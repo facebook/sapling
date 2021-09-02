@@ -11,6 +11,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/telemetry/IHiveLogger.h"
 
 namespace facebook::eden {
 
@@ -92,7 +93,11 @@ void FsEventLogger::log(Event event) {
     *configsString_.wlock() = getConfigsString(edenConfig_.getEdenConfig());
   }
 
-  // TODO: log
+  auto configString = configsString_.rlock();
+  uint64_t durationUs =
+      std::chrono::duration_cast<std::chrono::microseconds>(event.durationNs)
+          .count();
+  logger_->logFsEventSample({durationUs, event.cause, *configString});
 }
 
 } // namespace facebook::eden

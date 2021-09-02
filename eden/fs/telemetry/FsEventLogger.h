@@ -34,7 +34,7 @@ class IHiveLogger;
 class FsEventLogger {
  public:
   struct Event {
-    uint64_t durationNs;
+    std::chrono::nanoseconds durationNs;
     SamplingGroup samplingGroup;
     folly::StringPiece cause;
   };
@@ -46,7 +46,7 @@ class FsEventLogger {
 
  private:
   ReloadableConfig& edenConfig_;
-  FOLLY_MAYBE_UNUSED std::shared_ptr<IHiveLogger> logger_;
+  std::shared_ptr<IHiveLogger> logger_;
 
   std::atomic<uint32_t> samplesCount_{0};
   std::atomic<std::chrono::steady_clock::time_point> counterStartTime_;

@@ -838,16 +838,14 @@ FuseChannel::FuseChannel(
             break;
           }
           case FuseTraceEvent::FINISH: {
-            uint64_t durationNs = 0;
+            std::chrono::nanoseconds durationNs{0};
             {
               auto state = telemetryState_.wlock();
               auto it = state->requests.find(event.getUnique());
               XCHECK(it != state->requests.end())
                   << "duplicate fuse finish event";
-              durationNs =
-                  std::chrono::duration_cast<std::chrono::nanoseconds>(
-                      event.monotonicTime - it->second.requestStartTime)
-                      .count();
+              durationNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                  event.monotonicTime - it->second.requestStartTime);
               state->requests.erase(it);
             }
 

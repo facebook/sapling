@@ -25,6 +25,17 @@ struct FileAccess {
   std::weak_ptr<EdenMount> edenMount;
 };
 
+/**
+ * A filesystem event to be logged through HiveLogger.
+ * The caller is responsible for ensuring the lifetime of the underlying
+ * string exceeds the lifetime of the event.
+ */
+struct FsEventSample {
+  uint64_t durationUs;
+  folly::StringPiece cause;
+  folly::StringPiece configList;
+};
+
 // TODO: Deprecate ScribeLogger and rename this class ScribeLogger.
 class IHiveLogger {
  public:
@@ -37,6 +48,8 @@ class IHiveLogger {
   virtual void log(std::string_view category, std::string&& message) = 0;
 
   virtual void logFileAccess(FileAccess access) = 0;
+
+  virtual void logFsEventSample(FsEventSample event) = 0;
 
   /**
    * This allows us to create objects derived from IHiveLogger with
@@ -60,6 +73,8 @@ class NullHiveLogger : public IHiveLogger {
   void log(std::string_view /*category*/, std::string&& /*message*/) override {}
 
   void logFileAccess(FileAccess /* access */) override {}
+
+  void logFsEventSample(FsEventSample /* event */) override {}
 };
 
 } // namespace facebook::eden
