@@ -20,7 +20,7 @@ use revisionstore::{
 };
 use types::{Key, Node, RepoPathBuf};
 
-use crate::{contentstore, filescmstore};
+use crate::{contentstore, filescmstore, treescmstore};
 
 pub fn to_node(py: Python, node: &PyBytes) -> Node {
     let mut bytes: [u8; 20] = Default::default();
@@ -71,7 +71,11 @@ pub fn as_legacystore(py: Python, store: PyObject) -> PyResult<Arc<dyn LegacySto
     Ok(contentstore::downcast_from(py, store.clone_ref(py))
         .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
         .or_else(|_| {
-            filescmstore::downcast_from(py, store)
+            filescmstore::downcast_from(py, store.clone_ref(py))
+                .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
+        })
+        .or_else(|_| {
+            treescmstore::downcast_from(py, store)
                 .map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
         })?)
 }
