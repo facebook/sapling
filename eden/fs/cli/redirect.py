@@ -377,7 +377,9 @@ class Redirection:
 
         raise Exception(f"don't know how to handle bind mounts on {sys.platform}")
 
-    def remove_existing(self, checkout: EdenCheckout) -> RepoPathDisposition:
+    def remove_existing(
+        self, checkout: EdenCheckout, fail_if_bind_mount: bool = False
+    ) -> RepoPathDisposition:
         repo_path = self.expand_repo_path(checkout)
         disposition = RepoPathDisposition.analyze(repo_path)
         if disposition == RepoPathDisposition.DOES_NOT_EXIST:
@@ -394,10 +396,16 @@ class Redirection:
             repo_path.unlink()
             return RepoPathDisposition.DOES_NOT_EXIST
         if disposition == RepoPathDisposition.IS_BIND_MOUNT:
+            if fail_if_bind_mount:
+                raise Exception(
+                    f"Failed to remove {repo_path} since the bind unmount failed"
+                )
             self._bind_unmount(checkout)
             # Now that it is unmounted, re-assess and ideally
             # remove the empty directory that was the mount point
-            return self.remove_existing(checkout)
+            # To avoid infinite recursion, tell the next call to fail if
+            # the disposition is still a bind mount
+            return self.remove_existing(checkout, True)
         if disposition == RepoPathDisposition.IS_EMPTY_DIR:
             repo_path.rmdir()
             return RepoPathDisposition.DOES_NOT_EXIST
