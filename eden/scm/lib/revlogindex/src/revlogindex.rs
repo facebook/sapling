@@ -63,8 +63,6 @@ use util::path::remove_file;
 // Revset is non-lazy. Sync APIs can be used.
 use dag::nameset::SyncNameSetQuery;
 
-const REVIDX_OCTOPUS_MERGE: u16 = 1 << 12;
-
 impl RevlogIndex {
     /// Calculate `heads(ancestors(revs))`.
     pub fn headsancestors(&self, revs: Vec<u32>) -> dag::Result<Vec<u32>> {
@@ -398,35 +396,21 @@ pub struct RevlogIndex {
 }
 
 /// "smallvec" optimization
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum ParentRevs {
-    Compact([i32; 2]),
-    // Box<Vec<i32>> takes 8 bytes. Box<[i32]> takes 16 bytes.
-    // Using smaller struct for better memory efficiency.
-    Octopus(Box<Vec<i32>>),
-}
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ParentRevs([i32; 2]);
 
 impl ParentRevs {
     fn from_p1p2(p1: i32, p2: i32) -> Self {
-        Self::Compact([p1, p2])
-    }
-
-    fn from_vec(v: Vec<i32>) -> Self {
-        Self::Octopus(Box::new(v))
+        Self([p1, p2])
     }
 
     pub fn as_revs(&self) -> &[u32] {
-        let slice: &[i32] = match self {
-            ParentRevs::Compact(s) => {
-                if s[0] == -1 {
-                    &s[0..0]
-                } else if s[1] == -1 {
-                    &s[0..1]
-                } else {
-                    &s[..]
-                }
-            }
-            ParentRevs::Octopus(s) => &s[..],
+        let slice: &[i32] = if self.0[0] == -1 {
+            &self.0[0..0]
+        } else if self.0[1] == -1 {
+            &self.0[0..1]
+        } else {
+            &self.0[..]
         };
         let ptr = (slice as *const [i32]) as *const [u32];
         unsafe { &*ptr }
@@ -470,16 +454,6 @@ impl<T: UnsafeSliceCast> AsRef<[T]> for BytesSlice<T> {
 }
 impl UnsafeSliceCast for u32 {}
 impl UnsafeSliceCast for RevlogEntry {}
-
-impl RevlogEntry {
-    fn flags(&self) -> u16 {
-        (self.offset_flags.to_be() & 0xffff) as u16
-    }
-
-    fn is_octopus_merge(&self) -> bool {
-        (self.flags() & REVIDX_OCTOPUS_MERGE) != 0
-    }
-}
 
 impl RevlogIndex {
     /// Constructs a RevlogIndex. The NodeRevMap is automatically manage>
@@ -566,87 +540,9 @@ impl RevlogIndex {
         }
 
         let data = self.data();
-        let entry = &data[rev as usize];
-        let p1 = i32::from_be(entry.p1);
-        let p2 = i32::from_be(entry.p2);
-        if entry.is_octopus_merge() {
-            let mut parents = Vec::with_capacity(3);
-            if p1 >= 0 {
-                parents.push(p1);
-            }
-            if p2 >= 0 {
-                parents.push(p2);
-            }
-            // Read from the "stepparents" extra.
-            let data = self.raw_data(rev)?;
-            let stepparents = self.get_stepparents(&data)?;
-            parents.extend(stepparents);
-            Ok(ParentRevs::from_vec(parents))
-        } else {
-            Ok(ParentRevs::from_p1p2(p1, p2))
-        }
-    }
-
-    /// Get the extra parents from raw data of a revision.
-    fn get_stepparents(&self, data: &[u8]) -> Result<Vec<i32>> {
-        // `data` format:
-        // <manifest sha1> + '\n'
-        // author + '\n'
-        // date + ' ' + timezone + ' ' + (... + '\0')* + 'stepparents:' + (hexnode + ',')+
-
-        let mut parents = Vec::new();
-
-        #[derive(Copy, Clone)]
-        enum State {
-            ManifestLine,
-            AuthorLine,
-            Date,
-            Timezone,
-            Extras,
-        }
-
-        let mut state: State = State::ManifestLine;
-        let mut extra_start = 0;
-        for (i, b) in data.iter().enumerate() {
-            match (state, b) {
-                (State::ManifestLine, b'\n') => {
-                    state = State::AuthorLine;
-                }
-                (State::AuthorLine, b'\n') => {
-                    state = State::Date;
-                }
-                (State::Date, b' ') => {
-                    state = State::Timezone;
-                }
-                (State::Timezone, b' ') => {
-                    state = State::Extras;
-                    extra_start = i + 1;
-                }
-                (State::Extras, b'\0') | (State::Extras, b'\n') => {
-                    let extra = &data[extra_start..i]; // name:value
-                    if let Some(value) = extra.strip_prefix(b"stepparents:") {
-                        // Parse the stepparents field.
-                        if let Ok(value) = std::str::from_utf8(value) {
-                            for hex_node in value.split(',') {
-                                let node = Vertex::from_hex(hex_node.as_bytes())?;
-                                if let Some(id) = self.nodemap.node_to_rev(node.as_ref())? {
-                                    parents.push(id as i32);
-                                } else {
-                                    return Err(crate::errors::CommitNotFound(node).into());
-                                }
-                            }
-                        }
-                    }
-                    if *b == b'\n' {
-                        break;
-                    } else {
-                        extra_start = i + 1;
-                    }
-                }
-                (_, _) => {}
-            }
-        }
-        Ok(parents)
+        let p1 = i32::from_be(data[rev as usize].p1);
+        let p2 = i32::from_be(data[rev as usize].p2);
+        Ok(ParentRevs::from_p1p2(p1, p2))
     }
 
     /// Get raw content from a revision.
@@ -712,15 +608,10 @@ impl RevlogIndex {
         if non_blocking_result(self.contains_vertex_name(&node)).unwrap_or(false) {
             return;
         }
-        let parent_revs = if parents.len() <= 2 {
-            let p1 = parents.get(0).map(|r| *r as i32).unwrap_or(-1);
-            let p2 = parents.get(1).map(|r| *r as i32).unwrap_or(-1);
-            ParentRevs::from_p1p2(p1, p2)
-        } else {
-            ParentRevs::from_vec(parents.into_iter().map(|i| i as i32).collect())
-        };
+        let p1 = parents.get(0).map(|r| *r as i32).unwrap_or(-1);
+        let p2 = parents.get(1).map(|r| *r as i32).unwrap_or(-1);
         let idx = self.pending_parents.len();
-        self.pending_parents.push(parent_revs);
+        self.pending_parents.push(ParentRevs::from_p1p2(p1, p2));
         self.pending_nodes.push(node.clone());
 
         self.pending_nodes_index.insert(node, idx);
@@ -851,17 +742,12 @@ impl RevlogIndex {
             existing_nodes.insert(node.as_ref().to_vec(), rev as u32);
 
             let mut parent_revs: [i32; 2] = [-1, -1];
-            let parents = &parent_map[node.as_ref()];
-            for (p_id, p_node) in parents.iter().enumerate() {
+            for (p_id, p_node) in parent_map[node.as_ref()].iter().enumerate() {
                 parent_revs[p_id] = get_rev(&existing_nodes, p_node)? as i32;
             }
 
-            let mut flags = 0;
-            if parents.len() > 2 || find_bytes_in_bytes(&raw, b"stepparents:").is_some() {
-                flags |= REVIDX_OCTOPUS_MERGE;
-            };
             let entry = RevlogEntry {
-                offset_flags: u64::to_be((offset << 16) | (flags as u64)),
+                offset_flags: u64::to_be(offset << 16),
                 compressed: i32::to_be(chunk.len() as i32),
                 len: i32::to_be(raw_len as i32),
                 base: i32::to_be(rev as i32),
@@ -1896,10 +1782,6 @@ fn unsupported_dag_error<T>() -> dag::Result<T> {
     Err(dag::errors::BackendError::Generic("unsupported by revlog index".to_string()).into())
 }
 
-fn find_bytes_in_bytes(bytes: &[u8], to_find: &[u8]) -> Option<usize> {
-    bytes.windows(to_find.len()).position(|b| b == to_find)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1955,9 +1837,9 @@ mod tests {
         let index = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
         // Read parents.
-        assert_eq!(index.parent_revs(0)?, ParentRevs::Compact([-1, -1]));
-        assert_eq!(index.parent_revs(1)?, ParentRevs::Compact([0, -1]));
-        assert_eq!(index.parent_revs(2)?, ParentRevs::Compact([1, -1]));
+        assert_eq!(index.parent_revs(0)?, ParentRevs([-1, -1]));
+        assert_eq!(index.parent_revs(1)?, ParentRevs([0, -1]));
+        assert_eq!(index.parent_revs(2)?, ParentRevs([1, -1]));
 
         // Read commit data.
         let read = |rev: u32| -> Result<String> {
@@ -2210,41 +2092,6 @@ commit 3"#
     }
 
     #[test]
-    fn test_octopus_merge() {
-        let dir = tempdir().unwrap();
-        let dir = dir.path();
-        let changelog_i_path = dir.join("00changelog.i");
-        let nodemap_path = dir.join("00changelog.nodemap");
-
-        let mut rlog = RevlogIndex::new(&changelog_i_path, &nodemap_path).unwrap();
-        rlog.insert(v(0), vec![], b"A".to_vec().into()); // rev 0
-        rlog.insert(v(1), vec![], b"B".to_vec().into()); // rev 1
-        rlog.insert(v(2), vec![], b"C".to_vec().into()); // rev 2
-        rlog.insert(v(3), vec![], b"D".to_vec().into()); // rev 3
-        rlog.insert(
-            v(4),
-            vec![0, 3],
-            format!(
-                concat!(
-                    "deadbeef000000000000\n",
-                    "test <test@example.com>\n",
-                    "100 300 bar:foo\0stepparents:{},{}\0foo:bar\n",
-                    "foobar"
-                ),
-                v(2).to_hex(),
-                v(1).to_hex()
-            )
-            .as_bytes()
-            .to_vec()
-            .into(),
-        ); // rev 4
-        rlog.flush().unwrap();
-
-        let rlog = RevlogIndex::new(&changelog_i_path, &nodemap_path).unwrap();
-        assert_eq!(rlog.parent_revs(4).unwrap().as_revs(), [0, 3, 2, 1]);
-    }
-
-    #[test]
     fn test_flush() -> Result<()> {
         let dir = tempdir()?;
         let dir = dir.path();
@@ -2282,11 +2129,11 @@ commit 3"#
         let revlog3 = RevlogIndex::new(&changelog_i_path, &nodemap_path)?;
 
         // Read parents.
-        assert_eq!(revlog3.parent_revs(0)?, ParentRevs::Compact([-1, -1]));
-        assert_eq!(revlog3.parent_revs(1)?, ParentRevs::Compact([0, -1]));
-        assert_eq!(revlog3.parent_revs(2)?, ParentRevs::Compact([-1, -1]));
-        assert_eq!(revlog3.parent_revs(3)?, ParentRevs::Compact([2, -1]));
-        assert_eq!(revlog3.parent_revs(4)?, ParentRevs::Compact([0, 2])); // 0: "commit 1"
+        assert_eq!(revlog3.parent_revs(0)?, ParentRevs([-1, -1]));
+        assert_eq!(revlog3.parent_revs(1)?, ParentRevs([0, -1]));
+        assert_eq!(revlog3.parent_revs(2)?, ParentRevs([-1, -1]));
+        assert_eq!(revlog3.parent_revs(3)?, ParentRevs([2, -1]));
+        assert_eq!(revlog3.parent_revs(4)?, ParentRevs([0, 2])); // 0: "commit 1"
 
         // Prefix lookup.
         assert_eq!(r(revlog3.vertexes_by_hex_prefix(b"0303", 2))?, vec![v(3)]);
