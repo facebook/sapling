@@ -108,7 +108,7 @@ impl Client {
     }
 
     /// Append a repo name and endpoint path onto the server's base URL.
-    fn url(&self, path: &str, repo: Option<&str>) -> Result<Url, EdenApiError> {
+    fn build_url(&self, path: &str, repo: Option<&str>) -> Result<Url, EdenApiError> {
         let url = &self.config.server_url;
         Ok(match repo {
             Some(repo) => url
@@ -120,7 +120,7 @@ impl Client {
     }
 
     /// Add configured values to a request.
-    fn configure(&self, mut req: Request) -> Result<Request, EdenApiError> {
+    fn configure_request(&self, mut req: Request) -> Result<Request, EdenApiError> {
         if let Some(ref cert) = self.config.cert {
             if self.config.validate_certs {
                 check_certs(cert)?;
@@ -168,7 +168,7 @@ impl Client {
     /// The keys will be grouped into batches of the specified size and
     /// passed to the `make_req` callback, which should insert them into
     /// a struct that will be CBOR-encoded and used as the request body.
-    fn prepare<T, K, F, R>(
+    fn prepare_requests<T, K, F, R>(
         &self,
         url: &Url,
         keys: K,
@@ -184,7 +184,7 @@ impl Client {
             .into_iter()
             .map(|keys| {
                 let req = make_req(keys);
-                self.configure(Request::post(url.clone()))?
+                self.configure_request(Request::post(url.clone()))?
                     .cbor(&req)
                     .map_err(EdenApiError::RequestSerializationFailed)
             })
@@ -308,7 +308,7 @@ impl Client {
         bubble_id: Option<NonZeroU64>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<UploadToken>, EdenApiError> {
-        let mut url = self.url(paths::UPLOAD, Some(&repo))?;
+        let mut url = self.build_url(paths::UPLOAD, Some(&repo))?;
         url = url.join("file/")?;
         match item {
             AnyFileContentId::ContentId(id) => {
@@ -336,7 +336,7 @@ impl Client {
         Ok(self.fetch::<WireUploadToken>(
             vec![{
                 let request = self
-                    .configure(Request::put(url.clone()))?
+                    .configure_request(Request::put(url.clone()))?
                     .body(raw_content.to_vec());
                 request
             }],
@@ -348,7 +348,7 @@ impl Client {
 #[async_trait]
 impl EdenApi for Client {
     async fn health(&self) -> Result<ResponseMeta, EdenApiError> {
-        let url = self.url(paths::HEALTH_CHECK, None)?;
+        let url = self.build_url(paths::HEALTH_CHECK, None)?;
 
         let msg = format!("Sending health check request: {}", &url);
         tracing::info!("{}", &msg);
@@ -356,7 +356,7 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let req = self.configure(Request::get(url))?;
+        let req = self.configure_request(Request::get(url))?;
         let res = raise_for_status(req.send_async().await?).await?;
 
         Ok(ResponseMeta::from(&res))
@@ -380,8 +380,8 @@ impl EdenApi for Client {
 
         let guards = vec![FILES_INFLIGHT.entrance_guard(keys.len())];
 
-        let url = self.url(paths::FILES, Some(&repo))?;
-        let requests = self.prepare(&url, keys, self.config.max_files, |keys| {
+        let url = self.build_url(paths::FILES, Some(&repo))?;
+        let requests = self.prepare_requests(&url, keys, self.config.max_files, |keys| {
             let req = FileRequest { keys, reqs: vec![] };
             self.log_request(&req, "files");
             req.to_wire()
@@ -408,8 +408,8 @@ impl EdenApi for Client {
 
         let guards = vec![FILES_ATTRS_INFLIGHT.entrance_guard(reqs.len())];
 
-        let url = self.url(paths::FILES, Some(&repo))?;
-        let requests = self.prepare(&url, reqs, self.config.max_files, |reqs| {
+        let url = self.build_url(paths::FILES, Some(&repo))?;
+        let requests = self.prepare_requests(&url, reqs, self.config.max_files, |reqs| {
             let req = FileRequest { reqs, keys: vec![] };
             self.log_request(&req, "files");
             req.to_wire()
@@ -435,8 +435,8 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
-        let url = self.url(paths::HISTORY, Some(&repo))?;
-        let requests = self.prepare(&url, keys, self.config.max_history, |keys| {
+        let url = self.build_url(paths::HISTORY, Some(&repo))?;
+        let requests = self.prepare_requests(&url, keys, self.config.max_history, |keys| {
             let req = HistoryRequest { keys, length };
             self.log_request(&req, "history");
             req.to_wire()
@@ -471,8 +471,8 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
-        let url = self.url(paths::TREES, Some(&repo))?;
-        let requests = self.prepare(&url, keys, self.config.max_trees, |keys| {
+        let url = self.build_url(paths::TREES, Some(&repo))?;
+        let requests = self.prepare_requests(&url, keys, self.config.max_trees, |keys| {
             let req = TreeRequest {
                 keys,
                 attributes: attributes.clone().unwrap_or_default(),
@@ -503,7 +503,7 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let url = self.url(paths::COMPLETE_TREES, Some(&repo))?;
+        let url = self.build_url(paths::COMPLETE_TREES, Some(&repo))?;
         let tree_req = CompleteTreeRequest {
             rootdir,
             mfnodes,
@@ -514,7 +514,7 @@ impl EdenApi for Client {
         let wire_tree_req = tree_req.to_wire();
 
         let req = self
-            .configure(Request::post(url))?
+            .configure_request(Request::post(url))?
             .cbor(&wire_tree_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -533,13 +533,13 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let url = self.url(paths::COMMIT_REVLOG_DATA, Some(&repo))?;
+        let url = self.build_url(paths::COMMIT_REVLOG_DATA, Some(&repo))?;
         let commit_revlog_data_req = CommitRevlogDataRequest { hgids };
 
         self.log_request(&commit_revlog_data_req, "commit_revlog_data");
 
         let req = self
-            .configure(Request::post(url))?
+            .configure_request(Request::post(url))?
             .cbor(&commit_revlog_data_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -557,11 +557,11 @@ impl EdenApi for Client {
         if self.config.debug {
             eprintln!("{}", &msg);
         }
-        let url = self.url(paths::BOOKMARKS, Some(&repo))?;
+        let url = self.build_url(paths::BOOKMARKS, Some(&repo))?;
         let bookmark_req = BookmarkRequest { bookmarks };
         self.log_request(&bookmark_req, "bookmarks");
         let req = self
-            .configure(Request::post(url))?
+            .configure_request(Request::post(url))?
             .cbor(&bookmark_req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -579,8 +579,8 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let url = self.url(paths::CLONE_DATA, Some(&repo))?;
-        let req = self.configure(Request::post(url))?;
+        let url = self.build_url(paths::CLONE_DATA, Some(&repo))?;
+        let req = self.configure_request(Request::post(url))?;
         let mut fetch = self.fetch::<WireCloneData>(vec![req], progress)?;
         let clone_data = fetch.entries.next().await.ok_or_else(|| {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
@@ -603,9 +603,9 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let url = self.url(paths::PULL_FAST_FORWARD, Some(&repo))?;
+        let url = self.build_url(paths::PULL_FAST_FORWARD, Some(&repo))?;
         let req = self
-            .configure(Request::post(url))?
+            .configure_request(Request::post(url))?
             .cbor(
                 &PullFastForwardRequest {
                     old_master,
@@ -635,8 +635,8 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let url = self.url(paths::FULL_IDMAP_CLONE_DATA, Some(&repo))?;
-        let req = self.configure(Request::post(url))?;
+        let url = self.build_url(paths::FULL_IDMAP_CLONE_DATA, Some(&repo))?;
+        let req = self.configure_request(Request::post(url))?;
         let async_response = req
             .send_async()
             .await
@@ -692,9 +692,9 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
-        let url = self.url(paths::COMMIT_LOCATION_TO_HASH, Some(&repo))?;
+        let url = self.build_url(paths::COMMIT_LOCATION_TO_HASH, Some(&repo))?;
 
-        let formatted = self.prepare(
+        let formatted = self.prepare_requests(
             &url,
             requests,
             self.config.max_location_to_hash,
@@ -728,17 +728,18 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
-        let url = self.url(paths::COMMIT_HASH_TO_LOCATION, Some(&repo))?;
+        let url = self.build_url(paths::COMMIT_HASH_TO_LOCATION, Some(&repo))?;
 
-        let formatted = self.prepare(&url, hgids, self.config.max_location_to_hash, |hgids| {
-            let batch = CommitHashToLocationRequestBatch {
-                master_heads: master_heads.clone(),
-                hgids,
-                unfiltered: Some(true),
-            };
-            self.log_request(&batch, "commit_hash_to_location");
-            batch.to_wire()
-        })?;
+        let formatted =
+            self.prepare_requests(&url, hgids, self.config.max_location_to_hash, |hgids| {
+                let batch = CommitHashToLocationRequestBatch {
+                    master_heads: master_heads.clone(),
+                    hgids,
+                    unfiltered: Some(true),
+                };
+                self.log_request(&batch, "commit_hash_to_location");
+                batch.to_wire()
+            })?;
 
         Ok(self.fetch::<WireCommitHashToLocationResponse>(formatted, progress)?)
     }
@@ -853,8 +854,8 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
-        let url = self.url(paths::LOOKUP, Some(&repo))?;
-        let requests = self.prepare(
+        let url = self.build_url(paths::LOOKUP, Some(&repo))?;
+        let requests = self.prepare_requests(
             &url,
             items,
             Some(MAX_CONCURRENT_LOOKUPS_PER_REQUEST),
@@ -970,8 +971,8 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
-        let url = self.url(paths::UPLOAD_FILENODES, Some(&repo))?;
-        let requests = self.prepare(
+        let url = self.build_url(paths::UPLOAD_FILENODES, Some(&repo))?;
+        let requests = self.prepare_requests(
             &url,
             items,
             Some(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST),
@@ -1004,8 +1005,8 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
-        let url = self.url(paths::UPLOAD_TREES, Some(&repo))?;
-        let requests = self.prepare(
+        let url = self.build_url(paths::UPLOAD_TREES, Some(&repo))?;
+        let requests = self.prepare_requests(
             &url,
             items,
             Some(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST),
@@ -1043,7 +1044,7 @@ impl EdenApi for Client {
             return Ok(Fetch::empty());
         }
 
-        let url = self.url(paths::UPLOAD_CHANGESETS, Some(&repo))?;
+        let url = self.build_url(paths::UPLOAD_CHANGESETS, Some(&repo))?;
         let req = UploadHgChangesetsRequest {
             changesets,
             mutations,
@@ -1051,7 +1052,7 @@ impl EdenApi for Client {
         .to_wire();
 
         let request = self
-            .configure(Request::post(url.clone()))?
+            .configure_request(Request::post(url.clone()))?
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -1070,7 +1071,7 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let mut url = self.url(paths::UPLOAD_BONSAI_CHANGESET, Some(&repo))?;
+        let mut url = self.build_url(paths::UPLOAD_BONSAI_CHANGESET, Some(&repo))?;
         if let Some(bubble_id) = bubble_id {
             url.query_pairs_mut()
                 .append_pair("bubble_id", &bubble_id.to_string());
@@ -1078,7 +1079,7 @@ impl EdenApi for Client {
         let req = UploadBonsaiChangesetRequest { changeset }.to_wire();
 
         let request = self
-            .configure(Request::post(url.clone()))?
+            .configure_request(Request::post(url.clone()))?
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -1094,10 +1095,10 @@ impl EdenApi for Client {
         if self.config.debug {
             eprintln!("{}", &msg);
         }
-        let url = self.url(paths::EPHEMERAL_PREPARE, Some(&repo))?;
+        let url = self.build_url(paths::EPHEMERAL_PREPARE, Some(&repo))?;
         let req = EphemeralPrepareRequest {}.to_wire();
         let request = self
-            .configure(Request::post(url.clone()))?
+            .configure_request(Request::post(url.clone()))?
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -1126,10 +1127,10 @@ impl EdenApi for Client {
                 request.cs_id, request.bubble_id
             );
         }
-        let url = self.url(paths::FETCH_SNAPSHOT, Some(&repo))?;
+        let url = self.build_url(paths::FETCH_SNAPSHOT, Some(&repo))?;
         let req = request.to_wire();
         let request = self
-            .configure(Request::post(url.clone()))?
+            .configure_request(Request::post(url.clone()))?
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -1193,7 +1194,7 @@ mod tests {
         let repo = "repo_-. !@#$% foo \u{1f4a9} bar";
         let path = "path";
 
-        let url = client.url(path, Some(repo))?.into_string();
+        let url: String = client.build_url(path, Some(repo))?.into();
         let expected =
             "https://example.com/repo_-.%20%21%40%23%24%25%20foo%20%F0%9F%92%A9%20bar/path";
         assert_eq!(&url, &expected);
