@@ -15,8 +15,8 @@ context = { version = "0.1.0", path = "../server/context" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 phases = { version = "0.1.0", path = "../phases" }
-strum = "0.19"
-strum_macros = "0.19"
+strum = "0.21"
+strum_macros = "0.21"
 tokio = { version = "1.10", features = ["full", "test-util"] }
 
 [dev-dependencies]
