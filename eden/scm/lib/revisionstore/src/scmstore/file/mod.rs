@@ -43,6 +43,8 @@ use crate::{
     StoreKey, StoreResult,
 };
 
+const PREFETCH_CHUNK_SIZE: usize = 1000;
+
 pub struct FileStore {
     // Config
     // TODO(meyer): Move these to a separate config struct with default impl, etc.
@@ -528,15 +530,21 @@ impl HgIdDataStore for FileStore {
 impl RemoteDataStore for FileStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.metrics.write().api.hg_prefetch.call(keys.len());
-        Ok(self
-            .fetch(
-                keys.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
-                FileAttributes::CONTENT,
-            )
-            .missing()?
-            .into_iter()
-            .map(StoreKey::HgId)
-            .collect())
+        // TODO(meyer): Implement better memory management inside FileStore or introduce a "prefetch" flag to avoid
+        // keeping all remotely fetched EdenApi files in memory.
+        let mut missing = Vec::new();
+        for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
+            missing.extend(
+                self.fetch(
+                    chunk.iter().cloned().filter_map(|sk| sk.maybe_into_key()),
+                    FileAttributes::CONTENT,
+                )
+                .missing()?
+                .into_iter()
+                .map(StoreKey::HgId),
+            );
+        }
+        Ok(missing)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
