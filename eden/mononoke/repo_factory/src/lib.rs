@@ -702,7 +702,7 @@ impl RepoFactory {
         let segmented_changelog = new_server_segmented_changelog(
             self.env.fb,
             &self.ctx(Some(&repo_identity)),
-            repo_identity.id(),
+            &repo_identity,
             repo_config.segmented_changelog_config.clone(),
             sql_connections,
             changeset_fetcher.clone(),

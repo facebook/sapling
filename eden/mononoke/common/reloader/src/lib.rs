@@ -12,6 +12,7 @@ use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
+use futures::future;
 use futures_ext::future::{spawn_controlled, ControlledHandle};
 use rand::Rng;
 use slog::warn;
@@ -73,8 +74,26 @@ impl<R: 'static + Send + Sync> Reloader<R> {
         L: 'static + Loader<R> + Send + Sync,
     >(
         ctx: CoreContext,
+        interval_getter: I,
+        loader: L,
+    ) -> Result<Self> {
+        Self::reload_periodically_with_force_reload(
+            ctx,
+            interval_getter,
+            loader,
+            Arc::new(Notify::new()),
+        )
+        .await
+    }
+
+    pub async fn reload_periodically_with_force_reload<
+        I: 'static + FnMut() -> Duration + Send,
+        L: 'static + Loader<R> + Send + Sync,
+    >(
+        ctx: CoreContext,
         mut interval_getter: I,
         mut loader: L,
+        force_reload: Arc<Notify>,
     ) -> Result<Self> {
         let obj = Arc::new(ArcSwap::from_pointee(
             loader
@@ -88,7 +107,11 @@ impl<R: 'static + Send + Sync> Reloader<R> {
             async move {
                 loop {
                     let interval = interval_getter();
-                    tokio::time::sleep(interval).await;
+                    let sleep_fut = tokio::time::sleep(interval);
+                    let force_reload_fut = force_reload.notified();
+                    futures::pin_mut!(sleep_fut, force_reload_fut);
+                    future::select(sleep_fut, force_reload_fut).await;
+
                     match loader.load().await {
                         Ok(Some(new)) => obj.store(Arc::new(new)),
                         // Fetch was successful, but there's nothing to reload
@@ -116,8 +139,25 @@ impl<R: 'static + Send + Sync> Reloader<R> {
         period: Duration,
         loader: L,
     ) -> Result<Self> {
+        Self::reload_periodically_with_skew_and_force_reload(
+            ctx,
+            period,
+            loader,
+            Arc::new(Notify::new()),
+        )
+        .await
+    }
+
+    pub async fn reload_periodically_with_skew_and_force_reload<
+        L: 'static + Loader<R> + Send + Sync,
+    >(
+        ctx: CoreContext,
+        period: Duration,
+        loader: L,
+        force_reload: Arc<Notify>,
+    ) -> Result<Self> {
         let mut first = true;
-        Self::reload_periodically(
+        Self::reload_periodically_with_force_reload(
             ctx,
             move || {
                 if first {
@@ -129,6 +169,7 @@ impl<R: 'static + Send + Sync> Reloader<R> {
                 }
             },
             loader,
+            force_reload,
         )
         .await
     }

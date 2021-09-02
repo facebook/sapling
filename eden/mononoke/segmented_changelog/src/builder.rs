@@ -14,7 +14,7 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::SegmentedChangelogConfig;
-use mononoke_types::RepositoryId;
+use repo_identity::RepoIdentity;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::replication::NoReplicaLagMonitor;
 use sql_ext::SqlConnections;
@@ -42,10 +42,10 @@ impl SqlConstruct for SegmentedChangelogSqlConnections {
 
 impl SqlConstructFromMetadataDatabaseConfig for SegmentedChangelogSqlConnections {}
 
-pub async fn new_server_segmented_changelog(
+pub async fn new_server_segmented_changelog<'a>(
     fb: FacebookInit,
-    ctx: &CoreContext,
-    repo_id: RepositoryId,
+    ctx: &'a CoreContext,
+    repo_identity: &'a RepoIdentity,
     config: SegmentedChangelogConfig,
     connections: SegmentedChangelogSqlConnections,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
@@ -56,6 +56,7 @@ pub async fn new_server_segmented_changelog(
     if !config.enabled {
         return Ok(Arc::new(DisabledSegmentedChangelog::new()));
     }
+    let repo_id = repo_identity.id();
     let bookmarks_name = BookmarkName::new(&config.master_bookmark).with_context(|| {
         format!(
             "failed to interpret {} as bookmark for repo {}",
@@ -96,10 +97,11 @@ pub async fn new_server_segmented_changelog(
         bookmarks_name,
         config.update_to_master_bookmark_period,
     );
+    let name = repo_identity.name().to_string();
     let sc = match config.reload_dag_save_period {
         None => manager.load(ctx).await?,
         Some(reload_period) => Arc::new(
-            PeriodicReloadSegmentedChangelog::start_from_manager(ctx, reload_period, manager)
+            PeriodicReloadSegmentedChangelog::start_from_manager(ctx, reload_period, manager, name)
                 .await?,
         ),
     };

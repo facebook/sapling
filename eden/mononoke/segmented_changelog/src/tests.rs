@@ -917,8 +917,13 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     seed(&ctx, &blobrepo, &conns, start_cs_id).await?;
 
     tokio::time::pause();
-    let sc =
-        PeriodicReloadSegmentedChangelog::start(&ctx, Duration::from_secs(10), load_fn).await?;
+    let sc = PeriodicReloadSegmentedChangelog::start(
+        &ctx,
+        Duration::from_secs(10),
+        load_fn,
+        blobrepo.name().to_string(),
+    )
+    .await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
     let tailer = new_tailer(&blobrepo, &conns);

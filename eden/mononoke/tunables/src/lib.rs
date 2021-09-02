@@ -203,6 +203,11 @@ pub struct MononokeTunables {
 
     force_unode_v2: AtomicBool,
     fastlog_use_gen_num_traversal: AtomicBool,
+
+    // Changing the value of this tunable forces all mononoke instances
+    // to reload segmented changelog. One can also specify jitter (or use default)
+    segmented_changelog_force_reload: TunableI64ByRepo,
+    segmented_changelog_force_reload_jitter_secs: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
@@ -303,6 +308,10 @@ fn update_tunables(new_tunables: Arc<TunablesStruct>) -> Result<()> {
 
     if let Some(killswitches_by_repo) = &new_tunables.killswitches_by_repo {
         tunables.update_by_repo_bools(killswitches_by_repo);
+    }
+
+    if let Some(ints_by_repo) = &new_tunables.ints_by_repo {
+        tunables.update_by_repo_ints(ints_by_repo);
     }
 
     if let Some(vec_of_strings_by_repo) = &new_tunables.vec_of_strings_by_repo {
