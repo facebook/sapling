@@ -98,6 +98,7 @@ pub fn log_derivation_end<Derivable>(
 pub fn log_mapping_insertion<Derivable>(
     ctx: &CoreContext,
     derived_data_scuba: &mut MononokeScubaSampleBuilder,
+    cs_id: ChangesetId,
     stats: &FutureStats,
     res: &Result<(), Error>,
     value: &Derivable,
@@ -127,6 +128,7 @@ pub fn log_mapping_insertion<Derivable>(
 
     derived_data_scuba
         .add_future_stats(&stats)
+        .add("changeset", format!("{}", cs_id))
         .add("mapping_value", value)
         // derived data name and bcs_id already logged as separate fields
         .log_with_msg(tag, msg);

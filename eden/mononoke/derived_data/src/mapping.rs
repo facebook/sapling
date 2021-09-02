@@ -66,7 +66,9 @@ where
     pub async fn put(&self, ctx: &CoreContext, csid: ChangesetId, value: &Derivable) -> Result<()> {
         let (stats, res) = self.mapping.put(ctx, csid, value).timed().await;
         let mut scuba = self.scuba.clone();
-        crate::logging::log_mapping_insertion::<Derivable>(ctx, &mut scuba, &stats, &res, &value);
+        crate::logging::log_mapping_insertion::<Derivable>(
+            ctx, &mut scuba, csid, &stats, &res, &value,
+        );
         res
     }
 
