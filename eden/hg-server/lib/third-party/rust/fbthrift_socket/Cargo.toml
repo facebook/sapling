@@ -8,4 +8,4 @@ include = ["lib.rs"]
 path = "lib.rs"
 
 [dependencies]
-fbthrift_socket = { path = "../../../../../../common/rust/shed/fbthrift_ext/socket" }
+fbthrift_socket-02 = { path = "../../../../../../common/rust/shed/fbthrift_ext/fbthrift_ext-02/socket" }
