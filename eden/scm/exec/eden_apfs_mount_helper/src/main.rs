@@ -19,12 +19,14 @@ use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
+use std::time::Duration;
 use structopt::StructOpt;
 
 // Take care with the full path to the utility so that we are not so easily
 // tricked into running something scary if we are setuid root.
 const DISKUTIL: &'static str = "/usr/sbin/diskutil";
 const MOUNT_APFS: &'static str = "/sbin/mount_apfs";
+const MAX_ADDVOLUME_RETRY: u64 = 3;
 
 #[derive(StructOpt, Debug)]
 enum Opt {
@@ -336,17 +338,44 @@ fn new_cmd_unprivileged(path: &str) -> Command {
 
 /// Create a new subvolume with the specified name.
 /// Note that this does NOT require any special privilege on macOS.
+///
+/// Note that this code tries to create the subvolume multiple times to workaround a bug where the
+/// `diskutil apfs addVolume` command succeeds but the subvolume isn't created. Apple claims that
+/// this is fixed in macOS 11.5 but Sandcastle isn't on 11.5 yet.
 fn make_new_volume(name: &str, disk: &str) -> Result<ApfsVolume> {
-    let output = new_cmd_unprivileged(DISKUTIL)
-        .args(&["apfs", "addVolume", disk, "apfs", name, "-nomount"])
-        .output()?;
-    if !output.status.success() {
-        anyhow::bail!("failed to execute diskutil addVolume: {:?}", output);
+    let mut tried = 0;
+    loop {
+        let output = new_cmd_unprivileged(DISKUTIL)
+            .args(&["apfs", "addVolume", disk, "apfs", name, "-nomount"])
+            .output()?;
+        if !output.status.success() {
+            anyhow::bail!("failed to execute diskutil addVolume: {:?}", output);
+        }
+        let containers = apfs_list()?;
+
+        if let Some(volume) = find_existing_volume(&containers, name) {
+            return Ok(volume.clone());
+        } else {
+            tried += 1;
+            if tried == MAX_ADDVOLUME_RETRY {
+                return Err(anyhow!("failed to create volume `{}`: {:#?}", name, output));
+            } else {
+                println!(
+                    "APFS subvolume created, but not found in `diskutil apfs list`, retrying."
+                );
+                // Let's sleep a bit before retrying in case this is timing related.
+                std::thread::sleep(Duration::from_secs(1));
+
+                // Maybe the volume wasn't available immediately, let's see if it appeared.
+                let containers = apfs_list()?;
+                if let Some(volume) = find_existing_volume(&containers, name) {
+                    return Ok(volume.clone());
+                }
+
+                // Nope, let's just loop
+            }
+        }
     }
-    let containers = apfs_list()?;
-    find_existing_volume(&containers, name)
-        .ok_or_else(|| anyhow!("failed to create volume `{}`: {:#?}", name, output))
-        .map(ApfsVolume::clone)
 }
 
 fn getgid() -> u32 {
