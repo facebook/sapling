@@ -52,7 +52,7 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
         let progress = self.remote.progress.clone();
         let keys = hgid_keys(keys);
 
-        let fetch = async move {
+        let response = async move {
             let prog = progress.bar(
                 "Downloading file history over HTTP",
                 None,
@@ -68,7 +68,7 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
             Ok(())
         };
 
-        block_on(fetch)
+        block_on(response)
     }
 }
 

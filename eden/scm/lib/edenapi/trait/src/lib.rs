@@ -11,7 +11,7 @@ pub mod response;
 
 pub use crate::api::{EdenApi, ProgressCallback};
 pub use crate::errors::{ConfigError, EdenApiError};
-pub use crate::response::{Entries, Fetch, ResponseMeta};
+pub use crate::response::{Entries, Response, ResponseMeta};
 
 // Re-export for convenience.
 pub use configmodel;

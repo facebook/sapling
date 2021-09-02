@@ -26,7 +26,7 @@ use minibytes::Bytes;
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::errors::EdenApiError;
-use crate::response::{Fetch, ResponseMeta};
+use crate::response::{Response, ResponseMeta};
 
 pub type ProgressCallback = Box<dyn FnMut(Progress) + Send + 'static>;
 
@@ -39,14 +39,14 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<FileEntry>, EdenApiError>;
+    ) -> Result<Response<FileEntry>, EdenApiError>;
 
     async fn files_attrs(
         &self,
         repo: String,
         reqs: Vec<FileSpec>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<FileEntry>, EdenApiError>;
+    ) -> Result<Response<FileEntry>, EdenApiError>;
 
     async fn history(
         &self,
@@ -54,7 +54,7 @@ pub trait EdenApi: Send + Sync + 'static {
         keys: Vec<Key>,
         length: Option<u32>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<HistoryEntry>, EdenApiError>;
+    ) -> Result<Response<HistoryEntry>, EdenApiError>;
 
     async fn trees(
         &self,
@@ -62,7 +62,7 @@ pub trait EdenApi: Send + Sync + 'static {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError>;
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError>;
 
     async fn complete_trees(
         &self,
@@ -72,14 +72,14 @@ pub trait EdenApi: Send + Sync + 'static {
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError>;
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError>;
 
     async fn commit_revlog_data(
         &self,
         repo: String,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitRevlogData>, EdenApiError>;
+    ) -> Result<Response<CommitRevlogData>, EdenApiError>;
 
     async fn clone_data(
         &self,
@@ -105,7 +105,7 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         requests: Vec<CommitLocationToHashRequest>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitLocationToHashResponse>, EdenApiError>;
+    ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError>;
 
     async fn commit_hash_to_location(
         &self,
@@ -113,7 +113,7 @@ pub trait EdenApi: Send + Sync + 'static {
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError>;
+    ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError>;
 
     /// Return a subset of commits that are known by the server.
     /// This is similar to the "known" command in HG wireproto.
@@ -121,7 +121,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         hgids: Vec<HgId>,
-    ) -> Result<Fetch<CommitKnownResponse>, EdenApiError>;
+    ) -> Result<Response<CommitKnownResponse>, EdenApiError>;
 
     /// Return part of the commit graph that are ancestors of `heads`,
     /// excluding ancestors of `common`.
@@ -136,14 +136,14 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Fetch<CommitGraphEntry>, EdenApiError>;
+    ) -> Result<Response<CommitGraphEntry>, EdenApiError>;
 
     async fn bookmarks(
         &self,
         repo: String,
         bookmarks: Vec<String>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<BookmarkEntry>, EdenApiError>;
+    ) -> Result<Response<BookmarkEntry>, EdenApiError>;
 
     /// Lookup items and return signed upload tokens if an item has been uploaded
     /// Supports: file content, hg filenode, hg tree, hg changeset
@@ -152,7 +152,7 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<LookupResponse>, EdenApiError>;
+    ) -> Result<Response<LookupResponse>, EdenApiError>;
 
     /// Upload files content
     async fn process_files_upload(
@@ -160,21 +160,21 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<UploadToken>, EdenApiError>;
+    ) -> Result<Response<UploadToken>, EdenApiError>;
 
     /// Upload list of hg filenodes
     async fn upload_filenodes_batch(
         &self,
         repo: String,
         items: Vec<HgFilenodeData>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError>;
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError>;
 
     /// Upload list of trees
     async fn upload_trees_batch(
         &self,
         repo: String,
         items: Vec<UploadTreeEntry>,
-    ) -> Result<Fetch<UploadTreeResponse>, EdenApiError>;
+    ) -> Result<Response<UploadTreeResponse>, EdenApiError>;
 
     /// Upload list of changesets
     async fn upload_changesets(
@@ -182,26 +182,26 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError>;
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError>;
 
     async fn upload_bonsai_changeset(
         &self,
         repo: String,
         changeset: BonsaiChangesetContent,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError>;
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError>;
 
     async fn ephemeral_prepare(
         &self,
         repo: String,
-    ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError>;
+    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError>;
 
     /// Fetch information about the requested snapshot
     async fn fetch_snapshot(
         &self,
         repo: String,
         request: FetchSnapshotRequest,
-    ) -> Result<Fetch<FetchSnapshotResponse>, EdenApiError>;
+    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError>;
 }
 
 #[async_trait]
@@ -217,7 +217,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileEntry>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .files(repo, keys, progress)
             .await
@@ -228,7 +228,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         reqs: Vec<FileSpec>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileEntry>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .files_attrs(repo, reqs, progress)
             .await
@@ -240,7 +240,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         keys: Vec<Key>,
         length: Option<u32>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<HistoryEntry>, EdenApiError> {
+    ) -> Result<Response<HistoryEntry>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .history(repo, keys, length, progress)
             .await
@@ -252,7 +252,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .trees(repo, keys, attributes, progress)
             .await
@@ -266,7 +266,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .complete_trees(repo, rootdir, mfnodes, basemfnodes, depth, progress)
             .await
@@ -277,7 +277,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitRevlogData>, EdenApiError> {
+    ) -> Result<Response<CommitRevlogData>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .commit_revlog_data(repo, hgids, progress)
             .await
@@ -319,7 +319,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         requests: Vec<CommitLocationToHashRequest>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitLocationToHashResponse>, EdenApiError> {
+    ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .commit_location_to_hash(repo, requests, progress)
             .await
@@ -331,7 +331,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {
+    ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .commit_hash_to_location(repo, master_heads, hgids, progress)
             .await
@@ -341,7 +341,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         hgids: Vec<HgId>,
-    ) -> Result<Fetch<CommitKnownResponse>, EdenApiError> {
+    ) -> Result<Response<CommitKnownResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .commit_known(repo, hgids)
             .await
@@ -352,7 +352,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Fetch<CommitGraphEntry>, EdenApiError> {
+    ) -> Result<Response<CommitGraphEntry>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .commit_graph(repo, heads, common)
             .await
@@ -363,7 +363,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         bookmarks: Vec<String>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<BookmarkEntry>, EdenApiError> {
+    ) -> Result<Response<BookmarkEntry>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .bookmarks(repo, bookmarks, progress)
             .await
@@ -374,7 +374,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<LookupResponse>, EdenApiError> {
+    ) -> Result<Response<LookupResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .lookup_batch(repo, items, bubble_id)
             .await
@@ -385,7 +385,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<UploadToken>, EdenApiError> {
+    ) -> Result<Response<UploadToken>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .process_files_upload(repo, data, bubble_id)
             .await
@@ -396,7 +396,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         items: Vec<HgFilenodeData>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .upload_filenodes_batch(repo, items)
             .await
@@ -406,7 +406,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         items: Vec<UploadTreeEntry>,
-    ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .upload_trees_batch(repo, items)
             .await
@@ -417,7 +417,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .upload_changesets(repo, changesets, mutations)
             .await
@@ -428,7 +428,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         repo: String,
         changeset: BonsaiChangesetContent,
         bubble_id: Option<std::num::NonZeroU64>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .upload_bonsai_changeset(repo, changeset, bubble_id)
             .await
@@ -437,7 +437,7 @@ impl EdenApi for Arc<dyn EdenApi> {
     async fn ephemeral_prepare(
         &self,
         repo: String,
-    ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError> {
+    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .ephemeral_prepare(repo)
             .await
@@ -447,7 +447,7 @@ impl EdenApi for Arc<dyn EdenApi> {
         &self,
         repo: String,
         request: FetchSnapshotRequest,
-    ) -> Result<Fetch<FetchSnapshotResponse>, EdenApiError> {
+    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .fetch_snapshot(repo, request)
             .await

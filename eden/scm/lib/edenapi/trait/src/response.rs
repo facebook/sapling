@@ -10,7 +10,7 @@ use std::pin::Pin;
 use futures::prelude::*;
 use http::{header, HeaderMap, StatusCode, Version};
 
-use http_client::{AsyncResponse, Response, Stats};
+use http_client::{AsyncResponse as AsyncHttpResponse, Response as HttpResponse, Stats};
 
 use crate::errors::EdenApiError;
 
@@ -28,7 +28,7 @@ pub type StatsFuture = Pin<Box<dyn Future<Output = Result<Stats, EdenApiError>> 
 
 /// The result of a data fetching operation, which may have involved
 /// several individual HTTP requests.
-pub struct Fetch<T> {
+pub struct Response<T> {
     /// A `Stream` containing the combined responses for all of the requests.
     /// There are no ordering guarantees; entries from different HTTP responses
     /// may be arbitrarily interleaved.
@@ -40,7 +40,7 @@ pub struct Fetch<T> {
     pub stats: StatsFuture,
 }
 
-impl<T: Send + 'static> Fetch<T> {
+impl<T: Send + 'static> Response<T> {
     pub fn empty() -> Self {
         Self {
             entries: stream::empty().boxed(),
@@ -82,14 +82,14 @@ impl ResponseMeta {
     }
 }
 
-impl From<&Response> for ResponseMeta {
-    fn from(res: &Response) -> Self {
+impl From<&HttpResponse> for ResponseMeta {
+    fn from(res: &HttpResponse) -> Self {
         Self::from_parts(res.version(), res.status(), res.headers())
     }
 }
 
-impl From<&AsyncResponse> for ResponseMeta {
-    fn from(res: &AsyncResponse) -> Self {
+impl From<&AsyncHttpResponse> for ResponseMeta {
+    fn from(res: &AsyncHttpResponse) -> Self {
         Self::from_parts(res.version(), res.status(), res.headers())
     }
 }

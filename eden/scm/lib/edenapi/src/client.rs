@@ -52,7 +52,7 @@ use types::{HgId, Key, RepoPathBuf};
 use crate::api::{EdenApi, ProgressCallback};
 use crate::builder::Config;
 use crate::errors::EdenApiError;
-use crate::response::{Fetch, ResponseMeta};
+use crate::response::{Response, ResponseMeta};
 use crate::types::wire::pull::PullFastForwardRequest;
 use metrics::{Counter, EntranceGuard};
 
@@ -203,7 +203,7 @@ impl Client {
         &self,
         requests: Vec<Request>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<T>, EdenApiError> {
+    ) -> Result<Response<T>, EdenApiError> {
         let progress = progress.unwrap_or_else(|| Box::new(|_| ()));
         let (responses, stats) = self.client.send_async_with_progress(requests, progress)?;
 
@@ -224,7 +224,7 @@ impl Client {
         let entries = stream::select_all(streams).boxed();
         let stats = stats.err_into().boxed();
 
-        Ok(Fetch { entries, stats })
+        Ok(Response { entries, stats })
     }
 
     /// Fetch data from the server.
@@ -239,7 +239,7 @@ impl Client {
         &self,
         requests: Vec<Request>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<<T as ToApi>::Api>, EdenApiError>
+    ) -> Result<Response<<T as ToApi>::Api>, EdenApiError>
     where
         T: ToApi + Send + DeserializeOwned + 'static,
         <T as ToApi>::Api: Send + 'static,
@@ -252,20 +252,20 @@ impl Client {
         requests: Vec<Request>,
         progress: Option<ProgressCallback>,
         mut guards: Vec<EntranceGuard>,
-    ) -> Result<Fetch<<T as ToApi>::Api>, EdenApiError>
+    ) -> Result<Response<<T as ToApi>::Api>, EdenApiError>
     where
         T: ToApi + Send + DeserializeOwned + 'static,
         <T as ToApi>::Api: Send + 'static,
     {
         guards.push(REQUESTS_INFLIGHT.entrance_guard(requests.len()));
-        let Fetch { entries, stats } = self.fetch_raw::<T>(requests, progress)?;
+        let Response { entries, stats } = self.fetch_raw::<T>(requests, progress)?;
 
         let stats = metrics::wrap_future_keep_guards(stats, guards).boxed();
         let entries = entries
             .and_then(|v| future::ready(v.to_api().map_err(|e| EdenApiError::from(e.into()))))
             .boxed();
 
-        Ok(Fetch { entries, stats })
+        Ok(Response { entries, stats })
     }
 
 
@@ -307,7 +307,7 @@ impl Client {
         raw_content: Bytes,
         bubble_id: Option<NonZeroU64>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<UploadToken>, EdenApiError> {
+    ) -> Result<Response<UploadToken>, EdenApiError> {
         let mut url = self.build_url(paths::UPLOAD, Some(&repo))?;
         url = url.join("file/")?;
         match item {
@@ -367,7 +367,7 @@ impl EdenApi for Client {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileEntry>, EdenApiError> {
         let msg = format!("Requesting content for {} file(s)", keys.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -375,7 +375,7 @@ impl EdenApi for Client {
         }
 
         if keys.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let guards = vec![FILES_INFLIGHT.entrance_guard(keys.len())];
@@ -395,7 +395,7 @@ impl EdenApi for Client {
         repo: String,
         reqs: Vec<FileSpec>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileEntry>, EdenApiError> {
         let msg = format!("Requesting attributes for {} file(s)", reqs.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -403,7 +403,7 @@ impl EdenApi for Client {
         }
 
         if reqs.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let guards = vec![FILES_ATTRS_INFLIGHT.entrance_guard(reqs.len())];
@@ -424,7 +424,7 @@ impl EdenApi for Client {
         keys: Vec<Key>,
         length: Option<u32>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<HistoryEntry>, EdenApiError> {
+    ) -> Result<Response<HistoryEntry>, EdenApiError> {
         let msg = format!("Requesting history for {} file(s)", keys.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -432,7 +432,7 @@ impl EdenApi for Client {
         }
 
         if keys.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let url = self.build_url(paths::HISTORY, Some(&repo))?;
@@ -442,7 +442,7 @@ impl EdenApi for Client {
             req.to_wire()
         })?;
 
-        let Fetch { entries, stats } =
+        let Response { entries, stats } =
             self.fetch::<WireHistoryResponseChunk>(requests, progress)?;
 
         // Convert received `HistoryResponseChunk`s into `HistoryEntry`s.
@@ -451,7 +451,7 @@ impl EdenApi for Client {
             .try_flatten()
             .boxed();
 
-        Ok(Fetch { entries, stats })
+        Ok(Response { entries, stats })
     }
 
     async fn trees(
@@ -460,7 +460,7 @@ impl EdenApi for Client {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         let msg = format!("Requesting {} tree(s)", keys.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -468,7 +468,7 @@ impl EdenApi for Client {
         }
 
         if keys.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let url = self.build_url(paths::TREES, Some(&repo))?;
@@ -492,7 +492,7 @@ impl EdenApi for Client {
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         let msg = format!(
             "Requesting {} complete tree(s) for directory '{}'",
             mfnodes.len(),
@@ -526,7 +526,7 @@ impl EdenApi for Client {
         repo: String,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitRevlogData>, EdenApiError> {
+    ) -> Result<Response<CommitRevlogData>, EdenApiError> {
         let msg = format!("Requesting revlog data for {} commit(s)", hgids.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -551,7 +551,7 @@ impl EdenApi for Client {
         repo: String,
         bookmarks: Vec<String>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<BookmarkEntry>, EdenApiError> {
+    ) -> Result<Response<BookmarkEntry>, EdenApiError> {
         let msg = format!("Requesting '{}' bookmarks", bookmarks.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -581,8 +581,8 @@ impl EdenApi for Client {
 
         let url = self.build_url(paths::CLONE_DATA, Some(&repo))?;
         let req = self.configure_request(Request::post(url))?;
-        let mut fetch = self.fetch::<WireCloneData>(vec![req], progress)?;
-        let clone_data = fetch.entries.next().await.ok_or_else(|| {
+        let mut res = self.fetch::<WireCloneData>(vec![req], progress)?;
+        let clone_data = res.entries.next().await.ok_or_else(|| {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
         })??;
         Ok(clone_data)
@@ -614,8 +614,8 @@ impl EdenApi for Client {
                 .to_wire(),
             )
             .map_err(EdenApiError::RequestSerializationFailed)?;
-        let mut fetch = self.fetch::<WireCloneData>(vec![req], None)?;
-        let clone_data = fetch.entries.next().await.ok_or_else(|| {
+        let mut res = self.fetch::<WireCloneData>(vec![req], None)?;
+        let clone_data = res.entries.next().await.ok_or_else(|| {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
         })??;
         Ok(clone_data)
@@ -678,7 +678,7 @@ impl EdenApi for Client {
         repo: String,
         requests: Vec<CommitLocationToHashRequest>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitLocationToHashResponse>, EdenApiError> {
+    ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError> {
         let msg = format!(
             "Requesting commit location to hash (batch size = {})",
             requests.len()
@@ -689,7 +689,7 @@ impl EdenApi for Client {
         }
 
         if requests.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let url = self.build_url(paths::COMMIT_LOCATION_TO_HASH, Some(&repo))?;
@@ -714,7 +714,7 @@ impl EdenApi for Client {
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {
+    ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError> {
         let msg = format!(
             "Requesting commit hash to location (batch size = {})",
             hgids.len()
@@ -725,7 +725,7 @@ impl EdenApi for Client {
         }
 
         if hgids.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let url = self.build_url(paths::COMMIT_HASH_TO_LOCATION, Some(&repo))?;
@@ -748,7 +748,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         hgids: Vec<HgId>,
-    ) -> Result<Fetch<CommitKnownResponse>, EdenApiError> {
+    ) -> Result<Response<CommitKnownResponse>, EdenApiError> {
         let response = self
             .lookup_batch(
                 repo,
@@ -804,7 +804,7 @@ impl EdenApi for Client {
             }
         }
 
-        Ok(Fetch {
+        Ok(Response {
             stats,
             entries: Box::pin(futures::stream::iter(
                 knowns
@@ -834,7 +834,7 @@ impl EdenApi for Client {
         _repo: String,
         _heads: Vec<HgId>,
         _common: Vec<HgId>,
-    ) -> Result<Fetch<CommitGraphEntry>, EdenApiError> {
+    ) -> Result<Response<CommitGraphEntry>, EdenApiError> {
         raise_not_implemented()
     }
 
@@ -843,7 +843,7 @@ impl EdenApi for Client {
         repo: String,
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<LookupResponse>, EdenApiError> {
+    ) -> Result<Response<LookupResponse>, EdenApiError> {
         let msg = format!("Requesting lookup for {} item(s)", items.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -851,7 +851,7 @@ impl EdenApi for Client {
         }
 
         if items.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let url = self.build_url(paths::LOOKUP, Some(&repo))?;
@@ -878,9 +878,9 @@ impl EdenApi for Client {
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<UploadToken>, EdenApiError> {
+    ) -> Result<Response<UploadToken>, EdenApiError> {
         if data.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
         // Filter already uploaded file contents first
 
@@ -949,7 +949,7 @@ impl EdenApi for Client {
             .chain(uploaded_tokens.into_iter().map(|token| Ok(token)))
             .collect::<Vec<Result<_, _>>>();
 
-        Ok(Fetch {
+        Ok(Response {
             stats: Box::pin(async { Ok(Default::default()) }),
             entries: Box::pin(futures::stream::iter(all_tokens)),
         })
@@ -960,7 +960,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         items: Vec<HgFilenodeData>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         let msg = format!("Requesting hg filenodes upload for {} item(s)", items.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -968,7 +968,7 @@ impl EdenApi for Client {
         }
 
         if items.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let url = self.build_url(paths::UPLOAD_FILENODES, Some(&repo))?;
@@ -994,7 +994,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         items: Vec<UploadTreeEntry>,
-    ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
         let msg = format!("Requesting trees upload for {} item(s)", items.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -1002,7 +1002,7 @@ impl EdenApi for Client {
         }
 
         if items.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let url = self.build_url(paths::UPLOAD_TREES, Some(&repo))?;
@@ -1030,7 +1030,7 @@ impl EdenApi for Client {
         repo: String,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         let msg = format!(
             "Requesting changesets upload for {} item(s)",
             changesets.len(),
@@ -1041,7 +1041,7 @@ impl EdenApi for Client {
         }
 
         if changesets.is_empty() {
-            return Ok(Fetch::empty());
+            return Ok(Response::empty());
         }
 
         let url = self.build_url(paths::UPLOAD_CHANGESETS, Some(&repo))?;
@@ -1064,7 +1064,7 @@ impl EdenApi for Client {
         repo: String,
         changeset: BonsaiChangesetContent,
         bubble_id: Option<std::num::NonZeroU64>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         let msg = "Requesting changeset upload";
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -1089,7 +1089,7 @@ impl EdenApi for Client {
     async fn ephemeral_prepare(
         &self,
         repo: String,
-    ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError> {
+    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         let msg = "Preparing ephemeral bubble";
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -1115,7 +1115,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         request: FetchSnapshotRequest,
-    ) -> Result<Fetch<FetchSnapshotResponse>, EdenApiError> {
+    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
         tracing::info!(
             "Fetching snapshot {} from bubble {}",
             request.cs_id,

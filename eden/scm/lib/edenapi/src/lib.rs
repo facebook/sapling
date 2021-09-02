@@ -20,8 +20,8 @@ pub use crate::builder::Builder;
 pub use crate::builder::HttpClientBuilder;
 pub use crate::client::Client;
 pub use crate::errors::{ConfigError, EdenApiError};
-pub use crate::response::BlockingFetch;
-pub use edenapi_trait::{Entries, Fetch, ResponseMeta};
+pub use crate::response::BlockingResponse;
+pub use edenapi_trait::{Entries, Response, ResponseMeta};
 
 // Re-export for convenience.
 pub use configmodel;

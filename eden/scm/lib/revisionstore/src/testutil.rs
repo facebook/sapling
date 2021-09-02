@@ -10,7 +10,7 @@ use std::{collections::HashMap, num::NonZeroU64, path::Path, sync::Arc};
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use configparser::config::ConfigSet;
-use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
+use edenapi::{EdenApi, EdenApiError, ProgressCallback, Response, ResponseMeta, Stats};
 use edenapi_types::{
     AnyFileContentId, AnyId, BonsaiChangesetContent, BookmarkEntry, CloneData,
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
@@ -238,7 +238,7 @@ impl FakeEdenApi {
     fn get_files(
         map: &HashMap<Key, (Bytes, Option<u64>)>,
         reqs: impl Iterator<Item = FileSpec>,
-    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileEntry>, EdenApiError> {
         let entries = reqs
             .filter_map(|spec| {
                 let parents = Parents::default();
@@ -270,7 +270,7 @@ impl FakeEdenApi {
             })
             .collect::<Vec<_>>();
 
-        Ok(Fetch {
+        Ok(Response {
             entries: Box::pin(stream::iter(entries)),
             stats: Box::pin(future::ok(Stats::default())),
         })
@@ -279,7 +279,7 @@ impl FakeEdenApi {
     fn get_trees(
         map: &HashMap<Key, Bytes>,
         keys: Vec<Key>,
-    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         let entries = keys
             .into_iter()
             .filter_map(|key| {
@@ -290,7 +290,7 @@ impl FakeEdenApi {
             })
             .collect::<Vec<_>>();
 
-        Ok(Fetch {
+        Ok(Response {
             entries: Box::pin(stream::iter(entries)),
             stats: Box::pin(future::ok(Stats::default())),
         })
@@ -308,7 +308,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileEntry>, EdenApiError> {
         Self::get_files(
             &self.files,
             keys.into_iter().map(|key| FileSpec {
@@ -326,7 +326,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         reqs: Vec<FileSpec>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileEntry>, EdenApiError> {
         Self::get_files(&self.files, reqs.into_iter())
     }
 
@@ -336,7 +336,7 @@ impl EdenApi for FakeEdenApi {
         keys: Vec<Key>,
         _length: Option<u32>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<HistoryEntry>, EdenApiError> {
+    ) -> Result<Response<HistoryEntry>, EdenApiError> {
         let entries = keys
             .into_iter()
             .filter_map(|key| {
@@ -345,7 +345,7 @@ impl EdenApi for FakeEdenApi {
             })
             .collect::<Vec<_>>();
 
-        Ok(Fetch {
+        Ok(Response {
             entries: Box::pin(stream::iter(entries)),
             stats: Box::pin(future::ok(Stats::default())),
         })
@@ -357,7 +357,7 @@ impl EdenApi for FakeEdenApi {
         keys: Vec<Key>,
         _attrs: Option<TreeAttributes>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         Self::get_trees(&self.trees, keys)
     }
 
@@ -369,7 +369,7 @@ impl EdenApi for FakeEdenApi {
         _basemfnodes: Vec<HgId>,
         _depth: Option<usize>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         unimplemented!()
     }
 
@@ -378,7 +378,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _hgids: Vec<HgId>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitRevlogData>, EdenApiError> {
+    ) -> Result<Response<CommitRevlogData>, EdenApiError> {
         unimplemented!()
     }
 
@@ -412,7 +412,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _requests: Vec<CommitLocationToHashRequest>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitLocationToHashResponse>, EdenApiError> {
+    ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError> {
         unimplemented!()
     }
 
@@ -422,7 +422,7 @@ impl EdenApi for FakeEdenApi {
         _master_heads: Vec<HgId>,
         _hgids: Vec<HgId>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {
+    ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError> {
         unimplemented!()
     }
 
@@ -431,7 +431,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _bookmarks: Vec<String>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<BookmarkEntry>, EdenApiError> {
+    ) -> Result<Response<BookmarkEntry>, EdenApiError> {
         unimplemented!()
     }
 
@@ -439,7 +439,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _hgids: Vec<HgId>,
-    ) -> Result<Fetch<edenapi_types::CommitKnownResponse>, EdenApiError> {
+    ) -> Result<Response<edenapi_types::CommitKnownResponse>, EdenApiError> {
         unimplemented!()
     }
 
@@ -448,7 +448,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _heads: Vec<HgId>,
         _common: Vec<HgId>,
-    ) -> Result<Fetch<edenapi_types::CommitGraphEntry>, EdenApiError> {
+    ) -> Result<Response<edenapi_types::CommitGraphEntry>, EdenApiError> {
         unimplemented!()
     }
 
@@ -457,7 +457,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _items: Vec<AnyId>,
         _bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<LookupResponse>, EdenApiError> {
+    ) -> Result<Response<LookupResponse>, EdenApiError> {
         unimplemented!();
     }
 
@@ -466,7 +466,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _data: Vec<(AnyFileContentId, Bytes)>,
         _bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<UploadToken>, EdenApiError> {
+    ) -> Result<Response<UploadToken>, EdenApiError> {
         unimplemented!();
     }
 
@@ -474,7 +474,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _items: Vec<HgFilenodeData>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         unimplemented!();
     }
 
@@ -482,7 +482,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _items: Vec<UploadTreeEntry>,
-    ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
         unimplemented!();
     }
 
@@ -491,7 +491,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _changesets: Vec<UploadHgChangeset>,
         _mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         unimplemented!();
     }
 
@@ -500,14 +500,14 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _changeset: BonsaiChangesetContent,
         _bubble_id: Option<std::num::NonZeroU64>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         unimplemented!();
     }
 
     async fn ephemeral_prepare(
         &self,
         _repo: String,
-    ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError> {
+    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         unimplemented!()
     }
 
@@ -515,7 +515,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _request: FetchSnapshotRequest,
-    ) -> Result<Fetch<FetchSnapshotResponse>, EdenApiError> {
+    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
         unimplemented!()
     }
 }

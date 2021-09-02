@@ -49,8 +49,8 @@ use edenapi::types::UploadTreeEntry;
 use edenapi::types::UploadTreeResponse;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
-use edenapi::Fetch;
 use edenapi::ProgressCallback;
+use edenapi::Response;
 use edenapi::ResponseMeta;
 use edenapi_trait as edenapi;
 use futures::stream::BoxStream;
@@ -76,7 +76,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Fetch<FileEntry>> {
+    ) -> edenapi::Result<Response<FileEntry>> {
         debug!("files {}", debug_key_list(&keys));
         let mut values = Vec::with_capacity(keys.len());
         for key in keys {
@@ -96,7 +96,7 @@ impl EdenApi for EagerRepo {
             };
             values.push(Ok(entry));
         }
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn files_attrs(
@@ -104,7 +104,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         reqs: Vec<FileSpec>,
         _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Fetch<FileEntry>> {
+    ) -> edenapi::Result<Response<FileEntry>> {
         debug!("files {}", debug_spec_list(&reqs));
         let mut values = Vec::with_capacity(reqs.len());
         for spec in reqs {
@@ -126,7 +126,7 @@ impl EdenApi for EagerRepo {
             };
             values.push(Ok(entry));
         }
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn history(
@@ -135,7 +135,7 @@ impl EdenApi for EagerRepo {
         keys: Vec<Key>,
         _length: Option<u32>,
         _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Fetch<HistoryEntry>> {
+    ) -> edenapi::Result<Response<HistoryEntry>> {
         debug!("history {}", debug_key_list(&keys));
         let mut values = Vec::new();
         let mut visited: HashSet<Key> = Default::default();
@@ -178,7 +178,7 @@ impl EdenApi for EagerRepo {
             };
             values.push(Ok(entry));
         }
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn trees(
@@ -187,7 +187,7 @@ impl EdenApi for EagerRepo {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
         _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Fetch<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
+    ) -> edenapi::Result<Response<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
         debug!("trees {}", debug_key_list(&keys));
         let mut values = Vec::new();
         let attributes = attributes.unwrap_or_default();
@@ -212,7 +212,7 @@ impl EdenApi for EagerRepo {
             assert!(!attributes.child_metadata, "checked above");
             values.push(Ok(Ok(entry)));
         }
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn complete_trees(
@@ -223,7 +223,7 @@ impl EdenApi for EagerRepo {
         _basemfnodes: Vec<HgId>,
         _depth: Option<usize>,
         _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Fetch<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
+    ) -> edenapi::Result<Response<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
         Err(not_implemented_error(
             "EagerRepo does not support complete_trees endpoint".to_string(),
         ))
@@ -234,7 +234,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         hgids: Vec<HgId>,
         _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Fetch<CommitRevlogData>> {
+    ) -> edenapi::Result<Response<CommitRevlogData>> {
         debug!("revlog_data {}", debug_hgid_list(&hgids));
         let mut values = Vec::new();
         for id in hgids {
@@ -246,7 +246,7 @@ impl EdenApi for EagerRepo {
             };
             values.push(Ok(data));
         }
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn clone_data(
@@ -291,7 +291,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         requests: Vec<CommitLocationToHashRequest>,
         _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Fetch<CommitLocationToHashResponse>> {
+    ) -> edenapi::Result<Response<CommitLocationToHashResponse>> {
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let paths: Vec<AncestorPath> = requests
                 .into_iter()
@@ -329,7 +329,7 @@ impl EdenApi for EagerRepo {
             })
             .collect();
 
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn commit_hash_to_location(
@@ -338,7 +338,7 @@ impl EdenApi for EagerRepo {
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
         _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Fetch<CommitHashToLocationResponse>> {
+    ) -> edenapi::Result<Response<CommitHashToLocationResponse>> {
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let heads: Vec<Vertex> = master_heads
                 .into_iter()
@@ -379,14 +379,14 @@ impl EdenApi for EagerRepo {
         // For hgids outside the master group, just ignore them.
         // It's okay to return them with result "None" too.
 
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn commit_known(
         &self,
         _repo: String,
         hgids: Vec<HgId>,
-    ) -> edenapi::Result<Fetch<CommitKnownResponse>> {
+    ) -> edenapi::Result<Response<CommitKnownResponse>> {
         debug!("commit_known {}", debug_hgid_list(&hgids));
         let mut values = Vec::new();
         for id in hgids {
@@ -397,7 +397,7 @@ impl EdenApi for EagerRepo {
             };
             values.push(Ok(response));
         }
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn commit_graph(
@@ -405,7 +405,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Fetch<CommitGraphEntry>, EdenApiError> {
+    ) -> Result<Response<CommitGraphEntry>, EdenApiError> {
         debug!(
             "commit_graph {} {}",
             debug_hgid_list(&heads),
@@ -432,7 +432,7 @@ impl EdenApi for EagerRepo {
             .map_err(map_dag_err)
             .boxed();
         let values: Vec<edenapi::Result<CommitGraphEntry>> = stream.collect().await;
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn bookmarks(
@@ -440,7 +440,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         bookmarks: Vec<String>,
         _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Fetch<BookmarkEntry>> {
+    ) -> edenapi::Result<Response<BookmarkEntry>> {
         debug!("bookmarks {}", debug_string_list(&bookmarks),);
         let mut values = Vec::new();
         let map = self.get_bookmarks_map().map_err(map_crate_err)?;
@@ -452,7 +452,7 @@ impl EdenApi for EagerRepo {
             };
             values.push(Ok(entry));
         }
-        Ok(convert_to_fetch(values))
+        Ok(convert_to_response(values))
     }
 
     async fn lookup_batch(
@@ -460,7 +460,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _items: Vec<AnyId>,
         _bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<LookupResponse>, EdenApiError> {
+    ) -> Result<Response<LookupResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support lookup_batch endpoint".to_string(),
         ))
@@ -471,7 +471,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _data: Vec<(AnyFileContentId, Bytes)>,
         _bubble_id: Option<NonZeroU64>,
-    ) -> Result<Fetch<UploadToken>, EdenApiError> {
+    ) -> Result<Response<UploadToken>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support process_file_upload endpoint".to_string(),
         ))
@@ -481,7 +481,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _items: Vec<HgFilenodeData>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_filenodes_batch endpoint".to_string(),
         ))
@@ -491,7 +491,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _items: Vec<UploadTreeEntry>,
-    ) -> Result<Fetch<UploadTreeResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_trees_batch endpoint".to_string(),
         ))
@@ -502,7 +502,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _changesets: Vec<UploadHgChangeset>,
         _mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_changesets endpoint".to_string(),
         ))
@@ -513,7 +513,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _changeset: BonsaiChangesetContent,
         _bubble_id: Option<std::num::NonZeroU64>,
-    ) -> Result<Fetch<UploadTokensResponse>, EdenApiError> {
+    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support upload_bonsai_changeset endpoint".to_string(),
         ))
@@ -522,7 +522,7 @@ impl EdenApi for EagerRepo {
     async fn ephemeral_prepare(
         &self,
         _repo: String,
-    ) -> Result<Fetch<EphemeralPrepareResponse>, EdenApiError> {
+    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support ephemeral_prepare endpoint".to_string(),
         ))
@@ -532,7 +532,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         _request: FetchSnapshotRequest,
-    ) -> Result<Fetch<FetchSnapshotResponse>, EdenApiError> {
+    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
         unimplemented!()
     }
 }
@@ -627,9 +627,9 @@ fn extract_rename(data: &[u8]) -> Option<Key> {
     None
 }
 
-/// Convert `Vec<T>` to `Fetch<T>`.
-fn convert_to_fetch<T: Send + Sync + 'static>(values: Vec<edenapi::Result<T>>) -> Fetch<T> {
-    Fetch {
+/// Convert `Vec<T>` to `Response<T>`.
+fn convert_to_response<T: Send + Sync + 'static>(values: Vec<edenapi::Result<T>>) -> Response<T> {
+    Response {
         stats: Box::pin(async { Ok(Default::default()) }),
         entries: Box::pin(futures::stream::iter(values)),
     }

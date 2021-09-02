@@ -21,7 +21,7 @@ use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::{Location, VertexName};
 use edenapi::{
     ext::{calc_contentid, upload_snapshot},
-    EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats,
+    EdenApi, EdenApiBlocking, EdenApiError, Response, Stats,
 };
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitGraphEntry, CommitHashToLocationResponse, CommitKnownResponse,
@@ -822,7 +822,7 @@ pub trait EdenApiPyExt: EdenApi {
 impl<T: EdenApi + ?Sized> EdenApiPyExt for T {}
 
 async fn write_files(
-    mut response: Fetch<FileEntry>,
+    mut response: Response<FileEntry>,
     store: Arc<dyn HgIdMutableDeltaStore>,
     prog: &dyn ProgressBar,
 ) -> Result<Stats, EdenApiError> {
@@ -834,7 +834,7 @@ async fn write_files(
 }
 
 async fn write_trees(
-    mut response: Fetch<Result<TreeEntry, EdenApiServerError>>,
+    mut response: Response<Result<TreeEntry, EdenApiServerError>>,
     store: Arc<dyn HgIdMutableDeltaStore>,
     prog: &dyn ProgressBar,
 ) -> Result<Stats, EdenApiError> {
@@ -846,7 +846,7 @@ async fn write_trees(
 }
 
 async fn write_history(
-    mut response: Fetch<HistoryEntry>,
+    mut response: Response<HistoryEntry>,
     store: Arc<dyn HgIdMutableHistoryStore>,
     prog: &dyn ProgressBar,
 ) -> Result<Stats, EdenApiError> {

@@ -49,7 +49,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
         let progress = self.remote.progress.clone();
         let hgidkeys = hgid_keys(keys);
 
-        let fetch = async move {
+        let response = async move {
             let prog = progress.bar(
                 "Downloading files over HTTP",
                 Some(hgidkeys.len() as u64),
@@ -78,7 +78,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
             scmstore = false,
         );
         let _enter = span.enter();
-        let (keys, stats) = block_on(fetch)?;
+        let (keys, stats) = block_on(response)?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
     }
@@ -96,7 +96,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
         let progress = self.remote.progress.clone();
         let hgidkeys = hgid_keys(keys);
 
-        let fetch = async move {
+        let response = async move {
             let prog = progress.bar(
                 "Downloading trees over HTTP",
                 Some(hgidkeys.len() as u64),
@@ -125,7 +125,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
             scmstore = false,
         );
         let _enter = span.enter();
-        let (keys, stats) = block_on(fetch)?;
+        let (keys, stats) = block_on(response)?;
         util::record_edenapi_stats(&span, &stats);
         Ok(keys)
     }

@@ -13,21 +13,21 @@ use http_client::Stats;
 
 use crate::errors::EdenApiError;
 
-pub use edenapi_trait::Fetch;
+pub use edenapi_trait::Response;
 pub use edenapi_trait::ResponseMeta;
 
-/// Non-async version of `Fetch`.
-pub struct BlockingFetch<T> {
+/// Non-async version of `Response`.
+pub struct BlockingResponse<T> {
     pub entries: Vec<T>,
     pub stats: Stats,
 }
 
-impl<T> BlockingFetch<T> {
+impl<T> BlockingResponse<T> {
     pub(crate) fn from_async<F>(fetch: F) -> Result<Self, EdenApiError>
     where
-        F: Future<Output = Result<Fetch<T>, EdenApiError>>,
+        F: Future<Output = Result<Response<T>, EdenApiError>>,
     {
-        let Fetch { entries, stats } =
+        let Response { entries, stats } =
             block_unless_interrupted(fetch).context("transfer interrupted by user")??;
         let entries = block_unless_interrupted(entries.try_collect())
             .context("transfer interrupted by user")??;

@@ -15,7 +15,7 @@ use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::{EdenApi, ProgressCallback};
 use crate::errors::EdenApiError;
-use crate::response::{BlockingFetch, ResponseMeta};
+use crate::response::{BlockingResponse, ResponseMeta};
 
 pub trait EdenApiBlocking: EdenApi {
     fn health_blocking(&self) -> Result<ResponseMeta, EdenApiError> {
@@ -27,8 +27,8 @@ pub trait EdenApiBlocking: EdenApi {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<FileEntry>, EdenApiError> {
-        BlockingFetch::from_async(self.files(repo, keys, progress))
+    ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
+        BlockingResponse::from_async(self.files(repo, keys, progress))
     }
 
     fn files_attrs_blocking(
@@ -36,8 +36,8 @@ pub trait EdenApiBlocking: EdenApi {
         repo: String,
         reqs: Vec<FileSpec>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<FileEntry>, EdenApiError> {
-        BlockingFetch::from_async(self.files_attrs(repo, reqs, progress))
+    ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
+        BlockingResponse::from_async(self.files_attrs(repo, reqs, progress))
     }
 
     fn history_blocking(
@@ -46,8 +46,8 @@ pub trait EdenApiBlocking: EdenApi {
         keys: Vec<Key>,
         length: Option<u32>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<HistoryEntry>, EdenApiError> {
-        BlockingFetch::from_async(self.history(repo, keys, length, progress))
+    ) -> Result<BlockingResponse<HistoryEntry>, EdenApiError> {
+        BlockingResponse::from_async(self.history(repo, keys, length, progress))
     }
 
     fn trees_blocking(
@@ -56,8 +56,8 @@ pub trait EdenApiBlocking: EdenApi {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        BlockingFetch::from_async(self.trees(repo, keys, attributes, progress))
+    ) -> Result<BlockingResponse<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+        BlockingResponse::from_async(self.trees(repo, keys, attributes, progress))
     }
 
     fn complete_trees_blocking(
@@ -68,8 +68,8 @@ pub trait EdenApiBlocking: EdenApi {
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        BlockingFetch::from_async(self.complete_trees(
+    ) -> Result<BlockingResponse<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+        BlockingResponse::from_async(self.complete_trees(
             repo,
             rootdir,
             mfnodes,
@@ -84,8 +84,8 @@ pub trait EdenApiBlocking: EdenApi {
         repo: String,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<CommitRevlogData>, EdenApiError> {
-        BlockingFetch::from_async(self.commit_revlog_data(repo, hgids, progress))
+    ) -> Result<BlockingResponse<CommitRevlogData>, EdenApiError> {
+        BlockingResponse::from_async(self.commit_revlog_data(repo, hgids, progress))
     }
 
     fn clone_data_blocking(
@@ -109,8 +109,8 @@ pub trait EdenApiBlocking: EdenApi {
         repo: String,
         requests: Vec<CommitLocationToHashRequest>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<CommitLocationToHashResponse>, EdenApiError> {
-        BlockingFetch::from_async(self.commit_location_to_hash(repo, requests, progress))
+    ) -> Result<BlockingResponse<CommitLocationToHashResponse>, EdenApiError> {
+        BlockingResponse::from_async(self.commit_location_to_hash(repo, requests, progress))
     }
 
     fn commit_hash_to_location_blocking(
@@ -119,8 +119,13 @@ pub trait EdenApiBlocking: EdenApi {
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<CommitHashToLocationResponse>, EdenApiError> {
-        BlockingFetch::from_async(self.commit_hash_to_location(repo, master_heads, hgids, progress))
+    ) -> Result<BlockingResponse<CommitHashToLocationResponse>, EdenApiError> {
+        BlockingResponse::from_async(self.commit_hash_to_location(
+            repo,
+            master_heads,
+            hgids,
+            progress,
+        ))
     }
 
     fn bookmarks_blocking(
@@ -128,8 +133,8 @@ pub trait EdenApiBlocking: EdenApi {
         repo: String,
         bookmarks: Vec<String>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<BookmarkEntry>, EdenApiError> {
-        BlockingFetch::from_async(self.bookmarks(repo, bookmarks, progress))
+    ) -> Result<BlockingResponse<BookmarkEntry>, EdenApiError> {
+        BlockingResponse::from_async(self.bookmarks(repo, bookmarks, progress))
     }
 }
 

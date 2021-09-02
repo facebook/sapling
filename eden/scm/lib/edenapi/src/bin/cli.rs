@@ -21,7 +21,7 @@ use tokio::io;
 use tokio::io::AsyncWriteExt;
 
 use configparser::config::{ConfigSet, Options};
-use edenapi::{Builder, EdenApi, Entries, Fetch, Progress, ProgressCallback};
+use edenapi::{Builder, EdenApi, Entries, Progress, ProgressCallback, Response};
 use edenapi_types::{
     json::FromJson, wire::ToWire, BookmarkRequest, CommitRevlogDataRequest, CompleteTreeRequest,
     FileRequest, HistoryRequest, TreeRequest,
@@ -229,7 +229,7 @@ async fn cmd_commit_revlog_data(args: Args) -> Result<()> {
 /// Handle the incoming deserialized response by reserializing it
 /// and dumping it to stdout (only if stdout isn't a TTY, to avoid
 /// messing up the user's terminal).
-async fn handle_response<T: ToWire>(res: Fetch<T>, bar: ProgressBar) -> Result<()> {
+async fn handle_response<T: ToWire>(res: Response<T>, bar: ProgressBar) -> Result<()> {
     let buf = serialize_and_concat(res.entries).await?;
 
     let stats = res.stats.await?;
@@ -248,7 +248,7 @@ async fn handle_response<T: ToWire>(res: Fetch<T>, bar: ProgressBar) -> Result<(
 }
 
 // TODO(meyer): Remove when all types have wire type
-async fn handle_response_raw<T: Serialize>(res: Fetch<T>, bar: ProgressBar) -> Result<()> {
+async fn handle_response_raw<T: Serialize>(res: Response<T>, bar: ProgressBar) -> Result<()> {
     let buf = serialize_and_concat_raw(res.entries).await?;
 
     let stats = res.stats.await?;
