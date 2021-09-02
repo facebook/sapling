@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::io::Read;
+use std::io::{Read, SeekFrom};
 use std::mem;
 
-use curl::easy::{Handler, ReadError, WriteError};
+use curl::easy::{Handler, ReadError, SeekResult, WriteError};
 use http::{header, HeaderMap, StatusCode, Version};
 
 use crate::header::Header;
@@ -93,6 +93,27 @@ impl Handler for Buffered {
         })
     }
 
+    fn seek(&mut self, whence: SeekFrom) -> SeekResult {
+        let size = match &self.request_context.body {
+            Some(payload) => payload.len(),
+            None => return SeekResult::CantSeek,
+        };
+
+        let (start, offset) = match whence {
+            SeekFrom::Start(offset) => (0, offset as i64),
+            SeekFrom::End(offset) => (size, offset),
+            SeekFrom::Current(offset) => (self.bytes_sent, offset),
+        };
+
+        self.bytes_sent = if offset >= 0 {
+            start.saturating_add(offset as usize).clamp(0, size)
+        } else {
+            start.saturating_sub(-offset as usize)
+        };
+
+        SeekResult::Ok
+    }
+
     fn header(&mut self, data: &[u8]) -> bool {
         match Header::parse(data) {
             Ok(Header::Header(name, value)) => {
@@ -151,6 +172,7 @@ impl HandlerExt for Buffered {
 mod tests {
     use super::*;
 
+    use assert_matches::assert_matches;
     use http::HeaderValue;
 
     use crate::progress::ProgressReporter;
@@ -187,6 +209,33 @@ mod tests {
         assert_eq!(&expected[..], &*body);
 
         assert!(handler.take_body().is_empty());
+    }
+
+    #[test]
+    fn test_seek() {
+        let data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+        let mut handler = Buffered::new(RequestContext::dummy().body(data));
+
+        assert_matches!(handler.seek(SeekFrom::Start(3)), SeekResult::Ok);
+        assert_eq!(handler.bytes_sent, 3);
+
+        assert_matches!(handler.seek(SeekFrom::End(-3)), SeekResult::Ok);
+        assert_eq!(handler.bytes_sent, 7);
+
+        assert_matches!(handler.seek(SeekFrom::End(20)), SeekResult::Ok);
+        assert_eq!(handler.bytes_sent, 10);
+
+        assert_matches!(handler.seek(SeekFrom::Current(-4)), SeekResult::Ok);
+        assert_eq!(handler.bytes_sent, 6);
+
+        assert_matches!(handler.seek(SeekFrom::Current(2)), SeekResult::Ok);
+        assert_eq!(handler.bytes_sent, 8);
+
+        assert_matches!(handler.seek(SeekFrom::Current(-20)), SeekResult::Ok);
+        assert_eq!(handler.bytes_sent, 0);
+
+        handler.request_context_mut().body = None;
+        assert_matches!(handler.seek(SeekFrom::Current(0)), SeekResult::CantSeek);
     }
 
     #[test]
