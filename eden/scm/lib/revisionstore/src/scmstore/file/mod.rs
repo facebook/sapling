@@ -613,6 +613,7 @@ impl ContentDataStore for FileStore {
         self.metrics.write().api.contentdatastore_blob.call(0);
         Ok(
             match self
+                .local()
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
@@ -629,6 +630,7 @@ impl ContentDataStore for FileStore {
         self.metrics.write().api.contentdatastore_metadata.call(0);
         Ok(
             match self
+                .local()
                 .fetch(
                     std::iter::once(key.clone()).filter_map(|sk| sk.maybe_into_key()),
                     FileAttributes::CONTENT,
