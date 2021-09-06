@@ -38,7 +38,7 @@ use observability::{DynamicLevelDrain, ObservabilityContext};
 use repo_factory::ReadOnlyStorage;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog_ext::make_tag_filter_drain;
-use sql_ext::facebook::{MysqlOptions, PoolConfig};
+use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType};
 use tunables::init_tunables_worker;
 
 use crate::helpers::create_runtime;
@@ -454,12 +454,16 @@ fn parse_mysql_options(
     let pool = app_data.global_mysql_connection_pool.clone();
     let pool_config =
         parse_mysql_pool_options(matches).context("Failed to parse MySQL pool options")?;
-    let master_only = matches.is_present(MYSQL_MASTER_ONLY);
+    let read_connection_type = if matches.is_present(MYSQL_MASTER_ONLY) {
+        ReadConnectionType::Master
+    } else {
+        ReadConnectionType::ReplicaOnly
+    };
 
     Ok(MysqlOptions {
         pool,
         pool_config,
-        master_only,
+        read_connection_type,
     })
 }
 
@@ -519,12 +523,16 @@ fn parse_sqlblob_mysql_options(
 ) -> Result<MysqlOptions, Error> {
     let pool = app_data.sqlblob_mysql_connection_pool.clone();
     let pool_config = parse_mysql_sqlblob_pool_options(matches)?;
-    let master_only = matches.is_present(MYSQL_MASTER_ONLY);
+    let read_connection_type = if matches.is_present(MYSQL_MASTER_ONLY) {
+        ReadConnectionType::Master
+    } else {
+        ReadConnectionType::ReplicaOnly
+    };
 
     Ok(MysqlOptions {
         pool,
         pool_config,
-        master_only,
+        read_connection_type,
     })
 }
 

@@ -46,7 +46,7 @@ pub mod facebook {
         pub pool: SharedConnectionPool,
         // pool config is used only once when the shared connection pool is being created
         pub pool_config: PoolConfig,
-        pub master_only: bool,
+        pub read_connection_type: ReadConnectionType,
     }
 
     impl MysqlOptions {
@@ -60,34 +60,36 @@ pub mod facebook {
                 Some(self.pool_config.per_key_limit as usize)
             }
         }
-
-        pub fn read_connection_type(&self) -> ReadConnectionType {
-            if self.master_only {
-                ReadConnectionType::Master
-            } else {
-                ReadConnectionType::Replica
-            }
-        }
     }
 
     impl Debug for MysqlOptions {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let conn_type = if self.master_only {
-                "master only"
-            } else {
-                "replica"
-            };
             write!(
                 f,
-                "MySQL pool with config {:?}, connection type: {}",
-                self.pool_config, conn_type
+                "MySQL pool with config {:?}, connection type: {:?}",
+                self.pool_config, self.read_connection_type
             )
         }
     }
 
+    /// Mirrors facebook::db::InstanceRequirement enum for DBLocator
     #[derive(Copy, Clone, Debug)]
     pub enum ReadConnectionType {
-        Replica,
+        /// Choose master or replica, whatever is closest and available.
+        /// Use this if both master and replica are in the same region, and reads
+        /// should we served by both.
+        Closest,
+        /// Choose replicas only, avoiding the master, even if it means going to a
+        /// remote region.
+        ReplicaOnly,
+        /// Choose master only (typically for writes). Will never connect to replica.
         Master,
+        /// Choose closer first and inside the same region, replicas first.
+        /// In case both master and replica in the same region - all reads
+        /// will be routed to the replica.
+        ReplicaFirst,
+        /// Choose replicas that satisfy a lower bound HLC value in order to
+        /// perform consistent read-your-writes operations
+        ReadAfterWriteConsistency,
     }
 }

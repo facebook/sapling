@@ -29,7 +29,7 @@ use metaconfig_types::{
 };
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
 use sql_construct::facebook::FbSqlConstruct;
-use sql_ext::facebook::MysqlOptions;
+use sql_ext::facebook::{MysqlOptions, ReadConnectionType};
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;
@@ -401,7 +401,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     match blobstore {
         Ok(blobstore) => {
             let mut mysql_options = config.mysql_options.clone();
-            mysql_options.master_only = false;
+            mysql_options.read_connection_type = ReadConnectionType::ReplicaOnly;
 
             let queue: Arc<dyn BlobstoreSyncQueue> = Arc::new(SqlBlobstoreSyncQueue::with_mysql(
                 fb,
