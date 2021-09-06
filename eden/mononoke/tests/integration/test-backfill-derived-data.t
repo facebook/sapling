@@ -22,7 +22,7 @@ setup configuration
 
 backfill derived data
   $ DERIVED_DATA_TYPE="fsnodes"
-  $ backfill_derived_data prefetch-commits --out-filename "$TESTTMP/prefetched_commits"
+  $ dump_public_changeset_entries --out-filename "$TESTTMP/prefetched_commits"
   *] enabled stdlog with level: Error (set RUST_LOG to configure) (glob)
   *] Initializing tunables: * (glob)
   * using repo "repo" repoid RepositoryId(0) (glob)

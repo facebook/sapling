@@ -16,10 +16,9 @@ use blobrepo_override::DangerousOverride;
 use bookmarks::{
     BookmarkKind, BookmarkPagination, BookmarkPrefix, BookmarksSubscription, Freshness,
 };
-use bulkops::{Direction, PublicChangesetBulkFetch};
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, InProcessLease, LeaseOps};
-use changesets::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry};
+use changesets::{deserialize_cs_entries, ChangesetEntry};
 use clap::{Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{
@@ -67,7 +66,6 @@ define_stats! {
 
 const ARG_ALL_TYPES: &str = "all-types";
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
-const ARG_OUT_FILENAME: &str = "out-filename";
 const ARG_SKIP: &str = "skip-changesets";
 const ARG_LIMIT: &str = "limit";
 const ARG_REGENERATE: &str = "regenerate";
@@ -86,7 +84,6 @@ const ARG_GAP_SIZE: &str = "gap-size";
 const SUBCOMMAND_BACKFILL: &str = "backfill";
 const SUBCOMMAND_BACKFILL_ALL: &str = "backfill-all";
 const SUBCOMMAND_TAIL: &str = "tail";
-const SUBCOMMAND_PREFETCH_COMMITS: &str = "prefetch-commits";
 const SUBCOMMAND_SINGLE: &str = "single";
 
 const DEFAULT_BATCH_SIZE_STR: &str = "128";
@@ -261,17 +258,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                             .long(ARG_GAP_SIZE)
                             .takes_value(true)
                             .help("size of gap to leave in derived data types that support gaps"),
-                    ),
-            )
-            .subcommand(
-                SubCommand::with_name(SUBCOMMAND_PREFETCH_COMMITS)
-                    .about("fetch commits metadata from the database and save them to a file")
-                    .arg(
-                        Arg::with_name(ARG_OUT_FILENAME)
-                            .long(ARG_OUT_FILENAME)
-                            .takes_value(true)
-                            .required(true)
-                            .help("file name where commits will be saved"),
                     ),
             )
             .subcommand(
@@ -529,27 +515,6 @@ async fn run_subcmd<'a>(
                 tailers.push(future);
             }
             try_join_all(tailers).await.map(|_| ())
-        }
-        (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
-            let out_filename = sub_m
-                .value_of(ARG_OUT_FILENAME)
-                .ok_or_else(|| format_err!("missing required argument: {}", ARG_OUT_FILENAME))?
-                .to_string();
-
-            let repo: InnerRepo = args::open_repo(fb, &logger, &matches).await?;
-
-            let fetcher = PublicChangesetBulkFetch::new(
-                repo.blob_repo.get_changesets_object(),
-                repo.blob_repo.get_phases(),
-            );
-
-            let css = fetcher
-                .fetch(&ctx, Direction::OldestFirst)
-                .try_collect()
-                .await?;
-
-            let serialized = serialize_cs_entries(css);
-            Ok(fs::write(out_filename, serialized)?)
         }
         (SUBCOMMAND_SINGLE, Some(sub_m)) => {
             let hash_or_bookmark = sub_m
