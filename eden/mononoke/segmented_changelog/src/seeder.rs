@@ -7,9 +7,10 @@
 
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use futures::stream::TryStreamExt;
 use slog::info;
+use std::collections::{HashSet, VecDeque};
 
 use sql_ext::replication::ReplicaLagMonitor;
 use stats::prelude::*;
@@ -34,9 +35,85 @@ define_stats! {
     build_all_graph: timeseries(Sum),
 }
 
+enum ChangesetBulkFetch {
+    Fetch(Arc<PublicChangesetBulkFetch>),
+    UsePrefetched {
+        prefetched: Vec<ChangesetEntry>,
+        changesets: Arc<dyn Changesets>,
+    },
+}
+
+impl ChangesetBulkFetch {
+    async fn fetch(&self, ctx: &CoreContext, head: ChangesetId) -> Result<HashSet<ChangesetEntry>> {
+        use ChangesetBulkFetch::*;
+
+        match self {
+            Fetch(bulk_fetch) => {
+                let cs_entries: HashSet<_> = bulk_fetch
+                    // Order doesn't matter here
+                    .fetch(ctx, Direction::OldestFirst)
+                    .inspect_ok({
+                        let mut count = 1;
+                        move |_| {
+                            count += 1;
+                            if count % 100000 == 0 {
+                                info!(ctx.logger(), "{} changesets loaded ", count);
+                            }
+                        }
+                    })
+                    .try_collect()
+                    .await?;
+                Ok(cs_entries)
+            }
+            UsePrefetched {
+                prefetched,
+                changesets,
+            } => {
+                let mut visited = HashSet::new();
+                for cs in prefetched {
+                    visited.insert(cs.cs_id);
+                }
+                // Check that prefetched changesets are valid i.e. that every parent changeset is present
+                for cs in prefetched {
+                    for parent in &cs.parents {
+                        if !visited.contains(&parent) {
+                            return Err(anyhow!(
+                                "invalid prefetched changesets - parent {} of {} is not present",
+                                parent,
+                                cs.cs_id
+                            ));
+                        }
+                    }
+                }
+
+                let mut q = VecDeque::new();
+                if visited.insert(head) {
+                    q.push_back(head);
+                }
+
+                let mut res: HashSet<_> = prefetched.clone().into_iter().collect();
+                while let Some(cs_id) = q.pop_front() {
+                    let cs_entry = changesets
+                        .get(ctx.clone(), cs_id)
+                        .await?
+                        .ok_or_else(|| anyhow!("{} not found", cs_id))?;
+                    for parent in &cs_entry.parents {
+                        if visited.insert(*parent) {
+                            q.push_back(*parent);
+                        }
+                    }
+                    res.insert(cs_entry);
+                }
+
+                Ok(res)
+            }
+        }
+    }
+}
+
 pub struct SegmentedChangelogSeeder {
     idmap_version_store: SqlIdMapVersionStore,
-    changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
+    changeset_bulk_fetch: ChangesetBulkFetch,
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: IdMapFactory,
@@ -50,11 +127,20 @@ impl SegmentedChangelogSeeder {
         changesets: Arc<dyn Changesets>,
         phases: Arc<dyn Phases>,
         blobstore: Arc<dyn Blobstore>,
+        prefetched: Option<Vec<ChangesetEntry>>,
     ) -> Self {
         let idmap_version_store = SqlIdMapVersionStore::new(connections.0.clone(), repo_id);
         let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
         let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
-        let changeset_bulk_fetch = Arc::new(PublicChangesetBulkFetch::new(changesets, phases));
+        let changeset_bulk_fetch = match prefetched {
+            Some(prefetched) => ChangesetBulkFetch::UsePrefetched {
+                prefetched,
+                changesets,
+            },
+            None => ChangesetBulkFetch::Fetch(Arc::new(PublicChangesetBulkFetch::new(
+                changesets, phases,
+            ))),
+        };
         let idmap_factory = IdMapFactory::new(connections.0, replica_lag_monitor, repo_id);
         Self {
             idmap_version_store,
@@ -74,7 +160,7 @@ impl SegmentedChangelogSeeder {
     ) -> Self {
         Self {
             idmap_version_store,
-            changeset_bulk_fetch,
+            changeset_bulk_fetch: ChangesetBulkFetch::Fetch(changeset_bulk_fetch),
             sc_version_store,
             iddag_save_store,
             idmap_factory,
@@ -109,20 +195,7 @@ impl SegmentedChangelogSeeder {
             "seeding segmented changelog using idmap version: {}", idmap_version
         );
 
-        let changeset_entries: Vec<ChangesetEntry> = self
-            .changeset_bulk_fetch
-            .fetch(ctx, Direction::OldestFirst)
-            .inspect_ok({
-                let mut count = 1;
-                move |_| {
-                    count += 1;
-                    if count % 100000 == 0 {
-                        info!(ctx.logger(), "{} changesets loaded ", count);
-                    }
-                }
-            })
-            .try_collect()
-            .await?;
+        let changeset_entries = self.changeset_bulk_fetch.fetch(ctx, head).await?;
         info!(
             ctx.logger(),
             "{} changesets loaded",

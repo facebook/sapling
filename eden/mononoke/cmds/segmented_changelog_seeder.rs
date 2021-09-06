@@ -11,10 +11,12 @@ use std::sync::Arc;
 
 use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
+use bytes::Bytes;
 use clap::Arg;
 use slog::info;
 
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
+use changesets::deserialize_cs_entries;
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
@@ -27,6 +29,7 @@ use segmented_changelog::{SegmentedChangelogSeeder, SegmentedChangelogSqlConnect
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
+const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 const IDMAP_VERSION_ARG: &str = "idmap-version";
 const HEAD_ARG: &str = "head";
 
@@ -49,6 +52,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long(HEAD_ARG)
                 .takes_value(true)
                 .help("What head to use for Segmented Changelog."),
+        )
+        .arg(
+            Arg::with_name(ARG_PREFETCHED_COMMITS_PATH)
+                .long(ARG_PREFETCHED_COMMITS_PATH)
+                .takes_value(true)
+                .required(false)
+                .help(
+                    "a file with a serialized list of ChangesetEntry, \
+                which can be used to speed up rebuilding of segmented changelog",
+                ),
         );
     let matches = app.get_matches(fb)?;
 
@@ -108,6 +121,18 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .open::<SegmentedChangelogSqlConnections>()
         .context("error opening segmented changelog sql connections")?;
 
+    let prefetched_commits =
+        match matches.value_of(ARG_PREFETCHED_COMMITS_PATH) {
+            Some(path) => {
+                info!(ctx.logger(), "reading prefetched commits from {}", path);
+                let data = tokio::fs::read(path).await?;
+                Some(deserialize_cs_entries(&Bytes::from(data)).with_context(|| {
+                    format!("failed to parse serialized cs entries from {}", path)
+                })?)
+            }
+            None => None,
+        };
+
     let segmented_changelog_seeder = SegmentedChangelogSeeder::new(
         repo.get_repoid(),
         segmented_changelog_sql_connections,
@@ -115,6 +140,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         repo.get_changesets_object(),
         repo.get_phases(),
         Arc::new(repo.get_blobstore()),
+        prefetched_commits,
     );
 
     info!(

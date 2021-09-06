@@ -19,6 +19,7 @@ use once_cell::sync::Lazy;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Bookmarks};
 use caching_ext::{CachelibHandler, MemcacheHandler};
+use changesets::{ChangesetEntry, ChangesetsRef};
 use context::CoreContext;
 use fixtures::{branch_even, linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -80,11 +81,12 @@ fn new_tailer(
     )
 }
 
-async fn seed(
+async fn seed_with_prefetched(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
     connections: &SegmentedChangelogSqlConnections,
     head: ChangesetId,
+    prefetched: Option<Vec<ChangesetEntry>>,
 ) -> Result<()> {
     // Does it make sense to seed up to the master commit instead of head?
     // Something to consider. Depends how it's used by tests.
@@ -99,8 +101,25 @@ async fn seed(
         blobrepo.get_changesets_object(),
         blobrepo.get_phases(),
         Arc::new(blobrepo.get_blobstore()),
+        prefetched,
     );
     seeder.run(ctx, head).await
+}
+
+async fn seed(
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    connections: &SegmentedChangelogSqlConnections,
+    head: ChangesetId,
+) -> Result<()> {
+    seed_with_prefetched(
+        ctx,
+        blobrepo,
+        connections,
+        head,
+        None, // no prefetching
+    )
+    .await
 }
 
 async fn load_sc_version(
@@ -189,6 +208,14 @@ async fn validate_build_idmap(
         }
     }
     Ok(())
+}
+
+async fn fetch_cs_entry(ctx: &CoreContext, repo: &BlobRepo, cs: &str) -> Result<ChangesetEntry> {
+    let cs = resolve_cs_id(&ctx, &repo, cs).await?;
+    repo.changesets()
+        .get(ctx.clone(), cs)
+        .await?
+        .ok_or_else(|| format_err!("can't find changeset entry for {}", cs))
 }
 
 #[fbinit::test]
@@ -958,6 +985,47 @@ async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
         .err()
         .unwrap();
     assert!(err.is::<crate::MismatchedHeadsError>());
+
+    Ok(())
+}
+#[fbinit::test]
+async fn test_prefetched_seeding(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = linear::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+    let repo_id = blobrepo.get_repoid();
+
+    let first_cs_entry =
+        fetch_cs_entry(&ctx, &blobrepo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
+    let second_cs_entry =
+        fetch_cs_entry(&ctx, &blobrepo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
+    let last_cs =
+        resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
+
+    // this should fail - we didn't add parent commit in the list of prefetched
+    let res = seed_with_prefetched(
+        &ctx,
+        &blobrepo,
+        &conns,
+        last_cs,
+        Some(vec![second_cs_entry.clone()]),
+    )
+    .await;
+    assert!(res.is_err());
+
+    // And this should succeed since we have both first and second entry in "prefetched" list
+    seed_with_prefetched(
+        &ctx,
+        &blobrepo,
+        &conns,
+        last_cs,
+        Some(vec![first_cs_entry, second_cs_entry]),
+    )
+    .await?;
+
+    // Check that new entries were added to the idmap
+    let idmap = load_idmap(&ctx, repo_id, &conns).await?;
+    assert!(idmap.find_dag_id(&ctx, last_cs).await?.is_some());
 
     Ok(())
 }
