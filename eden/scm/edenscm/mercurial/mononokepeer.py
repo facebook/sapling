@@ -382,6 +382,7 @@ class mononokepeer(stdiopeer.stdiopeer):
                 httpcode = headerparts[1]
                 httpstatus = b" ".join(headerparts[2:])
                 bodylength = 0
+                apeadvice = b""
 
                 # Strip away all headers so we can start decoding Mercurial
                 # wire protocol or read HTTP response body
@@ -391,17 +392,20 @@ class mononokepeer(stdiopeer.stdiopeer):
                         print("< {}".format(line))
                     if line.lower().startswith(b"x-mononoke-encoding:"):
                         decompress = True
-                    if line.lower().startswith(b"content-length:"):
-                        bodylength = int(line.split()[1])
+                    elif line.lower().startswith(b"content-length:"):
+                        bodylength = int(line.split(b" ", 1)[1])
+                    elif line.lower().startswith(b"x-fb-validated-x2pauth-advice"):
+                        apeadvice = line.split(b" ", 1)[1]
 
                 if httpcode != b"101":
                     bodyerrmsg = self.handle.read(bodylength)
                     self._abort(
                         error.BadResponseError(
-                            'unexpected server response: "{} {}": {}'.format(
+                            'unexpected server response: "{} {}": {}{}'.format(
                                 decodeutf8(httpcode),
                                 decodeutf8(httpstatus),
                                 decodeutf8(bodyerrmsg),
+                                decodeutf8(apeadvice),
                             )
                         )
                     )

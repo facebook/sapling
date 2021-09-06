@@ -29,6 +29,7 @@ use futures::{
     future::FutureExt,
     stream::{iter, FuturesUnordered, StreamExt, TryStreamExt},
 };
+use http::header::HeaderMap;
 use http::status::StatusCode;
 use minibytes::Bytes;
 use parking_lot::{Mutex, RwLock};
@@ -63,7 +64,7 @@ use crate::{
         strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
         HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
     },
-    error::{FetchError, TransferError},
+    error::{Advice, FetchError, TransferError},
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::LocalStore,
@@ -1000,6 +1001,21 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
     }
 }
 
+fn get_advice_header(headers: &HeaderMap) -> Option<String> {
+    for key in headers.keys() {
+        if key.as_str().starts_with("X-FB-Validated-X2PAuth-Advice") {
+            return Some(
+                headers
+                    .get(key)
+                    .and_then(|c| std::str::from_utf8(c.as_bytes()).ok())
+                    .unwrap_or("Failed to get X-FB-Validated-X2PAuth-Advice-* header.")
+                    .into(),
+            );
+        }
+    }
+    None
+}
+
 impl LfsRemoteInner {
     pub fn batch_fetch(
         &self,
@@ -1156,7 +1172,8 @@ impl LfsRemoteInner {
 
                     let status = head.status();
                     if !status.is_success() {
-                        return Err(TransferError::HttpStatus(status));
+                        let advice = get_advice_header(head.headers());
+                        return Err(TransferError::HttpStatus(status, advice.into()));
                     }
 
                     check_status(status)?;
@@ -1195,7 +1212,9 @@ impl LfsRemoteInner {
                 };
 
                 let retry_strategy = match &error {
-                    TransferError::HttpStatus(status) => RetryStrategy::from_http_status(*status),
+                    TransferError::HttpStatus(status, _) => {
+                        RetryStrategy::from_http_status(*status)
+                    }
                     TransferError::HttpClientError(http_error) => {
                         RetryStrategy::from_http_error(&http_error)
                     }
@@ -1376,7 +1395,7 @@ impl LfsRemoteInner {
         let data = match data {
             Ok(data) => data,
             Err(err) => match err.error {
-                TransferError::HttpStatus(http::StatusCode::GONE) => {
+                TransferError::HttpStatus(http::StatusCode::GONE, _) => {
                     Bytes::from_static(redacted::REDACTED_CONTENT)
                 }
                 _ => return Err(err.into()),

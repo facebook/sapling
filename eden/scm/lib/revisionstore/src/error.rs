@@ -8,6 +8,7 @@
 use std::time::Duration;
 
 use anyhow::Error;
+use http::header::HeaderMap;
 use thiserror::Error;
 use url::Url;
 
@@ -27,10 +28,28 @@ pub struct FetchError {
     pub error: TransferError,
 }
 
+#[derive(Debug, Clone)]
+pub struct Advice(Option<String>);
+
+impl std::fmt::Display for Advice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.0 {
+            None => Ok(()),
+            Some(advice) => write!(f, "Advice: {}", advice),
+        }
+    }
+}
+
+impl From<Option<String>> for Advice {
+    fn from(opt_s: Option<String>) -> Self {
+        Advice(opt_s)
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum TransferError {
-    #[error("HTTP status {}", .0)]
-    HttpStatus(StatusCode),
+    #[error("HTTP status {}. {}", .0, .1)]
+    HttpStatus(StatusCode, Advice),
 
     #[error("HTTP transfer failed")]
     HttpClientError(#[from] HttpClientError),
