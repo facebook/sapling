@@ -6,12 +6,12 @@
  */
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use context::CoreContext;
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, MPath};
+use repo_blobstore::RepoBlobstore;
 use std::collections::HashSet;
 
 /// NOTE: To be used only for generating list of files for old, Mercurial format of Changesets.
@@ -23,33 +23,33 @@ use std::collections::HashSet;
 /// It sorts the returned Vec<MPath> in the order expected by Mercurial.
 pub async fn compute_changed_files(
     ctx: CoreContext,
-    repo: BlobRepo,
+    blobstore: RepoBlobstore,
     root: HgManifestId,
     p1: Option<HgManifestId>,
     p2: Option<HgManifestId>,
 ) -> Result<Vec<MPath>, Error> {
     let files = match (p1, p2) {
         (None, None) => {
-            root.list_leaf_entries(ctx, repo.get_blobstore())
+            root.list_leaf_entries(ctx, blobstore)
                 .map_ok(|(path, _)| path)
                 .try_collect()
                 .await?
         }
         (Some(manifest), None) | (None, Some(manifest)) => {
-            compute_changed_files_pair(ctx, root, manifest, repo).await?
+            compute_changed_files_pair(ctx, blobstore.clone(), root, manifest).await?
         }
         (Some(p1), Some(p2)) => {
             let changed = future::try_join(
-                compute_changed_files_pair(ctx.clone(), root, p1, repo.clone()),
-                compute_changed_files_pair(ctx.clone(), root, p2, repo.clone()),
+                compute_changed_files_pair(ctx.clone(), blobstore.clone(), root, p1),
+                compute_changed_files_pair(ctx.clone(), blobstore.clone(), root, p2),
             )
             .map_ok(|(left, right)| left.intersection(&right).cloned().collect::<Vec<_>>());
 
             // Mercurial always includes removed files, we need to match this behaviour
             let (ch1, ch2, ch3) = future::try_join3(
                 changed,
-                compute_removed_files(&ctx, &repo, root, Some(p1)),
-                compute_removed_files(&ctx, &repo, root, Some(p2)),
+                compute_removed_files(&ctx, blobstore.clone(), root, Some(p1)),
+                compute_removed_files(&ctx, blobstore.clone(), root, Some(p2)),
             )
             .await?;
             ch1.into_iter()
@@ -66,11 +66,11 @@ pub async fn compute_changed_files(
 
 async fn compute_changed_files_pair(
     ctx: CoreContext,
+    blobstore: RepoBlobstore,
     to: HgManifestId,
     from: HgManifestId,
-    repo: BlobRepo,
 ) -> Result<HashSet<MPath>, Error> {
-    from.diff(ctx, repo.get_blobstore(), to)
+    from.diff(ctx, blobstore, to)
         .try_filter_map(|diff| async move {
             let (path, entry) = match diff {
                 Diff::Added(path, entry) | Diff::Removed(path, entry) => (path, entry),
@@ -88,11 +88,11 @@ async fn compute_changed_files_pair(
 
 async fn compute_removed_files(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    blobstore: RepoBlobstore,
     child: HgManifestId,
     parent: Option<HgManifestId>,
 ) -> Result<Vec<MPath>, Error> {
-    compute_files_with_status(ctx, repo, child, parent, move |diff| {
+    compute_files_with_status(ctx, blobstore, child, parent, move |diff| {
         match diff {
             Diff::Removed(path, entry) => match entry {
                 Entry::Leaf(_) => path,
@@ -106,17 +106,15 @@ async fn compute_removed_files(
 
 async fn compute_files_with_status(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    blobstore: RepoBlobstore,
     child: HgManifestId,
     parent: Option<HgManifestId>,
     filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> Option<MPath>,
 ) -> Result<Vec<MPath>, Error> {
     let s = match parent {
-        Some(parent) => parent
-            .diff(ctx.clone(), repo.get_blobstore(), child)
-            .left_stream(),
+        Some(parent) => parent.diff(ctx.clone(), blobstore, child).left_stream(),
         None => child
-            .list_all_entries(ctx.clone(), repo.get_blobstore())
+            .list_all_entries(ctx.clone(), blobstore)
             .map_ok(|(path, entry)| Diff::Added(path, entry))
             .right_stream(),
     };

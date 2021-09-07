@@ -41,8 +41,10 @@ impl BonsaiDerivable for MappedHgChangesetId {
         parents: Vec<Self>,
         options: &Self::Options,
     ) -> Result<Self, Error> {
+        let blobstore = repo.blobstore();
         // TODO(T97939172): Fail if changeset is snapshot (once that field is added)
-        crate::derive_hg_changeset::derive_from_parents(ctx, repo, bonsai, parents, options).await
+        crate::derive_hg_changeset::derive_from_parents(ctx, blobstore, bonsai, parents, options)
+            .await
     }
 }
 

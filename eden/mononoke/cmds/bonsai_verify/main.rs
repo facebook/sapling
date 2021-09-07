@@ -362,31 +362,34 @@ fn subcommmand_hg_manifest_verify(
 
                         let start = Instant::now();
 
-                        get_manifest_from_bonsai(&repo, ctx.clone(), bonsai.clone(), parents)
-                            .map_ok(move |result| {
-                                if result != expected {
-                                    println!(
-                                        "\x1b[KBAD hg_cisd:{} result:{} expected:{}\x1b[m",
-                                        hg_csid, result, expected,
-                                    );
-                                    bad.with(|bad| bad.insert((csid, hg_csid, result, expected)));
-                                }
+                        get_manifest_from_bonsai(
+                            ctx.clone(),
+                            repo.get_blobstore(),
+                            bonsai.clone(),
+                            parents,
+                        )
+                        .map_ok(move |result| {
+                            if result != expected {
+                                println!(
+                                    "\x1b[KBAD hg_cisd:{} result:{} expected:{}\x1b[m",
+                                    hg_csid, result, expected,
+                                );
+                                bad.with(|bad| bad.insert((csid, hg_csid, result, expected)));
+                            }
 
-                                let all = total.fetch_add(1, Ordering::SeqCst) + 1;
-                                total_millis.fetch_add(
-                                    start.elapsed().as_millis() as u64,
-                                    Ordering::SeqCst,
-                                );
-                                print!(
-                                    "\x1b[K {} total:{} bad:{} mean_time:{:.2} ms \r",
-                                    hg_csid,
-                                    all,
-                                    bad.with(|bad| bad.len()),
-                                    total_millis.load(Ordering::SeqCst) as f32 / all as f32,
-                                );
-                                std::io::stdout().flush().expect("flush on stdout failed");
-                            })
-                            .await
+                            let all = total.fetch_add(1, Ordering::SeqCst) + 1;
+                            total_millis
+                                .fetch_add(start.elapsed().as_millis() as u64, Ordering::SeqCst);
+                            print!(
+                                "\x1b[K {} total:{} bad:{} mean_time:{:.2} ms \r",
+                                hg_csid,
+                                all,
+                                bad.with(|bad| bad.len()),
+                                total_millis.load(Ordering::SeqCst) as f32 / all as f32,
+                            );
+                            std::io::stdout().flush().expect("flush on stdout failed");
+                        })
+                        .await
                     }
                     Err(e) => Err(e),
                 }

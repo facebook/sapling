@@ -12,7 +12,7 @@ use crate::{
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
 use blobrepo_common::changed_files::compute_changed_files;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
@@ -32,8 +32,9 @@ use mercurial_types::{
 use mononoke_types::{
     BonsaiChangeset, ChangesetId, FileChange, FileType, MPath, TrackedFileChange,
 };
+use repo_blobstore::RepoBlobstore;
 use stats::prelude::*;
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{collections::HashMap, time::Instant};
 
 define_stats! {
     prefix = "mononoke.blobrepo";
@@ -45,12 +46,12 @@ define_stats! {
 }
 
 async fn can_reuse_filenode(
-    repo: &BlobRepo,
     ctx: &CoreContext,
+    blobstore: &RepoBlobstore,
     parent: HgFileNodeId,
     change: &TrackedFileChange,
 ) -> Result<Option<HgFileNodeId>, Error> {
-    let parent_envelope = parent.load(&ctx, repo.blobstore()).await?;
+    let parent_envelope = parent.load(&ctx, blobstore).await?;
     let parent_copyfrom_path = File::extract_copied_from(parent_envelope.metadata())?.map(|t| t.0);
     let parent_content_id = parent_envelope.content_id();
 
@@ -64,8 +65,8 @@ async fn can_reuse_filenode(
 }
 
 async fn store_file_change(
-    repo: &BlobRepo,
     ctx: CoreContext,
+    blobstore: RepoBlobstore,
     p1: Option<HgFileNodeId>,
     p2: Option<HgFileNodeId>,
     path: &MPath,
@@ -98,12 +99,12 @@ async fn store_file_change(
     // same content and copyfrom information
     let maybe_filenode = match (p1, p2) {
         (Some(parent), None) | (None, Some(parent)) => {
-            can_reuse_filenode(repo, &ctx, parent, change).await?
+            can_reuse_filenode(&ctx, &blobstore, parent, change).await?
         }
         (Some(p1), Some(p2)) => {
             let (reuse_p1, reuse_p2) = try_join(
-                can_reuse_filenode(repo, &ctx, p1, change),
-                can_reuse_filenode(repo, &ctx, p2, change),
+                can_reuse_filenode(&ctx, &blobstore, p1, change),
+                can_reuse_filenode(&ctx, &blobstore, p2, change),
             )
             .await?;
             reuse_p1.or(reuse_p2)
@@ -148,7 +149,7 @@ async fn store_file_change(
             };
 
             upload_entry
-                .upload(ctx, repo.get_blobstore().boxed(), Some(&path))
+                .upload(ctx, blobstore.boxed(), Some(&path))
                 .await?
         }
     };
@@ -158,7 +159,7 @@ async fn store_file_change(
 
 async fn resolve_paths(
     ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: RepoBlobstore,
     manifest_id: Option<HgManifestId>,
     paths: Vec<MPath>,
 ) -> Result<HashMap<MPath, HgFileNodeId>, Error> {
@@ -177,8 +178,8 @@ async fn resolve_paths(
 }
 
 pub async fn get_manifest_from_bonsai(
-    repo: &BlobRepo,
     ctx: CoreContext,
+    blobstore: RepoBlobstore,
     bcs: BonsaiChangeset,
     parent_manifests: Vec<HgManifestId>,
 ) -> Result<HgManifestId, Error> {
@@ -239,10 +240,9 @@ pub async fn get_manifest_from_bonsai(
     // `derive_manifest` already provides parents for newly created files, so we
     // can remove **all** lookups to files from here, and only leave lookups for
     // files that were copied (i.e bonsai changes that contain `copy_path`)
-    let blobstore = repo.get_blobstore().boxed();
     let (p1s, p2s) = try_join(
         resolve_paths(ctx.clone(), blobstore.clone(), manifest_p1, p1_paths),
-        resolve_paths(ctx.clone(), blobstore, manifest_p2, p2_paths),
+        resolve_paths(ctx.clone(), blobstore.clone(), manifest_p2, p2_paths),
     )
     .await?;
 
@@ -252,7 +252,7 @@ pub async fn get_manifest_from_bonsai(
         .collect();
     let changes: Vec<_> = stream::iter(file_changes)
         .map_ok({
-            cloned!(ctx);
+            cloned!(ctx, blobstore);
             move |(path, file_change)| match file_change {
                 None => future::ok((path, None)).left_future(),
                 Some(file_change) => {
@@ -267,11 +267,18 @@ pub async fn get_manifest_from_bonsai(
                     });
                     let p1 = p1s.get(&path).cloned();
                     let p2 = p2s.get(&path).cloned();
-                    cloned!(ctx, repo);
+                    cloned!(ctx, blobstore);
                     let spawned = tokio::spawn(async move {
-                        let entry =
-                            store_file_change(&repo, ctx, p1, p2, &path, &file_change, copy_from)
-                                .await?;
+                        let entry = store_file_change(
+                            ctx,
+                            blobstore,
+                            p1,
+                            p2,
+                            &path,
+                            &file_change,
+                            copy_from,
+                        )
+                        .await?;
                         Ok((path, Some(entry)))
                     });
                     async move { spawned.await? }.boxed().right_future()
@@ -282,40 +289,35 @@ pub async fn get_manifest_from_bonsai(
         .try_collect()
         .await?;
 
-    let manifest_id = derive_hg_manifest(
-        ctx.clone(),
-        repo.get_blobstore().boxed(),
-        parent_manifests,
-        changes,
-    )
-    .await?;
+    let manifest_id =
+        derive_hg_manifest(ctx.clone(), blobstore.boxed(), parent_manifests, changes).await?;
 
     Ok(manifest_id)
 }
 
 pub(crate) async fn derive_from_parents(
     ctx: CoreContext,
-    repo: BlobRepo,
+    blobstore: &RepoBlobstore,
     bonsai: BonsaiChangeset,
     parents: Vec<MappedHgChangesetId>,
     options: &HgChangesetDeriveOptions,
 ) -> Result<MappedHgChangesetId, Error> {
     let parents = {
-        borrowed!(ctx, repo);
+        borrowed!(ctx);
         try_join_all(
             parents
                 .into_iter()
-                .map(|id| async move { id.0.load(ctx, repo.blobstore()).await }),
+                .map(|id| async move { id.0.load(ctx, blobstore).await }),
         )
         .await?
     };
-    let hg_cs_id = generate_hg_changeset(repo, ctx, bonsai, parents, options).await?;
+    let hg_cs_id = generate_hg_changeset(ctx, blobstore, bonsai, parents, options).await?;
     Ok(MappedHgChangesetId(hg_cs_id))
 }
 
 async fn generate_hg_changeset(
-    repo: BlobRepo,
     ctx: CoreContext,
+    blobstore: &RepoBlobstore,
     bcs: BonsaiChangeset,
     parents: Vec<HgBlobChangeset>,
     options: &HgChangesetDeriveOptions,
@@ -346,10 +348,21 @@ async fn generate_hg_changeset(
     // Keep a record of any parents for now (i.e. > 2 parents). We'll store those in extras.
     let step_parents = parents;
 
-    let manifest_id =
-        get_manifest_from_bonsai(&repo, ctx.clone(), bcs.clone(), parent_manifests).await?;
-    let files =
-        compute_changed_files(ctx.clone(), repo.clone(), manifest_id.clone(), mf_p1, mf_p2).await?;
+    let manifest_id = get_manifest_from_bonsai(
+        ctx.clone(),
+        blobstore.clone(),
+        bcs.clone(),
+        parent_manifests,
+    )
+    .await?;
+    let files = compute_changed_files(
+        ctx.clone(),
+        blobstore.clone(),
+        manifest_id.clone(),
+        mf_p1,
+        mf_p2,
+    )
+    .await?;
 
     let mut metadata = ChangesetMetadata {
         user: bcs.author().to_string(),
@@ -380,7 +393,7 @@ async fn generate_hg_changeset(
     let cs = HgBlobChangeset::new(content)?;
     let csid = cs.get_changeset_id();
 
-    cs.save(&ctx, repo.blobstore()).await?;
+    cs.save(&ctx, blobstore).await?;
 
     STATS::generate_hg_from_bonsai_single_latency_ms
         .add_value(start_timestamp.elapsed().as_millis() as i64);
