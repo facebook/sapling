@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ enable amend commitcloud infinitepush remotenames
-  $ disable treemanifest
   $ configure dummyssh
   $ setconfig remotenames.autopullhoistpattern=re:.*
   $ setconfig commitcloud.hostname=testhost

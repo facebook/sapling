@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure dummyssh mutation-norecord
-  $ disable treemanifest
   $ enable amend arcdiff commitcloud infinitepush rebase remotenames share
   $ setconfig extensions.arcconfig="$TESTDIR/../edenscm/hgext/extlib/phabricator/arcconfig.py"
   $ setconfig infinitepush.branchpattern="re:scratch/.*" commitcloud.hostname=testhost

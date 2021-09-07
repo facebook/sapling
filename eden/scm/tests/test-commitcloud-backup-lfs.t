@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ enable amend
 
 Setup common infinitepush

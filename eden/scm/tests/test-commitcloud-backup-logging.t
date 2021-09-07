@@ -1,6 +1,5 @@
 #chg-compatible
 
-  $ disable treemanifest
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
@@ -36,8 +35,8 @@
   remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
-  remote: infinitepush: bundlestore \(bundlesize=546, eventtype=start, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: bundlestore \(bundlesize=546, elapsedms=.+, eventtype=success, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: bundlestore \(bundlesize=654, eventtype=start, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: bundlestore \(bundlesize=654, elapsedms=.+, eventtype=success, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: index \(eventtype=start, hostname=.+, newheadscount=1, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: index \(elapsedms=.+, eventtype=success, hostname=.+, newheadscount=1, reponame=babar, requestid=\d+, user=\w+\) (re)
   remote: infinitepush: b2x:infinitepush \(elapsedms=.+, eventtype=success, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
@@ -57,7 +56,7 @@ Make upload to bundlestore fail
   remote: pushing 2 commits:
   remote:     7e6a6fd9c7c8  commit
   remote:     bba29d9d577a  failpushcommit
-  remote: infinitepush: bundlestore \(bundlesize=1067, eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: bundlestore \(bundlesize=1067, elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: infinitepush: b2x:infinitepush \(elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/\d+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
-  remote: abort: \$ENOTDIR\$: /dev/null/\d+ (re)
+  remote: infinitepush: bundlestore \(bundlesize=1247, eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: bundlestore \(bundlesize=1247, elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/[0-9a-f]+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: infinitepush: b2x:infinitepush \(elapsedms=[-+0-9.e]+, errormsg=\[Errno 20\] \$ENOTDIR\$: '/dev/null/[0-9a-f]+', eventtype=failure, hostname=.+, reponame=babar, requestid=\d+, user=\w+\) (re)
+  remote: abort: \$ENOTDIR\$: /dev/null/[0-9a-f]+ (re)
