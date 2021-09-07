@@ -573,4 +573,8 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
       root, manifest, prefetchMetadata);
 }
 
+void HgQueuedBackingStore::periodicManagementTask() {
+  backingStore_->periodicManagementTask();
+}
+
 } // namespace facebook::eden

@@ -157,6 +157,8 @@ class HgQueuedBackingStore final : public BackingStore {
       const RootId& root,
       const Hash& manifest) override;
 
+  void periodicManagementTask() override;
+
   HgBackingStore& getHgBackingStore() {
     return *backingStore_;
   }
