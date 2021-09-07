@@ -19,7 +19,6 @@ blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
-bulkops = { version = "0.1.0", path = "../bulkops" }
 bytes = { version = "1.0", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 changesets = { version = "0.1.0", path = "../changesets" }
