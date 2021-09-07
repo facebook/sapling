@@ -80,10 +80,18 @@ impl BackingStore {
         }
     }
 
-    /// forces backing store to rescan pack files
+    /// Forces backing store to write its pending data to disk and to read the latest version from
+    /// the disk.
     pub fn refresh(&self) {
         if let Old(stores) = self {
             stores.refresh()
         }
+    }
+}
+
+impl Drop for BackingStore {
+    fn drop(&mut self) {
+        // Make sure that all the data that was fetched is written to the hgcache.
+        self.refresh();
     }
 }
