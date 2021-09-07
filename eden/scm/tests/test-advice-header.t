@@ -5,6 +5,7 @@
   $ disable treemanifest
   $ configure dummyssh
 #require serve
+#require bucktest
 
   $ hg init test
   $ cd test
