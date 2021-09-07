@@ -17,11 +17,12 @@ use mononoke_types::{
     blame::{store_blame, Blame, BlameId},
     BonsaiChangeset, ChangesetId, FileUnodeId, MPath,
 };
+use repo_blobstore::RepoBlobstore;
 use std::collections::HashMap;
 use std::sync::Arc;
 use unodes::{find_unode_renames_incorrect_for_blame_v1, RootUnodeManifestId};
 
-use crate::fetch::{fetch_content_for_blame, FetchOutcome};
+use crate::fetch::{fetch_content_for_blame_with_options, FetchOutcome};
 use crate::BlameDeriveOptions;
 
 pub(crate) async fn derive_blame_v1(
@@ -49,22 +50,23 @@ pub(crate) async fn derive_blame_v1(
     .await?;
 
     let renames = Arc::new(renames);
-    let blobstore = repo.get_blobstore().boxed();
+    let blobstore = repo.get_blobstore();
     find_intersection_of_diffs(
         ctx.clone(),
-        blobstore,
+        blobstore.clone(),
         root_manifest.manifest_unode_id().clone(),
         parents_mf,
     )
     .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?)))
     .try_filter_map(future::ok)
     .map(move |v| {
-        cloned!(ctx, repo, renames);
+        cloned!(ctx, blobstore, renames);
         async move {
             let (path, file) = v?;
             Result::<_>::Ok(
                 tokio::spawn(async move {
-                    create_blame_v1(&ctx, &repo, renames, csid, path, file, blame_options).await
+                    create_blame_v1(&ctx, &blobstore, renames, csid, path, file, blame_options)
+                        .await
                 })
                 .await??,
             )
@@ -79,15 +81,13 @@ pub(crate) async fn derive_blame_v1(
 
 async fn create_blame_v1(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    blobstore: &RepoBlobstore,
     renames: Arc<HashMap<MPath, FileUnodeId>>,
     csid: ChangesetId,
     path: MPath,
     file_unode_id: FileUnodeId,
     options: BlameDeriveOptions,
 ) -> Result<BlameId, Error> {
-    let blobstore = repo.blobstore();
-
     let file_unode = file_unode_id.load(ctx, blobstore).await?;
 
     let parents_content_and_blame: Vec<_> = file_unode
@@ -97,14 +97,14 @@ async fn create_blame_v1(
         .chain(renames.get(&path).cloned())
         .map(|file_unode_id| {
             future::try_join(
-                fetch_content_for_blame(ctx, repo, file_unode_id, options),
+                fetch_content_for_blame_with_options(ctx, blobstore, file_unode_id, options),
                 async move { BlameId::from(file_unode_id).load(ctx, blobstore).await }.err_into(),
             )
         })
         .collect();
 
     let (content, parents_content) = future::try_join(
-        fetch_content_for_blame(ctx, repo, file_unode_id, options),
+        fetch_content_for_blame_with_options(ctx, blobstore, file_unode_id, options),
         future::try_join_all(parents_content_and_blame),
     )
     .await?;
@@ -125,5 +125,5 @@ async fn create_blame_v1(
         }
     };
 
-    store_blame(ctx, &blobstore, file_unode_id, blame_maybe_rejected).await
+    store_blame(ctx, blobstore, file_unode_id, blame_maybe_rejected).await
 }

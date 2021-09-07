@@ -16,11 +16,12 @@ use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use manifest::find_intersection_of_diffs;
 use mononoke_types::blame_v2::{store_blame, BlameParent, BlameV2, BlameV2Id};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath};
+use repo_blobstore::RepoBlobstore;
 use std::collections::HashMap;
 use std::sync::Arc;
 use unodes::{find_unode_rename_sources, RootUnodeManifestId, UnodeRenameSource};
 
-use crate::fetch::{fetch_content_for_blame, FetchOutcome};
+use crate::fetch::{fetch_content_for_blame_with_options, FetchOutcome};
 use crate::BlameDeriveOptions;
 
 pub(crate) async fn derive_blame_v2(
@@ -44,23 +45,31 @@ pub(crate) async fn derive_blame_v2(
     .await?;
 
     let renames = Arc::new(renames);
-    let blobstore = repo.get_blobstore().boxed();
+    let blobstore = repo.get_blobstore();
     find_intersection_of_diffs(
         ctx.clone(),
-        blobstore,
+        blobstore.clone(),
         root_manifest.manifest_unode_id().clone(),
         parent_manifests,
     )
     .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?)))
     .try_filter_map(future::ok)
     .map(move |path_and_file_unode| {
-        cloned!(ctx, repo, renames);
+        cloned!(ctx, blobstore, renames);
         async move {
             let (path, file_unode) = path_and_file_unode?;
             Ok::<_, Error>(
                 tokio::spawn(async move {
-                    create_blame_v2(&ctx, &repo, renames, csid, path, file_unode, blame_options)
-                        .await
+                    create_blame_v2(
+                        &ctx,
+                        &blobstore,
+                        renames,
+                        csid,
+                        path,
+                        file_unode,
+                        blame_options,
+                    )
+                    .await
                 })
                 .await??,
             )
@@ -75,22 +84,20 @@ pub(crate) async fn derive_blame_v2(
 
 async fn create_blame_v2(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    blobstore: &RepoBlobstore,
     renames: Arc<HashMap<MPath, UnodeRenameSource>>,
     csid: ChangesetId,
     path: MPath,
     file_unode_id: FileUnodeId,
     options: BlameDeriveOptions,
 ) -> Result<BlameV2Id, Error> {
-    let blobstore = repo.blobstore();
-
     let file_unode = file_unode_id.load(ctx, blobstore).await?;
 
     let mut blame_parents = Vec::new();
     for (parent_index, unode_id) in file_unode.parents().iter().enumerate() {
         blame_parents.push(fetch_blame_parent(
             ctx,
-            repo,
+            blobstore,
             parent_index,
             path.clone(),
             *unode_id,
@@ -101,7 +108,7 @@ async fn create_blame_v2(
     if let Some(source) = renames.get(&path) {
         blame_parents.push(fetch_blame_parent(
             ctx,
-            repo,
+            blobstore,
             source.parent_index,
             source.from_path.clone(),
             source.unode_id,
@@ -110,7 +117,7 @@ async fn create_blame_v2(
     }
 
     let (content, blame_parents) = future::try_join(
-        fetch_content_for_blame(ctx, repo, file_unode_id, options),
+        fetch_content_for_blame_with_options(ctx, blobstore, file_unode_id, options),
         future::try_join_all(blame_parents),
     )
     .await?;
@@ -125,17 +132,15 @@ async fn create_blame_v2(
 
 async fn fetch_blame_parent(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    blobstore: &RepoBlobstore,
     parent_index: usize,
     path: MPath,
     unode_id: FileUnodeId,
     options: BlameDeriveOptions,
 ) -> Result<BlameParent<Bytes>, Error> {
     let (content, blame) = future::try_join(
-        fetch_content_for_blame(ctx, repo, unode_id, options),
-        BlameV2Id::from(unode_id)
-            .load(ctx, repo.blobstore())
-            .err_into(),
+        fetch_content_for_blame_with_options(ctx, blobstore, unode_id, options),
+        BlameV2Id::from(unode_id).load(ctx, blobstore).err_into(),
     )
     .await?;
 

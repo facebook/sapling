@@ -61,11 +61,12 @@ impl BonsaiDerivable for RootDeletedManifestId {
         parents: Vec<Self>,
         _options: &Self::Options,
     ) -> Result<Self, Error> {
+        let blobstore = repo.blobstore().clone();
         let bcs_id = bonsai.get_changeset_id();
         let changes = get_changes(&ctx, &repo, bonsai).await?;
         let id = derive_deleted_files_manifest(
             ctx,
-            repo,
+            blobstore,
             bcs_id,
             parents
                 .into_iter()

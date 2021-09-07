@@ -578,9 +578,15 @@ mod tests {
         let bcs_id = bcs.get_changeset_id();
 
         let changes = get_changes(&ctx, &repo, bcs).await.unwrap();
-        derive_deleted_files_manifest(ctx.clone(), repo.clone(), bcs_id, parent_mf_ids, changes)
-            .await
-            .unwrap()
+        derive_deleted_files_manifest(
+            ctx,
+            repo.blobstore().clone(),
+            bcs_id,
+            parent_mf_ids,
+            changes,
+        )
+        .await
+        .unwrap()
     }
 
     async fn create_bonsai_changeset(

@@ -16,6 +16,7 @@ use futures::TryStreamExt;
 use metaconfig_types::BlameVersion;
 use mononoke_types::blame::BlameRejected;
 use mononoke_types::FileUnodeId;
+use repo_blobstore::RepoBlobstore;
 
 use crate::mapping_v1::BlameRoot;
 use crate::mapping_v2::RootBlameV2;
@@ -51,15 +52,23 @@ pub async fn fetch_content_for_blame(
         },
     };
     let blobstore = repo.blobstore();
+    fetch_content_for_blame_with_options(ctx, &blobstore, file_unode_id, options).await
+}
+
+/// Fetch the content of a file ready for blame.  If the file content is
+/// too large or binary data is detected then the fetch may be rejected.
+pub async fn fetch_content_for_blame_with_options(
+    ctx: &CoreContext,
+    blobstore: &RepoBlobstore,
+    file_unode_id: FileUnodeId,
+    options: BlameDeriveOptions,
+) -> Result<FetchOutcome> {
     let file_unode = file_unode_id.load(ctx, blobstore).await?;
     let content_id = *file_unode.content_id();
-    let (mut stream, size) = filestore::fetch_with_size(
-        repo.get_blobstore(),
-        ctx.clone(),
-        &FetchKey::Canonical(content_id),
-    )
-    .await?
-    .ok_or_else(|| anyhow!("Missing content: {}", content_id))?;
+    let (mut stream, size) =
+        filestore::fetch_with_size(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+            .await?
+            .ok_or_else(|| anyhow!("Missing content: {}", content_id))?;
     if size > options.filesize_limit {
         return Ok(FetchOutcome::Rejected(BlameRejected::TooBig));
     }
