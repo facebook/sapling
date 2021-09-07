@@ -170,21 +170,18 @@ sh % "hg log --debug -r tip" == r"""
     description:
     2"""
 
-# Graft out of order, skipping a merge and a duplicate
+# Graft out of order, skipping a merge
 # (this also tests that editor is not invoked if '--edit' is not specified)
 
-sh % "hg graft 1 5 4 3 'merge()' 2 -n" == r'''
+sh % "hg graft 1 5 4 3 'merge()' -n" == r'''
     skipping ungraftable merge revision 6
-    skipping 5c095ad7e90f (already grafted to ef0ef43d49e7)
     grafting 5d205f8b35b6 "1"
     grafting 5345cd5c0f38 "5"
     grafting 9c233e8e184d "4"
     grafting 4c60f11aa304 "3"'''
 
-sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.backgroundclose=False" == r"""
+sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' --debug --config worker.backgroundclose=False" == r"""
     skipping ungraftable merge revision 6
-    scanning for duplicate grafts
-    skipping 5c095ad7e90f (already grafted to ef0ef43d49e7)
     grafting 5d205f8b35b6 "1"
       searching for copies back to 5d205f8b35b6
       unmatched files in local:
@@ -220,7 +217,6 @@ sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.background
     committing manifest
     committing changelog"""
 sh % "'HGEDITOR=cat' hg graft 4 3 --log --debug" == r"""
-    scanning for duplicate grafts
     grafting 9c233e8e184d "4"
       searching for copies back to 5d205f8b35b6
       unmatched files in other (from topological common ancestor):
@@ -291,11 +287,8 @@ sh % "hg debugstrip ." == "1 files updated, 0 files merged, 0 files removed, 0 f
 
 # Graft again:
 
-sh % "hg graft 1 5 4 3 'merge()' 2" == r"""
+sh % "hg graft 4 3 'merge()'" == r"""
     skipping ungraftable merge revision 6
-    skipping 5c095ad7e90f (already grafted to ef0ef43d49e7)
-    skipping 5d205f8b35b6 (already grafted to 6b9e5368ca4e)
-    skipping 5345cd5c0f38 (already grafted to 9436191a062e)
     grafting 9c233e8e184d "4"
     merging e
     warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
@@ -408,11 +401,7 @@ sh % "hg log --debug -r tip" == r"""
     extra:       source=5c095ad7e90f871700f02dd1fa5012cb4498a2d4
     description:
     2"""
-# Disallow grafting an already grafted cset onto its original branch
 sh % "hg up -q 6"
-sh % "hg graft 7" == r"""
-    skipping already grafted revision ef0ef43d49e7 (was grafted from 5c095ad7e90f)
-    [255]"""
 
 sh % "hg diff -r 2 -r 13" == r"""
     diff -r 5c095ad7e90f -r 7a4785234d87 b
@@ -428,23 +417,6 @@ sh % "hg diff -r 2 -r 13" == r"""
     +g"""
 
 sh % "hg diff -r 2 -r 13 -X ." == ""
-
-# Disallow grafting already grafted csets with the same origin onto each other
-sh % "hg up -q 13" == ""
-sh % "hg graft 2" == r"""
-    skipping 5c095ad7e90f (already grafted to 7a4785234d87)
-    [255]"""
-sh % "hg graft 7" == r"""
-    skipping already grafted revision ef0ef43d49e7 (7a4785234d87 also has origin 5c095ad7e90f)
-    [255]"""
-
-sh % "hg up -q 7"
-sh % "hg graft 2" == r"""
-    skipping 5c095ad7e90f (already grafted to ef0ef43d49e7)
-    [255]"""
-sh % "hg graft tip" == r"""
-    skipping already grafted revision 7a4785234d87 (ef0ef43d49e7 also has origin 5c095ad7e90f)
-    [255]"""
 
 # Graft with --log
 
@@ -542,10 +514,9 @@ sh % "hg update -q $C"
 sh % "hg graft $B" == 'grafting fc2b737bb2e5 "B"'
 sh % "hg rm A B C"
 sh % "hg commit -m remove-all"
-sh % "hg graft $B $A $D" == r"""
+sh % "hg graft $A $D" == r"""
     skipping ungraftable merge revision 3
     skipping ancestor revision 426bada5c675
-    skipping fc2b737bb2e5 (already grafted to bd8a7a0a7392)
     [255]"""
 sh % "hg graft $B $A $D --force" == r'''
     skipping ungraftable merge revision 3
@@ -1104,19 +1075,15 @@ sh % "hg log -G -T '{rev} {desc|firstline}'" == r"""
 # Grafting of plain changes correctly detects that 3 and 5 should be skipped:
 
 sh % "hg up -qCr 4"
-sh % "hg graft --tool ':local' -r '2::5'" == r'''
-    skipping already grafted revision ca093ca2f1d9 (was grafted from 13ec5badbf2a)
-    skipping already grafted revision 43e9eb70dab0 (was grafted from 6c9a1289e5f1)
+sh % "hg graft --tool ':local' -r '2'" == r'''
     grafting 42127f193bcd "b"'''
 
 # Extending the graft range to include a (skipped) merge of 3 will not prevent us from
 # also detecting that both 3 and 5 should be skipped:
 
 sh % "hg up -qCr 4"
-sh % "hg graft --tool ':local' -r '2::7'" == r"""
+sh % "hg graft --tool ':local' -r '2 + 6 + 7'" == r"""
     skipping ungraftable merge revision 6
-    skipping already grafted revision ca093ca2f1d9 (was grafted from 13ec5badbf2a)
-    skipping already grafted revision 43e9eb70dab0 (was grafted from 6c9a1289e5f1)
     grafting 42127f193bcd "b"
     grafting d3c3f2b38ecc "xx"
     note: graft of d3c3f2b38ecc created no changes to commit"""

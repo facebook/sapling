@@ -2506,58 +2506,7 @@ def _dograft(ui, repo, *revs, **opts):
                 ui.warn(_("skipping ancestor revision %s\n") % (repo[rev]))
                 # XXX remove on list is slow
                 revs.remove(rev)
-        if not revs:
-            return -1
 
-        # analyze revs for earlier grafts
-        ids = {}
-        for ctx in repo.set("%ld", revs):
-            ids[ctx.hex()] = ctx.rev()
-            n = ctx.extra().get("source")
-            if n:
-                ids[n] = ctx.rev()
-
-        # check ancestors for earlier grafts
-        ui.debug("scanning for duplicate grafts\n")
-
-        # The only changesets we can be sure doesn't contain grafts of any
-        # revs, are the ones that are common ancestors of *all* revs:
-        for rev in repo.revs("only(%d,ancestor(%ld))", crev, revs):
-            ctx = repo[rev]
-            n = ctx.extra().get("source")
-            if n in ids:
-                try:
-                    r = repo[n].rev()
-                except error.RepoLookupError:
-                    r = None
-                if r in revs:
-                    ui.warn(_("skipping %s (already grafted to %s)\n") % (repo[r], ctx))
-                    revs.remove(r)
-                elif ids[n] in revs:
-                    if r is None:
-                        ui.warn(
-                            _(
-                                "skipping already grafted revision %s "
-                                "(%s also has unknown origin %s)\n"
-                            )
-                            % (repo[ids[n]], ctx, n[:12])
-                        )
-                    else:
-                        ui.warn(
-                            _(
-                                "skipping already grafted revision %s "
-                                "(%s also has origin %s)\n"
-                            )
-                            % (repo[ids[n]], ctx, n[:12])
-                        )
-                    revs.remove(ids[n])
-            elif ctx.hex() in ids:
-                r = ids[ctx.hex()]
-                ui.warn(
-                    _("skipping already grafted revision %s (was grafted from %s)\n")
-                    % (repo[r], ctx)
-                )
-                revs.remove(r)
         if not revs:
             return -1
 
