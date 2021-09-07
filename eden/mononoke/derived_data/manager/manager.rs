@@ -95,6 +95,16 @@ impl DerivedDataManager {
         }
     }
 
+    // For dangerous-override: allow replacement of blobstore
+    pub fn with_replaced_blobstore(&self, repo_blobstore: RepoBlobstore) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                repo_blobstore,
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
     pub fn changesets(&self) -> &dyn Changesets {
         self.inner.changesets.as_ref()
     }

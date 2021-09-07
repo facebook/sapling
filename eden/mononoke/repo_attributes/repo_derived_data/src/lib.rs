@@ -63,6 +63,14 @@ impl RepoDerivedData {
         }
     }
 
+    // For dangerous-override: allow replacement of blobstore
+    pub fn with_replaced_blobstore(&self, repo_blobstore: RepoBlobstore) -> Self {
+        Self {
+            config: self.config.clone(),
+            manager: self.manager.with_replaced_blobstore(repo_blobstore),
+        }
+    }
+
     /// Current derived data configuration for this repo.
     pub fn config(&self) -> &DerivedDataConfig {
         &self.config
