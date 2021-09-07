@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use anyhow::Context;
 use async_trait::async_trait;
 use structopt::{clap::AppSettings, StructOpt};
-use tokio_compat_02::FutureExt;
 use tracing::{event, Level};
 
 use edenfs_client::EdenFsInstance;
@@ -142,7 +141,7 @@ impl MainCommand {
             .build()
             .context("unable to start async runtime")?;
 
-        runtime.block_on(self.dispatch().compat())
+        runtime.block_on(self.dispatch())
     }
 
     /// Execute subcommands. This function returns only a return code since all the error handling
