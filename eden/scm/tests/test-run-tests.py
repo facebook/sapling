@@ -70,7 +70,7 @@ def wintests():
 
     direct matching, glob unnecessary
         >>> lm(b'g/b (glob)\n', b'g/b\n')
-        'special: -glob'
+        True
 
     missing glob
         >>> lm(b'/g/c/d/fg\n', b'\\g\\c\\d/fg\n')

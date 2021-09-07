@@ -1795,20 +1795,6 @@ class PythonTest(Test):
                 return False
 
 
-# Some glob patterns apply only in some circumstances, so the script
-# might want to remove (glob) annotations that otherwise should be
-# retained.
-checkcodeglobpats = [
-    # On Windows it looks like \ doesn't require a (glob), but we know
-    # better.
-    re.compile(br"^pushing to \$TESTTMP/.*[^)]$"),
-    re.compile(br"^moving \S+/.*[^)]$"),
-    re.compile(br"^pulling from \$TESTTMP/.*[^)]$"),
-    # Not all platforms have 127.0.0.1 as loopback (though most do),
-    # so we always glob that too.
-    re.compile(br".*\$LOCALIP.*$"),
-]
-
 bchr = chr
 if PYTHON3:
     bchr = lambda x: bytes([x])
@@ -2138,10 +2124,7 @@ class TTest(Test):
 
                     r = self.linematch(el, lout)
                     if isinstance(r, str):
-                        if r == "-glob":
-                            lout = "".join(el.rsplit(" (glob)", 1))
-                            r = ""  # Warn only this line.
-                        elif r == "retry":
+                        if r == "retry":
                             postout.append(b"  " + el)
                             els.pop(i)
                             break
@@ -2239,12 +2222,6 @@ class TTest(Test):
         # The only supported special characters are * and ? plus / which also
         # matches \ on windows. Escaping of these characters is supported.
         if el + b"\n" == l:
-            if os.altsep:
-                # matching on "/" is not needed for this line
-                for pat in checkcodeglobpats:
-                    if pat.match(el):
-                        return True
-                return b"-glob"
             return True
         el = el.replace(b"$LOCALIP", b"*")
         # $HGPORT might be changed in test. Do a fuzzy match.
