@@ -693,7 +693,7 @@ impl Log {
     /// of `lag_threshold`.
     ///
     /// This is used internally by [`RotateLog`] to make sure a [`Log`] has
-    /// complate indexes before rotating.
+    /// complete indexes before rotating.
     pub(crate) fn finalize_indexes(&mut self, _lock: &ScopedDirLock) -> crate::Result<()> {
         let result: crate::Result<_> = (|| {
             let dir = self.dir.clone();
