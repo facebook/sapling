@@ -48,7 +48,7 @@ impl<'a> AddBranchingSyncTarget<'a> {
         let bookmark = sync_target_config.target.bookmark.clone();
 
         self.megarepo_configs
-            .add_target_with_config_version(ctx.clone(), sync_target_config)
+            .add_config_version(ctx.clone(), sync_target_config)
             .await?;
         self.create_bookmark(ctx, repo.blob_repo(), bookmark, branching_point)
             .await?;

@@ -65,21 +65,7 @@ pub trait MononokeMegarepoConfigs: Send + Sync {
         version: SyncConfigVersion,
     ) -> Result<SyncTargetConfig, MegarepoError>;
 
-    /// Add a Target with an initial SyncTargetConfig
-    /// Note: this method is identical to `add_config_version`, but
-    /// it expects the target to not exist. The reason this method
-    /// exists instead of a combination of (add_target, add_config_version)
-    /// is that I want it to be impossible to create a target without
-    /// a single config version associated
-    async fn add_target_with_config_version(
-        &self,
-        ctx: CoreContext,
-        config: SyncTargetConfig,
-    ) -> Result<(), MegarepoError>;
-
     /// Add a new unused SyncTargetConfig for an existing Target
-    /// Note: this method is identical to `add_target_with_config_version`, but
-    /// it expects the target to exist
     async fn add_config_version(
         &self,
         ctx: CoreContext,

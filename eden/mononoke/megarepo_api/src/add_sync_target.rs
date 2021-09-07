@@ -158,7 +158,7 @@ impl<'a> AddSyncTarget<'a> {
         scuba.log_with_msg("Derived data", None);
 
         self.megarepo_configs
-            .add_target_with_config_version(ctx.clone(), sync_target_config.clone())
+            .add_config_version(ctx.clone(), sync_target_config.clone())
             .await?;
 
         self.create_bookmark(

@@ -60,14 +60,6 @@ impl MononokeMegarepoConfigs for CfgrMononokeMegarepoConfigs {
         unimplemented!("OSS CfgrMononokeMegarepoConfigs::get_config_by_version")
     }
 
-    async fn add_target_with_config_version(
-        &self,
-        _ctx: CoreContext,
-        _config: SyncTargetConfig,
-    ) -> Result<(), MegarepoError> {
-        unimplemented!("OSS CfgrMononokeMegarepoConfigs::add_target_with_config_version")
-    }
-
     async fn add_config_version(
         &self,
         _ctx: CoreContext,

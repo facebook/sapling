@@ -60,7 +60,7 @@ impl MononokeMegarepoConfigs for TestMononokeMegarepoConfigs {
             .map_err(MegarepoError::internal)
     }
 
-    async fn add_target_with_config_version(
+    async fn add_config_version(
         &self,
         ctx: CoreContext,
         config: SyncTargetConfig,
@@ -70,13 +70,5 @@ impl MononokeMegarepoConfigs for TestMononokeMegarepoConfigs {
         let key = (config.target.clone(), config.version.clone());
         config_versions.insert(key, config);
         Ok(())
-    }
-
-    async fn add_config_version(
-        &self,
-        _ctx: CoreContext,
-        _config: SyncTargetConfig,
-    ) -> Result<(), MegarepoError> {
-        unimplemented!("TestMononokeMegarepoConfigs::add_config_version")
     }
 }
