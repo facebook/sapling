@@ -23,6 +23,7 @@ use futures::stream::{self, StreamExt, TryStreamExt};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, FsnodeId, MPath,
 };
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::batch::derive_fsnode_in_batch;
 use crate::derive::derive_fsnode;
@@ -74,9 +75,10 @@ impl BonsaiDerivable for RootFsnodeId {
         parents: Vec<Self>,
         _options: &Self::Options,
     ) -> Result<Self, Error> {
+        let manager = repo.repo_derived_data().manager();
         let fsnode_id = derive_fsnode(
             &ctx,
-            &repo,
+            manager,
             parents
                 .into_iter()
                 .map(|root_fsnode_id| root_fsnode_id.into_fsnode_id())

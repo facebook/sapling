@@ -16,6 +16,7 @@ use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
 use derived_data::{derive_impl, BonsaiDerivedMappingContainer};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::{ChangesetId, SkeletonManifestId};
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::derive::derive_skeleton_manifest;
 use crate::RootSkeletonManifestId;
@@ -33,8 +34,14 @@ pub async fn derive_skeleton_manifests_in_batch(
     batch: Vec<ChangesetId>,
     gap_size: Option<usize>,
 ) -> Result<HashMap<ChangesetId, SkeletonManifestId>, Error> {
-    let linear_stacks =
-        split_batch_in_linear_stacks(ctx, repo, batch, FileConflicts::ChangeDelete).await?;
+    let manager = repo.repo_derived_data().manager();
+    let linear_stacks = split_batch_in_linear_stacks(
+        ctx,
+        manager.repo_blobstore(),
+        batch,
+        FileConflicts::ChangeDelete,
+    )
+    .await?;
     let mut res = HashMap::new();
     for linear_stack in linear_stacks {
         // Fetch the parent skeleton manifests, either from a previous
@@ -76,12 +83,12 @@ pub async fn derive_skeleton_manifests_in_batch(
                 // Clone the values that we need owned copies of to move
                 // into the future we are going to spawn, which means it
                 // must have static lifetime.
-                cloned!(ctx, repo, parent_skeleton_manifests);
+                cloned!(ctx, manager, parent_skeleton_manifests);
                 async move {
                     let derivation_fut = async move {
                         derive_skeleton_manifest(
                             &ctx,
-                            &repo,
+                            &manager,
                             parent_skeleton_manifests,
                             fc.into_iter().collect(),
                         )

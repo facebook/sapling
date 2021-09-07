@@ -21,12 +21,14 @@ bytes = { version = "1.0", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = ".." }
+derived_data_manager = { version = "0.1.0", path = "../manager" }
 digest = "0.8"
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 sha-1 = "0.8"
 sha2 = "0.8"
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

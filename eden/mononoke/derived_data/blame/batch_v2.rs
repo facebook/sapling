@@ -31,7 +31,8 @@ pub async fn derive_blame_v2_in_batch(
     let batch_len = batch.len();
     // We must split on any change as blame data must use the parent file.
     let linear_stacks =
-        split_batch_in_linear_stacks(ctx, repo, batch, FileConflicts::AnyChange).await?;
+        split_batch_in_linear_stacks(ctx, repo.blobstore(), batch, FileConflicts::AnyChange)
+            .await?;
 
     let mut res = HashMap::new();
     let options = mapping.options();

@@ -9,13 +9,13 @@ use std::cmp::Ordering as CmpOrdering;
 use std::collections::BTreeMap;
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use mononoke_types::{BonsaiChangeset, FileChange, MPath};
 use mononoke_types::{ChangesetId, ContentId, FileType};
+use repo_blobstore::RepoBlobstore;
 
 pub type FileToContent = BTreeMap<MPath, Option<(ContentId, FileType)>>;
 
@@ -36,12 +36,12 @@ pub enum FileConflicts {
 ///    to different stacks
 pub async fn split_batch_in_linear_stacks(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    blobstore: &RepoBlobstore,
     batch: Vec<ChangesetId>,
     file_conflicts: FileConflicts,
 ) -> Result<Vec<LinearStack>, Error> {
     let bonsais = stream::iter(batch.into_iter().map(|bcs_id| async move {
-        let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
+        let bcs = bcs_id.load(ctx, blobstore).await?;
         Result::<_, Error>::Ok((bcs_id, bcs))
     }))
     .buffered(100)
@@ -187,6 +187,7 @@ fn has_file_conflict(
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
     use maplit::btreemap;
     use mononoke_types::FileType;
@@ -208,9 +209,13 @@ mod test {
             .commit()
             .await?;
 
-        let linear_stacks =
-            split_batch_in_linear_stacks(&ctx, &repo, vec![root], FileConflicts::ChangeDelete)
-                .await?;
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            repo.blobstore(),
+            vec![root],
+            FileConflicts::ChangeDelete,
+        )
+        .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -222,9 +227,13 @@ mod test {
         )
         .await?;
 
-        let linear_stacks =
-            split_batch_in_linear_stacks(&ctx, &repo, vec![second], FileConflicts::ChangeDelete)
-                .await?;
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            repo.blobstore(),
+            vec![second],
+            FileConflicts::ChangeDelete,
+        )
+        .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -238,7 +247,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            &repo,
+            repo.blobstore(),
             vec![root, second],
             FileConflicts::ChangeDelete,
         )
@@ -284,9 +293,13 @@ mod test {
             .commit()
             .await?;
 
-        let linear_stacks =
-            split_batch_in_linear_stacks(&ctx, &repo, vec![p1, merge], FileConflicts::ChangeDelete)
-                .await?;
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            repo.blobstore(),
+            vec![p1, merge],
+            FileConflicts::ChangeDelete,
+        )
+        .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -304,9 +317,13 @@ mod test {
         )
         .await?;
 
-        let linear_stacks =
-            split_batch_in_linear_stacks(&ctx, &repo, vec![p1, p2], FileConflicts::ChangeDelete)
-                .await?;
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            repo.blobstore(),
+            vec![p1, p2],
+            FileConflicts::ChangeDelete,
+        )
+        .await?;
         assert_linear_stacks(
             &ctx,
             &repo,
@@ -347,7 +364,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            &repo,
+            repo.blobstore(),
             vec![root, child],
             FileConflicts::ChangeDelete,
         )
@@ -389,7 +406,7 @@ mod test {
 
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            &repo,
+            repo.blobstore(),
             vec![root, child],
             FileConflicts::ChangeDelete,
         )
@@ -431,7 +448,7 @@ mod test {
         // With ChangeDelete, the stack is combined.
         let linear_stacks = split_batch_in_linear_stacks(
             &ctx,
-            &repo,
+            repo.blobstore(),
             vec![root, child],
             FileConflicts::ChangeDelete,
         )
@@ -451,9 +468,13 @@ mod test {
         .await?;
 
         // With AnyChange, the stack is split.
-        let linear_stacks =
-            split_batch_in_linear_stacks(&ctx, &repo, vec![root, child], FileConflicts::AnyChange)
-                .await?;
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            repo.blobstore(),
+            vec![root, child],
+            FileConflicts::AnyChange,
+        )
+        .await?;
         assert_linear_stacks(
             &ctx,
             &repo,

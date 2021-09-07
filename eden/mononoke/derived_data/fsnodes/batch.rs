@@ -16,6 +16,7 @@ use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
 use derived_data::{derive_impl, BonsaiDerivedMappingContainer};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::{ChangesetId, FsnodeId};
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::derive::derive_fsnode;
 use crate::RootFsnodeId;
@@ -55,8 +56,14 @@ pub async fn derive_fsnode_in_batch(
     batch: Vec<ChangesetId>,
     gap_size: Option<usize>,
 ) -> Result<HashMap<ChangesetId, FsnodeId>, Error> {
-    let linear_stacks =
-        split_batch_in_linear_stacks(ctx, repo, batch, FileConflicts::ChangeDelete).await?;
+    let manager = repo.repo_derived_data().manager();
+    let linear_stacks = split_batch_in_linear_stacks(
+        ctx,
+        manager.repo_blobstore(),
+        batch,
+        FileConflicts::ChangeDelete,
+    )
+    .await?;
     let mut res = HashMap::new();
     for linear_stack in linear_stacks {
         // Fetch the parent fsnodes, either from a previous iteration of this
@@ -97,10 +104,11 @@ pub async fn derive_fsnode_in_batch(
                 // Clone the values that we need owned copies of to move
                 // into the future we are going to spawn, which means it
                 // must have static lifetime.
-                cloned!(ctx, repo, parent_fsnodes);
+                cloned!(ctx, manager, parent_fsnodes);
                 async move {
                     let derivation_fut = async move {
-                        derive_fsnode(&ctx, &repo, parent_fsnodes, fc.into_iter().collect()).await
+                        derive_fsnode(&ctx, &manager, parent_fsnodes, fc.into_iter().collect())
+                            .await
                     };
                     let derivation_handle = tokio::spawn(derivation_fut);
                     let fsnode_id: FsnodeId = derivation_handle.await??;

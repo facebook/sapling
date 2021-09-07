@@ -23,6 +23,7 @@ use futures::stream::{self, StreamExt, TryStreamExt};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, SkeletonManifestId,
 };
+use repo_derived_data::RepoDerivedDataRef;
 
 use crate::batch::derive_skeleton_manifests_in_batch;
 use crate::derive::derive_skeleton_manifest;
@@ -76,9 +77,10 @@ impl BonsaiDerivable for RootSkeletonManifestId {
         parents: Vec<Self>,
         _options: &Self::Options,
     ) -> Result<Self, Error> {
+        let manager = repo.repo_derived_data().manager();
         let skeleton_manifest_id = derive_skeleton_manifest(
             &ctx,
-            &repo,
+            manager,
             parents
                 .into_iter()
                 .map(RootSkeletonManifestId::into_skeleton_manifest_id)

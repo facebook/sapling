@@ -8,11 +8,11 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use anyhow::{format_err, Context, Error, Result};
-use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data_manager::DerivedDataManager;
 use futures::channel::mpsc;
 use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{FuturesOrdered, FuturesUnordered, TryStreamExt};
@@ -34,11 +34,11 @@ use crate::SkeletonManifestDerivationError;
 /// single fsnode, and check that the leaf entries are valid during merges.
 pub(crate) async fn derive_skeleton_manifest(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    manager: &DerivedDataManager,
     parents: Vec<SkeletonManifestId>,
     changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
 ) -> Result<SkeletonManifestId> {
-    let blobstore = repo.get_blobstore();
+    let blobstore = manager.repo_blobstore();
 
     // We must box and store the derivation future, otherwise lifetime
     // analysis is unable to see that the blobstore lasts long enough.
@@ -71,7 +71,7 @@ pub(crate) async fn derive_skeleton_manifest(
                 parents,
                 subentries: Default::default(),
             };
-            let (_, tree_id) = create_skeleton_manifest(ctx, &blobstore, None, tree_info).await?;
+            let (_, tree_id) = create_skeleton_manifest(ctx, blobstore, None, tree_info).await?;
             Ok(tree_id)
         }
     }
@@ -269,9 +269,11 @@ mod test {
     use super::*;
 
     use anyhow::anyhow;
+    use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
     use mononoke_types::ChangesetId;
     use pretty_assertions::assert_eq;
+    use repo_derived_data::RepoDerivedDataRef;
     use tests_utils::drawdag::{changes, create_from_dag_with_changes};
     use tests_utils::CreateCommitContext;
 
@@ -380,10 +382,11 @@ mod test {
     async fn test_skeleton_manifests(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, changesets) = init_repo(&ctx).await?;
+        let manager = repo.repo_derived_data().manager();
 
         let a_bcs = changesets["A"].load(&ctx, repo.blobstore()).await?;
         let a_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![], get_file_changes(&a_bcs)).await?;
+            derive_skeleton_manifest(&ctx, manager, vec![], get_file_changes(&a_bcs)).await?;
         let a_skeleton = a_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
             a_skeleton.lookup(&MPathElement::new(b"A".to_vec())?),
@@ -403,7 +406,7 @@ mod test {
         // Changeset B introduces some subdirectories
         let b_bcs = changesets["B"].load(&ctx, repo.blobstore()).await?;
         let b_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![a_skeleton_id], get_file_changes(&b_bcs))
+            derive_skeleton_manifest(&ctx, manager, vec![a_skeleton_id], get_file_changes(&b_bcs))
                 .await?;
         let b_skeleton = b_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
@@ -440,7 +443,7 @@ mod test {
         // Changeset C introduces some case conflicts
         let c_bcs = changesets["C"].load(&ctx, repo.blobstore()).await?;
         let c_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![b_skeleton_id], get_file_changes(&c_bcs))
+            derive_skeleton_manifest(&ctx, manager, vec![b_skeleton_id], get_file_changes(&c_bcs))
                 .await?;
         let c_skeleton = c_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
@@ -509,7 +512,7 @@ mod test {
         // Changeset D removes some of the conflicts
         let d_bcs = changesets["D"].load(&ctx, repo.blobstore()).await?;
         let d_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![c_skeleton_id], get_file_changes(&d_bcs))
+            derive_skeleton_manifest(&ctx, manager, vec![c_skeleton_id], get_file_changes(&d_bcs))
                 .await?;
         let d_skeleton = d_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(d_skeleton.summary().child_case_conflicts, false);
@@ -548,7 +551,7 @@ mod test {
         // Changeset E removes them all
         let e_bcs = changesets["E"].load(&ctx, repo.blobstore()).await?;
         let e_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![d_skeleton_id], get_file_changes(&e_bcs))
+            derive_skeleton_manifest(&ctx, manager, vec![d_skeleton_id], get_file_changes(&e_bcs))
                 .await?;
         let e_skeleton = e_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
@@ -567,7 +570,7 @@ mod test {
         // Changeset F adds a non-UTF-8 filename
         let f_bcs = changesets["F"].load(&ctx, repo.blobstore()).await?;
         let f_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![e_skeleton_id], get_file_changes(&f_bcs))
+            derive_skeleton_manifest(&ctx, manager, vec![e_skeleton_id], get_file_changes(&f_bcs))
                 .await?;
         let f_skeleton = f_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
@@ -600,7 +603,7 @@ mod test {
         // Changeset G adds some files that are not valid on Windows
         let g_bcs = changesets["G"].load(&ctx, repo.blobstore()).await?;
         let g_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![f_skeleton_id], get_file_changes(&g_bcs))
+            derive_skeleton_manifest(&ctx, manager, vec![f_skeleton_id], get_file_changes(&g_bcs))
                 .await?;
         let g_skeleton = g_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
@@ -648,7 +651,7 @@ mod test {
         // already in changeset C.
         let h_bcs = changesets["H"].load(&ctx, repo.blobstore()).await?;
         let h_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![c_skeleton_id], get_file_changes(&h_bcs))
+            derive_skeleton_manifest(&ctx, manager, vec![c_skeleton_id], get_file_changes(&h_bcs))
                 .await?;
         let h_skeleton = h_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
@@ -687,7 +690,7 @@ mod test {
         // Changeset J has an internal case conflict.
         let j_bcs = changesets["J"].load(&ctx, repo.blobstore()).await?;
         let j_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![], get_file_changes(&j_bcs)).await?;
+            derive_skeleton_manifest(&ctx, manager, vec![], get_file_changes(&j_bcs)).await?;
         let j_skeleton = j_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
             j_skeleton
@@ -701,7 +704,7 @@ mod test {
         let k_bcs = changesets["K"].load(&ctx, repo.blobstore()).await?;
         let k_skeleton_id = derive_skeleton_manifest(
             &ctx,
-            &repo,
+            manager,
             vec![h_skeleton_id, j_skeleton_id],
             get_file_changes(&k_bcs),
         )
@@ -721,7 +724,7 @@ mod test {
         // Changeset L has no case conflicts.
         let l_bcs = changesets["L"].load(&ctx, repo.blobstore()).await?;
         let l_skeleton_id =
-            derive_skeleton_manifest(&ctx, &repo, vec![], get_file_changes(&l_bcs)).await?;
+            derive_skeleton_manifest(&ctx, manager, vec![], get_file_changes(&l_bcs)).await?;
         let l_skeleton = l_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
             l_skeleton
@@ -735,7 +738,7 @@ mod test {
         let m_bcs = changesets["M"].load(&ctx, repo.blobstore()).await?;
         let m_skeleton_id = derive_skeleton_manifest(
             &ctx,
-            &repo,
+            manager,
             vec![h_skeleton_id, l_skeleton_id],
             get_file_changes(&m_bcs),
         )

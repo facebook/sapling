@@ -10,11 +10,11 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Context, Error, Result};
 use ascii::AsciiString;
-use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data_manager::DerivedDataManager;
 use digest::Digest;
 use filestore::{get_metadata, FetchKey};
 use futures::channel::mpsc;
@@ -37,11 +37,11 @@ use crate::FsnodeDerivationError;
 /// during merges.
 pub(crate) async fn derive_fsnode(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    manager: &DerivedDataManager,
     parents: Vec<FsnodeId>,
     changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
 ) -> Result<FsnodeId> {
-    let blobstore = repo.get_blobstore();
+    let blobstore = manager.repo_blobstore();
     let content_ids = changes
         .iter()
         .filter_map(|(_mpath, content_id_and_file_type)| {
@@ -400,6 +400,7 @@ mod test {
     use derived_data_test_utils::{bonsai_changeset_from_hg, iterate_all_manifest_entries};
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs};
+    use repo_derived_data::RepoDerivedDataRef;
     use std::str::FromStr;
     use tokio::runtime::Runtime;
 
@@ -407,6 +408,7 @@ mod test {
     fn flat_linear_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         let repo = runtime.block_on(linear::getrepo(fb));
+        let manager = repo.repo_derived_data().manager();
 
         let ctx = CoreContext::test_mock(fb);
         let parent_fsnode_id = {
@@ -415,7 +417,7 @@ mod test {
                 .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
                 .unwrap();
 
-            let f = derive_fsnode(&ctx, &repo, vec![], get_file_changes(&bcs));
+            let f = derive_fsnode(&ctx, manager, vec![], get_file_changes(&bcs));
 
             let root_fsnode_id = runtime.block_on(f).unwrap();
 
@@ -468,7 +470,7 @@ mod test {
 
             let f = derive_fsnode(
                 &ctx,
-                &repo,
+                manager,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
@@ -521,6 +523,7 @@ mod test {
     fn nested_directories_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         let repo = runtime.block_on(many_files_dirs::getrepo(fb));
+        let manager = repo.repo_derived_data().manager();
 
         let ctx = CoreContext::test_mock(fb);
 
@@ -530,7 +533,7 @@ mod test {
             let (_bcs_id, bcs) = runtime
                 .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
                 .unwrap();
-            let f = derive_fsnode(&ctx, &repo, vec![], get_file_changes(&bcs));
+            let f = derive_fsnode(&ctx, manager, vec![], get_file_changes(&bcs));
             runtime.block_on(f).unwrap()
         };
 
@@ -541,7 +544,7 @@ mod test {
                 .unwrap();
             let f = derive_fsnode(
                 &ctx,
-                &repo,
+                manager,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
@@ -556,7 +559,7 @@ mod test {
 
             let f = derive_fsnode(
                 &ctx,
-                &repo,
+                manager,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
@@ -741,7 +744,7 @@ mod test {
 
             let f = derive_fsnode(
                 &ctx,
-                &repo,
+                manager,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
