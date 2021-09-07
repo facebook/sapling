@@ -38,10 +38,8 @@ pub enum EdenApiError {
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("No server URL specified")]
-    MissingUrl,
-    #[error("Invalid server URL: {0}")]
-    InvalidUrl(#[source] url::ParseError),
-    #[error("Config field '{0}' is malformed")]
-    Malformed(String, #[source] configmodel::Error),
+    #[error("Missing required config item: {0}")]
+    Missing(String),
+    #[error("Invalid config item: {0}")]
+    Invalid(String, #[source] anyhow::Error),
 }
