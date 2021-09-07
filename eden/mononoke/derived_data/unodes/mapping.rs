@@ -20,6 +20,7 @@ use metaconfig_types::UnodeVersion;
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ContentId, FileType, MPath, ManifestUnodeId,
 };
+use repo_derived_data::RepoDerivedDataRef;
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 
@@ -69,9 +70,10 @@ impl BonsaiDerivable for RootUnodeManifestId {
     ) -> Result<Self, Error> {
         let unode_version = *options;
         let bcs_id = bonsai.get_changeset_id();
+        let manager = repo.repo_derived_data().manager();
         derive_unode_manifest(
-            ctx,
-            repo,
+            &ctx,
+            manager,
             bcs_id,
             parents
                 .into_iter()
