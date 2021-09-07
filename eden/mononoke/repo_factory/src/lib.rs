@@ -643,7 +643,11 @@ impl RepoFactory {
         )))
     }
 
-    pub async fn filenodes(&self, repo_config: &ArcRepoConfig) -> Result<ArcFilenodes> {
+    pub async fn filenodes(
+        &self,
+        repo_config: &ArcRepoConfig,
+        repo_identity: &ArcRepoIdentity,
+    ) -> Result<ArcFilenodes> {
         let sql_factory = self
             .sql_factory(&repo_config.storage_config.metadata)
             .await?;
@@ -666,7 +670,7 @@ impl RepoFactory {
                 &filenodes_tier.tier_name,
             );
         }
-        Ok(Arc::new(filenodes_builder.build()))
+        Ok(Arc::new(filenodes_builder.build(repo_identity.id())))
     }
 
     pub async fn hg_mutation_store(

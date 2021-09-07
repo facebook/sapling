@@ -5,49 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
-use cloned::cloned;
+use anyhow::Result;
+use async_trait::async_trait;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode};
-use futures::{
-    channel::mpsc::Sender,
-    compat::Future01CompatExt,
-    future::{FutureExt as _, TryFutureExt},
-    sink::SinkExt,
-};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{channel::mpsc::Sender, sink::SinkExt};
 use mercurial_types::HgFileNodeId;
-use mononoke_types::{RepoPath, RepositoryId};
+use mononoke_types::RepoPath;
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct MicrowaveFilenodes {
-    repo_id: RepositoryId,
     recorder: Sender<PreparedFilenode>,
     inner: Arc<dyn Filenodes>,
 }
 
 impl MicrowaveFilenodes {
-    pub fn new(
-        repo_id: RepositoryId,
-        recorder: Sender<PreparedFilenode>,
-        inner: Arc<dyn Filenodes>,
-    ) -> Self {
-        Self {
-            repo_id,
-            recorder,
-            inner,
-        }
+    pub fn new(recorder: Sender<PreparedFilenode>, inner: Arc<dyn Filenodes>) -> Self {
+        Self { recorder, inner }
     }
 }
 
+#[async_trait]
 impl Filenodes for MicrowaveFilenodes {
-    fn add_filenodes(
+    async fn add_filenodes(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<()>, Error> {
+    ) -> Result<FilenodeResult<()>> {
         // Microwave normally should never be writing. If it is writing, then that's likely a bug
         // that warants attention, and it is preferable to panic and wait for a fix. Since
         // Microwave isn't on the critical path for anything, and can do its job perfectly well
@@ -64,91 +49,59 @@ impl Filenodes for MicrowaveFilenodes {
         // is therefore  generally preferable if the release schedule for things that might write
         // to our underlying storage is more controlled and has additional healthchecks, so not
         // doing it in Microwave at all is preferable.
-        unimplemented!(
-            "MicrowaveFilenodes: unexpected add_filenodes in repo {}",
-            repo_id
-        )
+        unimplemented!("MicrowaveFilenodes: unexpected add_filenodes")
     }
 
-    fn add_or_replace_filenodes(
+    async fn add_or_replace_filenodes(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<()>, Error> {
+    ) -> Result<FilenodeResult<()>> {
         // Same as above
-        unimplemented!(
-            "MicrowaveFilenodes: unexpected add_or_replace_filenodes in repo {}",
-            repo_id
-        )
+        unimplemented!("MicrowaveFilenodes: unexpected add_or_replace_filenodes",)
     }
 
-    fn get_filenode(
+    async fn get_filenode(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         path: &RepoPath,
         filenode_id: HgFileNodeId,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error> {
-        cloned!(self.inner, mut self.recorder, path);
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>> {
+        let info = self
+            .inner
+            .get_filenode(ctx, path, filenode_id)
+            .await?
+            .do_not_handle_disabled_filenodes()?;
 
-        // NOTE: Receiving any other repo_id here would be a programming error, so we block it. See
-        // above for rationale.
-        if repo_id != self.repo_id {
-            panic!(
-                "MicrowaveFilenodes: unexpected get_filenode for repo_id {} when expecting {}",
-                repo_id, self.repo_id
-            );
+        if let Some(ref info) = info {
+            self.recorder
+                .clone()
+                .send(PreparedFilenode {
+                    path: path.clone(),
+                    info: info.clone(),
+                })
+                .await?;
         }
 
-        async move {
-            let info = inner
-                .get_filenode(ctx, &path, filenode_id, repo_id)
-                .compat()
-                .await?
-                .do_not_handle_disabled_filenodes()?;
-
-            if let Some(ref info) = info {
-                recorder
-                    .send(PreparedFilenode {
-                        path,
-                        info: info.clone(),
-                    })
-                    .await?;
-            }
-
-            Ok(FilenodeResult::Present(info))
-        }
-        .boxed()
-        .compat()
-        .boxify()
+        Ok(FilenodeResult::Present(info))
     }
 
-    fn get_all_filenodes_maybe_stale(
+    async fn get_all_filenodes_maybe_stale(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _path: &RepoPath,
-        repo_id: RepositoryId,
         _limit: Option<u64>,
-    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
+    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>> {
         // The rationale is a bit different to that in add() here, since this is a read method. The
         // idea here is that we do not expect cache warmup to call get_all_filenodes_maybe_stale,
         // so we don't do anything about it in Microwave (i.e. don't cache it). If cache warmup
         // starts requiring this, then Microwave will fail, and we can fix it. If we didn't panic
         // (and e.g. silently ignored the errors), then we could end be in a situation where our
         // Microwave caches don't have the data we need, but we don't notice.
-        unimplemented!(
-            "MicrowaveFilenodes: unexpected get_all_filenodes_maybe_stale in repo {}",
-            repo_id
-        )
+        unimplemented!("MicrowaveFilenodes: unexpected get_all_filenodes_maybe_stale")
     }
 
-    fn prime_cache(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-        filenodes: &[PreparedFilenode],
-    ) {
-        self.inner.prime_cache(ctx, repo_id, filenodes)
+    fn prime_cache(&self, ctx: &CoreContext, filenodes: &[PreparedFilenode]) {
+        self.inner.prime_cache(ctx, filenodes)
     }
 }

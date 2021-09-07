@@ -16,7 +16,7 @@ use derived_data::{
     DeriveError, DerivedDataTypesConfig,
 };
 use filenodes::{FilenodeInfo, FilenodeResult, Filenodes, FilenodesArc, PreparedFilenode};
-use futures::{compat::Future01CompatExt, stream, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{stream, StreamExt, TryFutureExt, TryStreamExt};
 use mercurial_types::{HgChangesetId, HgFileNodeId, NULL_HASH};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepoPath, RepositoryId};
 use repo_blobstore::RepoBlobstoreRef;
@@ -236,12 +236,7 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
         match root_filenode {
             Some(root_filenode) => {
                 self.filenodes
-                    .add_filenodes(
-                        ctx.clone(),
-                        vec![root_filenode.clone().into()],
-                        self.repo_id,
-                    )
-                    .compat()
+                    .add_filenodes(ctx, vec![root_filenode.clone().into()])
                     .map_ok(|res| match res {
                         // If filenodes are disabled then just return success
                         // but use explicit match here in case we add more variants
@@ -290,13 +285,7 @@ impl FilenodesOnlyPublicMapping {
         } else {
             let filenode_res = self
                 .filenodes
-                .get_filenode(
-                    ctx.clone(),
-                    &RepoPath::RootPath,
-                    HgFileNodeId::new(mf_id),
-                    self.repo_id,
-                )
-                .compat()
+                .get_filenode(ctx, &RepoPath::RootPath, HgFileNodeId::new(mf_id))
                 .await?;
 
             match filenode_res {

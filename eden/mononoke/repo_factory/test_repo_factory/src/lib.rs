@@ -337,9 +337,9 @@ impl TestRepoFactory {
     ///
     /// Filenodes do not use the metadata db (each repo has its own filenodes
     /// db in memory).
-    pub fn filenodes(&self) -> Result<ArcFilenodes> {
+    pub fn filenodes(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcFilenodes> {
         let mut filenodes: ArcFilenodes =
-            Arc::new(NewFilenodesBuilder::with_sqlite_in_memory()?.build());
+            Arc::new(NewFilenodesBuilder::with_sqlite_in_memory()?.build(repo_identity.id()));
         if let Some(filenodes_override) = &self.filenodes_override {
             filenodes = filenodes_override(filenodes);
         }

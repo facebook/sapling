@@ -8,6 +8,7 @@
 use cachelib::VolatileLruCachePool;
 use fbinit::FacebookInit;
 use metaconfig_types::{RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig};
+use mononoke_types::RepositoryId;
 use sql::Connection;
 use sql_construct::{
     SqlConstruct, SqlShardableConstructFromMetadataDatabaseConfig, SqlShardedConstruct,
@@ -95,10 +96,11 @@ impl SqlShardableConstructFromMetadataDatabaseConfig for NewFilenodesBuilder {
 }
 
 impl NewFilenodesBuilder {
-    pub fn build(self) -> NewFilenodes {
+    pub fn build(self, repo_id: RepositoryId) -> NewFilenodes {
         NewFilenodes {
             reader: Arc::new(self.reader),
             writer: Arc::new(self.writer),
+            repo_id,
         }
     }
 

@@ -7,11 +7,11 @@
 
 #![deny(warnings)]
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 use context::CoreContext;
-use futures_ext::BoxFuture;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
-use mononoke_types::{hash, RepositoryId};
+use mononoke_types::hash;
 use quickcheck::{Arbitrary, Gen};
 
 pub mod thrift {
@@ -62,7 +62,7 @@ impl<T> FilenodeResult<T> {
         }
     }
 
-    pub fn do_not_handle_disabled_filenodes(self) -> Result<T, Error> {
+    pub fn do_not_handle_disabled_filenodes(self) -> Result<T> {
         match self {
             FilenodeResult::Present(t) => Ok(t),
             FilenodeResult::Disabled => Err(anyhow!("filenodes are disabled")),
@@ -87,7 +87,7 @@ impl<T> FilenodeRangeResult<T> {
         }
     }
 
-    pub fn do_not_handle_disabled_filenodes(self) -> Result<Option<T>, Error> {
+    pub fn do_not_handle_disabled_filenodes(self) -> Result<Option<T>> {
         match self {
             FilenodeRangeResult::Present(t) => Ok(Some(t)),
             FilenodeRangeResult::TooBig => Ok(None),
@@ -146,38 +146,35 @@ impl Arbitrary for FilenodeInfo {
 }
 
 #[facet::facet]
+#[async_trait]
 pub trait Filenodes: Send + Sync {
-    fn add_filenodes(
+    async fn add_filenodes(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<()>, Error>;
+    ) -> Result<FilenodeResult<()>>;
 
-    fn add_or_replace_filenodes(
+    async fn add_or_replace_filenodes(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<()>, Error>;
+    ) -> Result<FilenodeResult<()>>;
 
-    fn get_filenode(
+    async fn get_filenode(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         path: &RepoPath,
         filenode: HgFileNodeId,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error>;
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>>;
 
-    fn get_all_filenodes_maybe_stale(
+    async fn get_all_filenodes_maybe_stale(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         path: &RepoPath,
-        repo_id: RepositoryId,
         limit: Option<u64>,
-    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>;
+    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>>;
 
-    fn prime_cache(&self, ctx: &CoreContext, repo_id: RepositoryId, filenodes: &[PreparedFilenode]);
+    fn prime_cache(&self, ctx: &CoreContext, filenodes: &[PreparedFilenode]);
 }
 
 #[cfg(test)]

@@ -18,7 +18,6 @@ use cmdlib::args;
 use context::CoreContext;
 use derived_data_filenodes::generate_all_filenodes;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use futures::future::{join_all, FutureExt};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use slog::info;
@@ -55,8 +54,7 @@ async fn regenerate_single_manifest(
     let toinsert = generate_all_filenodes(&ctx, &repo, cs_id).await?;
 
     repo.get_filenodes()
-        .add_or_replace_filenodes(ctx.clone(), toinsert, repo.get_repoid())
-        .compat()
+        .add_or_replace_filenodes(&ctx, toinsert)
         .await?
         .do_not_handle_disabled_filenodes()?;
 

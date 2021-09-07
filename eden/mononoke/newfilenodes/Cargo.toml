@@ -11,17 +11,16 @@ license = "GPLv2+"
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
+async-trait = "0.1.51"
 bytes = { version = "1.0", features = ["serde"] }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../server/context" }
 faster-hex = "0.4"
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 itertools = "0.10.1"
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

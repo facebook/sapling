@@ -13,7 +13,6 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult};
 use futures::{
-    compat::Future01CompatExt,
     future::{self, try_join},
     stream, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
@@ -59,8 +58,7 @@ async fn get_filenode_generation(
 ) -> Result<Option<u64>, Error> {
     let filenode_info = match repo
         .filenodes()
-        .get_filenode(ctx.clone(), repo_path, filenode, repo.get_repoid())
-        .compat()
+        .get_filenode(ctx, repo_path, filenode)
         .await?
         .do_not_handle_disabled_filenodes()?
     {
@@ -209,8 +207,7 @@ pub async fn get_file_history(
     path: MPath,
     max_length: Option<u64>,
 ) -> Result<FilenodeResult<Vec<HgFileHistoryEntry>>, Error> {
-    let prefetched_res =
-        prefetch_history(ctx.clone(), repo.clone(), path.clone(), max_length).await?;
+    let prefetched_res = prefetch_history(&ctx, &repo, path.clone(), max_length).await?;
     match prefetched_res {
         FilenodeRangeResult::Present(prefetched) => {
             let history = get_file_history_using_prefetched(
@@ -243,15 +240,14 @@ pub async fn get_file_history(
 /// Prefetch and cache filenode information. Performing these fetches in bulk upfront
 /// prevents an excessive number of DB roundtrips when constructing file history.
 async fn prefetch_history(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     path: MPath,
     limit: Option<u64>,
 ) -> Result<FilenodeRangeResult<HashMap<HgFileNodeId, FilenodeInfo>>, Error> {
     let filenodes_res = repo
         .filenodes()
-        .get_all_filenodes_maybe_stale(ctx, &RepoPath::FilePath(path), repo.get_repoid(), limit)
-        .compat()
+        .get_all_filenodes_maybe_stale(ctx, &RepoPath::FilePath(path), limit)
         .await?;
     Ok(filenodes_res.map(|filenodes| {
         filenodes
@@ -373,11 +369,7 @@ async fn get_maybe_missing_filenode(
     path: &RepoPath,
     node: HgFileNodeId,
 ) -> Result<FilenodeInfo, Error> {
-    let filenode_res = repo
-        .filenodes()
-        .get_filenode(ctx.clone(), path, node, repo.get_repoid())
-        .compat()
-        .await?;
+    let filenode_res = repo.filenodes().get_filenode(ctx, path, node).await?;
     match filenode_res {
         FilenodeResult::Present(Some(filenode)) => Ok(filenode),
         FilenodeResult::Present(None) | FilenodeResult::Disabled => {

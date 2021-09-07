@@ -117,7 +117,6 @@ async fn do_main<'a>(
                 let warmup_ctx = ctx.clone();
 
                 let warmup = async move {
-                    let repoid = config.repoid;
                     let cache_warmup = config.cache_warmup.clone();
                     let repo: InnerRepo = repo_factory.build(name, config).await?;
 
@@ -145,7 +144,7 @@ async fn do_main<'a>(
                     let warmup_repo = repo
                         .blob_repo
                         .dangerous_override(|inner| -> ArcFilenodes {
-                            Arc::new(MicrowaveFilenodes::new(repoid, filenodes_sender, inner))
+                            Arc::new(MicrowaveFilenodes::new(filenodes_sender, inner))
                         })
                         .dangerous_override(|inner| -> ArcChangesets {
                             Arc::new(MicrowaveChangesets::new(changesets_sender, inner))

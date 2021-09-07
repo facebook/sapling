@@ -18,12 +18,10 @@ mod writer;
 #[cfg(test)]
 mod test;
 
-use anyhow::{Context, Error};
-use cloned::cloned;
+use anyhow::{Context, Result};
+use async_trait::async_trait;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode};
-use futures::future::{FutureExt as _, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as _};
 use mercurial_types::HgFileNodeId;
 use mononoke_types::{RepoPath, RepositoryId};
 use std::sync::Arc;
@@ -51,97 +49,66 @@ pub enum ErrorKind {
 pub struct NewFilenodes {
     reader: Arc<FilenodesReader>,
     writer: Arc<FilenodesWriter>,
+    repo_id: RepositoryId,
 }
 
+#[async_trait]
 impl Filenodes for NewFilenodes {
-    fn add_filenodes(
-        &self,
-        ctx: CoreContext,
-        info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<()>, Error> {
-        cloned!(self.writer);
-
-        async move {
-            let ret = writer
-                .insert_filenodes(&ctx, repo_id, info, false /* replace */)
-                .await
-                .with_context(|| ErrorKind::FailAddFilenodes)?;
-            Ok(ret)
-        }
-        .boxed()
-        .compat()
-        .boxify()
-    }
-
-    fn add_or_replace_filenodes(
-        &self,
-        ctx: CoreContext,
-        info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<()>, Error> {
-        cloned!(self.writer);
-
-        async move {
-            let ret = writer
-                .insert_filenodes(&ctx, repo_id, info, true /* replace */)
-                .await
-                .with_context(|| ErrorKind::FailAddFilenodes)?;
-            Ok(ret)
-        }
-        .boxed()
-        .compat()
-        .boxify()
-    }
-
-    fn get_filenode(
-        &self,
-        ctx: CoreContext,
-        path: &RepoPath,
-        filenode_id: HgFileNodeId,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error> {
-        cloned!(self.reader, path);
-
-        async move {
-            let ret = reader
-                .get_filenode(&ctx, repo_id, &path, filenode_id)
-                .await
-                .with_context(|| ErrorKind::FailFetchFilenode(filenode_id, path))?;
-            Ok(ret)
-        }
-        .boxed()
-        .compat()
-        .boxify()
-    }
-
-    fn get_all_filenodes_maybe_stale(
-        &self,
-        ctx: CoreContext,
-        path: &RepoPath,
-        repo_id: RepositoryId,
-        limit: Option<u64>,
-    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
-        cloned!(self.reader, path);
-
-        async move {
-            let ret = reader
-                .get_all_filenodes_for_path(&ctx, repo_id, &path, limit)
-                .await
-                .with_context(|| ErrorKind::FailFetchFilenodeRange(path))?;
-            Ok(ret)
-        }
-        .boxed()
-        .compat()
-        .boxify()
-    }
-
-    fn prime_cache(
+    async fn add_filenodes(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
-        filenodes: &[PreparedFilenode],
-    ) {
-        self.reader.prime_cache(ctx, repo_id, filenodes);
+        info: Vec<PreparedFilenode>,
+    ) -> Result<FilenodeResult<()>> {
+        let ret = self
+            .writer
+            .insert_filenodes(ctx, self.repo_id, info, false /* replace */)
+            .await
+            .with_context(|| ErrorKind::FailAddFilenodes)?;
+        Ok(ret)
+    }
+
+    async fn add_or_replace_filenodes(
+        &self,
+        ctx: &CoreContext,
+        info: Vec<PreparedFilenode>,
+    ) -> Result<FilenodeResult<()>> {
+        let ret = self
+            .writer
+            .insert_filenodes(ctx, self.repo_id, info, true /* replace */)
+            .await
+            .with_context(|| ErrorKind::FailAddFilenodes)?;
+        Ok(ret)
+    }
+
+    async fn get_filenode(
+        &self,
+        ctx: &CoreContext,
+        path: &RepoPath,
+        filenode_id: HgFileNodeId,
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>> {
+        let ret = self
+            .reader
+            .get_filenode(ctx, self.repo_id, path, filenode_id)
+            .await
+            .with_context(|| ErrorKind::FailFetchFilenode(filenode_id, path.clone()))?;
+        Ok(ret)
+    }
+
+    async fn get_all_filenodes_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        path: &RepoPath,
+        limit: Option<u64>,
+    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>> {
+        let ret = self
+            .reader
+            .get_all_filenodes_for_path(ctx, self.repo_id, path, limit)
+            .await
+            .with_context(|| ErrorKind::FailFetchFilenodeRange(path.clone()))?;
+        Ok(ret)
+    }
+
+    fn prime_cache(&self, ctx: &CoreContext, filenodes: &[PreparedFilenode]) {
+        self.reader.prime_cache(ctx, self.repo_id, filenodes);
     }
 }

@@ -14,8 +14,7 @@ use borrowed::borrowed;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{
-    compat::Future01CompatExt, future::try_join_all, pin_mut, stream, FutureExt, StreamExt,
-    TryFutureExt, TryStreamExt,
+    future::try_join_all, pin_mut, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
 use futures_util::try_join;
 use itertools::{Either, Itertools};
@@ -106,11 +105,7 @@ pub(crate) async fn add_filenodes(
         return Ok(FilenodeResult::Present(()));
     }
     let filenodes = repo.get_filenodes();
-    let repo_id = repo.get_repoid();
-    filenodes
-        .add_filenodes(ctx.clone(), to_write, repo_id)
-        .compat()
-        .await
+    filenodes.add_filenodes(ctx, to_write).await
 }
 
 pub async fn generate_all_filenodes(
@@ -276,7 +271,8 @@ async fn fetch_root_manifest_id(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::{anyhow, Context};
+    use anyhow::{anyhow, Context, Result};
+    use async_trait::async_trait;
     use cloned::cloned;
     use derived_data::{
         BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, BonsaiDerivedMappingContainer,
@@ -285,10 +281,9 @@ mod tests {
     use filenodes::{FilenodeRangeResult, Filenodes};
     use fixtures::linear;
     use futures::compat::Stream01CompatExt;
-    use futures_ext::{BoxFuture, FutureExt as _};
     use manifest::ManifestOps;
     use maplit::hashmap;
-    use mononoke_types::{FileType, RepositoryId};
+    use mononoke_types::FileType;
     use revset::AncestorsNodeStream;
     use slog::info;
     use std::{
@@ -621,62 +616,52 @@ mod tests {
         cs_id: Arc<Mutex<Option<HgChangesetId>>>,
     }
 
+    #[async_trait]
     impl Filenodes for FilenodesWrapper {
-        fn add_filenodes(
+        async fn add_filenodes(
             &self,
-            ctx: CoreContext,
+            ctx: &CoreContext,
             info: Vec<PreparedFilenode>,
-            repo_id: RepositoryId,
-        ) -> BoxFuture<FilenodeResult<()>, Error> {
+        ) -> Result<FilenodeResult<()>> {
             // compare PreparedFilenode::Info::Linknode
             if let Some(cs_id) = *self.cs_id.lock().unwrap() {
                 if info.iter().any(|filenode| filenode.info.linknode == cs_id) {
-                    return async move { Err(anyhow!("filenodes for {} are prohibited", cs_id)) }
-                        .boxed()
-                        .compat()
-                        .boxify();
+                    return Err(anyhow!("filenodes for {} are prohibited", cs_id));
                 }
             }
-            self.inner.add_filenodes(ctx, info, repo_id)
+            self.inner.add_filenodes(ctx, info).await
         }
 
-        fn add_or_replace_filenodes(
-            &self,
-            ctx: CoreContext,
-            info: Vec<PreparedFilenode>,
-            repo_id: RepositoryId,
-        ) -> BoxFuture<FilenodeResult<()>, Error> {
-            self.inner.add_or_replace_filenodes(ctx, info, repo_id)
-        }
-
-        fn get_filenode(
-            &self,
-            ctx: CoreContext,
-            path: &RepoPath,
-            filenode: HgFileNodeId,
-            repo_id: RepositoryId,
-        ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error> {
-            self.inner.get_filenode(ctx, path, filenode, repo_id)
-        }
-
-        fn get_all_filenodes_maybe_stale(
-            &self,
-            ctx: CoreContext,
-            path: &RepoPath,
-            repo_id: RepositoryId,
-            limit: Option<u64>,
-        ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
-            self.inner
-                .get_all_filenodes_maybe_stale(ctx, path, repo_id, limit)
-        }
-
-        fn prime_cache(
+        async fn add_or_replace_filenodes(
             &self,
             ctx: &CoreContext,
-            repo_id: RepositoryId,
-            filenodes: &[PreparedFilenode],
-        ) {
-            self.inner.prime_cache(ctx, repo_id, filenodes)
+            info: Vec<PreparedFilenode>,
+        ) -> Result<FilenodeResult<()>> {
+            self.inner.add_or_replace_filenodes(ctx, info).await
+        }
+
+        async fn get_filenode(
+            &self,
+            ctx: &CoreContext,
+            path: &RepoPath,
+            filenode: HgFileNodeId,
+        ) -> Result<FilenodeResult<Option<FilenodeInfo>>> {
+            self.inner.get_filenode(ctx, path, filenode).await
+        }
+
+        async fn get_all_filenodes_maybe_stale(
+            &self,
+            ctx: &CoreContext,
+            path: &RepoPath,
+            limit: Option<u64>,
+        ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>> {
+            self.inner
+                .get_all_filenodes_maybe_stale(ctx, path, limit)
+                .await
+        }
+
+        fn prime_cache(&self, ctx: &CoreContext, filenodes: &[PreparedFilenode]) {
+            self.inner.prime_cache(ctx, filenodes)
         }
     }
 
@@ -691,11 +676,9 @@ mod tests {
         let manifest = fetch_root_manifest_id(ctx, cs, repo)
             .await
             .with_context(|| format!("while fetching manifest from prod for cs {:?}", cs))?;
-        cloned!(repo);
         manifest
             .list_all_entries(ctx.clone(), repo.get_blobstore())
             .map_ok(|(path, entry)| {
-                cloned!(repo);
                 async move {
                     let (path, node) = match (path, entry) {
                         (Some(path), Entry::Leaf((_, id))) => (RepoPath::FilePath(path), id),
@@ -709,13 +692,11 @@ mod tests {
                         }
                     };
                     let prod = prod_filenodes
-                        .get_filenode(ctx.clone(), &path, node, repo.get_repoid())
-                        .compat()
+                        .get_filenode(ctx, &path, node, )
                         .await
                         .with_context(|| format!("while get prod filenode for cs {:?}", cs))?;
                     let backup = backup_filenodes
-                        .get_filenode(ctx.clone(), &path, node, backup_repo.get_repoid())
-                        .compat()
+                        .get_filenode(ctx, &path, node, )
                         .await
                         .with_context(|| format!("while get backup filenode for cs {:?}", cs))?;
                     match (prod, backup) {

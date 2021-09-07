@@ -34,10 +34,7 @@ use filenodes::{
     ArcFilenodes, FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode,
 };
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
-use futures::future::{FutureExt as _, TryFutureExt as _};
 use futures::stream::BoxStream;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::Future;
 use memblob::Memblob;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use mercurial_types::{HgChangesetId, HgFileNodeId};
@@ -232,14 +229,14 @@ impl BenchmarkRepoFactory {
         )))
     }
 
-    pub fn filenodes(&self) -> Result<ArcFilenodes> {
+    pub fn filenodes(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcFilenodes> {
         let pool = volatile_pool("filenodes")?;
 
         let mut builder = NewFilenodesBuilder::with_sqlite_in_memory()?;
         builder.enable_caching(self.fb, pool.clone(), pool, "filenodes", "");
 
         Ok(Arc::new(DelayedFilenodes::new(
-            builder.build(),
+            builder.build(repo_identity.id()),
             self.delay_settings.db_get_dist,
             self.delay_settings.db_put_dist,
         )))
@@ -288,26 +285,9 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
 }
 
 /// Delay target future execution by delay sampled from provided distribution
-fn delay<F, D>(distribution: D, target: F) -> impl Future<Item = F::Item, Error = Error>
-where
-    D: Distribution<f64>,
-    F: Future<Error = Error>,
-{
+async fn delay(distribution: impl Distribution<f64>) {
     let seconds = rand::thread_rng().sample(distribution).abs();
-
-    tokio_shim::time::sleep(Duration::new(
-        seconds.trunc() as u64,
-        (seconds.fract() * 1e+9) as u32,
-    ))
-    .map(Result::<_, Error>::Ok)
-    .boxed()
-    .compat()
-    .and_then(move |_| target)
-}
-
-async fn delay_v2(distribution: impl Distribution<f64>) {
-    let seconds = rand::thread_rng().sample(distribution).abs();
-    let duration = Duration::new(seconds.trunc() as u64, (seconds.fract() * 1e+9) as u32);
+    let duration = Duration::from_secs_f64(seconds);
     tokio::time::sleep(duration).await;
 }
 
@@ -327,65 +307,50 @@ impl<F> DelayedFilenodes<F> {
     }
 }
 
+#[async_trait]
 impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
-    fn add_filenodes(
-        &self,
-        ctx: CoreContext,
-        info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<()>, Error> {
-        delay(self.put_dist, self.inner.add_filenodes(ctx, info, repo_id)).boxify()
-    }
-
-    fn add_or_replace_filenodes(
-        &self,
-        ctx: CoreContext,
-        info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<()>, Error> {
-        delay(
-            self.put_dist,
-            self.inner.add_or_replace_filenodes(ctx, info, repo_id),
-        )
-        .boxify()
-    }
-
-    fn get_filenode(
-        &self,
-        ctx: CoreContext,
-        path: &RepoPath,
-        filenode: HgFileNodeId,
-        repo_id: RepositoryId,
-    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error> {
-        delay(
-            self.get_dist,
-            self.inner.get_filenode(ctx, path, filenode, repo_id),
-        )
-        .boxify()
-    }
-
-    fn get_all_filenodes_maybe_stale(
-        &self,
-        ctx: CoreContext,
-        path: &RepoPath,
-        repo_id: RepositoryId,
-        limit: Option<u64>,
-    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
-        delay(
-            self.get_dist,
-            self.inner
-                .get_all_filenodes_maybe_stale(ctx, path, repo_id, limit),
-        )
-        .boxify()
-    }
-
-    fn prime_cache(
+    async fn add_filenodes(
         &self,
         ctx: &CoreContext,
-        repo_id: RepositoryId,
-        filenodes: &[PreparedFilenode],
-    ) {
-        self.inner.prime_cache(ctx, repo_id, filenodes)
+        info: Vec<PreparedFilenode>,
+    ) -> Result<FilenodeResult<()>> {
+        delay(self.put_dist).await;
+        self.inner.add_filenodes(ctx, info).await
+    }
+
+    async fn add_or_replace_filenodes(
+        &self,
+        ctx: &CoreContext,
+        info: Vec<PreparedFilenode>,
+    ) -> Result<FilenodeResult<()>> {
+        delay(self.put_dist).await;
+        self.inner.add_or_replace_filenodes(ctx, info).await
+    }
+
+    async fn get_filenode(
+        &self,
+        ctx: &CoreContext,
+        path: &RepoPath,
+        filenode: HgFileNodeId,
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>> {
+        delay(self.get_dist).await;
+        self.inner.get_filenode(ctx, path, filenode).await
+    }
+
+    async fn get_all_filenodes_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        path: &RepoPath,
+        limit: Option<u64>,
+    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>> {
+        delay(self.get_dist).await;
+        self.inner
+            .get_all_filenodes_maybe_stale(ctx, path, limit)
+            .await
+    }
+
+    fn prime_cache(&self, ctx: &CoreContext, filenodes: &[PreparedFilenode]) {
+        self.inner.prime_cache(ctx, filenodes)
     }
 }
 
@@ -412,7 +377,7 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
     }
 
     async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
-        delay_v2(self.put_dist).await;
+        delay(self.put_dist).await;
         self.inner.add(ctx, cs).await
     }
 
@@ -421,7 +386,7 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
         ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<ChangesetEntry>, Error> {
-        delay_v2(self.get_dist).await;
+        delay(self.get_dist).await;
         self.inner.get(ctx, cs_id).await
     }
 
@@ -430,7 +395,7 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
         ctx: CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetEntry>, Error> {
-        delay_v2(self.get_dist).await;
+        delay(self.get_dist).await;
         self.inner.get_many(ctx, cs_ids).await
     }
 
@@ -440,7 +405,7 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
-        delay_v2(self.get_dist).await;
+        delay(self.get_dist).await;
         self.inner.get_many_by_prefix(ctx, cs_prefix, limit).await
     }
 
@@ -488,7 +453,7 @@ impl<M> DelayedBonsaiHgMapping<M> {
 #[async_trait]
 impl<M: BonsaiHgMapping> BonsaiHgMapping for DelayedBonsaiHgMapping<M> {
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
-        delay_v2(self.put_dist).await;
+        delay(self.put_dist).await;
         self.inner.add(ctx, entry).await
     }
 
@@ -498,7 +463,7 @@ impl<M: BonsaiHgMapping> BonsaiHgMapping for DelayedBonsaiHgMapping<M> {
         repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
     ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
-        delay_v2(self.get_dist).await;
+        delay(self.get_dist).await;
         self.inner.get(ctx, repo_id, cs_id).await
     }
 
@@ -510,7 +475,7 @@ impl<M: BonsaiHgMapping> BonsaiHgMapping for DelayedBonsaiHgMapping<M> {
         high: HgChangesetId,
         limit: usize,
     ) -> Result<Vec<HgChangesetId>, Error> {
-        delay_v2(self.get_dist).await;
+        delay(self.get_dist).await;
         self.inner
             .get_hg_in_range(ctx, repo_id, low, high, limit)
             .await

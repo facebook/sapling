@@ -35,7 +35,6 @@ use cloned::cloned;
 use context::CoreContext;
 use filenodes::{ArcFilenodes, FilenodeInfo, FilenodeRangeResult, FilenodeResult};
 use futures::{
-    compat::Future01CompatExt,
     future,
     stream::{self, BoxStream},
     Stream, StreamExt, TryFutureExt, TryStreamExt,
@@ -382,10 +381,7 @@ impl BlobRepoHg for BlobRepo {
         path: &RepoPath,
         node: HgFileNodeId,
     ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error> {
-        self.get_filenodes()
-            .get_filenode(ctx, path, node, self.get_repoid())
-            .compat()
-            .await
+        self.get_filenodes().get_filenode(&ctx, path, node).await
     }
 
     async fn get_filenode(
@@ -412,8 +408,7 @@ impl BlobRepoHg for BlobRepo {
     ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
         STATS::get_all_filenodes.add_value(1);
         self.get_filenodes()
-            .get_all_filenodes_maybe_stale(ctx, &path, self.get_repoid(), limit)
-            .compat()
+            .get_all_filenodes_maybe_stale(&ctx, &path, limit)
             .await
     }
 

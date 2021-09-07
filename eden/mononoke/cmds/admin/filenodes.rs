@@ -17,7 +17,7 @@ use cmdlib::{args::MononokeMatches, helpers};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
-use futures::{compat::Future01CompatExt, future::try_join_all, TryStreamExt};
+use futures::{future::try_join_all, TryStreamExt};
 use futures_stats::TimedFutureExt;
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
@@ -304,8 +304,7 @@ pub async fn subcommand_filenodes<'a>(
 
             let filenodes = repo.get_filenodes();
             let (stats, res) = filenodes
-                .get_all_filenodes_maybe_stale(ctx.clone(), &path, repo.get_repoid(), None)
-                .compat()
+                .get_all_filenodes_maybe_stale(&ctx, &path, None)
                 .timed()
                 .await;
 

@@ -169,8 +169,7 @@ pub async fn prime_cache(
     let filenodes = snapshot.filenodes.ok_or(Error::msg("filenodes missing"))?;
     let filenodes = reheat_filenodes(filenodes)?;
 
-    repo.get_filenodes()
-        .prime_cache(ctx, repo.get_repoid(), filenodes.as_ref());
+    repo.get_filenodes().prime_cache(ctx, filenodes.as_ref());
     info!(
         ctx.logger(),
         "primed filenodes cache with {} entries",
