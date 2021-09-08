@@ -14,11 +14,11 @@ use dag_types::Location;
 use types::HgId;
 
 use crate::commit::{
-    BonsaiChangesetContent, BonsaiExtra, BonsaiFileChange, CommitHashLookupRequest,
-    CommitHashLookupResponse, CommitHashToLocationRequestBatch, CommitHashToLocationResponse,
-    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
-    EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, FetchSnapshotRequest,
-    FetchSnapshotResponse, HgChangesetContent, HgMutationEntryContent,
+    BonsaiChangesetContent, BonsaiExtra, BonsaiFileChange, CommitGraphEntry, CommitGraphRequest,
+    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
+    CommitLocationToHashResponse, EphemeralPrepareRequest, EphemeralPrepareResponse, Extra,
+    FetchSnapshotRequest, FetchSnapshotResponse, HgChangesetContent, HgMutationEntryContent,
     UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
 };
 use crate::wire::{
@@ -56,6 +56,22 @@ pub struct WireCommitLocationToHashResponse {
 pub struct WireCommitLocationToHashRequestBatch {
     #[serde(rename = "1")]
     pub requests: Vec<WireCommitLocationToHashRequest>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireCommitGraphRequest {
+    #[serde(rename = "1")]
+    pub common: Vec<WireHgId>,
+    #[serde(rename = "2")]
+    pub heads: Vec<WireHgId>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireCommitGraphEntry {
+    #[serde(rename = "1")]
+    pub hgid: WireHgId,
+    #[serde(rename = "2")]
+    pub parents: Vec<WireHgId>,
 }
 
 impl ToWire for Location<HgId> {
@@ -179,6 +195,61 @@ impl ToApi for WireCommitLocationToHashRequestBatch {
 impl Arbitrary for WireCommitLocationToHashRequestBatch {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         CommitLocationToHashRequestBatch::arbitrary(g).to_wire()
+    }
+}
+
+impl ToWire for CommitGraphRequest {
+    type Wire = WireCommitGraphRequest;
+
+    fn to_wire(self) -> Self::Wire {
+        Self::Wire {
+            common: self.common.to_wire(),
+            heads: self.heads.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireCommitGraphRequest {
+    type Api = CommitGraphRequest;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        let api = Self::Api {
+            common: self.common.to_api()?,
+            heads: self.heads.to_api()?,
+        };
+        Ok(api)
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireCommitGraphRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitGraphRequest::arbitrary(g).to_wire()
+    }
+}
+
+impl ToWire for CommitGraphEntry {
+    type Wire = WireCommitGraphEntry;
+
+    fn to_wire(self) -> Self::Wire {
+        Self::Wire {
+            hgid: self.hgid.to_wire(),
+            parents: self.parents.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireCommitGraphEntry {
+    type Api = CommitGraphEntry;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        let api = Self::Api {
+            hgid: self.hgid.to_api()?,
+            parents: self.parents.to_api()?,
+        };
+        Ok(api)
     }
 }
 
@@ -1040,6 +1111,18 @@ mod tests {
 
         fn test_roundtrip_wire_ephemeral_prepare_res(
             v: EphemeralPrepareResponse
+        ) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_roundtrip_serialize_commit_graph_request(
+            v: WireCommitGraphRequest
+        ) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_roundtrip_commit_graph_request(
+            v: CommitGraphRequest
         ) -> bool {
             check_wire_roundtrip(v)
         }

@@ -107,11 +107,38 @@ pub struct CommitKnownResponse {
     pub known: Result<bool, ServerError>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 #[derive(Serialize)]
 pub struct CommitGraphEntry {
     pub hgid: HgId,
     pub parents: Vec<HgId>,
+}
+
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize)]
+pub struct CommitGraphRequest {
+    pub common: Vec<HgId>,
+    pub heads: Vec<HgId>,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitGraphEntry {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitGraphEntry {
+            hgid: Arbitrary::arbitrary(g),
+            parents: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitGraphRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitGraphRequest {
+            common: Arbitrary::arbitrary(g),
+            heads: Arbitrary::arbitrary(g),
+        }
+    }
 }
 
 #[cfg(any(test, feature = "for-tests"))]

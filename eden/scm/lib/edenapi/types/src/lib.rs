@@ -43,16 +43,16 @@ pub mod wire;
 pub use crate::anyid::{AnyId, BonsaiChangesetId, LookupRequest, LookupResponse};
 pub use crate::batch::Batch;
 pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
-pub use crate::commit::CommitGraphEntry;
 pub use crate::commit::CommitKnownResponse;
 pub use crate::commit::{
-    BonsaiChangesetContent, BonsaiFileChange, CommitHashLookupRequest, CommitHashLookupResponse,
-    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
-    CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse, Extra,
-    FetchSnapshotRequest, FetchSnapshotResponse, HgChangesetContent, HgMutationEntryContent,
-    SnapshotRawData, SnapshotRawFiles, UploadBonsaiChangesetRequest, UploadHgChangeset,
-    UploadHgChangesetsRequest, UploadSnapshotResponse,
+    BonsaiChangesetContent, BonsaiFileChange, CommitGraphEntry, CommitGraphRequest,
+    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
+    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest,
+    EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, FetchSnapshotRequest,
+    FetchSnapshotResponse, HgChangesetContent, HgMutationEntryContent, SnapshotRawData,
+    SnapshotRawFiles, UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
+    UploadSnapshotResponse,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::errors::ServerError;
