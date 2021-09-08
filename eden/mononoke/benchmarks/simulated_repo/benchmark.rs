@@ -10,12 +10,12 @@
 
 #![deny(warnings)]
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{anyhow, bail, format_err, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use clap::Arg;
 use cloned::cloned;
-use cmdlib::args::{self, ArgType};
+use cmdlib::args::{self, get_and_parse_opt, ArgType, MononokeMatches};
 use context::CoreContext;
 use derived_data::{BonsaiDerivable, BonsaiDerived};
 use fbinit::FacebookInit;
@@ -27,7 +27,7 @@ use futures_stats::futures03::TimedFutureExt;
 use mononoke_types::ChangesetId;
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
-use simulated_repo::{new_benchmark_repo, GenManifest};
+use simulated_repo::{new_benchmark_repo, DelaySettings, GenManifest};
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 use unodes::RootUnodeManifestId;
@@ -36,6 +36,12 @@ const HG_CHANGESET_TYPE: &str = "hg-changeset";
 const ARG_SEED: &str = "seed";
 const ARG_TYPE: &str = "type";
 const ARG_STACK_SIZE: &str = "stack-size";
+const ARG_BLOBSTORE_PUT_MEAN_SECS: &str = "blobstore-put-mean-secs";
+const ARG_BLOBSTORE_PUT_STDDEV_SECS: &str = "blobstore-put-stddev-secs";
+const ARG_BLOBSTORE_GET_MEAN_SECS: &str = "blobstore-get-mean-secs";
+const ARG_BLOBSTORE_GET_STDDEV_SECS: &str = "blobstore-get-stddev-secs";
+
+pub type Normal = rand_distr::Normal<f64>;
 
 type DeriveFn = Arc<dyn Fn(ChangesetId) -> OldBoxFuture<String, Error> + Send + Sync + 'static>;
 
@@ -124,6 +130,23 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
     }
 }
 
+fn parse_norm_distribution(
+    matches: &MononokeMatches,
+    mean_key: &str,
+    stddev_key: &str,
+) -> Result<Option<Normal>, Error> {
+    let put_mean = get_and_parse_opt(matches, mean_key);
+    let put_stddev = get_and_parse_opt(matches, stddev_key);
+    match (put_mean, put_stddev) {
+        (Some(put_mean), Some(put_stddev)) => {
+            let dist = Normal::new(put_mean, put_stddev)
+                .map_err(|err| anyhow!("can't create normal distribution {:?}", err))?;
+            Ok(Some(dist))
+        }
+        _ => Ok(None),
+    }
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = args::MononokeAppBuilder::new("mononoke benchmark")
@@ -151,6 +174,38 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .help("Size of the generated stack"),
         )
         .arg(
+            Arg::with_name(ARG_BLOBSTORE_PUT_MEAN_SECS)
+                .long(ARG_BLOBSTORE_PUT_MEAN_SECS)
+                .takes_value(true)
+                .value_name(ARG_BLOBSTORE_PUT_MEAN_SECS)
+                .help("Mean value of blobstore put calls. Will be used to emulate blobstore delay"),
+        )
+        .arg(
+            Arg::with_name(ARG_BLOBSTORE_PUT_STDDEV_SECS)
+                .long(ARG_BLOBSTORE_PUT_STDDEV_SECS)
+                .takes_value(true)
+                .value_name(ARG_BLOBSTORE_PUT_STDDEV_SECS)
+                .help(
+                    "Std deviation of blobstore put calls. Will be used to emulate blobstore delay",
+                ),
+        )
+        .arg(
+            Arg::with_name(ARG_BLOBSTORE_GET_MEAN_SECS)
+                .long(ARG_BLOBSTORE_GET_MEAN_SECS)
+                .takes_value(true)
+                .value_name(ARG_BLOBSTORE_GET_MEAN_SECS)
+                .help("Mean value of blobstore put calls. Will be used to emulate blobstore delay"),
+        )
+        .arg(
+            Arg::with_name(ARG_BLOBSTORE_GET_STDDEV_SECS)
+                .long(ARG_BLOBSTORE_GET_STDDEV_SECS)
+                .takes_value(true)
+                .value_name(ARG_BLOBSTORE_GET_STDDEV_SECS)
+                .help(
+                    "Std deviation of blobstore put calls. Will be used to emulate blobstore delay",
+                ),
+        )
+        .arg(
             Arg::with_name(ARG_TYPE)
                 .required(true)
                 .index(1)
@@ -165,7 +220,23 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = new_benchmark_repo(fb, Default::default())?;
+    let mut delay: DelaySettings = Default::default();
+    if let Some(dist) = parse_norm_distribution(
+        &matches,
+        ARG_BLOBSTORE_PUT_MEAN_SECS,
+        ARG_BLOBSTORE_PUT_STDDEV_SECS,
+    )? {
+        delay.blobstore_put_dist = dist;
+    }
+    if let Some(dist) = parse_norm_distribution(
+        &matches,
+        ARG_BLOBSTORE_GET_MEAN_SECS,
+        ARG_BLOBSTORE_GET_STDDEV_SECS,
+    )? {
+        delay.blobstore_get_dist = dist;
+    }
+
+    let repo = new_benchmark_repo(fb, delay)?;
 
     let seed = matches
         .value_of(ARG_SEED)
