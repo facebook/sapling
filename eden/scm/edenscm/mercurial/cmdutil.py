@@ -3223,7 +3223,7 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
     badfn = lambda x, y: bad.append(x) or match.bad(x, y)
     names = []
     wctx = repo[None]
-    pctx = wctx.parents()[0]
+    pctx = wctx.p1()
     cca = None
     abort, warn = scmutil.checkportabilityalert(ui)
     if abort or warn:

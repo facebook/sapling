@@ -644,7 +644,7 @@ def commitfuncfor(repo, src):
 def applychanges(ui, repo, ctx, opts):
     """Merge changeset from ctx (only) in the current working directory"""
     with repo.wlock(), repo.lock(), repo.transaction("histedit"):
-        wcpar = repo.dirstate.parents()[0]
+        wcpar = repo.dirstate.p1()
         if ctx.p1().node() == wcpar:
             # edits are "in place" we do not need to make any merge,
             # just applies changes on parent for editing
@@ -678,7 +678,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
             raise error.ParseError(
                 _("cannot fold into public change %s") % node.short(c.node())
             )
-    base = first.parents()[0]
+    base = first.p1()
 
     # commit a new version of the old changeset, including the update
     # collect all files which might be affected
@@ -773,7 +773,7 @@ def action(verbs, message, priority=False, internal=False):
 class pick(histeditaction):
     def run(self):
         rulectx = self.repo[self.node]
-        if rulectx.parents()[0].node() == self.state.parentctxnode:
+        if rulectx.p1().node() == self.state.parentctxnode:
             self.repo.ui.debug("node %s unchanged\n" % node.short(self.node))
             return rulectx, []
 
@@ -805,7 +805,7 @@ class fold(histeditaction):
         super(fold, self).verify(prev, expected, seen)
         repo = self.repo
         if not prev:
-            c = repo[self.node].parents()[0]
+            c = repo[self.node].p1()
         elif not prev.verb in ("pick", "base"):
             return
         else:
@@ -879,7 +879,7 @@ class fold(histeditaction):
         return False
 
     def finishfold(self, ui, repo, ctx, oldctx, newnode, internalchanges):
-        parent = ctx.parents()[0].node()
+        parent = ctx.p1().node()
         repo.ui.pushbuffer()
         with repo.transaction("fold-checkout"):
             hg.update(repo, parent)
@@ -1461,7 +1461,7 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
     actions = parserules(rules, state)
     warnverifyactions(ui, repo, actions, state, ctxs)
 
-    parentctxnode = repo[root].parents()[0].node()
+    parentctxnode = repo[root].p1().node()
 
     state.parentctxnode = parentctxnode
     state.actions = actions

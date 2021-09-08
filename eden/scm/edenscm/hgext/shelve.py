@@ -719,7 +719,7 @@ def mergefiles(ui, repo, wctx, shelvectx):
         hg.update(repo, wctx.node())
         files = []
         files.extend(shelvectx.files())
-        files.extend(shelvectx.parents()[0].files())
+        files.extend(shelvectx.p1().files())
 
         # revert will overwrite unknown files, so move them out of the way
         for file in repo.status(unknown=True).unknown:
@@ -861,7 +861,7 @@ def _rebaserestoredcommit(
     """Rebase restored commit from its original location to a destination"""
     # If the shelve is not immediately on top of the commit
     # we'll be merging with, rebase it to be on top.
-    if tmpwctx.node() == shelvectx.parents()[0].node():
+    if tmpwctx.node() == shelvectx.p1().node():
         # shelvectx is immediately on top of the tmpwctx
         return shelvectx
 

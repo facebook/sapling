@@ -120,7 +120,7 @@ def commitfilteredctx(repo, ctx, match, allowempty):
     files = initialfiles - exclude
     # return the p1 so that we don't create an obsmarker later
     if not files and not allowempty:
-        return ctx.parents()[0].node()
+        return ctx.p1().node()
 
     # Filter copies
     copied = copies.pathcopies(base, ctx)

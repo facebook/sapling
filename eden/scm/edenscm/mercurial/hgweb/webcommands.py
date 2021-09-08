@@ -874,7 +874,7 @@ def comparison(web, req, tmpl):
             leftlines = filelines(pfctx)
     else:
         rightlines = ()
-        pfctx = ctx.parents()[0][path]
+        pfctx = ctx.p1()[path]
         leftlines = filelines(pfctx)
 
     comparison = webutil.compare(tmpl, context, leftlines, rightlines)

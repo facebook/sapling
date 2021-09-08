@@ -175,7 +175,7 @@ def prune(ui, repo, *revs, **opts):
             newnode = wdp
 
             while newnode in precs or newnode.obsolete():
-                newnode = newnode.parents()[0]
+                newnode = newnode.p1()
 
         if newnode.node() != wdp.node():
             if opts.get("keep", False):

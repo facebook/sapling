@@ -312,7 +312,7 @@ def repairtreestate(ui, vfs, root, cl):
     needrebuild = False
     try:
         tmap = treestate.treestatemap(ui, vfs, root)
-        p1node = tmap.parents()[0]
+        p1node = tmap.p1()
         if p1node not in cl.nodemap:
             needrebuild = True
     except Exception:

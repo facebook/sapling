@@ -257,7 +257,7 @@ def cloudjoin(ui, repo, **opts):
                     currentnode = repo["."]
                     newnode = currentnode
                     while newnode.mutable():
-                        newnode = newnode.parents()[0]
+                        newnode = newnode.p1()
 
                     publicroot = newnode
                     mainbookmark = bookmarksmod.mainbookmark(repo)

@@ -1265,7 +1265,7 @@ class localrepository(object):
                     self.ui.configbool("experimental", "nativecheckout")
                     or self.ui.configbool("clone", "nativecheckout")
                 )
-                and ds.parents()[0] == nullid
+                and ds.p1() == nullid
             ):
                 self.ui.warn(
                     _(

@@ -146,17 +146,15 @@ def crdump(ui, repo, *revs, **opts):
                 "date": list(map(int, ctx.date())),
                 "desc": encoding.fromlocal(ctx.description()),
                 "files": ctx.files(),
-                "p1": {"node": ctx.parents()[0].hex()},
+                "p1": {"node": ctx.p1().hex()},
                 "user": encoding.fromlocal(ctx.user()),
                 "bookmarks": list(map(encoding.fromlocal, ctx.bookmarks())),
                 "commit_cloud": False if ctx.node() in notbackedup else True,
                 "manifest_node": hex(ctx.manifestnode()),
             }
-            if ctx.parents()[0].phase() != phases.public:
+            if ctx.p1().phase() != phases.public:
                 # we need this only if parent is in the same draft stack
-                rdata["p1"]["differential_revision"] = phabricatorrevision(
-                    ctx.parents()[0]
-                )
+                rdata["p1"]["differential_revision"] = phabricatorrevision(ctx.p1())
 
             if opts["obsolete"]:
                 markers = obsutil.getmarkers(repo, [ctx.node()])
@@ -246,7 +244,7 @@ def _getfilesizeandsha256(flog, ctx, fname, lfs):
 
 def dumpbinaryfiles(ui, repo, ctx, outdir, lfs):
     binaryfiles = []
-    pctx = ctx.parents()[0]
+    pctx = ctx.p1()
     with ui.configoverride({("remotefilelog", "dolfsprefetch"): False}):
         for fname in ctx.files():
             oldfile = newfile = None

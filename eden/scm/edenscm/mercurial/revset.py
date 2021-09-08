@@ -1735,7 +1735,7 @@ def p1(repo, subset, x):
         try:
             ps.add(cl.parentrevs(r)[0])
         except error.WdirUnsupported:
-            ps.add(repo[r].parents()[0].rev())
+            ps.add(repo[r].p1().rev())
     ps -= {node.nullrev}
     # XXX we should turn this into a baseset instead of a set, smartset may do
     # some optimizations from the fact this is a baseset.
@@ -1838,7 +1838,7 @@ def parentspec(repo, subset, x, n, order):
             try:
                 ps.add(cl.parentrevs(r)[0])
             except error.WdirUnsupported:
-                ps.add(repo[r].parents()[0].rev())
+                ps.add(repo[r].p1().rev())
         else:
             try:
                 parents = cl.parentrevs(r)

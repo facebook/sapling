@@ -219,7 +219,7 @@ class physicalfilesystem(object):
             if size == -2:
                 if parentmf is None:
                     repo = self.dirstate._repo
-                    p1 = self.dirstate.parents()[0]
+                    p1 = self.dirstate.p1()
                     pctx = repo[p1]
                     parentmf = pctx.manifest()
                 if fn not in parentmf:
@@ -294,7 +294,7 @@ class physicalfilesystem(object):
 
     def _processlookups(self, lookups):
         repo = self.dirstate._repo
-        p1 = self.dirstate.parents()[0]
+        p1 = self.dirstate.p1()
 
         if util.safehasattr(repo, "fileservice"):
             p1mf = repo[p1].manifest()
@@ -492,7 +492,7 @@ class physicalfilesystem(object):
         self.cleanlookups = []
 
         repo = dirstate._repo
-        p1 = dirstate.parents()[0]
+        p1 = dirstate.p1()
         wctx = repo[None]
         pctx = repo[p1]
 

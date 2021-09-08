@@ -979,7 +979,7 @@ class dirstate(object):
         wctx = self._repo[None]
         # Prime the wctx._parents cache so the parent doesn't change out from
         # under us if a checkout happens in another process.
-        pctx = wctx.parents()[0]
+        pctx = wctx.p1()
 
         listignored, listclean, listunknown = ignored, clean, unknown
         modified = []  # type: List[str]

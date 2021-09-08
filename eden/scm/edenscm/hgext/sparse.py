@@ -312,7 +312,7 @@ def _setupupdates(ui):
         if branchmerge:
             # If we're merging, use the wctx filter, since we're merging into
             # the wctx.
-            sparsematch = repo.sparsematch(wctx.parents()[0].rev())
+            sparsematch = repo.sparsematch(wctx.p1().rev())
         else:
             # If we're updating, use the target context's filter, since we're
             # moving to the target context.

@@ -154,7 +154,7 @@ def hide(ui, repo, *revs, **opts):
         newnode = wdp
 
         while newnode in hidectxs:
-            newnode = newnode.parents()[0]
+            newnode = newnode.p1()
 
         if newnode.node() != wdp.node():
             cmdutil.bailifchanged(repo, merge=False)
