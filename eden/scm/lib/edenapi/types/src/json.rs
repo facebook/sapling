@@ -31,8 +31,9 @@ use types::{HgId, Key, RepoPathBuf};
 use crate::batch::Batch;
 use crate::bookmark::BookmarkRequest;
 use crate::commit::{
-    CommitHashLookupRequest, CommitHashToLocationRequestBatch, CommitLocationToHashRequest,
-    CommitLocationToHashRequestBatch, CommitRevlogDataRequest, EphemeralPrepareRequest,
+    CommitGraphRequest, CommitHashLookupRequest, CommitHashToLocationRequestBatch,
+    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
+    EphemeralPrepareRequest,
 };
 use crate::complete_tree::CompleteTreeRequest;
 use crate::file::{FileAttributes, FileRequest, FileSpec};
@@ -420,6 +421,26 @@ pub fn parse_directory_metadata_req(json: &Value) -> Result<DirectoryMetadataReq
     })
 }
 
+/// Parse a `CommitGraphRequest` from JSON.
+///
+/// Example request:
+/// ```json
+/// {
+///   "common": [
+///     "c1d934ef5a2b899e0c34d967d9d907e60911bb42",
+///   ],
+///   "heads": [
+///     "76fef898cdc04b36cff0664d280b956bb07003eb",
+///     "34b93dfd5987551ac91087a1dc5637a19be4dd0f"
+///   ]
+/// }
+pub fn parse_commit_graph_req(json: &Value) -> Result<CommitGraphRequest> {
+    let json = json.as_object().context("input must be a JSON object")?;
+    let common = parse_hashes(json.get("common").context("missing field commmon")?)?;
+    let heads = parse_hashes(json.get("heads").context("missing field heads")?)?;
+    Ok(CommitGraphRequest { common, heads })
+}
+
 fn parse_key(value: &Value) -> Result<Key> {
     let json_key = value
         .as_array()
@@ -635,6 +656,12 @@ impl FromJson for EphemeralPrepareRequest {
     }
 }
 
+impl FromJson for CommitGraphRequest {
+    fn from_json(json: &Value) -> Result<Self> {
+        parse_commit_graph_req(json)
+    }
+}
+
 pub trait ToJson {
     fn to_json(&self) -> Value;
 }
@@ -792,6 +819,15 @@ impl ToJson for CommitHashToLocationRequestBatch {
     }
 }
 
+impl ToJson for CommitGraphRequest {
+    fn to_json(&self) -> Value {
+        json!({
+            "common": self.common.to_json(),
+            "heads": self.heads.to_json(),
+        })
+    }
+}
+
 impl ToJson for CommitRevlogDataRequest {
     fn to_json(&self) -> Value {
         json!({
@@ -849,6 +885,7 @@ mod tests {
         CommitLocationToHashRequestBatch,
         CommitHashToLocationRequestBatch,
         CommitRevlogDataRequest,
-        BookmarkRequest
+        BookmarkRequest,
+        CommitGraphRequest
     );
 }

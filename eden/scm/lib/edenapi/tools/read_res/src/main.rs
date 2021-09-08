@@ -23,12 +23,12 @@ use structopt::StructOpt;
 
 use edenapi_types::{
     wire::{
-        ToApi, WireBookmarkEntry, WireCloneData, WireCommitHashLookupResponse,
-        WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
-        WireEphemeralPrepareResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireTreeEntry, WireUploadToken,
+        ToApi, WireBookmarkEntry, WireCloneData, WireCommitGraphEntry,
+        WireCommitHashLookupResponse, WireCommitHashToLocationResponse,
+        WireCommitLocationToHashResponse, WireEphemeralPrepareResponse, WireFileEntry,
+        WireHistoryResponseChunk, WireIdMapEntry, WireTreeEntry, WireUploadToken,
     },
-    CommitRevlogData, FileError, TreeError, WireHistoryEntry,
+    CommitGraphEntry, CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
 use types::{HgId, Key, Parents, RepoPathBuf};
 
@@ -42,6 +42,7 @@ enum Args {
     CommitLocationToHash(CommitLocationToHashArgs),
     CommitHashToLocation(CommitHashToLocationArgs),
     CommitHashLookup(CommitHashLookupArgs),
+    CommitGraph(CommitGraphArgs),
     Clone(CloneArgs),
     FullIdmapClone(CloneArgs),
     Bookmark(BookmarkArgs),
@@ -208,8 +209,6 @@ struct CloneArgs {
 struct BookmarkArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
-    #[structopt(long, short, help = "Output file (stdout used if omitted)")]
-    output: Option<PathBuf>,
     #[structopt(long, short, help = "Only look at the first N entries")]
     limit: Option<usize>,
 }
@@ -219,6 +218,17 @@ struct BookmarkArgs {
 struct CommitHashLookupArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
+}
+
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Read the content of a CBOR commit-graph response")]
+struct CommitGraphArgs {
+    #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
+    input: Option<PathBuf>,
+    #[structopt(long, short, help = "Output file (stdout used if omitted)")]
+    output: Option<PathBuf>,
     #[structopt(long, short, help = "Only look at the first N entries")]
     limit: Option<usize>,
 }
@@ -250,6 +260,7 @@ fn main() -> Result<()> {
         Args::CommitLocationToHash(args) => cmd_commit_location_to_hash(args),
         Args::CommitHashToLocation(args) => cmd_commit_hash_to_location(args),
         Args::CommitHashLookup(args) => cmd_commit_hash_lookup(args),
+        Args::CommitGraph(args) => cmd_commit_graph(args),
         Args::Clone(args) => cmd_clone(args),
         Args::FullIdmapClone(args) => cmd_full_idmap_clone(args),
         Args::Bookmark(args) => cmd_bookmark(args),
@@ -520,6 +531,22 @@ fn cmd_commit_hash_lookup(args: CommitHashLookupArgs) -> Result<()> {
                     .join(", ")
             );
         }
+    }
+    Ok(())
+}
+
+fn cmd_commit_graph(args: CommitGraphArgs) -> Result<()> {
+    let entries: Vec<WireCommitGraphEntry> = read_input(args.input, args.limit)?;
+    let mut entries: Vec<CommitGraphEntry> = entries.into_iter().filter_map(to_api).collect();
+    entries.sort();
+
+    for entry in entries {
+        println!("hg id: {}", entry.hgid);
+        println!("parents: [");
+        for parent in entry.parents {
+            println!("  {}", parent);
+        }
+        println!("]");
     }
     Ok(())
 }

@@ -23,9 +23,10 @@ use serde_json::Value;
 use structopt::StructOpt;
 
 use edenapi_types::{
-    json::FromJson, wire::ToWire, Batch, BookmarkRequest, CommitHashLookupRequest,
-    CommitHashToLocationRequestBatch, CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
-    CompleteTreeRequest, EphemeralPrepareRequest, FileRequest, HistoryRequest, TreeRequest,
+    json::FromJson, wire::ToWire, Batch, BookmarkRequest, CommitGraphRequest,
+    CommitHashLookupRequest, CommitHashToLocationRequestBatch, CommitLocationToHashRequestBatch,
+    CommitRevlogDataRequest, CompleteTreeRequest, EphemeralPrepareRequest, FileRequest,
+    HistoryRequest, TreeRequest,
 };
 
 #[derive(Debug, StructOpt)]
@@ -39,6 +40,7 @@ enum Command {
     CommitLocationToHash(Args),
     CommitHashToLocation(Args),
     CommitHashLookup(Args),
+    CommitGraph(Args),
     Bookmark(Args),
     EphemeralPrepare(Args),
 }
@@ -61,6 +63,7 @@ fn main() -> Result<()> {
         Command::CommitLocationToHash(args) => make_req::<CommitLocationToHashRequestBatch>(args),
         Command::CommitHashToLocation(args) => make_req::<CommitHashToLocationRequestBatch>(args),
         Command::CommitHashLookup(args) => make_req::<Batch<CommitHashLookupRequest>>(args),
+        Command::CommitGraph(args) => make_req::<CommitGraphRequest>(args),
         Command::Bookmark(args) => make_req::<BookmarkRequest>(args),
         Command::EphemeralPrepare(args) => make_req::<EphemeralPrepareRequest>(args),
     }
