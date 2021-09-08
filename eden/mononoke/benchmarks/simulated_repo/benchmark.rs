@@ -10,29 +10,20 @@
 
 #![deny(warnings)]
 
-use anyhow::{anyhow, bail, format_err, Error, Result};
+use anyhow::{anyhow, Error, Result};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use clap::Arg;
-use cloned::cloned;
 use cmdlib::args::{self, get_and_parse_opt, ArgType, MononokeMatches};
 use context::CoreContext;
-use derived_data::{BonsaiDerivable, BonsaiDerived};
+use derived_data_utils::{derived_data_utils, POSSIBLE_DERIVED_TYPES};
 use fbinit::FacebookInit;
-use fsnodes::RootFsnodeId;
-use futures::compat::Future01CompatExt;
-use futures::future::{FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
+use futures::future::TryFutureExt;
 use futures_stats::futures03::TimedFutureExt;
-use mononoke_types::ChangesetId;
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 use simulated_repo::{new_benchmark_repo, DelaySettings, GenManifest};
-use std::sync::Arc;
 use tokio::runtime::Runtime;
-use unodes::RootUnodeManifestId;
 
-const HG_CHANGESET_TYPE: &str = "hg-changeset";
 const ARG_SEED: &str = "seed";
 const ARG_TYPE: &str = "type";
 const ARG_STACK_SIZE: &str = "stack-size";
@@ -40,17 +31,17 @@ const ARG_BLOBSTORE_PUT_MEAN_SECS: &str = "blobstore-put-mean-secs";
 const ARG_BLOBSTORE_PUT_STDDEV_SECS: &str = "blobstore-put-stddev-secs";
 const ARG_BLOBSTORE_GET_MEAN_SECS: &str = "blobstore-get-mean-secs";
 const ARG_BLOBSTORE_GET_STDDEV_SECS: &str = "blobstore-get-stddev-secs";
+const ARG_USE_BACKFILL_MODE: &str = "use-backfill-mode";
 
 pub type Normal = rand_distr::Normal<f64>;
-
-type DeriveFn = Arc<dyn Fn(ChangesetId) -> OldBoxFuture<String, Error> + Send + Sync + 'static>;
 
 async fn run(
     ctx: CoreContext,
     repo: BlobRepo,
     rng_seed: u64,
     stack_size: usize,
-    derive: DeriveFn,
+    derived_data_type: &str,
+    use_backfill_mode: bool,
 ) -> Result<(), Error> {
     println!("rng seed: {}", rng_seed);
     let mut rng = XorShiftRng::seed_from_u64(rng_seed); // reproducable Rng
@@ -59,8 +50,8 @@ async fn run(
     let settings = Default::default();
     let (stats, csidq) = gen
         .gen_stack(
-            ctx,
-            repo,
+            ctx.clone(),
+            repo.clone(),
             &mut rng,
             &settings,
             None,
@@ -71,63 +62,30 @@ async fn run(
     println!("stack generated: {:?} {:?}", gen.size(), stats);
 
     let csid = csidq?;
-    let (stats2, result) = derive(csid).compat().timed().await;
+    let derive_utils = derived_data_utils(ctx.fb, &repo, derived_data_type)?;
+
+    let (stats2, result) = if use_backfill_mode {
+        derive_utils
+            .backfill_batch_dangerous(
+                ctx,
+                repo.clone(),
+                vec![csid],
+                true, /* parallel */
+                None, /* No gaps */
+            )
+            .timed()
+            .await
+    } else {
+        derive_utils
+            .derive(ctx.clone(), repo.clone(), csid)
+            .map_ok(|_| ())
+            .timed()
+            .await
+    };
+
     println!("bonsai conversion: {:?}", stats2);
     println!("{:?} -> {:?}", csid.to_string(), result);
     Ok(())
-}
-
-fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Result<DeriveFn> {
-    match derive_type {
-        None => bail!("required `type` argument is missing"),
-        Some(HG_CHANGESET_TYPE) => {
-            let derive_hg_changeset = move |csid| {
-                cloned!(ctx, repo);
-                async move {
-                    let hgcsid = repo
-                        .get_hg_from_bonsai_changeset(ctx, csid)
-                        .await?
-                        .to_string();
-                    Ok(hgcsid)
-                }
-                .boxed()
-                .compat()
-                .boxify()
-            };
-            Ok(Arc::new(derive_hg_changeset))
-        }
-        Some(RootUnodeManifestId::NAME) => {
-            let derive_unodes = move |csid| {
-                cloned!(ctx, repo);
-                async move {
-                    Ok(RootUnodeManifestId::derive(&ctx, &repo, csid)
-                        .await?
-                        .manifest_unode_id()
-                        .to_string())
-                }
-                .boxed()
-                .compat()
-                .boxify()
-            };
-            Ok(Arc::new(derive_unodes))
-        }
-        Some(RootFsnodeId::NAME) => {
-            let derive_fsnodes = move |csid| {
-                cloned!(ctx, repo);
-                async move {
-                    Ok(RootFsnodeId::derive(&ctx, &repo, csid)
-                        .await?
-                        .fsnode_id()
-                        .to_string())
-                }
-                .boxed()
-                .compat()
-                .boxify()
-            };
-            Ok(Arc::new(derive_fsnodes))
-        }
-        Some(derived_type) => Err(format_err!("unknown derived data type: {}", derived_type)),
-    }
 }
 
 fn parse_norm_distribution(
@@ -209,12 +167,14 @@ fn main(fb: FacebookInit) -> Result<()> {
             Arg::with_name(ARG_TYPE)
                 .required(true)
                 .index(1)
-                .possible_values(&[
-                    HG_CHANGESET_TYPE,
-                    RootUnodeManifestId::NAME,
-                    RootFsnodeId::NAME,
-                ])
+                .possible_values(POSSIBLE_DERIVED_TYPES)
                 .help("derived data type"),
+        )
+        .arg(
+            Arg::with_name(ARG_USE_BACKFILL_MODE)
+                .long(ARG_USE_BACKFILL_MODE)
+                .takes_value(false)
+                .help("Use backfilling mode while deriving"),
         )
         .get_matches(fb)?;
 
@@ -249,8 +209,16 @@ fn main(fb: FacebookInit) -> Result<()> {
         .parse()
         .expect("stack size must be a positive integer");
 
-    let derive = derive_fn(ctx.clone(), repo.clone(), matches.value_of(ARG_TYPE))?;
-
     let runtime = Runtime::new()?;
-    runtime.block_on(run(ctx, repo, seed, stack_size, derive))
+    let derived_data_type = matches
+        .value_of(ARG_TYPE)
+        .ok_or_else(|| anyhow!("{} not set", ARG_TYPE))?;
+    runtime.block_on(run(
+        ctx,
+        repo,
+        seed,
+        stack_size,
+        derived_data_type,
+        matches.is_present(ARG_USE_BACKFILL_MODE),
+    ))
 }
