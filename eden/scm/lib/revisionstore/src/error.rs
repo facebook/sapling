@@ -8,7 +8,6 @@
 use std::time::Duration;
 
 use anyhow::Error;
-use http::header::HeaderMap;
 use thiserror::Error;
 use url::Url;
 

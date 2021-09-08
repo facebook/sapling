@@ -64,7 +64,7 @@ use crate::{
         strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
         HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
     },
-    error::{Advice, FetchError, TransferError},
+    error::{FetchError, TransferError},
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::LocalStore,
