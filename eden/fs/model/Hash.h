@@ -22,7 +22,7 @@ namespace facebook::eden {
 /**
  * Immutable 160-bit hash.
  */
-class Hash : boost::totally_ordered<Hash> {
+class Hash20 : boost::totally_ordered<Hash20> {
  public:
   enum { RAW_SIZE = 20 };
   using Storage = std::array<uint8_t, RAW_SIZE>;
@@ -30,35 +30,35 @@ class Hash : boost::totally_ordered<Hash> {
   /**
    * Create a 0-initialized hash
    */
-  constexpr Hash() noexcept : bytes_{} {}
+  constexpr Hash20() noexcept : bytes_{} {}
 
-  explicit constexpr Hash(const Storage& bytes) : bytes_{bytes} {}
+  explicit constexpr Hash20(const Storage& bytes) : bytes_{bytes} {}
 
-  explicit constexpr Hash(folly::ByteRange bytes)
+  explicit constexpr Hash20(folly::ByteRange bytes)
       : bytes_{constructFromByteRange(bytes)} {}
 
   /**
    * @param hex is a string of 40 hexadecimal characters.
    */
-  explicit constexpr Hash(folly::StringPiece hex)
+  explicit constexpr Hash20(folly::StringPiece hex)
       : bytes_{constructFromHex(hex)} {}
 
   /**
    * Compute the SHA1 hash of an IOBuf chain.
    */
-  static Hash sha1(const folly::IOBuf& buf);
+  static Hash20 sha1(const folly::IOBuf& buf);
 
   /**
    * Compute the SHA1 hash of a std::string.
    */
-  static Hash sha1(const std::string& str) {
+  static Hash20 sha1(const std::string& str) {
     return sha1(folly::ByteRange{folly::StringPiece{str}});
   }
 
   /**
    * Compute the SHA1 hash of a ByteRange.
    */
-  static Hash sha1(folly::ByteRange data);
+  static Hash20 sha1(folly::ByteRange data);
 
   constexpr folly::ByteRange getBytes() const {
     return folly::ByteRange{bytes_.data(), bytes_.size()};
@@ -73,8 +73,8 @@ class Hash : boost::totally_ordered<Hash> {
 
   size_t getHashCode() const noexcept;
 
-  bool operator==(const Hash&) const;
-  bool operator<(const Hash&) const;
+  bool operator==(const Hash20&) const;
+  bool operator<(const Hash20&) const;
 
  private:
   static constexpr Storage constructFromByteRange(folly::ByteRange bytes) {
@@ -129,29 +129,30 @@ class Hash : boost::totally_ordered<Hash> {
   Storage bytes_;
 };
 
-using HashRange = folly::Range<const Hash*>;
+using HashRange = folly::Range<const Hash20*>;
+using Hash = Hash20;
 
 /** A hash object initialized to all zeroes */
-extern const Hash kZeroHash;
+extern const Hash20 kZeroHash;
 
 /** A hash object initialized to the SHA-1 of zero bytes */
-extern const Hash kEmptySha1;
+extern const Hash20 kEmptySha1;
 
 /**
  * Output stream operator for Hash.
  *
  * This makes it possible to easily use Hash in glog statements.
  */
-std::ostream& operator<<(std::ostream& os, const Hash& hash);
+std::ostream& operator<<(std::ostream& os, const Hash20& hash);
 
 /* Define toAppend() so folly::to<string>(Hash) will work */
-void toAppend(const Hash& hash, std::string* result);
+void toAppend(const Hash20& hash, std::string* result);
 
 } // namespace facebook::eden
 
 namespace std {
 template <>
-struct hash<facebook::eden::Hash> {
+struct hash<facebook::eden::Hash20> {
   size_t operator()(const facebook::eden::Hash& hash) const noexcept {
     return hash.getHashCode();
   }

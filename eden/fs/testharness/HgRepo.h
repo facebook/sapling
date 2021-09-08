@@ -18,7 +18,8 @@
 namespace facebook {
 namespace eden {
 
-class Hash;
+class Hash20;
+using Hash = Hash20;
 
 /**
  * A helper class for working with a mercurial repository in unit tests.

@@ -17,8 +17,6 @@
 
 namespace facebook::eden {
 
-class Hash;
-
 /**
  * Represents the allowed types of entries in version control trees.
  *

@@ -14,7 +14,6 @@
 namespace facebook::eden {
 
 class Blob;
-class Hash;
 class IObjectStore;
 class ObjectFetchContext;
 

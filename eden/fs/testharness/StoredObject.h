@@ -14,7 +14,8 @@ namespace facebook {
 namespace eden {
 
 class Blob;
-class Hash;
+class Hash20;
+using Hash = Hash20;
 class Tree;
 
 template <typename T>

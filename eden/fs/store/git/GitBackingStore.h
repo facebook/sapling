@@ -18,7 +18,6 @@ struct git_repository;
 
 namespace facebook::eden {
 
-class Hash;
 class LocalStore;
 
 /**

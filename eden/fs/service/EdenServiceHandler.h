@@ -23,7 +23,8 @@ class Future;
 namespace facebook {
 namespace eden {
 
-class Hash;
+class Hash20;
+using Hash = Hash20;
 class EdenMount;
 class EdenServer;
 class TreeInode;

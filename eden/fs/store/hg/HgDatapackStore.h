@@ -17,7 +17,6 @@
 
 namespace facebook::eden {
 
-class Hash;
 class HgProxyHash;
 
 class HgDatapackStore {

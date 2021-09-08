@@ -22,7 +22,8 @@ namespace eden {
 
 class DiffContext;
 class GitIgnoreStack;
-class Hash;
+class Hash20;
+using Hash = Hash20;
 class ObjectStore;
 class TreeEntry;
 class TreeInode;

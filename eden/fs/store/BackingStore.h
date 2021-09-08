@@ -24,7 +24,6 @@ class Future;
 namespace facebook::eden {
 
 class Blob;
-class Hash;
 class Tree;
 class TreeEntry;
 enum class TreeEntryType : uint8_t;

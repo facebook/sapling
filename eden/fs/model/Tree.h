@@ -9,8 +9,8 @@
 
 #include <algorithm>
 #include <vector>
-#include "Hash.h"
-#include "TreeEntry.h"
+#include "eden/fs/model/Hash.h"
+#include "eden/fs/model/TreeEntry.h"
 
 namespace facebook::eden {
 

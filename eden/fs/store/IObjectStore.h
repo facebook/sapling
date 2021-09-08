@@ -25,7 +25,8 @@ namespace facebook::eden {
 
 class Blob;
 class BlobMetadata;
-class Hash;
+class Hash20;
+using Hash = Hash20;
 class Tree;
 class ObjectFetchContext;
 

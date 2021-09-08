@@ -13,7 +13,8 @@
 
 namespace facebook::eden {
 
-class Hash;
+class Hash20;
+using Hash = Hash20;
 class Tree;
 class TreeEntry;
 

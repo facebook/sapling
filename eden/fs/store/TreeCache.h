@@ -13,8 +13,6 @@
 
 namespace facebook::eden {
 
-class Hash;
-
 /**
  * An in-memory LRU cache for loaded trees. Currently, this will not be used by
  * the inode code as inodes store the tree data in the inode itself. This is

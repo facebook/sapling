@@ -11,8 +11,6 @@
 
 namespace facebook::eden {
 
-class Hash;
-
 using BlobInterestHandle = ObjectInterestHandle<Blob>;
 
 /**

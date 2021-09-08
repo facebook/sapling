@@ -30,7 +30,6 @@ namespace facebook {
 namespace eden {
 
 class Blob;
-class Hash;
 class ObjectFetchContext;
 class ObjectStore;
 class OverlayFileAccess;

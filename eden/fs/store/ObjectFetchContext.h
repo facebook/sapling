@@ -10,10 +10,12 @@
 
 #include <folly/Range.h>
 
-#include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ImportPriority.h"
 
 namespace facebook::eden {
+
+class Hash20;
+using Hash = Hash20;
 
 /**
  * ObjectStore calls methods on this context when fetching objects.

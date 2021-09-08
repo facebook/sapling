@@ -9,7 +9,7 @@
 
 #include <folly/io/IOBuf.h>
 #include <string>
-#include "Hash.h"
+#include "eden/fs/model/Hash.h"
 
 namespace facebook::eden {
 

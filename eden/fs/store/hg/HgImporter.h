@@ -11,11 +11,11 @@
 #include <folly/portability/GFlags.h>
 #include <folly/portability/IOVec.h>
 #include <optional>
-#include "eden/fs/utils/SpawnedProcess.h"
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 
 DECLARE_string(hgPath);
 DECLARE_string(hgPythonPath);
@@ -27,7 +27,8 @@ class IOBuf;
 namespace facebook::eden {
 
 class Blob;
-class Hash;
+class Hash20;
+using Hash = Hash20;
 class HgManifestImporter;
 class StoreResult;
 class Tree;

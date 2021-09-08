@@ -24,7 +24,6 @@ namespace facebook::eden {
 
 class Blob;
 class EdenConfig;
-class Hash;
 class StoreResult;
 class Tree;
 class TreeMetadata;
