@@ -813,6 +813,7 @@ def has_parso():
 def has_mononoke():
     return "USE_MONONOKE" in os.environ
 
+
 @check("bucktest", "Tests are being run from Buck")
 def has_bucktest():
     return "HGTEST_HG" in os.environ
