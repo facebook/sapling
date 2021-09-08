@@ -47,7 +47,7 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
     let edenapi_client = edenapi::Builder::from_config(&config)?.build()?;
 
     let clone_data = edenapi_client
-        .clone_data_blocking(reponame.clone(), None)
+        .clone_data_blocking(reponame.clone())
         .context("error cloning segmented changelog")?;
 
     let namedag_path = IndexedLogNameDagPath(destination.join(".hg/store/segments/v1"));

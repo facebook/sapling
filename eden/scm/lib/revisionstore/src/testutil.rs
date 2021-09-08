@@ -382,11 +382,7 @@ impl EdenApi for FakeEdenApi {
         unimplemented!()
     }
 
-    async fn clone_data(
-        &self,
-        _repo: String,
-        _progress: Option<ProgressCallback>,
-    ) -> Result<CloneData<HgId>, EdenApiError> {
+    async fn clone_data(&self, _repo: String) -> Result<CloneData<HgId>, EdenApiError> {
         unimplemented!()
     }
 

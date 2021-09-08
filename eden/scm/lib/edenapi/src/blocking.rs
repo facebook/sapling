@@ -88,12 +88,8 @@ pub trait EdenApiBlocking: EdenApi {
         BlockingResponse::from_async(self.commit_revlog_data(repo, hgids, progress))
     }
 
-    fn clone_data_blocking(
-        &self,
-        repo: String,
-        progress: Option<ProgressCallback>,
-    ) -> Result<CloneData<HgId>, EdenApiError> {
-        block_on(self.clone_data(repo, progress))
+    fn clone_data_blocking(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
+        block_on(self.clone_data(repo))
     }
 
     fn full_idmap_clone_data_blocking(

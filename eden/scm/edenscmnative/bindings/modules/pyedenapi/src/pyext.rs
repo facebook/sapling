@@ -392,7 +392,7 @@ pub trait EdenApiPyExt: EdenApi {
         let bytes = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    match self.clone_data(repo, None).await {
+                    match self.clone_data(repo).await {
                         Err(e) => Err(e),
                         Ok(data) => Ok(mincode::serialize(&data)),
                     }

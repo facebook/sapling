@@ -81,11 +81,7 @@ pub trait EdenApi: Send + Sync + 'static {
         progress: Option<ProgressCallback>,
     ) -> Result<Response<CommitRevlogData>, EdenApiError>;
 
-    async fn clone_data(
-        &self,
-        repo: String,
-        progress: Option<ProgressCallback>,
-    ) -> Result<CloneData<HgId>, EdenApiError>;
+    async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError>;
 
     async fn pull_fast_forward_master(
         &self,
@@ -283,13 +279,9 @@ impl EdenApi for Arc<dyn EdenApi> {
             .await
     }
 
-    async fn clone_data(
-        &self,
-        repo: String,
-        progress: Option<ProgressCallback>,
-    ) -> Result<CloneData<HgId>, EdenApiError> {
+    async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
-            .clone_data(repo, progress)
+            .clone_data(repo)
             .await
     }
 

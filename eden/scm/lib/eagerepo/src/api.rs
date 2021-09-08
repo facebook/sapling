@@ -249,11 +249,7 @@ impl EdenApi for EagerRepo {
         Ok(convert_to_response(values))
     }
 
-    async fn clone_data(
-        &self,
-        _repo: String,
-        _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<dag::CloneData<HgId>> {
+    async fn clone_data(&self, _repo: String) -> edenapi::Result<dag::CloneData<HgId>> {
         debug!("clone_data");
         let clone_data = self.dag().export_clone_data().await.map_err(map_dag_err)?;
         convert_clone_data(clone_data)

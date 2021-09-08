@@ -617,11 +617,7 @@ impl EdenApi for Client {
         Ok(self.fetch::<WireBookmarkEntry>(vec![req], progress)?)
     }
 
-    async fn clone_data(
-        &self,
-        repo: String,
-        _progress: Option<ProgressCallback>, // todo - remove progress (not used anyway)
-    ) -> Result<CloneData<HgId>, EdenApiError> {
+    async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
         let msg = format!("Requesting clone data for the '{}' repository", repo);
         tracing::info!("{}", &msg);
         if self.config().debug {
