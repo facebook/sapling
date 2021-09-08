@@ -10,7 +10,7 @@ use std::pin::Pin;
 
 use anyhow::{Context, Error};
 use edenapi_types::ToWire;
-use futures::{stream::TryStreamExt, FutureExt};
+use futures::{stream::TryStreamExt, FutureExt, Stream};
 use gotham::{
     handler::{HandlerError as GothamHandlerError, HandlerFuture},
     middleware::state::StateMiddleware,
@@ -24,8 +24,9 @@ use gotham::{
 };
 use gotham_derive::StateData;
 use gotham_ext::{
+    content_encoding::ContentEncoding,
     error::{ErrorFormatter, HttpError},
-    response::build_response,
+    response::{build_response, encode_stream, ResponseTryStreamExt, StreamBody, TryIntoResponse},
 };
 use hyper::{Body, Response};
 use mime::Mime;
@@ -33,7 +34,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream_filtered_errors, get_repo, parse_wire_request};
+use crate::utils::{cbor_mime, get_repo, parse_wire_request, to_cbor_bytes};
 
 mod bookmarks;
 mod clone;
@@ -197,6 +198,7 @@ async fn handler_wrapper<Handler: EdenApiHandler>(
     let res = async {
         let path = Handler::PathExtractor::take_from(&mut state);
         let query_string = Handler::QueryStringExtractor::take_from(&mut state);
+        let content_encoding = ContentEncoding::from_state(&state);
 
         state.put(HandlerInfo::new(path.repo(), Handler::API_METHOD));
 
@@ -206,9 +208,7 @@ async fn handler_wrapper<Handler: EdenApiHandler>(
         let repo = get_repo(&sctx, &rctx, path.repo(), None).await?;
         let request = parse_wire_request::<<Handler::Request as ToWire>::Wire>(&mut state).await?;
         match Handler::handler(repo, path, query_string, request).await {
-            Ok(responses) => Ok(cbor_stream_filtered_errors(
-                responses.map_ok(ToWire::to_wire),
-            )),
+            Ok(responses) => Ok(encode_response_stream(responses, content_encoding)),
             Err(HandlerError::E500(err)) => Err(HttpError::e500(err)),
             Err(HandlerError::E400(err)) => Err(HttpError::e400(err)),
         }
@@ -216,6 +216,20 @@ async fn handler_wrapper<Handler: EdenApiHandler>(
     .await;
 
     build_response(res, state, &JsonErrorFomatter)
+}
+
+/// Encode a stream of EdenAPI responses into its final on-wire representation.
+///
+/// This involves converting each item to its wire format, CBOR serializing them, and then
+/// optionally compressing the resulting byte stream based on the specified Content-Encoding.
+pub fn encode_response_stream<S, T>(stream: S, encoding: ContentEncoding) -> impl TryIntoResponse
+where
+    S: Stream<Item = Result<T, Error>> + Send + 'static,
+    T: ToWire + Send + 'static,
+{
+    let stream = stream.and_then(|item| async move { to_cbor_bytes(&item.to_wire()) });
+    let stream = encode_stream(stream, encoding, None).capture_first_err();
+    StreamBody::new(stream, cbor_mime())
 }
 
 // We use a struct here (rather than just a global function) just for the convenience

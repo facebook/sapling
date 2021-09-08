@@ -11,13 +11,40 @@ use anyhow::Error;
 use async_compression::tokio::bufread::{GzipEncoder, ZstdEncoder};
 use bytes::Bytes;
 use futures::{
+    future::Either,
     stream::{BoxStream, Stream, StreamExt, TryStreamExt},
     task::{Context, Poll},
 };
 use pin_project::pin_project;
 use tokio_util::io::{ReaderStream, StreamReader};
 
-use crate::content_encoding::ContentCompression;
+use crate::content_encoding::{ContentCompression, ContentEncoding};
+
+/// Create a response stream using the specified Content-Encoding.
+///
+/// The resulting stream may or may not be compressed depending on the chosen encoding. Optionally,
+/// the caller can specify the value for the `Content-Length` header. This is only useful in cases
+/// where the response isn't compressed (i.e., the encoding is set to `ContentEncoding::Identity`)
+/// because otherwise, we would need to send the post-compression size of the content, which cannot
+/// be known in advance.
+pub fn encode_stream<S>(
+    stream: S,
+    encoding: ContentEncoding,
+    length: Option<u64>,
+) -> Either<ResponseStream<S>, CompressedResponseStream<'static>>
+where
+    S: Stream<Item = Result<Bytes, Error>> + Send + 'static,
+{
+    match (encoding, length) {
+        (ContentEncoding::Identity, Some(size)) => ResponseStream::new(stream)
+            .set_content_length(size)
+            .left_stream(),
+        (ContentEncoding::Identity, None) => ResponseStream::new(stream).left_stream(),
+        (ContentEncoding::Compressed(c), _) => {
+            CompressedResponseStream::new(stream, c).right_stream()
+        }
+    }
+}
 
 #[pin_project]
 pub struct CompressedResponseStream<'a> {
