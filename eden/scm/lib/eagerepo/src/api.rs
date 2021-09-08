@@ -9,12 +9,13 @@ use crate::EagerRepo;
 use configmodel::Config;
 use configmodel::ConfigExt;
 use dag::ops::DagExportCloneData;
-use dag::ops::{DagAlgorithm, DagPullFastForwardMasterData};
+use dag::ops::{DagAlgorithm, DagPullFastForwardMasterData, PrefixLookup};
 use dag::protocol::AncestorPath;
 use dag::protocol::RemoteIdConvertProtocol;
 use dag::Vertex;
 use dag::{Location, VertexName};
 use edenapi::configmodel;
+use edenapi::types::make_hash_lookup_request;
 use edenapi::types::AnyFileContentId;
 use edenapi::types::AnyId;
 use edenapi::types::BonsaiChangesetContent;
@@ -54,6 +55,7 @@ use edenapi::ProgressCallback;
 use edenapi::Response;
 use edenapi::ResponseMeta;
 use edenapi_trait as edenapi;
+use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
 use futures::StreamExt;
@@ -536,9 +538,31 @@ impl EdenApi for EagerRepo {
     async fn hash_prefixes_lookup(
         &self,
         _repo: String,
-        _prefixes: Vec<String>,
+        prefixes: Vec<String>,
     ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
-        unimplemented!()
+        let hashes = stream::iter(prefixes.into_iter())
+            .map(move |prefix| async move {
+                let req = make_hash_lookup_request(prefix.clone())?;
+                let resp = self
+                    .dag()
+                    .vertexes_by_hex_prefix(prefix.as_bytes(), 100)
+                    .await;
+                resp.map_err(|e| EdenApiError::Other(e.into()))
+                    .map(|vertexes| {
+                        Ok(CommitHashLookupResponse {
+                            request: req,
+                            hgids: vertexes
+                                .into_iter()
+                                .map(|vertex| HgId::from_hex(vertex.to_hex().as_bytes()))
+                                .collect::<Result<Vec<_>, _>>()?,
+                        })
+                    })
+            })
+            .buffered(100)
+            .try_collect::<Vec<Result<CommitHashLookupResponse, _>>>()
+            .await
+            .map_err(|e| EdenApiError::Other(e.into()))?;
+        Ok(convert_to_response(hashes))
     }
 }
 
