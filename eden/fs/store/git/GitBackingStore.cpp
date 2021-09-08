@@ -167,9 +167,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
     entries.emplace_back(entryHash, PathComponent{entryName}, fileType);
   }
   auto tree = make_unique<Tree>(std::move(entries), id);
-  auto hash = localStore_->putTree(tree.get());
-  XDCHECK_EQ(id, hash);
-
+  localStore_->putTree(*tree);
   return tree;
 }
 

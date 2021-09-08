@@ -91,9 +91,8 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
   }
 
   auto edenTree = std::make_unique<Tree>(std::move(entries), edenTreeId);
-  auto serialized = LocalStore::serializeTree(edenTree.get());
-  writeBatch->put(
-      KeySpace::TreeFamily, edenTreeId, serialized.second.coalesce());
+  auto serialized = LocalStore::serializeTree(*edenTree);
+  writeBatch->put(KeySpace::TreeFamily, edenTreeId, serialized.coalesce());
   writeBatch->flush();
 
   return edenTree;

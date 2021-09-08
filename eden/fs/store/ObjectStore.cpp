@@ -131,7 +131,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getRootTree(
               folly::to<string>("unable to import root ", rootId));
         }
 
-        localStore->putTree(tree.get());
+        localStore->putTree(*tree);
         treeCache->insert(tree);
 
         return tree;
@@ -209,7 +209,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
 
           // promote to shared_ptr so we can store in the cache and return
           std::shared_ptr<const Tree> loadedTree{std::move(tree)};
-          localStore->putTree(loadedTree.get());
+          localStore->putTree(*loadedTree);
           self->treeCache_->insert(loadedTree);
           XLOG(DBG3) << "tree " << id << " retrieved from backing store";
           fetchContext.didFetch(

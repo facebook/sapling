@@ -134,40 +134,30 @@ folly::Future<optional<BlobMetadata>> LocalStore::getBlobMetadata(
       });
 }
 
-std::pair<Hash, folly::IOBuf> LocalStore::serializeTree(const Tree* tree) {
+folly::IOBuf LocalStore::serializeTree(const Tree& tree) {
   GitTreeSerializer serializer;
-  for (auto& entry : tree->getTreeEntries()) {
+  for (auto& entry : tree.getTreeEntries()) {
     serializer.addEntry(std::move(entry));
   }
-  IOBuf treeBuf = serializer.finalize();
-
-  auto id = tree->getHash();
-  if (id == Hash()) {
-    id = Hash::sha1(treeBuf);
-  }
-  return std::make_pair(id, treeBuf);
+  return serializer.finalize();
 }
 
 bool LocalStore::hasKey(KeySpace keySpace, const Hash& id) const {
   return hasKey(keySpace, id.getBytes());
 }
 
-Hash LocalStore::putTree(const Tree* tree) {
+void LocalStore::putTree(const Tree& tree) {
   auto serialized = LocalStore::serializeTree(tree);
-  ByteRange treeData = serialized.second.coalesce();
+  ByteRange treeData = serialized.coalesce();
 
-  auto& id = serialized.first;
-  put(KeySpace::TreeFamily, id, treeData);
-  return id;
+  put(KeySpace::TreeFamily, tree.getHash().getBytes(), treeData);
 }
 
-Hash LocalStore::WriteBatch::putTree(const Tree* tree) {
+void LocalStore::WriteBatch::putTree(const Tree& tree) {
   auto serialized = LocalStore::serializeTree(tree);
-  ByteRange treeData = serialized.second.coalesce();
+  ByteRange treeData = serialized.coalesce();
 
-  auto& id = serialized.first;
-  put(KeySpace::TreeFamily, id.getBytes(), treeData);
-  return id;
+  put(KeySpace::TreeFamily, tree.getHash().getBytes(), treeData);
 }
 
 BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
