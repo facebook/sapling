@@ -123,6 +123,7 @@ class treestatemap(object):
             # But our dirstate map is lazy anyway. So "_read" during init
             # should be fine.
             self._read()
+        assert len(self._parents) == 2
 
     @property
     def copymap(self):
@@ -306,6 +307,12 @@ class treestatemap(object):
 
     def parents(self):
         return self._parents
+
+    def p1(self):
+        return self._parents[0]
+
+    def p2(self):
+        return self._parents[1]
 
     def setparents(self, p1, p2):
         self._parents = (p1, p2)
