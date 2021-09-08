@@ -218,7 +218,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         self._send(path, {})
 
     @perftrace.tracefunc("Get Commit Cloud References")
-    def getreferences(self, reponame, workspace, baseversion):
+    def getreferences(self, reponame, workspace, baseversion, clientinfo=None):
         self.ui.debug("sending 'get_references' request\n", component="commitcloud")
 
         # send request
@@ -228,6 +228,8 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "repo_name": reponame,
             "workspace": workspace,
         }
+        if clientinfo is not None:
+            data["client_info"] = clientinfo
         response = self._timedsend(path, data)
         version = response["ref"]["version"]
 
@@ -266,6 +268,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         newbookmarks=None,
         oldremotebookmarks=None,
         newremotebookmarks=None,
+        clientinfo=None,
         logopts={},
     ):
         self.ui.debug("sending 'update_references' request\n", component="commitcloud")
@@ -311,6 +314,8 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "removed_snapshots": [],
             "new_snapshots": [],
         }
+        if clientinfo is not None:
+            data["client_info"] = clientinfo
 
         response = self._timedsend(path, data)
         data = response["ref"]

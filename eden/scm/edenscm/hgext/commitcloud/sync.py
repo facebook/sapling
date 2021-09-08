@@ -236,7 +236,12 @@ def _sync(
     # On cloud rejoin we already know what the cloudrefs are.  Otherwise,
     # fetch them from the commit cloud service.
     if cloudrefs is None:
-        cloudrefs = serv.getreferences(reponame, workspacename, fetchversion)
+        cloudrefs = serv.getreferences(
+            reponame,
+            workspacename,
+            fetchversion,
+            clientinfo=service.makeclientinfo(repo, lastsyncstate),
+        )
 
     with repo.ui.configoverride(
         {("treemanifest", "prefetchdraftparents"): False}, "cloudsync"
@@ -273,7 +278,12 @@ def _sync(
                 ):
                     # We're up-to-date, but didn't sync remote bookmarks last time.
                     # Sync them now.
-                    cloudrefs = serv.getreferences(reponame, workspacename, 0)
+                    cloudrefs = serv.getreferences(
+                        reponame,
+                        workspacename,
+                        0,
+                        clientinfo=service.makeclientinfo(repo, lastsyncstate),
+                    )
                     _forcesyncremotebookmarks(
                         repo, cloudrefs, lastsyncstate, remotepath, tr
                     )
@@ -1086,6 +1096,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         newcloudbookmarks,
         oldremotebookmarks,
         newremotebookmarks,
+        clientinfo=service.makeclientinfo(repo, lastsyncstate),
         logopts={"metalogroot": hex(repo.svfs.metalog.root())},
     )
     if synced:

@@ -5,6 +5,8 @@
 
 from __future__ import absolute_import
 
+import socket
+
 from edenscm.mercurial import error
 
 from . import httpsservice, localservice
@@ -19,3 +21,12 @@ def get(ui, token=None):
     else:
         msg = "Unrecognized commitcloud.servicetype: %s" % servicetype
         raise error.Abort(msg)
+
+
+def makeclientinfo(repo, syncstate):
+    hostname = repo.ui.config("commitcloud", "hostname", socket.gethostname())
+    return {
+        "hostname": hostname,
+        "reporoot": repo.root,
+        "version": syncstate.version,
+    }

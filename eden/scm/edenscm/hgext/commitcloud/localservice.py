@@ -77,7 +77,13 @@ class _LocalService(baseservice.BaseService):
     def check(self):
         return True
 
-    def getreferences(self, reponame, workspace, baseversion):
+    def getreferences(
+        self,
+        reponame,
+        workspace,
+        baseversion,
+        clientinfo=None,
+    ):
         data = self._load(workspace)
         version = data["version"]
         if version == baseversion:
@@ -111,6 +117,7 @@ class _LocalService(baseservice.BaseService):
         newbookmarks=None,
         oldremotebookmarks=None,
         newremotebookmarks=None,
+        clientinfo=None,
         logopts={},
     ):
         data = self._load(workspace)

@@ -218,6 +218,7 @@ class BaseService(pycompat.ABC):
         newbookmarks,
         oldremotebookmarks,
         newremotebookmarks,
+        clientinfo,
     ):
         """Updates the references to a new version.
 
@@ -230,7 +231,7 @@ class BaseService(pycompat.ABC):
         """
 
     @abstractmethod
-    def getreferences(self, reponame, workspace, baseversion):
+    def getreferences(self, reponame, workspace, baseversion, clientinfo):
         """Gets the current references if they differ from the base version"""
 
     @abstractmethod
