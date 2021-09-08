@@ -284,7 +284,8 @@ constexpr auto kFuseHandlers = [] {
       &FuseChannel::fuseLookup,
       &argrender::lookup,
       &ChannelThreadStats::lookup,
-      Read};
+      Read,
+      SamplingGroup::Four};
   handlers[FUSE_FORGET] = {
       "FUSE_FORGET",
       &FuseChannel::fuseForget,
@@ -295,13 +296,15 @@ constexpr auto kFuseHandlers = [] {
       &FuseChannel::fuseGetAttr,
       &argrender::getattr,
       &ChannelThreadStats::getattr,
-      Read};
+      Read,
+      SamplingGroup::Three};
   handlers[FUSE_SETATTR] = {
       "FUSE_SETATTR",
       &FuseChannel::fuseSetAttr,
       &argrender::setattr,
       &ChannelThreadStats::setattr,
-      Write};
+      Write,
+      SamplingGroup::Two};
   handlers[FUSE_READLINK] = {
       "FUSE_READLINK",
       &FuseChannel::fuseReadLink,
@@ -325,7 +328,8 @@ constexpr auto kFuseHandlers = [] {
       &FuseChannel::fuseMkdir,
       &argrender::mkdir,
       &ChannelThreadStats::mkdir,
-      Write};
+      Write,
+      SamplingGroup::One};
   handlers[FUSE_UNLINK] = {
       "FUSE_UNLINK",
       &FuseChannel::fuseUnlink,
@@ -337,13 +341,15 @@ constexpr auto kFuseHandlers = [] {
       &FuseChannel::fuseRmdir,
       &argrender::rmdir,
       &ChannelThreadStats::rmdir,
-      Write};
+      Write,
+      SamplingGroup::One};
   handlers[FUSE_RENAME] = {
       "FUSE_RENAME",
       &FuseChannel::fuseRename,
       &argrender::rename,
       &ChannelThreadStats::rename,
-      Write};
+      Write,
+      SamplingGroup::One};
   handlers[FUSE_LINK] = {
       "FUSE_LINK",
       &FuseChannel::fuseLink,
@@ -368,7 +374,7 @@ constexpr auto kFuseHandlers = [] {
       &argrender::write,
       &ChannelThreadStats::write,
       Write,
-      SamplingGroup::Four};
+      SamplingGroup::Two};
   handlers[FUSE_STATFS] = {
       "FUSE_STATFS",
       &FuseChannel::fuseStatFs,
@@ -397,13 +403,15 @@ constexpr auto kFuseHandlers = [] {
       &FuseChannel::fuseGetXAttr,
       &argrender::getxattr,
       &ChannelThreadStats::getxattr,
-      Read};
+      Read,
+      SamplingGroup::Three};
   handlers[FUSE_LISTXATTR] = {
       "FUSE_LISTXATTR",
       &FuseChannel::fuseListXAttr,
       &argrender::listxattr,
       &ChannelThreadStats::listxattr,
-      Read};
+      Read,
+      SamplingGroup::Two};
   handlers[FUSE_REMOVEXATTR] = {
       "FUSE_REMOVEXATTR",
       &FuseChannel::fuseRemoveXAttr,
@@ -427,7 +435,7 @@ constexpr auto kFuseHandlers = [] {
       &argrender::readdir,
       &ChannelThreadStats::readdir,
       Read,
-      SamplingGroup::Two};
+      SamplingGroup::Three};
   handlers[FUSE_RELEASEDIR] = {
       "FUSE_RELEASEDIR",
       &FuseChannel::fuseReleaseDir,
@@ -453,7 +461,8 @@ constexpr auto kFuseHandlers = [] {
       &FuseChannel::fuseCreate,
       &argrender::create,
       &ChannelThreadStats::create,
-      Write};
+      Write,
+      SamplingGroup::One};
   handlers[FUSE_INTERRUPT] = {"FUSE_INTERRUPT"};
   handlers[FUSE_BMAP] = {
       "FUSE_BMAP",
