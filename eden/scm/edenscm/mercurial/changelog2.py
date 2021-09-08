@@ -613,13 +613,23 @@ class changelog(object):
             return []
         return list(self.dag.gcaall([a, b]))
 
-    def parents(self, node):
-        # special case for null
-        if node == nullid:
-            return (nullid, nullid)
-        parents = list(self.dag.parentnames(node))
-        while len(parents) < 2:
-            parents.append(nullid)
+    def parents(self, node, fillnullid=True):
+        """Get parent nodes of a node
+
+        If fillnullid is set to True, ensure the result contains at least 2
+        items. If there are 1 or 0 parents, fill the rest with nullid.
+        """
+        if fillnullid:
+            # special case for null
+            if node == nullid:
+                return (nullid, nullid)
+            parents = list(self.dag.parentnames(node))
+            while len(parents) < 2:
+                parents.append(nullid)
+        else:
+            if node == nullid:
+                return []
+            parents = list(self.dag.parentnames(node))
         return parents
 
     def parentrevs(self, rev):
