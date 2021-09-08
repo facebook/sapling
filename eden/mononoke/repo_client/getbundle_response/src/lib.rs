@@ -58,7 +58,6 @@ use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryInto,
-    iter::FromIterator,
     sync::Arc,
 };
 use tunables::tunables;
@@ -261,7 +260,6 @@ async fn find_commits_to_send(
     heads: &[HgChangesetId],
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
 ) -> Result<Vec<ChangesetId>, Error> {
-    let common_heads: HashSet<_> = HashSet::from_iter(common.iter());
     let changeset_fetcher = blobrepo.get_changeset_fetcher();
 
     let heads = hg_to_bonsai_stream(
@@ -269,7 +267,7 @@ async fn find_commits_to_send(
         &blobrepo,
         heads
             .iter()
-            .filter(|head| !common_heads.contains(head))
+            .filter(|head| !common.contains(head))
             .cloned()
             .collect(),
     );
