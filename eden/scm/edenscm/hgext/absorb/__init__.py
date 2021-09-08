@@ -121,11 +121,10 @@ def getdraftstack(headctx, limit=None):
     while ctx.phase() != phases.public:
         if limit and len(result) >= limit:
             break
-        parents = ctx.parents()
-        if len(parents) != 1:
+        if len(ctx.parents()) > 1:
             break
         result.append(ctx)
-        ctx = parents[0]
+        ctx = ctx.p1()
     result.reverse()
     return result
 
