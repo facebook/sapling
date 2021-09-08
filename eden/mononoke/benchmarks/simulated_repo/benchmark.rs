@@ -130,8 +130,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         .without_arg_types(vec![
             ArgType::Config,
             ArgType::Repo,
-            ArgType::Mysql,
-            ArgType::Blobstore,
             ArgType::Tunables,
             ArgType::Runtime, // we construct our own runtime, so these args would do nothing
         ])
