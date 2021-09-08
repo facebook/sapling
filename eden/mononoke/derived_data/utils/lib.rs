@@ -33,6 +33,7 @@ use futures::{
     stream::{self, futures_unordered::FuturesUnordered},
     Future, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
+use futures_stats::TimedTryFutureExt;
 use git_types::{TreeHandle, TreeMapping};
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
@@ -283,6 +284,7 @@ where
             });
         let memblobstore = memblobstore.expect("memblobstore should have been updated");
 
+        let mut scuba = create_derive_graph_scuba_sample(&ctx, &csids, self.name());
         async move {
             // create new context so each derivation has its own trace, but same QPS limits
             let ctx = ctx.session().new_context(
@@ -290,21 +292,38 @@ where
                 MononokeScubaSampleBuilder::with_discard(),
             );
 
-            if parallel || gap_size.is_some() {
-                // derive the batch of derived data in parallel
-                Derivable::batch_derive(&ctx, &repo, csids, &in_memory_mapping, gap_size).await?;
-            } else {
-                for csid in csids {
-                    // derive each changeset sequentially
-                    derive_impl::derive_impl::<Derivable>(&ctx, &repo, &in_memory_mapping, csid)
+            let (stats, _) = async {
+                if parallel || gap_size.is_some() {
+                    // derive the batch of derived data in parallel
+                    Derivable::batch_derive(&ctx, &repo, csids, &in_memory_mapping, gap_size)
                         .await?;
+                } else {
+                    for csid in csids {
+                        // derive each changeset sequentially
+                        derive_impl::derive_impl::<Derivable>(
+                            &ctx,
+                            &repo,
+                            &in_memory_mapping,
+                            csid,
+                        )
+                        .await?;
+                    }
                 }
+                Result::<_, Error>::Ok(())
             }
+            .try_timed()
+            .await?;
+            scuba
+                .add_future_stats(&stats)
+                .log_with_msg("Derived in memory", None);
 
             {
                 let ctx = derived_data::override_ctx(ctx.clone(), &repo);
                 // flush blobstore
-                memblobstore.persist(&ctx).await?;
+                let (stats, _) = memblobstore.persist(&ctx).try_timed().await?;
+                scuba
+                    .add_future_stats(&stats)
+                    .log_with_msg("Flushed derived blobs", None);
             }
 
             // flush mapping
@@ -320,7 +339,10 @@ where
                     });
                 }
             }
-            futs.try_for_each(|_| future::ok(())).await?;
+            let (stats, _) = futs.try_for_each(|_| future::ok(())).try_timed().await?;
+            scuba
+                .add_future_stats(&stats)
+                .log_with_msg("Flushed mapping", None);
             Ok(())
         }
         .boxed()
@@ -687,14 +709,16 @@ impl DeriveGraph {
                 cloned!(ctx, repo);
                 async move {
                     if let Some(deriver) = &node.deriver {
-                        let job = deriver.backfill_batch_dangerous(
-                            ctx.clone(),
-                            repo,
-                            node.csids.clone(),
-                            parallel,
-                            gap_size,
-                        );
-                        tokio::spawn(job).await??;
+                        let job = deriver
+                            .backfill_batch_dangerous(
+                                ctx.clone(),
+                                repo,
+                                node.csids.clone(),
+                                parallel,
+                                gap_size,
+                            )
+                            .try_timed();
+                        let (stats, _) = tokio::spawn(job).await??;
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
                             slog::debug!(
                                 ctx.logger(),
@@ -705,6 +729,11 @@ impl DeriveGraph {
                                 first,
                                 last
                             );
+                            let mut scuba =
+                                create_derive_graph_scuba_sample(&ctx, &node.csids, deriver.name());
+                            scuba
+                                .add_future_stats(&stats)
+                                .log_with_msg("Derived stack", None);
                         }
                     }
                     Ok::<_, Error>(())
@@ -744,6 +773,23 @@ impl DeriveGraph {
         writeln!(w, "}}")?;
         Ok(())
     }
+}
+
+pub fn create_derive_graph_scuba_sample(
+    ctx: &CoreContext,
+    nodes: &[ChangesetId],
+    derived_data_name: &str,
+) -> MononokeScubaSampleBuilder {
+    let mut scuba_sample = ctx.scuba().clone();
+    scuba_sample
+        .add("stack_size", nodes.len())
+        .add("derived_data", derived_data_name);
+    if let (Some(first), Some(last)) = (nodes.first(), nodes.last()) {
+        scuba_sample
+            .add("first_csid", format!("{}", first))
+            .add("last_csid", format!("{}", last));
+    }
+    scuba_sample
 }
 
 impl std::ops::Deref for DeriveGraph {

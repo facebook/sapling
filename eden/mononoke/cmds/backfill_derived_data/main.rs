@@ -28,8 +28,8 @@ use cmdlib::{
 use context::{CoreContext, SessionContainer};
 use derived_data::BonsaiDerivable;
 use derived_data_utils::{
-    derived_data_utils, derived_data_utils_for_backfill, DerivedUtils, ThinOut,
-    POSSIBLE_DERIVED_TYPES,
+    create_derive_graph_scuba_sample, derived_data_utils, derived_data_utils_for_backfill,
+    DerivedUtils, ThinOut, POSSIBLE_DERIVED_TYPES,
 };
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
@@ -37,7 +37,7 @@ use futures::{
     future::{self, try_join, try_join_all, FutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
-use futures_stats::TimedFutureExt;
+use futures_stats::{TimedFutureExt, TimedTryFutureExt};
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{ChangesetId, DateTime};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -131,6 +131,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             .with_advanced_args_hidden()
             .with_fb303_args()
             .with_repo_required(RepoRequirement::AtLeastOne)
+            .with_scuba_logging_args()
             .build()
             .about("Utility to work with bonsai derived data")
             .subcommand(
@@ -990,10 +991,15 @@ async fn tail_batch_iteration(
                 cloned!(ctx, repo);
                 async move {
                     if let Some(deriver) = &node.deriver {
-                        warmup::warmup(&ctx, &repo, deriver.name(), &node.csids).await?;
+                        let mut scuba =
+                            create_derive_graph_scuba_sample(&ctx, &node.csids, deriver.name());
+                        let (stats, _) = warmup::warmup(&ctx, &repo, deriver.name(), &node.csids)
+                            .try_timed()
+                            .await?;
+                        scuba.add_future_stats(&stats).log_with_msg("Warmup", None);
                         let timestamp = Instant::now();
 
-                        deriver
+                        let (stats, _) = deriver
                             .backfill_batch_dangerous(
                                 get_batch_ctx(&ctx, parallel || gap_size.is_some()).await,
                                 repo.clone(),
@@ -1001,6 +1007,7 @@ async fn tail_batch_iteration(
                                 parallel,
                                 gap_size,
                             )
+                            .try_timed()
                             .await?;
 
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
@@ -1014,6 +1021,9 @@ async fn tail_batch_iteration(
                                 first,
                                 last
                             );
+                            scuba
+                                .add_future_stats(&stats)
+                                .log_with_msg("Derived stack", None);
                         }
                     }
                     Result::<_>::Ok(())
