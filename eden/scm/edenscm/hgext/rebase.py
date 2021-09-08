@@ -2128,7 +2128,12 @@ def buildstate(repo, destmap, collapse):
                 samebranch = root.branch() == wctx.branch()
             else:
                 samebranch = root.branch() == dest.branch()
-            if not collapse and samebranch and dest in root.parents():
+            rootparents = root.parents()
+            if (
+                not collapse
+                and samebranch
+                and (dest in rootparents or (dest.node() == nullid and not rootparents))
+            ):
                 # mark the revision as done by setting its new revision
                 # equal to its old (current) revisions
                 state[root.rev()] = root.rev()
