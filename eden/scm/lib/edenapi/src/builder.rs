@@ -17,6 +17,7 @@ use parking_lot::RwLock;
 use url::Url;
 
 use auth::AuthSection;
+use configmodel::convert::FromConfigValue;
 use configmodel::ConfigExt;
 use http_client::{Encoding, HttpVersion, MinTransferSpeed};
 
@@ -138,18 +139,12 @@ impl HttpClientBuilder {
 
     /// Populate a `HttpClientBuilder` from a Mercurial configuration.
     pub fn from_config(config: &dyn configmodel::Config) -> Result<Self, EdenApiError> {
-        let server_url = config
-            .get_opt::<String>("edenapi", "url")
-            .map_err(|e| ConfigError::Invalid("edenapi.url".into(), e.into()))?
-            .ok_or(ConfigError::Missing("edenapi.url".into()))?
+        let server_url = get_required_config::<String>(config, "edenapi", "url")?
             .parse::<Url>()
             .map_err(|e| ConfigError::Invalid("edenapi.url".into(), e.into()))?;
 
-        let validate_certs = config
-            .get_opt::<bool>("edenapi", "validate-certs")
-            .map_err(|e| ConfigError::Invalid("edenapi.validate-certs".into(), e.into()))?
-            .unwrap_or_default();
-
+        let validate_certs =
+            get_config::<bool>(config, "edenapi", "validate-certs")?.unwrap_or_default();
         let (cert, key, ca_bundle) = AuthSection::from_config(config)
             .best_match_for(&server_url)
             .or_else(|e| {
@@ -165,10 +160,13 @@ impl HttpClientBuilder {
             })?
             .map(|auth| (auth.cert, auth.key, auth.cacerts))
             .unwrap_or_default();
+        // Normally, this setting would be set globally for Mercurial elsewhere. However, when this
+        // crate is used outside of Mercurial (such as in EdenFS), global Mercurial HTTP client
+        // config options will not be applied. Since this particular option is essential for EdenAPI
+        // to work correctly, we explicitly [re]set it here.
+        let convert_cert = get_config(config, "http", "convert-cert")?.unwrap_or(cfg!(windows));
 
-        let mut headers = config
-            .get_opt::<String>("edenapi", "headers")
-            .map_err(|e| ConfigError::Invalid("edenapi.headers".into(), e.into()))?
+        let mut headers = get_config::<String>(config, "edenapi", "headers")?
             .map(parse_headers)
             .transpose()
             .map_err(|e| ConfigError::Invalid("edenapi.headers".into(), e.into()))?
@@ -178,40 +176,15 @@ impl HttpClientBuilder {
             format!("EdenSCM/{}", version::VERSION),
         );
 
-        let max_requests = config
-            .get_opt("edenapi", "maxrequests")
-            .map_err(|e| ConfigError::Invalid("edenapi.maxrequests".into(), e.into()))?;
-
-        let max_files = config
-            .get_opt("edenapi", "maxfiles")
-            .map_err(|e| ConfigError::Invalid("edenapi.maxfiles".into(), e.into()))?;
-
-        let max_trees = config
-            .get_opt("edenapi", "maxtrees")
-            .map_err(|e| ConfigError::Invalid("edenapi.maxtrees".into(), e.into()))?;
-
-        let max_history = config
-            .get_opt("edenapi", "maxhistory")
-            .map_err(|e| ConfigError::Invalid("edenapi.maxhistory".into(), e.into()))?;
-
-        let max_location_to_hash = config
-            .get_opt("edenapi", "maxlocationtohash")
-            .map_err(|e| ConfigError::Invalid("edenapi.maxlocationtohash".into(), e.into()))?;
-
-        let timeout = config
-            .get_opt("edenapi", "timeout")
-            .map_err(|e| ConfigError::Invalid("edenapi.timeout".into(), e.into()))?
-            .map(Duration::from_secs);
-
-        let debug = config
-            .get_opt("edenapi", "debug")
-            .map_err(|e| ConfigError::Invalid("edenapi.timeout".into(), e.into()))?
-            .unwrap_or_default();
-
-        let http_version = config
-            .get_opt("edenapi", "http-version")
-            .map_err(|e| ConfigError::Invalid("edenapi.http-version".into(), e.into()))?
-            .unwrap_or_else(|| "2".to_string());
+        let max_requests = get_config(config, "edenapi", "maxrequests")?;
+        let max_files = get_config(config, "edenapi", "maxfiles")?;
+        let max_trees = get_config(config, "edenapi", "maxtrees")?;
+        let max_history = get_config(config, "edenapi", "maxhistory")?;
+        let max_location_to_hash = get_config(config, "edenapi", "maxlocationtohash")?;
+        let timeout = get_config(config, "edenapi", "timeout")?.map(Duration::from_secs);
+        let debug = get_config(config, "edenapi", "debug")?.unwrap_or_default();
+        let http_version =
+            get_config(config, "edenapi", "http-version")?.unwrap_or_else(|| "2".to_string());
         let http_version = Some(match http_version.as_str() {
             "1.1" => HttpVersion::V11,
             "2" => HttpVersion::V2,
@@ -222,39 +195,19 @@ impl HttpClientBuilder {
                 )));
             }
         });
-
-        let log_dir = config
-            .get_opt::<PathBuf>("edenapi", "logdir")
-            .map_err(|e| ConfigError::Invalid("edenapi.logdir".into(), e.into()))?;
-
-
-        // Normally, this setting would be set globally for Mercurial elsewhere. However, when this
-        // crate is used outside of Mercurial (such as in EdenFS), global Mercurial HTTP client
-        // config options will not be applied. Since this particular option is essential for EdenAPI
-        // to work correctly, we explicitly [re]set it here.
-        let convert_cert = config
-            .get_or("http", "convert-cert", || cfg!(windows))
-            .map_err(|e| ConfigError::Invalid("http.convert-cert".into(), e.into()))?;
-
-        let encoding = config
-            .get_opt::<String>("edenapi", "encoding")
-            .map_err(|e| ConfigError::Invalid("edenapi.encoding".into(), e.into()))?
-            .map(|s| Encoding::from(&*s));
-
-
-        let low_speed_grace_period = config
-            .get_or_default("edenapi", "low-speed-grace-period-seconds")
-            .map_err(|e| ConfigError::Invalid("edenapi.low-speed-grace-period".into(), e.into()))?;
-
-        let min_transfer_speed = config
-            .get_opt::<u32>("edenapi", "low-speed-min-bytes-per-second")
-            .map_err(|e| {
-                ConfigError::Invalid("edenapi.low-speed-min-bytes-per-second".into(), e.into())
-            })?
-            .map(|min_bytes_per_second| MinTransferSpeed {
-                min_bytes_per_second,
-                grace_period: Duration::from_secs(low_speed_grace_period),
-            });
+        let log_dir = get_config(config, "edenapi", "logdir")?;
+        let encoding =
+            get_config::<String>(config, "edenapi", "encoding")?.map(|s| Encoding::from(&*s));
+        let low_speed_grace_period =
+            get_config::<u64>(config, "edenapi", "low-speed-grace-period-seconds")?
+                .unwrap_or_default();
+        let min_transfer_speed =
+            get_config::<u32>(config, "edenapi", "low-speed-min-bytes-per-second")?.map(
+                |min_bytes_per_second| MinTransferSpeed {
+                    min_bytes_per_second,
+                    grace_period: Duration::from_secs(low_speed_grace_period),
+                },
+            );
 
         Ok(HttpClientBuilder {
             server_url: Some(server_url),
@@ -408,6 +361,25 @@ impl HttpClientBuilder {
         self.convert_cert = enable;
         self
     }
+}
+
+fn get_config<T: FromConfigValue>(
+    config: &dyn configmodel::Config,
+    section: &str,
+    name: &str,
+) -> Result<Option<T>, ConfigError> {
+    config
+        .get_opt::<T>(section, name)
+        .map_err(|e| ConfigError::Invalid(format!("{}.{}", section, name), e.into()))
+}
+
+fn get_required_config<T: FromConfigValue>(
+    config: &dyn configmodel::Config,
+    section: &str,
+    name: &str,
+) -> Result<T, ConfigError> {
+    Ok(get_config::<T>(config, section, name)?
+        .ok_or_else(|| ConfigError::Missing(format!("{}.{}", section, name)))?)
 }
 
 /// Configuration for a `Client`. Essentially has the same fields as a
