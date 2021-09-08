@@ -269,7 +269,10 @@ class basectx(object):
         return self._parents
 
     def p1(self):
-        return self._parents[0]
+        p = self.parents()
+        if p:
+            return p[0]
+        return changectx(self._repo, nullrev)
 
     def p2(self):
         parents = self._parents
@@ -556,10 +559,8 @@ class changectx(basectx):
     @propertycache
     def _parents(self):
         repo = self._repo
-        p1, p2 = repo.changelog.parentrevs(self._rev)
-        if p2 == nullrev:
-            return [changectx(repo, p1)]
-        return [changectx(repo, p1), changectx(repo, p2)]
+        pnodes = repo.changelog.parents(self._node, fillnullid=False)
+        return [changectx(repo, p) for p in pnodes]
 
     def changeset(self):
         c = self._changeset

@@ -775,7 +775,7 @@ sh % "hg log -T json" == r"""
       "date": [1000000, 0],
       "desc": "second",
       "bookmarks": [],
-      "parents": ["0000000000000000000000000000000000000000"]
+      "parents": []
      },
      {
       "rev": 6,
@@ -852,7 +852,7 @@ sh % "hg log -T json" == r"""
       "date": [1000000, 0],
       "desc": "line 1\nline 2",
       "bookmarks": [],
-      "parents": ["0000000000000000000000000000000000000000"]
+      "parents": []
      }
     ]"""
 
@@ -911,7 +911,7 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1000000, 0],
       "desc": "second",
       "bookmarks": [],
-      "parents": ["0000000000000000000000000000000000000000"],
+      "parents": [],
       "manifest": "e3aa144e25d914ea34006bd7b3c266b7eb283c61",
       "extra": {"branch": "default"},
       "modified": [],
@@ -1023,7 +1023,7 @@ sh % "hg log --debug -Tjson" == r"""
       "date": [1000000, 0],
       "desc": "line 1\nline 2",
       "bookmarks": [],
-      "parents": ["0000000000000000000000000000000000000000"],
+      "parents": [],
       "manifest": "a0c8bcbbb45c63b90b70ad007bf38961f64f2af0",
       "extra": {"branch": "default"},
       "modified": [],
@@ -1143,7 +1143,7 @@ sh % "hg debugmakepublic 5"
 sh % "hg log --debug -G --style ./parentphase" == r"""
     @  8 (draft): 7 (draft)
     │
-    o  7 (draft): -1 (public)
+    o  7 (draft):
 
     o    6 (draft): 5 (public) 4 (draft)
     ├─╮
@@ -1157,7 +1157,7 @@ sh % "hg log --debug -G --style ./parentphase" == r"""
     │
     o  1 (public): 0 (public)
     │
-    o  0 (public): -1 (public)"""
+    o  0 (public):"""
 
 # Missing non-standard names give no error (backward compatibility):
 
@@ -1645,32 +1645,32 @@ eq(
     node--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     node--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
     parents: 88058a185da2
-    parents: 000000000000
+    parents:
     parents: 13207e5a10d9 07fa1db10648
     parents: 10e46f2dcbf4
     parents: 10e46f2dcbf4
     parents: 97054abb4ab8
     parents: b608e9d1a3f0
     parents: 1e4e1b8f71e0
-    parents: 000000000000
+    parents:
     parents--verbose: 88058a185da2
-    parents--verbose: 000000000000
+    parents--verbose:
     parents--verbose: 13207e5a10d9 07fa1db10648
     parents--verbose: 10e46f2dcbf4
     parents--verbose: 10e46f2dcbf4
     parents--verbose: 97054abb4ab8
     parents--verbose: b608e9d1a3f0
     parents--verbose: 1e4e1b8f71e0
-    parents--verbose: 000000000000
+    parents--verbose:
     parents--debug: 88058a185da202d22e8ee0bb4d3515ff0ecb222b
-    parents--debug: 0000000000000000000000000000000000000000
+    parents--debug:
     parents--debug: 13207e5a10d9fd28ec424934298e176197f2c67f 07fa1db1064879a32157227401eb44b322ae53ce
     parents--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
     parents--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
     parents--debug: 97054abb4ab824450e9164180baf491ae0078465
     parents--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     parents--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
-    parents--debug: 0000000000000000000000000000000000000000
+    parents--debug:
     rev: 8
     rev: 7
     rev: 6
@@ -3478,7 +3478,7 @@ sh % 'hg log -T \'{rev} p: {revset("p1(%s)", rev) % "{rev}:{node|short}"}\\n\'' 
 sh % "hg log --debug -T '{rev} p:{parents % \" {rev}:{node|short}\"}\\n'" == r"""
     2 p: 1:ea4c0948489d
     1 p: 0:f7769ec2ab97
-    0 p: -1:000000000000"""
+    0 p:"""
 
 #  therefore, 'revcache' should be recreated for each rev
 

@@ -732,9 +732,8 @@ sh % "hg log -f -r null" == r"""
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 sh % "hg log -f -r null -G" == r"""
     o  commit:      000000000000
-    │  user:
-    │  date:        Thu Jan 01 00:00:00 1970 +0000
-    │"""
+       user:
+       date:        Thu Jan 01 00:00:00 1970 +0000"""
 
 
 # log -f with null parent

@@ -16,7 +16,7 @@
     "desc": "unicode quote: \xe2\x80\x99", (esc) (?)
     "desc": "unicode quote: \u2019", (?)
     "bookmarks": [],
-    "parents": ["0000000000000000000000000000000000000000"],
+    "parents": [],
     "manifest": "e014a281af7c5932257f42933049e389b86dc42e",
     "extra": {"branch": "default"},
     "modified": [],

@@ -65,7 +65,7 @@ Revert the content change from rev 2:
   0555950ead28 0f2ff26688b9 5cd961e4045d 
   0f2ff26688b9 2665aaee66e9 
   5cd961e4045d 2665aaee66e9 
-  2665aaee66e9 000000000000 
+  2665aaee66e9 
 
 This should use bar@rev2 as the ancestor:
 
@@ -155,7 +155,7 @@ Revert the content change from rev 2:
   3ffa6b9e35f0 5cd961e4045d 0f2ff26688b9 
   0f2ff26688b9 2665aaee66e9 
   5cd961e4045d 2665aaee66e9 
-  2665aaee66e9 000000000000 
+  2665aaee66e9 
 
 This should use bar@rev2 as the ancestor:
 
