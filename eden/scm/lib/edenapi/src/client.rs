@@ -56,6 +56,7 @@ use crate::errors::EdenApiError;
 use crate::response::{Response, ResponseMeta};
 use crate::types::wire::pull::PullFastForwardRequest;
 use metrics::{Counter, EntranceGuard};
+use std::time::Duration;
 
 /// All non-alphanumeric characters (except hypens, underscores, and periods)
 /// found in the repo's name will be percent-encoded before being used in URLs.
@@ -359,6 +360,38 @@ impl Client {
             progress,
         )?)
     }
+
+    async fn clone_data_retry(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
+        const CLONE_ATTEMPTS_MAX: usize = 10;
+        let mut attempt = 0usize;
+        loop {
+            let result = self.clone_data_attempt(&repo).await;
+            if attempt >= CLONE_ATTEMPTS_MAX {
+                return result;
+            }
+            match result {
+                Err(EdenApiError::HttpError { status, message }) => {
+                    tracing::warn!("Retrying http status {} {}", status, message);
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+                Err(EdenApiError::Http(err)) => {
+                    tracing::warn!("Retrying http error {:?}", err);
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+                other => return other,
+            }
+            attempt += 1;
+        }
+    }
+
+    async fn clone_data_attempt(&self, repo: &str) -> Result<CloneData<HgId>, EdenApiError> {
+        let url = self.build_url(paths::CLONE_DATA, Some(repo))?;
+        let req = self.configure_request(Request::post(url))?;
+        let mut fetch = self.fetch::<WireCloneData>(vec![req], None)?;
+        fetch.entries.next().await.ok_or_else(|| {
+            EdenApiError::Other(format_err!("clone data missing from reponse body"))
+        })?
+    }
 }
 
 #[async_trait]
@@ -587,7 +620,7 @@ impl EdenApi for Client {
     async fn clone_data(
         &self,
         repo: String,
-        progress: Option<ProgressCallback>,
+        _progress: Option<ProgressCallback>, // todo - remove progress (not used anyway)
     ) -> Result<CloneData<HgId>, EdenApiError> {
         let msg = format!("Requesting clone data for the '{}' repository", repo);
         tracing::info!("{}", &msg);
@@ -595,13 +628,7 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let url = self.build_url(paths::CLONE_DATA, Some(&repo))?;
-        let req = self.configure_request(Request::post(url))?;
-        let mut res = self.fetch::<WireCloneData>(vec![req], progress)?;
-        let clone_data = res.entries.next().await.ok_or_else(|| {
-            EdenApiError::Other(format_err!("clone data missing from reponse body"))
-        })??;
-        Ok(clone_data)
+        self.clone_data_retry(repo).await
     }
 
     async fn pull_fast_forward_master(
