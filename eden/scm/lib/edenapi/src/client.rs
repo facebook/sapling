@@ -392,6 +392,49 @@ impl Client {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
         })?
     }
+
+    async fn fast_forward_pull_retry(
+        &self,
+        repo: String,
+        req: PullFastForwardRequest,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        const PULL_ATTEMPTS_MAX: usize = 10;
+        let mut attempt = 0usize;
+        loop {
+            let result = self.fast_forward_pull_attempt(&repo, req.clone()).await;
+            if attempt >= PULL_ATTEMPTS_MAX {
+                return result;
+            }
+            match result {
+                Err(EdenApiError::HttpError { status, message }) => {
+                    tracing::warn!("Retrying http status {} {}", status, message);
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+                Err(EdenApiError::Http(err)) => {
+                    tracing::warn!("Retrying http error {:?}", err);
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+                other => return other,
+            }
+            attempt += 1;
+        }
+    }
+
+    async fn fast_forward_pull_attempt(
+        &self,
+        repo: &str,
+        req: PullFastForwardRequest,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        let url = self.build_url(paths::PULL_FAST_FORWARD, Some(&repo))?;
+        let req = self
+            .configure_request(Request::post(url))?
+            .cbor(&req.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+        let mut fetch = self.fetch::<WireCloneData>(vec![req], None)?;
+        fetch.entries.next().await.ok_or_else(|| {
+            EdenApiError::Other(format_err!("clone data missing from reponse body"))
+        })?
+    }
 }
 
 #[async_trait]
@@ -642,22 +685,11 @@ impl EdenApi for Client {
             eprintln!("{}", &msg);
         }
 
-        let url = self.build_url(paths::PULL_FAST_FORWARD, Some(&repo))?;
-        let req = self
-            .configure_request(Request::post(url))?
-            .cbor(
-                &PullFastForwardRequest {
-                    old_master,
-                    new_master,
-                }
-                .to_wire(),
-            )
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-        let mut res = self.fetch::<WireCloneData>(vec![req], None)?;
-        let clone_data = res.entries.next().await.ok_or_else(|| {
-            EdenApiError::Other(format_err!("clone data missing from reponse body"))
-        })??;
-        Ok(clone_data)
+        let req = PullFastForwardRequest {
+            old_master,
+            new_master,
+        };
+        self.fast_forward_pull_retry(repo, req).await
     }
 
     async fn full_idmap_clone_data(
