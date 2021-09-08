@@ -253,7 +253,8 @@ fn report_manifests_and_filenodes<
     STATS::filenodes_weight.add_value(total_filenodes_weight, (reponame.to_owned(),));
 }
 
-async fn find_commits_to_send(
+/// return ancestors of heads with hint to exclude ancestors of common
+pub async fn find_commits_to_send(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
     common: &HashSet<HgChangesetId>,
@@ -633,7 +634,7 @@ async fn hg_to_bonsai_stream(
 // Given a set of heads and a set of common heads, find the new draft commits,
 // and ensure all the public heads and first public ancestors of the draft commits
 // have had their filenodes derived.
-async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
+pub async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
     ctx: &CoreContext,
     repo: &BlobRepo,
     common: &HashSet<HgChangesetId>,

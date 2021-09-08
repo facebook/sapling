@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
+use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::iter::FromIterator;
@@ -18,14 +19,13 @@ use std::num::NonZeroU64;
 use blobstore::Loadable;
 use edenapi_types::{
     wire::WireCommitHashToLocationRequestBatch, AnyFileContentId, AnyId, Batch, BonsaiFileChange,
-    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationResponse,
-    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
-    CommitRevlogData, CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse,
-    FetchSnapshotRequest, FetchSnapshotResponse, UploadBonsaiChangesetRequest,
-    UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
+    CommitGraphEntry, CommitGraphRequest, CommitHashLookupRequest, CommitHashLookupResponse,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
+    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest,
+    EphemeralPrepareRequest, EphemeralPrepareResponse, FetchSnapshotRequest, FetchSnapshotResponse,
+    UploadBonsaiChangesetRequest, UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
 };
 use ephemeral_blobstore::BubbleId;
-use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::{ChangesetId, DateTime, FileChange};
@@ -475,5 +475,50 @@ impl EdenApiHandler for EphemeralPrepareHandler {
             })
         })
         .boxed())
+    }
+}
+
+pub struct GraphHandler;
+
+#[async_trait]
+impl EdenApiHandler for GraphHandler {
+    type Request = CommitGraphRequest;
+    type Response = CommitGraphEntry;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitGraph;
+    const ENDPOINT: &'static str = "/commit/graph";
+
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let heads = request
+            .heads
+            .into_iter()
+            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
+            .collect();
+        let common = request
+            .common
+            .into_iter()
+            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
+            .collect();
+
+        let graph_entries = repo
+            .get_graph_mapping(common, heads)
+            .await?
+            .into_iter()
+            .map(|(hgid, parents)| {
+                Ok(CommitGraphEntry {
+                    hgid: HgId::from(hgid.into_nodehash()),
+                    parents: parents
+                        .into_iter()
+                        .map(|p_hgid| HgId::from(p_hgid.into_nodehash()))
+                        .collect(),
+                })
+            });
+        Ok(stream::iter(graph_entries).boxed())
     }
 }

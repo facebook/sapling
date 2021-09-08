@@ -73,6 +73,7 @@ pub enum EdenApiMethod {
     PullFastForwardMaster,
     EphemeralPrepare,
     FetchSnapshot,
+    CommitGraph,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -86,6 +87,7 @@ impl fmt::Display for EdenApiMethod {
             Self::CommitHashToLocation => "commit_hash_to_location",
             Self::CommitRevlogData => "commit_revlog_data",
             Self::CommitHashLookup => "commit_hash_lookup",
+            Self::CommitGraph => "commit_graph",
             Self::Clone => "clone",
             Self::FullIdMapClone => "full_idmap_clone",
             Self::Bookmarks => "bookmarks",
@@ -260,6 +262,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<lookup::LookupHandler>(route);
         Handlers::setup::<trees::UploadTreesHandler>(route);
         Handlers::setup::<commit::FetchSnapshotHandler>(route);
+        Handlers::setup::<commit::GraphHandler>(route);
         route
             .post("/:repo/trees")
             .with_path_extractor::<trees::TreeParams>()

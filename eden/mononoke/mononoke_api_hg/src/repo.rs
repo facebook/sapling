@@ -19,6 +19,7 @@ use ephemeral_blobstore::{Bubble, BubbleId};
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
+use futures_util::try_join;
 use hgproto::GettreepackArgs;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_types::blobs::{RevlogChangeset, UploadHgNodeHash, UploadHgTreeEntry};
@@ -31,11 +32,17 @@ use mononoke_types::{
     BonsaiChangeset, ChangesetId, ContentId, MPath, MononokeId, RepoPath,
 };
 use repo_blobstore::RepoBlobstore;
-use repo_client::gettreepack_entries;
+use repo_client::{
+    find_commits_to_send, find_new_draft_commits_and_derive_filenodes_for_public_roots,
+    gettreepack_entries,
+};
+
 use segmented_changelog::{CloneData, DagId, Location, StreamCloneData};
 use std::collections::HashSet;
 use std::sync::Arc;
 use unbundle::upload_changeset;
+
+use reachabilityindex::LeastCommonAncestorsHint;
 
 use super::{HgFileContext, HgTreeContext};
 
@@ -755,6 +762,76 @@ impl HgRepoContext {
             .get_hg_in_range(self.ctx(), repo_id, low, high, LIMIT)
             .await
             .map_err(|e| e.into())
+    }
+
+    /// return a mapping of commits to their parents that are in the segment of
+    /// of the commit graph bounded by common and heads.
+    pub async fn get_graph_mapping(
+        &self,
+        common: Vec<HgChangesetId>,
+        heads: Vec<HgChangesetId>,
+    ) -> Result<HashMap<HgChangesetId, Vec<HgChangesetId>>, MononokeError> {
+        let ctx = self.ctx().clone();
+        let blob_repo = self.blob_repo();
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.repo.skiplist_index().clone();
+        let phases = blob_repo.get_phases();
+        let common: HashSet<_> = common.into_iter().collect();
+        // make sure filenodes are derived before sending
+        let (_draft_commits, missing_commits) = try_join!(
+            find_new_draft_commits_and_derive_filenodes_for_public_roots(
+                &ctx, blob_repo, &common, &heads, &phases
+            ),
+            find_commits_to_send(&ctx, blob_repo, &common, &heads, &lca_hint),
+        )?;
+
+        let cs_parent_mapping: HashMap<ChangesetId, Vec<ChangesetId>> =
+            stream::iter(missing_commits.clone().into_iter())
+                .map(move |cs_id| async move {
+                    let parents = blob_repo
+                        .get_changeset_parents_by_bonsai(self.ctx().clone(), cs_id)
+                        .await?;
+                    Ok::<_, Error>((cs_id, parents))
+                })
+                .buffered(100)
+                .try_collect::<HashMap<_, _>>()
+                .await?;
+
+        let cs_ids = cs_parent_mapping
+            .clone()
+            .into_values()
+            .flatten()
+            .chain(missing_commits)
+            .collect::<HashSet<_>>();
+        let bonsai_hg_mapping = self
+            .blob_repo()
+            .get_hg_bonsai_mapping(
+                self.ctx().clone(),
+                cs_ids.into_iter().collect::<Vec<ChangesetId>>(),
+            )
+            .await
+            .context("error fetching hg bonsai mapping")?
+            .into_iter()
+            .map(|(hg_id, cs_id)| (cs_id, hg_id))
+            .collect::<HashMap<_, _>>();
+
+        let mut hg_parent_mapping: HashMap<HgChangesetId, Vec<HgChangesetId>> = HashMap::new();
+        let get_hg_id = |cs_id| {
+            bonsai_hg_mapping
+                .get(cs_id)
+                .cloned()
+                .with_context(|| format_err!("failed to find bonsai '{}' mapping to hg", cs_id))
+        };
+
+        for (cs_id, cs_parents) in cs_parent_mapping.iter() {
+            let hg_id = get_hg_id(cs_id)?;
+            let hg_parents = cs_parents
+                .into_iter()
+                .map(get_hg_id)
+                .collect::<Result<Vec<HgChangesetId>, Error>>()
+                .map_err(MononokeError::from)?;
+            hg_parent_mapping.insert(hg_id, hg_parents);
+        }
+        Ok(hg_parent_mapping)
     }
 }
 
