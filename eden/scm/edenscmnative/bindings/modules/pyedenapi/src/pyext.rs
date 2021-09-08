@@ -24,11 +24,12 @@ use edenapi::{
     EdenApi, EdenApiBlocking, EdenApiError, Response, Stats,
 };
 use edenapi_types::{
-    AnyFileContentId, AnyId, CommitGraphEntry, CommitHashToLocationResponse, CommitKnownResponse,
-    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FetchSnapshotRequest, FetchSnapshotResponse, FileEntry, HgChangesetContent,
-    HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, SnapshotRawData,
-    TreeEntry, UploadHgChangeset, UploadSnapshotResponse, UploadTokensResponse, UploadTreeResponse,
+    AnyFileContentId, AnyId, CommitGraphEntry, CommitHashLookupResponse,
+    CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FetchSnapshotRequest,
+    FetchSnapshotResponse, FileEntry, HgChangesetContent, HgFilenodeData, HgMutationEntryContent,
+    HistoryEntry, LookupResponse, SnapshotRawData, TreeEntry, UploadHgChangeset,
+    UploadSnapshotResponse, UploadTokensResponse, UploadTreeResponse,
 };
 use futures::stream;
 use progress::{ProgressBar, ProgressFactory, Unit};
@@ -270,6 +271,31 @@ pub trait EdenApiPyExt: EdenApi {
         }
         let stats = stats::new(py, response.stats)?;
         Ok((bookmarks, stats))
+    }
+
+    fn hash_lookup_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        hash_prefixes: Vec<String>,
+    ) -> PyResult<(
+        TStream<anyhow::Result<Serde<CommitHashLookupResponse>>>,
+        PyFuture,
+    )> {
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    let response = self.hash_prefixes_lookup(repo, hash_prefixes).await?;
+                    let responses = response.entries;
+                    let stats = response.stats;
+                    Ok::<_, EdenApiError>((responses, stats))
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
     }
 
     fn commit_location_to_hash_py(

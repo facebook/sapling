@@ -19,10 +19,10 @@ use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::TreeEntry;
 use edenapi_types::{
-    CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData,
-    FetchSnapshotRequest, FetchSnapshotResponse, HgChangesetContent, HgMutationEntryContent,
-    LookupResponse, SnapshotRawData, UploadSnapshotResponse, UploadTokensResponse,
-    UploadTreeResponse,
+    CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashResponse,
+    CommitRevlogData, FetchSnapshotRequest, FetchSnapshotResponse, HgChangesetContent,
+    HgMutationEntryContent, LookupResponse, SnapshotRawData, UploadSnapshotResponse,
+    UploadTokensResponse, UploadTreeResponse,
 };
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
@@ -155,6 +155,14 @@ py_class!(pub class client |py| {
         callback: Option<PyObject> = None
     ) -> PyResult<(PyDict, stats)> {
         self.inner(py).clone().bookmarks_py(py, repo, bookmarks, callback)
+    }
+
+    def hashlookup(
+        &self,
+        repo: String,
+        hash_prefixes: Vec<String>
+    ) -> PyResult<(TStream<anyhow::Result<Serde<CommitHashLookupResponse>>>, PyFuture)> {
+        self.inner(py).clone().hash_lookup_py(py, repo, hash_prefixes)
     }
 
     def filestore(
