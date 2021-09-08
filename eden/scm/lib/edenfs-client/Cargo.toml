@@ -12,8 +12,7 @@ clidispatch = { path = "../clidispatch" }
 libc = "0.2.98"
 sha2 = "0.8"
 thrift-types = { path = "../thrift-types" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-uds = "0.1"
+tokio = { version = "1.10", features = ["full", "test-util"] }
 
 [dev-dependencies]
 telemetry = { path = "../../../../scm/telemetry/telemetry" }
