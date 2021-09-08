@@ -43,6 +43,7 @@ pub mod wire;
 pub use crate::anyid::{AnyId, BonsaiChangesetId, LookupRequest, LookupResponse};
 pub use crate::batch::Batch;
 pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
+pub use crate::commit::make_hash_lookup_request;
 pub use crate::commit::CommitKnownResponse;
 pub use crate::commit::{
     BonsaiChangesetContent, BonsaiFileChange, CommitGraphEntry, CommitGraphRequest,

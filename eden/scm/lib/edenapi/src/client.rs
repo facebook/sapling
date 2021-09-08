@@ -28,23 +28,25 @@ use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     json::ToJson,
+    make_hash_lookup_request,
     wire::{
-        WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
-        WireCommitLocationToHashResponse, WireEphemeralPrepareResponse, WireFetchSnapshotResponse,
-        WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry, WireLookupResponse,
-        WireToApiConversionError, WireTreeEntry, WireUploadToken, WireUploadTokensResponse,
-        WireUploadTreeResponse,
+        WireBookmarkEntry, WireCloneData, WireCommitHashLookupResponse,
+        WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
+        WireEphemeralPrepareResponse, WireFetchSnapshotResponse, WireFileEntry,
+        WireHistoryResponseChunk, WireIdMapEntry, WireLookupResponse, WireToApiConversionError,
+        WireTreeEntry, WireUploadToken, WireUploadTokensResponse, WireUploadTreeResponse,
     },
     AnyFileContentId, AnyId, Batch, BonsaiChangesetContent, BookmarkEntry, BookmarkRequest,
-    CloneData, CommitHashToLocationRequestBatch, CommitHashToLocationResponse,
-    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
-    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError,
-    EphemeralPrepareRequest, EphemeralPrepareResponse, FetchSnapshotRequest, FetchSnapshotResponse,
-    FileEntry, FileRequest, FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry,
-    HistoryRequest, LookupRequest, LookupResponse, ServerError, ToApi, ToWire, TreeAttributes,
-    TreeEntry, TreeRequest, UploadBonsaiChangesetRequest, UploadHgChangeset,
-    UploadHgChangesetsRequest, UploadHgFilenodeRequest, UploadToken, UploadTokensResponse,
-    UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
+    CloneData, CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
+    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest,
+    EdenApiServerError, EphemeralPrepareRequest, EphemeralPrepareResponse, FetchSnapshotRequest,
+    FetchSnapshotResponse, FileEntry, FileRequest, FileSpec, HgFilenodeData,
+    HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest, LookupResponse,
+    ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
+    UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
+    UploadHgFilenodeRequest, UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeRequest,
+    UploadTreeResponse,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -66,6 +68,7 @@ const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST: usize = 10000;
 const MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST: usize = 1000;
 const MAX_CONCURRENT_FILE_UPLOADS: usize = 1000;
+const MAX_CONCURRENT_HASH_LOOKUPS_PER_REQUEST: usize = 1000;
 const MAX_ERROR_MSG_LEN: usize = 500;
 
 static REQUESTS_INFLIGHT: Counter = Counter::new("edenapi.req_inflight");
@@ -84,6 +87,7 @@ mod paths {
     pub const FULL_IDMAP_CLONE_DATA: &str = "full_idmap_clone";
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
+    pub const COMMIT_HASH_LOOKUP: &str = "commit/hash_lookup";
     pub const BOOKMARKS: &str = "bookmarks";
     pub const LOOKUP: &str = "lookup";
     pub const UPLOAD: &str = "upload/";
@@ -637,6 +641,36 @@ impl EdenApi for Client {
 
         self.fetch_raw::<CommitRevlogData>(vec![req], progress)
     }
+
+    async fn hash_prefixes_lookup(
+        &self,
+        repo: String,
+        prefixes: Vec<String>,
+    ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
+        let msg = format!("Requesting full hashes for {} prefix(es)", prefixes.len());
+        tracing::info!("{}", &msg);
+        if self.config().debug {
+            eprintln!("{}", &msg);
+        }
+        let url = self.build_url(paths::COMMIT_HASH_LOOKUP, Some(&repo))?;
+        let prefixes: Vec<CommitHashLookupRequest> = prefixes
+            .into_iter()
+            .map(|prefix| make_hash_lookup_request(prefix))
+            .collect::<Result<Vec<CommitHashLookupRequest>, _>>()?;
+        let requests = self.prepare_requests(
+            &url,
+            prefixes,
+            Some(MAX_CONCURRENT_HASH_LOOKUPS_PER_REQUEST),
+            |prefixes| {
+                let req = Batch::<_> {
+                    batch: prefixes.into_iter().map(|prefix| prefix).collect(),
+                };
+                req.to_wire()
+            },
+        )?;
+        Ok(self.fetch::<WireCommitHashLookupResponse>(requests, None)?)
+    }
+
 
     async fn bookmarks(
         &self,

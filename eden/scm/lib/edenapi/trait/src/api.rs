@@ -15,11 +15,11 @@ use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
     AnyFileContentId, AnyId, BonsaiChangesetContent, BookmarkEntry, CloneData,
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
-    CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse, FetchSnapshotRequest,
-    FetchSnapshotResponse, FileEntry, FileSpec, HgFilenodeData, HgMutationEntryContent,
-    HistoryEntry, LookupResponse, TreeAttributes, TreeEntry, UploadHgChangeset, UploadToken,
-    UploadTokensResponse, UploadTreeEntry, UploadTreeResponse,
+    CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse,
+    FetchSnapshotRequest, FetchSnapshotResponse, FileEntry, FileSpec, HgFilenodeData,
+    HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
+    UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeResponse,
 };
 use http_client::Progress;
 use minibytes::Bytes;
@@ -133,6 +133,13 @@ pub trait EdenApi: Send + Sync + 'static {
         heads: Vec<HgId>,
         common: Vec<HgId>,
     ) -> Result<Response<CommitGraphEntry>, EdenApiError>;
+
+    /// return matching full hashes of hash prefix
+    async fn hash_prefixes_lookup(
+        &self,
+        repo: String,
+        prefixes: Vec<String>,
+    ) -> Result<Response<CommitHashLookupResponse>, EdenApiError>;
 
     async fn bookmarks(
         &self,
@@ -347,6 +354,16 @@ impl EdenApi for Arc<dyn EdenApi> {
     ) -> Result<Response<CommitGraphEntry>, EdenApiError> {
         <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
             .commit_graph(repo, heads, common)
+            .await
+    }
+
+    async fn hash_prefixes_lookup(
+        &self,
+        repo: String,
+        prefixes: Vec<String>,
+    ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
+        <Arc<dyn EdenApi> as Borrow<dyn EdenApi>>::borrow(self)
+            .hash_prefixes_lookup(repo, prefixes)
             .await
     }
 

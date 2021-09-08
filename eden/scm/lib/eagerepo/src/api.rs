@@ -20,6 +20,7 @@ use edenapi::types::AnyId;
 use edenapi::types::BonsaiChangesetContent;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
+use edenapi::types::CommitHashLookupResponse;
 use edenapi::types::CommitHashToLocationResponse;
 use edenapi::types::CommitKnownResponse;
 use edenapi::types::CommitLocationToHashRequest;
@@ -529,6 +530,14 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _request: FetchSnapshotRequest,
     ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
+        unimplemented!()
+    }
+
+    async fn hash_prefixes_lookup(
+        &self,
+        _repo: String,
+        _prefixes: Vec<String>,
+    ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
         unimplemented!()
     }
 }

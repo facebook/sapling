@@ -13,11 +13,12 @@ use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, ProgressCallback, Response, ResponseMeta, Stats};
 use edenapi_types::{
     AnyFileContentId, AnyId, BonsaiChangesetContent, BookmarkEntry, CloneData,
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
-    CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse, FetchSnapshotRequest,
-    FetchSnapshotResponse, FileAttributes, FileContent, FileEntry, FileSpec, HgFilenodeData,
-    HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
-    UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeResponse,
+    CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse,
+    FetchSnapshotRequest, FetchSnapshotResponse, FileAttributes, FileContent, FileEntry, FileSpec,
+    HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes,
+    TreeEntry, UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry,
+    UploadTreeResponse,
 };
 use futures::prelude::*;
 use minibytes::Bytes;
@@ -512,6 +513,14 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _request: FetchSnapshotRequest,
     ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
+        unimplemented!()
+    }
+
+    async fn hash_prefixes_lookup(
+        &self,
+        _repo: String,
+        _prefixes: Vec<String>,
+    ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
         unimplemented!()
     }
 }

@@ -7,12 +7,12 @@
 
 use anyhow::Result;
 use bytes::Bytes;
+use dag_types::Location;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
+use std::iter;
 use std::num::NonZeroU64;
-
-use dag_types::Location;
 use types::{hgid::HgId, Parents, RepoPathBuf};
 
 use crate::{BonsaiChangesetId, FileType, ServerError, UploadToken};
@@ -201,6 +201,26 @@ pub enum CommitHashLookupRequest {
     InclusiveRange(HgId, HgId),
 }
 
+/// make a hash lookup request from a hash prefix for the range of hashes that
+/// could match the hash prefix
+/// ex: the range 3f54ab22d87423966e0000000000000000000000:3f54ab22d87423966effffffffffffffffffffff
+///     matches the prefix 3f54ab22d87423966e
+pub fn make_hash_lookup_request(prefix: String) -> Result<CommitHashLookupRequest, anyhow::Error> {
+    let suffix_len = HgId::hex_len() - prefix.len();
+    let low_hex = prefix
+        .clone()
+        .chars()
+        .chain(iter::repeat('0').take(suffix_len))
+        .collect::<String>();
+    let low_id = HgId::from_hex(low_hex.as_bytes())?;
+    let high_hex = prefix
+        .chars()
+        .chain(iter::repeat('f').take(suffix_len))
+        .collect::<String>();
+    let high_id = HgId::from_hex(high_hex.as_bytes())?;
+    Ok(CommitHashLookupRequest::InclusiveRange(low_id, high_id))
+}
+
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitHashLookupRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
@@ -370,5 +390,45 @@ impl Arbitrary for EphemeralPrepareResponse {
         EphemeralPrepareResponse {
             bubble_id: Arbitrary::arbitrary(g),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_range(start: &[u8], end: &[u8]) -> Result<CommitHashLookupRequest> {
+        let start_id = HgId::from_hex(start)?;
+        let end_id = HgId::from_hex(end)?;
+        Ok(CommitHashLookupRequest::InclusiveRange(start_id, end_id))
+    }
+
+    #[test]
+    fn test_make_hash_lookup_request() -> Result<()> {
+        let short_hash = String::from("3f54ab22d87423966e");
+        let prefix_req = make_hash_lookup_request(short_hash)?;
+        let expected_req = make_range(
+            b"3f54ab22d87423966e0000000000000000000000",
+            b"3f54ab22d87423966effffffffffffffffffffff",
+        )?;
+        assert_eq!(prefix_req, expected_req);
+
+        let empty_hash = String::new();
+        let empty_req = make_hash_lookup_request(empty_hash)?;
+        let expected_empty_req = make_range(
+            b"0000000000000000000000000000000000000000",
+            b"ffffffffffffffffffffffffffffffffffffffff",
+        )?;
+        assert_eq!(empty_req, expected_empty_req);
+
+        let full_hash = String::from("3f54ab22d87423966e27374e6c0f8112a269999b");
+        let full_req = make_hash_lookup_request(full_hash)?;
+        let expected__full_req = make_range(
+            b"3f54ab22d87423966e27374e6c0f8112a269999b",
+            b"3f54ab22d87423966e27374e6c0f8112a269999b",
+        )?;
+        assert_eq!(full_req, expected__full_req);
+
+        Ok(())
     }
 }
