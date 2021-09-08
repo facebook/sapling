@@ -434,6 +434,7 @@ coreconfigitem("pull", "automigrate", default=True)
 # duplicated in Python / Rust).
 coreconfigitem("pull", "buffer-commit-count", default=(util.istest() and 5 or 100000))
 coreconfigitem("pull", "httpbookmarks", default=False)
+coreconfigitem("pull", "httphashprefix", default=False)
 coreconfigitem("exchange", "httpcommitlookup", default=False)
 coreconfigitem("push", "pushvars.server", default=True)
 coreconfigitem("push", "requirereason", default=False)

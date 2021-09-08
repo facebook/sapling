@@ -866,6 +866,33 @@ class localrepository(object):
     def peer(self):
         return localpeer(self)  # not cached to avoid reference cycle
 
+    def _get_common_prefix(self, low, high):
+        for i, c in enumerate(low):
+            if high[i] != c:
+                return low[:i]
+        return low
+
+    def _http_prefix_lookup(self, prefixes):
+        (responses, _stats) = self.edenapi.hashlookup(self.name, prefixes)
+        for resp in responses:
+            hgids = resp["hgids"]
+            hashrange = resp["request"]["InclusiveRange"]
+            (low, high) = hex(hashrange[0]), hex(hashrange[1])
+            prefix = self._get_common_prefix(low, high)
+            hgids = [hex(hgid) for hgid in hgids]
+            tracing.debug(
+                "edenapi hash lookups: %s" % str(hgids),
+                target="pull::httphashlookup",
+            )
+            if len(hgids) == 0:
+                raise errormod.Abort(_("%s not found!") % prefix)
+            elif len(hgids) > 1:
+                raise errormod.Abort(
+                    _("ambiguous identifier: %s") % prefix,
+                    hint=_("suggestsions are:\n%s") % "\n".join(hgids),
+                )
+            yield bin(hgids[0])
+
     def pull(
         self, source="default", bookmarknames=(), headnodes=(), headnames=(), quiet=True
     ):
@@ -969,11 +996,17 @@ class localrepository(object):
                         remotenamechanges[name] = nullhex  # delete it
             # Resolve headnames to heads.
             if headnames:
-                batch = remote.iterbatch()
-                for name in headnames:
-                    batch.lookup(name)
-                batch.submit()
-                heads.update(batch.results())
+                if (
+                    self.ui.configbool("pull", "httphashprefix")
+                    and self.nullableedenapi is not None
+                ):
+                    heads.update(self._http_prefix_lookup(headnames))
+                else:
+                    batch = remote.iterbatch()
+                    for name in headnames:
+                        batch.lookup(name)
+                    batch.submit()
+                    heads.update(batch.results())
 
             # Merge headnodes into heads.
             for node in headnodes:
