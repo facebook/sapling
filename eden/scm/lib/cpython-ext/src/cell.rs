@@ -14,13 +14,15 @@ use std::any::Any;
 use std::cell::RefCell;
 use std::fmt::Debug;
 
+type BoxedAny = Box<dyn Any + Sync + Send + 'static>;
+
 // PyCell allows to put arbitrary rust data and pass it between different rust functions through python code
 // This allows to avoid using bincode or writing wrapper types for some basic use cases
 py_class!(pub class PyCell |py| {
-    data inner: RefCell<Option<Box<dyn Any + Sync + Send + 'static>>>;
-    data fmt: Box<dyn (Fn(&(dyn Any)) -> String) + Send + Sync>;
-    data fn_export: Box<dyn (Fn(&(dyn Any), Python) -> PyObject) + Send + Sync>;
-    data fn_import: Box<dyn (Fn(PyObject, Python) -> PyResult<Box<dyn Any + Sync + Send + 'static>>) + Send + Sync>;
+    data inner: RefCell<Option<BoxedAny>>;
+    data fmt: Box<dyn (Fn(&BoxedAny) -> String) + Send + Sync>;
+    data fn_export: Box<dyn (Fn(&BoxedAny, Python) -> PyObject) + Send + Sync>;
+    data fn_import: Box<dyn (Fn(PyObject, Python) -> PyResult<BoxedAny>) + Send + Sync>;
 
     def __str__(&self) -> PyResult<String> {
         let str = self.inner(py).borrow().as_ref().map(|inner| {
@@ -53,20 +55,19 @@ impl PyCell {
         py: Python,
         data: T,
     ) -> PyResult<Self> {
-        let inner = Box::new(data) as Box<dyn Any + Sync + Send + 'static>;
-        let fmt = |obj: &(dyn Any)| {
-            let obj = obj.downcast_ref::<T>().unwrap(); // does not fail
+        let inner = Box::new(data) as BoxedAny;
+        let fmt = |obj: &BoxedAny| {
+            let obj = obj.as_ref().downcast_ref::<T>().unwrap(); // does not fail
             format!("{:?}", obj)
         };
-        let export = |obj: &(dyn Any), py: Python| {
-            let obj = obj.downcast_ref::<T>().unwrap(); // does not fail
+        let export = |obj: &BoxedAny, py: Python| {
+            let obj = obj.as_ref().downcast_ref::<T>().unwrap(); // does not fail
             Serde(obj).to_py_object(py)
         };
-        let import =
-            |obj: PyObject, py: Python| -> PyResult<Box<dyn Any + Sync + Send + 'static>> {
-                let obj: Serde<T> = Serde::extract(py, &obj)?;
-                Ok(Box::new(obj.0) as Box<dyn Any + Sync + Send + 'static>)
-            };
+        let import = |obj: PyObject, py: Python| -> PyResult<BoxedAny> {
+            let obj: Serde<T> = Serde::extract(py, &obj)?;
+            Ok(Box::new(obj.0) as BoxedAny)
+        };
         Self::create_instance(
             py,
             RefCell::new(Some(inner)),
