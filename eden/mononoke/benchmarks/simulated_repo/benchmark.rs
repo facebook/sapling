@@ -73,6 +73,7 @@ async fn run(
                 true, /* parallel */
                 None, /* No gaps */
             )
+            .map_ok(|_| ())
             .timed()
             .await
     } else {

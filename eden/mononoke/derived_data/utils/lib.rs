@@ -47,6 +47,7 @@ use std::{
     hash::{Hash, Hasher},
     io::Write,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 use topo_sort::sort_topological;
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
@@ -153,7 +154,7 @@ pub trait DerivedUtils: Send + Sync + 'static {
         csids: Vec<ChangesetId>,
         parallel: bool,
         gap_size: Option<usize>,
-    ) -> BoxFuture<'static, Result<(), Error>>;
+    ) -> BoxFuture<'static, Result<BackfillDeriveStats, Error>>;
 
     /// Find pending changeset (changesets for which data have not been derived)
     async fn pending(
@@ -257,7 +258,7 @@ where
         csids: Vec<ChangesetId>,
         parallel: bool,
         gap_size: Option<usize>,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'static, Result<BackfillDeriveStats, Error>> {
         // With InMemoryMapping we can ensure that mapping entries are written only after
         // all corresponding blobs were successfully saved
         let in_memory_mapping_inner = Arc::new(InMemoryMapping::new(
@@ -292,30 +293,29 @@ where
                 MononokeScubaSampleBuilder::with_discard(),
             );
 
-            let (stats, _) = async {
-                if parallel || gap_size.is_some() {
-                    // derive the batch of derived data in parallel
+            let res = if parallel || gap_size.is_some() {
+                // derive the batch of derived data in parallel
+                let (stats, _) =
                     Derivable::batch_derive(&ctx, &repo, csids, &in_memory_mapping, gap_size)
+                        .try_timed()
                         .await?;
-                } else {
-                    for csid in csids {
-                        // derive each changeset sequentially
-                        derive_impl::derive_impl::<Derivable>(
-                            &ctx,
-                            &repo,
-                            &in_memory_mapping,
-                            csid,
-                        )
-                        .await?;
-                    }
+                BackfillDeriveStats::Parallel(stats.completion_time)
+            } else {
+                let mut per_commit_stats = vec![];
+                for csid in csids {
+                    // derive each changeset sequentially
+                    let (stats, _) = derive_impl::derive_impl::<Derivable>(
+                        &ctx,
+                        &repo,
+                        &in_memory_mapping,
+                        csid,
+                    )
+                    .try_timed()
+                    .await?;
+                    per_commit_stats.push((csid, stats.completion_time));
                 }
-                Result::<_, Error>::Ok(())
-            }
-            .try_timed()
-            .await?;
-            scuba
-                .add_future_stats(&stats)
-                .log_with_msg("Derived in memory", None);
+                BackfillDeriveStats::Serial(per_commit_stats)
+            };
 
             {
                 let ctx = derived_data::override_ctx(ctx.clone(), &repo);
@@ -343,7 +343,7 @@ where
             scuba
                 .add_future_stats(&stats)
                 .log_with_msg("Flushed mapping", None);
-            Ok(())
+            Ok(res)
         }
         .boxed()
     }
@@ -426,6 +426,11 @@ where
     fn name(&self) -> &'static str {
         Derivable::NAME
     }
+}
+
+pub enum BackfillDeriveStats {
+    Parallel(Duration),
+    Serial(Vec<(ChangesetId, Duration)>),
 }
 
 #[derive(Clone)]
@@ -1251,7 +1256,7 @@ mod tests {
             csids: Vec<ChangesetId>,
             parallel: bool,
             gap_size: Option<usize>,
-        ) -> BoxFuture<'static, Result<(), Error>> {
+        ) -> BoxFuture<'static, Result<BackfillDeriveStats, Error>> {
             self.deriver
                 .backfill_batch_dangerous(ctx, repo, csids, parallel, gap_size)
         }

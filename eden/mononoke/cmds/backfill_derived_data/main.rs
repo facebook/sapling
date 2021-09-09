@@ -52,8 +52,10 @@ use std::{
     time::{Duration, Instant},
 };
 use time_ext::DurationExt;
+use tokio::io::AsyncBufReadExt;
 use tunables::tunables;
 
+mod benchmark;
 mod slice;
 mod warmup;
 
@@ -80,9 +82,12 @@ const ARG_SLICED: &str = "sliced";
 const ARG_SLICE_SIZE: &str = "slice-size";
 const ARG_BACKFILL: &str = "backfill";
 const ARG_GAP_SIZE: &str = "gap-size";
+const ARG_INPUT_FILE: &str = "input-file";
+const ARG_JSON: &str = "json";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
 const SUBCOMMAND_BACKFILL_ALL: &str = "backfill-all";
+const SUBCOMMAND_BENCHMARK: &str = "benchmark";
 const SUBCOMMAND_TAIL: &str = "tail";
 const SUBCOMMAND_SINGLE: &str = "single";
 
@@ -327,6 +332,57 @@ fn main(fb: FacebookInit) -> Result<()> {
                             .takes_value(true)
                             .help("size of gap to leave in derived data types that support gaps"),
                     ),
+            )
+            .subcommand(
+                SubCommand::with_name(SUBCOMMAND_BENCHMARK)
+                    .about("benchmark derivation of a list of commits")
+                    .long_about("note that this command WILL DERIVE data and save it to storage")
+                    .arg(
+                        Arg::with_name(ARG_INPUT_FILE)
+                            .long(ARG_INPUT_FILE)
+                            .takes_value(true)
+                            .required(true)
+                            .help("File with a list of changeset hashes {hd|bonsai} or bookmarks"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                            .required(true)
+                            .index(1)
+                            .multiple(true)
+                            .conflicts_with(ARG_ALL_TYPES)
+                            .possible_values(POSSIBLE_DERIVED_TYPES)
+                            .help("derived data type for which backfill will be run"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BACKFILL)
+                            .long(ARG_BACKFILL)
+                            .required(false)
+                            .takes_value(false)
+                            .help("Whether we need to use backfill mode"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_PARALLEL)
+                            .long(ARG_PARALLEL)
+                            .required(false)
+                            .takes_value(false)
+                            .requires(ARG_BACKFILL)
+                            .help("Whether we need to us parallel mode"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_BATCH_SIZE)
+                            .long(ARG_BATCH_SIZE)
+                            .required(false)
+                            .takes_value(true)
+                            .requires(ARG_PARALLEL)
+                            .help("size of batch that will be derived in parallel"),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_JSON)
+                            .long(ARG_JSON)
+                            .required(false)
+                            .takes_value(false)
+                            .help("Print result in json format"),
+                    ),
             );
     let matches = app.get_matches(fb)?;
     let logger = matches.logger();
@@ -566,8 +622,64 @@ async fn run_subcmd<'a>(
                 helpers::csid_resolve(&ctx, repo.blob_repo.clone(), hash_or_bookmark).await?;
             subcommand_single(&ctx, &repo, csid, types).await
         }
+        (SUBCOMMAND_BENCHMARK, Some(sub_m)) => {
+            let input_file = sub_m
+                .value_of(ARG_INPUT_FILE)
+                .ok_or_else(|| anyhow!("{} is not set", ARG_INPUT_FILE))?;
+
+            let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
+            let file = tokio::fs::File::open(input_file).await?;
+            let file = tokio::io::BufReader::new(file);
+            let mut lines = file.lines();
+            let mut csids = vec![];
+            while let Some(line) = lines.next_line().await? {
+                csids.push(line);
+            }
+            let csids = resolve_csids(&ctx, &repo, csids).await?;
+
+            let derived_data_type = sub_m
+                .value_of(ARG_DERIVED_DATA_TYPE)
+                .ok_or_else(|| anyhow!("{} is not set", ARG_DERIVED_DATA_TYPE))?;
+
+            let opts = if sub_m.is_present(ARG_BACKFILL) {
+                if sub_m.is_present(ARG_PARALLEL) {
+                    let batch_size = args::get_u64_opt(&sub_m, ARG_BATCH_SIZE);
+
+                    benchmark::BenchmarkOptions::BackfillParallel { batch_size }
+                } else {
+                    benchmark::BenchmarkOptions::Backfill
+                }
+            } else {
+                benchmark::BenchmarkOptions::Simple
+            };
+
+            let res = benchmark::benchmark_derived_data(
+                &ctx,
+                &repo,
+                csids,
+                derived_data_type.to_string(),
+                opts,
+            )
+            .await?;
+
+            benchmark::print_benchmark_result(&res, sub_m.is_present(ARG_JSON))?;
+
+            Ok(())
+        }
         (name, _) => Err(format_err!("unhandled subcommand: {}", name)),
     }
+}
+
+async fn resolve_csids(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    csids: Vec<String>,
+) -> Result<Vec<ChangesetId>, Error> {
+    stream::iter(csids)
+        .map(|csid| helpers::csid_resolve(&ctx, repo.clone(), csid))
+        .buffered(100)
+        .try_collect::<Vec<_>>()
+        .await
 }
 
 fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntry>> {
