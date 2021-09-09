@@ -325,6 +325,7 @@ impl WorkspaceSubscriberService {
                         cloudsync_retries,
                         version,
                         subscription.workspace.clone(),
+                        format!("scm_daemon: {}", reason),
                     );
                     if interrupt.load(Ordering::Relaxed) {
                         break;

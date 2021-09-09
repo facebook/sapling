@@ -137,7 +137,7 @@ def _runcommand(orig, lui, repo, cmd, fullargs, *args):
             and "emergencychangelog" not in repo.storerequirements
         ):
             lui.debug("starting commit cloud autobackup in the background\n")
-            backgroundbackup(repo)
+            backgroundbackup(repo, reason=cmd)
 
 
 def _transaction(orig, self, *args, **kwargs):
@@ -150,13 +150,12 @@ def _transaction(orig, self, *args, **kwargs):
     return orig(self, *args, **kwargs)
 
 
-def backgroundbackup(repo, command=None, dest=None):
+def backgroundbackup(repo, dest=None, reason=None):
     """start background backup"""
     ui = repo.ui
-    if command is not None:
-        background_cmd = command
-    elif workspace.currentworkspace(repo):
+    if workspace.currentworkspace(repo):
         background_cmd = ["hg", "cloud", "sync"]
+        background_cmd += ["--reason", reason]
     else:
         background_cmd = ["hg", "cloud", "backup"]
     infinitepush_bgssh = ui.config("infinitepush", "bgssh")

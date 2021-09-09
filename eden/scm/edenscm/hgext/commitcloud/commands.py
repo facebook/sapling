@@ -1281,7 +1281,22 @@ def cloudreclaimworkspaces(ui, repo, **opts):
     reclaimhelper(archived, archived=True)
 
 
-@subcmd("sync", scmdaemon.scmdaemonsyncopts + pullopts + remoteopts)
+@subcmd(
+    "sync",
+    scmdaemon.scmdaemonsyncopts
+    + pullopts
+    + remoteopts
+    + [
+        (
+            "",
+            "reason",
+            "",
+            _(
+                "reason why the sync has been triggered (used for logging purposes) (ADVANCED)"
+            ),
+        )
+    ],
+)
 def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
     """backup and synchronize commits with the commit cloud service"""
     repo.ignoreautobackup = True
@@ -1297,6 +1312,9 @@ def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
     if maybebgssh:
         ui.setconfig("ui", "ssh", maybebgssh)
 
+    reason = opts.get("reason")
+    if reason:
+        ui.log("commitcloud_sync_reason", commitcloud_sync_reason=reason)
     ret = sync.sync(
         repo,
         cloudrefs,
