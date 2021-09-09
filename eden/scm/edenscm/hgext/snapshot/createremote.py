@@ -31,6 +31,7 @@ def createremote(ui, repo, **opts):
         getreponame(repo),
         {
             "files": {
+                "root": repo.root,
                 "modified": [(f, filetypefromfile(wctx[f])) for f in wctx.modified()],
                 "added": [(f, filetypefromfile(wctx[f])) for f in wctx.added()],
                 "untracked": [(f, filetypefromfile(wctx[f])) for f in untracked],

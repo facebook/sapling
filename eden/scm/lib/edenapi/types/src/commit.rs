@@ -331,6 +331,9 @@ pub struct UploadBonsaiChangesetRequest {
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct SnapshotRawFiles {
+    /// Absolute root of the repository, where all files are
+    /// relative to. Can be different from cwd.
+    pub root: RepoPathBuf,
     /// Tracked files modified in local changes
     pub modified: Vec<(RepoPathBuf, FileType)>,
     /// Files added with "hg add"

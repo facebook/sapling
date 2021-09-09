@@ -31,6 +31,7 @@ pub async fn upload_snapshot(
         tz,
     } = data;
     let SnapshotRawFiles {
+        root,
         modified,
         added,
         removed,
@@ -51,11 +52,14 @@ pub async fn upload_snapshot(
             // TODO(yancouto): Don't upload untracked files if they're too big.
             untracked.into_iter().map(|(p, t)| (p, t, Untracked)),
         )
-        .map(|(path, file_type, tracked)| {
-            let bytes = std::fs::read(path.as_repo_path().as_str())?;
+        // rel_path is relative to the repo root
+        .map(|(rel_path, file_type, tracked)| {
+            let mut abs_path = root.clone();
+            abs_path.push(&rel_path);
+            let bytes = std::fs::read(abs_path.as_repo_path().as_str())?;
             let content_id = calc_contentid(&bytes);
             Ok((
-                (path, file_type, content_id, tracked),
+                (rel_path, file_type, content_id, tracked),
                 (content_id, Bytes::from_owner(bytes)),
             ))
         })
