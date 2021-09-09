@@ -308,7 +308,7 @@ def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts, check_binary=True):
         if a and b and len(a) == len(b) and a == b:
             return sentinel
         headerlines = []
-        if opts.hashbinary:
+        if opts.hashbinary and b:
             message = b"Binary file %s has changed to %s\n" % (
                 encodeutf8(fn1),
                 encodeutf8(sha1(b).hexdigest()),
