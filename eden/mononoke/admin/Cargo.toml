@@ -89,8 +89,11 @@ unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 
 [dev-dependencies]
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
+tests_utils = { version = "0.1.0", path = "../tests/utils" }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }

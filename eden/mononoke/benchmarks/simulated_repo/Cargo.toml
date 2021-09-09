@@ -18,7 +18,6 @@ path = "benchmark.rs"
 anyhow = "1.0"
 async-trait = "0.1.51"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
@@ -31,17 +30,15 @@ changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetche
 changesets = { version = "0.1.0", path = "../../changesets" }
 changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
 clap = "2.33"
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 context = { version = "0.1.0", path = "../../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
 delayblob = { version = "0.1.0", path = "../../blobstore/delayblob" }
-derived_data = { version = "0.1.0", path = "../../derived_data" }
+derived_data_utils = { version = "0.1.0", path = "../../derived_data/utils" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
-fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -67,7 +64,6 @@ skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tokio = { version = "1.10", features = ["full", "test-util"] }
-unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
