@@ -17,7 +17,7 @@ python3-sys = { version = "0.5", optional = true }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 taggederror = { path = "../taggederror" }
 taggederror-util = { path = "../taggederror-util" }
-thiserror = "1.0"
+thiserror = "1.0.29"
 types = { path = "../types" }
 
 [dev-dependencies]

@@ -12,7 +12,7 @@ ascii = "1.0"
 bincode = "1.3.3"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-thiserror = "1.0"
+thiserror = "1.0.29"
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }

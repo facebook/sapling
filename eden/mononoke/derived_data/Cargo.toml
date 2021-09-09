@@ -28,7 +28,7 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-thiserror = "1.0"
+thiserror = "1.0.29"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "1.10", features = ["full", "test-util"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }

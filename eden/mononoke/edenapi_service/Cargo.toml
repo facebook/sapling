@@ -43,7 +43,7 @@ slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sshrelay = { version = "0.1.0", path = "../sshrelay" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-thiserror = "1.0"
+thiserror = "1.0.29"
 types = { version = "0.1.0", path = "../../scm/lib/types" }
 
 [dev-dependencies]

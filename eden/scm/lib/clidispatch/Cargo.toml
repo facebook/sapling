@@ -14,7 +14,7 @@ indexedlog = { path = "../indexedlog" }
 io = { path = "../io" }
 taggederror = { path = "../taggederror" }
 taggederror-util = { path = "../taggederror-util" }
-thiserror = "1.0"
+thiserror = "1.0.29"
 thrift-types = { path = "../thrift-types" }
 tracing = "0.1"
 util = { path = "../util" }

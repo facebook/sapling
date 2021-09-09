@@ -9,7 +9,7 @@ name = "bench"
 harness = false
 
 [dependencies]
-thiserror = "1.0"
+thiserror = "1.0.29"
 vlqencoding = { path = "../vlqencoding" }
 
 [dev-dependencies]

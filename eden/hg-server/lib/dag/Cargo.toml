@@ -38,7 +38,7 @@ parking_lot = "0.10.2"
 quickcheck = { version = "0.9", optional = true }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 tempfile = { version = "3.1", optional = true }
-thiserror = "1.0"
+thiserror = "1.0.29"
 tracing = "0.1"
 tracing-futures = "0.2"
 vlqencoding = { path = "../vlqencoding" }

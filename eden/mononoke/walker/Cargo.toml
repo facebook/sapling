@@ -71,7 +71,7 @@ sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 strum = "0.21"
 strum_macros = "0.21"
-thiserror = "1.0"
+thiserror = "1.0.29"
 tokio = { version = "1.10", features = ["full", "test-util"] }
 unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 

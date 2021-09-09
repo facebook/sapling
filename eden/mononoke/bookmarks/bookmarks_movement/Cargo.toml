@@ -41,7 +41,7 @@ scribe_commit_queue = { version = "0.1.0", path = "../../repo_client/scribe_comm
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-thiserror = "1.0"
+thiserror = "1.0.29"
 tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]

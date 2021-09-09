@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 indexedlog = { path = "../indexedlog" }
-thiserror = "1.0"
+thiserror = "1.0.29"
 types = { path = "../types" }
 
 [dev-dependencies]

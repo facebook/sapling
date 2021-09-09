@@ -14,7 +14,7 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_bytes = "0.11"
 serde_derive = "1.0"
 sha-1 = "0.8"
-thiserror = "1.0"
+thiserror = "1.0.29"
 vlqencoding = { path = "../vlqencoding" }
 
 [dev-dependencies]

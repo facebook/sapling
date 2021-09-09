@@ -13,7 +13,7 @@ itertools = "0.10.1"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-thiserror = "1.0"
+thiserror = "1.0.29"
 
 [dev-dependencies]
 ascii = "1.0"
