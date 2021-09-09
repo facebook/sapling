@@ -1477,6 +1477,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                         EdenDispatcherFactory::makeNfsDispatcher(this),
                         &getStraceLogger(),
                         serverState_->getProcessNameCache(),
+                        serverState_->getFsEventLogger(),
                         std::chrono::duration_cast<folly::Duration>(
                             edenConfig->nfsRequestTimeout.getValue()),
                         serverState_->getNotifications(),

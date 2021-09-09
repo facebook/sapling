@@ -20,6 +20,7 @@
 #include <memory>
 #include "eden/fs/nfs/NfsRequestContext.h"
 #include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/IDGen.h"
@@ -1654,14 +1655,21 @@ struct HandlerEntry {
       Handler h,
       FormatArgs format,
       ChannelThreadStats::StatPtr s,
-      AccessType at = AccessType::FsChannelOther)
-      : name(n), handler(h), formatArgs(format), stat{s}, accessType(at) {}
+      AccessType at = AccessType::FsChannelOther,
+      SamplingGroup samplingGroup = SamplingGroup::DropAll)
+      : name(n),
+        handler(h),
+        formatArgs(format),
+        stat{s},
+        accessType(at),
+        samplingGroup{samplingGroup} {}
 
   folly::StringPiece name;
   Handler handler = nullptr;
   FormatArgs formatArgs = nullptr;
   ChannelThreadStats::StatPtr stat = nullptr;
   AccessType accessType = AccessType::FsChannelOther;
+  SamplingGroup samplingGroup = SamplingGroup::DropAll;
 };
 
 constexpr auto kNfs3dHandlers = [] {
@@ -1709,13 +1717,15 @@ constexpr auto kNfs3dHandlers = [] {
       &Nfsd3ServerProcessor::read,
       formatRead,
       &ChannelThreadStats::nfsRead,
-      Read};
+      Read,
+      SamplingGroup::Three};
   handlers[folly::to_underlying(nfsv3Procs::write)] = {
       "WRITE",
       &Nfsd3ServerProcessor::write,
       formatWrite,
       &ChannelThreadStats::nfsWrite,
-      Write};
+      Write,
+      SamplingGroup::Two};
   handlers[folly::to_underlying(nfsv3Procs::create)] = {
       "CREATE",
       &Nfsd3ServerProcessor::create,
@@ -1832,6 +1842,12 @@ struct LiveRequest {
   uint32_t xid_;
   uint32_t procNumber_;
 };
+
+SamplingGroup nfsProcSamplingGroup(uint32_t procNumber) {
+  XDCHECK(procNumber < kNfs3dHandlers.size())
+      << "got invalid NFS procedure: " << procNumber;
+  return kNfs3dHandlers[procNumber].samplingGroup;
+}
 } // namespace
 
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
@@ -1901,6 +1917,7 @@ Nfsd3::Nfsd3(
     std::unique_ptr<NfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
+    std::shared_ptr<FsEventLogger> fsEventLogger,
     folly::Duration /*requestTimeout*/,
     Notifications* /*notifications*/,
     CaseSensitivity caseSensitive,
@@ -1924,19 +1941,41 @@ Nfsd3::Nfsd3(
       traceBus_{
           TraceBus<NfsTraceEvent>::create("NfsTrace", kTraceBusCapacity)} {
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
-      "NFS request tracking", [this](const NfsTraceEvent& event) {
+      "NFS request tracking",
+      [this,
+       fsEventLogger = std::move(fsEventLogger)](const NfsTraceEvent& event) {
         switch (event.getType()) {
           case NfsTraceEvent::START: {
             auto state = telemetryState_.wlock();
-            // allow duplicated calls since the client may retry a request
+            // NFS client is allowed to retry requests and emplace could
+            // therefore fail. We just ignore duplicated requests.
             (void)state->requests.emplace(
-                event.getXid(), OutstandingRequest{event.getXid()});
+                event.getXid(),
+                OutstandingRequest{event.getXid(), event.monotonicTime});
             break;
           }
           case NfsTraceEvent::FINISH: {
-            auto state = telemetryState_.wlock();
-            // allow duplicated calls since the client may retry a request
-            (void)state->requests.erase(event.getXid());
+            std::chrono::nanoseconds durationNs{0};
+            {
+              auto state = telemetryState_.wlock();
+              auto it = state->requests.find(event.getXid());
+              if (it == state->requests.end()) {
+                // Duplicated request, break early.
+                break;
+              }
+              durationNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                  event.monotonicTime - it->second.requestStartTime);
+              (void)state->requests.erase(it);
+            }
+
+            if (fsEventLogger) {
+              auto procNumber = event.getProcNumber();
+              fsEventLogger->log({
+                  durationNs,
+                  nfsProcSamplingGroup(procNumber),
+                  nfsProcName(procNumber),
+              });
+            }
             break;
           }
         }
@@ -2008,8 +2047,9 @@ folly::SemiFuture<Nfsd3::StopData> Nfsd3::getStopFuture() {
 }
 
 folly::StringPiece nfsProcName(uint32_t procNumber) {
-  return procNumber < kNfs3dHandlers.size() ? kNfs3dHandlers[procNumber].name
-                                            : "<unknown>";
+  XDCHECK(procNumber < kNfs3dHandlers.size())
+      << "got invalid NFS procedure: " << procNumber;
+  return kNfs3dHandlers[procNumber].name;
 }
 
 ProcessAccessLog::AccessType nfsProcAccessType(uint32_t procNumber) {

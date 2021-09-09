@@ -72,6 +72,7 @@ class NfsServer {
       std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
+      std::shared_ptr<FsEventLogger> fsEventLogger,
       folly::Duration requestTimeout,
       Notifications* FOLLY_NULLABLE notifications,
       CaseSensitivity caseSensitive,
