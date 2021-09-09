@@ -564,6 +564,14 @@ impl EdenApi for EagerRepo {
             .map_err(|e| EdenApiError::Other(e.into()))?;
         Ok(convert_to_response(hashes))
     }
+
+    async fn download_file(
+        &self,
+        _repo: String,
+        _token: UploadToken,
+    ) -> Result<Bytes, EdenApiError> {
+        unimplemented!()
+    }
 }
 
 impl EagerRepo {

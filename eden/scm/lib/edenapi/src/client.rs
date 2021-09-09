@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use bytes::Bytes as RawBytes;
 use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 use std::fmt::Debug;
 use std::fs::{create_dir_all, File};
 use std::iter::FromIterator;
@@ -45,8 +47,8 @@ use edenapi_types::{
     HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest, LookupResponse,
     ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
     UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
-    UploadHgFilenodeRequest, UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeRequest,
-    UploadTreeResponse,
+    UploadHgFilenodeRequest, UploadToken, UploadTokenMetadata, UploadTokensResponse,
+    UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -97,6 +99,7 @@ mod paths {
     pub const UPLOAD_BONSAI_CHANGESET: &str = "upload/changeset/bonsai";
     pub const EPHEMERAL_PREPARE: &str = "ephemeral/prepare";
     pub const FETCH_SNAPSHOT: &str = "snapshot";
+    pub const DOWNLOAD_FILE: &str = "download/file";
 }
 
 #[derive(Clone)]
@@ -1240,6 +1243,39 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         Ok(self.fetch::<WireFetchSnapshotResponse>(vec![request], None)?)
+    }
+
+    async fn download_file(&self, repo: String, token: UploadToken) -> Result<Bytes, EdenApiError> {
+        let download_file = "Downloading file";
+        tracing::info!("{}", download_file);
+        if self.config().debug {
+            eprintln!("{}", download_file);
+        }
+        let url = self.build_url(paths::DOWNLOAD_FILE, Some(&repo))?;
+        let metadata = token.data.metadata.clone();
+        let req = token.to_wire();
+        let request = self
+            .configure_request(Request::post(url.clone()))?
+            .cbor(&req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        use bytes::BytesMut;
+        let buf = if let Some(UploadTokenMetadata::FileContentTokenMetadata(m)) = metadata {
+            BytesMut::with_capacity(m.content_size.try_into().unwrap_or_default())
+        } else {
+            BytesMut::new()
+        };
+
+        Ok(self
+            .fetch::<RawBytes>(vec![request], None)?
+            .entries
+            .try_fold(buf, |mut buf, chunk| async move {
+                buf.extend_from_slice(&chunk);
+                Ok(buf)
+            })
+            .await?
+            .freeze()
+            .into())
     }
 }
 

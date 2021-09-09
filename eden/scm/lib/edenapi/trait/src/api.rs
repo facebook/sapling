@@ -203,4 +203,7 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         request: FetchSnapshotRequest,
     ) -> Result<Response<FetchSnapshotResponse>, EdenApiError>;
+
+    /// Download single file from upload token
+    async fn download_file(&self, repo: String, token: UploadToken) -> Result<Bytes, EdenApiError>;
 }

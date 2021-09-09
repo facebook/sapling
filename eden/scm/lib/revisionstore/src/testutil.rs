@@ -523,6 +523,14 @@ impl EdenApi for FakeEdenApi {
     ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
         unimplemented!()
     }
+
+    async fn download_file(
+        &self,
+        _repo: String,
+        _token: UploadToken,
+    ) -> Result<Bytes, EdenApiError> {
+        unimplemented!()
+    }
 }
 
 pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
