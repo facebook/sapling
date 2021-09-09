@@ -1027,7 +1027,7 @@ def _wraprepo(ui, repo):
             onlyv1 = True
             for kind, value in rawconfig.lines:
                 if kind == "profile":
-                    profile = self.readsparseprofile(rev, value, version=None)
+                    profile = self.readsparseprofile(rev, value)
                     if profile is not None:
                         profiles.append(profile)
                         # v1 config's put all includes before all excludes, so
@@ -1072,7 +1072,7 @@ def _wraprepo(ui, repo):
                 rawconfig.metadata,
             )
 
-        def readsparseprofile(self, rev, name, version):
+        def readsparseprofile(self, rev, name):
             ctx = self[rev]
             try:
                 raw = self.getrawprofile(name, ctx.hex())
@@ -1089,15 +1089,13 @@ def _wraprepo(ui, repo):
                 return None
 
             rawconfig = self.readsparseconfig(raw, filename=name)
-            if version is None:
-                version = rawconfig.version()
 
             rules = []
             profiles = set()
             for kind, value in rawconfig.lines:
                 if kind == "profile":
                     profiles.add(value)
-                    profile = self.readsparseprofile(rev, value, version)
+                    profile = self.readsparseprofile(rev, value)
                     if profile is not None:
                         for rule in profile.rules:
                             rules.append(rule)
@@ -1107,11 +1105,6 @@ def _wraprepo(ui, repo):
                     rules.append(value)
                 elif kind == "exclude":
                     rules.append("!" + value)
-
-            # If all rules (excluding the default '.hg*') are exclude rules, add
-            # an initial "**" to provide the default include of everything.
-            if version != "1" and all(rule[0] == "!" for rule in rules):
-                rules.insert(0, "**")
 
             return SparseProfile(name, rules, profiles, rawconfig.metadata)
 
