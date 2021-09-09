@@ -39,6 +39,8 @@ manifest = { version = "0.1.0", path = "../manifest" }
 mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
+serde = { version = "1.0.126", features = ["derive", "rc"] }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
