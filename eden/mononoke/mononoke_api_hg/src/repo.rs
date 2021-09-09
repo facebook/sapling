@@ -15,6 +15,7 @@ use bookmarks::Freshness;
 use bytes::Bytes;
 use changesets::{ChangesetInsert, Changesets, ChangesetsArc};
 use context::CoreContext;
+use edenapi_types::{AnyId, UploadToken};
 use ephemeral_blobstore::{Bubble, BubbleId};
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
@@ -257,6 +258,28 @@ impl HgRepoContext {
         .await
         .map_err(MononokeError::from)?;
         Ok(())
+    }
+
+    /// Download file contents
+    pub async fn download_file(
+        &self,
+        upload_token: UploadToken,
+    ) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + 'static>, MononokeError> {
+        Ok(filestore::fetch(
+            self.bubble_blobstore(upload_token.data.bubble_id.map(BubbleId::new))
+                .await?,
+            self.ctx().clone(),
+            &match upload_token.data.id {
+                AnyId::AnyFileContentId(file_id) => file_id.into(),
+                e @ _ => {
+                    return Err(MononokeError::from(format_err!(
+                        "Id is not of a file: {:?}",
+                        e
+                    )));
+                }
+            },
+        )
+        .await?)
     }
 
     /// Look up changeset

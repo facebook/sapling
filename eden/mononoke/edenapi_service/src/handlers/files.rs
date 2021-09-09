@@ -311,3 +311,29 @@ impl EdenApiHandler for UploadHgFilenodesHandler {
             .boxed())
     }
 }
+
+/// Downloads a file given an upload token
+pub struct DownloadFileHandler;
+
+#[async_trait]
+impl EdenApiHandler for DownloadFileHandler {
+    type Request = UploadToken;
+    type Response = Bytes;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::DownloadFile;
+    const ENDPOINT: &'static str = "/download/file";
+
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let content = repo
+            .download_file(request)
+            .await?
+            .context("File not found")?;
+        Ok(content.boxed())
+    }
+}

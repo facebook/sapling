@@ -75,6 +75,7 @@ pub enum EdenApiMethod {
     EphemeralPrepare,
     FetchSnapshot,
     CommitGraph,
+    DownloadFile,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -101,6 +102,7 @@ impl fmt::Display for EdenApiMethod {
             Self::UploadBonsaiChangeset => "upload_bonsai_changeset",
             Self::EphemeralPrepare => "ephemeral_prepare",
             Self::FetchSnapshot => "fetch_snapshot",
+            Self::DownloadFile => "download_file",
         };
         write!(f, "{}", name)
     }
@@ -277,6 +279,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<trees::UploadTreesHandler>(route);
         Handlers::setup::<commit::FetchSnapshotHandler>(route);
         Handlers::setup::<commit::GraphHandler>(route);
+        Handlers::setup::<files::DownloadFileHandler>(route);
         route
             .post("/:repo/trees")
             .with_path_extractor::<trees::TreeParams>()
