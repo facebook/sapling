@@ -571,9 +571,9 @@ Test command without options
   
       This command is a no-op.
   
-  Options ([+] can be repeated):
+  Options:
   
-   -r --rev REV [+] verify the specified revision or revset
+    --dag perform slower commit graph checks with server
   
   (some details hidden, use --verbose to show complete help)
 

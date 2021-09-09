@@ -6590,15 +6590,35 @@ def update(
 
 
 @command(
-    "verify", [("r", "rev", [], _("verify the specified revision or revset"), _("REV"))]
+    "verify",
+    [
+        (
+            "r",
+            "rev",
+            [],
+            _("verify the specified revision or revset (DEPRECATED)"),
+            _("REV"),
+        ),
+        ("", "dag", False, _("perform slower commit graph checks with server")),
+    ],
 )
 def verify(ui, repo, **opts):
     """verify the integrity of the repository
 
     This command is a no-op.
     """
-    ui.status(_("warning: verify does not actually check anything in this repo\n"))
-    return 0
+    from .. import verify
+
+    ret = 0
+    if "lazychangelog" in repo.storerequirements:
+        ret |= verify.checklazychangelog(repo)
+        if ret == 0 and opts.get("dag"):
+            ret |= verify.checklazychangelogwithserver(repo)
+        else:
+            ui.write_err(_("(pass --dag to perform slow checks with server)\n"))
+    else:
+        ui.status(_("warning: verify does not actually check anything in this repo\n"))
+    return ret
 
 
 @command("version|vers|versi|versio", [] + formatteropts, norepo=True, cmdtype=readonly)

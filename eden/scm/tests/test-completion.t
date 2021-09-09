@@ -564,7 +564,7 @@ Show all commands + options
   uncommit: keep, include, exclude
   uncopy: include, exclude, dry-run
   update: clean, check, merge, date, rev, inactive, continue, tool
-  verify: rev
+  verify: rev, dag
   verifyremotefilelog: decompress
   version: template
 

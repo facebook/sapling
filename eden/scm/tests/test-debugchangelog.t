@@ -326,3 +326,12 @@ Revlog -> Lazy:
   $ ls .hg/store/segments
   v1
 #endif
+
+Verify lazy changelog:
+
+  $ hg verify
+  commit graph passed quick local checks
+  (pass --dag to perform slow checks with server)
+  $ hg verify --dag
+  commit graph passed quick local checks
+  commit graph looks okay compared with the server
