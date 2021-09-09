@@ -569,7 +569,20 @@ impl Request {
     /// progress reporting.
     pub fn send(self) -> Result<Response, HttpClientError> {
         let mut easy: Easy2<Buffered> = self.try_into()?;
-        easy.perform()?;
+        let res = easy.perform();
+        let ctx = easy.get_mut().request_context_mut();
+        let info = ctx.info().clone();
+
+        match res {
+            Ok(()) => {
+                ctx.event_listeners().trigger_success(&info);
+            }
+            Err(e) => {
+                ctx.event_listeners().trigger_failure(&info);
+                return Err(e.into());
+            }
+        }
+
         Response::try_from(easy.get_mut())
     }
 

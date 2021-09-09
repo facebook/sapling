@@ -111,13 +111,17 @@ impl HttpClient {
 
         let stats = driver.perform(|res| {
             let res = res
-                .map_err(|(easy, e)| {
-                    let ctx = easy.get_ref().request_context();
+                .map_err(|(mut easy, e)| {
+                    let ctx = easy.get_mut().request_context_mut();
+                    let info = ctx.info().clone();
+                    ctx.event_listeners().trigger_failure(&info);
                     self.event_listeners.trigger_failed_request(ctx);
                     e.into()
                 })
                 .and_then(|mut easy| {
-                    let ctx = easy.get_ref().request_context();
+                    let ctx = easy.get_mut().request_context_mut();
+                    let info = ctx.info().clone();
+                    ctx.event_listeners().trigger_success(&info);
                     self.event_listeners.trigger_succeeded_request(ctx);
                     Response::try_from(easy.get_mut())
                 });
@@ -259,14 +263,18 @@ impl HttpClient {
         // need to pass the result to the handler contained
         // therein.
         let (mut easy, res) = match res {
-            Ok(easy) => {
-                self.event_listeners
-                    .trigger_succeeded_request(easy.get_ref().request_context());
+            Ok(mut easy) => {
+                let ctx = easy.get_mut().request_context_mut();
+                let info = ctx.info().clone();
+                ctx.event_listeners().trigger_success(&info);
+                self.event_listeners.trigger_succeeded_request(ctx);
                 (easy, Ok(()))
             }
-            Err((easy, e)) => {
-                self.event_listeners
-                    .trigger_failed_request(easy.get_ref().request_context());
+            Err((mut easy, e)) => {
+                let ctx = easy.get_mut().request_context_mut();
+                let info = ctx.info().clone();
+                ctx.event_listeners().trigger_failure(&info);
+                self.event_listeners.trigger_failed_request(ctx);
                 (easy, Err(e.into()))
             }
         };

@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use crate::progress::Progress;
-use crate::request::{Request, RequestContext};
+use crate::request::{Request, RequestContext, RequestInfo};
 use crate::stats::Stats;
 
 /// Generate a struct for holding event listeners (callbacks).
@@ -98,6 +98,12 @@ gen_event_listeners! {
 
         /// On progress update. Note: this is called periodically even if there is no progress.
         progress(req: &RequestContext, progress: Progress),
+
+        /// The request completed successfully.
+        success(req: &RequestInfo),
+
+        /// The request completed unsuccessfully.
+        failure(req: &RequestInfo),
     }
 }
 
