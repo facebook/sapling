@@ -57,7 +57,6 @@ impl BackingContentStores {
         let (blobstore, treestore) = match config.get_opt::<String>("remotefilelog", "reponame")? {
             Some(repo) if use_edenapi => {
                 let edenapi = EdenApiBuilder::from_config(config)?.build()?;
-                let edenapi: Arc<dyn EdenApi> = Arc::new(edenapi);
                 let fileremotestore = EdenApiFileStore::new(repo.clone(), edenapi.clone(), None);
                 let treeremotestore = EdenApiTreeStore::new(repo, edenapi, None);
                 (
