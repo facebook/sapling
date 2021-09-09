@@ -806,7 +806,11 @@ mod tests {
             let out = opts.open_options_repair(path).unwrap();
             // Filter out dynamic content.
             out.lines()
-                .filter(|l| !l.contains("bytes in log") && !l.contains("Backed up"))
+                .filter(|l| {
+                    !l.contains("bytes in log")
+                        && !l.contains("Backed up")
+                        && !l.contains("Processing")
+                })
                 .collect::<Vec<_>>()
                 .join("\n")
         };

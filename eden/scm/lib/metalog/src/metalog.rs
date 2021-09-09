@@ -834,6 +834,7 @@ mod tests {
                     .lines()
                     // Remove 'Backed up' lines since they have dynamic file names.
                     .filter(|l| !l.contains("Backed up"))
+                    .filter(|l| !l.contains("Processing"))
                     .collect::<Vec<_>>()
                     .join("\n")
                     .replace(&path, "<path>")

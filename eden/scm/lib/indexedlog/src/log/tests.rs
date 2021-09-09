@@ -1038,6 +1038,7 @@ fn test_repair_and_delete_content() {
             .lines()
             // Remove 'Backed up' lines since they have dynamic file names.
             .filter(|l| !l.contains("Backed up"))
+            .filter(|l| !l.contains("Processing"))
             .collect::<Vec<_>>()
             .join("\n")
     };

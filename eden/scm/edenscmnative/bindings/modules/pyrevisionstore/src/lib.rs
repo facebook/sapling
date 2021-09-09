@@ -161,19 +161,23 @@ fn repair(
     config: config,
 ) -> PyResult<Str> {
     let config = config.get_cfg(py);
-    py.allow_threads(|| {
-        ContentStore::repair(
+    py.allow_threads::<Result<String>, _>(|| {
+        let mut message = ContentStore::repair(
             shared_path.as_path(),
             local_path.map(|p| p.as_path()),
             suffix.map(|p| p.as_path()),
             &config,
         )?;
-        MetadataStore::repair(
-            shared_path.as_path(),
-            local_path.map(|p| p.as_path()),
-            suffix.map(|p| p.as_path()),
-            &config,
-        )
+        message.push_str(
+            MetadataStore::repair(
+                shared_path.as_path(),
+                local_path.map(|p| p.as_path()),
+                suffix.map(|p| p.as_path()),
+                &config,
+            )?
+            .as_str(),
+        );
+        Ok(message)
     })
     .map_pyerr(py)
     .map(Into::into)

@@ -63,12 +63,110 @@ Check the repo is broken (exit code is non-zero):
 
 Test that 'hg doctor' can fix them:
 
-  $ hg doctor
+  $ hg doctor -v
   checking internal storage
-  mutation: repaired
-  metalog: repaired
-  revisionstore: repaired
-  revisionstore: repaired
+  mutation:
+    Processing IndexedLog: Filesystem(*) (glob)
+    Fixed header in log
+    Extended log to 82 bytes required by meta
+    Verified first 0 entries, 12 of 82 bytes in log
+    Backed up corrupted log to "*" (glob)
+    Reset log size to 12
+    Rebuilt index "pred"
+    Rebuilt index "succ"
+    Rebuilt index "split"
+  
+  
+  metalog:
+    Checking blobs at "*": (glob)
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 23 entries, * bytes in log (glob)
+    Index "id" passed integrity check
+    
+    Checking roots at "*": (glob)
+    Processing IndexedLog: Filesystem("*") (glob)
+    Rebuilt metadata
+    Verified 9 entries, 246 bytes in log
+    Index "reverse" passed integrity check
+    
+    Checking blobs referred by 10 Roots:
+    All Roots are verified.
+  
+  
+  allheads:
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node" passed integrity check
+  
+  
+  revisionstore:
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 0 entries, 12 bytes in log
+    Rebuilt index "node"
+    Reset latest to 0
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 3 entries, 153 bytes in log
+    Index "node" passed integrity check
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node" passed integrity check
+    Index "sha256" passed integrity check
+    Latest = 0
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "sha256" passed integrity check
+    Latest = 0
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node_and_path" passed integrity check
+    Latest = 0
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 3 entries, 357 bytes in log
+    Index "node_and_path" passed integrity check
+  
+  
+  revisionstore:
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 0 entries, 12 bytes in log
+    Rebuilt index "node"
+    Reset latest to 0
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 3 entries, 373 bytes in log
+    Index "node" passed integrity check
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node" passed integrity check
+    Index "sha256" passed integrity check
+    Latest = 0
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "sha256" passed integrity check
+    Latest = 0
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node_and_path" passed integrity check
+    Latest = 0
+    Processing IndexedLog: Filesystem("*") (glob)
+    Verified 3 entries, 348 bytes in log
+    Index "node_and_path" passed integrity check
+  
+  
   checking commit references
 
 Check the repo is usable again:

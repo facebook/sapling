@@ -30,6 +30,7 @@ impl OpenOptions {
     pub fn repair(&self, dir: impl Into<GenericPath>) -> crate::Result<String> {
         let dir = dir.into();
         let mut message = String::new();
+        message += &format!("Processing IndexedLog: {:?}\n", dir);
 
         let dir = match dir.as_opt_path() {
             Some(dir) => dir,

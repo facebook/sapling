@@ -250,6 +250,7 @@ impl OpenOptions {
             let _lock = ScopedDirLock::new(&dir)?;
 
             let mut message = String::new();
+            message += &format!("Processing RotateLog: {:?}\n", dir);
             let read_dir = dir.read_dir().context(dir, "cannot readdir")?;
             let mut ids = Vec::new();
 
@@ -1555,15 +1556,19 @@ mod tests {
         utils::atomic_write(&latest_path, "NaN", false).unwrap();
         assert!(opts.open(&dir).is_err());
         assert_eq!(
-            opts.repair(&dir).unwrap(),
+            opts.repair(&dir)
+                .unwrap()
+                .lines()
+                .filter(|l| !l.contains("Processing"))
+                .collect::<Vec<_>>()
+                .join("\n"),
             r#"Attempt to repair log "0"
 Verified 1 entries, 223 bytes in log
 Attempt to repair log "1"
 Verified 1 entries, 223 bytes in log
 Attempt to repair log "2"
 Verified 0 entries, 12 bytes in log
-Reset latest to 2
-"#
+Reset latest to 2"#
         );
         opts.open(&dir).unwrap();
 
@@ -1573,15 +1578,19 @@ Reset latest to 2
 
         // Repair can fix it.
         assert_eq!(
-            opts.repair(&dir).unwrap(),
+            opts.repair(&dir)
+                .unwrap()
+                .lines()
+                .filter(|l| !l.contains("Processing"))
+                .collect::<Vec<_>>()
+                .join("\n"),
             r#"Attempt to repair log "0"
 Verified 1 entries, 223 bytes in log
 Attempt to repair log "1"
 Verified 1 entries, 223 bytes in log
 Attempt to repair log "2"
 Verified 0 entries, 12 bytes in log
-Reset latest to 2
-"#
+Reset latest to 2"#
         );
         opts.open(&dir).unwrap();
     }
