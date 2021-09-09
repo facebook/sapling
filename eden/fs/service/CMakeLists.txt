@@ -86,9 +86,14 @@ if (NOT WIN32)
       eden_fuse
       eden_notifications
       eden_takeover
-    PRIVATE
-      eden_smartplatform_service
   )
 endif()
 
-add_subdirectory(facebook)
+if(EDEN_HAVE_USAGE_SERVICE)
+  add_subdirectory(facebook)
+  target_link_libraries(
+    eden_service
+    PUBLIC
+      eden_smartplatform_service
+  )
+endif()

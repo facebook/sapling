@@ -34,6 +34,10 @@
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #endif // !_WIN32
 
+#ifdef EDEN_HAVE_USAGE_SERVICE
+#include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
+#endif
+
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
@@ -373,11 +377,13 @@ EdenServiceHandler::EdenServiceHandler(
         hc.min,
         hc.max);
   }
-#ifdef __linux__
+#ifdef EDEN_HAVE_USAGE_SERVICE
   spServiceEndpoint_ = std::make_unique<EdenFSSmartPlatformServiceEndpoint>(
       server_->getServerState()->getThreadPool());
 #endif
 }
+
+EdenServiceHandler::~EdenServiceHandler() = default;
 
 std::unique_ptr<apache::thrift::AsyncProcessor>
 EdenServiceHandler::getProcessor() {
@@ -1513,7 +1519,7 @@ EdenServiceHandler::future_setPathObjectId(
 folly::Future<std::unique_ptr<Glob>>
 EdenServiceHandler::future_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
-#ifdef __linux__
+#ifdef EDEN_HAVE_USAGE_SERVICE
   // TODO: since we call INSTRUMENT_THRIFT_CALL in _globFiles, the time
   // of getTopUsedDirs won't be taken into account
   auto& mountPoint = *params->mountPoint_ref();
@@ -1599,10 +1605,10 @@ EdenServiceHandler::future_predictiveGlobFiles(
         return makeFuture<std::unique_ptr<Glob>>(std::move(ew));
       })
       .ensure([params = std::move(params)]() {});
-#else
+#else // !EDEN_HAVE_USAGE_SERVICE
   (void)params;
   NOT_IMPLEMENTED();
-#endif
+#endif // !EDEN_HAVE_USAGE_SERVICE
 }
 
 folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(

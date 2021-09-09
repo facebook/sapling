@@ -8,12 +8,10 @@
 #pragma once
 
 #include <optional>
+#include "eden/fs/eden-config.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "fb303/BaseService.h"
-#ifdef __linux__
-#include "eden/fs/service/facebook/EdenFSSmartPlatformServiceEndpoint.h" // @manual
-#endif
 
 namespace folly {
 template <typename T>
@@ -29,6 +27,9 @@ class EdenMount;
 class EdenServer;
 class TreeInode;
 class ObjectFetchContext;
+#ifdef EDEN_HAVE_USAGE_SERVICE
+class EdenFSSmartPlatformServiceEndpoint;
+#endif
 
 extern const char* const kServiceName;
 
@@ -41,6 +42,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   explicit EdenServiceHandler(
       std::vector<std::string> originalCommandLine,
       EdenServer* server);
+  ~EdenServiceHandler() override;
 
   EdenServiceHandler(EdenServiceHandler const&) = delete;
   EdenServiceHandler& operator=(EdenServiceHandler const&) = delete;
@@ -312,7 +314,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       folly::StringPiece caller,
       std::optional<pid_t> pid);
 
-#ifdef __linux__
+#ifdef EDEN_HAVE_USAGE_SERVICE
   // an endpoint for the edenfs/edenfs_service smartservice used for predictive
   // prefetch profiles
   std::unique_ptr<EdenFSSmartPlatformServiceEndpoint> spServiceEndpoint_;
