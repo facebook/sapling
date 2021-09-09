@@ -143,7 +143,19 @@ macro_rules! decode {
         let reader = BufReader::new(StreamReader::new(body));
         ReaderStream::new($decoder::new(reader))
             .map_ok(|bytes| bytes.to_vec())
-            .map_err(HttpClientError::DecompressionFailed)
+            .map_err(|e| {
+                if e.get_ref()
+                    .map(|i| i.is::<HttpClientError>())
+                    .unwrap_or(false)
+                {
+                    *e.into_inner()
+                        .unwrap()
+                        .downcast::<HttpClientError>()
+                        .unwrap()
+                } else {
+                    HttpClientError::DecompressionFailed(e)
+                }
+            })
             .boxed()
     }};
 }
