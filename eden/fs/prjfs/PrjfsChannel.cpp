@@ -935,6 +935,11 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
     throw makeHResultErrorExplicit(result, "Failed to start the mount point");
   }
 
+  // On Windows, negative path cache is kept between channels. Invalidating here
+  // gives our user an easy way to get out of a situation where an incorrect
+  // negative path result is cached by Windows without rebooting.
+  flushNegativePathCache();
+
   inner_.rlock()->setMountChannel(mountChannel_);
 
   XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
