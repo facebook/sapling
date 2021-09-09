@@ -256,6 +256,44 @@ def readsigtraces(repo):
     return result
 
 
+def checkproxyagentstate(ui):
+    if not ui.config("auth_proxy", "x2pagentd"):
+        return "Not enabled"
+
+    status = "OS not supported"
+
+    if pycompat.iswindows:
+        os.environ["COMSPEC"] = "powershell"
+        status = shcmd(
+            "Get-WmiObject win32_process | ? CommandLine -match 'x2pagentd.exe'"
+        )
+    elif pycompat.islinux:
+        status = shcmd("systemctl status --user x2pagentd.service")
+    elif pycompat.isdarwin:
+        status = shcmd("launchctl list com.fb.chef.x2pagentd")
+
+    logs = "OS not supported"
+    if pycompat.iswindows:
+        logs = shcmd(
+            "type C:\\Users\\%USERNAME%\\AppData\\Local\\facebook\\fb-x2pagentd\\x2pagentd.log"
+        )
+    elif pycompat.islinux:
+        logs = shcmd("journalctl --user-unit x2pagentd.service | tail -n 100")
+    elif pycompat.isdarwin:
+        logs = shcmd(
+            "cat ~/Library/Application\\ Support/fb-x2pagentd/fb-x2pagentd.log | tail -n 100"
+        )
+
+    return """x2pagentd status:
+{}
+
+x2pagentd logs (might be truncated):
+{}
+""".format(
+        status, logs
+    )
+
+
 def _makerage(ui, repo, **opts):
     configoverrides = {
         # Make graphlog shorter.
@@ -414,6 +452,7 @@ def _makerage(ui, repo, **opts):
         ),
         ("ssh config", lambda: shcmd("ssh -G hg.vip.facebook.com", check=False)),
         ("debuglocks", lambda: hgcmd("debuglocks")),
+        ("x2pagentd info", lambda: checkproxyagentstate(ui)),
     ]
 
     msg = ""
