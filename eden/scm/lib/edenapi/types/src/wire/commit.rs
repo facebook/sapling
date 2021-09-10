@@ -932,8 +932,6 @@ impl Arbitrary for WireEphemeralPrepareResponse {
 pub struct WireFetchSnapshotRequest {
     #[serde(rename = "1")]
     pub cs_id: WireBonsaiChangesetId,
-    #[serde(rename = "2")]
-    pub bubble_id: NonZeroU64,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -950,7 +948,6 @@ impl ToWire for FetchSnapshotRequest {
     fn to_wire(self) -> Self::Wire {
         WireFetchSnapshotRequest {
             cs_id: self.cs_id.to_wire(),
-            bubble_id: self.bubble_id,
         }
     }
 }
@@ -962,7 +959,6 @@ impl ToApi for WireFetchSnapshotRequest {
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(FetchSnapshotRequest {
             cs_id: self.cs_id.to_api()?,
-            bubble_id: self.bubble_id,
         })
     }
 }

@@ -23,6 +23,9 @@ use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
 use repo_identity::RepoIdentityRef;
 use sql::mysql_async::prelude::{ConvIr, FromValue};
 use sql::mysql_async::{FromValueError, Value};
+use sql::sql_common::mysql::{
+    opt_try_from_rowfield, MysqlError, OptionalTryFromRowField, RowField,
+};
 use sql_ext::SqlConnections;
 
 use crate::changesets::EphemeralChangesets;
@@ -54,11 +57,13 @@ impl From<BubbleId> for NonZeroU64 {
 
 impl ConvIr<BubbleId> for BubbleId {
     fn new(v: Value) -> Result<Self, FromValueError> {
+        let from_u64 = |id, v| match NonZeroU64::new(id) {
+            Some(id) => Ok(BubbleId(id)),
+            None => Err(FromValueError(v)),
+        };
         match v {
-            Value::UInt(id) => match NonZeroU64::new(id) {
-                Some(id) => Ok(BubbleId(id)),
-                None => Err(FromValueError(v))?,
-            },
+            Value::UInt(id) => from_u64(id, v),
+            Value::Int(id) => from_u64(id as u64, v),
             v => Err(FromValueError(v)),
         }
     }
@@ -74,6 +79,12 @@ impl ConvIr<BubbleId> for BubbleId {
 
 impl FromValue for BubbleId {
     type Intermediate = BubbleId;
+}
+
+impl OptionalTryFromRowField for BubbleId {
+    fn try_from_opt(field: RowField) -> Result<Option<Self>, MysqlError> {
+        opt_try_from_rowfield(field)
+    }
 }
 
 impl BubbleId {

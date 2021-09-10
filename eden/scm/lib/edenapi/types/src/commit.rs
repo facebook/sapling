@@ -358,7 +358,6 @@ pub struct SnapshotRawData {
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct FetchSnapshotRequest {
     pub cs_id: BonsaiChangesetId,
-    pub bubble_id: NonZeroU64,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]

@@ -16,8 +16,6 @@ def restore(ui, repo, csid, **opts):
         getreponame(repo),
         {
             "cs_id": bytes.fromhex(csid),
-            # TODO(yancouto): Find bubble id from snapshot id
-            "bubble_id": 1,
         },
     )
 

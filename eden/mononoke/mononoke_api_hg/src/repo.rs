@@ -16,7 +16,7 @@ use bytes::Bytes;
 use changesets::{ChangesetInsert, Changesets, ChangesetsArc};
 use context::CoreContext;
 use edenapi_types::{AnyId, UploadToken};
-use ephemeral_blobstore::{Bubble, BubbleId};
+use ephemeral_blobstore::{Bubble, BubbleId, RepoEphemeralBlobstore};
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
@@ -86,6 +86,11 @@ impl HgRepoContext {
     pub async fn write(self) -> Result<RepoWriteContext, MononokeError> {
         self.repo.write().await
     }
+
+    pub fn ephemeral_blobstore(&self) -> &Arc<RepoEphemeralBlobstore> {
+        self.repo().ephemeral_blobstore()
+    }
+
 
     /// Load bubble from id
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {

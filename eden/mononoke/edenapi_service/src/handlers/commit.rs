@@ -394,13 +394,14 @@ impl EdenApiHandler for FetchSnapshotHandler {
         request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         let repo = &repo;
-        let blobstore = repo
-            .bubble_blobstore(Some(BubbleId::new(request.bubble_id)))
-            .await?;
-        let cs = ChangesetId::from(request.cs_id)
-            .load(repo.ctx(), &blobstore)
+        let cs_id = ChangesetId::from(request.cs_id);
+        let bubble_id = repo
+            .ephemeral_blobstore()
+            .bubble_from_changeset(&cs_id)
             .await?
-            .into_mut();
+            .context("Snapshot not in a bubble")?;
+        let blobstore = repo.bubble_blobstore(Some(bubble_id)).await?;
+        let cs = cs_id.load(repo.ctx(), &blobstore).await?.into_mut();
         let response = FetchSnapshotResponse {
             hg_parents: Parents::from_iter(
                 stream::iter(
@@ -429,7 +430,7 @@ impl EdenApiHandler for FetchSnapshotHandler {
                                     AnyId::AnyFileContentId(AnyFileContentId::ContentId(
                                         tc.content_id().into(),
                                     )),
-                                    Some(request.bubble_id),
+                                    Some(bubble_id.into()),
                                 ),
                                 file_type: tc.file_type().into(),
                             },
@@ -438,7 +439,7 @@ impl EdenApiHandler for FetchSnapshotHandler {
                                     AnyId::AnyFileContentId(AnyFileContentId::ContentId(
                                         uc.content_id().into(),
                                     )),
-                                    Some(request.bubble_id),
+                                    Some(bubble_id.into()),
                                 ),
                                 file_type: uc.file_type().into(),
                             },

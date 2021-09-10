@@ -13,7 +13,7 @@ use anyhow::Result;
 use blobstore::Blobstore;
 use chrono::Duration as ChronoDuration;
 use derivative::Derivative;
-use mononoke_types::{DateTime, RepositoryId, Timestamp};
+use mononoke_types::{ChangesetId, DateTime, RepositoryId, Timestamp};
 use sql::queries;
 use sql_ext::SqlConnections;
 
@@ -70,6 +70,15 @@ queries! {
         "SELECT expires_at, expired, owner_identity FROM ephemeral_bubbles
          WHERE id = {id}"
     }
+
+    read SelectBubbleFromChangeset(
+        repo_id: RepositoryId,
+        cs_id: ChangesetId,
+    ) -> (BubbleId,) {
+        "SELECT bubble_id
+        FROM ephemeral_bubble_changeset_mapping
+        WHERE repo_id = {repo_id} AND cs_id = {cs_id}"
+    }
 }
 
 impl RepoEphemeralBlobstoreInner {
@@ -100,6 +109,17 @@ impl RepoEphemeralBlobstoreInner {
             }
             _ => Err(EphemeralBlobstoreError::CreateBubbleFailed.into()),
         }
+    }
+
+    async fn bubble_from_changeset(
+        &self,
+        repo_id: &RepositoryId,
+        cs_id: &ChangesetId,
+    ) -> Result<Option<BubbleId>> {
+        let rows =
+            SelectBubbleFromChangeset::query(&self.connections.read_connection, &repo_id, &cs_id)
+                .await?;
+        Ok(rows.into_iter().next().map(|b| b.0))
     }
 
     async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble> {
@@ -163,6 +183,12 @@ impl RepoEphemeralBlobstore {
 
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble> {
         self.inner()?.open_bubble(bubble_id).await
+    }
+
+    pub async fn bubble_from_changeset(&self, cs_id: &ChangesetId) -> Result<Option<BubbleId>> {
+        self.inner()?
+            .bubble_from_changeset(&self.repo_id, cs_id)
+            .await
     }
 }
 

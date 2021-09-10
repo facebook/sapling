@@ -1224,16 +1224,9 @@ impl EdenApi for Client {
         repo: String,
         request: FetchSnapshotRequest,
     ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
-        tracing::info!(
-            "Fetching snapshot {} from bubble {}",
-            request.cs_id,
-            request.bubble_id
-        );
+        tracing::info!("Fetching snapshot {}", request.cs_id,);
         if self.config().debug {
-            eprintln!(
-                "Fetching snapshot {} from bubble {}",
-                request.cs_id, request.bubble_id
-            );
+            eprintln!("Fetching snapshot {}", request.cs_id);
         }
         let url = self.build_url(paths::FETCH_SNAPSHOT, Some(&repo))?;
         let req = request.to_wire();
