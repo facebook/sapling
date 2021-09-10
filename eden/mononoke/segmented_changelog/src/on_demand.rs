@@ -420,6 +420,10 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
         read_dag.full_idmap_clone_data(ctx).await
     }
+
+    async fn disabled(&self, _ctx: &CoreContext) -> Result<bool> {
+        Ok(false)
+    }
 }
 
 pub struct PeriodicUpdateSegmentedChangelog {

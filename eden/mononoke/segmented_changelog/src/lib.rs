@@ -110,6 +110,10 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
             "Segmented Changelog is not enabled for this repo",
         ))
     }
+
+    async fn disabled(&self, _ctx: &CoreContext) -> Result<bool> {
+        Ok(true)
+    }
 }
 
 #[macro_export]
@@ -166,6 +170,11 @@ macro_rules! segmented_changelog_delegate {
                 delegate
                     .many_changeset_ids_to_locations($ctx, master_heads, cs_ids)
                     .await
+            }
+
+            async fn disabled(&$self, $ctx: &CoreContext) -> Result<bool> {
+                let delegate = $delegate;
+                delegate.disabled($ctx).await
             }
         }
     };

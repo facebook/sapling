@@ -221,6 +221,10 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         };
         Ok(stream_clone_data)
     }
+
+    async fn disabled(&self, _ctx: &CoreContext) -> Result<bool> {
+        Ok(false)
+    }
 }
 
 impl<'a> ReadOnlySegmentedChangelog<'a> {

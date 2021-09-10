@@ -119,6 +119,14 @@ pub trait SegmentedChangelog: Send + Sync {
         &self,
         ctx: &CoreContext,
     ) -> Result<StreamCloneData<ChangesetId>>;
+
+    /// Whether segmented changelog is disabled.
+    ///
+    /// A quick way to test if the backend supports segmented changelog or not
+    /// without doing real work.
+    ///
+    /// Return true if it is disabled.
+    async fn disabled(&self, ctx: &CoreContext) -> Result<bool>;
 }
 
 pub struct StreamCloneData<T> {
