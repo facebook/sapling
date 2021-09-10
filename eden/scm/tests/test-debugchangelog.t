@@ -257,7 +257,7 @@ To lazy:
   $ hg debugchangelog --migrate doublewrite --unless lazy
 
   $ LOG=dag::protocol=debug hg log -Gr 'all()' -T '{desc} {remotenames}'
-   DEBUG dag::protocol: resolve ids [4, 3, 1, 0] remotely
+  DEBUG dag::protocol: resolve ids [4, 3, 1, 0] remotely
   o  B
   │
   │ o  C remote/master

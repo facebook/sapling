@@ -84,10 +84,10 @@ Absorb triggers mirroring
   mirrored changes in 'dir1/C' to 'dir2/C'
   mirrored changes in 'dir1/D' to 'dir2/D'
   mirrored changes in 'dir2/A' to 'dir1/A'
-   DEBUG edenscm::hgext::dirsync: rewrite mirrored dir1/A
-   DEBUG edenscm::hgext::dirsync: rewrite mirrored dir2/B
-   DEBUG edenscm::hgext::dirsync: rewrite mirrored dir2/C
-   DEBUG edenscm::hgext::dirsync: rewrite mirrored dir2/D
+  DEBUG edenscm::hgext::dirsync: rewrite mirrored dir1/A
+  DEBUG edenscm::hgext::dirsync: rewrite mirrored dir2/B
+  DEBUG edenscm::hgext::dirsync: rewrite mirrored dir2/C
+  DEBUG edenscm::hgext::dirsync: rewrite mirrored dir2/D
   5 of 6 chunks applied
 
 Working copy does not have "M" mirrored files
@@ -207,7 +207,7 @@ Only changes the 1st commit:
   apply changes (yn)?  y
   mirrored changes in 'dir1/A' to 'dir2/A'
   mirrored changes in 'dir1/A' to 'dir2/A'
-   DEBUG edenscm::hgext::dirsync: rewrite mirrored dir2/A
+  DEBUG edenscm::hgext::dirsync: rewrite mirrored dir2/A
   1 of 1 chunk applied
 
   $ hg status
