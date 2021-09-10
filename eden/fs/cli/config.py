@@ -1266,7 +1266,7 @@ class EdenCheckout:
                 raise RuntimeError("SNAPSHOT file has invalid header")
 
     def save_snapshot(self, commit_id: str) -> None:
-        """Write a new parent commit ID into the SNAPSOHT file."""
+        """Write a new parent commit ID into the SNAPSHOT file."""
         snapshot_path = self.state_dir / SNAPSHOT
         encoded = commit_id.encode()
         write_file_atomically(
