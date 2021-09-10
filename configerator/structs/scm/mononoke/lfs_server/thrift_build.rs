@@ -33,6 +33,11 @@ ratelimits rate_limiting_config",
             conf.options(options);
         }
 
+        let include_srcs = vec![
+            
+        ];
+        conf.include_srcs(include_srcs);
+
         conf
     };
 
