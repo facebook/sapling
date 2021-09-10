@@ -113,24 +113,24 @@ This test also checks file content deduplication. We upload 1 file content and 1
 
   $ hgedenapi commit -m "New files Dir1"
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
-    INFO edenapi::client: Requesting lookup for 1 item(s)
+   INFO edenapi::client: Requesting lookup for 1 item(s)
   commitcloud: head '536d3fb3929e' hasn't been uploaded yet
-    INFO edenapi::client: Requesting lookup for 1 item(s)
+   INFO edenapi::client: Requesting lookup for 1 item(s)
   edenapi: queue 1 commit for upload
-    INFO edenapi::client: Requesting lookup for 100 item(s)
+   INFO edenapi::client: Requesting lookup for 100 item(s)
   edenapi: queue 100 files for upload
-    INFO edenapi::client: Requesting lookup for 1 item(s)
-    INFO edenapi::client: Received 0 token(s) from the lookup_batch request
-    INFO edenapi::client: Requesting upload for */repo/upload/file/content_id/a6ef0ef0eb8935a67f26f91d4cd13c02d2f7e13c74325488d8b12fdda58b6a00?content_size=0 (glob)
-    INFO edenapi::client: Received 1 new token(s) from upload requests
-    INFO edenapi::client: Requesting hg filenodes upload for 100 item(s)
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+   INFO edenapi::client: Received 0 token(s) from the lookup_batch request
+   INFO edenapi::client: Requesting upload for http://localhost:56093/repo/upload/file/content_id/a6ef0ef0eb8935a67f26f91d4cd13c02d2f7e13c74325488d8b12fdda58b6a00?content_size=0
+   INFO edenapi::client: Received 1 new token(s) from upload requests
+   INFO edenapi::client: Requesting hg filenodes upload for 100 item(s)
   edenapi: uploaded 100 files
-    INFO edenapi::client: Requesting lookup for 2 item(s)
+   INFO edenapi::client: Requesting lookup for 2 item(s)
   edenapi: queue 2 trees for upload
-    INFO edenapi::client: Requesting trees upload for 2 item(s)
+   INFO edenapi::client: Requesting trees upload for 2 item(s)
   edenapi: uploaded 2 trees
   edenapi: uploading commit '536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9'...
-    INFO edenapi::client: Requesting changesets upload for 1 item(s)
+   INFO edenapi::client: Requesting changesets upload for 1 item(s)
   edenapi: uploaded 1 changeset
 
   $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9
@@ -145,22 +145,22 @@ The files of the second commit are identical to the files of the first commit, s
   $ hgedenapi addremove -q
   $ hgedenapi commit -m "New files Dir2"
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
-    INFO edenapi::client: Requesting lookup for 2 item(s)
+   INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: head '65289540f44d' hasn't been uploaded yet
-    INFO edenapi::client: Requesting lookup for 1 item(s)
+   INFO edenapi::client: Requesting lookup for 1 item(s)
   edenapi: queue 1 commit for upload
-    INFO edenapi::client: Requesting lookup for 100 item(s)
+   INFO edenapi::client: Requesting lookup for 100 item(s)
   edenapi: queue 0 files for upload
-    INFO edenapi::client: Requesting lookup for 2 item(s)
+   INFO edenapi::client: Requesting lookup for 2 item(s)
   edenapi: queue 1 tree for upload
-    INFO edenapi::client: Requesting trees upload for 1 item(s)
+   INFO edenapi::client: Requesting trees upload for 1 item(s)
   edenapi: uploaded 1 tree
   edenapi: uploading commit '65289540f44d80cecffca8a3fd655c0ca6243cd9'...
-    INFO edenapi::client: Requesting changesets upload for 1 item(s)
+   INFO edenapi::client: Requesting changesets upload for 1 item(s)
   edenapi: uploaded 1 changeset
 
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
-    INFO edenapi::client: Requesting lookup for 2 item(s)
+   INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: nothing to upload
 
   $ hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
@@ -248,23 +248,23 @@ Also, dedup for file contents is expected to work (see queue 100 files but only 
   $ hgedenapi commit -m "New files Dir3 moved from Dir2" -q
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud sync
   commitcloud: synchronizing 'repo' with 'user/test/default'
-    INFO edenapi::client: Requesting lookup for 2 item(s)
+   INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: head '32551ca74417' hasn't been uploaded yet
-    INFO edenapi::client: Requesting lookup for 3 item(s)
+   INFO edenapi::client: Requesting lookup for 3 item(s)
   edenapi: queue 1 commit for upload
-    INFO edenapi::client: Requesting lookup for 100 item(s)
+   INFO edenapi::client: Requesting lookup for 100 item(s)
   edenapi: queue 100 files for upload
-    INFO edenapi::client: Requesting lookup for 1 item(s)
-    INFO edenapi::client: Received 1 token(s) from the lookup_batch request
-    INFO edenapi::client: Received 0 new token(s) from upload requests
-    INFO edenapi::client: Requesting hg filenodes upload for 100 item(s)
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+   INFO edenapi::client: Received 1 token(s) from the lookup_batch request
+   INFO edenapi::client: Received 0 new token(s) from upload requests
+   INFO edenapi::client: Requesting hg filenodes upload for 100 item(s)
   edenapi: uploaded 100 files
-    INFO edenapi::client: Requesting lookup for 2 item(s)
+   INFO edenapi::client: Requesting lookup for 2 item(s)
   edenapi: queue 2 trees for upload
-    INFO edenapi::client: Requesting trees upload for 2 item(s)
+   INFO edenapi::client: Requesting trees upload for 2 item(s)
   edenapi: uploaded 2 trees
   edenapi: uploading commit '32551ca744171ab6eedf48245d4fab816292ae5f'...
-    INFO edenapi::client: Requesting changesets upload for 1 item(s)
+   INFO edenapi::client: Requesting changesets upload for 1 item(s)
   edenapi: uploaded 1 changeset
   commitcloud: commits synchronized
   finished in * (glob)

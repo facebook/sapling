@@ -28,8 +28,8 @@ serde_derive = "1.0"
 source_control = { version = "0.1.0", path = "../../scs/if" }
 thiserror = "1.0.29"
 tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tracing = "0.1"
-tracing-futures = "0.2"
+tracing = "0.1.26"
+tracing-futures = "0.2.5"
 
 [build-dependencies]
 thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

@@ -16,7 +16,7 @@ progress-model = { path = "../progress/model" }
 revisionstore = { path = "../revisionstore" }
 status = { path = "../status" }
 tokio = { version = "1.10", features = ["full", "test-util"] }
-tracing = "0.1"
+tracing = "0.1.26"
 treestate = { path = "../treestate" }
 types = { path = "../types" }
 vfs = { path = "../vfs" }
