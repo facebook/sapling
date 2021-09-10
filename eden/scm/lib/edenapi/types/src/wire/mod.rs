@@ -213,20 +213,33 @@ impl<W: ToApi> ToApi for Option<W> {
     }
 }
 
-impl ToApi for Vec<u8> {
-    type Api = Vec<u8>;
-    type Error = WireToApiConversionError;
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(self)
+// This allows using these objects as pure requests and responses
+// Only use it for very simple objects which serializations don't
+// incur extra costs
+macro_rules! transparent_wire {
+    ( $($name: ty),* ) => {
+        $(
+        impl ToWire for $name {
+            type Wire = $name;
+
+            fn to_wire(self) -> Self::Wire {
+                self
+            }
+        }
+
+        impl ToApi for $name {
+            type Api = $name;
+            type Error = std::convert::Infallible;
+
+            fn to_api(self) -> Result<Self::Api, Self::Error> {
+                Ok(self)
+            }
+        }
+     )*
     }
 }
 
-impl ToWire for Vec<u8> {
-    type Wire = Vec<u8>;
-    fn to_wire(self) -> Self::Wire {
-        self
-    }
-}
+transparent_wire!(bool, u8, i8, u16, i16, u32, i32, u64, i64, bytes::Bytes);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WireEdenApiServerError {
@@ -475,23 +488,6 @@ impl ToApi for WireRevisionstoreMetadata {
             size: self.size,
             flags: self.flags,
         })
-    }
-}
-
-impl ToWire for u32 {
-    type Wire = u32;
-
-    fn to_wire(self) -> Self::Wire {
-        self
-    }
-}
-
-impl ToApi for u32 {
-    type Api = u32;
-    type Error = Infallible;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(self)
     }
 }
 

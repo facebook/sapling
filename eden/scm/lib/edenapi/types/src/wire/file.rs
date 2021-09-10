@@ -345,32 +345,6 @@ impl ToApi for WireUploadHgFilenodeRequest {
     }
 }
 
-// This allows using these objects as pure requests and responses
-// Only use it for very simple objects which serializations don't
-// incur extra costs
-macro_rules! transparent_wire {
-    ($name: ident) => {
-        impl ToWire for $name {
-            type Wire = $name;
-
-            fn to_wire(self) -> Self::Wire {
-                self
-            }
-        }
-
-        impl ToApi for $name {
-            type Api = $name;
-            type Error = std::convert::Infallible;
-
-            fn to_api(self) -> Result<Self::Api, Self::Error> {
-                Ok(self)
-            }
-        }
-    };
-}
-
-transparent_wire!(Bytes);
-
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileEntry {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
