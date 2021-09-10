@@ -37,6 +37,7 @@ use crate::middleware::RequestContext;
 use crate::utils::{cbor_mime, get_repo, parse_wire_request, to_cbor_bytes};
 
 mod bookmarks;
+mod capabilities;
 mod clone;
 mod commit;
 mod complete_trees;
@@ -54,6 +55,7 @@ pub(crate) use handler::{EdenApiHandler, HandlerError, HandlerResult, PathExtrac
 /// Used to identify the handler for logging and stats collection.
 #[derive(Copy, Clone)]
 pub enum EdenApiMethod {
+    Capabilities,
     Files,
     Lookup,
     UploadFile,
@@ -81,6 +83,7 @@ pub enum EdenApiMethod {
 impl fmt::Display for EdenApiMethod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
+            Self::Capabilities => "capabilities",
             Self::Files => "files",
             Self::Trees => "trees",
             Self::CompleteTrees => "complete_trees",
@@ -179,6 +182,7 @@ macro_rules! define_handler {
 
 define_handler!(repos_handler, repos::repos);
 define_handler!(trees_handler, trees::trees);
+define_handler!(capabilities_handler, capabilities::capabilities_handler);
 define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
 define_handler!(clone_handler, clone::clone_data);
@@ -280,6 +284,10 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit::FetchSnapshotHandler>(route);
         Handlers::setup::<commit::GraphHandler>(route);
         Handlers::setup::<files::DownloadFileHandler>(route);
+        route
+            .get("/:repo/capabilities")
+            .with_path_extractor::<capabilities::CapabilitiesParams>()
+            .to(capabilities_handler);
         route
             .post("/:repo/trees")
             .with_path_extractor::<trees::TreeParams>()

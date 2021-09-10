@@ -680,6 +680,10 @@ impl HgRepoContext {
         self.convert_clone_data(m_clone_data).await
     }
 
+    pub async fn segmented_changelog_disabled(&self) -> Result<bool, MononokeError> {
+        self.repo().segmented_changelog_disabled().await
+    }
+
     pub async fn segmented_changelog_pull_fast_forward_master(
         &self,
         old_master: HgChangesetId,

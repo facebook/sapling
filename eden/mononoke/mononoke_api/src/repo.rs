@@ -1461,6 +1461,15 @@ impl RepoContext {
         Ok(clone_data)
     }
 
+    pub async fn segmented_changelog_disabled(&self) -> Result<bool, MononokeError> {
+        let segmented_changelog = self.repo.segmented_changelog();
+        let disabled = segmented_changelog
+            .disabled(&self.ctx)
+            .await
+            .map_err(MononokeError::from)?;
+        Ok(disabled)
+    }
+
     pub async fn segmented_changelog_pull_fast_forward_master(
         &self,
         old_master: ChangesetId,
