@@ -89,6 +89,8 @@ def print_diagnostic_info(
 
     print_thrift_counters(instance, out)
 
+    print_eden_config(instance, out)
+
     print_env_variables(out)
 
 
@@ -324,3 +326,11 @@ def print_env_variables(out: IO[bytes]) -> None:
             out.write(f"{k}={v}\n".encode())
     except Exception as e:
         out.write(f"Error getting environment variables: {e}\n".encode())
+
+
+def print_eden_config(instance: EdenInstance, out: IO[bytes]) -> None:
+    try:
+        out.write(b"\nedenfs config:\n")
+        instance.print_full_config(out)
+    except Exception as e:
+        out.write(f"Error printing edenfs config: {e}\n".encode())

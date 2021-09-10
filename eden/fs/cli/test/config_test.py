@@ -301,13 +301,13 @@ default-revision = "master"
 """
         )
 
-        printed_config = io.StringIO()
-        self.get_config().print_full_config(file=printed_config)
-        printed_config.seek(0)
-        parsed_config = toml.load(printed_config)
+        printed_config = io.BytesIO()
+        self.get_config().print_full_config(printed_config)
+        parsed_config = printed_config.getvalue().decode("utf-8")
+        parsed_toml = toml.loads(parsed_config)
 
-        self.assertIn("clone", parsed_config)
-        self.assertEqual(parsed_config["clone"].get("default-revision"), "master")
+        self.assertIn("clone", parsed_toml)
+        self.assertEqual(parsed_toml["clone"].get("default-revision"), "master")
 
     def test_printed_config_expands_variables(self) -> None:
         self.write_user_config(
@@ -318,10 +318,10 @@ path = "/data/users/${USER}/fbsource"
 """
         )
 
-        printed_config = io.StringIO()
-        self.get_config().print_full_config(file=printed_config)
+        printed_config = io.BytesIO()
+        self.get_config().print_full_config(printed_config)
 
-        self.assertIn("/data/users/bob/fbsource", printed_config.getvalue())
+        self.assertIn(b"/data/users/bob/fbsource", printed_config.getvalue())
 
     def test_printed_config_writes_booleans_as_booleans(self) -> None:
         self.write_user_config(
@@ -331,10 +331,11 @@ experimental_systemd = true
 """
         )
 
-        printed_config = io.StringIO()
-        self.get_config().print_full_config(file=printed_config)
+        printed_config = io.BytesIO()
+        self.get_config().print_full_config(printed_config)
+        parsed_config = printed_config.getvalue().decode("utf-8")
 
-        self.assertRegex(printed_config.getvalue(), r"experimental_systemd\s*=\s*true")
+        self.assertRegex(parsed_config, r"experimental_systemd\s*=\s*true")
 
     def get_config(self) -> EdenInstance:
         return EdenInstance(

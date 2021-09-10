@@ -416,12 +416,12 @@ class EdenInstance:
             xdg_runtime_dir = f"/run/user/{user_id}"
         return xdg_runtime_dir
 
-    def print_full_config(self, file: typing.TextIO) -> None:
+    def print_full_config(self, out: IO[bytes]) -> None:
         parser = self._loadConfig()
         data: Dict[str, Mapping[str, str]] = {}
         for section in parser.sections():
             data[section] = parser.get_section_str_to_any(section)
-        toml.dump(data, file)
+        out.write(toml.dumps(data).encode())
 
     def get_mount_paths(self) -> List[str]:
         """Return the paths of the set mount points stored in config.json"""

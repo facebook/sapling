@@ -890,7 +890,7 @@ class CloneCmd(Subcmd):
 class ConfigCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        instance.print_full_config(file=sys.stdout)
+        instance.print_full_config(sys.stdout.buffer)
         return 0
 
 
