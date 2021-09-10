@@ -329,6 +329,46 @@ where
     )
 }
 
+pub async fn open_source_repo<'a, R: 'a>(
+    _: FacebookInit,
+    logger: &'a Logger,
+    matches: &'a MononokeMatches<'a>,
+) -> Result<R, Error>
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
+    let config_store = matches.config_store();
+    let source_repo_id = get_source_repo_id(&config_store, matches)?;
+    open_repo_internal_with_repo_id(
+        logger,
+        source_repo_id,
+        matches,
+        false, // use CreateStorage::ExistingOnly when creating blobstore
+        None,  // do not override redaction config
+    )
+    .await
+}
+
+pub async fn open_target_repo<'a, R: 'a>(
+    _: FacebookInit,
+    logger: &'a Logger,
+    matches: &'a MononokeMatches<'a>,
+) -> Result<R, Error>
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
+    let config_store = matches.config_store();
+    let source_repo_id = get_target_repo_id(&config_store, matches)?;
+    open_repo_internal_with_repo_id(
+        logger,
+        source_repo_id,
+        matches,
+        false, // use CreateStorage::ExistingOnly when creating blobstore
+        None,  // do not override redaction config
+    )
+    .await
+}
+
 pub fn get_shutdown_grace_period<'a>(matches: &MononokeMatches<'a>) -> Result<Duration> {
     let seconds = matches
         .value_of("shutdown-grace-period")
