@@ -20,6 +20,9 @@ class UserInfoTest(testcase.IntegrationTestCase):
         except KeyError:
             self.skipTest("No USER environment variable available")
             return
+        if expected_user == "root":
+            self.skipTest("Is root user")
+            return
 
         cmd = ["/usr/bin/sudo", FindExe.DROP_PRIVS, "/usr/bin/env"]
         out = subprocess.check_output(cmd)
