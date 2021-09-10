@@ -195,6 +195,13 @@ impl Mononoke {
         self.repos.values()
     }
 
+    pub fn repo_name_from_id(&self, repo_id: RepositoryId) -> Option<&String> {
+        match self.repos_by_ids.get(&repo_id) {
+            None => None,
+            Some(repo) => Some(&repo.name()),
+        }
+    }
+
     /// Report configured monitoring stats
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         for (_, repo) in self.repos.iter() {

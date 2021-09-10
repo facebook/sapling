@@ -54,6 +54,8 @@ impl AddScubaResponse for thrift::CommitInfo {}
 
 impl AddScubaResponse for thrift::CommitLookupResponse {}
 
+impl AddScubaResponse for thrift::CommitLookupPushrebaseHistoryResponse {}
+
 impl AddScubaResponse for thrift::CommitHistoryResponse {}
 
 impl AddScubaResponse for thrift::CommitListDescendantBookmarksResponse {}

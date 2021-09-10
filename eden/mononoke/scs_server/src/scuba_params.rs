@@ -199,6 +199,8 @@ impl AddScubaParams for thrift::CommitLookupParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitLookupPushrebaseHistoryParams {}
+
 impl AddScubaParams for thrift::CommitHistoryParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_format", self.format.to_string());

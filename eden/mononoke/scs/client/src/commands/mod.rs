@@ -73,6 +73,7 @@ commands! {
     mod repos;
     mod blame;
     mod xrepo_lookup;
+    mod lookup_pushrebase_history;
 }
 
 #[derive(Copy, Clone, Debug)]

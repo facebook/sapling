@@ -17,7 +17,6 @@ async-trait = "0.1.51"
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 commitsync = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/commitsync" }
 context = { version = "0.1.0", path = "../../server/context" }
-iterhelpers = { version = "0.1.0", path = "../../common/iterhelpers" }
 metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

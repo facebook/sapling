@@ -25,6 +25,10 @@ name = "check_git_wc"
 path = "cmds/check_git_wc/main.rs"
 
 [[bin]]
+name = "compute_commit_stats"
+path = "cmds/compute_commit_stats/src/main.rs"
+
+[[bin]]
 name = "configlint"
 path = "cmds/configlint.rs"
 
@@ -101,6 +105,7 @@ context = { version = "0.1.0", path = "server/context" }
 criterion = "=0.3.1"
 dashmap = { version = "4.0.2", features = ["serde"] }
 derive_more = "0.99.3"
+derived_data = { version = "0.1.0", path = "derived_data" }
 environment = { version = "0.1.0", path = "cmdlib/environment" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -111,6 +116,7 @@ futures-util = "0.3.7"
 git2 = "0.13"
 itertools = "0.10.1"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+manifest = { version = "0.1.0", path = "manifest" }
 mercurial_derived_data = { version = "0.1.0", path = "derived_data/mercurial_derived_data" }
 mercurial_revlog = { version = "0.1.0", path = "mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "mercurial/types" }
@@ -125,6 +131,8 @@ scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "segmented_changelog" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+skeleton_manifest = { version = "0.1.0", path = "derived_data/skeleton_manifest" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "common/rust/sql_ext" }

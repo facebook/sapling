@@ -522,6 +522,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitLookupParams,
         ) -> Result<thrift::CommitLookupResponse, service::CommitLookupExn>;
 
+        async fn commit_lookup_pushrebase_history(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitLookupPushrebaseHistoryParams,
+        ) -> Result<thrift::CommitLookupPushrebaseHistoryResponse, service::CommitLookupPushrebaseHistoryExn>;
+
         async fn commit_file_diffs(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitFileDiffsParams,

@@ -12,6 +12,9 @@ mod sql_queries;
 #[cfg(test)]
 mod test;
 
+use anyhow::Result;
+use async_trait::async_trait;
+use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 use pushrebase_hook::PushrebaseHook;
 
@@ -40,7 +43,13 @@ impl PushrebaseMutationMappingEntry {
     }
 }
 
+#[async_trait]
 #[facet::facet]
 pub trait PushrebaseMutationMapping: Send + Sync {
     fn get_hook(&self) -> Option<Box<dyn PushrebaseHook>>;
+    async fn get_prepushrebase_ids(
+        &self,
+        ctx: &CoreContext,
+        successor_bcs_id: ChangesetId,
+    ) -> Result<Vec<ChangesetId>>;
 }

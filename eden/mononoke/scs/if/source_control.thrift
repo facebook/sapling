@@ -680,6 +680,9 @@ struct CommitLookupParams {
   1: set<CommitIdentityScheme> identity_schemes;
 }
 
+struct CommitLookupPushrebaseHistoryParams {
+}
+
 struct CommitInfoParams {
   // Commit identity schemes to return.
   1: set<CommitIdentityScheme> identity_schemes;
@@ -1156,6 +1159,12 @@ struct CommitLookupResponse {
   2: optional map<CommitIdentityScheme, CommitId> ids;
 }
 
+struct CommitLookupPushrebaseHistoryResponse {
+  1: list<CommitSpecifier> history;
+  // Always equals to the last element of history
+  2: CommitSpecifier origin;
+}
+
 struct CommitFindFilesResponse {
   // The files that match.
   1: list<string> files;
@@ -1481,6 +1490,27 @@ service SourceControlService extends fb303.FacebookService {
   CommitLookupResponse commit_lookup(
     1: CommitSpecifier commit,
     2: CommitLookupParams params,
+  ) throws (1: RequestError request_error, 2: InternalError internal_error);
+
+  // Look up commit history over Pushrebase mutations. It finishes on commit
+  // version that was originally pushed. Provided commit must be public.
+  //
+  // Currently attempts to traverse over commit sync and pushrebase mappings.
+  // Returns an error if there is ambiguity in any mapping but this is not
+  // expected to ever happen.
+  //
+  // Method may also theoretically return inaccurate results because of the
+  // way commit sync mapping currently works. "Inaccurate" means it may
+  // go in the wrong direction and return a commit that was a successor
+  // of the given one. This should be fixed soon. In the meantime you can
+  // consider using full history from the response if you are fine with a set
+  // of origin "candidates" rather than the exact one which may be incorrect.
+  //
+  // NOTE: returns commit specifiers with bonsai hashes. Use commit_lookup
+  // on specifiers to obtain hashes in needed schemes.
+  CommitLookupPushrebaseHistoryResponse commit_lookup_pushrebase_history(
+    1: CommitSpecifier commit,
+    2: CommitLookupPushrebaseHistoryParams params,
   ) throws (1: RequestError request_error, 2: InternalError internal_error);
 
   // Get commit info.
