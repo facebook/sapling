@@ -21,7 +21,7 @@ use edenapi_types::TreeEntry;
 use edenapi_types::{
     CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashResponse,
     CommitRevlogData, FetchSnapshotRequest, FetchSnapshotResponse, HgChangesetContent,
-    HgMutationEntryContent, LookupResponse, SnapshotRawData, UploadSnapshotResponse,
+    HgMutationEntryContent, LookupResponse, SnapshotRawData, UploadSnapshotResponse, UploadToken,
     UploadTokensResponse, UploadTreeResponse,
 };
 use progress::{NullProgressFactory, ProgressFactory};
@@ -29,6 +29,7 @@ use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
 use pyrevisionstore::{edenapifilestore, edenapitreestore};
 use revisionstore::{EdenApiFileStore, EdenApiTreeStore};
+use types::RepoPathBuf;
 
 use crate::pyext::EdenApiPyExt;
 use crate::stats::stats;
@@ -348,6 +349,17 @@ py_class!(pub class client |py| {
         data: Serde<FetchSnapshotRequest>,
     ) -> PyResult<Serde<FetchSnapshotResponse>> {
         self.inner(py).clone().fetchsnapshot_py(py, repo, data)
+    }
+
+    /// Downloads files from given upload tokens to given paths
+    def downloadfiles(
+        &self,
+        repo: String,
+        root: Serde<RepoPathBuf>,
+        // (path to download, content id)
+        files: Vec<(PyPathBuf, Serde<UploadToken>)>,
+    ) -> PyResult<bool> {
+        self.inner(py).clone().downloadfiles_py(py, repo, root, files)
     }
 });
 

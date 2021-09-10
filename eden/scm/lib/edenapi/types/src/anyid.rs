@@ -16,7 +16,7 @@ use types::HgId;
 
 blake2_hash!(BonsaiChangesetId);
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum AnyId {
     AnyFileContentId(AnyFileContentId),
     HgFilenodeId(HgId),

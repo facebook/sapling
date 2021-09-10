@@ -89,7 +89,7 @@ impl fmt::Debug for FsnodeId {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum AnyFileContentId {
     ContentId(ContentId),
     Sha1(Sha1),

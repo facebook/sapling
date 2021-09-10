@@ -553,8 +553,7 @@ impl CheckoutPlan {
             .collect();
         let actions = actions
             .into_iter()
-            .map(|(path, _, content, flag)| (path, content, flag))
-            .collect();
+            .map(|(path, _, content, flag)| (path, content, flag));
         let w = async_vfs.write_batch(actions).await?;
         stats.updated.fetch_add(count, Ordering::Relaxed);
         stats.written_bytes.fetch_add(w, Ordering::Relaxed);

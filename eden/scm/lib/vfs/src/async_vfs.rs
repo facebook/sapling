@@ -60,7 +60,7 @@ impl AsyncVfsWriter {
 
     pub async fn write_batch<B: Into<Bytes>>(
         &self,
-        batch: Vec<(RepoPathBuf, B, Option<UpdateFlag>)>,
+        batch: impl IntoIterator<Item = (RepoPathBuf, B, Option<UpdateFlag>)>,
     ) -> Result<usize> {
         let batch = batch
             .into_iter()

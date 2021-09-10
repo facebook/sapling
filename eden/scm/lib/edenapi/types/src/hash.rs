@@ -15,6 +15,7 @@ macro_rules! sized_hash {
             Eq,
             PartialOrd,
             Ord,
+            Hash,
             serde_derive::Serialize,
             serde_derive::Deserialize
         )]

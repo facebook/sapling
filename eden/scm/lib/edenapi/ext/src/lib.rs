@@ -13,8 +13,10 @@
 // fn my_function(api: &(impl EdenApi + ?Sized), other_args...) -> ... {...}
 // this way the function can be called from inside any trait that extends EdenAPI.
 
+mod files;
 mod snapshot;
 mod util;
 
+pub use files::download_files;
 pub use snapshot::upload_snapshot;
 pub use util::calc_contentid;

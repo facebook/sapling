@@ -19,17 +19,15 @@ use cpython_ext::convert::Serde;
 use cpython_ext::PyCell;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::{Location, VertexName};
-use edenapi::{
-    ext::{calc_contentid, upload_snapshot},
-    EdenApi, EdenApiBlocking, EdenApiError, Response, Stats,
-};
+use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Response, Stats};
+use edenapi_ext::{calc_contentid, download_files, upload_snapshot};
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitGraphEntry, CommitHashLookupResponse,
     CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FetchSnapshotRequest,
     FetchSnapshotResponse, FileEntry, HgChangesetContent, HgFilenodeData, HgMutationEntryContent,
     HistoryEntry, LookupResponse, SnapshotRawData, TreeEntry, UploadHgChangeset,
-    UploadSnapshotResponse, UploadTokensResponse, UploadTreeResponse,
+    UploadSnapshotResponse, UploadToken, UploadTokensResponse, UploadTreeResponse,
 };
 use futures::stream;
 use progress::{ProgressBar, ProgressFactory, Unit};
@@ -38,6 +36,7 @@ use revisionstore::{
     datastore::separate_metadata, HgIdMutableDeltaStore, HgIdMutableHistoryStore, StoreKey,
     StoreResult,
 };
+use types::RepoPathBuf;
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
@@ -842,6 +841,23 @@ pub trait EdenApiPyExt: EdenApi {
         .map_pyerr(py)?
         .map_pyerr(py)
         .map(Serde)
+    }
+
+    fn downloadfiles_py(
+        &self,
+        py: Python,
+        repo: String,
+        root: Serde<RepoPathBuf>,
+        files: Vec<(PyPathBuf, Serde<UploadToken>)>,
+    ) -> PyResult<bool> {
+        let files = files
+            .into_iter()
+            .map(|(p, t)| Ok((to_path(py, &p)?, t.0)))
+            .collect::<Result<Vec<_>, PyErr>>()?;
+        py.allow_threads(|| block_unless_interrupted(download_files(self, &repo, &root.0, files)))
+            .map_pyerr(py)?
+            .map_pyerr(py)
+            .map(|_| true)
     }
 }
 

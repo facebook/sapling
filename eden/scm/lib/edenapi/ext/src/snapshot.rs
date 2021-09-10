@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::api::EdenApi;
-use crate::ext::util::calc_contentid;
+use crate::util::calc_contentid;
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{bail, format_err, Context, Result};
+use edenapi::api::EdenApi;
 use edenapi_types::{
     AnyFileContentId, AnyId, BonsaiChangesetContent, BonsaiFileChange, SnapshotRawData,
     SnapshotRawFiles, UploadSnapshotResponse,
