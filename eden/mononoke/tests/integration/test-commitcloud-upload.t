@@ -121,7 +121,7 @@ This test also checks file content deduplication. We upload 1 file content and 1
   edenapi: queue 100 files for upload
    INFO edenapi::client: Requesting lookup for 1 item(s)
    INFO edenapi::client: Received 0 token(s) from the lookup_batch request
-   INFO edenapi::client: Requesting upload for http://localhost:56093/repo/upload/file/content_id/a6ef0ef0eb8935a67f26f91d4cd13c02d2f7e13c74325488d8b12fdda58b6a00?content_size=0
+   INFO edenapi::client: Requesting upload for */repo/upload/file/content_id/a6ef0ef0eb8935a67f26f91d4cd13c02d2f7e13c74325488d8b12fdda58b6a00?content_size=0 (glob)
    INFO edenapi::client: Received 1 new token(s) from upload requests
    INFO edenapi::client: Requesting hg filenodes upload for 100 item(s)
   edenapi: uploaded 100 files
