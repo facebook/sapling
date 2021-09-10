@@ -52,7 +52,6 @@ use std::{
     time::{Duration, Instant},
 };
 use time_ext::DurationExt;
-use tokio::io::AsyncBufReadExt;
 use tunables::tunables;
 
 mod benchmark;
@@ -628,14 +627,7 @@ async fn run_subcmd<'a>(
                 .ok_or_else(|| anyhow!("{} is not set", ARG_INPUT_FILE))?;
 
             let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
-            let file = tokio::fs::File::open(input_file).await?;
-            let file = tokio::io::BufReader::new(file);
-            let mut lines = file.lines();
-            let mut csids = vec![];
-            while let Some(line) = lines.next_line().await? {
-                csids.push(line);
-            }
-            let csids = resolve_csids(&ctx, &repo, csids).await?;
+            let csids = helpers::csids_resolve_from_file(&ctx, &repo, input_file).await?;
 
             let derived_data_type = sub_m
                 .value_of(ARG_DERIVED_DATA_TYPE)
@@ -668,18 +660,6 @@ async fn run_subcmd<'a>(
         }
         (name, _) => Err(format_err!("unhandled subcommand: {}", name)),
     }
-}
-
-async fn resolve_csids(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    csids: Vec<String>,
-) -> Result<Vec<ChangesetId>, Error> {
-    stream::iter(csids)
-        .map(|csid| helpers::csid_resolve(&ctx, repo.clone(), csid))
-        .buffered(100)
-        .try_collect::<Vec<_>>()
-        .await
 }
 
 fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntry>> {

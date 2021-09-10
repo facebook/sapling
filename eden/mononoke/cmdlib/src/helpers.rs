@@ -11,12 +11,13 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use fbinit::FacebookInit;
 use futures::{
     future::{self, Either},
-    TryFutureExt,
+    stream, StreamExt, TryFutureExt, TryStreamExt,
 };
 use services::Fb303Service;
 use slog::{error, info, Logger};
 use tokio::runtime::{Handle, Runtime};
 use tokio::{
+    io::AsyncBufReadExt,
     signal::unix::{signal, SignalKind},
     time,
 };
@@ -75,19 +76,43 @@ pub async fn csid_resolve(
     container: impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
     hash_or_bookmark: impl ToString,
 ) -> Result<ChangesetId, Error> {
-    let res = csid_resolve_impl(ctx, container, hash_or_bookmark).await;
+    let res = csid_resolve_impl(ctx, &container, hash_or_bookmark).await;
     if let Ok(csid) = &res {
         info!(ctx.logger(), "changeset resolved as: {:?}", csid);
     }
     res
 }
 
-/// Resolve changeset id by either bookmark name, hg hash, or changset id hash
-async fn csid_resolve_impl(
+/// Read and resolve a list of changeset from file
+pub async fn csids_resolve_from_file(
     ctx: &CoreContext,
     container: impl RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
+    filename: &str,
+) -> Result<Vec<ChangesetId>, Error> {
+    let file = tokio::fs::File::open(filename).await?;
+    let file = tokio::io::BufReader::new(file);
+    let mut lines = file.lines();
+    let mut csids = vec![];
+    while let Some(line) = lines.next_line().await? {
+        csids.push(line);
+    }
+
+    stream::iter(csids)
+        .map(|csid| csid_resolve_impl(&ctx, &container, csid))
+        .buffered(100)
+        .try_collect::<Vec<_>>()
+        .await
+}
+
+/// Resolve changeset id by either bookmark name, hg hash, or changset id hash
+async fn csid_resolve_impl<C>(
+    ctx: &CoreContext,
+    container: &C,
     hash_or_bookmark: impl ToString,
-) -> Result<ChangesetId, Error> {
+) -> Result<ChangesetId, Error>
+where
+    C: RepoIdentityRef + BonsaiHgMappingRef + BookmarksRef,
+{
     let hash_or_bookmark = hash_or_bookmark.to_string();
     if let Ok(name) = BookmarkName::new(hash_or_bookmark.clone()) {
         if let Some(cs_id) = container.bookmarks().get(ctx.clone(), &name).await? {
