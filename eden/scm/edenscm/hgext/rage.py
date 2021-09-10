@@ -610,7 +610,7 @@ def rage(ui, repo, *pats, **opts):
 
     if ret:
         fd, tmpname = tempfile.mkstemp(prefix="hg-rage-")
-        with util.fdopen(fd, r"w") as tmpfp:
+        with util.fdopen(fd, r"w", encoding="utf-8") as tmpfp:
             tmpfp.write(msg)
             ui.write(
                 _(
