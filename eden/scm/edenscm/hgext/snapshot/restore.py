@@ -34,18 +34,35 @@ def restore(ui, repo, csid, **opts):
             ui, repo, repo[snapshot["hg_parents"]], None, updatecheck="abort"
         )
 
+        files2download = []
+
         for (path, fc) in snapshot["file_changes"]:
             matcher = scmutil.matchfiles(repo, [path])
+            fctx = repo[None][path]
             if "Deletion" in fc:
                 cmdutil.remove(ui, repo, matcher, "", False, False)
             elif "UntrackedDeletion" in fc:
-                f = repo[None][path]
-                if not f.exists():
+                if not fctx.exists():
                     # File was hg added and is now missing. Let's add an empty file first
                     repo.wwrite(path, b"", "")
-                    cmdutil.add(ui, repo, matcher, "", False)
-                f.remove()
+                    cmdutil.add(ui, repo, matcher, prefix="", explicitonly=True)
+                fctx.remove()
             elif "Change" in fc:
-                ui.status(f"[{path}] Changes not supported yet\n")
-            else:
-                ui.status(f"[{path}] Untracked changes not supported yet\n")
+                if fctx.exists():
+                    # File exists, was modified
+                    fctx.remove()
+                files2download.append((path, fc["Change"]["upload_token"]))
+            elif "UntrackedChange" in fc:
+                if fctx.exists():
+                    # File was hg rm'ed and then overwritten
+                    cmdutil.remove(
+                        ui, repo, matcher, prefix="", after=False, force=False
+                    )
+                files2download.append((path, fc["UntrackedChange"]["upload_token"]))
+
+        repo.edenapi.downloadfiles(getreponame(repo), repo.root, files2download)
+
+        for (path, fc) in snapshot["file_changes"]:
+            if "Change" in fc:
+                # Doesn't hurt to add again if it was already tracked
+                cmdutil.add(ui, repo, scmutil.matchfiles(repo, [path]), "", True)
