@@ -669,6 +669,11 @@ def format_mount(mount) -> str:
     return os.fsdecode(os.path.basename(mount))
 
 
+def underlined(message: str) -> str:
+    line = "-" * len(message)
+    return f"\n{message}\n{line}\n"
+
+
 def is_edenfs_mount_device(device: bytes) -> bool:
     return device == b"edenfs" or device.startswith(b"edenfs:")
 

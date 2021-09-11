@@ -21,7 +21,7 @@ from facebook.eden.ttypes import GetStatInfoParams
 from thrift.protocol.TSimpleJSONProtocol import TSimpleJSONProtocolFactory
 from thrift.util import Serializer as ThriftSerializer
 
-from . import cmd_util, stats_print, subcmd as subcmd_mod
+from . import cmd_util, stats_print, subcmd as subcmd_mod, util as util_mod
 from .config import EdenInstance
 from .subcmd import Subcmd
 
@@ -82,28 +82,13 @@ def print_stats(stat_info, out: io.TextIOWrapper):
         blob_cache_size = None
         blob_cache_entry_count = None
 
-    out.write(
-        textwrap.dedent(
-            f"""\
-        edenfs memory usage
-        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
-        private bytes: {private_bytes} ({resident_bytes} resident)
-        """
-        )
-    )
+    out.write(util_mod.underlined("EdenFS memory usage:"))
+    out.write(f"private bytes: {private_bytes} ({resident_bytes} resident)\n")
 
     if blob_cache_size is not None and blob_cache_entry_count is not None:
         out.write(f"blob cache: {blob_cache_size} in {blob_cache_entry_count} blobs\n")
 
-    out.write(
-        textwrap.dedent(
-            f"""\
-
-        active mounts
-        ▔▔▔▔▔▔▔▔▔▔▔▔▔
-    """
-        )
-    )
+    out.write(util_mod.underlined("active mounts:"))
 
     inode_info = stat_info.mountPointInfo
     for key in inode_info:

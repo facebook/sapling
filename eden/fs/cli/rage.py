@@ -25,15 +25,21 @@ from . import (
     redirect as redirect_mod,
     stats as stats_mod,
     ui as ui_mod,
+    util as util_mod,
     version as version_mod,
     top as top_mod,
 )
 from .config import EdenInstance
 
 
+def section_title(message: str, out: IO[bytes]) -> None:
+    out.write(util_mod.underlined(message).encode())
+
+
 def print_diagnostic_info(
     instance: EdenInstance, out: IO[bytes], dry_run: bool
 ) -> None:
+    section_title("System info:", out)
     header = (
         f"User                    : {getpass.getuser()}\n"
         f"Hostname                : {socket.gethostname()}\n"
@@ -49,7 +55,7 @@ def print_diagnostic_info(
 
     health_status = instance.check_health()
     if health_status.is_healthy():
-        out.write(b"\n")
+        section_title("Build info:", out)
         debug_mod.do_buildinfo(instance, out)
         out.write(b"uptime: ")
         instance.do_uptime(pretty=False, out=out)
@@ -69,7 +75,7 @@ def print_diagnostic_info(
 
     print_eden_redirections(instance, out)
 
-    out.write(b"\nList of mount points:\n")
+    section_title("List of mount points:", out)
     mountpoint_paths = []
     for key in sorted(instance.get_mount_paths()):
         out.write(key.encode() + b"\n")
@@ -139,10 +145,9 @@ def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
         doctor_rc = doctor_mod.cure_what_ails_you(
             instance, dry_run=True, out=ui_mod.PlainOutput(doctor_output)
         )
-        out.write(
-            b"\neden doctor --dry-run (exit code %d):\n%s\n"
-            % (doctor_rc, doctor_output.getvalue().encode())
-        )
+        doctor_report_title = f"eden doctor --dry-run (exit code {doctor_rc}):"
+        section_title(doctor_report_title, out)
+        out.write(doctor_output.getvalue().encode())
     except Exception:
         out.write(b"\nUnexpected exception thrown while running eden doctor checks:\n")
         out.write(traceback.format_exc().encode("utf-8") + b"\n")
@@ -198,18 +203,19 @@ def print_expanded_log_file(path: Path, processor: str, out: IO[bytes]) -> None:
         pattern = re.compile("^.*\\n[a-zA-Z0-9_.-]*: .*\\n$")
         match = pattern.match(stdout)
 
+        section_title("Verbose EdenFS logs:", out)
         if not match:
-            out.write(b"Verbose EdenFS logs: %s\n" % stdout.encode())
+            out.write(stdout.encode())
         else:
             paste, _ = stdout.split("\n")[1].split(": ")
-            out.write(b"Verbose EdenFS logs: %s\n" % paste.encode())
+            out.write(paste.encode())
     except Exception as e:
         out.write(b"Error generating expanded EdenFS logs: %s\n" % str(e).encode())
 
 
 def print_tail_of_log_file(path: Path, out: IO[bytes]) -> None:
     try:
-        out.write(b"\nMost recent EdenFS logs:\n")
+        section_title("Most recent EdenFS logs:", out)
         LOG_AMOUNT = 20 * 1024
         with path.open("rb") as logfile:
             size = logfile.seek(0, io.SEEK_END)
@@ -247,7 +253,7 @@ def _get_running_eden_process_windows() -> List[Tuple[str, str, str, str, str, s
 
 def print_running_eden_process(out: IO[bytes]) -> None:
     try:
-        out.write(b"\nList of running EdenFS processes:\n")
+        section_title("List of running EdenFS processes:", out)
         if sys.platform == "win32":
             lines = _get_running_eden_process_windows()
         else:
@@ -279,7 +285,7 @@ def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
     if sys.platform != "linux":
         return
     try:
-        out.write(b"\nedenfs process tree:\n")
+        section_title("EdenFS process tree:", out)
         output = subprocess.check_output(["ps", "-o", "sid=", "-p", str(pid)])
         sid = output.decode("utf-8").strip()
         output = subprocess.check_output(
@@ -295,7 +301,7 @@ def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
         # TODO(zeyi): fix this once eden redirect is working on Windows
         return
     try:
-        out.write(b"\nedenfs redirections:\n")
+        section_title("EdenFS redirections:", out)
         checkouts = instance.get_checkouts()
         for checkout in checkouts:
             out.write(bytes(checkout.path) + b"\n")
@@ -304,24 +310,24 @@ def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
             output = output.replace("\n", "\n\t")
             out.write(b"\t" + output.encode() + b"\n")
     except Exception as e:
-        out.write(b"Error getting edenfs redirections %s\n" % str(e).encode())
+        out.write(b"Error getting EdenFS redirections %s\n" % str(e).encode())
         out.write(traceback.format_exc().encode() + b"\n")
 
 
 def print_thrift_counters(instance: EdenInstance, out: IO[bytes]) -> None:
     try:
-        out.write(b"\nedenfs counters:\n")
+        out.write(util_mod.underlined("EdenFS counters:").encode())
         with instance.get_thrift_client_legacy() as client:
             counters = client.getRegexCounters(top_mod.COUNTER_REGEX)
             for key, value in counters.items():
                 out.write(f"{key}: {value}\n".encode())
     except Exception as e:
-        out.write(b"Error getting edenfs Thrift counters: %s\n" % str(e).encode())
+        out.write(b"Error getting EdenFS Thrift counters: %s\n" % str(e).encode())
 
 
 def print_env_variables(out: IO[bytes]) -> None:
     try:
-        out.write(b"\nEnvironment Variables:\n")
+        section_title("Environment variables:", out)
         for k, v in os.environ.items():
             out.write(f"{k}={v}\n".encode())
     except Exception as e:
@@ -330,7 +336,7 @@ def print_env_variables(out: IO[bytes]) -> None:
 
 def print_eden_config(instance: EdenInstance, out: IO[bytes]) -> None:
     try:
-        out.write(b"\nedenfs config:\n")
+        section_title("EdenFS config:", out)
         instance.print_full_config(out)
     except Exception as e:
-        out.write(f"Error printing edenfs config: {e}\n".encode())
+        out.write(f"Error printing EdenFS config: {e}\n".encode())

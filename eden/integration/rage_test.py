@@ -26,7 +26,7 @@ class RageTest(testcase.EdenRepoTest):
         self.assertRegex(output, r"\nbuild_package_version\s*:")
         self.assertRegex(output, r"\nuptime\s*:")
         self.assertIn(f"\nChecking {self.mount}\n", output)
-        self.assertIn("edenfs memory usage", output)
+        self.assertIn("EdenFS memory usage", output)
 
     def test_rage_output_with_stopped_daemon(self) -> None:
         self.eden.shutdown()
@@ -41,7 +41,7 @@ class RageTest(testcase.EdenRepoTest):
         # We may need to update this in the future if we modify the rage output; the
         # main purpose it simply to make sure that the rage command did not exit early
         # or crash partway through the output.
-        self.assertRegex(output, r"^User\s*:")
+        self.assertRegex(output, r"\nUser\s*:")
         self.assertRegex(output, r"\nHostname\s*:")
         self.assertRegex(output, r"\nVersion\s*:")
         self.assertIn("\neden doctor --dry-run", output)
@@ -49,4 +49,6 @@ class RageTest(testcase.EdenRepoTest):
         self.assertIn("\nList of running EdenFS processes:\n", output)
         self.assertIn("\nList of mount points:\n", output)
         self.assertIn(f"\nMount point info for path {self.mount}:\n", output)
+        self.assertIn("\nEnvironment variables:\n", output)
+        self.assertIn("\nEdenFS config:\n", output)
         self.assertIn(f"{self.mount}\n", output)

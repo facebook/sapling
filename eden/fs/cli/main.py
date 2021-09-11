@@ -214,7 +214,7 @@ files outside the repo rather than to ignore and clean them up.\n""",
         backing_repos = set()
         all_redirections = set()
 
-        self.underlined("Mounts")
+        self.write_ui(util.underlined("Mounts"))
 
         # print all mounts together.
         for mount in mounts:
@@ -229,7 +229,7 @@ files outside the repo rather than to ignore and clean them up.\n""",
 
             self.usage_for_mount(mount, args, clean, deep_clean)
 
-        self.underlined("Redirections")
+        self.write_ui(util.underlined("Redirections"))
 
         for mount in mounts:
             instance, checkout, _rel_path = require_checkout(args, mount)
@@ -249,7 +249,7 @@ parent of the buck-out directory.
             )
 
         if backing_repos:
-            self.underlined("Backing repos")
+            self.write_ui(util.underlined("Backing repos"))
             for backing in backing_repos:
                 self.writeln_ui(backing)
 
@@ -310,7 +310,7 @@ space by running:
         return 0
 
     def make_summary(self, clean, deep_clean):
-        self.underlined("Summary")
+        self.write_ui(util.underlined("Summary"))
         type_labels = {
             "materialized": "Materialized files",
             "redirection": "Redirections",
@@ -405,10 +405,6 @@ space by running:
     def writeln_ui(self, message, fg=None) -> None:
         self.write_ui(f"{message}\n")
 
-    def underlined(self, message) -> None:
-        underline = "-" * len(message)
-        self.write_ui(f"\n{message}\n{underline}\n")
-
     def usage_for_dir(
         self, path, usage_type: str, print_label: Optional[str] = None
     ) -> None:
@@ -442,7 +438,7 @@ space by running:
     def shared_usage(self, instance: EdenInstance, clean: bool) -> None:
         logs_dir = instance.state_dir / "logs"
         storage_dir = instance.state_dir / "storage"
-        self.underlined("Shared space")
+        self.write_ui(util.underlined("Shared space"))
         self.usage_for_dir(logs_dir, "shared")
         self.usage_for_dir(storage_dir, "shared")
         if clean:
