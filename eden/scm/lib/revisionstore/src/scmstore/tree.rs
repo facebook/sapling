@@ -61,15 +61,7 @@ pub struct TreeStore {
 
 impl Drop for TreeStore {
     fn drop(&mut self) {
-        // TODO(meyer): Should we just add a Drop impl for IndexedLogHgIdDataStore instead?
-        // It'll be called automatically when the last Arc holding a reference to it is dropped.
-        if let Some(ref indexedlog_local) = self.indexedlog_local {
-            // TODO(meyer): Drop can't fail, so we ignore errors here. We should probably attempt to log them instead.
-            let _ = indexedlog_local.flush_log();
-        }
-        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            let _ = indexedlog_cache.flush_log();
-        }
+        let _ = self.flush();
     }
 }
 
@@ -258,6 +250,25 @@ impl TreeStore {
             creation_time: Instant::now(),
         }
     }
+
+    #[allow(unused_must_use)]
+    pub fn flush(&self) -> Result<()> {
+        let mut result = Ok(());
+        let mut handle_error = |error| {
+            tracing::error!(%error);
+            result = Err(error);
+        };
+
+        if let Some(ref indexedlog_local) = self.indexedlog_local {
+            indexedlog_local.flush_log().map_err(&mut handle_error);
+        }
+
+        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
+            indexedlog_cache.flush_log().map_err(&mut handle_error);
+        }
+
+        result
+    }
 }
 
 impl LegacyStore for TreeStore {
@@ -359,8 +370,10 @@ impl HgIdDataStore for TreeStore {
     }
 
     fn refresh(&self) -> Result<()> {
-        // AFAIK refresh only matters for DataPack / PackStore
-        Ok(())
+        if let Some(contentstore) = self.contentstore.as_ref() {
+            contentstore.refresh()?;
+        }
+        self.flush()
     }
 }
 

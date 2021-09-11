@@ -522,8 +522,10 @@ impl HgIdDataStore for FileStore {
 
     fn refresh(&self) -> Result<()> {
         self.metrics.write().api.hg_refresh.call(0);
-        // AFAIK refresh only matters for DataPack / PackStore
-        Ok(())
+        if let Some(contentstore) = self.contentstore.as_ref() {
+            contentstore.refresh()?;
+        }
+        self.flush()
     }
 }
 

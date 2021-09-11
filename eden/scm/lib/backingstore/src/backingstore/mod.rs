@@ -83,8 +83,9 @@ impl BackingStore {
     /// Forces backing store to write its pending data to disk and to read the latest version from
     /// the disk.
     pub fn refresh(&self) {
-        if let Old(stores) = self {
-            stores.refresh()
+        match self {
+            Old(stores) => stores.refresh(),
+            New(stores) => stores.refresh(),
         }
     }
 }
