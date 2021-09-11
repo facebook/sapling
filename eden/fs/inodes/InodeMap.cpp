@@ -433,6 +433,8 @@ void InodeMap::startChildLookup(
 
 InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
   auto number = inode->getNodeId();
+  // Since XLOG only evaluates the arguments if it is going to log, its cheaper
+  // in the most common case to not save the inode log path to a local variable
   XLOG(DBG5) << "successfully loaded inode " << number << ": "
              << inode->getLogPath();
 
@@ -442,7 +444,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
     auto it = data->unloadedInodes_.find(number);
     XCHECK(it != data->unloadedInodes_.end())
         << "failed to find unloaded inode data when finishing load of inode "
-        << number;
+        << number << ": " << inode->getLogPath();
     swap(promises, it->second.promises);
 
     inode->setChannelRefcount(it->second.numFsReferences);
