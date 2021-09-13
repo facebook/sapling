@@ -42,11 +42,13 @@ use std::{
 use thiserror::Error;
 use time_ext::DurationExt;
 use tokio::time::timeout;
+use tunables::tunables;
 use twox_hash::XxHash;
 
 use crate::scrub::ScrubWriteMostly;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
+const DEFAULT_IS_PRESENT_TIMEOUT_MS: i64 = 10000;
 
 type BlobstoresWithEntry = Vec<HashSet<BlobstoreId>>;
 type BlobstoresReturnedNone = HashSet<BlobstoreId>;
@@ -522,6 +524,15 @@ impl Blobstore for MultiplexedBlobstoreBase {
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
         let blobstores_count = self.blobstores.len() + self.write_mostly_blobstores.len();
+        let comprehensive_lookup = matches!(
+            ctx.session().session_class(),
+            SessionClass::ComprehensiveLookup
+        );
+        let is_present_timeout =
+            Duration::from_millis(match tunables().get_is_present_timeout_ms().try_into() {
+                Ok(duration) if duration > 0 => duration,
+                _ => DEFAULT_IS_PRESENT_TIMEOUT_MS,
+            } as u64);
 
         let main_requests: FuturesUnordered<_> = self
             .blobstores
@@ -531,6 +542,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                 (blobstore_id, blobstore.is_present(ctx, key).await)
             })
             .collect();
+
         let write_mostly_requests: FuturesUnordered<_> = self
             .write_mostly_blobstores
             .iter()
@@ -540,21 +552,35 @@ impl Blobstore for MultiplexedBlobstoreBase {
             })
             .collect();
 
+        // Lookup algorithm supports two strategies:
+        // "comprehensive" and "regular"
+        //
+        // Comprehensive lookup requires presence in all the blobstores.
+        // Regular lookup requires presence in at least one main or write mostly blobstore.
+
         // `chain` here guarantees that `main_requests` is empty before it starts
         // polling anything in `write_mostly_requests`
         let mut requests = main_requests.chain(write_mostly_requests);
         let (stats, result) = {
             let blobstores = &self.blobstores;
-            async move {
+            timeout(is_present_timeout, async move {
                 let mut errors = HashMap::new();
+                let mut present_counter = 0;
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::BlobPresenceChecks);
                 while let Some(result) = requests.next().await {
                     match result {
                         (_, Ok(BlobstoreIsPresent::Present)) => {
-                            return Ok(BlobstoreIsPresent::Present);
+                            if !comprehensive_lookup {
+                                return Ok(BlobstoreIsPresent::Present);
+                            }
+                            present_counter = present_counter + 1;
                         }
-                        (_, Ok(BlobstoreIsPresent::Absent)) => {}
+                        (_, Ok(BlobstoreIsPresent::Absent)) => {
+                            if comprehensive_lookup {
+                                return Ok(BlobstoreIsPresent::Absent);
+                            }
+                        }
                         // is_present failed for the underlying blobstore
                         (blobstore_id, Err(error)) => {
                             errors.insert(blobstore_id, error);
@@ -568,27 +594,59 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     }
                 }
 
-                if errors.is_empty() {
-                    Ok(BlobstoreIsPresent::Absent)
-                } else if errors.len() == blobstores_count {
-                    Err(ErrorKind::AllFailed(Arc::new(errors)))
-                } else {
-                    let write_mostly_err = write_mostly_error(&blobstores, errors);
-                    if let ErrorKind::SomeFailedOthersNone(errors) = write_mostly_err {
-                        let err = Error::from(ErrorKind::SomeFailedOthersNone(errors));
+                if comprehensive_lookup {
+                    // all blobstores reported the blob is present
+                    if errors.is_empty() {
+                        Ok(BlobstoreIsPresent::Present)
+                    }
+                    // some blobstores reported the blob is present, others failed
+                    else if present_counter > 0 {
+                        let err = Error::from(ErrorKind::SomeFailedOthersNone(Arc::new(errors)));
                         Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
-                    } else {
-                        Err(write_mostly_err)
+                    }
+                    // all blobstores failed
+                    else {
+                        Err(ErrorKind::AllFailed(Arc::new(errors)))
+                    }
+                } else {
+                    // all blobstores reported the blob is missing
+                    if errors.is_empty() {
+                        Ok(BlobstoreIsPresent::Absent)
+                    }
+                    // all blobstores failed
+                    else if errors.len() == blobstores_count {
+                        Err(ErrorKind::AllFailed(Arc::new(errors)))
+                    }
+                    // some blobstores reported the blob is missing, others failed
+                    else {
+                        let write_mostly_err = write_mostly_error(&blobstores, errors);
+                        if let ErrorKind::SomeFailedOthersNone(errors) = write_mostly_err {
+                            let err = Error::from(ErrorKind::SomeFailedOthersNone(errors));
+                            Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
+                        } else {
+                            Err(write_mostly_err)
+                        }
                     }
                 }
-            }
+            })
             .timed()
             .await
         };
+
         ctx.perf_counters().set_max_counter(
             PerfCounterType::BlobPresenceChecksMaxLatency,
             stats.completion_time.as_millis_unchecked() as i64,
         );
+
+        let result = match result {
+            Ok(result) => result,
+            Err(err) => {
+                let err = Error::from(err)
+                    .context("Request timeout. One of the blobstores is too slow to respond.");
+                Ok(BlobstoreIsPresent::ProbablyNotPresent(err))
+            }
+        };
+
         Ok(result?)
     }
 

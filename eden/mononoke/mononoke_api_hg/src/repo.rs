@@ -14,7 +14,7 @@ use blobstore::{Blobstore, Loadable, LoadableError};
 use bookmarks::Freshness;
 use bytes::Bytes;
 use changesets::{ChangesetInsert, Changesets, ChangesetsArc};
-use context::CoreContext;
+use context::{CoreContext, SessionClass};
 use edenapi_types::{AnyId, UploadToken};
 use ephemeral_blobstore::{Bubble, BubbleId, RepoEphemeralBlobstore};
 use filestore::{self, Alias, FetchKey, StoreRequest};
@@ -41,6 +41,7 @@ use repo_client::{
 use segmented_changelog::{CloneData, DagId, Location, StreamCloneData};
 use std::collections::HashSet;
 use std::sync::Arc;
+use tunables::tunables;
 use unbundle::upload_changeset;
 
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -149,11 +150,16 @@ impl HgRepoContext {
     }
 
     async fn is_key_present_in_blobstore(&self, key: &str) -> Result<bool, MononokeError> {
-        // TODO (liubovd): check in all multiplexes blobstores
         async move {
+            let mut ctx = self.ctx().clone();
+            let is_comprehensive = tunables().get_edenapi_lookup_use_comprehensive_mode();
+            if is_comprehensive {
+                ctx.session_mut()
+                    .override_session_class(SessionClass::ComprehensiveLookup);
+            }
             self.blob_repo()
                 .blobstore()
-                .is_present(self.ctx(), &key)
+                .is_present(&ctx, &key)
                 .await
                 .map(|is_present| {
                     // if we can't resolve the presence (some blobstores failed, some returned None)

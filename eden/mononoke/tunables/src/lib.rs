@@ -209,6 +209,12 @@ pub struct MononokeTunables {
     // to reload segmented changelog. One can also specify jitter (or use default)
     segmented_changelog_force_reload: TunableI64ByRepo,
     segmented_changelog_force_reload_jitter_secs: AtomicI64,
+
+    // Use comprehensive mode for is_present method in multiplexed blobstore for edenapi lookup api.
+    edenapi_lookup_use_comprehensive_mode: AtomicBool,
+
+    // Timeout for is_present call for multiplexed blobstore
+    is_present_timeout_ms: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
