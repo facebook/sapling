@@ -385,7 +385,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             );
     let matches = app.get_matches(fb)?;
     let logger = matches.logger();
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let scuba_sample_builder = matches.scuba_sample_builder();
+    let ctx =
+        SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba_sample_builder);
 
     helpers::block_execute(
         run_subcmd(fb, ctx, &logger, &matches),
