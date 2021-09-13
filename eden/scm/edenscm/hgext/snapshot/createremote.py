@@ -47,4 +47,7 @@ def createremote(ui, repo, **opts):
 
     csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"]).hex()
 
-    ui.status(f"Snapshot created with id {csid}\n", component="snapshot")
+    if ui.plain():
+        ui.status(f"{csid}\n")
+    else:
+        ui.status(f"Snapshot created with id {csid}\n", component="snapshot")
