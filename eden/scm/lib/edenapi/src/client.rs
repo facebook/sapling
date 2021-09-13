@@ -32,20 +32,20 @@ use edenapi_types::{
     json::ToJson,
     make_hash_lookup_request,
     wire::{
-        WireBookmarkEntry, WireCloneData, WireCommitHashLookupResponse,
+        WireBookmarkEntry, WireCloneData, WireCommitGraphEntry, WireCommitHashLookupResponse,
         WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
         WireEphemeralPrepareResponse, WireFetchSnapshotResponse, WireFileEntry,
         WireHistoryResponseChunk, WireIdMapEntry, WireLookupResponse, WireToApiConversionError,
         WireTreeEntry, WireUploadToken, WireUploadTokensResponse, WireUploadTreeResponse,
     },
     AnyFileContentId, AnyId, Batch, BonsaiChangesetContent, BookmarkEntry, BookmarkRequest,
-    CloneData, CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest,
-    EdenApiServerError, EphemeralPrepareRequest, EphemeralPrepareResponse, FetchSnapshotRequest,
-    FetchSnapshotResponse, FileEntry, FileRequest, FileSpec, HgFilenodeData,
-    HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest, LookupResponse,
-    ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
+    CloneData, CommitGraphRequest, CommitHashLookupRequest, CommitHashLookupResponse,
+    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
+    CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, EphemeralPrepareRequest,
+    EphemeralPrepareResponse, FetchSnapshotRequest, FetchSnapshotResponse, FileEntry, FileRequest,
+    FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest,
+    LookupResponse, ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
     UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
     UploadHgFilenodeRequest, UploadToken, UploadTokenMetadata, UploadTokensResponse,
     UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
@@ -90,6 +90,7 @@ mod paths {
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
     pub const COMMIT_HASH_LOOKUP: &str = "commit/hash_lookup";
+    pub const COMMIT_GRAPH: &str = "commit/commit_graph";
     pub const BOOKMARKS: &str = "bookmarks";
     pub const LOOKUP: &str = "lookup";
     pub const UPLOAD: &str = "upload/";
@@ -939,11 +940,26 @@ impl EdenApi for Client {
 
     async fn commit_graph(
         &self,
-        _repo: String,
-        _heads: Vec<HgId>,
-        _common: Vec<HgId>,
+        repo: String,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
     ) -> Result<Response<CommitGraphEntry>, EdenApiError> {
-        raise_not_implemented()
+        tracing::info!(
+            "Requesting commit graph with {} heads and {} common",
+            heads.len(),
+            common.len()
+        );
+        let url = self.build_url(paths::COMMIT_GRAPH, Some(&repo))?;
+        let graph_req = CommitGraphRequest { heads, common };
+        self.log_request(&graph_req, "commit_graph");
+        let wire_graph_req = graph_req.to_wire();
+
+        let req = self
+            .configure_request(Request::post(url))?
+            .cbor(&wire_graph_req)
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        Ok(self.fetch::<WireCommitGraphEntry>(vec![req], None)?)
     }
 
     async fn lookup_batch(
