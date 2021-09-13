@@ -10,6 +10,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
+use parking_lot::Mutex;
 use regex::Regex;
 
 use configparser::{config::ConfigSet, convert::ByteCount};
@@ -22,7 +23,7 @@ use crate::{
     indexedlogdatastore::IndexedLogHgIdDataStore,
     indexedlogutil::StoreType,
     lfs::{LfsRemote, LfsStore},
-    scmstore::{file::FileStoreMetrics, FileStore, TreeStore},
+    scmstore::{activitylogger::ActivityLogger, file::FileStoreMetrics, FileStore, TreeStore},
     util::{
         get_cache_path, get_indexedlogdatastore_aux_path, get_indexedlogdatastore_path,
         get_local_path, get_repo_name,
@@ -348,6 +349,18 @@ impl<'a> FileStoreBuilder<'a> {
             .config
             .get_or_default::<bool>("scmstore", "prefercomputingauxdata")?;
 
+
+        let activity_logger =
+            if let Some(path) = self.config.get_opt::<String>("scmstore", "activitylog")? {
+                let f = std::fs::OpenOptions::new()
+                    .append(true)
+                    .create(true)
+                    .open(path)?;
+                Some(Arc::new(Mutex::new(ActivityLogger::new(f))))
+            } else {
+                None
+            };
+
         Ok(FileStore {
             extstored_policy,
             lfs_threshold_bytes,
@@ -368,6 +381,7 @@ impl<'a> FileStoreBuilder<'a> {
             edenapi,
             lfs_remote,
 
+            activity_logger,
             contentstore,
             fetch_logger,
             metrics: FileStoreMetrics::new(),

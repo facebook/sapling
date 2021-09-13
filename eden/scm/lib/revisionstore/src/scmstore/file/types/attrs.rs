@@ -7,11 +7,13 @@
 
 use std::ops::{BitAnd, BitOr, Not, Sub};
 
+use serde::{Deserialize, Serialize};
+
 use edenapi_types::FileAttributes as EdenApiFileAttributes;
 
 use crate::scmstore::attrs::StoreAttrs;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FileAttributes {
     pub content: bool,
     pub aux_data: bool,

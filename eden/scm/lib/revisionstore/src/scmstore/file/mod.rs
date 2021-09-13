@@ -22,7 +22,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::{anyhow, bail, ensure, Result};
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use tracing::instrument;
 
 use ::types::{Key, RepoPathBuf};
@@ -37,6 +37,7 @@ use crate::{
     lfs::{lfs_from_hg_file_blob, LfsRemote, LfsStore},
     memcache::MEMCACHE_DELAY,
     remotestore::HgIdRemoteStore,
+    scmstore::activitylogger::ActivityLogger,
     scmstore::fetch::FetchResults,
     ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiFileStore, ExtStoredPolicy,
     LegacyStore, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore, RepackLocation,
@@ -85,6 +86,7 @@ pub struct FileStore {
     pub(crate) aux_cache: Option<Arc<AuxStore>>,
 
     // Metrics, statistics, debugging
+    pub(crate) activity_logger: Option<Arc<Mutex<ActivityLogger>>>,
     pub(crate) metrics: Arc<RwLock<FileStoreMetrics>>,
 
     // Records the store creation time, so we can only use memcache for long running commands.
@@ -97,9 +99,37 @@ impl Drop for FileStore {
         let _ = self.flush();
     }
 }
+
 impl FileStore {
     #[instrument(skip(self, keys))]
     pub fn fetch(
+        &self,
+        keys: impl Iterator<Item = Key>,
+        attrs: FileAttributes,
+    ) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
+        let start_instant = Instant::now();
+
+        let result = self.fetch_inner(keys, attrs);
+
+        if let Some(activity_logger) = &self.activity_logger {
+            if let Err(err) = activity_logger.lock().log_file_fetch(
+                result
+                    .complete
+                    .keys()
+                    .chain(result.incomplete.keys())
+                    .cloned()
+                    .collect(),
+                attrs,
+                start_instant.elapsed(),
+            ) {
+                tracing::error!("Error writing activity log: {}", err);
+            }
+        }
+
+        result
+    }
+
+    fn fetch_inner(
         &self,
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
@@ -294,6 +324,7 @@ impl FileStore {
             contentstore: None,
             fetch_logger: self.fetch_logger.clone(),
             metrics: self.metrics.clone(),
+            activity_logger: self.activity_logger.clone(),
 
             aux_local: self.aux_local.clone(),
             aux_cache: self.aux_cache.clone(),
@@ -378,6 +409,7 @@ impl FileStore {
             contentstore: None,
             fetch_logger: None,
             metrics: FileStoreMetrics::new(),
+            activity_logger: None,
 
             aux_local: None,
             aux_cache: None,
@@ -420,6 +452,7 @@ impl LegacyStore for FileStore {
             contentstore: None,
             fetch_logger: self.fetch_logger.clone(),
             metrics: self.metrics.clone(),
+            activity_logger: self.activity_logger.clone(),
 
             aux_local: None,
             aux_cache: None,
