@@ -1153,8 +1153,6 @@ async fn tail_one_iteration(
             |derive| {
                 let heads = heads.clone();
                 async move {
-                    // create new context so each derivation would have its own trace
-                    let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
                     let pending = derive.pending(ctx.clone(), (*repo).clone(), heads).await?;
 
                     let oldest_underived =
