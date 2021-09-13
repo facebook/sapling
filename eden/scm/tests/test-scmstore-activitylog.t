@@ -13,3 +13,10 @@
   $ cat log
   \{"op":"FileFetch","keys":\[\{"path":"f","node":\[([0-9]+,){19}[0-9]+\]\}\],"attrs":\{"content":true,"aux_data":false\},"start_millis":\d+,"duration_millis":\d+\} (re)
   \{"op":"FileFetch","keys":\[\{"path":"f","node":\[([0-9]+,){19}[0-9]+\]\}\],"attrs":\{"content":true,"aux_data":false\},"start_millis":\d+,"duration_millis":\d+\} (re)
+
+Use activity log to verify that replay triggers fetches
+  $ hg debugscmstorereplay --path log --config scmstore.activitylog=log2
+  Fetched 2 keys across 2 fetches in * (glob)
+  $ cat log2
+  \{"op":"FileFetch","keys":\[\{"path":"f","node":\[([0-9]+,){19}[0-9]+\]\}\],"attrs":\{"content":true,"aux_data":false\},"start_millis":\d+,"duration_millis":\d+\} (re)
+  \{"op":"FileFetch","keys":\[\{"path":"f","node":\[([0-9]+,){19}[0-9]+\]\}\],"attrs":\{"content":true,"aux_data":false\},"start_millis":\d+,"duration_millis":\d+\} (re)

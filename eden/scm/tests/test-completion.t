@@ -176,6 +176,7 @@ Show debug commands if there are no other candidates
   debugrevspec
   debugrunshell
   debugscmstore
+  debugscmstorereplay
   debugsegmentclone
   debugsegmentgraph
   debugsegmentpull
@@ -490,6 +491,7 @@ Show all commands + options
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugrunshell: cmd
   debugscmstore: mode, path, python
+  debugscmstorereplay: path
   debugsegmentclone: 
   debugsegmentgraph: level, group
   debugsegmentpull: 

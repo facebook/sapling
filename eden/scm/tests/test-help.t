@@ -1066,6 +1066,8 @@ Test list of internal help commands
                  run a shell command
    debugscmstore
                  test file and tree fetching using scmstore
+   debugscmstorereplay
+                 replay scmstore activity log
    debugsegmentclone
                  clone a repository using segmented changelog
    debugsegmentgraph

@@ -22,6 +22,7 @@ commands! {
     mod fsync;
     mod http;
     mod scmstore;
+    mod scmstorereplay;
     mod python;
     mod racyoutput;
     mod segmentclone;
