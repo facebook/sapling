@@ -17,6 +17,7 @@ import errno
 import hashlib
 
 import bindings
+from edenscm import tracing
 
 from . import (
     bookmarks as bookmod,
@@ -1494,7 +1495,15 @@ def pull(
         # etc).
         if not (cloned and pullop.exactbyteclone):
             _pulldiscovery(pullop)
-            if pullop.canusebundle2:
+            canusegraph = (
+                repo.nullableedenapi is not None
+                and (
+                    "lazychangelog" in repo.storerequirements
+                    or "lazytextchangelog" in repo.storerequirements
+                )
+                and repo.ui.configbool("pull", "httpcommitgraph")
+            )
+            if pullop.canusebundle2 and not canusegraph:
                 _pullbundle2(pullop)
             _pullchangeset(pullop)
             if pullop.extras.get("phases", True):
@@ -1782,7 +1791,19 @@ def _pullcommitgraph(pullop):
     assert heads is not None
 
     commits = repo.changelog.inner
-    graphnodes = list(pullop.remote.commitgraph(heads, pullop.common))
+    stream, _stats = repo.edenapi.commitgraph(repo.name, heads, pullop.common)
+    traceenabled = tracing.isenabled(tracing.LEVEL_DEBUG, target="pull::httpgraph")
+    graphnodes = []
+    for item in stream:
+        node = item["hgid"]
+        parents = item["parents"]
+        if traceenabled:
+            tracing.debug(
+                "edenapi fetched graph node: %s %r"
+                % (hex(node), [hex(n) for n in parents]),
+                target="pull::httpgraph",
+            )
+        graphnodes.append((node, parents))
 
     if graphnodes:
         commits.addgraphnodes(graphnodes)

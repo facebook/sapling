@@ -7,7 +7,8 @@
   $ setconfig pull.httpbookmarks=1
   $ setconfig pull.httphashprefix=1
   $ setconfig exchange.httpcommitlookup=1
-  $ export LOG=exchange::httpcommitlookup=debug,pull::httpbookmarks=debug,pull::httphashlookup
+  $ setconfig exchange.httpgraph=1
+  $ export LOG=exchange::httpcommitlookup=debug,pull
 
 Disable SSH:
 
@@ -48,8 +49,18 @@ Pull Bookmark:
   $ hg pull -B master
   pulling from test:e1
   DEBUG pull::httpbookmarks: edenapi fetched bookmarks: {'master': '178c10ffbc2f92d5407c14478ae9d9dea81f232e'}
+  DEBUG pull::httpgraph: edenapi fetched graph node: 748104bd5058bf2c386d074d8dcf2704855380f6 []
+  DEBUG pull::httpgraph: edenapi fetched graph node: 178c10ffbc2f92d5407c14478ae9d9dea81f232e ['748104bd5058bf2c386d074d8dcf2704855380f6']
   $ hg book --list-subscriptions
      remote/master             178c10ffbc2f
+
+Check Graph
+  $ hg log -r '178c10ffbc2f^'
+  commit:      748104bd5058
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     A
+  
 
 Pull short hash with multiround sampling:
   $ drawdag << 'EOS'
@@ -72,10 +83,10 @@ C and E are known and F is unknown
   DEBUG exchange::httpcommitlookup: edenapi commitknown: {'hgid': b"/'FJf\xa0\x1c\x1c\x14\xaa%yN\xf4\x10Q\x8d\xc0\x17\xaf", 'known': {'Ok': False}}
   searching for changes
   DEBUG exchange::httpcommitlookup: edenapi commitknown: {'hgid': b'\xe8\xe0\xa8\x1d\x95\x0f\xedk!}>\xc4U\xe6\x1a\xf1\xceN\xefH', 'known': {'Ok': True}}
+  DEBUG pull::httpgraph: edenapi fetched graph node: 99dac869f01e09fe3d501fa645ea524af80d498f ['748104bd5058bf2c386d074d8dcf2704855380f6']
   $ hg log -r 99dac869f01e09
   commit:      99dac869f01e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     B
   
-
