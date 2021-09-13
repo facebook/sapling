@@ -66,15 +66,105 @@ pub trait SegmentedChangelog: Send + Sync {
 
     /// Get the graph location of a given commit identifier.
     ///
-    /// The client using segmented changelog will have only a set of identifiers for the commits in
-    /// the graph. The client needs a way to translate user input to data that it has locally.
-    /// For example, when checking out an older commit by hash the client will have to retrieve
-    /// a location to understand the place in the graph of the commit.
+    /// ## Practical use-cases
     ///
-    /// The `client_head` parameter is required in order to construct consistent Locations for the
-    /// client.
-    /// Since the input for this function is potentially user input, it is expected that not all
-    /// hashes would be valid.
+    /// A lazy changelog client knows the "shape" of the commit graph where
+    /// vertexes in the graph are labeled using numbers. It does not know
+    /// all of the commit hashes corresponding to the numbers. When a commit
+    /// hash was referred (ex. from user input), the client wants to "locate"
+    /// the commit in its local graph, or be confident that the hash does not
+    /// exist in its local graph.
+    ///
+    ///
+    /// ## Principle (How it works)
+    ///
+    /// A lazy changelog client knows certain "anchor" commits (described as
+    /// "universally known" in the `dag` crate), and can use those commits
+    /// as "anchor points" to locate other commits. For example:
+    ///
+    /// The client wants to resolve C to its incomplete graph (only A is known).
+    /// The server knows the client knows A's location.
+    ///
+    /// ```plain,ignore
+    ///     Client | Server
+    ///       A 30 |  A 55
+    ///       |    |  |
+    ///       ? 29 |  B 54
+    ///       |    |  |
+    ///       ? 28 |  C 53
+    /// ```
+    ///
+    /// The server might use different integer IDs assigned in the graph so it
+    /// cannot return C's server-side integer ID (53) directly. Instead, it
+    /// translates `C` into `A~2` (revset notation, 1st parent of 1st parent of
+    /// A), sends `A~2` to client, then client resolves `A~2` locally to integer
+    /// ID 28.
+    ///
+    ///
+    /// ## Heads
+    ///
+    /// To understand what "anchor" commits client has, this API requires
+    /// `master_heads` from the client, meaning the client's lazy portion of
+    /// the graph contains *exactly* `ancestors(master_heads)`. This indicates
+    /// important properties like:
+    ///
+    /// 1. If the server returns `Ok(None)`, then the client can be confident
+    ///    that the `cs_id` does not exist in the `ancestors(master_heads)`
+    ///    sub-graph.
+    /// 2. The server knows that `master_heads` and
+    ///    `parents(ancestors(master_heads) & merge())` are "anchor"s known
+    ///    by the client. The server should use those commit hashes as the `X`
+    ///    part of `X~n` in responses.
+    ///
+    /// Providing precise heads is important. For example, suppose the client
+    /// wants to resolve commit hash `X` with heads `Y`.  Then the server should
+    /// return `Ok(None)` despite that the server knows `X`, because `X` is
+    /// outside `ancestors(Y)`.
+    ///
+    /// ```plain,ignore
+    ///     Client | Server
+    ///            |  X
+    ///            |  |
+    ///       Y    |  Y
+    ///       |    |  |
+    ///       ?    |  Z
+    /// ```
+    ///
+    /// Another example, commit `Z` can be represented as `Y~1`, `X~1`, or
+    /// `Q~2`.  Client1 tries to resolve `Z` using heads `Y`, then the server
+    /// should return `Y~1`, because `X` is unknown to client1. Client2 resolves
+    /// `Z` using heads `Q`, then the server should return `Q~2`.
+    ///
+    /// ```plain,ignore
+    ///     Client1 | Client2 | Server
+    ///             | Q       | P Q
+    ///             | |       | |\|
+    ///     Y       | X       | Y X
+    ///     |       | |       | |/
+    ///     ?       | ?       | Z
+    /// ```
+    ///
+    ///
+    /// ## Multiple heads
+    ///
+    /// In a repo with multiple mainline branches, or when the unique master
+    /// bookmark moves backwards, the client might send more than 1 head.
+    /// The server's DAG might have more than 1 head too.
+    ///
+    /// Suppose the client provides two heads `A` and `B`.
+    ///
+    /// - If the server knows both `A` and `B`, great. Then the server can
+    ///   process the request as usual.
+    ///
+    /// - If the server only knows `A` but does not know `B`, the server should
+    ///   never return `Ok(None)`, because it cannot confirm that the `cs_id`
+    ///   exists in `B % A` (revset notation) or not. This means the client can
+    ///   can never confirm a commit hash does not exist in the graph, and
+    ///   probably breaks a bunch of workflows until the client gets rid of the
+    ///   troublesome heads (by rebuilding the graph).
+    ///   If `cs_id` is an ancestor of `A`, the server can resolve it as if the client provides
+    ///   only `A` as the head, or return an error (correct, but provides less optimal
+    ///   UX when master moves backwards).
     async fn changeset_id_to_location(
         &self,
         ctx: &CoreContext,
@@ -91,6 +181,8 @@ pub trait SegmentedChangelog: Send + Sync {
     ///
     /// Batch variation of `changeset_id_to_location`. The assumption is that we are dealing with
     /// the same client repository so the `head` parameter stays the same between changesets.
+    ///
+    /// See `changeset_id_to_location` for corner cases of this method.
     async fn many_changeset_ids_to_locations(
         &self,
         ctx: &CoreContext,
