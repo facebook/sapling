@@ -34,6 +34,11 @@ mononoke_types_thrift mononoke_types_thrift",
             conf.options(options);
         }
 
+        let include_srcs = vec![
+            
+        ];
+        conf.include_srcs(include_srcs);
+
         conf
     };
 
