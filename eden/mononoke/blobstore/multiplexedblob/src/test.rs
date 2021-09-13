@@ -11,7 +11,7 @@ use std::{
     future::Future,
     pin::Pin,
     sync::{Arc, Mutex},
-    time::{Duration, SystemTime},
+    time::{Duration, Instant, SystemTime},
 };
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
@@ -1863,4 +1863,108 @@ async fn failing_put_handler(fb: FacebookInit) {
         // Make sure put is successful
         fut.await.expect("Put should have succeeded");
     }
+}
+
+struct DelayBlobstore {
+    delay: Duration,
+}
+
+impl DelayBlobstore {
+    fn new(delay: Duration) -> Self {
+        Self { delay }
+    }
+}
+
+#[async_trait]
+impl Blobstore for DelayBlobstore {
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        tokio::time::sleep(self.delay).await;
+        return Ok(None);
+    }
+
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl BlobstorePutOps for DelayBlobstore {
+    async fn put_explicit<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _key: String,
+        _value: BlobstoreBytes,
+        _put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        tokio::time::sleep(self.delay).await;
+        Ok(OverwriteStatus::NotChecked)
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.put_explicit(ctx, key, value, PutBehaviour::Overwrite)
+            .await
+    }
+}
+
+impl fmt::Debug for DelayBlobstore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DelayBlobstore")
+            .field("delay", &self.delay)
+            .finish()
+    }
+}
+
+impl fmt::Display for DelayBlobstore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "DelayBlobstore")
+    }
+}
+
+#[fbinit::test]
+async fn test_dont_wait_for_slowest_blobstore_in_background_mode(fb: FacebookInit) -> Result<()> {
+    let bs0 = Arc::new(DelayBlobstore::new(Duration::from_secs(0)));
+    let bs1 = Arc::new(DelayBlobstore::new(Duration::from_secs(15)));
+    let log = Arc::new(LogHandler::new());
+    let bs = MultiplexedBlobstoreBase::new(
+        MultiplexId::new(1),
+        vec![
+            (BlobstoreId::new(0), bs0.clone()),
+            (BlobstoreId::new(1), bs1.clone()),
+        ],
+        vec![],
+        nonzero!(1usize),
+        log.clone(),
+        MononokeScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+    let ctx_session = SessionContainer::builder(fb)
+        .session_class(SessionClass::BackgroundUnlessTooSlow)
+        .build();
+
+    let tunables = MononokeTunables::default();
+    tunables.update_ints(&hashmap! {
+        "multiplex_blobstore_background_session_timeout_ms".to_string() => 100,
+    });
+    let ctx = CoreContext::test_mock_session(ctx_session);
+    let start = Instant::now();
+    let fut = bs.put(&ctx, "key".to_string(), make_value("v0")).boxed();
+    with_tunables_async(tunables, fut).await?;
+    assert!(start.elapsed() < Duration::from_secs(2));
+
+    Ok(())
 }

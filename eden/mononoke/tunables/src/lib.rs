@@ -144,6 +144,7 @@ pub struct MononokeTunables {
     // data to blobstore sync queue if a write was successful to the main blobstore.
     derived_data_use_background_session_class: TunableBoolByRepo,
     commit_cloud_use_background_session_class: AtomicBool,
+    multiplex_blobstore_background_session_timeout_ms: AtomicI64,
 
     allow_change_xrepo_mapping_extra: AtomicBool,
 

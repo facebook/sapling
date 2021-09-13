@@ -281,7 +281,7 @@ pub fn override_ctx(mut ctx: CoreContext, repo: &BlobRepo) -> CoreContext {
         tunables::tunables().get_by_repo_derived_data_use_background_session_class(repo.name());
     if let Some(true) = use_bg_class {
         ctx.session_mut()
-            .override_session_class(SessionClass::Background);
+            .override_session_class(SessionClass::BackgroundUnlessTooSlow);
         ctx
     } else {
         ctx

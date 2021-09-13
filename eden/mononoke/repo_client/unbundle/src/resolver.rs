@@ -1101,7 +1101,7 @@ impl<'r> Bundle2Resolver<'r> {
                     && tunables::tunables().get_commit_cloud_use_background_session_class()
                 {
                     ctx.session_mut()
-                        .override_session_class(SessionClass::Background);
+                        .override_session_class(SessionClass::BackgroundUnlessTooSlow);
                 }
 
                 let filelogs = upload_hg_blobs(

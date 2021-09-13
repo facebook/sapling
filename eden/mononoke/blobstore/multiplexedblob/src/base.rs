@@ -16,6 +16,7 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType, SessionClass};
 use futures::{
     future::{self, join_all, select, Either as FutureEither, FutureExt},
+    pin_mut,
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
@@ -26,6 +27,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use std::{
     borrow::Borrow,
     collections::{hash_map::RandomState, HashMap, HashSet},
+    convert::TryInto,
     fmt,
     future::Future,
     hash::Hasher,
@@ -442,6 +444,29 @@ fn spawn_stream_completion(s: impl StreamExt + Send + 'static) {
     tokio::spawn(s.for_each(|_| async {}));
 }
 
+struct Timeout;
+
+// Waits for select_next and timer if it's set, and returns
+// whichever finishes first
+async fn select_next_with_timeout<F1: Future, F2: Future>(
+    left: &mut FuturesUnordered<F1>,
+    right: &mut FuturesUnordered<F2>,
+    consider_right: bool,
+    maybe_timer: &mut Option<std::pin::Pin<Box<tokio::time::Sleep>>>,
+) -> Option<Result<Either<F1::Output, F2::Output>, Timeout>> {
+    let select_next_fut = select_next(left, right, consider_right);
+    match maybe_timer {
+        Some(timer) => {
+            pin_mut!(select_next_fut);
+            match future::select(select_next_fut, timer).await {
+                FutureEither::Left((value, _)) => value.map(|res| Ok(res)),
+                FutureEither::Right(((), _)) => Some(Err(Timeout)),
+            }
+        }
+        None => select_next_fut.await.map(|res| Ok(res)),
+    }
+}
+
 /// Select the next item from one of two FuturesUnordered stream.
 /// With `consider_right` set to false, this is the same as `left.next().await.map(Either::Left)`.
 /// With `consider_right` set to true, this picks the first item to complete from either stream.
@@ -591,8 +616,10 @@ impl MultiplexedBlobstoreBase {
         let write_order = Arc::new(AtomicUsize::new(0));
         let operation_key = OperationKey::gen();
         let mut needed_handlers: usize = self.minimum_successful_writes.into();
-        let run_handlers_on_success =
-            !matches!(ctx.session().session_class(), SessionClass::Background);
+        let run_handlers_on_success = !matches!(
+            ctx.session().session_class(),
+            SessionClass::Background | SessionClass::BackgroundUnlessTooSlow
+        );
 
         let mut puts: FuturesUnordered<_> = self
             .blobstores
@@ -660,20 +687,23 @@ impl MultiplexedBlobstoreBase {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::BlobPuts);
 
+                let mut too_slow_signal = maybe_create_too_slow_signal(ctx);
+                let mut too_slow = false;
                 let mut put_errors = HashMap::new();
                 let mut handler_errors = HashMap::new();
                 let mut handlers = FuturesUnordered::new();
 
-                while let Some(result) = select_next(
+                while let Some(result) = select_next_with_timeout(
                     &mut puts,
                     &mut handlers,
-                    run_handlers_on_success || !put_errors.is_empty(),
+                    run_handlers_on_success || !put_errors.is_empty() || too_slow,
+                    &mut too_slow_signal,
                 )
                 .await
                 {
                     use Either::*;
                     match result {
-                        Left(Ok(handler)) => {
+                        Ok(Left(Ok(handler))) => {
                             handlers.push(handler);
                             // All puts have succeeded, no errors - we're done
                             if puts.is_empty() && put_errors.is_empty() {
@@ -685,10 +715,18 @@ impl MultiplexedBlobstoreBase {
                                 return Ok(OverwriteStatus::NotChecked);
                             }
                         }
-                        Left(Err((blobstore_id, e))) => {
+                        Ok(Left(Err((blobstore_id, e)))) => {
                             put_errors.insert(blobstore_id, e);
                         }
-                        Right(Ok(())) => {
+                        Err(Timeout) => {
+                            // We ran into a timeout, so one (or a few) blobstores
+                            // puts is taking too long. We don't want to wait for the
+                            // slowest blobstore, so if we haven't been running handlers
+                            // before we should start doing so now.
+                            too_slow = true;
+                            too_slow_signal.take();
+                        }
+                        Ok(Right(Ok(()))) => {
                             needed_handlers = needed_handlers.saturating_sub(1);
                             // Can only get here if at least one handler has been run, therefore need to ensure all handlers
                             // run.
@@ -701,7 +739,7 @@ impl MultiplexedBlobstoreBase {
                                 return Ok(OverwriteStatus::NotChecked);
                             }
                         }
-                        Right(Err((blobstore_id, e))) => {
+                        Ok(Right(Err((blobstore_id, e)))) => {
                             handler_errors.insert(blobstore_id, e);
                         }
                     }
@@ -759,6 +797,33 @@ impl fmt::Debug for MultiplexedBlobstoreBase {
         f.debug_map()
             .entries(self.blobstores.iter().map(|(ref k, ref v)| (k, v)))
             .finish()
+    }
+}
+
+// If SessionClass::BackgroundUnlessTooSlow is set we generally want to wait
+// until data is written to all blobstores, but there's one exception: we don't
+// want to wait if some of the blobstores are too slow. In that case
+// we'd rather use blobstore sync queue.
+fn maybe_create_too_slow_signal(
+    ctx: &CoreContext,
+) -> Option<std::pin::Pin<Box<tokio::time::Sleep>>> {
+    if matches!(
+        ctx.session().session_class(),
+        SessionClass::BackgroundUnlessTooSlow
+    ) {
+        let mut timeout =
+            tunables::tunables().get_multiplex_blobstore_background_session_timeout_ms();
+
+        if timeout <= 0 {
+            timeout = 5000;
+        }
+
+        let timeout = timeout.try_into().unwrap();
+        // tokio::time::Sleep is !Unpin, however later we use it in future::select
+        // which requires a future to be Unpin. So to make it Unpin we put it in Pin<Box<...>>
+        Some(Box::pin(tokio::time::sleep(Duration::from_millis(timeout))))
+    } else {
+        None
     }
 }
 

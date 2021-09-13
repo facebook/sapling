@@ -37,6 +37,9 @@ pub enum SessionClass {
     /// Wherever reasonable, prefer to slow down and wait for work to complete
     /// fully rather than pushing work out to other tasks.
     Background,
+    /// Same as Background, but if some work is taking too long to complete
+    /// then fallback to normal (i.e. UserWaiting) behavior
+    BackgroundUnlessTooSlow,
     /// This session is used by the warm bookmarks cache.
     WarmBookmarksCache,
 }
