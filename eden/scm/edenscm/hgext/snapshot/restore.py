@@ -37,9 +37,11 @@ def restore(ui, repo, csid, **opts):
         for (path, fc) in snapshot["file_changes"]:
             matcher = scmutil.matchfiles(repo, [path])
             fctx = repo[None][path]
-            if "Deletion" in fc:
+            # fc is either a string or a dict, can't use "Deletion" in fc because
+            # that applies to "UntrackedDeletion" as well
+            if fc == "Deletion":
                 cmdutil.remove(ui, repo, matcher, "", False, False)
-            elif "UntrackedDeletion" in fc:
+            elif fc == "UntrackedDeletion":
                 if not fctx.exists():
                     # File was hg added and is now missing. Let's add an empty file first
                     repo.wwrite(path, b"", "")
