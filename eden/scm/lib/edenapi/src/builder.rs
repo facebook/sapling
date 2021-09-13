@@ -106,6 +106,7 @@ impl<'a> Builder<'a> {
 /// You probably want to use [`Builder`] instead.
 #[derive(Debug, Default)]
 pub struct HttpClientBuilder {
+    repo_name: Option<String>,
     server_url: Option<Url>,
     cert: Option<PathBuf>,
     key: Option<PathBuf>,
@@ -139,6 +140,15 @@ impl HttpClientBuilder {
 
     /// Populate a `HttpClientBuilder` from a Mercurial configuration.
     pub fn from_config(config: &dyn configmodel::Config) -> Result<Self, EdenApiError> {
+        // XXX: Ideally, the repo name would be a required field, obtained from a `Repo` object from
+        // the `clidispatch` crate. Unforunately, not all callsites presently have access to a
+        // populated `Repo` object, and it isn't trivial to just initialize one (requires a path to
+        // the on-disk repo) or to plumb one through (which might not be possible for usage outside
+        // of a Mercurial process, such as by EdenFS). For now, let's just do what the Python code
+        // does and default to "unknown" when the repo name is missing.
+        let repo_name =
+            get_config::<String>(config, "remotefilelog", "reponame")?.unwrap_or("unknown".into());
+
         let server_url = get_required_config::<String>(config, "edenapi", "url")?
             .parse::<Url>()
             .map_err(|e| ConfigError::Invalid("edenapi.url".into(), e.into()))?;
@@ -210,6 +220,7 @@ impl HttpClientBuilder {
             );
 
         Ok(HttpClientBuilder {
+            repo_name: Some(repo_name),
             server_url: Some(server_url),
             cert,
             key,
@@ -230,6 +241,12 @@ impl HttpClientBuilder {
             encoding,
             min_transfer_speed,
         })
+    }
+
+    /// Set the repo name.
+    pub fn repo_name(mut self, repo_name: &str) -> Self {
+        self.repo_name = Some(repo_name.into());
+        self
     }
 
     /// Set the server URL.
@@ -387,6 +404,7 @@ fn get_required_config<T: FromConfigValue>(
 /// been appropriately parsed and validated.
 #[derive(Debug)]
 pub(crate) struct Config {
+    pub(crate) repo_name: String,
     pub(crate) server_url: Url,
     pub(crate) cert: Option<PathBuf>,
     pub(crate) key: Option<PathBuf>,
@@ -413,6 +431,7 @@ impl TryFrom<HttpClientBuilder> for Config {
 
     fn try_from(builder: HttpClientBuilder) -> Result<Self, Self::Error> {
         let HttpClientBuilder {
+            repo_name,
             server_url,
             cert,
             key,
@@ -435,6 +454,7 @@ impl TryFrom<HttpClientBuilder> for Config {
         } = builder;
 
         // Check for missing required fields.
+        let repo_name = repo_name.ok_or(ConfigError::Missing("remotefilelog.reponame".into()))?;
         let mut server_url = server_url.ok_or(ConfigError::Missing("edenapi.url".into()))?;
 
         // Ensure the base URL's path ends with a slash so that `Url::join`
@@ -450,6 +470,7 @@ impl TryFrom<HttpClientBuilder> for Config {
         let max_history = max_history.filter(|n| *n > 0);
 
         Ok(Config {
+            repo_name,
             server_url,
             cert,
             key,

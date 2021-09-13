@@ -1339,12 +1339,15 @@ mod tests {
     #[test]
     fn test_url_escaping() -> Result<()> {
         let base_url = "https://example.com".parse()?;
-        let client = HttpClientBuilder::new().server_url(base_url).build()?;
+        let repo_name = "repo_-. !@#$% foo \u{1f4a9} bar";
 
-        let repo = "repo_-. !@#$% foo \u{1f4a9} bar";
+        let client = HttpClientBuilder::new()
+            .repo_name(repo_name)
+            .server_url(base_url)
+            .build()?;
+
         let path = "path";
-
-        let url: String = client.build_url(path, Some(repo))?.into();
+        let url: String = client.build_url(path, Some(repo_name))?.into();
         let expected =
             "https://example.com/repo_-.%20%21%40%23%24%25%20foo%20%F0%9F%92%A9%20bar/path";
         assert_eq!(&url, &expected);
