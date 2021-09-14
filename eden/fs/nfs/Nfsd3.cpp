@@ -1395,16 +1395,16 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::commit(
   return folly::unit;
 }
 
-std::string formatNull(folly::io::Cursor /*deser*/) {
-  return "";
+NfsArgsDetails formatNull(folly::io::Cursor /*deser*/) {
+  return {""};
 }
 
-std::string formatGetattr(folly::io::Cursor deser) {
+NfsArgsDetails formatGetattr(folly::io::Cursor deser) {
   auto args = XdrTrait<GETATTR3args>::deserialize(deser);
-  return fmt::format(FMT_STRING("ino={}"), args.object.ino);
+  return {fmt::format(FMT_STRING("ino={}"), args.object.ino), args.object.ino};
 }
 
-std::string formatSattr3(const sattr3& attr) {
+NfsArgsDetails formatSattr3(const sattr3& attr) {
   auto formatOpt = [](auto&& val, const char* fmtString = "{}") {
     using T = std::decay_t<decltype(val)>;
     if (val.tag) {
@@ -1422,42 +1422,51 @@ std::string formatSattr3(const sattr3& attr) {
       formatOpt(attr.size));
 }
 
-std::string formatSetattr(folly::io::Cursor deser) {
+NfsArgsDetails formatSetattr(folly::io::Cursor deser) {
   auto args = XdrTrait<SETATTR3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("ino={}, attr=({}) guarded={}"),
-      args.object.ino,
-      formatSattr3(args.new_attributes),
-      args.guard.tag);
+  return {
+      fmt::format(
+          FMT_STRING("ino={}, attr=({}) guarded={}"),
+          args.object.ino,
+          formatSattr3(args.new_attributes).str,
+          args.guard.tag),
+      args.object.ino};
 }
 
-std::string formatLookup(folly::io::Cursor deser) {
+NfsArgsDetails formatLookup(folly::io::Cursor deser) {
   auto args = XdrTrait<LOOKUP3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("dir={}, name={}"), args.what.dir.ino, args.what.name);
+  return {
+      fmt::format(
+          FMT_STRING("dir={}, name={}"), args.what.dir.ino, args.what.name),
+      args.what.dir.ino};
 }
 
-std::string formatAccess(folly::io::Cursor deser) {
+NfsArgsDetails formatAccess(folly::io::Cursor deser) {
   auto args = XdrTrait<ACCESS3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("ino={}, access={:#x}"), args.object.ino, args.access);
+  return {
+      fmt::format(
+          FMT_STRING("ino={}, access={:#x}"), args.object.ino, args.access),
+      args.object.ino};
 }
 
-std::string formatReadlink(folly::io::Cursor deser) {
+NfsArgsDetails formatReadlink(folly::io::Cursor deser) {
   auto args = XdrTrait<READLINK3args>::deserialize(deser);
-  return fmt::format(FMT_STRING("ino={}"), args.symlink.ino);
+  return {
+      fmt::format(FMT_STRING("ino={}"), args.symlink.ino), args.symlink.ino};
 }
 
-std::string formatRead(folly::io::Cursor deser) {
+NfsArgsDetails formatRead(folly::io::Cursor deser) {
   auto args = XdrTrait<READ3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("ino={}, size={}, offset={}"),
-      args.file.ino,
-      args.count,
-      args.offset);
+  return {
+      fmt::format(
+          FMT_STRING("ino={}, size={}, offset={}"),
+          args.file.ino,
+          args.count,
+          args.offset),
+      args.file.ino};
 }
 
-std::string formatWrite(folly::io::Cursor deser) {
+NfsArgsDetails formatWrite(folly::io::Cursor deser) {
   auto args = XdrTrait<WRITE3args>::deserialize(deser);
   auto formatStable = [](stable_how stable) {
     switch (stable) {
@@ -1469,15 +1478,17 @@ std::string formatWrite(folly::io::Cursor deser) {
         return "FILE_SYNC";
     }
   };
-  return fmt::format(
-      FMT_STRING("ino={}, size={}, offset={}, stable={}"),
-      args.file.ino,
-      args.count,
-      args.offset,
-      formatStable(args.stable));
+  return {
+      fmt::format(
+          FMT_STRING("ino={}, size={}, offset={}, stable={}"),
+          args.file.ino,
+          args.count,
+          args.offset,
+          formatStable(args.stable)),
+      args.file.ino};
 }
 
-std::string formatCreate(folly::io::Cursor deser) {
+NfsArgsDetails formatCreate(folly::io::Cursor deser) {
   auto args = XdrTrait<CREATE3args>::deserialize(deser);
   auto formatMode = [](createmode3 createmode) {
     switch (createmode) {
@@ -1489,38 +1500,44 @@ std::string formatCreate(folly::io::Cursor deser) {
         return "EXCLUSIVE";
     }
   };
-  return fmt::format(
-      FMT_STRING("dir={}, name={}, mode={}{}"),
-      args.where.dir.ino,
-      args.where.name,
-      formatMode(args.how.tag),
-      args.how.tag != createmode3::EXCLUSIVE
-          ? fmt::format(
-                FMT_STRING(" attr=({})"),
-                formatSattr3(std::get<sattr3>(args.how.v)))
-          : "");
+  return {
+      fmt::format(
+          FMT_STRING("dir={}, name={}, mode={}{}"),
+          args.where.dir.ino,
+          args.where.name,
+          formatMode(args.how.tag),
+          args.how.tag != createmode3::EXCLUSIVE
+              ? fmt::format(
+                    FMT_STRING(" attr=({})"),
+                    formatSattr3(std::get<sattr3>(args.how.v)).str)
+              : ""),
+      args.where.dir.ino};
 }
 
-std::string formatMkdir(folly::io::Cursor deser) {
+NfsArgsDetails formatMkdir(folly::io::Cursor deser) {
   auto args = XdrTrait<MKDIR3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("dir={}, name={}, attr=({})"),
-      args.where.dir.ino,
-      args.where.name,
-      formatSattr3(args.attributes));
+  return {
+      fmt::format(
+          FMT_STRING("dir={}, name={}, attr=({})"),
+          args.where.dir.ino,
+          args.where.name,
+          formatSattr3(args.attributes).str),
+      args.where.dir.ino};
 }
 
-std::string formatSymlink(folly::io::Cursor deser) {
+NfsArgsDetails formatSymlink(folly::io::Cursor deser) {
   auto args = XdrTrait<SYMLINK3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("dir={}, name={}, symlink={}, attr=({})"),
-      args.where.dir.ino,
-      args.where.name,
-      args.symlink.symlink_data,
-      formatSattr3(args.symlink.symlink_attributes));
+  return {
+      fmt::format(
+          FMT_STRING("dir={}, name={}, symlink={}, attr=({})"),
+          args.where.dir.ino,
+          args.where.name,
+          args.symlink.symlink_data,
+          formatSattr3(args.symlink.symlink_attributes).str),
+      args.where.dir.ino};
 }
 
-std::string formatMknod(folly::io::Cursor deser) {
+NfsArgsDetails formatMknod(folly::io::Cursor deser) {
   auto args = XdrTrait<MKNOD3args>::deserialize(deser);
   auto formatFtype = [](const ftype3& type) {
     switch (type) {
@@ -1547,93 +1564,110 @@ std::string formatMknod(folly::io::Cursor deser) {
           if constexpr (std::is_same_v<ArgType, devicedata3>) {
             // TODO(xavierd): format the specdata3 too.
             return fmt::format(
-                FMT_STRING(", attr=({})"), formatSattr3(arg.dev_attributes));
+                FMT_STRING(", attr=({})"),
+                formatSattr3(arg.dev_attributes).str);
           } else if constexpr (std::is_same_v<ArgType, sattr3>) {
-            return fmt::format(FMT_STRING(", attr=({})"), formatSattr3(arg));
+            return fmt::format(
+                FMT_STRING(", attr=({})"), formatSattr3(arg).str);
           } else {
             return "";
           }
         },
         data.v);
   };
-  return fmt::format(
-      FMT_STRING("dir={}, name={}, type={}{}"),
-      args.where.dir.ino,
-      args.where.name,
-      formatFtype(args.what.tag),
-      formatWhat(args.what));
+  return {
+      fmt::format(
+          FMT_STRING("dir={}, name={}, type={}{}"),
+          args.where.dir.ino,
+          args.where.name,
+          formatFtype(args.what.tag),
+          formatWhat(args.what)),
+      args.where.dir.ino};
 }
 
-std::string formatRemove(folly::io::Cursor deser) {
+NfsArgsDetails formatRemove(folly::io::Cursor deser) {
   auto args = XdrTrait<REMOVE3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("dir={}, name={}"), args.object.dir.ino, args.object.name);
+  return {
+      fmt::format(
+          FMT_STRING("dir={}, name={}"), args.object.dir.ino, args.object.name),
+      args.object.dir.ino};
 }
 
-std::string formatRmdir(folly::io::Cursor deser) {
+NfsArgsDetails formatRmdir(folly::io::Cursor deser) {
   auto args = XdrTrait<RMDIR3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("dir={}, name={}"), args.object.dir.ino, args.object.name);
+  return {
+      fmt::format(
+          FMT_STRING("dir={}, name={}"), args.object.dir.ino, args.object.name),
+      args.object.dir.ino};
 }
 
-std::string formatRename(folly::io::Cursor deser) {
+NfsArgsDetails formatRename(folly::io::Cursor deser) {
   auto args = XdrTrait<RENAME3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("fromDir={}, fromName={}, toDir={}, toName={}"),
-      args.from.dir.ino,
-      args.from.name,
-      args.to.dir.ino,
-      args.to.name);
+  return {
+      fmt::format(
+          FMT_STRING("fromDir={}, fromName={}, toDir={}, toName={}"),
+          args.from.dir.ino,
+          args.from.name,
+          args.to.dir.ino,
+          args.to.name),
+      args.to.dir.ino};
 }
 
-std::string formatLink(folly::io::Cursor deser) {
+NfsArgsDetails formatLink(folly::io::Cursor deser) {
   auto args = XdrTrait<LINK3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("ino={}, dir={}, name={}"),
-      args.file.ino,
-      args.link.dir.ino,
-      args.link.name);
+  return {
+      fmt::format(
+          FMT_STRING("ino={}, dir={}, name={}"),
+          args.file.ino,
+          args.link.dir.ino,
+          args.link.name),
+      args.file.ino};
 }
 
-std::string formatReaddir(folly::io::Cursor deser) {
+NfsArgsDetails formatReaddir(folly::io::Cursor deser) {
   auto args = XdrTrait<READDIR3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("dir={}, cookie={}, cookieverf={}, count={}"),
-      args.dir.ino,
-      args.cookie,
-      args.cookieverf,
-      args.count);
+  return {
+      fmt::format(
+          FMT_STRING("dir={}, cookie={}, cookieverf={}, count={}"),
+          args.dir.ino,
+          args.cookie,
+          args.cookieverf,
+          args.count),
+      args.dir.ino};
 }
 
-std::string formatReaddirplus(folly::io::Cursor deser) {
+NfsArgsDetails formatReaddirplus(folly::io::Cursor deser) {
   auto args = XdrTrait<READDIRPLUS3args>::deserialize(deser);
-  return fmt::format(
-      FMT_STRING("dir={}, cookie={}, cookieverf={}, dircount={}, maxcount={}"),
-      args.dir.ino,
-      args.cookie,
-      args.cookieverf,
-      args.dircount,
-      args.maxcount);
+  return {
+      fmt::format(
+          FMT_STRING(
+              "dir={}, cookie={}, cookieverf={}, dircount={}, maxcount={}"),
+          args.dir.ino,
+          args.cookie,
+          args.cookieverf,
+          args.dircount,
+          args.maxcount),
+      args.dir.ino};
 }
 
-std::string formatFsstat(folly::io::Cursor deser) {
+NfsArgsDetails formatFsstat(folly::io::Cursor deser) {
   auto args = XdrTrait<FSSTAT3args>::deserialize(deser);
-  return fmt::format(FMT_STRING("ino={}"), args.fsroot.ino);
+  return {fmt::format(FMT_STRING("ino={}"), args.fsroot.ino), args.fsroot.ino};
 }
 
-std::string formatFsinfo(folly::io::Cursor deser) {
+NfsArgsDetails formatFsinfo(folly::io::Cursor deser) {
   auto args = XdrTrait<FSINFO3args>::deserialize(deser);
-  return fmt::format(FMT_STRING("ino={}"), args.fsroot.ino);
+  return {fmt::format(FMT_STRING("ino={}"), args.fsroot.ino), args.fsroot.ino};
 }
 
-std::string formatPathconf(folly::io::Cursor deser) {
+NfsArgsDetails formatPathconf(folly::io::Cursor deser) {
   auto args = XdrTrait<PATHCONF3args>::deserialize(deser);
-  return fmt::format(FMT_STRING("ino={}"), args.object.ino);
+  return {fmt::format(FMT_STRING("ino={}"), args.object.ino), args.object.ino};
 }
 
-std::string formatCommit(folly::io::Cursor /*deser*/) {
+NfsArgsDetails formatCommit(folly::io::Cursor /*deser*/) {
   // TODO(xavierd): Fill this in.
-  return "";
+  return {""};
 }
 
 using Handler = ImmediateFuture<folly::Unit> (Nfsd3ServerProcessor::*)(
@@ -1645,7 +1679,7 @@ using Handler = ImmediateFuture<folly::Unit> (Nfsd3ServerProcessor::*)(
  * Format the passed in arguments. The Cursor must be passed as a copy to avoid
  * disrupting the actual handler.
  */
-using FormatArgs = std::string (*)(folly::io::Cursor deser);
+using FormatArgs = NfsArgsDetails (*)(folly::io::Cursor deser);
 using AccessType = ProcessAccessLog::AccessType;
 
 struct HandlerEntry {
@@ -1881,7 +1915,7 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
       DBG7,
       "{}({})",
       handlerEntry.name,
-      handlerEntry.formatArgs(deser));
+      handlerEntry.formatArgs(deser).str);
 
   auto liveRequest = LiveRequest{
       traceBus_, traceDetailedArguments_, handlerEntry, deser, xid, procNumber};

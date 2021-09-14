@@ -30,6 +30,16 @@ class FsEventLogger;
 
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
 
+struct NfsArgsDetails {
+  /* implicit */ NfsArgsDetails(
+      std::string argStr,
+      std::optional<InodeNumber> ino = std::nullopt)
+      : str{std::move(argStr)}, inode{ino} {}
+
+  std::string str;
+  std::optional<InodeNumber> inode;
+};
+
 struct NfsTraceEvent : TraceEventBase {
   enum Type : unsigned char {
     START,
@@ -40,13 +50,13 @@ struct NfsTraceEvent : TraceEventBase {
 
   static NfsTraceEvent start(uint32_t xid, uint32_t procNumber) {
     return NfsTraceEvent{
-        xid, procNumber, StartDetails{std::unique_ptr<std::string>{}}};
+        xid, procNumber, StartDetails{std::unique_ptr<NfsArgsDetails>{}}};
   }
 
   static NfsTraceEvent
-  start(uint32_t xid, uint32_t procNumber, std::string&& args) {
+  start(uint32_t xid, uint32_t procNumber, NfsArgsDetails&& args) {
     return NfsTraceEvent{
-        xid, procNumber, StartDetails{std::make_unique<std::string>(args)}};
+        xid, procNumber, StartDetails{std::make_unique<NfsArgsDetails>(args)}};
   }
 
   static NfsTraceEvent finish(uint32_t xid, uint32_t procNumber) {
@@ -65,13 +75,24 @@ struct NfsTraceEvent : TraceEventBase {
   uint32_t getProcNumber() const {
     return procNumber_;
   }
-  const std::unique_ptr<std::string>& getArguments() const {
-    return std::get<StartDetails>(details_).arguments;
+
+  // `getArguments` and `getInode` must only be called on a start event. The
+  // caller is responsible to check this.
+  std::optional<folly::StringPiece> getArguments() const {
+    auto& argDetails = std::get<StartDetails>(details_).argDetails;
+    return argDetails ? std::make_optional<folly::StringPiece>(argDetails->str)
+                      : std::nullopt;
+  }
+  std::optional<InodeNumber> getInode() const {
+    auto& argDetails = std::get<StartDetails>(details_).argDetails;
+    return argDetails ? argDetails->inode : std::nullopt;
   }
 
  private:
   struct StartDetails {
-    std::unique_ptr<std::string> arguments;
+    explicit StartDetails(std::unique_ptr<NfsArgsDetails> args)
+        : argDetails{std::move(args)} {}
+    std::unique_ptr<NfsArgsDetails> argDetails;
   };
 
   struct FinishDetails {};

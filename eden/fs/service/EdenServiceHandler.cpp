@@ -935,8 +935,8 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
           switch (event.getType()) {
             case NfsTraceEvent::START:
               te.type_ref() = FsEventType::START;
-              if (auto& arguments = event.getArguments()) {
-                te.arguments_ref() = *arguments;
+              if (auto arguments = event.getArguments()) {
+                te.arguments_ref() = arguments.value();
               }
               break;
             case NfsTraceEvent::FINISH:
