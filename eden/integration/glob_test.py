@@ -259,6 +259,35 @@ class GlobTest(testcase.EdenRepoTest):
             search_root=b"java/com",
         )
 
+    def test_glob_list_includes_dirs(self) -> None:
+        self.assert_glob(
+            ["java/com/**/*"],
+            [
+                b"java/com/example",
+                b"java/com/example/Example.java",
+                b"java/com/example/foo",
+                b"java/com/example/foo/Foo.java",
+                b"java/com/example/foo/bar",
+                b"java/com/example/foo/bar/Bar.java",
+                b"java/com/example/foo/bar/baz",
+                b"java/com/example/foo/bar/baz/Baz.java",
+                b"java/com/example/package.html",
+            ],
+        )
+
+    def test_glob_list_only_files(self) -> None:
+        self.assert_glob(
+            ["java/com/**/*"],
+            [
+                b"java/com/example/Example.java",
+                b"java/com/example/foo/Foo.java",
+                b"java/com/example/foo/bar/Bar.java",
+                b"java/com/example/foo/bar/baz/Baz.java",
+                b"java/com/example/package.html",
+            ],
+            list_only_files=True,
+        )
+
     def assert_glob(
         self,
         globs: List[str],
@@ -269,6 +298,7 @@ class GlobTest(testcase.EdenRepoTest):
         prefetching: bool = False,
         expected_commits: Optional[List[bytes]] = None,
         search_root: Optional[bytes] = None,
+        list_only_files: bool = False,
     ) -> None:
         params = GlobParams(
             mountPoint=self.mount_path_bytes,
@@ -277,6 +307,7 @@ class GlobTest(testcase.EdenRepoTest):
             prefetchFiles=prefetching,
             revisions=commits,
             searchRoot=search_root,
+            listOnlyFiles=list_only_files,
         )
         result = self.client.globFiles(params)
         self.assertEqual(expected_matches, sorted(result.matchingFiles), msg=msg)

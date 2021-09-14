@@ -312,7 +312,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       folly::StringPiece searchRootUser,
       bool background,
       folly::StringPiece caller,
-      std::optional<pid_t> pid);
+      std::optional<pid_t> pid,
+      bool listOnlyFiles);
 
 #ifdef EDEN_HAVE_USAGE_SERVICE
   // an endpoint for the edenfs/edenfs_service smartservice used for predictive

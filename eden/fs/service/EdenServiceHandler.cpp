@@ -1271,7 +1271,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
     folly::StringPiece searchRootUser,
     bool background,
     folly::StringPiece caller,
-    std::optional<pid_t> pid) {
+    std::optional<pid_t> pid,
+    bool listOnlyFiles) {
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
       DBG3, caller, pid, mountPoint, toLogArg(globs), includeDotfiles);
   auto mountPath = AbsolutePathPiece{mountPoint};
@@ -1428,24 +1429,27 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
                       fileBlobsToPrefetch,
                       suppressFileList,
                       &fetchContext,
-                      config = server_->getServerState()->getEdenConfig()](
+                      config = server_->getServerState()->getEdenConfig(),
+                      listOnlyFiles](
                          std::vector<GlobNode::GlobResult>&& results) mutable {
             auto out = std::make_unique<Glob>();
 
             if (!suppressFileList) {
               // already deduplicated at this point, no need to de-dup
               for (auto& entry : results) {
-                out->matchingFiles_ref()->emplace_back(
-                    entry.name.stringPiece().toString());
+                if (!listOnlyFiles || entry.dtype != dtype_t::Dir) {
+                  out->matchingFiles_ref()->emplace_back(
+                      entry.name.stringPiece().toString());
 
-                if (wantDtype) {
-                  out->dtypes_ref()->emplace_back(
-                      static_cast<OsDtype>(entry.dtype));
+                  if (wantDtype) {
+                    out->dtypes_ref()->emplace_back(
+                        static_cast<OsDtype>(entry.dtype));
+                  }
+
+                  out->originHashes_ref()->emplace_back(
+                      edenMount->getObjectStore()->renderRootId(
+                          *entry.originHash));
                 }
-
-                out->originHashes_ref()->emplace_back(
-                    edenMount->getObjectStore()->renderRootId(
-                        *entry.originHash));
               }
             }
             if (fileBlobsToPrefetch) {
@@ -1531,6 +1535,7 @@ EdenServiceHandler::future_predictiveGlobFiles(
   auto& prefetchMetadata = *params->prefetchMetadata_ref();
   auto& searchRoot = *params->searchRoot_ref();
   auto& background = *params->background_ref();
+  auto& listOnlyFiles = *params->listOnlyFiles_ref();
   /* set predictive glob fetch parameters */
   // if numResults is not specified, use default predictivePrefetchProfileSize
   auto numResults = server_->getServerState()
@@ -1597,7 +1602,8 @@ EdenServiceHandler::future_predictiveGlobFiles(
             searchRoot,
             background,
             func,
-            pid);
+            pid,
+            listOnlyFiles);
       })
       .thenError([](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "Error fetching predictive file globs: "
@@ -1625,7 +1631,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
       *params->searchRoot_ref(),
       *params->background_ref(),
       __func__,
-      getAndRegisterClientPid());
+      getAndRegisterClientPid(),
+      *params->listOnlyFiles_ref());
 }
 
 folly::Future<Unit> EdenServiceHandler::future_chown(

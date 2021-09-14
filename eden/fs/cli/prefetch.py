@@ -46,6 +46,12 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         # source: https://man7.org/linux/man-pages/man3/fnmatch.3.html
         help="Filename patterns (relative to repo root) to match via glob, see: https://man7.org/linux/man-pages/man7/glob.7.html",
     )
+    parser.add_argument(
+        "--list-only-files",
+        help="When printing the list of matching files, exclude directories.",
+        default=False,
+        action="store_true",
+    )
 
 
 class CheckoutAndPatterns(NamedTuple):
@@ -114,6 +120,7 @@ class GlobCmd(Subcmd):
                     suppressFileList=False,
                     prefetchMetadata=False,
                     searchRoot=os.fsencode(checkout_and_patterns.rel_path),
+                    listOnlyFiles=args.list_only_files,
                 )
             )
             for name in result.matchingFiles:
@@ -168,6 +175,7 @@ class PrefetchCmd(Subcmd):
                     suppressFileList=args.silent,
                     prefetchMetadata=args.prefetch_metadata,
                     background=args.background,
+                    listOnlyFiles=args.list_only_files,
                 )
             )
             if not args.background and not args.silent:
