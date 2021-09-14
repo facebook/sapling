@@ -20,6 +20,7 @@ pub struct Streaming<R> {
     receiver: Option<R>,
     bytes_sent: usize,
     request_context: RequestContext,
+    is_active: bool,
 }
 
 impl<R> Streaming<R> {
@@ -28,11 +29,20 @@ impl<R> Streaming<R> {
             receiver: Some(receiver),
             bytes_sent: 0,
             request_context,
+            is_active: false,
         }
     }
 
     pub fn take_receiver(&mut self) -> Option<R> {
         self.receiver.take()
+    }
+
+    fn trigger_first_activity(&mut self) {
+        if !self.is_active {
+            self.is_active = true;
+            let listeners = &self.request_context.event_listeners;
+            listeners.trigger_first_activity(&self.request_context);
+        }
     }
 }
 
@@ -48,6 +58,8 @@ impl<R: Receiver> Handler for Streaming<R> {
     }
 
     fn read(&mut self, data: &mut [u8]) -> Result<usize, ReadError> {
+        self.trigger_first_activity();
+
         Ok(if let Some(payload) = self.request_context.body.as_mut() {
             let sent = (&payload[self.bytes_sent..])
                 .read(data)
@@ -84,6 +96,8 @@ impl<R: Receiver> Handler for Streaming<R> {
     }
 
     fn header(&mut self, data: &[u8]) -> bool {
+        self.trigger_first_activity();
+
         match Header::parse(data) {
             Ok(header) => {
                 if let Some(ref mut receiver) = self.receiver {

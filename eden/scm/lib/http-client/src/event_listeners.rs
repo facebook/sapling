@@ -96,6 +96,9 @@ gen_event_listeners! {
         /// Received Content-Length as `n`.
         content_length(req: &RequestContext, n: usize),
 
+        /// On first byte of network activity.
+        first_activity(req: &RequestContext),
+
         /// On progress update. Note: this is called periodically even if there is no progress.
         progress(req: &RequestContext, progress: Progress),
 

@@ -30,6 +30,7 @@ pub struct Buffered {
     status: Option<StatusCode>,
     headers: HeaderMap,
     bytes_sent: usize,
+    is_active: bool,
     request_context: RequestContext,
 }
 
@@ -42,6 +43,7 @@ impl Buffered {
             status: Default::default(),
             headers: Default::default(),
             bytes_sent: Default::default(),
+            is_active: false,
             request_context,
         }
     }
@@ -63,6 +65,14 @@ impl Buffered {
     pub(crate) fn take_body(&mut self) -> Vec<u8> {
         mem::take(&mut self.received)
     }
+
+    fn trigger_first_activity(&mut self) {
+        if !self.is_active {
+            self.is_active = true;
+            let listeners = &self.request_context.event_listeners;
+            listeners.trigger_first_activity(&self.request_context);
+        }
+    }
 }
 
 impl Handler for Buffered {
@@ -79,6 +89,8 @@ impl Handler for Buffered {
     }
 
     fn read(&mut self, data: &mut [u8]) -> Result<usize, ReadError> {
+        self.trigger_first_activity();
+
         Ok(if let Some(payload) = self.request_context.body.as_mut() {
             let sent = (&payload[self.bytes_sent..])
                 .read(data)
@@ -115,6 +127,8 @@ impl Handler for Buffered {
     }
 
     fn header(&mut self, data: &[u8]) -> bool {
+        self.trigger_first_activity();
+
         match Header::parse(data) {
             Ok(Header::Header(name, value)) => {
                 // XXX: This line triggers a lint error because `http::HeaderName`
@@ -152,7 +166,7 @@ impl Handler for Buffered {
         let listeners = &self.request_context.event_listeners;
         if listeners.should_trigger_progress() {
             let progress = Progress::from_curl(dltotal, dlnow, ultotal, ulnow);
-            listeners.trigger_progress(self.request_context(), progress)
+            listeners.trigger_progress(self.request_context(), progress);
         }
         true
     }
