@@ -52,6 +52,12 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         default=False,
         action="store_true",
     )
+    parser.add_argument(
+        "--include-dot-files",
+        help="Include hidden files in the list of returned matching files.",
+        default=False,
+        action="store_true",
+    )
 
 
 class CheckoutAndPatterns(NamedTuple):
@@ -115,7 +121,7 @@ class GlobCmd(Subcmd):
                 GlobParams(
                     mountPoint=bytes(checkout_and_patterns.checkout.path),
                     globs=checkout_and_patterns.patterns,
-                    includeDotfiles=False,
+                    includeDotfiles=args.include_dot_files,
                     prefetchFiles=False,
                     suppressFileList=False,
                     prefetchMetadata=False,
@@ -170,7 +176,7 @@ class PrefetchCmd(Subcmd):
                 GlobParams(
                     mountPoint=bytes(checkout_and_patterns.checkout.path),
                     globs=checkout_and_patterns.patterns,
-                    includeDotfiles=False,
+                    includeDotfiles=args.include_dot_files,
                     prefetchFiles=not args.no_prefetch,
                     suppressFileList=args.silent,
                     prefetchMetadata=args.prefetch_metadata,
