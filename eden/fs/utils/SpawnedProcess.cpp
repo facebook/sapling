@@ -843,6 +843,9 @@ ProcessStatus SpawnedProcess::wait() {
     }
 
     if (errno != EINTR) {
+      // We need to pretend that this child process has been waited on to
+      // prevent the destructor from aborting.
+      waited_ = true;
       throw std::system_error(
           errno,
           std::generic_category(),
@@ -860,6 +863,9 @@ ProcessStatus SpawnedProcess::wait() {
       return status_;
 
     default:
+      // Similarly to POSIX systems, we need to pretend that the child process
+      // has been waited on to prevent the destructor from aborting.
+      waited_ = true;
       throw makeWin32ErrorExplicit(
           GetLastError(), "WaitForSingleObject on child process handle");
   }
