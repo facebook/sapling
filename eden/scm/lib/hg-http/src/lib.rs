@@ -111,9 +111,10 @@ static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Drop + Send + Sync>> = Lazy::new(|
                 bar.increase_position(n as _);
             }
         });
-
-        let registry = Registry::main();
-        registry.register_progress_bar(&bar);
+        req_listeners.on_first_activity(move |_req| {
+            let registry = Registry::main();
+            registry.register_progress_bar(&bar);
+        })
     });
 
     // HTTP I/O time series.
