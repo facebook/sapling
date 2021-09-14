@@ -34,30 +34,28 @@ enum fb_status {
  * Standard base service
  */
 service FacebookService {
-
   /**
    * Gets the status of this service
    */
-  fb_status getStatus() (priority='IMPORTANT'),
+  fb_status getStatus() (priority = 'IMPORTANT');
 
   /**
    * Gets the counters for this service
    */
-  map<string, i64> getCounters(),
+  map<string, i64> getCounters();
 
   /**
    * Suggest a shutdown to the server
    */
-  oneway void shutdown(),
+  oneway void shutdown();
 
   /**
    * Returns the unix time that the server has been running since
    */
-  i64 aliveSince() (priority = 'IMPORTANT'),
+  i64 aliveSince() (priority = 'IMPORTANT');
 
   /**
    * Returns the pid of the process
    */
-  i64 getPid(),
-
+  i64 getPid();
 }
