@@ -255,6 +255,11 @@ impl BonsaiChangeset {
         self.id
     }
 
+    /// Whether this changeset is a snapshot
+    pub fn is_snapshot(&self) -> bool {
+        self.inner.is_snapshot
+    }
+
     /// Allow mutating this instance of `BonsaiChangeset`.
     pub fn into_mut(self) -> BonsaiChangesetMut {
         self.inner

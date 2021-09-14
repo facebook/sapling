@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{bail, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc, BonsaiHgMappingEntry};
@@ -42,7 +42,9 @@ impl BonsaiDerivable for MappedHgChangesetId {
         options: &Self::Options,
     ) -> Result<Self, Error> {
         let blobstore = repo.blobstore();
-        // TODO(T97939172): Fail if changeset is snapshot (once that field is added)
+        if bonsai.is_snapshot() {
+            bail!("Can't derive Hg changeset for snapshot")
+        }
         crate::derive_hg_changeset::derive_from_parents(ctx, blobstore, bonsai, parents, options)
             .await
     }

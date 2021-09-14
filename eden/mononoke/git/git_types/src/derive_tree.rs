@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{bail, Error};
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
@@ -101,7 +101,9 @@ impl BonsaiDerivable for TreeHandle {
         parents: Vec<Self>,
         _options: &Self::Options,
     ) -> Result<Self, Error> {
-        // TODO(T97939172): Fail if changeset is snapshot (once that field is added)
+        if bonsai.is_snapshot() {
+            bail!("Can't derive TreeHandle for snapshot")
+        }
         let blobstore = repo.get_blobstore();
         let changes = get_file_changes(&blobstore, &ctx, bonsai).await?;
         derive_git_manifest(ctx, blobstore, parents, changes).await
