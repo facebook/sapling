@@ -486,7 +486,7 @@ folly::SemiFuture<Unit> EdenMount::performBindMounts() {
         throw std::runtime_error(folly::to<std::string>(
             "Failed to run `",
             FLAGS_edenfsctlPath,
-            " fixup --mount ",
+            " redirect fixup --mount ",
             mountPath,
             "`: exited with status ",
             returnCode.str()));
