@@ -579,7 +579,7 @@ fn record_tracing_metadata(
 // -------- APIs for non-"tokio/tracing" use-cases --------
 
 impl TracingData {
-    /// Record a new [`Espan`] that can be used afterwards.
+    /// Record a new `Espan` that can be used afterwards.
     ///
     /// If `reuse_espan_id` is not empty, and matches `key_values`,
     /// `reuse_espan_id` will be returned instead.
@@ -624,7 +624,7 @@ impl TracingData {
         result.into()
     }
 
-    /// Edit key-value data to an existing [`Espan`].
+    /// Edit key-value data to an existing `Espan`.
     pub fn edit_espan<S1: ToString, S2: ToString>(
         &mut self,
         id: EspanId,
@@ -799,7 +799,7 @@ macro_rules! object {
 impl TracingData {
     /// Write "Trace Event" format that can be viewed by Chrome "about:tracing".
     ///
-    /// See https://github.com/catapult-project/catapult/tree/master/tracing.
+    /// See [tracing](https://github.com/catapult-project/catapult/tree/master/tracing).
     pub fn write_trace_event_json(
         &self,
         out: &mut dyn io::Write,
@@ -1610,7 +1610,7 @@ impl<'a, S: Eq + Hash> Deref for TreeSpans<S> {
 }
 
 impl TracingData {
-    /// Calculate [`RawTreeSpan`]s for each `(pid, tid)` pair.
+    /// Calculate `RawTreeSpan`s for each `(pid, tid)` pair.
     /// The result is serializable and can be useful for assertions in tests.
     pub fn tree_spans<'a, S: From<&'a str> + Eq + Hash + 'a>(
         &'a self,
