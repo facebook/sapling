@@ -6,7 +6,7 @@
 from edenscm.mercurial import error, registrar
 from edenscm.mercurial.i18n import _
 
-from . import createremote, restore
+from . import createremote, restore, info
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -35,3 +35,8 @@ def createremotecmd(*args, **kwargs):
 @subcmd("restore", [], _("ID"))
 def restorecmd(*args, **kwargs):
     restore.restore(*args, **kwargs)
+
+
+@subcmd("info", [], _("ID"))
+def infocmd(*args, **kwargs):
+    info.info(*args, **kwargs)
