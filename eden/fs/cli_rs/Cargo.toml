@@ -12,14 +12,6 @@ rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee5
 shellexpand = { git = "https://github.com/fanzeyi/shellexpand.git", rev = "179447a3f8fccd765acfd2eed15a54c716c49cfe" }
 tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
 toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }
-tracing = { git = "https://github.com/tokio-rs/tracing.git", rev = "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f" }
-tracing-appender = { git = "https://github.com/tokio-rs/tracing.git", rev = "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f" }
-tracing-attributes = { git = "https://github.com/tokio-rs/tracing.git", rev = "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f" }
-tracing-core = { git = "https://github.com/tokio-rs/tracing.git", rev = "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f" }
-tracing-futures = { git = "https://github.com/tokio-rs/tracing.git", rev = "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f" }
-tracing-log = { git = "https://github.com/tokio-rs/tracing.git", rev = "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f" }
-tracing-serde = { git = "https://github.com/tokio-rs/tracing.git", rev = "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f" }
-tracing-subscriber = { git = "https://github.com/tokio-rs/tracing.git", rev = "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f" }
 
 [workspace]
 members = [

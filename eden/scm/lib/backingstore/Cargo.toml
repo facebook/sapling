@@ -21,9 +21,9 @@ manifest-tree = { path = "../manifest-tree" }
 parking_lot = "0.10.2"
 progress = { path = "../progress" }
 revisionstore = { path = "../revisionstore" }
-tracing = "0.1.26"
+tracing = "0.1.27"
 tracing-collector = { path = "../tracing-collector" }
-tracing-subscriber = "0.2.20"
+tracing-subscriber = { version = "0.2.22", features = ["parking_lot"] }
 types = { path = "../types" }
 
 [features]

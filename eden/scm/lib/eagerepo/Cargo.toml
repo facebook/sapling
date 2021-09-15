@@ -14,7 +14,7 @@ http = "0.2"
 metalog = { path = "../metalog" }
 minibytes = { path = "../minibytes" }
 thiserror = "1.0.29"
-tracing = "0.1.26"
+tracing = "0.1.27"
 zstore = { path = "../zstore" }
 
 [dev-dependencies]

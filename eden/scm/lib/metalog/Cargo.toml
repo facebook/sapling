@@ -12,7 +12,7 @@ lazy_static = "1.0"
 mincode = { path = "../mincode" }
 minibytes = { path = "../minibytes" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
-tracing = "0.1.26"
+tracing = "0.1.27"
 types = { path = "../types" }
 zstore = { path = "../zstore" }
 

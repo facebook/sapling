@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 glob = "0.3"
-tracing = "0.1.26"
+tracing = "0.1.27"
 
 [dev-dependencies]
 tempfile = "3.1"
