@@ -36,6 +36,7 @@ repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_client = { version = "0.1.0", path = "../repo_client" }
 revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
+tunables = { version = "0.1.0", path = "../tunables" }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 
 [dev-dependencies]
