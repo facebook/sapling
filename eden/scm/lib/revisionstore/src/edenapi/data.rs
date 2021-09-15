@@ -260,10 +260,12 @@ mod tests {
         // Attempt fetch.
         let mut fetched = store
             .fetch_batch(std::iter::once(k.clone()))?
-            .complete
-            .pop()
+            .single()?
             .expect("key not found");
-        assert_eq!(fetched.content()?.to_vec(), d.data.as_ref().to_vec());
+        assert_eq!(
+            fetched.manifest_tree_entry()?.0.to_vec(),
+            d.data.as_ref().to_vec()
+        );
 
         // Check that data was written to the local store.
         let mut fetched = cache.get_entry(k.clone())?.expect("key not found");
@@ -286,7 +288,7 @@ mod tests {
         // Attempt fetch.
         let fetched = store.fetch_batch(std::iter::once(k.clone()))?;
         assert_eq!(fetched.complete.len(), 0);
-        assert_eq!(fetched.incomplete, vec![k]);
+        assert_eq!(fetched.incomplete.into_keys().collect::<Vec<_>>(), vec![k]);
 
         Ok(())
     }

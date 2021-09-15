@@ -7,7 +7,7 @@
 
 // TODO(meyer): Remove this
 #![allow(dead_code)]
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -25,6 +25,10 @@ use crate::{
     datastore::{HgIdDataStore, RemoteDataStore},
     indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
     memcache::MEMCACHE_DELAY,
+    scmstore::{
+        fetch::{CommonFetchState, FetchErrors, FetchResults},
+        tree::types::{LazyTree, StoreTree, TreeAttributes},
+    },
     util, ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiTreeStore,
     HgIdMutableDeltaStore, LegacyStore, LocalStore, MemcacheStore, Metadata, RepackLocation,
     StoreKey, StoreResult,
@@ -67,57 +71,64 @@ impl Drop for TreeStore {
     }
 }
 
-pub struct TreeStoreFetch {
-    pub complete: Vec<Entry>,
-    pub incomplete: Vec<Key>,
-}
-
 impl TreeStore {
-    pub fn fetch_batch(&self, reqs: impl Iterator<Item = Key>) -> Result<TreeStoreFetch> {
-        let mut complete = HashMap::<Key, Entry>::new();
+    pub fn fetch_batch(
+        &self,
+        reqs: impl Iterator<Item = Key>,
+    ) -> Result<FetchResults<StoreTree, ()>> {
+        let mut common: CommonFetchState<StoreTree> =
+            CommonFetchState::new(reqs, TreeAttributes::CONTENT);
         let mut write_to_local_cache = HashSet::new();
         let mut write_to_memcache = HashSet::new();
-        let mut incomplete: HashSet<_> = reqs.collect();
 
         if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            let pending: Vec<_> = incomplete.iter().cloned().collect();
+            let pending: Vec<_> = common
+                .pending(TreeAttributes::CONTENT, false)
+                .map(|(key, _attrs)| key.clone())
+                .collect();
             for key in pending.into_iter() {
                 if let Some(entry) = indexedlog_cache.get_entry(key)? {
-                    incomplete.remove(entry.key());
-                    complete.insert(entry.key().clone(), entry);
+                    common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
                 }
             }
         }
 
         if let Some(ref indexedlog_local) = self.indexedlog_local {
-            let pending: Vec<_> = incomplete.iter().cloned().collect();
+            let pending: Vec<_> = common
+                .pending(TreeAttributes::CONTENT, false)
+                .map(|(key, _attrs)| key.clone())
+                .collect();
             for key in pending.into_iter() {
                 if let Some(entry) = indexedlog_local.get_entry(key)? {
-                    incomplete.remove(entry.key());
-                    complete.insert(entry.key().clone(), entry);
+                    common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
                 }
             }
         }
 
         if self.use_memcache() {
             if let Some(ref memcache) = self.memcache {
-                let pending: Vec<_> = incomplete.iter().cloned().collect();
+                let pending: Vec<_> = common
+                    .pending(TreeAttributes::CONTENT, false)
+                    .map(|(key, _attrs)| key.clone())
+                    .collect();
 
                 if !pending.is_empty() {
                     for entry in memcache.get_data_iter(&pending)? {
-                        let entry: Entry = entry?.into();
-                        incomplete.remove(entry.key());
+                        let entry = entry?;
                         if self.indexedlog_cache.is_some() && self.cache_to_local_cache {
-                            write_to_local_cache.insert(entry.key().clone());
+                            write_to_local_cache.insert(entry.key.clone());
                         }
-                        complete.insert(entry.key().clone(), entry);
+                        common.found(entry.key.clone(), LazyTree::Memcache(entry).into());
                     }
                 }
             }
         }
 
         if let Some(ref edenapi) = self.edenapi {
-            let pending: Vec<_> = incomplete.iter().cloned().collect();
+            let pending: Vec<_> = common
+                .pending(TreeAttributes::CONTENT, false)
+                .map(|(key, _attrs)| key.clone())
+                .collect();
             if !pending.is_empty() {
                 let span = tracing::info_span!(
                     "fetch_edenapi",
@@ -131,25 +142,24 @@ impl TreeStore {
                 let _enter = span.enter();
                 let response = edenapi.trees_blocking(pending, None, None)?;
                 for entry in response.entries {
-                    // TODO(meyer): Should probably remove the From impls and add TryFrom instead
-                    // TODO(meyer): Again, handle errors better. This will turn EdenApi NotFound into failing
-                    // the entire batch
-                    let entry: Entry = entry?.into();
-                    incomplete.remove(entry.key());
+                    let entry = entry?;
                     if self.indexedlog_cache.is_some() && self.cache_to_local_cache {
                         write_to_local_cache.insert(entry.key().clone());
                     }
                     if self.memcache.is_some() && self.cache_to_memcache && self.use_memcache() {
                         write_to_memcache.insert(entry.key().clone());
                     }
-                    complete.insert(entry.key().clone(), entry);
+                    common.found(entry.key().clone(), LazyTree::EdenApi(entry).into());
                 }
                 util::record_edenapi_stats(&span, &response.stats);
             }
         }
 
         if let Some(ref contentstore) = self.contentstore {
-            let pending: Vec<_> = incomplete.iter().cloned().map(StoreKey::HgId).collect();
+            let pending: Vec<_> = common
+                .pending(TreeAttributes::CONTENT, false)
+                .map(|(key, _attrs)| StoreKey::HgId(key.clone()))
+                .collect();
             if !pending.is_empty() {
                 contentstore.prefetch(&pending)?;
 
@@ -172,38 +182,44 @@ impl TreeStore {
                     };
 
                     if let (Some(blob), Some(meta)) = (blob, meta) {
-                        incomplete.remove(&key);
                         // We don't write to local indexedlog or memcache for contentstore fallbacks because
                         // contentstore handles that internally.
-                        let entry = Entry::new(key, blob.into(), meta);
-                        complete.insert(entry.key().clone(), entry);
+                        common.found(key, LazyTree::ContentStore(blob.into(), meta).into());
                     }
                 }
             }
         }
 
+        // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
+        let results = common.results(FetchErrors::new(), ());
+
         // TODO(meyer): We can do this in the background if we actually want to make this implementation perform well.
         // TODO(meyer): We shouldn't fail the batch on write failures here.
         if self.cache_to_local_cache {
             if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-                for key in write_to_local_cache.iter() {
-                    indexedlog_cache.put_entry(complete[key].clone())?
-                }
-            }
-        }
-        if self.cache_to_memcache {
-            if let Some(ref memcache) = self.memcache {
-                for key in write_to_memcache.iter() {
-                    memcache.add_mcdata(complete[key].clone().try_into()?);
+                for key in write_to_local_cache.into_iter() {
+                    if let Some(ref content) = results.complete[&key].content {
+                        if let Some(entry) = content.indexedlog_cache_entry(key)? {
+                            indexedlog_cache.put_entry(entry)?;
+                        }
+                    }
                 }
             }
         }
 
-        // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
-        Ok(TreeStoreFetch {
-            complete: complete.drain().map(|(_k, v)| v).collect(),
-            incomplete: incomplete.drain().collect(),
-        })
+        if self.cache_to_memcache {
+            if let Some(ref memcache) = self.memcache {
+                for key in write_to_memcache.into_iter() {
+                    if let Some(ref content) = results.complete[&key].content {
+                        if let Some(entry) = content.indexedlog_cache_entry(key)? {
+                            memcache.add_mcdata(entry.try_into()?);
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(results)
     }
 
     fn use_memcache(&self) -> bool {
@@ -349,10 +365,9 @@ impl HgIdDataStore for TreeStore {
         Ok(
             match self
                 .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))?
-                .complete
-                .pop()
+                .single()?
             {
-                Some(mut entry) => StoreResult::Found(entry.content()?.into_vec()),
+                Some(entry) => StoreResult::Found(entry.content.expect("content attribute not found despite being requested and returned as complete").hg_content()?.into_vec()),
                 None => StoreResult::NotFound(key),
             },
         )
@@ -362,10 +377,15 @@ impl HgIdDataStore for TreeStore {
         Ok(
             match self
                 .fetch_batch(std::iter::once(key.clone()).filter_map(StoreKey::maybe_into_key))?
-                .complete
-                .pop()
+                .single()?
             {
-                Some(e) => StoreResult::Found(e.metadata().clone()),
+                // This is currently in a bit of an awkward state, as revisionstore metadata is no longer used for trees
+                // (it should always be default), but the get_meta function should return StoreResult::Found
+                // only when the content is available. Thus, we request the tree content, but ignore it and just
+                // return default metadata when it's found, and otherwise report StoreResult::NotFound.
+                // TODO(meyer): Replace this with an presence check once support for separate fetch and return attrs
+                // is added.
+                Some(_e) => StoreResult::Found(Metadata::default()),
                 None => StoreResult::NotFound(key),
             },
         )
@@ -383,7 +403,7 @@ impl RemoteDataStore for TreeStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(self
             .fetch_batch(keys.iter().cloned().filter_map(StoreKey::maybe_into_key))?
-            .incomplete
+            .missing()?
             .into_iter()
             .map(StoreKey::HgId)
             .collect())

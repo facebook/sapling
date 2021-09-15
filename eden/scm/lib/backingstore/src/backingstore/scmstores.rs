@@ -16,7 +16,6 @@ use tracing::{event, instrument, Level};
 
 use configparser::config::ConfigSet;
 use manifest::List;
-use manifest_tree::TreeEntry;
 use progress::null::NullProgressFactory;
 use revisionstore::{
     scmstore::{FileAttributes, FileStore, FileStoreBuilder, TreeStore, TreeStoreBuilder},
@@ -159,7 +158,7 @@ impl BackingScmStores {
         let key = Key::new(RepoPathBuf::new(), hgid);
 
         let local = self.treestore.local();
-        let mut fetch_results = if local_only {
+        let fetch_results = if local_only {
             event!(Level::TRACE, "attempting to fetch trees locally");
             &local
         } else {
@@ -167,16 +166,8 @@ impl BackingScmStores {
         }
         .fetch_batch(std::iter::once(key.clone()))?;
 
-        // TODO(meyer): Standardize error handling across trees and files, support Option not found
-        if let Some(mut entry) = fetch_results.complete.pop() {
-            Ok(Some(
-                entry
-                    .content()
-                    // TODO(meyer): Make manifest-tree crate use minibytes::Bytes
-                    .map(|c| c.into_vec().into())
-                    .map(TreeEntry)
-                    .and_then(|entry| entry.try_into())?,
-            ))
+        if let Some(mut entry) = fetch_results.single()? {
+            Ok(Some(entry.manifest_tree_entry()?.try_into()?))
         } else {
             Ok(None)
         }
@@ -247,32 +238,21 @@ impl BackingScmStores {
                 }
                 return;
             }
-        };
+        }
+        .fetch_results();
 
         // Handle pey-key fetch results
-        for mut entry in fetch_results.complete {
-            let key = entry.key().clone();
-            let res = entry
-                .content()
-                // TODO(meyer): Make manifest-tree crate use minibytes::Bytes
-                .map(|c| c.into_vec().into())
-                .map(TreeEntry)
-                .and_then(|entry| entry.try_into())
-                .map(Some);
+        for (key, res) in fetch_results {
+            let res = res.and_then(|opt| {
+                opt.map(|mut tree| {
+                    tree.manifest_tree_entry()
+                        .and_then(|entry| entry.try_into())
+                })
+                .transpose()
+            });
+
             if let Some(index) = indexes.remove(&key) {
                 resolve(index, res)
-            } else {
-                tracing::error!(
-                    "no index found for {}, scmstore returned a key we have no record of requesting",
-                    key
-                );
-            }
-        }
-
-        for key in fetch_results.incomplete {
-            if let Some(index) = indexes.remove(&key) {
-                // TODO(meyer): Standardize error handling across trees and files, support Option not found
-                resolve(index, Ok(None))
             } else {
                 tracing::error!(
                     "no index found for {}, scmstore returned a key we have no record of requesting",
