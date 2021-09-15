@@ -9,7 +9,7 @@ use anyhow::Result;
 use tracing::instrument;
 
 use edenapi_types::TreeEntry;
-
+use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
 use types::{HgId, Key};
 
@@ -71,5 +71,10 @@ impl LazyTree {
             // ContentStore handles caching internally
             ContentStore(_, _) => None,
         })
+    }
+
+    pub fn manifest_tree_entry(&mut self) -> Result<ManifestTreeEntry> {
+        // TODO(meyer): Make manifest-tree crate use minibytes::Bytes
+        Ok(ManifestTreeEntry(self.hg_content()?.into_vec().into()))
     }
 }

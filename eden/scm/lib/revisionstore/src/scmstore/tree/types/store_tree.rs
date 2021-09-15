@@ -7,6 +7,10 @@
 
 use std::ops::BitOr;
 
+use anyhow::{anyhow, Result};
+
+use manifest_tree::TreeEntry as ManifestTreeEntry;
+
 use crate::scmstore::{
     tree::types::{LazyTree, TreeAttributes},
     value::StoreValue,
@@ -15,6 +19,15 @@ use crate::scmstore::{
 #[derive(Debug)]
 pub struct StoreTree {
     pub(crate) content: Option<LazyTree>,
+}
+
+impl StoreTree {
+    pub fn manifest_tree_entry(&mut self) -> Result<ManifestTreeEntry> {
+        self.content
+            .as_mut()
+            .ok_or_else(|| anyhow!("no content available"))?
+            .manifest_tree_entry()
+    }
 }
 
 impl StoreValue for StoreTree {
@@ -50,6 +63,7 @@ impl Default for StoreTree {
         StoreTree { content: None }
     }
 }
+
 impl From<LazyTree> for StoreTree {
     fn from(v: LazyTree) -> Self {
         StoreTree { content: Some(v) }

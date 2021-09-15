@@ -26,6 +26,7 @@ http-client = { path = "../http-client" }
 indexedlog = { path = "../indexedlog" }
 lfs_protocol = { path = "../../../mononoke/lfs_protocol" }
 lz4-pyframe = { path = "../lz4-pyframe" }
+manifest-tree = { path = "../manifest-tree" }
 memmap = "0.7"
 mincode = { path = "../mincode" }
 minibytes = { path = "../minibytes", features = ["frombytes"] }
