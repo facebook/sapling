@@ -179,6 +179,12 @@ impl TestDag {
         self.dag.set_remote_protocol(remote);
     }
 
+    /// Alternative syntax of `set_remote`.
+    pub fn with_remote(mut self, server_dag: &Self) -> Self {
+        self.set_remote(server_dag);
+        self
+    }
+
     /// Similar to `client`, but also clone the Dag from the server.
     pub async fn client_cloned_data(&self) -> TestDag {
         let mut client = self.client().await;

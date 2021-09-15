@@ -369,6 +369,55 @@ async fn test_flush_reassign_master() {
     );
 }
 
+#[tokio::test]
+async fn test_resolve_misleading_merges() {
+    // Test when the server graph gets more merges making vertexes
+    // previously not a parent of a merge become a parent of a merge.
+
+    // Initially, B is not a parent of a merge. A can be resolved as
+    // C~2.
+    let server1 = TestDag::draw("A-B-C # master: C");
+
+    // Make B a parent of a merge by adding extra vertexes.
+    // So A might be resolved as B~1 or C~2.
+    let server2 = TestDag::draw(
+        r#"
+        A-B-C
+           \
+          D-E   # master: E C"#,
+    );
+
+    let client1 = server1.client_cloned_data().await.with_remote(&server2);
+
+    // BUG: Cannot resolve A. It is resolved to B~1 but B does not exist locally.
+    client1.dag.vertex_id("A".into()).await.unwrap_err();
+    assert_eq!(client1.output(), ["resolve names: [A], heads: [C]"]);
+}
+
+#[tokio::test]
+async fn test_resolve_pick_path() {
+    // Test when a vertex can be resolved in multiple ways, pick the one that is
+    // supported by the client.
+
+    // Make A resolve to D~1, and C~2.
+    let server2 = TestDag::draw(
+        r#"
+           A-B-C
+            \
+             D-F
+              /
+             E  # master: F C"#,
+    );
+
+    // The client does not have D, F, E part of the graph.
+    let server1 = TestDag::draw("A-B-C # master: C");
+    let client1 = server1.client_cloned_data().await.with_remote(&server2);
+
+    // BUG: Cannot resolve A. It is resolved to D~1 but D does not exist locally.
+    client1.dag.vertex_id("A".into()).await.unwrap_err();
+    assert_eq!(client1.output(), ["resolve names: [A], heads: [C]"]);
+}
+
 async fn client_for_local_cache_test() -> TestDag {
     let server = TestDag::draw("A-B-C-D-E-F-G # master: G");
     server.client_cloned_data().await
