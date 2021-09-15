@@ -15,9 +15,11 @@ use std::time::Instant;
 
 use anyhow::{bail, Result};
 
+use ::types::{Key, RepoPathBuf};
 use minibytes::Bytes;
 use tracing::field;
-use types::{Key, RepoPathBuf};
+
+pub mod types;
 
 use crate::{
     datastore::{HgIdDataStore, RemoteDataStore},

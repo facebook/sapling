@@ -1,0 +1,75 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use anyhow::Result;
+use tracing::instrument;
+
+use edenapi_types::TreeEntry;
+
+use minibytes::Bytes;
+use types::{HgId, Key};
+
+use crate::{indexedlogdatastore::Entry, memcache::McData, Metadata};
+
+/// A minimal tree enum that simply wraps the possible underlying tree types,
+/// with no processing.
+#[derive(Debug)]
+pub(crate) enum LazyTree {
+    /// A response from calling into the legacy storage API
+    ContentStore(Bytes, Metadata),
+
+    /// An entry from a local IndexedLog. The contained Key's path might not match the requested Key's path.
+    IndexedLog(Entry),
+
+    /// An EdenApi TreeEntry.
+    EdenApi(TreeEntry),
+
+    /// A memcache entry, convertable to Entry. In this case the Key's path should match the requested Key's path.
+    Memcache(McData),
+}
+
+impl LazyTree {
+    #[allow(dead_code)]
+    fn hgid(&self) -> Option<HgId> {
+        use LazyTree::*;
+        match self {
+            ContentStore(_, _) => None,
+            IndexedLog(ref entry) => Some(entry.key().hgid),
+            EdenApi(ref entry) => Some(entry.key().hgid),
+            Memcache(ref entry) => Some(entry.key.hgid),
+        }
+    }
+
+    /// The tree content, as would be encoded in the Mercurial blob
+    #[instrument(level = "debug", skip(self))]
+    pub(crate) fn hg_content(&mut self) -> Result<Bytes> {
+        use LazyTree::*;
+        Ok(match self {
+            IndexedLog(ref mut entry) => entry.content()?,
+            ContentStore(ref blob, _) => blob.clone(),
+            EdenApi(ref entry) => entry.data()?.into(),
+            Memcache(ref entry) => entry.data.clone(),
+        })
+    }
+
+    /// Convert the LazyTree to an indexedlog Entry, if it should ever be written to IndexedLog cache
+    #[instrument(level = "debug", skip(self))]
+    pub(crate) fn indexedlog_cache_entry(&self, key: Key) -> Result<Option<Entry>> {
+        use LazyTree::*;
+        Ok(match self {
+            IndexedLog(ref entry) => Some(entry.clone().with_key(key)),
+            EdenApi(ref entry) => Some(Entry::new(key, entry.data()?.into(), Metadata::default())),
+            // TODO(meyer): We shouldn't ever need to replace the key with Memcache, can probably just clone this.
+            Memcache(ref entry) => Some({
+                let entry: Entry = entry.clone().into();
+                entry.with_key(key)
+            }),
+            // ContentStore handles caching internally
+            ContentStore(_, _) => None,
+        })
+    }
+}
