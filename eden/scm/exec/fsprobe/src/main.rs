@@ -41,7 +41,7 @@ fn main() {
     let lat = duration_ms / files;
     let qps = files / duration_ms;
     println!(
-        "lat: {:.2} ms, qps: {:.0}, dur: {:?}, {}, rate {}",
+        "lat: {:.4} ms, qps: {:.0}, dur: {:?}, {}, rate {}",
         lat, qps, duration, stats, rate
     );
 }
