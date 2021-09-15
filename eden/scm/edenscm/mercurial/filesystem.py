@@ -298,8 +298,9 @@ class physicalfilesystem(object):
 
         if util.safehasattr(repo, "fileservice"):
             p1mf = repo[p1].manifest()
+            lookupmatcher = matchmod.exact(repo.root, repo.root, lookups)
             repo.fileservice.prefetch(
-                list((f, hex(p1mf[f])) for f in lookups if f in p1mf),
+                list((f, hex(p1mf[f])) for f in p1mf.matches(lookupmatcher)),
                 fetchhistory=False,
             )
 
