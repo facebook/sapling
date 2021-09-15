@@ -24,7 +24,6 @@ edenapi_types = { path = "types" }
 env_logger = "0.7"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 hg-http = { path = "../hg-http" }
-http = "0.2"
 http-client = { path = "../http-client" }
 indicatif = { version = "0.15", features = ["with_rayon"] }
 itertools = "0.10.1"

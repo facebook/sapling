@@ -17,7 +17,6 @@ use std::sync::Arc;
 use anyhow::{format_err, Context};
 use async_trait::async_trait;
 use futures::prelude::*;
-use http::StatusCode;
 use itertools::Itertools;
 use minibytes::Bytes;
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
@@ -1321,13 +1320,6 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
     }
 
     Err(EdenApiError::HttpError { status, message })
-}
-
-fn raise_not_implemented<T>() -> Result<T, EdenApiError> {
-    Err(EdenApiError::HttpError {
-        status: StatusCode::NOT_IMPLEMENTED,
-        message: "Not Implemented".to_string(),
-    })
 }
 
 #[cfg(test)]
