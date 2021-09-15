@@ -88,7 +88,6 @@ impl OpenOptions {
                     .context(&primary_path, "cannot read fs metadata")?
                     .len();
                 match LogMetadata::read_file(&meta_path)
-                    .context(&meta_path, "cannot read log metadata")
                     .context("repair cannot fix metadata corruption")
                 {
                     Ok(meta) => {

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::IoResultExt;
 use crate::lock::ScopedDirLock;
 use crate::log::{LogMetadata, META_FILE};
 use crate::utils;
@@ -93,7 +92,7 @@ impl GenericPath {
         match self {
             GenericPath::Filesystem(dir) => {
                 let meta_path = dir.join(META_FILE);
-                LogMetadata::read_file(&meta_path).context(&meta_path, "when reading LogMetadata")
+                LogMetadata::read_file(&meta_path)
             }
             GenericPath::SharedMeta { meta, path } => {
                 let meta = meta.lock().unwrap();

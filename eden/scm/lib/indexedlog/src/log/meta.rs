@@ -97,9 +97,12 @@ impl LogMetadata {
     }
 
     /// Read metadata from a file.
-    pub fn read_file<P: AsRef<Path>>(path: P) -> io::Result<Self> {
-        let buf = atomic_read(path.as_ref())?;
-        Self::read(&buf[..])
+    pub fn read_file<P: AsRef<Path>>(path: P) -> crate::Result<Self> {
+        let path = path.as_ref();
+        let buf = atomic_read(path).context(path, "when reading LogMetadata")?;
+        Self::read(&buf[..]).context(path, || {
+            format!("when parsing LogMetadata (content: {:?})", &buf)
+        })
     }
 
     /// Atomically write metadata to a file.
@@ -153,6 +156,23 @@ mod tests {
             let meta_read = LogMetadata::read_file(&path).expect("read_file");
             meta_read == meta
         }
+    }
 
+    #[test]
+    fn test_read_file_includes_file_content_on_error() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("meta");
+        let meta = LogMetadata {
+            primary_len: 1,
+            indexes: Default::default(),
+            epoch: 42,
+        };
+        let mut buf: Vec<u8> = Vec::new();
+        meta.write(&mut buf).unwrap();
+        *buf.last_mut().unwrap() ^= 1;
+        std::fs::write(&path, &buf).unwrap();
+        let err = LogMetadata::read_file(&path).unwrap_err();
+        let content = format!("{:?}", &buf);
+        assert!(err.to_string().contains(&content));
     }
 }
