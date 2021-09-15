@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::sync::Arc;
 
@@ -27,7 +27,7 @@ use crate::{
     memcache::McData,
     scmstore::{
         attrs::StoreAttrs,
-        fetch::{FetchErrors, FetchResults},
+        fetch::{CommonFetchState, FetchErrors, FetchResults},
         file::{metrics::FileStoreFetchMetrics, LazyFile},
         value::StoreValue,
         FileAttributes, FileAuxData, FileStore, StoreFile,
@@ -37,14 +37,10 @@ use crate::{
 };
 
 pub struct FetchState {
-    /// Requested keys for which at least some attributes haven't been found.
-    pending: HashSet<Key>,
+    common: CommonFetchState<StoreFile>,
 
-    /// Which attributes were requested
-    request_attrs: FileAttributes,
-
-    /// All attributes which have been found so far
-    found: HashMap<Key, StoreFile>,
+    /// Errors encountered during fetching.
+    errors: FetchErrors,
 
     /// LFS pointers we've discovered corresponding to a request Key.
     lfs_pointers: HashMap<Key, LfsPointersEntry>,
@@ -54,9 +50,6 @@ pub struct FetchState {
 
     /// A table tracking if each key is local-only or cache/shared so that computed aux data can be written to the appropriate store
     key_origin: HashMap<Key, StoreType>,
-
-    /// Errors encountered during fetching.
-    errors: FetchErrors,
 
     /// File content found in memcache, may be cached locally (currently only content may be found in memcache)
     found_in_memcache: HashSet<Key>,
@@ -87,16 +80,13 @@ impl FetchState {
         file_store: &FileStore,
     ) -> Self {
         FetchState {
-            pending: keys.collect(),
-            request_attrs: attrs,
-
-            found: HashMap::new(),
+            common: CommonFetchState::new(keys, attrs),
+            errors: FetchErrors::new(),
+            metrics: FileStoreFetchMetrics::default(),
 
             lfs_pointers: HashMap::new(),
             key_origin: HashMap::new(),
             pointer_origin: Arc::new(RwLock::new(HashMap::new())),
-
-            errors: FetchErrors::new(),
 
             found_in_memcache: HashSet::new(),
             found_in_edenapi: HashSet::new(),
@@ -106,7 +96,6 @@ impl FetchState {
             fetch_logger: file_store.fetch_logger.clone(),
             extstored_policy: file_store.extstored_policy,
             compute_aux_data: true,
-            metrics: FileStoreFetchMetrics::default(),
         }
     }
 
@@ -115,10 +104,9 @@ impl FetchState {
         if fetchable.none() {
             return vec![];
         }
-        self.pending
-            .iter()
-            .filter(|k| self.actionable(k, fetchable).any())
-            .cloned()
+        self.common
+            .pending(fetchable, self.compute_aux_data)
+            .map(|(key, _attrs)| key.clone())
             .collect()
     }
 
@@ -127,11 +115,10 @@ impl FetchState {
         if fetchable.none() {
             return vec![];
         }
-        self.pending
-            .iter()
+        self.common
+            .pending(fetchable, self.compute_aux_data)
+            .map(|(key, _attrs)| key.clone())
             .filter(|k| !self.lfs_pointers.contains_key(k))
-            .filter(|k| self.actionable(k, fetchable).any())
-            .cloned()
             .collect()
     }
 
@@ -140,46 +127,25 @@ impl FetchState {
         if fetchable.none() {
             return vec![];
         }
-        self.pending
-            .iter()
-            .filter(|k| self.actionable(k, fetchable).any())
+        self.common
+            .pending(fetchable, self.compute_aux_data)
+            .map(|(key, _attrs)| key.clone())
             .map(|k| self.storekey(k))
             .collect()
     }
 
-    /// A key is actionable with respect to a store if we can fetch something that is or allows us to compute a missing attribute.
-    #[instrument(level = "trace", skip(self))]
-    fn actionable(&self, key: &Key, fetchable: FileAttributes) -> FileAttributes {
-        if fetchable.none() {
-            return FileAttributes::NONE;
-        }
-
-        let available = self
-            .found
-            .get(key)
-            .map_or(FileAttributes::NONE, |f| f.attrs());
-        let (available, fetchable) = if self.compute_aux_data {
-            (available.with_computable(), fetchable.with_computable())
-        } else {
-            (available, fetchable)
-        };
-        let missing = self.request_attrs - available;
-        let actionable = missing & fetchable;
-        actionable
-    }
-
     /// Returns the Key as a StoreKey, as a StoreKey::Content with Sha256 from the LFS Pointer, if available, otherwise as a StoreKey::HgId.
     /// Every StoreKey returned from this function is guaranteed to have an associated Key, so unwrapping is fine.
-    fn storekey(&self, key: &Key) -> StoreKey {
-        self.lfs_pointers.get(key).map_or_else(
-            || StoreKey::HgId(key.clone()),
-            |ptr| StoreKey::Content(ContentHash::Sha256(ptr.sha256()), Some(key.clone())),
-        )
+    fn storekey(&self, key: Key) -> StoreKey {
+        if let Some(ptr) = self.lfs_pointers.get(&key) {
+            StoreKey::Content(ContentHash::Sha256(ptr.sha256()), Some(key))
+        } else {
+            StoreKey::HgId(key)
+        }
     }
 
     #[instrument(level = "debug", skip(self))]
     fn mark_complete(&mut self, key: &Key) {
-        self.pending.remove(key);
         if let Some(ptr) = self.lfs_pointers.remove(key) {
             self.pointer_origin.write().remove(&ptr.sha256());
         }
@@ -204,25 +170,10 @@ impl FetchState {
     fn found_attributes(&mut self, key: Key, sf: StoreFile, typ: Option<StoreType>) {
         self.key_origin
             .insert(key.clone(), typ.unwrap_or(StoreType::Shared));
-        use hash_map::Entry::*;
-        match self.found.entry(key.clone()) {
-            Occupied(mut entry) => {
-                tracing::debug!("merging into previously fetched attributes");
-                // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
-                // if applicable (so that we can re-use this function to replace in-memory files with mmap-ed files)
-                let available = entry.get_mut();
-                *available = sf | std::mem::take(available);
 
-                if available.attrs().has(self.request_attrs) {
-                    self.mark_complete(&key);
-                }
-            }
-            Vacant(entry) => {
-                if entry.insert(sf).attrs().has(self.request_attrs) {
-                    self.mark_complete(&key);
-                }
-            }
-        };
+        if self.common.found(key.clone(), sf) {
+            self.mark_complete(&key);
+        }
     }
 
     #[instrument(level = "debug", skip(self, entry))]
@@ -421,7 +372,7 @@ impl FetchState {
         let pending_attrs: Vec<_> = pending
             .into_iter()
             .map(|k| {
-                let actionable = self.actionable(&k, fetchable);
+                let actionable = self.common.actionable(&k, fetchable, self.compute_aux_data);
                 FileSpec {
                     key: k,
                     attrs: actionable.into(),
@@ -596,11 +547,11 @@ impl FetchState {
             return;
         }
 
-        for (key, value) in self.found.iter_mut() {
+        for (key, value) in self.common.found.iter_mut() {
             let span = tracing::debug_span!("checking derivations", %key);
             let _guard = span.enter();
 
-            let missing = self.request_attrs - value.attrs();
+            let missing = self.common.request_attrs - value.attrs();
             let actionable = value.attrs().with_computable() & missing;
 
             if actionable.aux_data {
@@ -615,11 +566,11 @@ impl FetchState {
             }
 
             // mark complete if applicable
-            if value.attrs().has(self.request_attrs) {
+            if value.attrs().has(self.common.request_attrs) {
                 tracing::debug!("marking complete");
                 // TODO(meyer): Extract out a "FetchPending" object like FetchErrors, or otherwise make it possible
                 // to share a "mark complete" implementation while holding a mutable reference to self.found.
-                self.pending.remove(key);
+                self.common.pending.remove(key);
                 if let Some(ptr) = self.lfs_pointers.remove(key) {
                     self.pointer_origin.write().remove(&ptr.sha256());
                 }
@@ -647,7 +598,7 @@ impl FetchState {
             let span = tracing::trace_span!("edenapi");
             let _guard = span.enter();
             for key in self.found_in_edenapi.drain() {
-                if let Some(lazy_file) = self.found[&key].content.as_ref() {
+                if let Some(lazy_file) = self.common.found[&key].content.as_ref() {
                     if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
                         if let Some(memcache) = memcache {
                             if let Ok(mcdata) = cache_entry.clone().try_into() {
@@ -666,7 +617,7 @@ impl FetchState {
             let span = tracing::trace_span!("memcache");
             let _guard = span.enter();
             for key in self.found_in_memcache.drain() {
-                if let Some(lazy_file) = self.found[&key].content.as_ref() {
+                if let Some(lazy_file) = self.common.found[&key].content.as_ref() {
                     if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
                         if let Some(ref indexedlog_cache) = indexedlog_cache {
                             let _ = indexedlog_cache.put_entry(cache_entry);
@@ -680,7 +631,7 @@ impl FetchState {
             let span = tracing::trace_span!("remote_aux");
             let _guard = span.enter();
             for key in self.found_remote_aux.drain() {
-                let entry: AuxDataEntry = self.found[&key].aux_data.unwrap().into();
+                let entry: AuxDataEntry = self.common.found[&key].aux_data.unwrap().into();
 
                 if let Some(ref aux_cache) = aux_cache {
                     let _ = aux_cache.put(key.hgid, &entry);
@@ -692,7 +643,7 @@ impl FetchState {
             let span = tracing::trace_span!("computed");
             let _guard = span.enter();
             for (key, origin) in self.computed_aux_data.drain() {
-                let entry: AuxDataEntry = self.found[&key].aux_data.unwrap().into();
+                let entry: AuxDataEntry = self.common.found[&key].aux_data.unwrap().into();
                 match origin {
                     StoreType::Shared => {
                         if let Some(ref aux_cache) = aux_cache {
@@ -710,27 +661,7 @@ impl FetchState {
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn finish(mut self) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
-        // Combine and collect errors
-        let mut incomplete = self.errors.fetch_errors;
-        for key in self.pending.into_iter() {
-            self.found.remove(&key);
-            incomplete.entry(key).or_insert_with(Vec::new);
-        }
-
-        for (key, value) in self.found.iter_mut() {
-            // Remove attributes that weren't requested (content only used to compute attributes)
-            *value = std::mem::take(value).mask(self.request_attrs);
-
-            // Don't return errors for keys we eventually found.
-            incomplete.remove(key);
-        }
-
-        FetchResults {
-            complete: self.found,
-            incomplete,
-            other_errors: self.errors.other_errors,
-            metrics: self.metrics,
-        }
+    pub(crate) fn finish(self) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
+        self.common.results(self.errors, self.metrics)
     }
 }

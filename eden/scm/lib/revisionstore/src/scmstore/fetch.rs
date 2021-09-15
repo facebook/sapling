@@ -5,12 +5,126 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::collections::{hash_map, HashMap, HashSet};
 
 use anyhow::{anyhow, Error, Result};
 use tracing::instrument;
 
 use types::Key;
+
+use crate::scmstore::{attrs::StoreAttrs, value::StoreValue};
+
+pub(crate) struct CommonFetchState<T: StoreValue> {
+    /// Requested keys for which at least some attributes haven't been found.
+    pub pending: HashSet<Key>,
+
+    /// Which attributes were requested
+    pub request_attrs: T::Attrs,
+
+    /// All attributes which have been found so far
+    pub found: HashMap<Key, T>,
+}
+
+impl<T: StoreValue> CommonFetchState<T> {
+    #[instrument(skip(keys))]
+    pub(crate) fn new(keys: impl Iterator<Item = Key>, attrs: T::Attrs) -> Self {
+        Self {
+            pending: keys.collect(),
+            request_attrs: attrs,
+            found: HashMap::new(),
+        }
+    }
+
+    #[instrument(skip(self))]
+    pub(crate) fn pending<'a>(
+        &'a self,
+        fetchable: T::Attrs,
+        with_computable: bool,
+    ) -> impl Iterator<Item = (&'a Key, T::Attrs)> + 'a {
+        self.pending.iter().filter_map(move |key| {
+            let actionable = self.actionable(key, fetchable, with_computable);
+            if actionable.any() {
+                Some((key, actionable))
+            } else {
+                None
+            }
+        })
+    }
+
+    #[instrument(skip(self, value))]
+    pub(crate) fn found(&mut self, key: Key, value: T) -> bool {
+        use hash_map::Entry::*;
+        match self.found.entry(key.clone()) {
+            Occupied(mut entry) => {
+                tracing::debug!("merging into previously fetched attributes");
+                // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
+                // if applicable (so that we can re-use this function to replace in-memory files with mmap-ed files)
+                let available = entry.get_mut();
+                *available = value | std::mem::take(available);
+
+                if available.attrs().has(self.request_attrs) {
+                    self.pending.remove(&key);
+                    return true;
+                }
+            }
+            Vacant(entry) => {
+                if entry.insert(value).attrs().has(self.request_attrs) {
+                    self.pending.remove(&key);
+                    return true;
+                }
+            }
+        };
+
+        return false;
+    }
+
+    #[instrument(skip(self, errors, metrics))]
+    pub(crate) fn results<M>(mut self, errors: FetchErrors, metrics: M) -> FetchResults<T, M> {
+        // Combine and collect errors
+        let mut incomplete = errors.fetch_errors;
+        for key in self.pending.into_iter() {
+            self.found.remove(&key);
+            incomplete.entry(key).or_insert_with(Vec::new);
+        }
+
+        for (key, value) in self.found.iter_mut() {
+            // Remove attributes that weren't requested (content only used to compute attributes)
+            *value = std::mem::take(value).mask(self.request_attrs);
+
+            // Don't return errors for keys we eventually found.
+            incomplete.remove(key);
+        }
+
+        FetchResults {
+            complete: self.found,
+            incomplete,
+            other_errors: errors.other_errors,
+            metrics,
+        }
+    }
+
+    #[instrument(level = "trace", skip(self))]
+    pub(crate) fn actionable(
+        &self,
+        key: &Key,
+        fetchable: T::Attrs,
+        with_computable: bool,
+    ) -> T::Attrs {
+        if fetchable.none() {
+            return T::Attrs::NONE;
+        }
+
+        let available = self.found.get(key).map_or(T::Attrs::NONE, |f| f.attrs());
+        let (available, fetchable) = if with_computable {
+            (available.with_computable(), fetchable.with_computable())
+        } else {
+            (available, fetchable)
+        };
+        let missing = self.request_attrs - available;
+        let actionable = missing & fetchable;
+        actionable
+    }
+}
 
 pub(crate) struct FetchErrors {
     /// Errors encountered for specific keys
