@@ -13,7 +13,7 @@ use log::warn;
 use tracing::{event, instrument, Level};
 
 use configparser::config::ConfigSet;
-use edenapi::{Builder as EdenApiBuilder, EdenApi};
+use edenapi::Builder as EdenApiBuilder;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
 use progress::null::NullProgressFactory;

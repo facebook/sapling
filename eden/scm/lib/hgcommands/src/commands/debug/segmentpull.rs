@@ -17,7 +17,6 @@ use dag::ops::DagPersistent;
 use dag::ops::Open;
 use dag::CloneData;
 use dag::VertexName;
-use edenapi::EdenApi;
 use std::collections::HashMap;
 use types::HgId;
 
