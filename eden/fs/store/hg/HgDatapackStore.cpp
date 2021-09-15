@@ -18,7 +18,6 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
-#include "eden/fs/store/hg/ScsProxyHash.h"
 #include "eden/fs/utils/Bug.h"
 
 namespace facebook::eden {
@@ -42,8 +41,7 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
 TreeEntry fromRawTreeEntry(
     RustTreeEntry entry,
     RelativePathPiece path,
-    LocalStore::WriteBatch* writeBatch,
-    const std::optional<Hash>& commitHash) {
+    LocalStore::WriteBatch* writeBatch) {
   std::optional<uint64_t> size;
   std::optional<Hash> contentSha1;
 
@@ -60,9 +58,6 @@ TreeEntry fromRawTreeEntry(
 
   auto fullPath = path + name;
   auto proxyHash = HgProxyHash::store(fullPath, hash, writeBatch);
-  if (commitHash) {
-    ScsProxyHash::store(proxyHash, fullPath, commitHash.value(), writeBatch);
-  }
 
   return TreeEntry{
       proxyHash,
@@ -76,14 +71,12 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
     const RustTree* tree,
     const Hash& edenTreeId,
     RelativePathPiece path,
-    LocalStore::WriteBatch* writeBatch,
-    const std::optional<Hash>& commitHash) {
+    LocalStore::WriteBatch* writeBatch) {
   std::vector<TreeEntry> entries;
 
   for (uintptr_t i = 0; i < tree->length; i++) {
     try {
-      auto entry =
-          fromRawTreeEntry(tree->entries[i], path, writeBatch, commitHash);
+      auto entry = fromRawTreeEntry(tree->entries[i], path, writeBatch);
       entries.push_back(entry);
     } catch (const PathComponentContainsDirectorySeparator& ex) {
       XLOG(WARN) << "Ignoring directory entry: " << ex.what();
@@ -121,8 +114,7 @@ std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
         tree.get(),
         edenTreeId,
         proxyHash.path(),
-        localStore.beginWrite().get(),
-        std::nullopt);
+        localStore.beginWrite().get());
   }
 
   return nullptr;
@@ -212,11 +204,7 @@ void HgDatapackStore::getTreeBatch(
               folly::StringPiece{requests[index].first},
               folly::hexlify(requests[index].second));
           return fromRawTree(
-              content.get(),
-              ids[index],
-              hashes[index].path(),
-              writeBatch,
-              std::optional<Hash>());
+              content.get(), ids[index], hashes[index].path(), writeBatch);
         });
       });
 }
@@ -225,8 +213,7 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
     const RelativePath& path,
     const Hash& manifestId,
     const Hash& edenTreeId,
-    LocalStore::WriteBatch* writeBatch,
-    const std::optional<Hash>& commitHash) {
+    LocalStore::WriteBatch* writeBatch) {
   // For root trees we will try getting the tree locally first.  This allows
   // us to catch when Mercurial might have just written a tree to the store,
   // and refresh the store so that the store can pick it up.  We don't do
@@ -242,7 +229,7 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
     tree = store_.getTree(manifestId.getBytes(), false);
   }
   if (tree) {
-    return fromRawTree(tree.get(), edenTreeId, path, writeBatch, commitHash);
+    return fromRawTree(tree.get(), edenTreeId, path, writeBatch);
   }
   return nullptr;
 }

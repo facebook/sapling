@@ -270,10 +270,6 @@ class EdenConfig : private ConfigSettingManager {
       "scs:tier",
       "mononoke-scs-server",
       this};
-  ConfigSetting<bool> useManifestBasedFetching{
-      "scs:use-manifest-based-fetching",
-      false,
-      this};
   /**
    * Log 1 in `scsThrottleErrorSampleRatio` throttling errors to save log space.
    */

@@ -8,7 +8,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 
 #include <folly/Executor.h>
 #include <folly/Range.h>
@@ -174,7 +173,6 @@ class HgBackingStore {
       bool prefetchMetadata);
 
   folly::Future<std::unique_ptr<Tree>> importTreeManifestImpl(
-      const Hash& commitId,
       Hash manifestNode,
       bool prefetchMetadata);
 
@@ -188,25 +186,21 @@ class HgBackingStore {
       const Hash& manifestNode,
       const Hash& edenTreeID,
       RelativePathPiece path,
-      const std::optional<Hash>& commitHash,
       bool prefetchMetadata);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromHgCacheOrImporter(
       Hash manifestNode,
       Hash edenTreeID,
-      RelativePath path,
-      const std::optional<Hash>& commitId);
+      RelativePath path);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromImporter(
       Hash manifestNode,
       Hash edenTreeID,
       RelativePath path,
-      std::optional<Hash> commitId,
       std::shared_ptr<LocalStore::WriteBatch> writeBatch);
   std::unique_ptr<Tree> processTree(
       std::unique_ptr<folly::IOBuf> content,
       const Hash& manifestNode,
       const Hash& edenTreeID,
       RelativePathPiece path,
-      const std::optional<Hash>& commitHash,
       LocalStore::WriteBatch* writeBatch);
 
   std::shared_ptr<LocalStore> localStore_;

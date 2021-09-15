@@ -93,7 +93,7 @@ class KeySpace {
   static constexpr KeySpaceRecord ScsProxyHashFamily{
       6,
       "scsproxyhash",
-      Persistent{}};
+      Deprecated{}};
   static constexpr KeySpaceRecord TreeMetaDataFamily{
       7,
       "treemeta",
