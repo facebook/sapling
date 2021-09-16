@@ -495,6 +495,56 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
         );
     }
 
+
+    // Weird case - if a directory is deleted as a file, then
+    // it should just be ignored
+    {
+        let mf0 = derive(
+            vec![],
+            btreemap! {
+                "/one/one" => Some("one"),
+            },
+        )
+        .await?;
+        let mf1 = derive(
+            vec![mf0],
+            btreemap! {
+                "/one" => None,
+            },
+        )
+        .await?;
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/one" => "one",
+            })?,
+            files(mf0).await?,
+        );
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/one" => "one",
+            })?,
+            files(mf1).await?,
+        );
+    }
+
+    // Weird case - deleting non-existing file is fine
+    {
+        let mf0 = derive(
+            vec![],
+            btreemap! {
+                "/file" => Some("content"),
+                "/one/one" => None,
+            },
+        )
+        .await?;
+        assert_eq!(
+            files_reference(btreemap! {
+                "/file" => "content",
+            })?,
+            files(mf0).await?,
+        );
+    }
+
     Ok(())
 }
 
