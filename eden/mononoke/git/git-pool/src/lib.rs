@@ -10,18 +10,32 @@ use anyhow::{anyhow, Error};
 use git2::{Error as Git2Error, Repository};
 use r2d2::{ManageConnection, Pool};
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::Semaphore;
+
+const POOL_CONNECTION_TIMEOUT_SEC: u64 = 3600;
 
 #[derive(Debug, Clone)]
 pub struct GitPool {
     pool: Pool<GitConnectionManager>,
+    /// Semaphore to make sure we are not using to many "blocking" tokio tasks.
+    /// Instead we wait in the calling task context before spawning.
+    sem: Arc<Semaphore>,
 }
 
 impl GitPool {
     pub fn new(path: PathBuf) -> Result<Self, Error> {
-        // TODO: Configurable pool size?
+        let simultaneous_open_repos = num_cpus::get();
         let manager = GitConnectionManager { path };
-        let pool = Pool::builder().max_size(8).build(manager)?;
-        Ok(Self { pool })
+        let pool = Pool::builder()
+            .max_size(simultaneous_open_repos as u32)
+            .connection_timeout(Duration::from_secs(POOL_CONNECTION_TIMEOUT_SEC))
+            .build(manager)?;
+        Ok(Self {
+            pool,
+            sem: Arc::new(Semaphore::new(simultaneous_open_repos)),
+        })
     }
 
     pub async fn with<F, T, E>(&self, f: F) -> Result<T, Error>
@@ -30,8 +44,8 @@ impl GitPool {
         T: Send + Sync + 'static,
         E: Into<Error> + Send + Sync + 'static,
     {
+        let _permit = self.sem.acquire().await?;
         let pool = self.pool.clone();
-
         let ret = tokio_shim::task::spawn_blocking(move || {
             let result_repo = pool.get()?;
             let repo = match &*result_repo {
