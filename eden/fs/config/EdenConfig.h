@@ -462,6 +462,11 @@ class EdenConfig : private ConfigSettingManager {
       false,
       this};
 
+  ConfigSetting<std::chrono::nanoseconds> postCheckoutDelayToUnloadInodes{
+      "nfs:post-checkout-inode-unloading-delay",
+      std::chrono::seconds{10},
+      this};
+
   // [prjfs]
 
   /**

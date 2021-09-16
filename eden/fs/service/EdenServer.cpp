@@ -8,6 +8,7 @@
 #include "eden/fs/service/EdenServer.h"
 
 #include <cpptoml.h>
+#include <chrono>
 
 #include <sys/stat.h>
 #include <atomic>
@@ -1688,7 +1689,10 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
           // However, the mount pont might have been unmounted before this
           // function is run outside of shutdown.
           this->scheduleCallbackOnMainEventBase(
-              std::chrono::milliseconds{10000}, // TODO: config
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  serverState_->getReloadableConfig()
+                      .getEdenConfig()
+                      ->postCheckoutDelayToUnloadInodes.getValue()),
               [this, mountPath = mountPath.copy()]() {
                 try {
                   auto edenMount = this->getMount(mountPath);

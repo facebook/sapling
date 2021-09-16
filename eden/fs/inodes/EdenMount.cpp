@@ -203,7 +203,11 @@ EdenMount::EdenMount(
     std::unique_ptr<Journal> journal)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
-      inodeMap_{new InodeMap(this)},
+      inodeMap_{new InodeMap(
+          this,
+          shared_ptr<ReloadableConfig>(
+              serverState_,
+              &serverState_->getReloadableConfig()))},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},

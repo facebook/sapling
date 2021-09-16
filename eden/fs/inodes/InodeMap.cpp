@@ -14,6 +14,8 @@
 #include <folly/chrono/Conv.h>
 #include <folly/logging/xlog.h>
 
+#include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -93,7 +95,8 @@ InodeMap::UnloadedInode::UnloadedInode(
   }
 }
 
-InodeMap::InodeMap(EdenMount* mount) : mount_{mount} {}
+InodeMap::InodeMap(EdenMount* mount, std::shared_ptr<ReloadableConfig> config)
+    : mount_{mount}, config_{std::move(config)} {}
 
 InodeMap::~InodeMap() {
   // TODO: We need to clean up the EdenMount / InodeMap destruction process a
@@ -643,8 +646,8 @@ void InodeMap::forgetStaleInodes() {
   // InodePtrs we created.
   std::vector<InodePtr> toClearFSRef;
   std::vector<InodePtr> justToHoldBeyondScopeOfLock;
-  auto cutoff =
-      std::chrono::system_clock::now() - std::chrono::milliseconds{10000};
+  auto cutoff = std::chrono::system_clock::now() -
+      config_->getEdenConfig()->postCheckoutDelayToUnloadInodes.getValue();
   auto cutoff_ts = folly::to<timespec>(cutoff);
 
   {

@@ -733,7 +733,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * measure as GETATTR calls do not update atime. We might want to use a
    * "referenced" time instead that we update on every inode access.
    *
-   * "recently" means 10s currently. TODO: turn this into a config option.
+   * "recently" means 10s by default and is controled by
+   * postCheckoutDelayToUnloadInodes.
    */
   void forgetStaleInodes();
 

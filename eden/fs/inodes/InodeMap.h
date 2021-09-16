@@ -34,6 +34,7 @@ class FileInode;
 class InodeBase;
 class TreeInode;
 class ParentInodeInfo;
+class ReloadableConfig;
 
 class InodeMapLock;
 
@@ -97,7 +98,7 @@ class InodeMap {
  public:
   using PromiseVector = std::vector<folly::Promise<InodePtr>>;
 
-  explicit InodeMap(EdenMount* mount);
+  explicit InodeMap(EdenMount* mount, std::shared_ptr<ReloadableConfig> config);
   virtual ~InodeMap();
 
   InodeMap(InodeMap&&) = delete;
@@ -235,6 +236,9 @@ class InodeMap {
    */
   void decFsRefcount(InodeNumber number, uint32_t count = 1);
 
+  /**
+   * See EdenMount::forgetStaleInodes
+   */
   void forgetStaleInodes();
 
   /**
@@ -653,6 +657,8 @@ class InodeMap {
    * The EdenMount that owns this InodeMap.
    */
   EdenMount* const mount_{nullptr};
+
+  std::shared_ptr<ReloadableConfig> config_;
 
   /**
    * The root inode.
