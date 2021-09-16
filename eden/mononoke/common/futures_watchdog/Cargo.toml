@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 maybe-owned = "0.3.4"
-pin-project = "0.4"
+pin-project = "0.4.28"
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 
 [patch.crates-io]
