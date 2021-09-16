@@ -13,11 +13,12 @@ use bookmarks::{
 };
 use context::CoreContext;
 use futures::{
-    compat::Stream01CompatExt, future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
-use futures_01_ext::{FutureExt as OldFutureExt, StreamExt as OldStreamExt};
+use futures_01_ext::StreamExt as OldStreamExt;
 use futures_ext::{FbFutureExt, FbTryFutureExt};
-use futures_old::{future as future_old, Future};
+use futures_old::Future;
 use mercurial_types::HgChangesetId;
 use mononoke_repo::MononokeRepo;
 use std::collections::HashMap;
@@ -25,7 +26,7 @@ use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tunables::tunables;
-use warm_bookmarks_cache::WarmBookmarksCache;
+use warm_bookmarks_cache::{BookmarksCache, WarmBookmarksCache};
 
 // We'd like to give user a consistent view of thier bookmarks for the duration of the
 // whole Mononoke session. SessionBookmarkCache is used for that.
@@ -84,10 +85,10 @@ where
             .take();
     }
 
-    pub fn get_publishing_bookmarks(
+    pub async fn get_publishing_bookmarks(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
+    ) -> Result<HashMap<Bookmark, HgChangesetId>, Error> {
         let maybe_cache = {
             self.cached_publishing_bookmarks_maybe_stale
                 .lock()
@@ -96,10 +97,11 @@ where
         };
 
         match maybe_cache {
-            None => self
-                .get_publishing_bookmarks_maybe_stale_updating_cache(ctx)
-                .left_future(),
-            Some(bookmarks) => future_old::ok(bookmarks).right_future(),
+            None => {
+                self.get_publishing_bookmarks_maybe_stale_updating_cache(ctx)
+                    .await
+            }
+            Some(bookmarks) => Ok(bookmarks),
         }
     }
 
@@ -117,18 +119,24 @@ where
             })
     }
 
-    pub fn get_bookmarks_by_prefix(
+    pub async fn get_bookmarks_by_prefix(
         &self,
         ctx: &CoreContext,
         prefix: &BookmarkPrefix,
         return_max: u64,
-    ) -> impl Stream<Item = Result<(BookmarkName, HgChangesetId), Error>> {
+    ) -> Result<impl Stream<Item = Result<(BookmarkName, HgChangesetId), Error>>, Error> {
         let mut kinds = vec![BookmarkKind::Scratch];
 
         let mut result = HashMap::new();
         if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache() {
-            let warm_bookmarks =
-                warm_bookmarks_cache.list(prefix, &BookmarkPagination::FromStart, Some(return_max));
+            let warm_bookmarks = warm_bookmarks_cache
+                .list(
+                    &ctx,
+                    prefix,
+                    &BookmarkPagination::FromStart,
+                    Some(return_max),
+                )
+                .await?;
             for (book, (cs_id, _)) in warm_bookmarks {
                 result.insert(book, cs_id);
             }
@@ -157,13 +165,13 @@ where
             futures::stream::empty().map(Ok).right_stream()
         };
 
-        to_hg_bookmark_stream(
+        Ok(to_hg_bookmark_stream(
             &self.repo.blobrepo(),
             &ctx,
             futures::stream::iter(result.into_iter())
                 .map(Ok)
                 .chain(new_bookmarks),
-        )
+        ))
     }
 
     // Tries to fetch a bookmark from warm bookmark cache first, but if the bookmark is not found
@@ -174,7 +182,7 @@ where
         bookmark: BookmarkName,
     ) -> Result<Option<HgChangesetId>, Error> {
         if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache() {
-            if let Some(cs_id) = warm_bookmarks_cache.get(&bookmark) {
+            if let Some(cs_id) = warm_bookmarks_cache.get(&ctx, &bookmark).await? {
                 return self
                     .repo
                     .blobrepo()
@@ -187,21 +195,20 @@ where
         self.repo.blobrepo().get_bookmark(ctx, &bookmark).await
     }
 
-    fn get_publishing_bookmarks_maybe_stale_updating_cache(
+    async fn get_publishing_bookmarks_maybe_stale_updating_cache(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
+    ) -> Result<HashMap<Bookmark, HgChangesetId>, Error> {
         let cache = self.cached_publishing_bookmarks_maybe_stale.clone();
-        self.get_publishing_maybe_stale_raw(ctx)
-            .inspect(move |bookmarks| {
-                update_publishing_bookmarks_maybe_stale_cache_raw(cache, bookmarks.clone())
-            })
+        let bookmarks = self.get_publishing_maybe_stale_raw(ctx).await?;
+        update_publishing_bookmarks_maybe_stale_cache_raw(cache, bookmarks.clone());
+        Ok(bookmarks)
     }
 
-    fn get_publishing_maybe_stale_raw(
+    async fn get_publishing_maybe_stale_raw(
         &self,
         ctx: CoreContext,
-    ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
+    ) -> Result<HashMap<Bookmark, HgChangesetId>, Error> {
         if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache() {
             ctx.scuba()
                 .clone()
@@ -209,10 +216,12 @@ where
             let s = futures_old::stream::iter_ok(
                 warm_bookmarks_cache
                     .list(
+                        &ctx,
                         &BookmarkPrefix::empty(),
                         &BookmarkPagination::FromStart,
                         Some(std::u64::MAX),
                     )
+                    .await?
                     .into_iter()
                     .map(|(name, (cs_id, kind))| (Bookmark::new(name, kind), cs_id)),
             )
@@ -220,10 +229,9 @@ where
             .compat();
             return to_hg_bookmark_stream(&self.repo.blobrepo(), &ctx, s)
                 .try_collect()
-                .compat()
-                .left_future();
+                .await;
         }
-        self.get_publishing_maybe_stale_from_db(ctx).right_future()
+        self.get_publishing_maybe_stale_from_db(ctx).compat().await
     }
 
     fn get_warm_bookmark_cache(&self) -> Option<&WarmBookmarksCache> {
@@ -354,6 +362,7 @@ mod test {
 
         let res = session_bookmark_cache
             .get_bookmarks_by_prefix(&ctx, &BookmarkPrefix::new("prefix")?, 3)
+            .await?
             .try_collect::<HashMap<_, _>>()
             .await?;
         assert_eq!(
@@ -367,6 +376,7 @@ mod test {
 
         let res = session_bookmark_cache
             .get_bookmarks_by_prefix(&ctx, &BookmarkPrefix::new("prefix")?, 1)
+            .await?
             .try_collect::<HashMap<_, _>>()
             .await?;
         assert_eq!(res.len(), 1);

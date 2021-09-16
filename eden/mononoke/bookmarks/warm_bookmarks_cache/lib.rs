@@ -15,8 +15,9 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use anyhow::{anyhow, Context as _, Error};
+use async_trait::async_trait;
 use blame::{BlameRoot, RootBlameV2};
-use bookmarks::{BookmarkName, BookmarksSubscription, Freshness};
+use bookmarks::{ArcBookmarks, BookmarkName, BookmarksSubscription, Freshness};
 use bookmarks_types::{Bookmark, BookmarkKind, BookmarkPagination, BookmarkPrefix};
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
@@ -224,6 +225,67 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
     }
 }
 
+#[async_trait]
+pub trait BookmarksCache {
+    async fn get(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkName,
+    ) -> Result<Option<ChangesetId>, Error>;
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        prefix: &BookmarkPrefix,
+        pagination: &BookmarkPagination,
+        limit: Option<u64>,
+    ) -> Result<Vec<(BookmarkName, (ChangesetId, BookmarkKind))>, Error>;
+}
+
+/// A drop-in replacement for warm bookmark cache that doesn't
+/// cache anything but goes to bookmarks struct every time.
+pub struct NoopBookmarksCache {
+    bookmarks: ArcBookmarks,
+}
+
+impl NoopBookmarksCache {
+    pub async fn new(bookmarks: ArcBookmarks) -> Result<Self, Error> {
+        Ok::<_, Error>(NoopBookmarksCache { bookmarks })
+    }
+}
+
+#[async_trait]
+impl BookmarksCache for NoopBookmarksCache {
+    async fn get(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkName,
+    ) -> Result<Option<ChangesetId>, Error> {
+        self.bookmarks.get(ctx.clone(), bookmark).await
+    }
+
+    async fn list(
+        &self,
+        ctx: &CoreContext,
+        prefix: &BookmarkPrefix,
+        pagination: &BookmarkPagination,
+        limit: Option<u64>,
+    ) -> Result<Vec<(BookmarkName, (ChangesetId, BookmarkKind))>, Error> {
+        self.bookmarks
+            .list(
+                ctx.clone(),
+                Freshness::MaybeStale,
+                prefix,
+                BookmarkKind::ALL_PUBLISHING,
+                pagination,
+                limit.unwrap_or(std::u64::MAX),
+            )
+            .map_ok(|(book, cs_id)| (book.name, (cs_id, book.kind)))
+            .try_collect()
+            .await
+    }
+}
+
 impl WarmBookmarksCache {
     pub async fn new(
         ctx: &CoreContext,
@@ -260,30 +322,39 @@ impl WarmBookmarksCache {
             terminate: Some(sender),
         })
     }
+}
 
-    pub fn get(&self, bookmark: &BookmarkName) -> Option<ChangesetId> {
-        self.bookmarks
+#[async_trait]
+impl BookmarksCache for WarmBookmarksCache {
+    async fn get(
+        &self,
+        _ctx: &CoreContext,
+        bookmark: &BookmarkName,
+    ) -> Result<Option<ChangesetId>, Error> {
+        Ok(self
+            .bookmarks
             .read()
             .unwrap()
             .get(bookmark)
             .map(|(cs_id, _)| cs_id)
-            .cloned()
+            .cloned())
     }
 
-    pub fn list(
+    async fn list(
         &self,
+        _ctx: &CoreContext,
         prefix: &BookmarkPrefix,
         pagination: &BookmarkPagination,
         limit: Option<u64>,
-    ) -> Vec<(BookmarkName, (ChangesetId, BookmarkKind))> {
+    ) -> Result<Vec<(BookmarkName, (ChangesetId, BookmarkKind))>, Error> {
         let bookmarks = self.bookmarks.read().unwrap();
 
         if prefix.is_empty() && *pagination == BookmarkPagination::FromStart && limit.is_none() {
             // Simple case: return all bookmarks
-            bookmarks
+            Ok(bookmarks
                 .iter()
                 .map(|(name, (cs_id, kind))| (name.clone(), (*cs_id, *kind)))
-                .collect()
+                .collect())
         } else {
             // Filter based on prefix and pagination
             let range = prefix.to_range().with_pagination(pagination.clone());
@@ -300,7 +371,7 @@ impl WarmBookmarksCache {
                 matches.sort_by(|(name1, _), (name2, _)| name1.cmp(name2));
                 matches.truncate(limit as usize);
             }
-            matches
+            Ok(matches)
         }
     }
 }

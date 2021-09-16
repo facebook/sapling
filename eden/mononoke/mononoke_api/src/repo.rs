@@ -68,7 +68,9 @@ use stats::prelude::*;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
-use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCache, WarmBookmarksCacheBuilder};
+use warm_bookmarks_cache::{
+    BookmarkUpdateDelay, BookmarksCache, WarmBookmarksCache, WarmBookmarksCacheBuilder,
+};
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -526,7 +528,7 @@ impl Repo {
     ) -> Result<(), MononokeError> {
         let repo = self.blob_repo();
 
-        let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(bookmark);
+        let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(&ctx, bookmark).await?;
         let maybe_bcs_id_from_blobrepo = repo.get_bonsai_bookmark(ctx.clone(), &bookmark).await?;
 
         if maybe_bcs_id_from_blobrepo.is_none() {
@@ -869,7 +871,11 @@ impl RepoContext {
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
 
         let mut cs_id = match freshness {
-            BookmarkFreshness::MaybeStale => self.warm_bookmarks_cache().get(&bookmark),
+            BookmarkFreshness::MaybeStale => {
+                self.warm_bookmarks_cache()
+                    .get(&self.ctx, &bookmark)
+                    .await?
+            }
             BookmarkFreshness::MostRecent => None,
         };
 
@@ -1007,7 +1013,7 @@ impl RepoContext {
     }
 
     /// Get a list of bookmarks.
-    pub fn list_bookmarks(
+    pub async fn list_bookmarks(
         &self,
         include_scratch: bool,
         prefix: Option<&str>,
@@ -1077,7 +1083,7 @@ impl RepoContext {
                         // has no warm value, this might mean we have to
                         // filter this bookmark out.
                         let bookmark_name = bookmark.into_name();
-                        let maybe_cs_id = cache.get(&bookmark_name);
+                        let maybe_cs_id = cache.get(&self.ctx, &bookmark_name).await?;
                         Ok(maybe_cs_id.map(|cs_id| (bookmark_name.into_string(), cs_id)))
                     }
                 })
@@ -1087,9 +1093,11 @@ impl RepoContext {
         } else {
             // Public bookmarks can be fetched from the warm bookmarks cache.
             let cache = self.warm_bookmarks_cache();
-            Ok(stream::iter(cache.list(&prefix, &pagination, limit))
-                .map(|(bookmark, (cs_id, _kind))| Ok((bookmark.into_string(), cs_id)))
-                .boxed())
+            Ok(
+                stream::iter(cache.list(&self.ctx, &prefix, &pagination, limit).await?)
+                    .map(|(bookmark, (cs_id, _kind))| Ok((bookmark.into_string(), cs_id)))
+                    .boxed(),
+            )
         }
     }
 

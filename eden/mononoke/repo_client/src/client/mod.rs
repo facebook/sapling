@@ -520,7 +520,10 @@ impl RepoClient {
         &self,
         ctx: CoreContext,
     ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
-        self.session_bookmarks_cache.get_publishing_bookmarks(ctx)
+        let session_bookmarks_cache = self.session_bookmarks_cache.clone();
+        (async move { session_bookmarks_cache.get_publishing_bookmarks(ctx).await })
+            .boxed()
+            .compat()
     }
 
     fn get_pull_default_bookmarks_maybe_stale(
@@ -1566,7 +1569,7 @@ impl HgCommands for RepoClient {
                         let prefix = BookmarkPrefix::new(&pattern[..pattern.len() - 1])?;
 
                         let bookmarks = session_bookmarks_cache
-                            .get_bookmarks_by_prefix(&ctx, &prefix, max)
+                            .get_bookmarks_by_prefix(&ctx, &prefix, max).await?
                             .map_ok(|(bookmark, cs_id)| {
                                 (bookmark.to_string(), cs_id)
                             })

@@ -109,14 +109,16 @@ async fn list_bookmarks(fb: FacebookInit) -> Result<()> {
     let repo = repo.write().await?;
 
     assert_eq!(
-        repo.list_bookmarks(false, None, None, None)?
+        repo.list_bookmarks(false, None, None, None)
+            .await?
             .try_collect::<Vec<_>>()
             .await?,
         vec![(String::from("trunk"), changesets["E"])]
     );
 
     assert_eq!(
-        repo.list_bookmarks(true, Some("scratch/"), None, Some(3))?
+        repo.list_bookmarks(true, Some("scratch/"), None, Some(3))
+            .await?
             .try_collect::<Vec<_>>()
             .await?,
         vec![
@@ -126,7 +128,8 @@ async fn list_bookmarks(fb: FacebookInit) -> Result<()> {
     );
 
     assert_eq!(
-        repo.list_bookmarks(true, Some("scratch/"), Some("scratch/branch"), Some(3))?
+        repo.list_bookmarks(true, Some("scratch/"), Some("scratch/branch"), Some(3))
+            .await?
             .try_collect::<Vec<_>>()
             .await?,
         vec![(String::from("scratch/branchpoint"), changesets["B"])]

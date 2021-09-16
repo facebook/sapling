@@ -152,7 +152,8 @@ impl SourceControlServiceImpl {
                 prefix.as_deref(),
                 params.after.as_deref(),
                 limit,
-            )?
+            )
+            .await?
             .try_collect::<Vec<_>>()
             .await?;
         let continue_after = match limit {
