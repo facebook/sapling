@@ -217,6 +217,7 @@ pub struct MononokeApiEnvironment {
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
     pub warm_bookmarks_cache_delay: BookmarkUpdateDelay,
+    pub warm_bookmarks_cache_enabled: bool,
 }
 
 #[derive(Copy, Clone, Debug)]

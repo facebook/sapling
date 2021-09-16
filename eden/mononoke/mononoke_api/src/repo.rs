@@ -32,7 +32,7 @@ use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::Stream01CompatExt;
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
-use futures::try_join;
+use futures::{try_join, FutureExt};
 use futures_watchdog::WatchdogExt;
 use hook_manager_factory::make_hook_manager;
 use hooks::HookManager;
@@ -69,7 +69,7 @@ use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use warm_bookmarks_cache::{
-    BookmarkUpdateDelay, BookmarksCache, WarmBookmarksCache, WarmBookmarksCacheBuilder,
+    BookmarkUpdateDelay, BookmarksCache, NoopBookmarksCache, WarmBookmarksCacheBuilder,
 };
 
 use crate::changeset::ChangesetContext;
@@ -103,7 +103,7 @@ define_stats! {
 pub struct Repo {
     pub(crate) inner: InnerRepo,
     pub(crate) name: String,
-    pub(crate) warm_bookmarks_cache: Arc<WarmBookmarksCache>,
+    pub(crate) warm_bookmarks_cache: Arc<dyn BookmarksCache>,
     // This doesn't really belong here, but until we have production mappings, we can't do a better job
     pub(crate) synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     pub(crate) config: RepoConfig,
@@ -181,7 +181,7 @@ impl Repo {
                 Some(acl) => PermissionCheckerBuilder::acl_for_repo(fb, acl).await?,
                 None => PermissionCheckerBuilder::always_allow(),
             };
-            Ok(ArcPermissionChecker::from(checker))
+            Ok::<_, Error>(ArcPermissionChecker::from(checker))
         };
 
         let service_permission_checker = async {
@@ -189,7 +189,7 @@ impl Repo {
                 Some(acl) => PermissionCheckerBuilder::acl_for_tier(fb, acl).await?,
                 None => PermissionCheckerBuilder::always_allow(),
             };
-            Ok(ArcPermissionChecker::from(checker))
+            Ok::<_, Error>(ArcPermissionChecker::from(checker))
         };
 
         let hook_manager = {
@@ -200,23 +200,40 @@ impl Repo {
             async move {
                 let hook_manager =
                     make_hook_manager(ctx, blob_repo, config, name, &disabled_hooks).await?;
-                Ok(Arc::new(hook_manager))
+                Ok::<_, Error>(Arc::new(hook_manager))
             }
         };
 
-        let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
-        match env.warm_bookmarks_cache_derived_data {
-            WarmBookmarksCacheDerivedData::HgOnly => {
-                warm_bookmarks_cache_builder.add_hg_warmers()?;
+        let warm_bookmarks_cache = if env.warm_bookmarks_cache_enabled {
+            let mut warm_bookmarks_cache_builder =
+                WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
+            match env.warm_bookmarks_cache_derived_data {
+                WarmBookmarksCacheDerivedData::HgOnly => {
+                    warm_bookmarks_cache_builder.add_hg_warmers()?;
+                }
+                WarmBookmarksCacheDerivedData::AllKinds => {
+                    warm_bookmarks_cache_builder.add_all_warmers()?;
+                }
+                WarmBookmarksCacheDerivedData::None => {}
             }
-            WarmBookmarksCacheDerivedData::AllKinds => {
-                warm_bookmarks_cache_builder.add_all_warmers()?;
-            }
-            WarmBookmarksCacheDerivedData::None => {}
-        }
 
-        let warm_bookmarks_cache =
-            warm_bookmarks_cache_builder.build(env.warm_bookmarks_cache_delay);
+            async {
+                Ok(Arc::new(
+                    warm_bookmarks_cache_builder
+                        .build(env.warm_bookmarks_cache_delay)
+                        .await?,
+                ) as Arc<dyn BookmarksCache>)
+            }
+            .boxed()
+        } else {
+            async {
+                Ok(
+                    Arc::new(NoopBookmarksCache::new(inner.blob_repo.bookmarks().clone()))
+                        as Arc<dyn BookmarksCache>,
+                )
+            }
+            .boxed()
+        };
 
         let sql_read_write_status = if let Some(addr) = &config.write_lock_db_address {
             let r = SqlRepoReadWriteStatus::with_mysql(
@@ -235,7 +252,7 @@ impl Repo {
             service_permission_checker,
             warm_bookmarks_cache,
             hook_manager,
-        ) = try_join!(
+        ): (_, _, Arc<dyn BookmarksCache>, _) = try_join!(
             repo_permission_checker.watched(&logger),
             service_permission_checker.watched(&logger),
             warm_bookmarks_cache.watched(&logger),
@@ -251,7 +268,7 @@ impl Repo {
         Ok(Self {
             name,
             inner,
-            warm_bookmarks_cache: Arc::new(warm_bookmarks_cache),
+            warm_bookmarks_cache,
             synced_commit_mapping,
             config,
             repo_permission_checker,
@@ -424,7 +441,7 @@ impl Repo {
     }
 
     /// The warm bookmarks cache for the referenced repository.
-    pub fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
+    pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
         &self.warm_bookmarks_cache
     }
 
@@ -782,7 +799,7 @@ impl RepoContext {
     }
 
     /// The warm bookmarks cache for the referenced repository.
-    pub fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
+    pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
         self.repo.warm_bookmarks_cache()
     }
 

@@ -80,6 +80,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
+        warm_bookmarks_cache_enabled: true,
     };
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs.clone()))?);
     let megarepo = runtime.block_on(MegarepoApi::new(

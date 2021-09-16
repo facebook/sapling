@@ -39,7 +39,7 @@ use std::{
     hash::{Hash, Hasher},
 };
 use streaming_clone::SqlStreamingChunksFetcher;
-use warm_bookmarks_cache::WarmBookmarksCache;
+use warm_bookmarks_cache::BookmarksCache;
 
 #[derive(Clone)]
 pub struct SqlStreamingCloneConfig {
@@ -236,7 +236,7 @@ impl MononokeRepo {
         self.repo.skiplist_index().clone()
     }
 
-    pub fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
+    pub fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
         self.repo.warm_bookmarks_cache()
     }
 

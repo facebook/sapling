@@ -237,6 +237,7 @@ async fn bootstrap_repositories<'a>(
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
+        warm_bookmarks_cache_enabled: true,
     };
 
     let no_skiplist = matches.is_present(ARG_NO_SKIPLIST);

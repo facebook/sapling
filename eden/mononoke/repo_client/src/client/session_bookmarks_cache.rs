@@ -26,7 +26,7 @@ use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tunables::tunables;
-use warm_bookmarks_cache::{BookmarksCache, WarmBookmarksCache};
+use warm_bookmarks_cache::BookmarksCache;
 
 // We'd like to give user a consistent view of thier bookmarks for the duration of the
 // whole Mononoke session. SessionBookmarkCache is used for that.
@@ -40,7 +40,7 @@ pub trait BookmarkCacheRepo {
 
     fn repo_client_use_warm_bookmarks_cache(&self) -> bool;
 
-    fn warm_bookmarks_cache(&self) -> &WarmBookmarksCache;
+    fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache>;
 }
 
 impl BookmarkCacheRepo for MononokeRepo {
@@ -52,8 +52,8 @@ impl BookmarkCacheRepo for MononokeRepo {
         MononokeRepo::repo_client_use_warm_bookmarks_cache(self)
     }
 
-    fn warm_bookmarks_cache(&self) -> &WarmBookmarksCache {
-        MononokeRepo::warm_bookmarks_cache(self).as_ref()
+    fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
+        MononokeRepo::warm_bookmarks_cache(self)
     }
 }
 
@@ -234,7 +234,7 @@ where
         self.get_publishing_maybe_stale_from_db(ctx).compat().await
     }
 
-    fn get_warm_bookmark_cache(&self) -> Option<&WarmBookmarksCache> {
+    fn get_warm_bookmark_cache(&self) -> Option<&Arc<dyn BookmarksCache>> {
         if self.repo.repo_client_use_warm_bookmarks_cache() {
             if !tunables().get_disable_repo_client_warm_bookmarks_cache() {
                 return Some(self.repo.warm_bookmarks_cache());
@@ -278,13 +278,11 @@ mod test {
     use maplit::hashmap;
     use mononoke_api_types::InnerRepo;
     use tests_utils::{bookmark, CreateCommitContext};
-    use warm_bookmarks_cache::{
-        BookmarkUpdateDelay, WarmBookmarksCache, WarmBookmarksCacheBuilder,
-    };
+    use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCacheBuilder};
 
     struct TestRepo {
         repo: BlobRepo,
-        wbc: Option<WarmBookmarksCache>,
+        wbc: Option<Arc<dyn BookmarksCache>>,
     }
 
     impl BookmarkCacheRepo for TestRepo {
@@ -296,7 +294,7 @@ mod test {
             self.wbc.is_some()
         }
 
-        fn warm_bookmarks_cache(&self) -> &WarmBookmarksCache {
+        fn warm_bookmarks_cache(&self) -> &Arc<dyn BookmarksCache> {
             self.wbc.as_ref().unwrap()
         }
     }
@@ -343,7 +341,7 @@ mod test {
         let wbc = builder.build(BookmarkUpdateDelay::Disallow).await?;
         let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
             repo: repo.blob_repo.clone(),
-            wbc: Some(wbc),
+            wbc: Some(Arc::new(wbc)),
         });
         validate(&ctx, hg_cs_id, &session_bookmark_cache).await?;
 

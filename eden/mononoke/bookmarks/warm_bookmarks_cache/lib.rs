@@ -226,7 +226,7 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
 }
 
 #[async_trait]
-pub trait BookmarksCache {
+pub trait BookmarksCache: Send + Sync {
     async fn get(
         &self,
         ctx: &CoreContext,
@@ -249,8 +249,8 @@ pub struct NoopBookmarksCache {
 }
 
 impl NoopBookmarksCache {
-    pub async fn new(bookmarks: ArcBookmarks) -> Result<Self, Error> {
-        Ok::<_, Error>(NoopBookmarksCache { bookmarks })
+    pub fn new(bookmarks: ArcBookmarks) -> Self {
+        NoopBookmarksCache { bookmarks }
     }
 }
 

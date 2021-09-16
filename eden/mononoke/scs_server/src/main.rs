@@ -111,6 +111,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         disabled_hooks: args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Allow,
+        warm_bookmarks_cache_enabled: true,
     };
 
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs.clone()))?);
