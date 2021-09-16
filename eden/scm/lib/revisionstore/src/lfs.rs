@@ -292,7 +292,7 @@ impl LfsIndexedLogBlobsStore {
         StoreOpenOptions::new()
             .max_log_count(4)
             .max_bytes_per_log(20_000_000_000 / 4)
-            .auto_sync_threshold(1_000_000_000)
+            .auto_sync_threshold(50 * 1024 * 1024)
             .index("sha256", |_| {
                 vec![IndexOutput::Reference(0..Sha256::len() as u64)]
             })

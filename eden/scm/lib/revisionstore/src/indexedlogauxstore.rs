@@ -135,7 +135,7 @@ impl AuxStore {
         let mut open_options = StoreOpenOptions::new()
             .max_log_count(4)
             .max_bytes_per_log(2500 * 1000 * 1000)
-            .auto_sync_threshold(250 * 1024 * 1024)
+            .auto_sync_threshold(10 * 1024 * 1024)
             .create(true)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]
