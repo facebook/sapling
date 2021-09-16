@@ -127,15 +127,10 @@ where
 
         let mut result = HashMap::new();
         if let Some(warm_bookmarks_cache) = self.get_warm_bookmark_cache() {
-            let warm_bookmarks = warm_bookmarks_cache.get_all();
+            let warm_bookmarks =
+                warm_bookmarks_cache.list(prefix, &BookmarkPagination::FromStart, Some(return_max));
             for (book, (cs_id, _)) in warm_bookmarks {
-                let current_size: u64 = result.len().try_into().unwrap();
-                if current_size >= return_max {
-                    break;
-                }
-                if prefix.is_prefix_of(&book) {
-                    result.insert(book, cs_id);
-                }
+                result.insert(book, cs_id);
             }
         } else {
             // Warm bookmark cache was disabled, so we'll need to fetch publishing
@@ -213,7 +208,11 @@ where
                 .log_with_msg("Fetching bookmarks from Warm bookmarks cache", None);
             let s = futures_old::stream::iter_ok(
                 warm_bookmarks_cache
-                    .get_all()
+                    .list(
+                        &BookmarkPrefix::empty(),
+                        &BookmarkPagination::FromStart,
+                        Some(std::u64::MAX),
+                    )
                     .into_iter()
                     .map(|(name, (cs_id, kind))| (Bookmark::new(name, kind), cs_id)),
             )

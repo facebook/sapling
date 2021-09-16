@@ -270,10 +270,6 @@ impl WarmBookmarksCache {
             .cloned()
     }
 
-    pub fn get_all(&self) -> HashMap<BookmarkName, (ChangesetId, BookmarkKind)> {
-        self.bookmarks.read().unwrap().clone()
-    }
-
     pub fn list(
         &self,
         prefix: &BookmarkPrefix,
