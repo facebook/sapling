@@ -258,6 +258,18 @@ where
         node.value = value;
     }
 
+    pub fn insert_and_merge<T>(&mut self, path: Option<MPath>, value: T)
+    where
+        V: Extend<T>,
+    {
+        let node = path.into_iter().flatten().fold(self, |node, element| {
+            node.subentries
+                .entry(element)
+                .or_insert_with(Default::default)
+        });
+        node.value.extend(std::iter::once(value));
+    }
+
     pub fn get(&self, path: Option<&MPath>) -> Option<&V> {
         let mut tree = self;
         for elem in path.into_iter().flatten() {

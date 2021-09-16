@@ -261,6 +261,28 @@ fn test_path_tree() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn test_path_insert_and_merge() -> Result<()> {
+    let mut tree = PathTree::<Vec<_>>::default();
+    let items = vec![
+        (MPath::new("/one/two/three")?, true),
+        (MPath::new("/one/two/three")?, false),
+    ];
+    for (path, value) in items {
+        tree.insert_and_merge(Some(path), value);
+    }
+
+    let reference = vec![
+        (None, vec![]),
+        (Some(MPath::new("one")?), vec![]),
+        (Some(MPath::new("one/two")?), vec![]),
+        (Some(MPath::new("one/two/three")?), vec![true, false]),
+    ];
+
+    assert_eq!(Vec::from_iter(tree), reference);
+    Ok(())
+}
+
 #[fbinit::test]
 async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
