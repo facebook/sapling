@@ -451,7 +451,12 @@ TEST(FileInode, readDuringLoad) {
 
   // Load the inode and start reading the contents
   auto inode = mount_.getFileInode("notready.txt");
-  auto dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext());
+  auto dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext())
+                        .thenValue([](std::tuple<BufVec, bool> readRes) {
+                          auto [data, isEof] = std::move(readRes);
+                          EXPECT_EQ(true, isEof);
+                          return data->moveToFbString();
+                        });
 
   EXPECT_FALSE(dataFuture.isReady());
 
@@ -460,7 +465,7 @@ TEST(FileInode, readDuringLoad) {
 
   // The read() operation should have completed now.
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ(contents, std::move(dataFuture).get()->moveToFbString());
+  EXPECT_EQ(contents, std::move(dataFuture).get());
 }
 
 TEST(FileInode, writeDuringLoad) {
@@ -499,7 +504,12 @@ TEST(FileInode, truncateDuringLoad) {
   auto inode = mount_.getFileInode("notready.txt");
 
   // Start reading the contents
-  auto dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext());
+  auto dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext())
+                        .thenValue([](std::tuple<BufVec, bool> readRes) {
+                          auto [data, isEof] = std::move(readRes);
+                          EXPECT_EQ(true, isEof);
+                          return data->moveToFbString();
+                        });
   EXPECT_FALSE(dataFuture.isReady());
 
   // Truncate the file while the initial read is in progress. This should
@@ -511,15 +521,19 @@ TEST(FileInode, truncateDuringLoad) {
 
   // The read should complete now too.
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ("", std::move(dataFuture).get()->moveToFbString());
+  EXPECT_EQ("", std::move(dataFuture).get());
 
   // For good measure, test reading and writing some more.
   inode->write("foobar\n"_sp, 5, ObjectFetchContext::getNullContext()).get(0ms);
 
-  dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext());
+  dataFuture = inode->read(4096, 0, ObjectFetchContext::getNullContext())
+                   .thenValue([](std::tuple<BufVec, bool> readRes) {
+                     auto [data, isEof] = std::move(readRes);
+                     EXPECT_EQ(false, isEof);
+                     return data->moveToFbString();
+                   });
   ASSERT_TRUE(dataFuture.isReady());
-  EXPECT_EQ(
-      "\0\0\0\0\0foobar\n"_sp, std::move(dataFuture).get()->moveToFbString());
+  EXPECT_EQ("\0\0\0\0\0foobar\n"_sp, std::move(dataFuture).get());
 
   EXPECT_FILE_INODE(inode, "\0\0\0\0\0foobar\n"_sp, 0644);
 }

@@ -860,24 +860,31 @@ void FileInode::materialize() {
 }
 #else
 
-Future<BufVec>
+Future<std::tuple<BufVec, bool>>
 FileInode::read(size_t size, off_t off, ObjectFetchContext& context) {
   XDCHECK_GE(off, 0);
-  return runWhileDataLoaded<Future<BufVec>>(
+  return runWhileDataLoaded<Future<std::tuple<BufVec, bool>>>(
       LockedState{this},
       BlobCache::Interest::WantHandle,
       // This function is only called by FUSE.
       context,
       nullptr,
       [size, off, self = inodePtrFromThis()](
-          LockedState&& state, std::shared_ptr<const Blob> blob) -> BufVec {
+          LockedState&& state,
+          std::shared_ptr<const Blob> blob) -> std::tuple<BufVec, bool> {
         SCOPE_SUCCESS {
           self->updateAtimeLocked(*state);
         };
 
         // Materialized either before or during blob load.
         if (state->tag == State::MATERIALIZED_IN_OVERLAY) {
-          return self->getOverlayFileAccess(state)->read(*self, size, off);
+          // TODO(xavierd): For materialized files, only return EOF when read
+          // returned no bytes. This will force some FS Channel (like NFS) to
+          // issue at least 2 read calls: one for reading the entire file, and
+          // the second one to get the EOF bit.
+          auto buf = self->getOverlayFileAccess(state)->read(*self, size, off);
+          auto eof = size != 0 && buf->empty();
+          return {std::move(buf), eof};
         }
 
         // runWhileDataLoaded() ensures that the state is either
@@ -899,7 +906,7 @@ FileInode::read(size_t size, off_t off, ObjectFetchContext& context) {
 
         if (!cursor.canAdvance(off)) {
           // Seek beyond EOF.  Return an empty result.
-          return BufVec{folly::IOBuf::wrapBuffer("", 0)};
+          return {BufVec{folly::IOBuf::wrapBuffer("", 0)}, true};
         }
 
         cursor.skip(off);
@@ -907,7 +914,7 @@ FileInode::read(size_t size, off_t off, ObjectFetchContext& context) {
         std::unique_ptr<folly::IOBuf> result;
         cursor.cloneAtMost(result, size);
 
-        return BufVec{std::move(result)};
+        return {BufVec{std::move(result)}, cursor.isAtEnd()};
       });
 }
 

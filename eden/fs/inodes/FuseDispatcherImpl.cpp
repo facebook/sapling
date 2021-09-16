@@ -249,7 +249,11 @@ ImmediateFuture<BufVec> FuseDispatcherImpl::read(
     ObjectFetchContext& context) {
   return inodeMap_->lookupFileInode(ino).thenValue(
       [&context, size, off](FileInodePtr&& inode) {
-        return inode->read(size, off, context).semi();
+        return inode->read(size, off, context)
+            .thenValue([](std::tuple<BufVec, bool>&& readRes) {
+              return std::get<BufVec>(std::move(readRes));
+            })
+            .semi();
       });
 }
 
