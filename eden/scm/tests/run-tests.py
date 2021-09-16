@@ -2118,52 +2118,27 @@ class TTest(Test):
                     els = expected[pos]
 
                 i = 0
-                optional = []
                 while i < len(els):
                     el = els[i]
+                    trimmed_el, is_optional = self.parse_optional_directive(el)
+                    success = lout == el or self.linematch(trimmed_el, lout)
 
-                    r = self.linematch(el, lout)
-                    if isinstance(r, str):
-                        if r == "retry":
-                            postout.append(b"  " + el)
-                            els.pop(i)
-                            break
-                        else:
-                            log("\ninfo, unknown linematch result: %r\n" % r)
-                            r = False
-                    if r:
+                    if success:
                         els.pop(i)
                         break
-                    if el:
-                        if el.endswith(b" (?)\n"):
-                            optional.append(i)
-                        else:
-                            m = optline.match(el)
-                            if m:
-                                conditions = [
-                                    _strpath(c) for c in m.group(2).split(b" ")
-                                ]
-
-                                if not self._iftest(conditions):
-                                    optional.append(i)
-
+                    if is_optional:
+                        postout.append(b"  " + el)
+                        els.pop(i)
+                        break
                     i += 1
 
-                if r:
-                    if r == "retry":
-                        continue
-                    # clean up any optional leftovers
-                    for i in optional:
-                        postout.append(b"  " + els[i])
-                    for i in reversed(optional):
-                        del els[i]
+                if success:
                     postout.append(b"  " + el)
+                elif is_optional:
+                    continue
                 else:
                     postout.append(b"  " + lout)  # Let diff deal with it.
-                    if r != "":  # If line failed.
-                        warnonly = 3  # for sure not
-                    elif warnonly == 1:  # Is "not yet" and line is warn only.
-                        warnonly = 2  # Yes do warn.
+                    warnonly = 3  # for sure not
                 break
             else:
                 # clean up any optional leftovers
@@ -2246,45 +2221,48 @@ class TTest(Test):
                 res += re.escape(c)
         return TTest.rematch(res, l)
 
+    def parse_optional_directive(self, el):
+        """Determine whether el is optional, and strip the optional marker if so."""
+        if not el:
+            # The function is sometimes pasesd None for some reason, so we have to early
+            return el, False
+        if el.endswith(b" (?)\n"):
+            return el[:-5] + b"\n", True
+
+        m = optline.match(el)
+        if m:
+            conditions = [_strpath(c) for c in m.group(2).split(b" ")]
+
+            el = m.group(1) + b"\n"
+            optional = not self._iftest(conditions)  # Not required by listed features
+            return el, optional
+        return el, False
+
     def linematch(self, el, l):
-        retry = False
-        if el == l:  # perfect match (fast)
-            return True
-        if el:
-            if el.endswith(b" (?)\n"):
-                retry = "retry"
-                el = el[:-5] + b"\n"
-            else:
-                m = optline.match(el)
-                if m:
-                    conditions = [_strpath(c) for c in m.group(2).split(b" ")]
-
-                    el = m.group(1) + b"\n"
-                    if not self._iftest(conditions):
-                        retry = "retry"  # Not required by listed features
-
-            if el.endswith(b" (esc)\n"):
-                if PYTHON3:
-                    if repr(el[:-7]) == repr(l[:-1]).replace("\\", "\\\\"):
-                        return True
-                    el = el[:-7].decode("unicode_escape") + "\n"
-                    el = el.encode("utf-8")
-                else:
-                    el = el[:-7].decode("string-escape") + "\n"
-            if el == l or os.name == "nt" and el[:-1] + b"\r\n" == l:
-                return True
-            if el.endswith(b" (re)\n"):
-                return TTest.rematch(el[:-6], l) or retry
-            if el.endswith(b" (glob)\n"):
-                # ignore '(glob)' added to l by 'replacements'
-                if l.endswith(b" (glob)\n"):
-                    l = l[:-8] + b"\n"
-                return TTest.globmatch(el[:-8], l) or retry
-            if os.altsep:
-                _l = l.replace(b"\\", b"/")
-                if el == _l or os.name == "nt" and el[:-1] + b"\r\n" == _l:
+        if not el:
+            return False
+        if el.endswith(b" (esc)\n"):
+            if PYTHON3:
+                if repr(el[:-7]) == repr(l[:-1]).replace("\\", "\\\\"):
                     return True
-        return retry
+                el = el[:-7].decode("unicode_escape") + "\n"
+                el = el.encode("utf-8")
+            else:
+                el = el[:-7].decode("string-escape") + "\n"
+        if el == l or os.name == "nt" and el[:-1] + b"\r\n" == l:
+            return True
+        if el.endswith(b" (re)\n"):
+            return TTest.rematch(el[:-6], l) or False
+        if el.endswith(b" (glob)\n"):
+            # ignore '(glob)' added to l by 'replacements'
+            if l.endswith(b" (glob)\n"):
+                l = l[:-8] + b"\n"
+            return TTest.globmatch(el[:-8], l) or False
+        if os.altsep:
+            _l = l.replace(b"\\", b"/")
+            if el == _l or os.name == "nt" and el[:-1] + b"\r\n" == _l:
+                return True
+        return False
 
     @staticmethod
     def parsehghaveoutput(lines):
