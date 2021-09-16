@@ -449,6 +449,19 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> useUnixSocket{"nfs:use-uds", false, this};
 
+  /**
+   * Whether EdenFS should unload NFS inodes. NFSv3 does not notify us when
+   * file handles are closed. We have no definitive info from NFS on how many
+   * open handles there are for already removed inodes.
+   *
+   * This enables background inode unloads to keep our inode memory and
+   * disk usage bounded.
+   */
+  ConfigSetting<bool> unloadUnlinkedInodes{
+      "nfs:unload-unlinked-inodes",
+      false,
+      this};
+
   // [prjfs]
 
   /**

@@ -725,6 +725,25 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       CheckoutMode checkoutMode,
       ObjectFetchContext& context);
 
+  /**
+   * Clear the fs reference count for all stale inodes. Stale inodes are those
+   * that have been unlinked and not recently referenced.
+   *
+   * "referenced" means atime changed on the inodes. This is not a perfect
+   * measure as GETATTR calls do not update atime. We might want to use a
+   * "referenced" time instead that we update on every inode access.
+   *
+   * "recently" means 10s currently. TODO: turn this into a config option.
+   */
+  void forgetStaleInodes();
+
+  bool isNFSMount() const {
+#ifndef _WIN32
+    return std::holds_alternative<NfsdChannelVariant>(channel_);
+#endif
+    return false;
+  }
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;

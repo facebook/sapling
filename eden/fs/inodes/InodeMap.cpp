@@ -8,8 +8,10 @@
 #include "eden/fs/inodes/InodeMap.h"
 
 #include <boost/polymorphic_cast.hpp>
+
 #include <folly/Exception.h>
 #include <folly/Likely.h>
+#include <folly/chrono/Conv.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/inodes/EdenMount.h"
@@ -559,10 +561,24 @@ std::optional<RelativePath> InodeMap::getPathForInodeHelper(
     }
   }
 }
-
 void InodeMap::decFsRefcount(InodeNumber number, uint32_t count) {
-  auto data = data_.wlock();
+  InodePtr inodePtr;
+  {
+    auto data = data_.wlock();
+    inodePtr = decFsRefcountHelper(data, number, count);
+  }
+  // Now release our lock before decrementing the inode's FS reference
+  // count and immediately releasing our pointer reference.
+  if (inodePtr) {
+    inodePtr->decFsRefcount();
+  }
+}
 
+InodePtr InodeMap::decFsRefcountHelper(
+    folly::Synchronized<Members>::LockedPtr& data,
+    InodeNumber number,
+    uint32_t count,
+    bool clearRefCount) {
   if (folly::kIsWindows) {
     XDCHECK_EQ(count, 1u);
   }
@@ -576,12 +592,7 @@ void InodeMap::decFsRefcount(InodeNumber number, uint32_t count) {
     // This ensures that onInodeUnreferenced() will be processed at some point
     // after decrementing the FS refcount to 0, even if there were no
     // outstanding pointer references before this.
-    auto inode = loadedIter->second.getPtr();
-    // Now release our lock before decrementing the inode's FS reference
-    // count and immediately releasing our pointer reference.
-    data.unlock();
-    inode->decFsRefcount(count);
-    return;
+    return loadedIter->second.getPtr();
   }
 
   // If it wasn't loaded, it should be in the unloaded map
@@ -593,14 +604,96 @@ void InodeMap::decFsRefcount(InodeNumber number, uint32_t count) {
 
   // Decrement the reference count in the unloaded entry
   auto& unloadedEntry = unloadedIter->second;
-  XCHECK_GE(unloadedEntry.numFsReferences, count);
-  unloadedEntry.numFsReferences -= count;
+  if (clearRefCount) {
+    unloadedEntry.numFsReferences = 0;
+  } else {
+    XCHECK_GE(unloadedEntry.numFsReferences, count);
+    unloadedEntry.numFsReferences -= count;
+  }
+
   if (unloadedEntry.numFsReferences == 0) {
     // We can completely forget about this unloaded inode now.
     XLOG(DBG5) << "forgetting unloaded inode " << number << ": "
                << unloadedEntry.parent << ":" << unloadedEntry.name;
     data->unloadedInodes_.erase(unloadedIter);
   }
+  return nullptr;
+}
+
+void InodeMap::forgetStaleInodes() {
+  // Note this functionality is pretty similar to the periodic Inode unloading
+  // which unloads old inodes (EdenServer::unloadInodes). The key difference is
+  // that this code unloads UNLINKED inodes where as that code unloads LINKED
+  // inodes. That codepath only considers unloading inodes reachable from the
+  // root inode which means the inodes must be linked to be considered for
+  // unloading. We might want to merge the two, however at the time of writing
+  // linked inode unloading is broken. We should consider merging
+  // both linked and unlinked inode unloading in the future: T100682833
+#ifndef _WIN32
+  // We do not track metadata for inodes on Windows. This was originally because
+  // ProjFS does not send most requests after a file is first read to EdenFS.
+  // If we support NFS on Windows, we need to keep track of inode metadata
+  // on Windows to enable periodic inode unloading: T100720928.
+
+  // TODO add a checkout decRef counter
+  // TODO: this will unload by atime, atime is not updated by stat -- fix it
+
+  XLOG(DBG2) << "dereferencing stale inodes";
+  // We have to destroy InodePtrs outside of the data lock. These hold all the
+  // InodePtrs we created.
+  std::vector<InodePtr> toClearFSRef;
+  std::vector<InodePtr> justToHoldBeyondScopeOfLock;
+  auto cutoff =
+      std::chrono::system_clock::now() - std::chrono::milliseconds{10000};
+  auto cutoff_ts = folly::to<timespec>(cutoff);
+
+  {
+    auto data = data_.wlock();
+
+    for (auto& inode : data->unloadedInodes_) {
+      if (inode.second.isUnlinked) {
+        auto inodePtr = decFsRefcountHelper(
+            data,
+            inode.first,
+            /*count=*/0, // Doesn't matter what we set this to because we are
+                         // going to clear the ref count.
+            /*clearRefCount=*/true);
+        XCHECK(!inodePtr)
+            << "decFsRefcountHelper should not return a loaded inode that  "
+            << "needs to be dereferenced for an inode we know to be unloaded.";
+      }
+    }
+
+    // we do this second because dereferencing a loaded inode will cause it to
+    // be unloaded. Thus this will create lots of unloaded inodes. we don't want
+    // to double decRef them, so we decref loaded inodes after unloaded ones.
+    for (auto& inode : data->loadedInodes_) {
+      auto inodePtr = decFsRefcountHelper(
+          data,
+          inode.first,
+          /*count=*/0, // Doesn't matter what we set this to because we are
+                       // going to clear the ref count.
+          /*clearRefCount=*/true);
+      if (inodePtr) {
+        if (inodePtr->isUnlinked() &&
+            inode.second->getMetadata().timestamps.atime < cutoff_ts) {
+          toClearFSRef.push_back(inodePtr);
+        } else {
+          // even though we are not going to do anything with these inodes we
+          // need to keep them around until we let go of the lock. It is not
+          // safe to dereference an inodePtr whild holding the lock.
+          justToHoldBeyondScopeOfLock.push_back(inodePtr);
+        }
+      }
+    }
+  }
+
+  for (auto& inodePtr : toClearFSRef) {
+    XLOG(DBG7) << "De-referencing NFS inode: " << inodePtr->getNodeId();
+    inodePtr->clearFsRefcount();
+  }
+  XLOG(DBG2) << "dereferencing stale inodes complete";
+#endif
 }
 
 void InodeMap::setUnmounted() {

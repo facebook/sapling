@@ -235,6 +235,8 @@ class InodeMap {
    */
   void decFsRefcount(InodeNumber number, uint32_t count = 1);
 
+  void forgetStaleInodes();
+
   /**
    * Indicate that the mount point has been unmounted.
    *
@@ -633,6 +635,19 @@ class InodeMap {
       InodeNumber parentIno,
       InodeNumber ino,
       Args&&... args);
+
+  /**
+   * For unloaded inodes, this decrements the inode fs refcount.
+   * For loaded inodes this returns the inode to decrement the FS refcount on
+   * because it is not safe to decrement the refcount while holding the data
+   * lock. For loaded inodes this does not decrement the fs refcount!
+   * WARNING: The returned inodePtr must be destroyed OUTSIDE of the data lock!
+   */
+  InodePtr decFsRefcountHelper(
+      folly::Synchronized<Members>::LockedPtr& data,
+      InodeNumber number,
+      uint32_t count = 0,
+      bool clearRefCount = false);
 
   /**
    * The EdenMount that owns this InodeMap.

@@ -470,23 +470,10 @@ void EdenServiceHandler::checkOutRevision(
           : "(unspecified hg root manifest)");
 
   auto mountPath = AbsolutePathPiece{*mountPoint};
-  auto edenMount = server_->getMount(mountPath);
-  auto rootId = edenMount->getObjectStore()->parseRootId(*hash);
-  if (params->hgRootManifest_ref().has_value()) {
-    // The hg client has told us what the root manifest is.
-    //
-    // This is useful when a commit has just been created.  We won't be able to
-    // ask the import helper to map the commit to its root manifest because it
-    // won't know about the new commit until it reopens the repo.  Instead,
-    // import the manifest for this commit directly.
-    auto rootManifest = hashFromThrift(*params->hgRootManifest_ref());
-    edenMount->getObjectStore()
-        ->getBackingStore()
-        ->importManifestForRoot(rootId, rootManifest)
-        .get();
-  }
-  auto checkoutFuture = edenMount->checkout(
-      rootId,
+  auto checkoutFuture = server_->checkOutRevision(
+      mountPath,
+      *hash,
+      params->hgRootManifest_ref().to_optional(),
       helper->getFetchContext().getClientPid(),
       helper->getFunctionName(),
       checkoutMode);

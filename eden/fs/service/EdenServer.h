@@ -283,6 +283,14 @@ class EdenServer : private TakeoverHandler {
    */
   std::shared_ptr<EdenMount> getMount(AbsolutePathPiece mountPath) const;
 
+  folly::Future<CheckoutResult> checkOutRevision(
+      AbsolutePathPiece mountPath,
+      std::string& rootHash,
+      std::optional<folly::StringPiece> rootHgManifest,
+      std::optional<pid_t> clientPid,
+      folly::StringPiece callerName,
+      CheckoutMode checkoutMode);
+
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;
   }
@@ -402,6 +410,19 @@ class EdenServer : private TakeoverHandler {
   std::unordered_set<std::shared_ptr<HgQueuedBackingStore>>
   getHgQueuedBackingStores();
 
+  /**
+   * Schedule `fn` to run on the main server event base when the `timeout`
+   * expires. This does not block until `fn` is scheduled.
+   *
+   * `fn` will either run before the event base is completely destroyed or
+   * not at all.
+   *
+   * Must be called only from the mainEventBase_ thread.
+   */
+  void scheduleCallbackOnMainEventBase(
+      std::chrono::milliseconds timeout,
+      std::function<void()> fn);
+
  private:
   // Struct to store EdenMount along with SharedPromise that is set
   // during unmount to allow synchronization between unmountFinished
@@ -441,7 +462,7 @@ class EdenServer : private TakeoverHandler {
   /**
    * Schedule a call to unloadInodes() to happen after timeout
    * has expired.
-   * Must be called only from the eventBase thread.
+   * Must be called only from the mainEventBase_ thread.
    */
   void scheduleInodeUnload(std::chrono::milliseconds timeout);
 

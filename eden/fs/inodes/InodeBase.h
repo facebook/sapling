@@ -102,8 +102,17 @@ class InodeBase {
       XDCHECK_GE(prevValue, count);
     } else {
       XDCHECK_GE(count, 1u);
-      numFsReferences_.store(0u, std::memory_order_release);
+      clearFsRefcount();
     }
+  }
+
+  /**
+   * Decrement the FSReference count to zero. This is used on platforms
+   * where the kernel does not tell us when an inode has been dereferenced.
+   * (NFS and Windows).
+   */
+  void clearFsRefcount() {
+    numFsReferences_.store(0u, std::memory_order_release);
   }
 
   /**

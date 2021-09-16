@@ -1203,6 +1203,10 @@ folly::Future<CheckoutResult> EdenMount::checkout(
       });
 }
 
+void EdenMount::forgetStaleInodes() {
+  inodeMap_->forgetStaleInodes();
+}
+
 #ifndef _WIN32
 folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   // 1) Ensure that all future opens will by default provide this owner

@@ -15,6 +15,7 @@
 #include <functional>
 #include <memory>
 #include <sstream>
+#include <string>
 
 #include <fb303/ServiceData.h>
 #include <fmt/core.h>
@@ -24,6 +25,7 @@
 #include <folly/String.h>
 #include <folly/chrono/Conv.h>
 #include <folly/io/async/AsyncSignalHandler.h>
+#include <folly/io/async/HHWheelTimer.h>
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 #include <gflags/gflags.h>
@@ -43,6 +45,7 @@
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenServiceHandler.h"
 #include "eden/fs/service/StartupLogger.h"
+#include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/BlobCache.h"
@@ -72,7 +75,6 @@
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UserInfo.h"
-
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -658,6 +660,52 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
   localStoreTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.localStoreManagementInterval.getValue()));
+}
+
+void EdenServer::scheduleCallbackOnMainEventBase(
+    std::chrono::milliseconds timeout,
+    std::function<void()> fn) {
+  // If we don't care about calling fn_ when the callback is canceled, we
+  // could just use scheduleTimeoutFn and not have to do a wrapper class.
+  // We don't want to run fn_ on cancel because we could be running in the
+  // middle of destruction.
+  struct Wrapper : folly::HHWheelTimer::Callback {
+    explicit Wrapper(std::function<void()> f) : fn_(std::move(f)) {}
+    void timeoutExpired() noexcept override {
+      XLOG(DBG3) << "Callback expired, running function";
+      try {
+        fn_();
+      } catch (std::exception const& e) {
+        LOG(ERROR) << "HHWheelTimerBase timeout callback threw an exception: "
+                   << e.what();
+      } catch (...) {
+        LOG(ERROR)
+            << "HHWheelTimerBase timeout callback threw a non-exception.";
+      }
+      // We have to use a CallBack* to schedule. We need to destroy ourselves
+      // because no one else will
+      delete this;
+    }
+    // The callback will be canceled if the timer is destroyed. Or we use
+    // deduplication We don't want to run fn during destruction.
+    void callbackCanceled() noexcept override {
+      XLOG(DBG3) << "Callback cancled, NOT running function";
+      // We have to use a CallBack* to schedule. We need to destory ourselves
+      // because no one else will
+      delete this;
+    }
+    std::function<void()> fn_;
+  };
+
+  // I hate using raw pointers, but we have to to schedule the callback.
+  Wrapper* w = new Wrapper(std::move(fn));
+  // Note callback will be run in the mainEventBase_ Thread.
+  // TODO: would be nice to deduplicate these function calls. We need the
+  // same type of callback to use the same wrapper object ... singletons?
+  // The main difference with scheduleTimeoutFn is whether the callback is
+  // invoked when the EventBase is destroyed: scheduleTimeoutFn will call it,
+  // this function won't. See comment above the wrapper class.
+  mainEventBase_->timer().scheduleTimeout(w, timeout);
 }
 
 #ifndef _WIN32
@@ -1586,6 +1634,81 @@ shared_ptr<EdenMount> EdenServer::getMountUnsafe(
             "\" is not known to this eden instance"));
   }
   return it->second.edenMount;
+}
+
+Future<CheckoutResult> EdenServer::checkOutRevision(
+    AbsolutePathPiece mountPath,
+    std::string& rootHash,
+    std::optional<folly::StringPiece> rootHgManifest,
+    std::optional<pid_t> clientPid,
+    StringPiece callerName,
+    CheckoutMode checkoutMode) {
+  auto edenMount = getMount(mountPath);
+  auto rootId = edenMount->getObjectStore()->parseRootId(rootHash);
+  if (rootHgManifest.has_value()) {
+    // The hg client has told us what the root manifest is.
+    //
+    // This is useful when a commit has just been created.  We won't be able to
+    // ask the import helper to map the commit to its root manifest because it
+    // won't know about the new commit until it reopens the repo.  Instead,
+    // import the manifest for this commit directly.
+    auto rootManifest = hashFromThrift(rootHgManifest.value());
+    edenMount->getObjectStore()
+        ->getBackingStore()
+        ->importManifestForRoot(rootId, rootManifest)
+        .get();
+  }
+  return edenMount->checkout(rootId, clientPid, callerName, checkoutMode)
+      .via(mainEventBase_)
+      .thenValue([this, checkoutMode, edenMount, mountPath](
+                     CheckoutResult&& result) {
+        if (checkoutMode == CheckoutMode::DRY_RUN) {
+          return std::move(result);
+        }
+
+        // In NFSv3 the kernel never tells us when its safe to unload
+        // inodes ("safe" meaning all file handles to the inode have been
+        // closed).
+        //
+        // To avoid unbounded memory and disk use we need to periodically
+        // clean them up. Checkout will likely create a lot of stale innodes
+        // so we run a delayed cleanup after checkout.
+        if (edenMount->isNFSMount() &&
+            serverState_->getReloadableConfig()
+                .getEdenConfig()
+                ->unloadUnlinkedInodes.getValue()) {
+          // During whole Eden Process stutdown, this function can only be run
+          // before the mount is destroyed.
+          // This is because the function is either run before the server
+          // event base is destroyed or it is not run at all, and the server
+          // event base is destroyed before the mountPoints. Since the function
+          // must be run before the eventbase is destroyed and the eventbase is
+          // destroyed before the mountPoints, this function can only be called
+          // before the mount points are destoryed during normal destruction.
+          // However, the mount pont might have been unmounted before this
+          // function is run outside of shutdown.
+          this->scheduleCallbackOnMainEventBase(
+              std::chrono::milliseconds{10000}, // TODO: config
+              [this, mountPath = mountPath.copy()]() {
+                try {
+                  auto edenMount = this->getMount(mountPath);
+                  edenMount->forgetStaleInodes();
+                } catch (EdenError& err) {
+                  // This is an expected error if the mount has been unmounted
+                  // before this callback ran.
+                  if (err.errorCode_ref() == ENOENT) {
+                    XLOG(DBG3)
+                        << "Callback to clear inodes: Mount cannot be found. "
+                        << err.get_message();
+                  } else {
+                    throw;
+                  }
+                }
+              });
+        }
+        return std::move(result);
+      })
+      .via(getServerState()->getThreadPool().get());
 }
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(
