@@ -24,6 +24,7 @@
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/NotImplemented.h"
+#include "eden/fs/utils/SystemError.h"
 
 using folly::Future;
 using folly::Promise;
@@ -95,8 +96,13 @@ InodeMap::UnloadedInode::UnloadedInode(
   }
 }
 
-InodeMap::InodeMap(EdenMount* mount, std::shared_ptr<ReloadableConfig> config)
-    : mount_{mount}, config_{std::move(config)} {}
+InodeMap::InodeMap(
+    EdenMount* mount,
+    std::shared_ptr<ReloadableConfig> config,
+    bool throwEstaleIfInodeIsMissing)
+    : mount_{mount},
+      config_{std::move(config)},
+      throwEstaleIfInodeIsMissing_{throwEstaleIfInodeIsMissing} {}
 
 InodeMap::~InodeMap() {
   // TODO: We need to clean up the EdenMount / InodeMap destruction process a
@@ -287,6 +293,15 @@ ImmediateFuture<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // Look up the data in the unloadedInodes_ map.
   auto unloadedIter = data->unloadedInodes_.find(number);
   if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
+    if (throwEstaleIfInodeIsMissing_) {
+      XLOG(DBG2) << "NFS inode " << number << " stale";
+      // windows does not have ESTALE. We need some other error to turn into the
+      // nfs stale error. For now let's just let it throw.
+#ifndef _WIN32
+      return ImmediateFuture<InodePtr>{folly::Try<InodePtr>{
+          std::system_error{std::error_code{ESTALE, std::system_category()}}}};
+#endif
+    }
     // This generally shouldn't happen.  If a InodeNumber has been allocated we
     // should always know about it.  It's a bug if our caller calls us with an
     // invalid InodeNumber number.

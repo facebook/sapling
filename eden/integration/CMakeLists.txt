@@ -20,6 +20,7 @@ if(WIN32)
     ${CMAKE_CURRENT_SOURCE_DIR}/mmap_test.py
     ${CMAKE_CURRENT_SOURCE_DIR}/takeover_test.py
     ${CMAKE_CURRENT_SOURCE_DIR}/userinfo_test.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/stale_inode_test.py
   )
 endif()
 
@@ -42,6 +43,7 @@ add_fb_python_unittest(
   DEPENDS
     edenfsctl.main_lib
     eden_integration_lib
+    eden_hg_integration_lib
   ENV
     "CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
 )

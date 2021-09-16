@@ -22,6 +22,7 @@
 #include <shared_mutex>
 #include <stdexcept>
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
@@ -726,6 +727,22 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
       ObjectFetchContext& context);
 
   /**
+   * Should only be called by the mount contructor. We decide wether this
+   * mount should use nfs at construction time and do not change the decision.
+   * This is so that we can consitently determine if we are determining if we
+   * are using an nfs mount without checking if the channel is an NFS mount.
+   * Needed because the InodeMap which is a dependency of ourselves needs to be
+   * NFS aware. We don't want a dependency inversion where the inode map relies
+   * on the mount to determine if its an NFS inode map.
+   */
+  bool shouldUseNFSMount() {
+#ifndef _WIN32
+    return getEdenConfig()->enableNfsServer.getValue() &&
+        getCheckoutConfig()->getMountProtocol() == MountProtocol::NFS;
+#endif
+    return false;
+  }
+  /**
    * Clear the fs reference count for all stale inodes. Stale inodes are those
    * that have been unlinked and not recently referenced.
    *
@@ -909,6 +926,13 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Eden server state shared across multiple mount points.
    */
   std::shared_ptr<ServerState> serverState_;
+
+  /**
+   * Should the created mount use NFS (only currently supported on Linux and
+   * Windows). We calculate this when the mount is created based on the
+   * underlying dynamic configuration.
+   */
+  bool shouldUseNFSMount_;
 
   std::unique_ptr<InodeMap> inodeMap_;
 

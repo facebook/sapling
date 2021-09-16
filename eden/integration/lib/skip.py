@@ -126,6 +126,7 @@ if sys.platform == "win32":
             # TODO: A \r\n is used
             "test_mount_state_during_unmount_with_in_progress_checkout"
         ],
+        "stale_inode_test.StaleInodeTestHgNFS": True,
     }
 elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-release"):
     # The ChownTest.setUp() code tries to look up the "nobody" group, which doesn't

@@ -203,11 +203,13 @@ EdenMount::EdenMount(
     std::unique_ptr<Journal> journal)
     : checkoutConfig_{std::move(checkoutConfig)},
       serverState_{std::move(serverState)},
+      shouldUseNFSMount_{shouldUseNFSMount()},
       inodeMap_{new InodeMap(
           this,
           shared_ptr<ReloadableConfig>(
               serverState_,
-              &serverState_->getReloadableConfig()))},
+              &serverState_->getReloadableConfig()),
+          shouldUseNFSMount_)},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
@@ -1468,8 +1470,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
               return makeFuture(folly::unit);
             });
 #else
-        if (edenConfig->enableNfsServer.getValue() &&
-            getCheckoutConfig()->getMountProtocol() == MountProtocol::NFS) {
+        if (shouldUseNFSMount_) {
           auto nfsServer = serverState_->getNfsServer();
 
           auto iosize = edenConfig->nfsIoSize.getValue();
