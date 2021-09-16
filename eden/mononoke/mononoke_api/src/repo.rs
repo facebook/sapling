@@ -148,10 +148,13 @@ impl Repo {
     pub async fn new(
         env: &MononokeApiEnvironment,
         name: String,
-        config: RepoConfig,
+        mut config: RepoConfig,
     ) -> Result<Self, Error> {
         let fb = env.repo_factory.env.fb;
 
+        if !env.skiplist_enabled {
+            config.skiplist_index_blobstore_key = None;
+        }
         let logger = env.repo_factory.env.logger.new(o!("repo" => name.clone()));
         let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
 

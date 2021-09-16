@@ -112,6 +112,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Allow,
         warm_bookmarks_cache_enabled: true,
+        skiplist_enabled: true,
     };
 
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs.clone()))?);

@@ -218,6 +218,7 @@ pub struct MononokeApiEnvironment {
     pub warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
     pub warm_bookmarks_cache_delay: BookmarkUpdateDelay,
     pub warm_bookmarks_cache_enabled: bool,
+    pub skiplist_enabled: bool,
 }
 
 #[derive(Copy, Clone, Debug)]

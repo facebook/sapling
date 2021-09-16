@@ -232,15 +232,17 @@ async fn bootstrap_repositories<'a>(
 
     let repo_factory = RepoFactory::new(matches.environment().clone(), &config.common);
 
+    let no_skiplist = matches.is_present(ARG_NO_SKIPLIST);
+
     let env = MononokeApiEnvironment {
         repo_factory,
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
         warm_bookmarks_cache_enabled: true,
+        skiplist_enabled: !no_skiplist,
     };
 
-    let no_skiplist = matches.is_present(ARG_NO_SKIPLIST);
     let no_cache_warmup = matches.is_present(ARG_NO_CACHE_WARMUP);
     let multiplexblob_sampling_rate = matches
         .value_of(ARG_MULTIPLEXEDBLOB_SAMPLING)

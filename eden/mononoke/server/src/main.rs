@@ -164,6 +164,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
                 warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
                 warm_bookmarks_cache_enabled: true,
+                skiplist_enabled: true,
             };
 
             let mononoke = Mononoke::new(&env, config.clone())
