@@ -1246,27 +1246,26 @@ EdenServiceHandler::semifuture_getFileInformation(
           }));
 }
 
-folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
+folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
     folly::StringPiece mountPoint,
     std::vector<std::string> globs,
-    bool includeDotfiles,
-    bool prefetchFiles,
-    bool suppressFileList,
-    bool wantDtype,
     std::vector<std::string> rootHashes,
-    bool prefetchMetadata,
     folly::StringPiece searchRootUser,
-    bool background,
+    GlobOptions globOptions,
     folly::StringPiece caller,
-    std::optional<pid_t> pid,
-    bool listOnlyFiles) {
+    std::optional<pid_t> pid) {
   auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME_AND_PID(
-      DBG3, caller, pid, mountPoint, toLogArg(globs), includeDotfiles);
+      DBG3,
+      caller,
+      pid,
+      mountPoint,
+      toLogArg(globs),
+      globOptions.includeDotfiles);
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto edenMount = server_->getMount(mountPath);
 
   // Compile the list of globs into a tree
-  auto globRoot = std::make_shared<GlobNode>(includeDotfiles);
+  auto globRoot = std::make_shared<GlobNode>(globOptions.includeDotfiles);
   try {
     for (auto& globString : globs) {
       try {
@@ -1284,12 +1283,12 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
     throw newEdenError(exc);
   }
 
-  auto fileBlobsToPrefetch = prefetchFiles
+  auto fileBlobsToPrefetch = globOptions.prefetchFiles
       ? std::make_shared<folly::Synchronized<std::vector<Hash>>>()
       : nullptr;
 
   auto& fetchContext = helper->getFetchContext();
-  fetchContext.setPrefetchMetadata(prefetchMetadata);
+  fetchContext.setPrefetchMetadata(globOptions.prefetchMetadata);
 
   // These hashes must outlive the GlobResult created by evaluate as the
   // GlobResults will hold on to references to these hashes
@@ -1361,7 +1360,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
       std::move(helper),
       folly::collectAll(std::move(globResults))
           .via(server_->getServerState()->getThreadPool().get())
-          .thenValue([fileBlobsToPrefetch, suppressFileList](
+          .thenValue([fileBlobsToPrefetch,
+                      suppressFileList = globOptions.suppressFileList](
                          std::vector<folly::Try<
                              std::vector<GlobNode::GlobResult>>>&& rawResults) {
             // deduplicate and combine all the globResults.
@@ -1412,12 +1412,12 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
                 std::move(combinedResults));
           })
           .thenValue([edenMount,
-                      wantDtype,
+                      wantDtype = globOptions.wantDtype,
                       fileBlobsToPrefetch,
-                      suppressFileList,
+                      suppressFileList = globOptions.suppressFileList,
+                      listOnlyFiles = globOptions.listOnlyFiles,
                       &fetchContext,
-                      config = server_->getServerState()->getEdenConfig(),
-                      listOnlyFiles](
+                      config = server_->getServerState()->getEdenConfig()](
                          std::vector<GlobNode::GlobResult>&& results) mutable {
             auto out = std::make_unique<Glob>();
 
@@ -1467,7 +1467,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::_globFiles(
             // keep globRoot and originRootIds alive until the end
           }));
 
-  if (!background) {
+  if (!globOptions.background) {
     return prefetchFuture;
   } else {
     folly::futures::detachOn(
@@ -1507,22 +1507,24 @@ EdenServiceHandler::future_setPathObjectId(
 #endif
 }
 
+EdenServiceHandler::GlobOptions::GlobOptions(const GlobParams& params)
+    : includeDotfiles{*params.includeDotfiles_ref()},
+      prefetchFiles{*params.prefetchFiles_ref()},
+      suppressFileList{*params.suppressFileList_ref()},
+      wantDtype{*params.wantDtype_ref()},
+      prefetchMetadata{*params.prefetchMetadata_ref()},
+      background{*params.background_ref()},
+      listOnlyFiles{*params.listOnlyFiles_ref()} {}
+
 folly::Future<std::unique_ptr<Glob>>
 EdenServiceHandler::future_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
 #ifdef EDEN_HAVE_USAGE_SERVICE
-  // TODO: since we call INSTRUMENT_THRIFT_CALL in _globFiles, the time
+  // TODO: since we call INSTRUMENT_THRIFT_CALL in globFilesImpl, the time
   // of getTopUsedDirs won't be taken into account
   auto& mountPoint = *params->mountPoint_ref();
-  auto& includeDotfiles = *params->includeDotfiles_ref();
-  auto& prefetchFiles = *params->prefetchFiles_ref();
-  auto& suppressFileList = *params->suppressFileList_ref();
-  auto& wantDtype = *params->wantDtype_ref();
   auto& revisions = *params->revisions_ref();
-  auto& prefetchMetadata = *params->prefetchMetadata_ref();
   auto& searchRoot = *params->searchRoot_ref();
-  auto& background = *params->background_ref();
-  auto& listOnlyFiles = *params->listOnlyFiles_ref();
   /* set predictive glob fetch parameters */
   // if numResults is not specified, use default predictivePrefetchProfileSize
   auto numResults = server_->getServerState()
@@ -1572,25 +1574,21 @@ EdenServiceHandler::future_predictiveGlobFiles(
         ? predictiveGlob->endTime_ref().value()
         : endTime;
   }
+
+  GlobOptions globOptions{*params};
+
   return spServiceEndpoint_
       ->getTopUsedDirs(
           user, repo, numResults, os, startTime, endTime, sandcastleAlias)
-      .thenValue([&, func = __func__, pid = getAndRegisterClientPid(), this](
-                     std::vector<std::string>&& globs) {
-        return _globFiles(
-            mountPoint,
-            globs,
-            includeDotfiles,
-            prefetchFiles,
-            suppressFileList,
-            wantDtype,
-            revisions,
-            prefetchMetadata,
-            searchRoot,
-            background,
-            func,
-            pid,
-            listOnlyFiles);
+      .thenValue([mountPoint,
+                  revisions,
+                  searchRoot,
+                  func = __func__,
+                  pid = getAndRegisterClientPid(),
+                  this,
+                  globOptions](std::vector<std::string>&& globs) {
+        return globFilesImpl(
+            mountPoint, globs, revisions, searchRoot, globOptions, func, pid);
       })
       .thenError([](folly::exception_wrapper&& ew) {
         XLOG(ERR) << "Error fetching predictive file globs: "
@@ -1606,20 +1604,15 @@ EdenServiceHandler::future_predictiveGlobFiles(
 
 folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     std::unique_ptr<GlobParams> params) {
-  return _globFiles(
+  GlobOptions globOptions{*params};
+  return globFilesImpl(
       *params->mountPoint_ref(),
       *params->globs_ref(),
-      *params->includeDotfiles_ref(),
-      *params->prefetchFiles_ref(),
-      *params->suppressFileList_ref(),
-      *params->wantDtype_ref(),
       *params->revisions_ref(),
-      *params->prefetchMetadata_ref(),
       *params->searchRoot_ref(),
-      *params->background_ref(),
+      globOptions,
       __func__,
-      getAndRegisterClientPid(),
-      *params->listOnlyFiles_ref());
+      getAndRegisterClientPid());
 }
 
 folly::Future<Unit> EdenServiceHandler::future_chown(

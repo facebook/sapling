@@ -300,20 +300,26 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext) noexcept;
 
-  folly::Future<std::unique_ptr<Glob>> _globFiles(
+  struct GlobOptions {
+    explicit GlobOptions(const GlobParams& params);
+
+    bool includeDotfiles;
+    bool prefetchFiles;
+    bool suppressFileList;
+    bool wantDtype;
+    bool prefetchMetadata;
+    bool background;
+    bool listOnlyFiles;
+  };
+
+  folly::Future<std::unique_ptr<Glob>> globFilesImpl(
       folly::StringPiece mountPoint,
       std::vector<std::string> globs,
-      bool includeDotfiles,
-      bool prefetchFiles,
-      bool suppressFileList,
-      bool wantDtype,
       std::vector<std::string> revisions,
-      bool prefetchMetadata,
       folly::StringPiece searchRootUser,
-      bool background,
+      GlobOptions options,
       folly::StringPiece caller,
-      std::optional<pid_t> pid,
-      bool listOnlyFiles);
+      std::optional<pid_t> pid);
 
 #ifdef EDEN_HAVE_USAGE_SERVICE
   // an endpoint for the edenfs/edenfs_service smartservice used for predictive
