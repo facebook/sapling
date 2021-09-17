@@ -11,7 +11,7 @@ use context::CoreContext;
 use fbthrift::compact_protocol;
 pub use megarepo_config::Target;
 use megarepo_error::MegarepoError;
-use megarepo_types_thrift::{
+pub use megarepo_types_thrift::{
     MegarepoAsynchronousRequestParams as ThriftMegarepoAsynchronousRequestParams,
     MegarepoAsynchronousRequestParamsId as ThriftMegarepoAsynchronousRequestParamsId,
     MegarepoAsynchronousRequestResult as ThriftMegarepoAsynchronousRequestResult,
@@ -19,6 +19,7 @@ use megarepo_types_thrift::{
 };
 use mononoke_types::{hash::Blake2, impl_typed_context, impl_typed_hash_no_context};
 use requests_table::RowId;
+pub use requests_table::{RequestStatus, RequestType};
 use source_control::{
     MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams,
     MegarepoAddTargetParams as ThriftMegarepoAddTargetParams,
@@ -213,6 +214,11 @@ macro_rules! impl_async_svc_stored_type {
             pub fn handle(&self) -> &$handle_type {
                 &self.id
             }
+
+            pub fn thrift(&self) -> &$value_thrift_type {
+                &self.thrift
+            }
+
         }
 
         // Conversions between thrift types and their Rust counterparts

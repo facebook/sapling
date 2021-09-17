@@ -123,4 +123,12 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         ctx: &CoreContext,
         req_id: &RequestId,
     ) -> Result<Option<(bool, LongRunningRequestEntry)>>;
+
+    async fn list_requests(
+        &self,
+        ctx: &CoreContext,
+        repo_ids: &[RepositoryId],
+        statuses: &[RequestStatus],
+        last_update_newer_than: Option<&Timestamp>,
+    ) -> Result<Vec<LongRunningRequestEntry>>;
 }

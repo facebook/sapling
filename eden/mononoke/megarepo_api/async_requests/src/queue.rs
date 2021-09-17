@@ -12,11 +12,13 @@ use blobstore::PutBehaviour;
 use blobstore::{Blobstore, Storable};
 use bookmarks::BookmarkName;
 use context::CoreContext;
+use futures::{stream, StreamExt, TryStreamExt};
 use megarepo_error::MegarepoError;
 use memblob::Memblob;
 use mononoke_types::{RepositoryId, Timestamp};
 use requests_table::{
-    BlobstoreKey, LongRunningRequestsQueue, RequestType, SqlLongRunningRequestsQueue,
+    BlobstoreKey, LongRunningRequestEntry, LongRunningRequestsQueue, RequestStatus, RequestType,
+    SqlLongRunningRequestsQueue,
 };
 pub use requests_table::{ClaimedBy, RequestId};
 use sql_construct::SqlConstruct;
@@ -208,6 +210,41 @@ impl AsyncMethodRequestQueue {
             .table
             .mark_abandoned_request_as_new(ctx, request_id, abandoned_timestamp)
             .await?)
+    }
+
+    pub async fn list_requests(
+        &self,
+        ctx: &CoreContext,
+        repo_ids: &[RepositoryId],
+        statuses: &[RequestStatus],
+        last_update_newer_than: Option<&Timestamp>,
+    ) -> Result<
+        Vec<(
+            RequestId,
+            LongRunningRequestEntry,
+            MegarepoAsynchronousRequestParams,
+        )>,
+        MegarepoError,
+    > {
+        let entries = self
+            .table
+            .list_requests(ctx, repo_ids, statuses, last_update_newer_than)
+            .await?;
+
+        stream::iter(entries)
+            .map(|entry| async {
+                let thrift_params = MegarepoAsynchronousRequestParams::load_from_key(
+                    ctx,
+                    &self.blobstore,
+                    &entry.args_blobstore_key.0,
+                )
+                .await?;
+                let req_id = RequestId(entry.id.clone(), entry.request_type.clone());
+                Ok::<_, MegarepoError>((req_id, entry, thrift_params))
+            })
+            .buffer_unordered(10)
+            .try_collect()
+            .await
     }
 }
 

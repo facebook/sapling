@@ -28,7 +28,7 @@ use fbinit::FacebookInit;
 use scribe_ext::Scribe;
 use slog::{info, warn, Logger};
 
-use metaconfig_parser::{RepoConfigs, StorageConfigs};
+pub use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig};
 use mononoke_types::RepositoryId;
 use repo_factory::{RepoFactory, RepoFactoryBuilder};
