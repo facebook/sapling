@@ -26,7 +26,7 @@ use crate::batch_v2::derive_blame_v2_in_batch;
 use crate::derive_v2::derive_blame_v2;
 use crate::{BlameDeriveOptions, DEFAULT_BLAME_FILESIZE_LIMIT};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RootBlameV2 {
     csid: ChangesetId,
     root_manifest: RootUnodeManifestId,

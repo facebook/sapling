@@ -44,7 +44,7 @@ pub enum ErrorKind {
     DeserializationError(String, String),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RootFastlog(ChangesetId);
 
 impl From<ChangesetId> for RootFastlog {
