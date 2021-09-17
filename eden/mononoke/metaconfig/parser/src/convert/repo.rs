@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
@@ -19,7 +20,7 @@ use metaconfig_types::{
     SegmentedChangelogConfig, ServiceWriteRestrictions, SourceControlServiceMonitoring,
     SourceControlServiceParams, StorageConfig, UnodeVersion, WireprotoLoggingConfig,
 };
-use mononoke_types::{MPath, PrefixTrie};
+use mononoke_types::{ChangesetId, MPath, PrefixTrie};
 use regex::Regex;
 use repos::{
     RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawCommitcloudBookmarksFiller,
@@ -440,6 +441,14 @@ impl Convert for RawSegmentedChangelogConfig {
                 None => Ok(default),
             }
         }
+
+        let bonsai_changesets_to_include: Result<Vec<_>> = self
+            .bonsai_changesets_to_include
+            .unwrap_or(vec![])
+            .into_iter()
+            .map(|s| ChangesetId::from_str(&s))
+            .collect();
+
         let default = SegmentedChangelogConfig::default();
         Ok(SegmentedChangelogConfig {
             enabled: self.enabled.unwrap_or(default.enabled),
@@ -460,6 +469,7 @@ impl Convert for RawSegmentedChangelogConfig {
                 self.update_to_master_bookmark_period_secs,
                 default.update_to_master_bookmark_period,
             )?,
+            bonsai_changesets_to_include: bonsai_changesets_to_include?,
         })
     }
 }

@@ -68,12 +68,25 @@ pub fn assign_ids(
     head: ChangesetId,
     low_dag_id: DagId,
 ) -> Result<(MemIdMap, DagId)> {
+    let mut mem_idmap = MemIdMap::new();
+
+    let head_dag_id = assign_ids_with_id_map(ctx, start_state, head, low_dag_id, &mut mem_idmap)?;
+
+    Ok((mem_idmap, head_dag_id))
+}
+
+pub fn assign_ids_with_id_map(
+    ctx: &CoreContext,
+    start_state: &StartState,
+    head: ChangesetId,
+    low_dag_id: DagId,
+    mem_idmap: &mut MemIdMap,
+) -> Result<DagId> {
     enum Todo {
         Visit(ChangesetId),
         Assign(ChangesetId),
     }
     let mut todo_stack = vec![Todo::Visit(head)];
-    let mut mem_idmap = MemIdMap::new();
 
     while let Some(todo) = todo_stack.pop() {
         match todo {
@@ -141,7 +154,7 @@ pub fn assign_ids(
         }
     }
 
-    Ok((mem_idmap, head_dag_id))
+    Ok(head_dag_id)
 }
 
 pub async fn update_idmap<'a>(

@@ -149,22 +149,46 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         repo.name()
     );
 
-    let head_arg = matches
-        .value_of(HEAD_ARG)
-        .unwrap_or(&config.segmented_changelog_config.master_bookmark);
-    let head = helpers::csid_resolve(&ctx, repo.clone(), head_arg)
-        .await
-        .with_context(|| format!("resolving head csid for '{}'", head_arg))?;
-    info!(ctx.logger(), "using '{}' for head", head);
+    let (head, bonsai_changesets_to_include) = match matches.value_of(HEAD_ARG) {
+        Some(head_arg) => {
+            let head = helpers::csid_resolve(&ctx, repo.clone(), head_arg)
+                .await
+                .with_context(|| format!("resolving head csid for '{}'", head_arg))?;
+            // If a head not from the config is used
+            (head, vec![])
+        }
+        None => {
+            let head = config.segmented_changelog_config.master_bookmark;
+            let head = helpers::csid_resolve(&ctx, repo.clone(), &head)
+                .await
+                .with_context(|| format!("resolving head csid for '{}'", head))?;
+            (
+                head,
+                config
+                    .segmented_changelog_config
+                    .bonsai_changesets_to_include,
+            )
+        }
+    };
 
+    info!(ctx.logger(), "using '{}' for head", head);
+    if bonsai_changesets_to_include.len() > 0 {
+        info!(
+            ctx.logger(),
+            "also adding {:?} to segmented changelog", bonsai_changesets_to_include
+        );
+    }
+
+    let mut heads = vec![head];
+    heads.extend(bonsai_changesets_to_include);
     if let Some(idmap_version) = idmap_version_arg {
         segmented_changelog_seeder
-            .run_with_idmap_version(&ctx, head, IdMapVersion(idmap_version))
+            .run_with_idmap_version(&ctx, heads, IdMapVersion(idmap_version))
             .await
             .context("seeding segmented changelog")?;
     } else {
         segmented_changelog_seeder
-            .run(&ctx, head)
+            .run(&ctx, heads)
             .await
             .context("seeding segmented changelog")?;
     }

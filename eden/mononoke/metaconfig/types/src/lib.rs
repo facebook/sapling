@@ -27,7 +27,7 @@ use std::{
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use fbinit::FacebookInit;
-use mononoke_types::{BonsaiChangeset, MPath, PrefixTrie, RepositoryId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, PrefixTrie, RepositoryId};
 use permission_checker::{BoxMembershipChecker, MembershipCheckerBuilder};
 use regex::Regex;
 use scuba::ScubaValue;
@@ -1540,6 +1540,41 @@ pub struct SegmentedChangelogConfig {
     /// How often the in process Dag will check the master bookmark to update itself.
     /// The Dag will not check master when unset.
     pub update_to_master_bookmark_period: Option<Duration>,
+    /// List of bonsai changeset to include in the segmented changelog during reseeding.
+    ///
+    /// To explain why we might need `bonsai_changesets_to_include` - say we have a
+    /// commit graph like this:
+    /// ```
+    ///  B <- master
+    ///  |
+    ///  A
+    ///  |
+    /// ...
+    /// ```
+    /// Then we move a master bookmark backwards to A and create a new commit on top
+    /// (this is a very rare situation, but it might happen during sevs)
+    ///
+    /// ```
+    ///  C <- master
+    ///  |
+    ///  |  B
+    ///  | /
+    ///  A
+    ///  |
+    /// ...
+    /// ```
+    ///
+    /// Clients might have already pulled commit B, and so they assume it's present on
+    /// the server. However if we reseed segmented changelog then commit B won't be
+    /// a part of a new reseeded changelog because B is not an ancestor of master anymore.
+    /// It might lead to problems - clients might fail because server doesn't know about
+    /// a commit they assume it should know of, and server would do expensive sql requests
+    /// (see S242328).
+    ///
+    /// `bonsai_changesets_to_include` might help with that - if we add `B` to
+    /// `bonsai_changesets_to_include` then every reseeding would add B and it's
+    /// ancestors to the reseeded segmented changelog.
+    pub bonsai_changesets_to_include: Vec<ChangesetId>,
 }
 
 impl Default for SegmentedChangelogConfig {
@@ -1552,6 +1587,7 @@ impl Default for SegmentedChangelogConfig {
             skip_dag_load_at_startup: false,
             reload_dag_save_period: Some(Duration::from_secs(3600)),
             update_to_master_bookmark_period: Some(Duration::from_secs(60)),
+            bonsai_changesets_to_include: vec![],
         }
     }
 }

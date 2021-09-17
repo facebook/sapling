@@ -27,7 +27,7 @@ use phases::mark_reachable_as_public;
 use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
-use tests_utils::resolve_cs_id;
+use tests_utils::{resolve_cs_id, CreateCommitContext};
 
 use crate::builder::SegmentedChangelogSqlConnections;
 use crate::iddag::IdDagSaveStore;
@@ -85,14 +85,14 @@ async fn seed_with_prefetched(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
     connections: &SegmentedChangelogSqlConnections,
-    head: ChangesetId,
+    heads: Vec<ChangesetId>,
     prefetched: Option<Vec<ChangesetEntry>>,
 ) -> Result<()> {
     // Does it make sense to seed up to the master commit instead of head?
     // Something to consider. Depends how it's used by tests.
     let phases = blobrepo.get_phases();
     let sql_phases = phases.get_store();
-    mark_reachable_as_public(&ctx, sql_phases, &[head], false).await?;
+    mark_reachable_as_public(&ctx, sql_phases, &heads, false).await?;
 
     let seeder = SegmentedChangelogSeeder::new(
         blobrepo.get_repoid(),
@@ -103,7 +103,7 @@ async fn seed_with_prefetched(
         Arc::new(blobrepo.get_blobstore()),
         prefetched,
     );
-    seeder.run(ctx, head).await
+    seeder.run(ctx, heads).await
 }
 
 async fn seed(
@@ -116,7 +116,7 @@ async fn seed(
         ctx,
         blobrepo,
         connections,
-        head,
+        vec![head],
         None, // no prefetching
     )
     .await
@@ -1007,7 +1007,7 @@ async fn test_prefetched_seeding(fb: FacebookInit) -> Result<()> {
         &ctx,
         &blobrepo,
         &conns,
-        last_cs,
+        vec![last_cs],
         Some(vec![second_cs_entry.clone()]),
     )
     .await;
@@ -1018,7 +1018,7 @@ async fn test_prefetched_seeding(fb: FacebookInit) -> Result<()> {
         &ctx,
         &blobrepo,
         &conns,
-        last_cs,
+        vec![last_cs],
         Some(vec![first_cs_entry, second_cs_entry]),
     )
     .await?;
@@ -1026,6 +1026,41 @@ async fn test_prefetched_seeding(fb: FacebookInit) -> Result<()> {
     // Check that new entries were added to the idmap
     let idmap = load_idmap(&ctx, repo_id, &conns).await?;
     assert!(idmap.find_dag_id(&ctx, last_cs).await?.is_some());
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_seeding_with_included_bonsais(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = linear::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+    let repo_id = blobrepo.get_repoid();
+
+    let first_cs_id =
+        resolve_cs_id(&ctx, &blobrepo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
+    let last_cs =
+        resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
+
+    let cs_id_to_include = CreateCommitContext::new(&ctx, &blobrepo, vec![first_cs_id])
+        .add_file("somefile", "file")
+        .commit()
+        .await?;
+
+    seed_with_prefetched(
+        &ctx,
+        &blobrepo,
+        &conns,
+        vec![last_cs, cs_id_to_include],
+        None,
+    )
+    .await?;
+
+    // Check that cs_id_to_include was added to idmap
+    let idmap = load_idmap(&ctx, repo_id, &conns).await?;
+    let dag_id = idmap.find_dag_id(&ctx, cs_id_to_include).await?.unwrap();
+    let iddag = load_iddag(&ctx, &blobrepo, &conns).await?;
+    assert!(iddag.find_flat_segment_including_id(dag_id)?.is_some());
 
     Ok(())
 }

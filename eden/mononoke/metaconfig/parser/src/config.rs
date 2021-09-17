@@ -1112,6 +1112,7 @@ mod test {
                     skip_dag_load_at_startup: true,
                     reload_dag_save_period: None,
                     update_to_master_bookmark_period: Some(Duration::from_secs(120)),
+                    bonsai_changesets_to_include: vec![],
                 },
                 repo_client_knobs: RepoClientKnobs {
                     allow_short_getpack_history: true,
@@ -1184,6 +1185,7 @@ mod test {
                     skip_dag_load_at_startup: false,
                     reload_dag_save_period: Some(Duration::from_secs(3600)),
                     update_to_master_bookmark_period: Some(Duration::from_secs(60)),
+                    bonsai_changesets_to_include: vec![],
                 },
                 repo_client_knobs: RepoClientKnobs::default(),
                 phabricator_callsign: Some("WWW".to_string()),
