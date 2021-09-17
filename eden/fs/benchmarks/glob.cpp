@@ -75,7 +75,7 @@ void watchman_glob(benchmark::State& state) {
   auto evbThread = folly::EventBaseThread();
   auto eventBase = evbThread.getEventBase();
 
-  folly::Optional<std::string> sockPath;
+  std::optional<std::string> sockPath;
   if (!FLAGS_watchman_socket.empty()) {
     sockPath = FLAGS_watchman_socket;
   }
