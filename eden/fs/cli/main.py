@@ -1213,6 +1213,12 @@ class ChownCmd(Subcmd):
         parser.add_argument(
             "gid", metavar="gid", help="The gid or unix group name to chown to"
         )
+        parser.add_argument(
+            "--skip-redirection",
+            action="store_true",
+            default=False,
+            help="Are redirections also chowned",
+        )
 
     def resolve_uid(self, uid_str) -> int:
         try:
@@ -1240,16 +1246,22 @@ class ChownCmd(Subcmd):
             client.chown(args.path, uid, gid)
             print("done")
 
-        for redir in redirect_mod.get_effective_redirections(
-            checkout, mtab.new()
-        ).values():
-            target = redir.expand_target_abspath(checkout)
-            print(f"Chowning redirection: {redir.repo_path}...", end="", flush=True)
-            subprocess.run(["sudo", "chown", "-R", f"{uid}:{gid}", str(target)])
-            subprocess.run(
-                ["sudo", "chown", f"{uid}:{gid}", str(checkout.path / redir.repo_path)]
-            )
-            print("done")
+        if not args.skip_redirection:
+            for redir in redirect_mod.get_effective_redirections(
+                checkout, mtab.new()
+            ).values():
+                target = redir.expand_target_abspath(checkout)
+                print(f"Chowning redirection: {redir.repo_path}...", end="", flush=True)
+                subprocess.run(["sudo", "chown", "-R", f"{uid}:{gid}", str(target)])
+                subprocess.run(
+                    [
+                        "sudo",
+                        "chown",
+                        f"{uid}:{gid}",
+                        str(checkout.path / redir.repo_path),
+                    ]
+                )
+                print("done")
 
         return 0
 
