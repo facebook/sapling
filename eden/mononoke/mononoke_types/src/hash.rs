@@ -66,9 +66,9 @@ impl Blake2 {
                 format!("need exactly {} bytes", BLAKE2_HASH_LENGTH_BYTES).into()
             ));
         } else {
-            let mut ret = Blake2([0; BLAKE2_HASH_LENGTH_BYTES]);
-            &mut ret.0[..].copy_from_slice(bytes);
-            Ok(ret)
+            let mut ret = [0; BLAKE2_HASH_LENGTH_BYTES];
+            ret.copy_from_slice(bytes);
+            Ok(Blake2(ret))
         }
     }
 
@@ -335,9 +335,9 @@ macro_rules! impl_hash {
                 if bytes.len() != $size {
                     Err(ErrorKind::$error(format!("need exactly {} bytes", $size)).into())
                 } else {
-                    let mut ret = $type([0; $size]);
-                    &mut ret.0[..].copy_from_slice(bytes);
-                    Ok(ret)
+                    let mut ret = [0; $size];
+                    ret.copy_from_slice(bytes);
+                    Ok($type(ret))
                 }
             }
 

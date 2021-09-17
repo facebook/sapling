@@ -43,9 +43,9 @@ impl Sha1 {
                 format!("need exactly {} bytes", SHA1_HASH_LENGTH_BYTES).into()
             ));
         } else {
-            let mut ret = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
-            &mut ret.0[..].copy_from_slice(bytes);
-            Ok(ret)
+            let mut ret = [0; SHA1_HASH_LENGTH_BYTES];
+            ret.copy_from_slice(bytes);
+            Ok(Sha1(ret))
         }
     }
 
