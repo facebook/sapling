@@ -69,7 +69,7 @@ pub(crate) async fn derive_unode_manifest(
                     ctx.clone(),
                     cs_id,
                     blobstore.clone(),
-                    sender,
+                    Some(sender),
                     leaf_info,
                     unode_version,
                 )
@@ -164,14 +164,14 @@ async fn create_unode_file(
     ctx: CoreContext,
     linknode: ChangesetId,
     blobstore: RepoBlobstore,
-    sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
+    sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
     unode_version: UnodeVersion,
 ) -> Result<((), FileUnodeId), Error> {
     async fn save_unode(
         ctx: &CoreContext,
         blobstore: &RepoBlobstore,
-        sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
+        sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
         parents: Vec<FileUnodeId>,
         content_id: ContentId,
         file_type: FileType,
@@ -203,9 +203,14 @@ async fn create_unode_file(
             .boxed()
         };
 
-        sender
-            .unbounded_send(f)
-            .map_err(|err| format_err!("failed to send manifest future {}", err))?;
+        match sender {
+            Some(sender) => {
+                sender
+                    .unbounded_send(f)
+                    .map_err(|err| format_err!("failed to send manifest future {}", err))?;
+            }
+            None => f.await?,
+        };
         Ok(file_unode_id)
     }
 
