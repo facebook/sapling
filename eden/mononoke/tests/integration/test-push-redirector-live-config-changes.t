@@ -214,11 +214,11 @@ Live change of the config, without Mononoke restart
 
 -- wait until it backsyncs to a small repo
   $ sleep 2
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name FROM synced_commit_mapping";
-  1|0|TEST_VERSION_NAME_LIVE_V1
-  1|0|TEST_VERSION_NAME_LIVE_V1
-  1|0|TEST_VERSION_NAME_LIVE_V1
-  1|0|TEST_VERSION_NAME_LIVE_V2
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name, source_repo FROM synced_commit_mapping";
+  1|0|TEST_VERSION_NAME_LIVE_V1|large
+  1|0|TEST_VERSION_NAME_LIVE_V1|small
+  1|0|TEST_VERSION_NAME_LIVE_V1|small
+  1|0|TEST_VERSION_NAME_LIVE_V2|large
 
 Do a push it should fail because we disallow pushing over a changeset that changes the mapping
   $ mkdir -p special
@@ -271,10 +271,10 @@ Again, normal pushrebase with one commit
   $ REPONAME=large-mon hgmn log -T "{files % '{file}\n'}" -r master_bookmark
   specialsmallrepofolder_after_change/f
 
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name FROM synced_commit_mapping";
-  1|0|TEST_VERSION_NAME_LIVE_V1
-  1|0|TEST_VERSION_NAME_LIVE_V1
-  1|0|TEST_VERSION_NAME_LIVE_V1
-  1|0|TEST_VERSION_NAME_LIVE_V2
-  1|0|TEST_VERSION_NAME_LIVE_V1
-  1|0|TEST_VERSION_NAME_LIVE_V2
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name, source_repo FROM synced_commit_mapping";
+  1|0|TEST_VERSION_NAME_LIVE_V1|large
+  1|0|TEST_VERSION_NAME_LIVE_V1|small
+  1|0|TEST_VERSION_NAME_LIVE_V1|small
+  1|0|TEST_VERSION_NAME_LIVE_V2|large
+  1|0|TEST_VERSION_NAME_LIVE_V1|small
+  1|0|TEST_VERSION_NAME_LIVE_V2|small

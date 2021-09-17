@@ -165,7 +165,7 @@ impl RepoChangesetsPushrebaseHistory {
                 synced_changesets.extend(
                     entries
                         .into_iter()
-                        .map(|(cs, _)| RepoChangeset(target_repo_name.clone(), cs)),
+                        .map(|(cs, _, _)| RepoChangeset(target_repo_name.clone(), cs)),
                 );
             }
         }

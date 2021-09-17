@@ -19,7 +19,7 @@ use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sql_construct::SqlConstruct;
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
-    SyncedCommitMappingEntry, WorkingCopyEquivalence,
+    SyncedCommitMappingEntry, SyncedCommitSourceRepo, WorkingCopyEquivalence,
 };
 
 async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
@@ -31,6 +31,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         REPO_ONE,
         bonsai::TWOS_CSID,
         version_name.clone(),
+        SyncedCommitSourceRepo::Large,
     );
     assert_eq!(
         true,
@@ -69,7 +70,8 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         bonsai::THREES_CSID,
         REPO_ONE,
         bonsai::FOURS_CSID,
-        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+        version_name.clone(),
+        SyncedCommitSourceRepo::Large,
     );
     assert_eq!(
         true,
@@ -101,9 +103,15 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         .expect("Get failed")
         .into_iter()
         .next()
-        .expect("Unexpectedly, mapping is absent")
-        .0;
-    assert_eq!(result, bonsai::TWOS_CSID);
+        .expect("Unexpectedly, mapping is absent");
+    assert_eq!(
+        result,
+        (
+            bonsai::TWOS_CSID,
+            Some(version_name.clone()),
+            Some(SyncedCommitSourceRepo::Large)
+        )
+    );
     let result = mapping
         .get(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
         .compat()
@@ -111,9 +119,15 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         .expect("Get failed")
         .into_iter()
         .next()
-        .expect("Unexpectedly, mapping is absent")
-        .0;
-    assert_eq!(result, bonsai::ONES_CSID);
+        .expect("Unexpectedly, mapping is absent");
+    assert_eq!(
+        result,
+        (
+            bonsai::ONES_CSID,
+            Some(version_name),
+            Some(SyncedCommitSourceRepo::Large)
+        )
+    );
 }
 
 async fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {

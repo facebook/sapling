@@ -1175,22 +1175,6 @@ mod test {
                 .await?;
 
         let current_version = CommitSyncConfigVersion("noop".to_string());
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
-        for cs_id in changesets {
-            mapping
-                .add(
-                    ctx.clone(),
-                    SyncedCommitMappingEntry {
-                        large_repo_id: large_repo.get_repoid(),
-                        small_repo_id: small_repo.get_repoid(),
-                        small_bcs_id: cs_id,
-                        large_bcs_id: cs_id,
-                        version_name: Some(current_version.clone()),
-                    },
-                )
-                .compat()
-                .await?;
-        }
 
         let repos = match direction {
             CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
@@ -1202,6 +1186,24 @@ mod test {
                 large_repo: large_repo.clone(),
             },
         };
+
+        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
+        for cs_id in changesets {
+            mapping
+                .add(
+                    ctx.clone(),
+                    SyncedCommitMappingEntry {
+                        large_repo_id: large_repo.get_repoid(),
+                        small_repo_id: small_repo.get_repoid(),
+                        small_bcs_id: cs_id,
+                        large_bcs_id: cs_id,
+                        version_name: Some(current_version.clone()),
+                        source_repo: Some(repos.get_source_repo_type()),
+                    },
+                )
+                .compat()
+                .await?;
+        }
 
         let commit_sync_data_provider = CommitSyncDataProvider::test_new(
             current_version.clone(),

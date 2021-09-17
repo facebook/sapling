@@ -106,6 +106,7 @@ where
         source_repo.get_repoid(),
         source_bcs_id,
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+        commit_syncer.get_source_repo_type(),
     );
     commit_syncer
         .get_mapping()

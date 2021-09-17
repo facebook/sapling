@@ -44,7 +44,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
-    SyncedCommitMappingEntry,
+    SyncedCommitMappingEntry, SyncedCommitSourceRepo,
 };
 use test_repo_factory::TestRepoFactory;
 use tests_utils::{
@@ -1073,6 +1073,7 @@ async fn init_repos(
         target_repo.get_repoid(),
         rewritten_first_bcs_id,
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+        commit_syncer.get_source_repo_type(),
     );
     mapping.add(ctx.clone(), first_entry).compat().await?;
 
@@ -1464,6 +1465,7 @@ async fn init_merged_repos(
             small_repo.get_repoid(),
             small_repo_first_after_merge,
             CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+            SyncedCommitSourceRepo::Large,
         );
         mapping.add(ctx.clone(), entry).compat().await?;
     }

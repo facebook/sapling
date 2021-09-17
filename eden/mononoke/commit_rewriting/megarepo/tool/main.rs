@@ -834,7 +834,7 @@ async fn run_backfill_noop_mapping<'a>(
     let s = tokio_stream::wrappers::LinesStream::new(reader.lines())
         .map_err(Error::from)
         .map_ok({
-            borrowed!(ctx, mapping_version_name);
+            borrowed!(ctx, commit_syncer, mapping_version_name);
             move |cs_id| async move {
                 let small_cs_id = helpers::csid_resolve(&ctx, small_repo, cs_id.clone());
 
@@ -848,6 +848,7 @@ async fn run_backfill_noop_mapping<'a>(
                     small_repo_id: small_repo.get_repoid(),
                     small_bcs_id: small_cs_id,
                     version_name: Some(mapping_version_name.clone()),
+                    source_repo: Some(commit_syncer.get_source_repo_type()),
                 };
                 Ok(entry)
             }

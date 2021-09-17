@@ -546,6 +546,7 @@ async fn run_insert_subcommand<'a>(
                     small_bcs_id: source_cs_id,
                     large_bcs_id: target_cs_id,
                     version_name: Some(mapping_version),
+                    source_repo: Some(commit_syncer.get_source_repo_type()),
                 }
             } else {
                 SyncedCommitMappingEntry {
@@ -554,6 +555,7 @@ async fn run_insert_subcommand<'a>(
                     small_bcs_id: target_cs_id,
                     large_bcs_id: source_cs_id,
                     version_name: Some(mapping_version),
+                    source_repo: Some(commit_syncer.get_source_repo_type()),
                 }
             };
 
@@ -1156,7 +1158,7 @@ async fn update_large_repo_bookmarks(
                         large_repo.get_repoid(),
                         large_cs_ids
                     ));
-                } else if let Some((large_cs_id, _)) = large_cs_ids.into_iter().next() {
+                } else if let Some((large_cs_id, _, _)) = large_cs_ids.into_iter().next() {
                     let reason = BookmarkUpdateReason::XRepoSync;
                     let large_bookmark = bookmark_renamer(&target_bookmark).ok_or(format_err!(
                         "small bookmark {} remaps to nothing",
@@ -1624,22 +1626,6 @@ mod test {
                 .await?;
 
         let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
-        for cs_id in changesets {
-            mapping
-                .add(
-                    ctx.clone(),
-                    SyncedCommitMappingEntry {
-                        large_repo_id: large_repo.get_repoid(),
-                        small_repo_id: small_repo.get_repoid(),
-                        small_bcs_id: cs_id,
-                        large_bcs_id: cs_id,
-                        version_name: Some(current_version.clone()),
-                    },
-                )
-                .compat()
-                .await?;
-        }
 
         let repos = match direction {
             CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
@@ -1651,6 +1637,24 @@ mod test {
                 large_repo: large_repo.clone(),
             },
         };
+
+        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+        for cs_id in changesets {
+            mapping
+                .add(
+                    ctx.clone(),
+                    SyncedCommitMappingEntry {
+                        large_repo_id: large_repo.get_repoid(),
+                        small_repo_id: small_repo.get_repoid(),
+                        small_bcs_id: cs_id,
+                        large_bcs_id: cs_id,
+                        version_name: Some(current_version.clone()),
+                        source_repo: Some(repos.get_source_repo_type()),
+                    },
+                )
+                .compat()
+                .await?;
+        }
 
         let commit_sync_data_provider = CommitSyncDataProvider::test_new(
             current_version.clone(),

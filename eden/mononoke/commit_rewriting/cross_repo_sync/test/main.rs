@@ -254,7 +254,7 @@ async fn check_mapping<M>(
             .unwrap()
             .into_iter()
             .next()
-            .map(|(cs, _maybe_version)| cs),
+            .map(|(cs, _maybe_version, _maybe_source_repo)| cs),
         expected_bcs_id
     );
 
@@ -272,7 +272,7 @@ async fn check_mapping<M>(
                 .unwrap()
                 .into_iter()
                 .next()
-                .map(|(cs, _maybe_version)| cs),
+                .map(|(cs, _maybe_version, _maybe_source_repo)| cs),
             Some(source_bcs_id)
         );
     }
@@ -980,6 +980,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         repo.get_repoid(),
         repo_initial_bcs_id,
         current_version,
+        commit_syncer.get_source_repo_type(),
     );
     mapping.add(ctx.clone(), entry).compat().await?;
 
@@ -1229,6 +1230,7 @@ async fn get_multiple_master_mapping_setup(
                 small_repo.get_repoid(),
                 small_repo_master_cs_id,
                 current_version.clone(),
+                small_to_large_syncer.get_source_repo_type(),
             ),
         )
         .compat()
@@ -1774,6 +1776,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                 small_repo.get_repoid(),
                 small_repo_master_cs_id,
                 current_version.clone(),
+                small_to_large_syncer.get_source_repo_type(),
             ),
         )
         .compat()

@@ -46,6 +46,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
+    SyncedCommitSourceRepo,
 };
 use thiserror::Error;
 use topo_sort::sort_topological;
@@ -452,6 +453,10 @@ where
 
     pub fn get_target_repo_id(&self) -> RepositoryId {
         self.get_target_repo().get_repoid()
+    }
+
+    pub fn get_source_repo_type(&self) -> SyncedCommitSourceRepo {
+        self.repos.get_source_repo_type()
     }
 
     pub fn get_large_repo(&self) -> &BlobRepo {
@@ -1623,6 +1628,13 @@ impl CommitSyncRepos {
             CommitSyncRepos::SmallToLarge { large_repo, .. } => large_repo,
         }
     }
+
+    pub fn get_source_repo_type(&self) -> SyncedCommitSourceRepo {
+        match self {
+            CommitSyncRepos::LargeToSmall { .. } => SyncedCommitSourceRepo::Large,
+            CommitSyncRepos::SmallToLarge { .. } => SyncedCommitSourceRepo::Small,
+        }
+    }
 }
 
 pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 'static>(
@@ -1673,9 +1685,23 @@ pub fn create_synced_commit_mapping_entry(
     let target_repoid = target_repo.get_repoid();
 
     if source_is_large {
-        SyncedCommitMappingEntry::new(source_repoid, from, target_repoid, to, version_name)
+        SyncedCommitMappingEntry::new(
+            source_repoid,
+            from,
+            target_repoid,
+            to,
+            version_name,
+            repos.get_source_repo_type(),
+        )
     } else {
-        SyncedCommitMappingEntry::new(target_repoid, to, source_repoid, from, version_name)
+        SyncedCommitMappingEntry::new(
+            target_repoid,
+            to,
+            source_repoid,
+            from,
+            version_name,
+            repos.get_source_repo_type(),
+        )
     }
 }
 

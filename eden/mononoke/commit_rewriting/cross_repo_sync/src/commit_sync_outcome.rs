@@ -207,7 +207,7 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         .await?;
     if !remapped.is_empty() {
         let remapped: Result<Vec<_>, Error> = remapped.into_iter()
-            .map(|(cs_id, maybe_version)| {
+            .map(|(cs_id, maybe_version, _maybe_source_repo)| {
                 let version = maybe_version.ok_or_else(||
                     anyhow!(
                         "no sync commit version specified for remapping of {} -> {} (source repo {}, target repo {})",
@@ -647,7 +647,9 @@ mod tests {
     use sql::Connection;
     use sql_construct::SqlConstruct;
     use sql_ext::SqlConnections;
-    use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMappingEntry};
+    use synced_commit_mapping::{
+        SqlSyncedCommitMapping, SyncedCommitMappingEntry, SyncedCommitSourceRepo,
+    };
     use test_repo_factory::TestRepoFactory;
     use tests_utils::drawdag::create_from_dag;
 
@@ -679,6 +681,7 @@ mod tests {
                     small_repo_id,
                     small_bcs_id,
                     test_version(),
+                    SyncedCommitSourceRepo::Small,
                 ),
             )
             .compat()

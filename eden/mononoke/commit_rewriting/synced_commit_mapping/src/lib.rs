@@ -22,7 +22,11 @@ use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::Future as Future01;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::{ChangesetId, RepositoryId};
-use sql::queries;
+use sql::mysql_async::{
+    prelude::{ConvIr, FromValue},
+    FromValueError, Value,
+};
+use sql::{mysql, queries};
 use stats::prelude::*;
 use thiserror::Error;
 
@@ -51,6 +55,48 @@ define_stats! {
     get_equivalent_working_copy: timeseries(Rate, Sum),
 }
 
+// Repo that originally contained the synced commit
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, mysql::OptTryFromRowField)]
+pub enum SyncedCommitSourceRepo {
+    Large,
+    Small,
+}
+
+impl ConvIr<SyncedCommitSourceRepo> for SyncedCommitSourceRepo {
+    fn new(v: Value) -> Result<Self, FromValueError> {
+        use SyncedCommitSourceRepo::*;
+
+        match v {
+            Value::Bytes(ref b) if b == b"large" => Ok(Large),
+            Value::Bytes(ref b) if b == b"small" => Ok(Small),
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> SyncedCommitSourceRepo {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for SyncedCommitSourceRepo {
+    type Intermediate = SyncedCommitSourceRepo;
+}
+
+impl From<SyncedCommitSourceRepo> for Value {
+    fn from(source_repo: SyncedCommitSourceRepo) -> Self {
+        use SyncedCommitSourceRepo::*;
+
+        match source_repo {
+            Small => Value::Bytes(b"small".to_vec()),
+            Large => Value::Bytes(b"large".to_vec()),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct SyncedCommitMappingEntry {
     pub large_repo_id: RepositoryId,
@@ -58,6 +104,7 @@ pub struct SyncedCommitMappingEntry {
     pub small_repo_id: RepositoryId,
     pub small_bcs_id: ChangesetId,
     pub version_name: Option<CommitSyncConfigVersion>,
+    pub source_repo: Option<SyncedCommitSourceRepo>,
 }
 
 impl SyncedCommitMappingEntry {
@@ -67,6 +114,7 @@ impl SyncedCommitMappingEntry {
         small_repo_id: RepositoryId,
         small_bcs_id: ChangesetId,
         version_name: CommitSyncConfigVersion,
+        source_repo: SyncedCommitSourceRepo,
     ) -> Self {
         Self {
             large_repo_id,
@@ -74,6 +122,7 @@ impl SyncedCommitMappingEntry {
             small_repo_id,
             small_bcs_id,
             version_name: Some(version_name),
+            source_repo: Some(source_repo),
         }
     }
 
@@ -84,6 +133,7 @@ impl SyncedCommitMappingEntry {
             small_repo_id,
             small_bcs_id,
             version_name,
+            source_repo: _,
         } = self;
 
         EquivalentWorkingCopyEntry {
@@ -134,7 +184,14 @@ pub trait SyncedCommitMapping: Send + Sync {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error>;
+    ) -> BoxFuture<
+        Vec<(
+            ChangesetId,
+            Option<CommitSyncConfigVersion>,
+            Option<SyncedCommitSourceRepo>,
+        )>,
+        Error,
+    >;
 
     /// Inserts equivalent working copy of a large bcs id. It's similar to mapping entry,
     /// however there are a few differences:
@@ -178,7 +235,14 @@ impl SyncedCommitMapping for Arc<dyn SyncedCommitMapping> {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error> {
+    ) -> BoxFuture<
+        Vec<(
+            ChangesetId,
+            Option<CommitSyncConfigVersion>,
+            Option<SyncedCommitSourceRepo>,
+        )>,
+        Error,
+    > {
         (**self).get(ctx, source_repo_id, bcs_id, target_repo_id)
     }
 
@@ -215,17 +279,18 @@ queries! {
         small_repo_id: RepositoryId,
         small_bcs_id: ChangesetId,
         sync_map_version_name: Option<CommitSyncConfigVersion>,
+        source_repo: Option<SyncedCommitSourceRepo>,
     )) {
         insert_or_ignore,
-        "{insert_or_ignore} INTO synced_commit_mapping (large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name) VALUES {values}"
+        "{insert_or_ignore} INTO synced_commit_mapping (large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name, source_repo) VALUES {values}"
     }
 
     read SelectMapping(
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> (RepositoryId, ChangesetId, RepositoryId, ChangesetId, Option<CommitSyncConfigVersion>) {
-        "SELECT large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name
+    ) -> (RepositoryId, ChangesetId, RepositoryId, ChangesetId, Option<CommitSyncConfigVersion>, Option<SyncedCommitSourceRepo>) {
+        "SELECT large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name, source_repo
           FROM synced_commit_mapping
           WHERE (large_repo_id = {source_repo_id} AND large_bcs_id = {bcs_id} AND small_repo_id = {target_repo_id}) OR
           (small_repo_id = {source_repo_id} AND small_bcs_id = {bcs_id} AND large_repo_id = {target_repo_id})"
@@ -317,7 +382,14 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error> {
+    ) -> BoxFuture<
+        Vec<(
+            ChangesetId,
+            Option<CommitSyncConfigVersion>,
+            Option<SyncedCommitSourceRepo>,
+        )>,
+        Error,
+    > {
         STATS::gets.add_value(1);
 
         cloned!(self.read_connection, self.read_master_connection);
@@ -348,11 +420,12 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                         _small_repo_id,
                         small_bcs_id,
                         maybe_version_name,
+                        maybe_source_repo,
                     ) = row;
                     if target_repo_id == large_repo_id {
-                        (large_bcs_id, maybe_version_name)
+                        (large_bcs_id, maybe_version_name, maybe_source_repo)
                     } else {
-                        (small_bcs_id, maybe_version_name)
+                        (small_bcs_id, maybe_version_name, maybe_source_repo)
                     }
                 })
                 .collect())
@@ -507,6 +580,7 @@ pub async fn add_many_in_txn(
                 &entry.small_repo_id,
                 &entry.small_bcs_id,
                 &entry.version_name,
+                &entry.source_repo,
             )
         })
         .collect();

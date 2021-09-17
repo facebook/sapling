@@ -38,7 +38,9 @@ use derived_data_utils::derive_data_for_csids;
 use mercurial_revlog::{revlog::RevIdx, RevlogRepo};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::{ChangesetId, RepositoryId};
-use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
+use synced_commit_mapping::{
+    SyncedCommitMapping, SyncedCommitMappingEntry, SyncedCommitSourceRepo,
+};
 
 use crate::changeset::UploadChangesets;
 
@@ -202,6 +204,7 @@ impl<'a> Blobimport<'a> {
                             small_repo_id,
                             small_bcs_id: cs.get_changeset_id(),
                             version_name: None,
+                            source_repo: Some(SyncedCommitSourceRepo::Small),
                         })
                         .collect();
                     synced_commit_mapping
