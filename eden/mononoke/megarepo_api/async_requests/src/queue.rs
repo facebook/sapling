@@ -20,7 +20,7 @@ use requests_table::{
     BlobstoreKey, LongRunningRequestEntry, LongRunningRequestsQueue, RequestStatus, RequestType,
     SqlLongRunningRequestsQueue,
 };
-pub use requests_table::{ClaimedBy, RequestId};
+pub use requests_table::{ClaimedBy, RequestId, RowId};
 use sql_construct::SqlConstruct;
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -245,6 +245,48 @@ impl AsyncMethodRequestQueue {
             .buffer_unordered(10)
             .try_collect()
             .await
+    }
+
+    pub async fn get_request_by_id(
+        &self,
+        ctx: &CoreContext,
+        row_id: &RowId,
+    ) -> Result<
+        Option<(
+            RequestId,
+            LongRunningRequestEntry,
+            MegarepoAsynchronousRequestParams,
+            Option<MegarepoAsynchronousRequestResult>,
+        )>,
+        MegarepoError,
+    > {
+        let entry = self.table.test_get_request_entry_by_id(ctx, row_id).await?;
+
+        if let Some(entry) = entry {
+            let thrift_params = MegarepoAsynchronousRequestParams::load_from_key(
+                ctx,
+                &self.blobstore,
+                &entry.args_blobstore_key.0,
+            )
+            .await?;
+            let req_id = RequestId(entry.id.clone(), entry.request_type.clone());
+            let thrift_result = if let Some(result_blobstore_key) = &entry.result_blobstore_key {
+                Some(
+                    MegarepoAsynchronousRequestResult::load_from_key(
+                        ctx,
+                        &self.blobstore,
+                        &result_blobstore_key.0,
+                    )
+                    .await?,
+                )
+            } else {
+                None
+            };
+            Ok(Some((req_id, entry, thrift_params, thrift_result)))
+        } else {
+            // empty queue
+            Ok(None)
+        }
     }
 }
 

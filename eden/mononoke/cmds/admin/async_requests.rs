@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use clap::{value_t, App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
@@ -22,7 +22,7 @@ use slog::Logger;
 
 use crate::error::SubcommandError;
 
-use async_requests::types::{RequestStatus, ThriftMegarepoAsynchronousRequestParams};
+use async_requests::types::{RequestStatus, RowId, ThriftMegarepoAsynchronousRequestParams};
 use mononoke_api::{
     BookmarkUpdateDelay, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData,
 };
@@ -31,6 +31,9 @@ use repo_factory::RepoFactory;
 pub const ASYNC_REQUESTS: &str = "async-requests";
 const LIST_CMD: &str = "list";
 pub const LOOKBACK_SECS: &str = "lookback";
+
+const SHOW_CMD: &str = "show";
+pub const REQUEST_ID_ARG: &str = "request-id";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let list = SubCommand::with_name(LIST_CMD)
@@ -44,9 +47,19 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             .takes_value(true)
         );
 
+    let show = SubCommand::with_name(SHOW_CMD)
+        .about("shows request details")
+        .arg(
+            Arg::with_name(REQUEST_ID_ARG)
+                .value_name("ID")
+                .help("id of the request")
+                .takes_value(true),
+        );
+
     SubCommand::with_name(ASYNC_REQUESTS)
         .about("view and manage the SCS async requests (used by megarepo)")
         .subcommand(list)
+        .subcommand(show)
 }
 
 pub async fn subcommand_async_requests<'a>(
@@ -81,6 +94,7 @@ pub async fn subcommand_async_requests<'a>(
     let ctx = session.new_context(logger.clone(), matches.scuba_sample_builder());
     match sub_m.subcommand() {
         (LIST_CMD, Some(sub_m)) => handle_list(sub_m, ctx, megarepo).await?,
+        (SHOW_CMD, Some(sub_m)) => handle_show(sub_m, ctx, megarepo).await?,
         _ => return Err(SubcommandError::InvalidArgs),
     }
     Ok(())
@@ -144,4 +158,25 @@ async fn handle_list(
     table.printstd();
 
     Ok(())
+}
+
+async fn handle_show(
+    args: &ArgMatches<'_>,
+    ctx: CoreContext,
+    megarepo: MegarepoApi,
+) -> Result<(), Error> {
+    let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
+
+    let row_id = value_t!(args.value_of(REQUEST_ID_ARG), u64)?;
+
+    for (_repo_ids, queue) in repos_and_queues {
+        if let Some((_request_id, entry, params, maybe_result)) =
+            queue.get_request_by_id(&ctx, &RowId(row_id)).await?
+        {
+            // TODO: pretty printing of the request details
+            dbg!(entry, params, maybe_result);
+            return Ok(());
+        }
+    }
+    Err(anyhow!("Request not found."))
 }

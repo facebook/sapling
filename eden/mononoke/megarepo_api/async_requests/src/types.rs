@@ -18,8 +18,7 @@ pub use megarepo_types_thrift::{
     MegarepoAsynchronousRequestResultId as ThriftMegarepoAsynchronousRequestResultId,
 };
 use mononoke_types::{hash::Blake2, impl_typed_context, impl_typed_hash_no_context};
-use requests_table::RowId;
-pub use requests_table::{RequestStatus, RequestType};
+pub use requests_table::{RequestStatus, RequestType, RowId};
 use source_control::{
     MegarepoAddBranchingTargetParams as ThriftMegarepoAddBranchingTargetParams,
     MegarepoAddTargetParams as ThriftMegarepoAddTargetParams,
