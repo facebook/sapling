@@ -691,6 +691,15 @@ void PrivHelperServer::nfsMount(
   auto buf = mountBuf.move();
   buf->coalesce();
 
+  XLOGF(
+      DBG1,
+      "Mounting {} via NFS with opts: mountaddr={},addr={},rsize={},wsize={},vers=3",
+      mountPath,
+      mountdAddr.describe(),
+      nfsdAddr.describe(),
+      iosize,
+      iosize);
+
   int rc = mount("nfs", mountPath.c_str(), mountFlags, (void*)buf->data());
   checkUnixError(rc, "failed to mount");
 
@@ -742,7 +751,7 @@ void PrivHelperServer::nfsMount(
     mountFlags |= MS_RDONLY;
   }
   auto source = fmt::format("edenfs:{}", mountPath);
-  XLOG(WARN) << "Mounting: " << source << ", opts=" << mountOpts;
+  XLOGF(DBG1, "Mounting {} va NFS with opts: {}", source, mountOpts);
 
   int rc = mount(
       source.c_str(), mountPath.c_str(), "nfs", mountFlags, mountOpts.c_str());
