@@ -588,10 +588,12 @@ def run_cmd_quietly(args, check: bool = True) -> int:
         else:
             formatted_args.append(a)
 
-    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(
+        formatted_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     stdout, stderr = proc.communicate()
     if proc.returncode != 0:
-        cmd = " ".join(shlex.quote(a) for a in args)
+        cmd = " ".join(shlex.quote(a) for a in formatted_args)
         stdout = stdout.decode("utf-8")
         stderr = stderr.decode("utf-8")
         message = f"{cmd}: Failed with status {proc.returncode}: {stdout} {stderr}"
