@@ -235,6 +235,7 @@ mod test {
     {
         let ctx = CoreContext::test_mock(fb);
         let repo = repo.await;
+        println!("Processing {}", repo.name());
         borrowed!(ctx, repo);
 
         all_commits(ctx.clone(), repo.clone())

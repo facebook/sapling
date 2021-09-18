@@ -317,7 +317,12 @@ pub mod linear {
     }
 
     pub async fn get_inner_repo_with_id(fb: FacebookInit, id: RepositoryId) -> InnerRepo {
-        let repo: InnerRepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let repo: InnerRepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("linear".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &repo.blob_repo).await;
         repo
     }
@@ -331,7 +336,12 @@ pub mod branch_even {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let blobrepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("branch_even".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -439,7 +449,12 @@ pub mod branch_uneven {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let blobrepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("branch_uneven".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -607,7 +622,12 @@ pub mod branch_wide {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let blobrepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("branch_wide".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -715,7 +735,12 @@ pub mod merge_even {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let blobrepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("merge_even".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -843,7 +868,12 @@ pub mod many_files_dirs {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let blobrepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("many_files_dirs".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -940,7 +970,12 @@ pub mod merge_uneven {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let blobrepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("merge_uneven".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -1135,7 +1170,12 @@ pub mod unshared_merge_even {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let blobrepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("unshared_merge_even".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -1326,7 +1366,12 @@ pub mod unshared_merge_uneven {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let blobrepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("unshared_merge_uneven".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -1663,7 +1708,12 @@ pub mod many_diamonds {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
+        let blobrepo = TestRepoFactory::new()
+            .unwrap()
+            .with_id(id)
+            .with_name("many_diamonds".to_string())
+            .build()
+            .unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
