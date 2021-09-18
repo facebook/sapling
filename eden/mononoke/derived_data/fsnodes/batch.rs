@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
+use derived_data::batch::{split_batch_in_linear_stacks, FileChangeAggregation, FileConflicts};
 use derived_data::{derive_impl, BonsaiDerivedMappingContainer};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::{ChangesetId, FsnodeId};
@@ -62,6 +62,7 @@ pub async fn derive_fsnode_in_batch(
         manager.repo_blobstore(),
         batch,
         FileConflicts::ChangeDelete,
+        FileChangeAggregation::Aggregate,
     )
     .await?;
     let mut res = HashMap::new();

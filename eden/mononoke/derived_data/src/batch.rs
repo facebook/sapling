@@ -28,6 +28,17 @@ pub enum FileConflicts {
     AnyChange,
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum FileChangeAggregation {
+    /// In a stack each commit will have the file changes from itself
+    /// and all its ancestors that are in the stack. E.g. first commit
+    /// has just its own file changes, second commit has its own changes and
+    /// file changes from first commit etc.
+    Aggregate,
+    /// Each commit in the stack has only its own file changes
+    DontAggregate,
+}
+
 /// We follow a few rules when splitting a batch in the stacks:
 /// 1) Merges go to a separate batch
 /// 2) If two commits have two files where one is a prefix of another, then they
@@ -39,6 +50,7 @@ pub async fn split_batch_in_linear_stacks(
     blobstore: &RepoBlobstore,
     batch: Vec<ChangesetId>,
     file_conflicts: FileConflicts,
+    file_change_aggregation: FileChangeAggregation,
 ) -> Result<Vec<LinearStack>, Error> {
     let bonsais = stream::iter(batch.into_iter().map(|bcs_id| async move {
         let bcs = bcs_id.load(ctx, blobstore).await?;
@@ -58,7 +70,7 @@ pub async fn split_batch_in_linear_stacks(
 
     let mut linear_stacks = vec![];
     let mut cur_linear_stack = LinearStack::new(start_bcs.parents().collect::<Vec<_>>());
-    cur_linear_stack.push(*start_bcs_id, start_bcs);
+    cur_linear_stack.push(*start_bcs_id, start_bcs, file_change_aggregation);
 
     for (prev_cs, (bcs_id, bcs)) in bonsai_iter.tuple_windows() {
         if !cur_linear_stack.can_be_in_same_linear_stack(&prev_cs, &bcs, file_conflicts) {
@@ -66,7 +78,7 @@ pub async fn split_batch_in_linear_stacks(
             cur_linear_stack = LinearStack::new(bcs.parents().collect::<Vec<_>>());
         }
 
-        cur_linear_stack.push(bcs_id, &bcs);
+        cur_linear_stack.push(bcs_id, &bcs, file_change_aggregation);
     }
 
     linear_stacks.push(cur_linear_stack);
@@ -90,15 +102,30 @@ impl LinearStack {
         }
     }
 
-    fn push(&mut self, cs_id: ChangesetId, bcs: &BonsaiChangeset) {
-        let mut fc = self.get_last_file_changes().cloned().unwrap_or_default();
-        fc.extend(bcs.file_changes().map(|(path, fc)| {
+    fn push(
+        &mut self,
+        cs_id: ChangesetId,
+        bcs: &BonsaiChangeset,
+        file_change_aggregation: FileChangeAggregation,
+    ) {
+        let file_changes = bcs.file_changes().map(|(path, fc)| {
             (
                 path.clone(),
                 fc.simplify().map(|bc| (bc.content_id(), bc.file_type())),
             )
-        }));
-        self.file_changes.push((cs_id, fc));
+        });
+
+        use FileChangeAggregation::*;
+        match file_change_aggregation {
+            Aggregate => {
+                let mut fc = self.get_last_file_changes().cloned().unwrap_or_default();
+                fc.extend(file_changes);
+                self.file_changes.push((cs_id, fc));
+            }
+            DontAggregate => {
+                self.file_changes.push((cs_id, file_changes.collect()));
+            }
+        }
     }
 
     fn can_be_in_same_linear_stack(
@@ -214,6 +241,7 @@ mod test {
             repo.blobstore(),
             vec![root],
             FileConflicts::ChangeDelete,
+            FileChangeAggregation::Aggregate,
         )
         .await?;
         assert_linear_stacks(
@@ -232,6 +260,7 @@ mod test {
             repo.blobstore(),
             vec![second],
             FileConflicts::ChangeDelete,
+            FileChangeAggregation::Aggregate,
         )
         .await?;
         assert_linear_stacks(
@@ -250,6 +279,7 @@ mod test {
             repo.blobstore(),
             vec![root, second],
             FileConflicts::ChangeDelete,
+            FileChangeAggregation::Aggregate,
         )
         .await?;
         assert_linear_stacks(
@@ -262,6 +292,31 @@ mod test {
                     btreemap! {file1 => Some(("content1".to_string(), FileType::Regular))},
                     btreemap! {
                         file1 => Some(("content1".to_string(), FileType::Regular)),
+                        file2 => Some(("content2".to_string(), FileType::Regular)),
+                    },
+                ],
+            )],
+        )
+        .await?;
+
+        // Now without aggregation
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            repo.blobstore(),
+            vec![root, second],
+            FileConflicts::ChangeDelete,
+            FileChangeAggregation::DontAggregate,
+        )
+        .await?;
+        assert_linear_stacks(
+            &ctx,
+            &repo,
+            linear_stacks,
+            vec![(
+                vec![],
+                vec![
+                    btreemap! {file1 => Some(("content1".to_string(), FileType::Regular))},
+                    btreemap! {
                         file2 => Some(("content2".to_string(), FileType::Regular)),
                     },
                 ],
@@ -298,6 +353,7 @@ mod test {
             repo.blobstore(),
             vec![p1, merge],
             FileConflicts::ChangeDelete,
+            FileChangeAggregation::Aggregate,
         )
         .await?;
         assert_linear_stacks(
@@ -322,6 +378,7 @@ mod test {
             repo.blobstore(),
             vec![p1, p2],
             FileConflicts::ChangeDelete,
+            FileChangeAggregation::Aggregate,
         )
         .await?;
         assert_linear_stacks(
@@ -367,6 +424,7 @@ mod test {
             repo.blobstore(),
             vec![root, child],
             FileConflicts::ChangeDelete,
+            FileChangeAggregation::Aggregate,
         )
         .await?;
         assert_linear_stacks(
@@ -409,6 +467,7 @@ mod test {
             repo.blobstore(),
             vec![root, child],
             FileConflicts::ChangeDelete,
+            FileChangeAggregation::Aggregate,
         )
         .await?;
         assert_linear_stacks(
@@ -451,6 +510,7 @@ mod test {
             repo.blobstore(),
             vec![root, child],
             FileConflicts::ChangeDelete,
+            FileChangeAggregation::Aggregate,
         )
         .await?;
         assert_linear_stacks(
@@ -473,6 +533,7 @@ mod test {
             repo.blobstore(),
             vec![root, child],
             FileConflicts::AnyChange,
+            FileChangeAggregation::Aggregate,
         )
         .await?;
         assert_linear_stacks(

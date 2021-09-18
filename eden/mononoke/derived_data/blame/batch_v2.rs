@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
+use derived_data::batch::{split_batch_in_linear_stacks, FileChangeAggregation, FileConflicts};
 use derived_data::{BonsaiDerived, BonsaiDerivedMappingContainer};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::ChangesetId;
@@ -30,9 +30,15 @@ pub async fn derive_blame_v2_in_batch(
 ) -> Result<HashMap<ChangesetId, RootUnodeManifestId>, Error> {
     let batch_len = batch.len();
     // We must split on any change as blame data must use the parent file.
-    let linear_stacks =
-        split_batch_in_linear_stacks(ctx, repo.blobstore(), batch, FileConflicts::AnyChange)
-            .await?;
+    let linear_stacks = split_batch_in_linear_stacks(
+        ctx,
+        repo.blobstore(),
+        batch,
+        FileConflicts::AnyChange,
+        // For blame we don't care about file changes, so FileChangeAggregation can be anything
+        FileChangeAggregation::Aggregate,
+    )
+    .await?;
 
     let mut res = HashMap::new();
     let options = mapping.options();
