@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 
-use anyhow::Result;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
 use metaconfig_types::DerivedDataTypesConfig;
@@ -38,53 +37,30 @@ pub struct DerivedDataManagerInner {
     config: DerivedDataTypesConfig,
 }
 
-pub struct DerivedDataManagerBuilder {
-    repo_id: RepositoryId,
-    repo_name: String,
-    changesets: Arc<dyn Changesets>,
-    repo_blobstore: RepoBlobstore,
-    lease: DerivedDataLease,
-    scuba: MononokeScubaSampleBuilder,
-    config: DerivedDataTypesConfig,
-}
-
-impl DerivedDataManagerBuilder {
+impl DerivedDataManager {
     pub fn new(
         repo_id: RepositoryId,
         repo_name: String,
         changesets: Arc<dyn Changesets>,
         repo_blobstore: RepoBlobstore,
-        lease: DerivedDataLease,
+        lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
         config: DerivedDataTypesConfig,
-    ) -> Result<Self> {
-        Ok(DerivedDataManagerBuilder {
-            repo_id,
-            repo_name,
-            config,
-            changesets,
-            repo_blobstore,
-            lease,
-            scuba,
-        })
-    }
-
-    pub fn build(self) -> DerivedDataManager {
+    ) -> Self {
+        let lease = DerivedDataLease::new(lease);
         DerivedDataManager {
             inner: Arc::new(DerivedDataManagerInner {
-                repo_id: self.repo_id,
-                repo_name: self.repo_name,
-                config: self.config,
-                changesets: self.changesets,
-                repo_blobstore: self.repo_blobstore,
-                lease: self.lease,
-                scuba: self.scuba,
+                repo_id,
+                repo_name,
+                config,
+                changesets,
+                repo_blobstore,
+                lease,
+                scuba,
             }),
         }
     }
-}
 
-impl DerivedDataManager {
     // For dangerous-override: allow replacement of lease-ops
     pub fn with_replaced_lease(&self, lease: Arc<dyn LeaseOps>) -> Self {
         Self {

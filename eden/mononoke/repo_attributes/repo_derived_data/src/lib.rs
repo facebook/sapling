@@ -14,7 +14,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
-use derived_data_manager::{DerivedDataLease, DerivedDataManager, DerivedDataManagerBuilder};
+use derived_data_manager::DerivedDataManager;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
@@ -41,8 +41,7 @@ impl RepoDerivedData {
         scuba: MononokeScubaSampleBuilder,
         config: DerivedDataConfig,
     ) -> Result<RepoDerivedData> {
-        let lease = DerivedDataLease::new(lease);
-        let builder = DerivedDataManagerBuilder::new(
+        let manager = DerivedDataManager::new(
             repo_id,
             repo_name,
             changesets,
@@ -50,8 +49,7 @@ impl RepoDerivedData {
             lease,
             scuba,
             config.enabled.clone(),
-        )?;
-        let manager = builder.build();
+        );
         Ok(RepoDerivedData { config, manager })
     }
 

@@ -9,4 +9,4 @@ pub mod lease;
 pub mod manager;
 
 pub use lease::DerivedDataLease;
-pub use manager::{DerivedDataManager, DerivedDataManagerBuilder};
+pub use manager::DerivedDataManager;
