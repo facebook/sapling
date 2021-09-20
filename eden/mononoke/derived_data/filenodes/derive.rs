@@ -10,7 +10,6 @@ use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use borrowed::borrowed;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{
@@ -23,16 +22,17 @@ use mercurial_types::{
     blobs::File, fetch_manifest_envelope, HgChangesetId, HgFileEnvelope, HgFileNodeId,
     HgManifestEnvelope, HgManifestId,
 };
-use mononoke_types::{ChangesetId, MPath, RepoPath};
+use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepoPath};
 
 pub async fn derive_filenodes(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    cs_id: ChangesetId,
+    bcs: BonsaiChangeset,
 ) -> Result<FilenodesOnlyPublic, Error> {
-    let (_, public_filenode, non_roots) = prepare_filenodes_for_cs(ctx, repo, cs_id).await?;
+    let (_, public_filenode, non_roots) = prepare_filenodes_for_cs(ctx, repo, bcs).await?;
     if !non_roots.is_empty() {
-        if let FilenodeResult::Disabled = add_filenodes(ctx, repo, non_roots).await? {
+        if let FilenodeResult::Disabled = repo.get_filenodes().add_filenodes(ctx, non_roots).await?
+        {
             return Ok(FilenodesOnlyPublic::Disabled);
         }
     }
@@ -42,13 +42,13 @@ pub async fn derive_filenodes(
 pub async fn derive_filenodes_in_batch(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    batch: Vec<ChangesetId>,
+    batch: Vec<BonsaiChangeset>,
 ) -> Result<Vec<(ChangesetId, FilenodesOnlyPublic, Vec<PreparedFilenode>)>, Error> {
     stream::iter(
         batch
             .clone()
             .into_iter()
-            .map(|cs_id| async move { prepare_filenodes_for_cs(ctx, repo, cs_id).await }),
+            .map(|bcs| async move { prepare_filenodes_for_cs(ctx, repo, bcs).await }),
     )
     .buffered(100)
     .try_collect()
@@ -58,16 +58,16 @@ pub async fn derive_filenodes_in_batch(
 pub async fn prepare_filenodes_for_cs(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    cs_id: ChangesetId,
+    bcs: BonsaiChangeset,
 ) -> Result<(ChangesetId, FilenodesOnlyPublic, Vec<PreparedFilenode>), Error> {
-    let filenodes = generate_all_filenodes(ctx, repo, cs_id).await?;
+    let filenodes = generate_all_filenodes(ctx, repo, &bcs).await?;
     if filenodes.is_empty() {
         // This commit didn't create any new filenodes, and it's root manifest is the
         // same as one of the parents (that can happen if this commit is empty).
         // In that case we don't need to insert a root filenode - it will be inserted
         // when parent is derived.
         Ok((
-            cs_id,
+            bcs.get_changeset_id(),
             FilenodesOnlyPublic::Present {
                 root_filenode: None,
             },
@@ -81,7 +81,7 @@ pub async fn prepare_filenodes_for_cs(
 
         match (roots.next(), roots.next()) {
             (Some(root_filenode), None) => Ok((
-                cs_id,
+                bcs.get_changeset_id(),
                 FilenodesOnlyPublic::Present {
                     root_filenode: Some(root_filenode),
                 },
@@ -90,48 +90,30 @@ pub async fn prepare_filenodes_for_cs(
             _ => Err(format_err!(
                 "expected exactly one root, found {} for cs_id {}",
                 roots_num,
-                cs_id.to_string()
+                bcs.get_changeset_id().to_string()
             )),
         }
     }
 }
 
-pub(crate) async fn add_filenodes(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    to_write: Vec<PreparedFilenode>,
-) -> Result<FilenodeResult<()>, Error> {
-    if to_write.is_empty() {
-        return Ok(FilenodeResult::Present(()));
-    }
-    let filenodes = repo.get_filenodes();
-    filenodes.add_filenodes(ctx, to_write).await
-}
-
 pub async fn generate_all_filenodes(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    cs_id: ChangesetId,
+    bcs: &BonsaiChangeset,
 ) -> Result<Vec<PreparedFilenode>, Error> {
-    let parents = repo
-        .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
-        .await?;
-
-    let root_mf = fetch_root_manifest_id(&ctx, &cs_id, &repo);
+    let blobstore = repo.blobstore();
+    let root_mf = fetch_root_manifest_id(&ctx, bcs.get_changeset_id(), &repo);
     // Bonsai might have > 2 parents, while mercurial supports at most 2.
     // That's fine for us - we just won't generate filenodes for paths that came from
     // stepparents. That means that linknode for these filenodes will point to a stepparent
     let parents = try_join_all(
-        parents
-            .iter()
+        bcs.parents()
             .map(|p| fetch_root_manifest_id(&ctx, p, &repo)),
     );
-    let linknode = repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id);
+    let linknode = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs.get_changeset_id());
 
     let (root_mf, parents, linknode) = try_join!(root_mf, parents, linknode)?;
-    let blobstore = repo.get_blobstore();
     (async_stream::stream! {
-        borrowed!(ctx, blobstore);
         let s = find_intersection_of_diffs_and_parents(
             ctx.clone(),
             blobstore.clone(),
@@ -258,11 +240,11 @@ fn create_file_filenode(
 
 async fn fetch_root_manifest_id(
     ctx: &CoreContext,
-    cs_id: &ChangesetId,
+    cs_id: ChangesetId,
     repo: &BlobRepo,
 ) -> Result<HgManifestId, Error> {
     let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), *cs_id)
+        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .await?;
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(hg_cs.manifestid())
@@ -301,7 +283,8 @@ mod tests {
         cs_id: ChangesetId,
         expected_paths: Vec<RepoPath>,
     ) -> Result<(), Error> {
-        let filenodes = generate_all_filenodes(&ctx, &repo, cs_id).await?;
+        let bonsai = cs_id.load(ctx, repo.blobstore()).await?;
+        let filenodes = generate_all_filenodes(&ctx, &repo, &bonsai).await?;
 
         assert_eq!(filenodes.len(), expected_paths.len());
         for path in expected_paths {
@@ -555,7 +538,7 @@ mod tests {
 
         assert_eq!(batch, sequential);
         for cs in cs_ids {
-            compare_filenodes(&ctx, &repo1, &repo2, &cs).await?;
+            compare_filenodes(&ctx, &repo1, &repo2, cs).await?;
         }
         Ok(())
     }
@@ -669,7 +652,7 @@ mod tests {
         ctx: &CoreContext,
         repo: &BlobRepo,
         backup_repo: &BlobRepo,
-        cs: &ChangesetId,
+        cs: ChangesetId,
     ) -> Result<(), Error> {
         let prod_filenodes = repo.get_filenodes();
         let backup_filenodes = backup_repo.get_filenodes();

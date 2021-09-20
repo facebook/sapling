@@ -12,7 +12,7 @@ use anyhow::{bail, format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_override::DangerousOverride;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use cacheblob::MemWritesBlobstore;
 use cmdlib::args;
 use context::CoreContext;
@@ -50,8 +50,9 @@ async fn regenerate_single_manifest(
 
     let maybe_cs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs).await?;
     let cs_id = maybe_cs_id.ok_or(format_err!("changeset not found {}", hg_cs))?;
+    let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
 
-    let toinsert = generate_all_filenodes(&ctx, &repo, cs_id).await?;
+    let toinsert = generate_all_filenodes(&ctx, &repo, &bonsai).await?;
 
     repo.get_filenodes()
         .add_or_replace_filenodes(&ctx, toinsert)

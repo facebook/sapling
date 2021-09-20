@@ -8,6 +8,7 @@
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::{Blobstore, Loadable};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc};
 use context::CoreContext;
@@ -24,7 +25,7 @@ use repo_identity::RepoIdentityRef;
 use std::sync::Arc;
 use std::{collections::HashMap, convert::TryFrom};
 
-use crate::derive::{add_filenodes, derive_filenodes, derive_filenodes_in_batch};
+use crate::derive::{derive_filenodes, derive_filenodes_in_batch};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreparedRootFilenode {
@@ -111,7 +112,7 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         _parents: Vec<Self>,
         _options: &Self::Options,
     ) -> Result<Self, Error> {
-        derive_filenodes(&ctx, &repo, bonsai.get_changeset_id()).await
+        derive_filenodes(&ctx, &repo, bonsai).await
     }
 
     async fn batch_derive_impl(
@@ -121,23 +122,30 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         mapping: &BonsaiDerivedMappingContainer<Self>,
         _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>, Error> {
-        let prepared = derive_filenodes_in_batch(ctx, repo, csids).await?;
+        let filenodes = repo.get_filenodes();
+        let blobstore = repo.blobstore();
+        let bonsais = stream::iter(
+            csids
+                .into_iter()
+                .map(|bcs_id| async move { bcs_id.load(ctx, blobstore).await }),
+        )
+        .buffered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+        let prepared = derive_filenodes_in_batch(ctx, repo, bonsais).await?;
         let mut res = HashMap::with_capacity(prepared.len());
         for (cs_id, public_filenode, non_roots) in prepared.into_iter() {
             let filenode = match public_filenode {
                 FilenodesOnlyPublic::Present { root_filenode } => match root_filenode {
-                    Some(filenode) => {
-                        let filenodes_res = add_filenodes(ctx, repo, non_roots).await?;
-                        match filenodes_res {
+                    Some(filenode) if !non_roots.is_empty() => {
+                        match filenodes.add_filenodes(ctx, non_roots).await? {
                             FilenodeResult::Disabled => FilenodesOnlyPublic::Disabled,
                             FilenodeResult::Present(()) => FilenodesOnlyPublic::Present {
                                 root_filenode: Some(filenode),
                             },
                         }
                     }
-                    None => FilenodesOnlyPublic::Present {
-                        root_filenode: None,
-                    },
+                    _ => FilenodesOnlyPublic::Present { root_filenode },
                 },
                 FilenodesOnlyPublic::Disabled => FilenodesOnlyPublic::Disabled,
             };
