@@ -7,7 +7,6 @@
 
 #ifndef _WIN32
 
-#include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>

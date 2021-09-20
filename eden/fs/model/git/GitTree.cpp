@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-#include "GitTree.h"
-#include <folly/Format.h>
+#include "eden/fs/model/git/GitTree.h"
+#include <fmt/format.h>
 #include <folly/String.h>
 #include <array>
 #include <cstdio>
@@ -83,12 +83,12 @@ std::unique_ptr<Tree> deserializeGitTree(
     } else if (mode == GitModeMask::SYMLINK) {
       fileType = TreeEntryType::SYMLINK;
     } else if (mode == GitModeMask::GIT_LINK) {
-      throw std::domain_error(folly::sformat(
+      throw std::domain_error(fmt::format(
           "Gitlinks are not currently supported: {:o} in object {}",
           mode,
           hash.toString()));
     } else {
-      throw invalid_argument(folly::sformat(
+      throw invalid_argument(fmt::format(
           "Unrecognized mode: {:o} in object {}", mode, hash.toString()));
     }
 

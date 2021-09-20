@@ -9,7 +9,6 @@
 
 #include <folly/Conv.h>
 #include <folly/Executor.h>
-#include <folly/Format.h>
 #include <folly/futures/Future.h>
 #include <folly/io/IOBuf.h>
 

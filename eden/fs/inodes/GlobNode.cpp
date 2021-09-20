@@ -235,7 +235,7 @@ GlobNode::GlobNode(StringPiece pattern, bool includeDotfiles, bool hasSpecials)
       throw std::system_error(
           EINVAL,
           std::generic_category(),
-          folly::sformat(
+          fmt::format(
               "failed to compile pattern `{}` to GlobMatcher: {}",
               pattern,
               compiled.error()));

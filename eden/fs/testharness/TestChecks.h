@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <folly/Format.h>
+#include <fmt/format.h>
 #include <folly/Range.h>
 #include <folly/io/IOBuf.h>
 #include <folly/portability/GTest.h>
@@ -27,8 +27,8 @@
                                .get(std::chrono::seconds(20))})                \
         << " for inode path " << (fileInode)->getLogPath();                    \
     EXPECT_EQ(                                                                 \
-        folly::sformat("{:#o}", (expectedPerms)),                              \
-        folly::sformat("{:#o}", (fileInode)->getPermissions()))                \
+        fmt::format("{:#o}", (expectedPerms)),                                 \
+        fmt::format("{:#o}", (fileInode)->getPermissions()))                   \
         << " for inode path " << (fileInode)->getLogPath();                    \
   } while (0)
 #else

@@ -9,7 +9,7 @@
 
 #include "eden/fs/inodes/FileInode.h"
 
-#include <folly/Format.h>
+#include <fmt/format.h>
 #include <folly/Range.h>
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
@@ -29,8 +29,7 @@ using folly::literals::string_piece_literals::operator""_sp;
 using namespace std::chrono_literals;
 
 std::ostream& operator<<(std::ostream& os, const timespec& ts) {
-  os << folly::sformat("{}.{:09d}", ts.tv_sec, ts.tv_nsec);
-  return os;
+  return os << fmt::format("{}.{:09d}", ts.tv_sec, ts.tv_nsec);
 }
 
 namespace std {
@@ -41,8 +40,7 @@ std::ostream& operator<<(
   auto duration = tp.time_since_epoch();
   auto secs = duration_cast<std::chrono::seconds>(duration);
   auto nsecs = duration_cast<std::chrono::nanoseconds>(duration - secs);
-  os << folly::sformat("{}.{:09d}", secs.count(), nsecs.count());
-  return os;
+  return os << fmt::format("{}.{:09d}", secs.count(), nsecs.count());
 }
 } // namespace chrono
 } // namespace std

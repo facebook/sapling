@@ -65,7 +65,7 @@ inline void PrintTo(
     throw std::runtime_error("strftime failed");
   }
 
-  *os << buf.data() << folly::sformat(".{:09d}", ts.tv_nsec);
+  *os << buf.data() << fmt::format(".{:09d}", ts.tv_nsec);
 }
 } // namespace std
 

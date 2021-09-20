@@ -222,8 +222,8 @@ class ThriftLogHelper {
   ~ThriftLogHelper() {
     // Logging completion time for the request
     // The line number points to where the object was originally created
-    TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << folly::sformat(
-        "{}() took {:,} " EDEN_MICRO,
+    TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << fmt::format(
+        "{}() took {} " EDEN_MICRO,
         itcFunctionName_,
         itcTimer_.elapsed().count());
   }

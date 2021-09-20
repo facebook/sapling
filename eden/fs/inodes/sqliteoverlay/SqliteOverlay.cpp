@@ -249,7 +249,7 @@ std::optional<uint64_t> SqliteOverlay::readNextInodeNumber(
     // Return the result; columns are 0-based!
     auto blob = stmt.columnBlob(0);
     if (blob.size() != sizeof(uint64_t)) {
-      throw std::logic_error(folly::sformat(
+      throw std::logic_error(fmt::format(
           "Unable to fetch the next inode number from the db, size: {}",
           blob.size()));
     }

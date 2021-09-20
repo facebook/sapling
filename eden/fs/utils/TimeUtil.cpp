@@ -21,24 +21,24 @@ std::string durationStr(std::chrono::nanoseconds duration) {
   // deciding how much precision to show in the output.
 
   if (duration < 1us) {
-    return folly::sformat("{}ns", duration.count());
+    return fmt::format("{}ns", duration.count());
   } else if (duration < 1ms) {
-    return folly::sformat("{:.3}us", duration.count() / 1000.0);
+    return fmt::format("{:.3}us", duration.count() / 1000.0);
   } else if (duration < 1s) {
-    return folly::sformat("{:.3}ms", duration.count() / 1000000.0);
+    return fmt::format("{:.3}ms", duration.count() / 1000000.0);
   } else if (duration < 1min) {
-    return folly::sformat("{:.3}s", duration.count() / 1000000000.0);
+    return fmt::format("{:.3}s", duration.count() / 1000000000.0);
   } else if (duration < 1h) {
     auto minutes = std::chrono::duration_cast<std::chrono::minutes>(duration);
     auto remainder = duration - minutes;
-    return folly::sformat(
+    return fmt::format(
         "{}m{:.3}s", minutes.count(), remainder.count() / 1000000000.0);
   } else if (duration < 24h) {
     auto hours = std::chrono::duration_cast<std::chrono::hours>(duration);
     auto remainder = duration - hours;
     auto minutes = std::chrono::duration_cast<std::chrono::minutes>(remainder);
     remainder -= minutes;
-    return folly::sformat(
+    return fmt::format(
         "{}h{}m{:.3}s",
         hours.count(),
         minutes.count(),
@@ -57,7 +57,7 @@ std::string durationStr(std::chrono::nanoseconds duration) {
     auto minutes = std::chrono::duration_cast<std::chrono::minutes>(remainder);
     remainder -= minutes;
 
-    return folly::sformat(
+    return fmt::format(
         "{}d{:02}h{:02}m{:.3}s",
         days.count(),
         hours.count(),

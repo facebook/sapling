@@ -421,7 +421,7 @@ namespace cursor_helper {
 // https://vt100.net/docs/vt510-rm/CPL.html
 // The cursor is moved to the start of the nth preceding line
 std::string move_cursor_up(size_t n) {
-  return folly::sformat("\x1b\x5b{}F", n);
+  return fmt::format("\x1b\x5b{}F", n);
 }
 
 // https://vt100.net/docs/vt510-rm/ED.html

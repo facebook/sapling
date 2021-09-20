@@ -7,7 +7,7 @@
 
 #include "FakeBackingStore.h"
 
-#include <folly/Format.h>
+#include <fmt/format.h>
 #include <folly/MapUtil.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
@@ -129,7 +129,7 @@ StoredBlob* FakeBackingStore::putBlob(Hash hash, folly::StringPiece contents) {
   auto ret = maybePutBlob(hash, contents);
   if (!ret.second) {
     throw std::domain_error(
-        folly::sformat("blob with hash {} already exists", hash.toString()));
+        fmt::format("blob with hash {} already exists", hash.toString()));
   }
   return ret.first;
 }
@@ -277,7 +277,7 @@ StoredTree* FakeBackingStore::putTreeImpl(
   auto ret = maybePutTreeImpl(hash, std::move(sortedEntries));
   if (!ret.second) {
     throw std::domain_error(
-        folly::sformat("tree with hash {} already exists", hash.toString()));
+        fmt::format("tree with hash {} already exists", hash.toString()));
   }
   return ret.first;
 }

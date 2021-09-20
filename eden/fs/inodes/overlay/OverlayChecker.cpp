@@ -148,7 +148,7 @@ class OverlayChecker::RepairState {
 
     // Name the repair directory based on the current timestamp
     auto now = getLocalTime(time(nullptr));
-    auto timestampStr = folly::sformat(
+    auto timestampStr = fmt::format(
         "{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}",
         now.tm_year + 1900,
         now.tm_mon + 1,
@@ -190,7 +190,7 @@ class OverlayChecker::RepairState {
     auto nowSec = std::chrono::duration_cast<seconds>(now);
     auto us = std::chrono::duration_cast<microseconds>(now - nowSec);
     auto timeFields = getLocalTime(nowSec.count());
-    auto header = folly::sformat(
+    auto header = fmt::format(
         "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.{:06d}: ",
         timeFields.tm_year + 1900,
         timeFields.tm_mon + 1,

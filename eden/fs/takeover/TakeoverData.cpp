@@ -117,7 +117,7 @@ TakeoverData TakeoverData::deserialize(IOBuf* buf) {
       buf->trimStart(sizeof(uint32_t));
       return deserializeVersion3(buf);
     default:
-      throw std::runtime_error(folly::sformat(
+      throw std::runtime_error(fmt::format(
           "Unrecognized TakeoverData response starting with {:x}",
           messageType));
   }

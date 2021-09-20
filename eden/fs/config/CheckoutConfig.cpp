@@ -92,15 +92,14 @@ RootId CheckoutConfig::getParentCommit() const {
   StringPiece contents{snapshotFileContents};
 
   if (contents.size() < kSnapshotHeaderSize) {
-    throw std::runtime_error(folly::sformat(
+    throw std::runtime_error(fmt::format(
         "eden SNAPSHOT file is too short ({} bytes): {}",
         contents.size(),
         snapshotFile));
   }
 
   if (!contents.startsWith(kSnapshotFileMagic)) {
-    throw std::runtime_error(
-        folly::sformat("unsupported legacy SNAPSHOT file"));
+    throw std::runtime_error(fmt::format("unsupported legacy SNAPSHOT file"));
   }
 
   IOBuf buf(IOBuf::WRAP_BUFFER, ByteRange{contents});
@@ -111,7 +110,7 @@ RootId CheckoutConfig::getParentCommit() const {
   switch (version) {
     case kSnapshotFormatVersion1: {
       if (sizeLeft != Hash::RAW_SIZE && sizeLeft != (Hash::RAW_SIZE * 2)) {
-        throw std::runtime_error(folly::sformat(
+        throw std::runtime_error(fmt::format(
             "unexpected length for eden SNAPSHOT file ({} bytes): {}",
             contents.size(),
             snapshotFile));
@@ -141,7 +140,7 @@ RootId CheckoutConfig::getParentCommit() const {
     }
 
     default:
-      throw std::runtime_error(folly::sformat(
+      throw std::runtime_error(fmt::format(
           "unsupported eden SNAPSHOT file format (version {}): {}",
           uint32_t{version},
           snapshotFile));

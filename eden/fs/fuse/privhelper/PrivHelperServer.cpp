@@ -533,7 +533,7 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
   // requester.  We could add this functionality in the future if we have a
   // need for it, but we would need to validate their changes are safe.
   const int rootMode = S_IFDIR;
-  auto mountOpts = folly::sformat(
+  auto mountOpts = fmt::format(
       "allow_other,default_permissions,"
       "rootmode={:o},user_id={},group_id={},fd={}",
       rootMode,

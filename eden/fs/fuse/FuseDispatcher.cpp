@@ -10,7 +10,6 @@
 #include "eden/fs/fuse/FuseDispatcher.h"
 
 #include <folly/Exception.h>
-#include <folly/Format.h>
 #include <folly/executors/GlobalExecutor.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
