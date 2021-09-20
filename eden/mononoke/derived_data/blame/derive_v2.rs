@@ -6,46 +6,48 @@
  */
 
 use anyhow::{Error, Result};
-use blobrepo::BlobRepo;
-use blobstore::Loadable;
+use blobstore::{Blobstore, Loadable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data_manager::DerivationContext;
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use manifest::find_intersection_of_diffs;
 use mononoke_types::blame_v2::{store_blame, BlameParent, BlameV2, BlameV2Id};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath};
-use repo_blobstore::RepoBlobstore;
 use std::collections::HashMap;
 use std::sync::Arc;
 use unodes::{find_unode_rename_sources, RootUnodeManifestId, UnodeRenameSource};
 
-use crate::fetch::{fetch_content_for_blame_with_options, FetchOutcome};
-use crate::BlameDeriveOptions;
+use crate::fetch::{fetch_content_for_blame_with_limit, FetchOutcome};
+use crate::DEFAULT_BLAME_FILESIZE_LIMIT;
 
 pub(crate) async fn derive_blame_v2(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
     root_manifest: RootUnodeManifestId,
-    options: &BlameDeriveOptions,
 ) -> Result<(), Error> {
-    let blame_options = *options;
     let csid = bonsai.get_changeset_id();
     let parent_manifests = bonsai.parents().map(|csid| async move {
-        let parent_root_mf_id = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
+        let parent_root_mf_id = derivation_ctx
+            .derive_dependency::<RootUnodeManifestId>(ctx, csid)
+            .await?;
         Ok::<_, Error>(parent_root_mf_id.manifest_unode_id().clone())
     });
 
     let (parent_manifests, renames) = future::try_join(
         future::try_join_all(parent_manifests).err_into(),
-        find_unode_rename_sources(ctx, repo, &bonsai),
+        find_unode_rename_sources(ctx, derivation_ctx, &bonsai),
     )
     .await?;
 
+    let filesize_limit = derivation_ctx
+        .config()
+        .blame_filesize_limit
+        .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
     let renames = Arc::new(renames);
-    let blobstore = repo.get_blobstore();
+    let blobstore = derivation_ctx.blobstore();
     find_intersection_of_diffs(
         ctx.clone(),
         blobstore.clone(),
@@ -67,7 +69,7 @@ pub(crate) async fn derive_blame_v2(
                         csid,
                         path,
                         file_unode,
-                        blame_options,
+                        filesize_limit,
                     )
                     .await
                 })
@@ -84,12 +86,12 @@ pub(crate) async fn derive_blame_v2(
 
 async fn create_blame_v2(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     renames: Arc<HashMap<MPath, UnodeRenameSource>>,
     csid: ChangesetId,
     path: MPath,
     file_unode_id: FileUnodeId,
-    options: BlameDeriveOptions,
+    filesize_limit: u64,
 ) -> Result<BlameV2Id, Error> {
     let file_unode = file_unode_id.load(ctx, blobstore).await?;
 
@@ -101,7 +103,7 @@ async fn create_blame_v2(
             parent_index,
             path.clone(),
             *unode_id,
-            options,
+            filesize_limit,
         ));
     }
 
@@ -112,12 +114,12 @@ async fn create_blame_v2(
             source.parent_index,
             source.from_path.clone(),
             source.unode_id,
-            options,
+            filesize_limit,
         ));
     }
 
     let (content, blame_parents) = future::try_join(
-        fetch_content_for_blame_with_options(ctx, blobstore, file_unode_id, options),
+        fetch_content_for_blame_with_limit(ctx, blobstore, file_unode_id, filesize_limit),
         future::try_join_all(blame_parents),
     )
     .await?;
@@ -132,14 +134,14 @@ async fn create_blame_v2(
 
 async fn fetch_blame_parent(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     parent_index: usize,
     path: MPath,
     unode_id: FileUnodeId,
-    options: BlameDeriveOptions,
+    filesize_limit: u64,
 ) -> Result<BlameParent<Bytes>, Error> {
     let (content, blame) = future::try_join(
-        fetch_content_for_blame_with_options(ctx, blobstore, unode_id, options),
+        fetch_content_for_blame_with_limit(ctx, blobstore, unode_id, filesize_limit),
         BlameV2Id::from(unode_id).load(ctx, blobstore).err_into(),
     )
     .await?;

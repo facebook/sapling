@@ -8,10 +8,9 @@
 #![deny(warnings)]
 
 use anyhow::{anyhow, Error, Result};
-use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data_manager::DerivationContext;
 use futures::{future, TryFutureExt, TryStreamExt};
 use manifest::ManifestOps;
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath};
@@ -51,7 +50,7 @@ pub struct UnodeRenameSource {
 /// rename in the parent changesets.
 pub async fn find_unode_rename_sources(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
 ) -> Result<HashMap<MPath, UnodeRenameSource>, Error> {
     // Collect together a map of (source_path -> [dest_paths]) for each parent
@@ -68,7 +67,7 @@ pub async fn find_unode_rename_sources(
         }
     }
 
-    let blobstore = repo.get_blobstore();
+    let blobstore = derivation_ctx.blobstore();
     let sources_futs = references.into_iter().map(|(csid, mut paths)| {
         cloned!(blobstore);
         async move {
@@ -79,7 +78,9 @@ pub async fn find_unode_rename_sources(
                     csid
                 )
             })?;
-            let mf_root = RootUnodeManifestId::derive(ctx, repo, csid).await?;
+            let mf_root = derivation_ctx
+                .derive_dependency::<RootUnodeManifestId>(ctx, csid)
+                .await?;
             let from_paths: Vec<_> = paths.keys().cloned().cloned().collect();
             let unodes = mf_root
                 .manifest_unode_id()
@@ -122,8 +123,8 @@ pub async fn find_unode_rename_sources(
 /// files that are copied multiple times.  The function is retained for
 /// blame_v1 compatibility.
 pub async fn find_unode_renames_incorrect_for_blame_v1(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
     bonsai: &BonsaiChangeset,
 ) -> Result<HashMap<MPath, FileUnodeId>, Error> {
     let mut references: HashMap<ChangesetId, HashMap<MPath, MPath>> = HashMap::new();
@@ -136,29 +137,26 @@ pub async fn find_unode_renames_incorrect_for_blame_v1(
         }
     }
 
-    let blobstore = repo.get_blobstore();
-    let unodes = references.into_iter().map(|(csid, mut paths)| {
-        cloned!(ctx, blobstore, repo);
-        async move {
-            let mf_root = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
-            let from_paths: Vec<_> = paths.keys().cloned().collect();
-            mf_root
-                .manifest_unode_id()
-                .clone()
-                .find_entries(ctx, blobstore, from_paths)
-                .map_ok(|(from_path, entry)| Some((from_path?, entry.into_leaf()?)))
-                .try_filter_map(future::ok)
-                .try_collect::<Vec<_>>()
-                .map_ok(move |unodes| {
-                    unodes
-                        .into_iter()
-                        .filter_map(|(from_path, unode_id)| {
-                            Some((paths.remove(&from_path)?, unode_id))
-                        })
-                        .collect::<HashMap<_, _>>()
-                })
-                .await
-        }
+    let unodes = references.into_iter().map(|(csid, mut paths)| async move {
+        let mf_root = derivation_ctx
+            .derive_dependency::<RootUnodeManifestId>(ctx, csid)
+            .await?;
+        let from_paths: Vec<_> = paths.keys().cloned().collect();
+        let blobstore = derivation_ctx.blobstore();
+        mf_root
+            .manifest_unode_id()
+            .clone()
+            .find_entries(ctx.clone(), blobstore.clone(), from_paths)
+            .map_ok(|(from_path, entry)| Some((from_path?, entry.into_leaf()?)))
+            .try_filter_map(future::ok)
+            .try_collect::<Vec<_>>()
+            .map_ok(move |unodes| {
+                unodes
+                    .into_iter()
+                    .filter_map(|(from_path, unode_id)| Some((paths.remove(&from_path)?, unode_id)))
+                    .collect::<HashMap<_, _>>()
+            })
+            .await
     });
 
     future::try_join_all(unodes)
@@ -175,6 +173,7 @@ mod tests {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use mononoke_types::MPath;
+    use repo_derived_data::RepoDerivedDataRef;
     use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
@@ -206,7 +205,8 @@ mod tests {
             .await?;
 
         let bonsai = c4.load(ctx, repo.blobstore()).await?;
-        let renames = crate::find_unode_rename_sources(ctx, repo, &bonsai).await?;
+        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
+        let renames = crate::find_unode_rename_sources(ctx, &derivation_ctx, &bonsai).await?;
 
         let check = |path: &str, parent_index: usize, from_path: &str| {
             let source = renames

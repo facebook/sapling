@@ -200,7 +200,7 @@ async fn subcommand_show_blame(
     line_number: bool,
 ) -> Result<(), Error> {
     let (blame, unode_id) = fetch_blame_compat(&ctx, &repo, csid, path.clone()).await?;
-    let content = fetch_content_for_blame(&ctx, &repo, unode_id, None)
+    let content = fetch_content_for_blame(&ctx, &repo, unode_id)
         .await?
         .into_bytes()?;
     let annotate = blame_hg_annotate(ctx, repo, content, blame, line_number).await?;
@@ -273,8 +273,8 @@ async fn diff(
     new: FileUnodeId,
     old: FileUnodeId,
 ) -> Result<String, Error> {
-    let f1 = fetch_content_for_blame(&ctx, &repo, new, None);
-    let f2 = fetch_content_for_blame(&ctx, &repo, old, None);
+    let f1 = fetch_content_for_blame(&ctx, &repo, new);
+    let f2 = fetch_content_for_blame(&ctx, &repo, old);
     let (new, old) = try_join(f1, f2).await?;
     let new = xdiff::DiffFile {
         path: "new",
@@ -402,7 +402,7 @@ async fn subcommand_compute_blame(
             | {
                 cloned!(ctx, repo);
                 async move {
-                    match fetch_content_for_blame(&ctx, &repo, file_unode_id, None).await? {
+                    match fetch_content_for_blame(&ctx, &repo, file_unode_id).await? {
                         FetchOutcome::Rejected(rejected) => Ok(Err(rejected)),
                         FetchOutcome::Fetched(content) => if blame_v2 {
                             let parents = parents

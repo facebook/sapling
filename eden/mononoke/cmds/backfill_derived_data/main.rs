@@ -28,6 +28,7 @@ use cmdlib::{
 };
 use context::{CoreContext, SessionContainer};
 use derived_data::BonsaiDerivable;
+use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use derived_data_utils::{
     create_derive_graph_scuba_sample, derived_data_utils, derived_data_utils_for_backfill,
     DerivedUtils, ThinOut, POSSIBLE_DERIVED_TYPES,

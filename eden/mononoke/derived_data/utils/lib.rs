@@ -9,7 +9,7 @@
 
 use anyhow::{anyhow, format_err, Error};
 use async_trait::async_trait;
-use blame::{BlameRoot, BlameRootMapping, RootBlameV2Mapping};
+use blame::{BlameRoot, RootBlameV2};
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
@@ -21,9 +21,8 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
-    derive_impl, BlobstoreExistsMapping, BlobstoreExistsWithDataMapping, BlobstoreRootIdMapping,
-    BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedMappingContainer, DerivedDataTypesConfig,
-    RegenerateMapping,
+    derive_impl, BlobstoreExistsMapping, BlobstoreRootIdMapping, BonsaiDerivable,
+    BonsaiDerivedMapping, BonsaiDerivedMappingContainer, DerivedDataTypesConfig, RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use derived_data_manager::{
@@ -693,22 +692,12 @@ fn derived_data_utils_impl(
             )))
         }
         BlameRoot::NAME => match config.blame_version {
-            BlameVersion::V1 => {
-                let mapping = BlameRootMapping::new(blobstore, config)?;
-                Ok(Arc::new(DerivedUtilsFromMapping::new(
-                    fb,
-                    mapping,
-                    repo.clone(),
-                )))
-            }
-            BlameVersion::V2 => {
-                let mapping = RootBlameV2Mapping::new(blobstore, config)?;
-                Ok(Arc::new(DerivedUtilsFromMapping::new(
-                    fb,
-                    mapping,
-                    repo.clone(),
-                )))
-            }
+            BlameVersion::V1 => Ok(Arc::new(DerivedUtilsFromManager::<BlameRoot>::new(
+                repo, config,
+            ))),
+            BlameVersion::V2 => Ok(Arc::new(DerivedUtilsFromManager::<RootBlameV2>::new(
+                repo, config,
+            ))),
         },
         ChangesetInfo::NAME => {
             let mapping = ChangesetInfoMapping::new(blobstore, config)?;

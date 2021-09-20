@@ -326,7 +326,7 @@ impl ChangesetPathHistoryContext {
         let (blame, file_unode_id) = self.blame_impl().await?;
         let ctx = self.changeset.ctx();
         let repo = self.changeset.repo().blob_repo();
-        let content = fetch_content_for_blame(ctx, repo, file_unode_id, None)
+        let content = fetch_content_for_blame(ctx, repo, file_unode_id)
             .await?
             .into_bytes()
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;

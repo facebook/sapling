@@ -11,7 +11,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::{BonsaiDerivable, BonsaiDerived};
+use derived_data::BonsaiDerived;
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fsnodes::{prefetch_content_metadata, RootFsnodeId};
 use futures::{
@@ -21,14 +21,18 @@ use futures::{
 };
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{ChangesetId, FileUnodeId};
+use repo_derived_data::RepoDerivedDataRef;
 use std::{collections::HashSet, sync::Arc};
 use unodes::{find_unode_rename_sources, RootUnodeManifestId};
 
 /// Types of derived data for which prefetching content for changed files
 /// migth speed up derivation.
-const PREFETCH_CONTENT_TYPES: &[&str] = &[BlameRoot::NAME];
-const PREFETCH_CONTENT_METADATA_TYPES: &[&str] = &[RootFsnodeId::NAME];
-const PREFETCH_UNODE_TYPES: &[&str] = &[RootFastlog::NAME, RootDeletedManifestId::NAME];
+const PREFETCH_CONTENT_TYPES: &[&str] = &[BlameRoot::DERIVABLE_NAME];
+const PREFETCH_CONTENT_METADATA_TYPES: &[&str] = &[RootFsnodeId::DERIVABLE_NAME];
+const PREFETCH_UNODE_TYPES: &[&str] = &[
+    RootFastlog::DERIVABLE_NAME,
+    RootDeletedManifestId::DERIVABLE_NAME,
+];
 
 pub(crate) async fn warmup(
     ctx: &CoreContext,
@@ -174,12 +178,12 @@ async fn prefetch_content(
             .iter()
             .cloned()
             .chain(rename)
-            .map(|file_unode_id| fetch_content_for_blame(ctx, repo, file_unode_id, None))
+            .map(|file_unode_id| fetch_content_for_blame(ctx, repo, file_unode_id))
             .collect();
 
         // the assignment is needed to avoid unused_must_use warnings
         let _ = future::try_join(
-            fetch_content_for_blame(ctx, repo, file_unode_id, None),
+            fetch_content_for_blame(ctx, repo, file_unode_id),
             future::try_join_all(parents_content),
         )
         .await?;
@@ -198,10 +202,11 @@ async fn prefetch_content(
                 .map_err(Error::from)
         }
     });
+    let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
     let (root_manifest, parents_manifests, renames) = try_join3(
         root_manifest_fut,
         future::try_join_all(parents_manifest_futs),
-        find_unode_rename_sources(ctx, repo, &bonsai),
+        find_unode_rename_sources(ctx, &derivation_ctx, &bonsai),
     )
     .await?;
 

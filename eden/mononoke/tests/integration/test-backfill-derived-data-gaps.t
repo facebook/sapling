@@ -39,7 +39,7 @@ enable some more derived data types for normal usage and backfilling
   $ cd "$TESTTMP"
   $ cat >> mononoke-config/repos/repo/server.toml <<CONFIG
   > [derived_data_config.backfilling]
-  > types=["blame", "skeleton_manifests"]
+  > types=["blame", "skeleton_manifests", "unodes"]
   > blame_version=2
   > CONFIG
 
@@ -55,6 +55,7 @@ stop when it becomes idle.
   *] found changesets: 8 * (glob)
   *] deriving data 32 (glob)
   *] backfill unodes batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298 (glob)
+  *] backfill blame batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298 (glob)
   *] derive blame batch at 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec (stack of 8 from batch of 8) (glob)
 
 Heads should all be derived

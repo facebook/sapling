@@ -58,7 +58,7 @@ enable some more derived data types for normal usage and backfilling
   $ cd "$TESTTMP"
   $ cat >> mononoke-config/repos/repo/server.toml <<CONFIG
   > [derived_data_config.backfilling]
-  > types=["blame", "skeleton_manifests"]
+  > types=["blame", "skeleton_manifests", "unodes"]
   > CONFIG
 
 start the tailer with tailing and backfilling some different types

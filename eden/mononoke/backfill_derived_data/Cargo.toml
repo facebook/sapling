@@ -28,6 +28,7 @@ cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 deleted_files_manifest = { version = "0.1.0", path = "../derived_data/deleted_files_manifest" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
+derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 fastlog = { version = "0.1.0", path = "../derived_data/fastlog" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -38,6 +39,7 @@ humantime = "1.3"
 manifest = { version = "0.1.0", path = "../manifest" }
 mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
@@ -54,7 +56,6 @@ unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 [dev-dependencies]
 async-trait = "0.1.51"
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
-derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }

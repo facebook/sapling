@@ -25,6 +25,7 @@ use crate::manager::DerivedDataManager;
 /// This struct is passed to derivation implementations.  They can use it
 /// to access repository attributes or request access to dependent
 /// derived data types.
+#[derive(Clone)]
 pub struct DerivationContext {
     manager: DerivedDataManager,
     rederivation: Option<Arc<dyn Rederivation>>,

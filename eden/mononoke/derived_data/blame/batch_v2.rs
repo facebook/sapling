@@ -6,16 +6,17 @@
  */
 
 use std::collections::HashMap;
+use std::sync::Mutex;
 
-use anyhow::Error;
-use blobrepo::BlobRepo;
-use blobstore::Loadable;
+use anyhow::{anyhow, Error, Result};
+use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_batch_in_linear_stacks, FileChangeAggregation, FileConflicts};
-use derived_data::{BonsaiDerived, BonsaiDerivedMappingContainer};
+use derived_data::batch::{split_bonsais_in_linear_stacks, FileChangeAggregation, FileConflicts};
+use derived_data_manager::DerivationContext;
 use futures::stream::{FuturesOrdered, TryStreamExt};
-use mononoke_types::ChangesetId;
+use lock_ext::LockExt;
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use slog::debug;
 use unodes::RootUnodeManifestId;
 
@@ -24,24 +25,27 @@ use crate::RootBlameV2;
 
 pub async fn derive_blame_v2_in_batch(
     ctx: &CoreContext,
-    repo: &BlobRepo,
-    mapping: &BonsaiDerivedMappingContainer<RootBlameV2>,
-    batch: Vec<ChangesetId>,
-) -> Result<HashMap<ChangesetId, RootUnodeManifestId>, Error> {
-    let batch_len = batch.len();
+    derivation_ctx: &DerivationContext,
+    bonsais: Vec<BonsaiChangeset>,
+) -> Result<HashMap<ChangesetId, RootBlameV2>, Error> {
+    let batch_len = bonsais.len();
     // We must split on any change as blame data must use the parent file.
-    let linear_stacks = split_batch_in_linear_stacks(
-        ctx,
-        repo.blobstore(),
-        batch,
+    let linear_stacks = split_bonsais_in_linear_stacks(
+        &bonsais,
         FileConflicts::AnyChange,
         // For blame we don't care about file changes, so FileChangeAggregation can be anything
         FileChangeAggregation::Aggregate,
     )
     .await?;
+    let bonsais = Mutex::new(
+        bonsais
+            .into_iter()
+            .map(|bcs| (bcs.get_changeset_id(), bcs))
+            .collect::<HashMap<_, _>>(),
+    );
+    borrowed!(bonsais);
 
     let mut res = HashMap::new();
-    let options = mapping.options();
     for linear_stack in linear_stacks {
         if let Some((cs_id, _fc)) = linear_stack.file_changes.first() {
             debug!(
@@ -56,19 +60,27 @@ pub async fn derive_blame_v2_in_batch(
         let new_blames = linear_stack
             .file_changes
             .into_iter()
-            .map(|(cs_id, _fc)| {
+            .map(|(csid, _fc)| {
                 // Clone owning copied to pass into the spawned future.
-                cloned!(ctx, repo, options);
+                cloned!(ctx, derivation_ctx);
                 async move {
+                    let bonsai = bonsais
+                        .with(|bonsais| bonsais.remove(&csid))
+                        .ok_or_else(|| anyhow!("changeset {} should be in bonsai batch", csid))?;
                     let derivation_fut = async move {
-                        let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
-                        let root_manifest = RootUnodeManifestId::derive(&ctx, &repo, cs_id).await?;
-                        derive_blame_v2(&ctx, &repo, bonsai, root_manifest, &options).await?;
+                        let root_manifest = derivation_ctx
+                            .derive_dependency::<RootUnodeManifestId>(&ctx, csid)
+                            .await?;
+                        derive_blame_v2(&ctx, &derivation_ctx, bonsai, root_manifest).await?;
                         Ok::<_, Error>(root_manifest)
                     };
                     let derivation_handle = tokio::spawn(derivation_fut);
                     let root_manifest = derivation_handle.await??;
-                    Ok::<_, Error>((cs_id, root_manifest))
+                    let derived = RootBlameV2 {
+                        csid,
+                        root_manifest,
+                    };
+                    Ok::<_, Error>((csid, derived))
                 }
             })
             .collect::<FuturesOrdered<_>>()

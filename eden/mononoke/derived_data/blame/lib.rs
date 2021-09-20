@@ -34,8 +34,8 @@ use unodes::RootUnodeManifestId;
 
 pub use compat::CompatBlame;
 pub use fetch::{fetch_content_for_blame, FetchOutcome};
-pub use mapping_v1::{BlameRoot, BlameRootMapping};
-pub use mapping_v2::{RootBlameV2, RootBlameV2Mapping};
+pub use mapping_v1::BlameRoot;
+pub use mapping_v2::RootBlameV2;
 
 pub const DEFAULT_BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
 

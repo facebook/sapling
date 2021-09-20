@@ -5,22 +5,19 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::{anyhow, Result};
 use blobrepo::BlobRepo;
-use blobstore::Loadable;
+use blobstore::{Blobstore, Loadable};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{BonsaiDerivedMapping, BonsaiDerivedOld};
 use filestore::{self, FetchKey};
 use futures::TryStreamExt;
-use metaconfig_types::BlameVersion;
 use mononoke_types::blame::BlameRejected;
 use mononoke_types::FileUnodeId;
-use repo_blobstore::RepoBlobstore;
 
-use crate::mapping_v1::BlameRoot;
-use crate::mapping_v2::RootBlameV2;
-use crate::BlameDeriveOptions;
+use crate::DEFAULT_BLAME_FILESIZE_LIMIT;
 
 pub enum FetchOutcome {
     Fetched(Bytes),
@@ -42,26 +39,23 @@ pub async fn fetch_content_for_blame(
     ctx: &CoreContext,
     repo: &BlobRepo,
     file_unode_id: FileUnodeId,
-    options: impl Into<Option<BlameDeriveOptions>>,
 ) -> Result<FetchOutcome> {
-    let options = match options.into() {
-        Some(options) => options,
-        None => match repo.get_derived_data_config().enabled.blame_version {
-            BlameVersion::V1 => BlameRoot::default_mapping(ctx, repo)?.options(),
-            BlameVersion::V2 => RootBlameV2::default_mapping(ctx, repo)?.options(),
-        },
-    };
-    let blobstore = repo.blobstore();
-    fetch_content_for_blame_with_options(ctx, &blobstore, file_unode_id, options).await
+    let filesize_limit = repo
+        .get_derived_data_config()
+        .enabled
+        .blame_filesize_limit
+        .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
+    let blobstore = repo.blobstore().boxed();
+    fetch_content_for_blame_with_limit(ctx, &blobstore, file_unode_id, filesize_limit).await
 }
 
 /// Fetch the content of a file ready for blame.  If the file content is
 /// too large or binary data is detected then the fetch may be rejected.
-pub async fn fetch_content_for_blame_with_options(
+pub async fn fetch_content_for_blame_with_limit(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     file_unode_id: FileUnodeId,
-    options: BlameDeriveOptions,
+    filesize_limit: u64,
 ) -> Result<FetchOutcome> {
     let file_unode = file_unode_id.load(ctx, blobstore).await?;
     let content_id = *file_unode.content_id();
@@ -69,7 +63,7 @@ pub async fn fetch_content_for_blame_with_options(
         filestore::fetch_with_size(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
             .await?
             .ok_or_else(|| anyhow!("Missing content: {}", content_id))?;
-    if size > options.filesize_limit {
+    if size > filesize_limit {
         return Ok(FetchOutcome::Rejected(BlameRejected::TooBig));
     }
     let mut buffer = Vec::with_capacity(size as usize);

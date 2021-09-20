@@ -39,12 +39,6 @@ pub enum FileChangeAggregation {
     DontAggregate,
 }
 
-/// We follow a few rules when splitting a batch in the stacks:
-/// 1) Merges go to a separate batch
-/// 2) If two commits have two files where one is a prefix of another, then they
-///    go to a separate stacks (because of the way bonsai interprets these files)
-/// 3) If a file was modified in one commit and delete in other then they go
-///    to different stacks
 pub async fn split_batch_in_linear_stacks(
     ctx: &CoreContext,
     blobstore: &RepoBlobstore,
@@ -52,33 +46,46 @@ pub async fn split_batch_in_linear_stacks(
     file_conflicts: FileConflicts,
     file_change_aggregation: FileChangeAggregation,
 ) -> Result<Vec<LinearStack>, Error> {
-    let bonsais = stream::iter(batch.into_iter().map(|bcs_id| async move {
-        let bcs = bcs_id.load(ctx, blobstore).await?;
-        Result::<_, Error>::Ok((bcs_id, bcs))
-    }))
+    let bonsais = stream::iter(
+        batch
+            .into_iter()
+            .map(|bcs_id| async move { bcs_id.load(ctx, blobstore).await }),
+    )
     .buffered(100)
     .try_collect::<Vec<_>>()
     .await?;
+    split_bonsais_in_linear_stacks(&bonsais, file_conflicts, file_change_aggregation).await
+}
 
-    let mut bonsai_iter = bonsais.into_iter().peekable();
-    let (start_bcs_id, start_bcs) = match bonsai_iter.peek() {
+/// We follow a few rules when splitting a batch in the stacks:
+/// 1) Merges go to a separate batch
+/// 2) If two commits have two files where one is a prefix of another, then they
+///    go to a separate stacks (because of the way bonsai interprets these files)
+/// 3) If a file was modified in one commit and delete in other then they go
+///    to different stacks
+pub async fn split_bonsais_in_linear_stacks(
+    bonsais: &[BonsaiChangeset],
+    file_conflicts: FileConflicts,
+    file_change_aggregation: FileChangeAggregation,
+) -> Result<Vec<LinearStack>, Error> {
+    let start_bcs = match bonsais.first() {
         Some(val) => val,
         None => {
             return Ok(vec![]);
         }
     };
 
-    let mut linear_stacks = vec![];
+    let mut linear_stacks = Vec::new();
     let mut cur_linear_stack = LinearStack::new(start_bcs.parents().collect::<Vec<_>>());
-    cur_linear_stack.push(*start_bcs_id, start_bcs, file_change_aggregation);
+    cur_linear_stack.push(start_bcs, file_change_aggregation);
 
-    for (prev_cs, (bcs_id, bcs)) in bonsai_iter.tuple_windows() {
-        if !cur_linear_stack.can_be_in_same_linear_stack(&prev_cs, &bcs, file_conflicts) {
+    for (prev_bcs, bcs) in bonsais.iter().tuple_windows() {
+        if !cur_linear_stack.can_be_in_same_linear_stack(prev_bcs, bcs, file_conflicts) {
             linear_stacks.push(cur_linear_stack);
             cur_linear_stack = LinearStack::new(bcs.parents().collect::<Vec<_>>());
         }
 
-        cur_linear_stack.push(bcs_id, &bcs, file_change_aggregation);
+        cur_linear_stack.push(bcs, file_change_aggregation);
     }
 
     linear_stacks.push(cur_linear_stack);
@@ -102,12 +109,8 @@ impl LinearStack {
         }
     }
 
-    fn push(
-        &mut self,
-        cs_id: ChangesetId,
-        bcs: &BonsaiChangeset,
-        file_change_aggregation: FileChangeAggregation,
-    ) {
+    fn push(&mut self, bcs: &BonsaiChangeset, file_change_aggregation: FileChangeAggregation) {
+        let cs_id = bcs.get_changeset_id();
         let file_changes = bcs.file_changes().map(|(path, fc)| {
             (
                 path.clone(),
@@ -130,7 +133,7 @@ impl LinearStack {
 
     fn can_be_in_same_linear_stack(
         &self,
-        (prev_cs_id, prev): &(ChangesetId, BonsaiChangeset),
+        prev: &BonsaiChangeset,
         next: &BonsaiChangeset,
         file_conflicts: FileConflicts,
     ) -> bool {
@@ -140,7 +143,8 @@ impl LinearStack {
         }
 
         // The next commit should be stacked on top of the previous one
-        if next.parents().find(|p| p == prev_cs_id).is_none() {
+        let prev_cs_id = prev.get_changeset_id();
+        if next.parents().find(|p| *p == prev_cs_id).is_none() {
             return false;
         }
 
