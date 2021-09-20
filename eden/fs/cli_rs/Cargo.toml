@@ -8,6 +8,7 @@ object = { git = "https://github.com/gimli-rs/object", rev = "9271d2cd06d1fed112
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
+ring = { git = "https://github.com/fanzeyi/ring", branch = "main" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
 shellexpand = { git = "https://github.com/fanzeyi/shellexpand.git", rev = "179447a3f8fccd765acfd2eed15a54c716c49cfe" }
 tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
