@@ -338,6 +338,7 @@ class localrepository(object):
         "treedirstate",
         "treestate",
         "storerequirements",
+        "lfs",
     }
     _basestoresupported = {
         "visibleheads",
