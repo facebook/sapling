@@ -37,7 +37,6 @@ lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }

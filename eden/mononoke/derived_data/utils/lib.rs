@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use blame::{BlameRoot, BlameRootMapping, RootBlameV2Mapping};
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use blobstore::{Blobstore, Loadable};
+use blobstore::Blobstore;
 use borrowed::borrowed;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changeset_info::{ChangesetInfo, ChangesetInfoMapping};
@@ -30,8 +30,8 @@ use fbinit::FacebookInit;
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::{
     future::{self, ready, try_join_all, BoxFuture, FutureExt},
-    stream::{self, futures_unordered::FuturesUnordered},
-    Future, Stream, StreamExt, TryFutureExt, TryStreamExt,
+    stream::futures_unordered::FuturesUnordered,
+    Future, Stream, TryFutureExt, TryStreamExt,
 };
 use futures_stats::TimedTryFutureExt;
 use git_types::{TreeHandle, TreeMapping};
@@ -39,7 +39,7 @@ use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use metaconfig_types::BlameVersion;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::{RootSkeletonManifestId, RootSkeletonManifestMapping};
 use std::{
@@ -178,12 +178,16 @@ pub trait DerivedUtils: Send + Sync + 'static {
     /// Get a name for this type of derived data
     fn name(&self) -> &'static str;
 
-    async fn find_oldest_underived<'a>(
+    /// Find all underived ancestors of the target changeset id.
+    ///
+    /// Returns a map from underived commit to its underived
+    /// parents, suitable for input to toposort.
+    async fn find_underived<'a>(
         &'a self,
         ctx: &'a CoreContext,
         repo: &'a BlobRepo,
-        csids: &'a Vec<ChangesetId>,
-    ) -> Result<Option<BonsaiChangeset>, Error>;
+        csid: ChangesetId,
+    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error>;
 }
 
 #[derive(Clone)]
@@ -376,47 +380,13 @@ where
         Ok(underived.len() as u64)
     }
 
-    async fn find_oldest_underived<'a>(
+    async fn find_underived<'a>(
         &'a self,
         ctx: &'a CoreContext,
         repo: &'a BlobRepo,
-        csids: &'a Vec<ChangesetId>,
-    ) -> Result<Option<BonsaiChangeset>, Error> {
-        let mut underived_ancestors = vec![];
-        for cs_id in csids {
-            underived_ancestors.push(derive_impl::find_topo_sorted_underived::<Derivable, _>(
-                ctx,
-                repo,
-                &self.mapping,
-                vec![*cs_id],
-                None,
-            ));
-        }
-
-        let boxed_stream = stream::iter(underived_ancestors)
-            .map(Result::<_, Error>::Ok)
-            .try_buffer_unordered(100)
-            // boxed() is necessary to avoid "one type is more general than the other" error
-            .boxed();
-
-        let res = boxed_stream.try_collect::<Vec<_>>().await?;
-        let oldest_changesets = stream::iter(
-            res.into_iter()
-                // The first element is the first underived ancestor in toposorted order.
-                // Let's use it as a proxy for the oldest underived commit
-                .map(|all_underived| all_underived.get(0).cloned())
-                .flatten()
-                .map(|cs_id| async move { cs_id.load(ctx, repo.blobstore()).await }),
-        )
-        .map(Ok)
-        .try_buffer_unordered(100)
-        // boxed() is necessary to avoid "one type is more general than the other" error
-        .boxed();
-
-        let oldest_changesets = oldest_changesets.try_collect::<Vec<_>>().await?;
-        Ok(oldest_changesets
-            .into_iter()
-            .min_by_key(|bcs| *bcs.author_date()))
+        csid: ChangesetId,
+    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error> {
+        derive_impl::find_underived(ctx, repo, &self.mapping, Some(csid), None).await
     }
 
     fn regenerate(&self, csids: &Vec<ChangesetId>) {
@@ -1288,12 +1258,12 @@ mod tests {
             self.deriver.name()
         }
 
-        async fn find_oldest_underived<'a>(
+        async fn find_underived<'a>(
             &'a self,
             _ctx: &'a CoreContext,
             _repo: &'a BlobRepo,
-            _csids: &'a Vec<ChangesetId>,
-        ) -> Result<Option<BonsaiChangeset>, Error> {
+            _csid: ChangesetId,
+        ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error> {
             unimplemented!()
         }
     }
@@ -1399,38 +1369,30 @@ mod tests {
 
         assert_eq!(
             utils_v1
-                .find_oldest_underived(&ctx, &repo, &vec![c])
-                .await?
-                .unwrap()
-                .get_changeset_id(),
-            a
+                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .await?,
+            vec![a, b, c]
         );
         assert_eq!(
             utils_v2
-                .find_oldest_underived(&ctx, &repo, &vec![c])
-                .await?
-                .unwrap()
-                .get_changeset_id(),
-            a
+                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .await?,
+            vec![a, b, c]
         );
 
         // Derive V1 of A using the V1 utils.  V2 of A should still be underived.
         utils_v1.derive(ctx.clone(), repo.clone(), a).await?;
         assert_eq!(
             utils_v1
-                .find_oldest_underived(&ctx, &repo, &vec![c])
-                .await?
-                .unwrap()
-                .get_changeset_id(),
-            b
+                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .await?,
+            vec![b, c]
         );
         assert_eq!(
             utils_v2
-                .find_oldest_underived(&ctx, &repo, &vec![c])
-                .await?
-                .unwrap()
-                .get_changeset_id(),
-            a
+                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .await?,
+            vec![a, b, c]
         );
 
         // Derive B directly, which should use the V2 mapping, as that is the
@@ -1438,19 +1400,15 @@ mod tests {
         RootUnodeManifestId::derive(&ctx, &repo, b).await?;
         assert_eq!(
             utils_v1
-                .find_oldest_underived(&ctx, &repo, &vec![c])
-                .await?
-                .unwrap()
-                .get_changeset_id(),
-            b
+                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .await?,
+            vec![b, c]
         );
         assert_eq!(
             utils_v2
-                .find_oldest_underived(&ctx, &repo, &vec![c])
-                .await?
-                .unwrap()
-                .get_changeset_id(),
-            c
+                .pending(ctx.clone(), repo.clone(), vec![a, b, c])
+                .await?,
+            vec![c]
         );
 
         Ok(())

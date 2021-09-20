@@ -13,6 +13,7 @@ use anyhow::{anyhow, format_err, Context, Error, Result};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
+use blobstore::Loadable;
 use bookmarks::{
     BookmarkKind, BookmarkPagination, BookmarkPrefix, BookmarksSubscription, Freshness,
 };
@@ -39,7 +40,7 @@ use futures::{
 };
 use futures_stats::{TimedFutureExt, TimedTryFutureExt};
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{ChangesetId, DateTime};
+use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime};
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::{info, Logger};
@@ -52,6 +53,7 @@ use std::{
     time::{Duration, Instant},
 };
 use time_ext::DurationExt;
+use topo_sort::sort_topological;
 use tunables::tunables;
 
 mod benchmark;
@@ -1132,6 +1134,36 @@ async fn tail_batch_iteration(
     Ok(())
 }
 
+async fn find_oldest_underived(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    derive: &dyn DerivedUtils,
+    csids: &[ChangesetId],
+) -> Result<Option<BonsaiChangeset>> {
+    let underived_ancestors = stream::iter(csids)
+        .map(|csid| {
+            Ok(async move {
+                let underived = derive.find_underived(ctx, repo, *csid).await?;
+                let underived = sort_topological(&underived)
+                    .ok_or_else(|| anyhow!("commit graph has cycles!"))?;
+                // The first element is the first underived ancestor in
+                // toposorted order.  Let's use it as a proxy for the oldest
+                // underived commit.
+                match underived.first() {
+                    Some(csid) => Ok(Some(csid.load(ctx, repo.blobstore()).await?)),
+                    None => Ok::<_, Error>(None),
+                }
+            })
+        })
+        .try_buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+    Ok(underived_ancestors
+        .into_iter()
+        .flatten()
+        .min_by_key(|bcs| *bcs.author_date()))
+}
+
 async fn tail_one_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -1158,7 +1190,7 @@ async fn tail_one_iteration(
                     let pending = derive.pending(ctx.clone(), (*repo).clone(), heads).await?;
 
                     let oldest_underived =
-                        derive.find_oldest_underived(&ctx, &repo, &pending).await?;
+                        find_oldest_underived(&ctx, &repo, derive.as_ref(), &pending).await?;
                     let now = DateTime::now();
                     let oldest_underived_age = oldest_underived.map_or(0, |oldest_underived| {
                         now.timestamp_secs() - oldest_underived.author_date().timestamp_secs()
