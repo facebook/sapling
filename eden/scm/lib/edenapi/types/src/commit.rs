@@ -425,11 +425,11 @@ mod tests {
 
         let full_hash = String::from("3f54ab22d87423966e27374e6c0f8112a269999b");
         let full_req = make_hash_lookup_request(full_hash)?;
-        let expected__full_req = make_range(
+        let expected_full_req = make_range(
             b"3f54ab22d87423966e27374e6c0f8112a269999b",
             b"3f54ab22d87423966e27374e6c0f8112a269999b",
         )?;
-        assert_eq!(full_req, expected__full_req);
+        assert_eq!(full_req, expected_full_req);
 
         Ok(())
     }

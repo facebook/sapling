@@ -12,9 +12,9 @@ use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
-    wire::{is_default, TryFromBytesError},
-    AnyFileContentId, ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata,
-    FileMetadataRequest, FileType, FsnodeId, Sha1, Sha256, ToApi, ToWire, WireToApiConversionError,
+    wire::is_default, AnyFileContentId, ContentId, DirectoryMetadata, DirectoryMetadataRequest,
+    FileMetadata, FileMetadataRequest, FileType, FsnodeId, Sha1, Sha256, ToApi, ToWire,
+    WireToApiConversionError,
 };
 
 /// Directory entry metadata
