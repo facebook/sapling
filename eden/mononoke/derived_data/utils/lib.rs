@@ -16,6 +16,7 @@ use blobstore::Blobstore;
 use borrowed::borrowed;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changeset_info::{ChangesetInfo, ChangesetInfoMapping};
+use changesets::ChangesetsArc;
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
@@ -25,6 +26,10 @@ use derived_data::{
     RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
+use derived_data_manager::{
+    BatchDeriveOptions, BatchDeriveStats, BonsaiDerivable as NewBonsaiDerivable,
+    DerivedDataManager, Rederivation,
+};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
@@ -40,14 +45,16 @@ use lock_ext::LockExt;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
+use repo_blobstore::RepoBlobstoreRef;
+use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::{RootSkeletonManifestId, RootSkeletonManifestMapping};
 use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
     io::Write,
+    marker::PhantomData,
     sync::{Arc, Mutex},
-    time::Duration,
 };
 use topo_sort::sort_topological;
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
@@ -398,10 +405,7 @@ where
     }
 }
 
-pub enum BackfillDeriveStats {
-    Parallel(Duration),
-    Serial(Vec<(ChangesetId, Duration)>),
-}
+pub type BackfillDeriveStats = BatchDeriveStats;
 
 #[derive(Clone)]
 struct InMemoryMapping<M: BonsaiDerivedMapping + Clone> {
@@ -471,6 +475,151 @@ where
 
     fn options(&self) -> <M::Value as BonsaiDerivable>::Options {
         self.mapping.options()
+    }
+}
+
+#[derive(Clone)]
+struct DerivedUtilsFromManager<Derivable> {
+    manager: DerivedDataManager,
+    rederive: Arc<Mutex<HashSet<ChangesetId>>>,
+    phantom: PhantomData<Derivable>,
+}
+
+impl<Derivable> DerivedUtilsFromManager<Derivable> {
+    #[allow(unused)]
+    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Self {
+        let lease = repo.repo_derived_data().lease().clone();
+        let scuba = repo.repo_derived_data().manager().scuba().clone();
+        let manager = DerivedDataManager::new(
+            repo.get_repoid(),
+            repo.name().clone(),
+            repo.changesets_arc(),
+            repo.repo_blobstore().clone(),
+            lease,
+            scuba,
+            config.clone(),
+        );
+        Self {
+            manager,
+            rederive: Default::default(),
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<Derivable> Rederivation for DerivedUtilsFromManager<Derivable>
+where
+    Derivable: NewBonsaiDerivable,
+{
+    fn needs_rederive(&self, derivable_name: &str, csid: ChangesetId) -> Option<bool> {
+        if derivable_name == Derivable::NAME {
+            if self.rederive.with(|rederive| rederive.contains(&csid)) {
+                return Some(true);
+            }
+        }
+        None
+    }
+
+    fn mark_derived(&self, derivable_name: &str, csid: ChangesetId) {
+        if derivable_name == Derivable::NAME {
+            self.rederive.with(|rederive| rederive.remove(&csid));
+        }
+    }
+}
+
+#[async_trait]
+impl<Derivable> DerivedUtils for DerivedUtilsFromManager<Derivable>
+where
+    Derivable: NewBonsaiDerivable + std::fmt::Debug,
+{
+    fn derive(
+        &self,
+        ctx: CoreContext,
+        _repo: BlobRepo,
+        csid: ChangesetId,
+    ) -> BoxFuture<'static, Result<String, Error>> {
+        let utils = Arc::new(self.clone());
+        async move {
+            let derived = utils
+                .manager
+                .derive::<Derivable>(&ctx, csid, Some(utils.clone()))
+                .await?;
+            Ok(format!("{:?}", derived))
+        }
+        .boxed()
+    }
+
+    fn backfill_batch_dangerous(
+        &self,
+        ctx: CoreContext,
+        _repo: BlobRepo,
+        csids: Vec<ChangesetId>,
+        parallel: bool,
+        gap_size: Option<usize>,
+    ) -> BoxFuture<'static, Result<BackfillDeriveStats, Error>> {
+        let options = if parallel || gap_size.is_some() {
+            BatchDeriveOptions::Parallel { gap_size }
+        } else {
+            BatchDeriveOptions::Serial
+        };
+        let utils = Arc::new(self.clone());
+        async move {
+            let stats = utils
+                .manager
+                .backfill_batch::<Derivable>(&ctx, csids, options, Some(utils.clone()))
+                .await?;
+            Ok(stats)
+        }
+        .boxed()
+    }
+
+    async fn pending(
+        &self,
+        ctx: CoreContext,
+        _repo: BlobRepo,
+        mut csids: Vec<ChangesetId>,
+    ) -> Result<Vec<ChangesetId>, Error> {
+        let utils = Arc::new(self.clone());
+        let derived = self
+            .manager
+            .fetch_derived_batch::<Derivable>(&ctx, csids.clone(), Some(utils))
+            .await?;
+        csids.retain(|csid| !derived.contains_key(&csid));
+        Ok(csids)
+    }
+
+    async fn count_underived(
+        &self,
+        ctx: &CoreContext,
+        _repo: &BlobRepo,
+        csid: ChangesetId,
+    ) -> Result<u64, Error> {
+        let utils = Arc::new(self.clone());
+        Ok(self
+            .manager
+            .count_underived::<Derivable>(ctx, csid, None, Some(utils))
+            .await?)
+    }
+
+    fn regenerate(&self, csids: &Vec<ChangesetId>) {
+        self.rederive
+            .with(|rederive| rederive.extend(csids.iter().copied()));
+    }
+
+    fn name(&self) -> &'static str {
+        Derivable::NAME
+    }
+
+    async fn find_underived<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        _repo: &'a BlobRepo,
+        csid: ChangesetId,
+    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error> {
+        let utils = Arc::new(self.clone());
+        self.manager
+            .find_underived::<Derivable>(ctx, csid, None, Some(utils))
+            .await
     }
 }
 
