@@ -1074,9 +1074,22 @@ async fn tail_batch_iteration(
         tokio::time::sleep(Duration::from_millis(SLEEP_TIME)).await;
     } else {
         info!(ctx.logger(), "deriving data {}", size);
+        // Find all the commits that we need to derive, and fetch gen number
+        // so that we can sort them lexicographically
+        let commits = derive_graph.commits();
+        let cs_fetcher = &repo.get_changeset_fetcher();
+
+        let mut commits = stream::iter(commits.into_iter().map(|cs_id| async move {
+            let gen_num = cs_fetcher.get_generation_number(ctx.clone(), cs_id).await?;
+            Result::<_, Error>::Ok((cs_id, gen_num))
+        }))
+        .buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+
         // We are using `bounded_traversal_dag` directly instead of `DeriveGraph::derive`
         // so we could use `warmup::warmup` on each node.
-        bounded_traversal::bounded_traversal_dag(
+        let (stats, res) = bounded_traversal::bounded_traversal_dag(
             100,
             derive_graph,
             |node| {
@@ -1130,8 +1143,17 @@ async fn tail_batch_iteration(
                 .boxed()
             },
         )
-        .await?
-        .ok_or_else(|| anyhow!("derive graph contains a cycle"))?;
+        .try_timed()
+        .await?;
+        res.ok_or_else(|| anyhow!("derive graph contains a cycle"))?;
+
+        // Log how long it took to derive all the data for all the commits
+        commits.sort_by_key(|(_, gen)| *gen);
+        let commits: Vec<_> = commits.into_iter().map(|(cs_id, _)| cs_id).collect();
+        let mut scuba = create_derive_graph_scuba_sample(&ctx, &commits, "all");
+        scuba
+            .add_future_stats(&stats)
+            .log_with_msg("Derived stack", None);
     }
 
     Ok(())

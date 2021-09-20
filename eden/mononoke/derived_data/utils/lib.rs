@@ -794,6 +794,22 @@ impl DeriveGraph {
         count
     }
 
+    /// Find all commits that will be derived
+    pub fn commits(&self) -> HashSet<ChangesetId> {
+        let mut stack = vec![self];
+        let mut visited = HashSet::new();
+        let mut res = HashSet::new();
+        while let Some(node) = stack.pop() {
+            res.extend(node.csids.iter().map(|cs_id| *cs_id));
+            for dep in node.dependencies.iter() {
+                if visited.insert(dep.id) {
+                    stack.push(dep);
+                }
+            }
+        }
+        res
+    }
+
     /// Derive all data in the graph
     pub async fn derive(
         &self,
