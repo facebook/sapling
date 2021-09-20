@@ -450,17 +450,6 @@ No local source
   abort: repository a not found!
   [255]
 
-No remote source
-
-#if windows
-  $ hg clone http://$LOCALIP:3121/a b
-  abort: error: * (glob)
-  [255]
-#else
-  $ hg clone http://$LOCALIP:3121/a b
-  abort: error: *refused* (glob)
-  [255]
-#endif
   $ rm -rf b # work around bug with http clone
 
 

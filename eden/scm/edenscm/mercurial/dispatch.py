@@ -196,7 +196,6 @@ def _preimportmodules():
         "hbisect",
         "httpclient",
         "httpconnection",
-        "httppeer",
         "localrepo",
         "lock",
         "mail",

@@ -205,12 +205,6 @@ Pull -u takes us back to branch foo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar
   
-Test handling of invalid urls
-
-  $ hg id http://foo/?bar
-  abort: unsupported URL component: "bar"
-  [255]
-
   $ cd ..
 
 Test handling common incoming revisions between "default" and

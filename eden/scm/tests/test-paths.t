@@ -167,39 +167,3 @@ unknown sub-options aren't displayed
   (paths.default:pushurl not a URL; ignoring)
   default = /path/to/nothing
 
-#fragment is not allowed in :pushurl
-
-  $ cat > .hg/hgrc << EOF
-  > [paths]
-  > default = https://example.com/repo
-  > invalid = https://example.com/repo
-  > invalid:pushurl = https://example.com/repo#branch
-  > EOF
-
-  $ hg paths
-  ("#fragment" in paths.invalid:pushurl not supported; ignoring)
-  default = https://example.com/repo
-  invalid = https://example.com/repo
-  invalid:pushurl = https://example.com/repo
-
-  $ cd ..
-
-'file:' disables [paths] entries for clone destination
-
-  $ cat >> $HGRCPATH <<EOF
-  > [paths]
-  > gpath1 = http://hg.example.com
-  > EOF
-
-  $ hg clone a gpath1
-  abort: cannot create new http repository
-  [255]
-
-  $ hg clone a file:gpath1
-  updating to branch default
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd gpath1
-  $ hg -q id
-  000000000000
-
-  $ cd ..

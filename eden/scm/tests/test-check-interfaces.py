@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, print_function
 
-from edenscm.mercurial import bundlerepo, httppeer, localrepo, sshpeer, ui as uimod
+from edenscm.mercurial import bundlerepo, localrepo, sshpeer, ui as uimod
 from hghave import require
 
 
@@ -53,20 +53,9 @@ class testingsshpeer(sshpeer.sshpeer):
         pass
 
 
-class badpeer(httppeer.httppeer):
-    def __init__(self):
-        super(badpeer, self).__init__(uimod.ui(), "http://localhost")
-        self.badattribute = True
-
-    def badmethod(self):
-        pass
-
-
 def main():
     ui = uimod.ui()
 
-    checkobject(badpeer())
-    checkobject(httppeer.httppeer(ui, "http://localhost"))
     checkobject(localrepo.localpeer(dummyrepo()))
     checkobject(testingsshpeer(ui, "ssh://localhost/foo"))
     checkobject(bundlerepo.bundlepeer(dummyrepo()))

@@ -21,7 +21,6 @@ import traceback
 from edenscm.mercurial import (
     encoding,
     error,
-    httppeer,
     perftrace,
     progress,
     pycompat,
