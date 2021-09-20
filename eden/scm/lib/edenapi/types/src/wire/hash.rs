@@ -12,12 +12,18 @@ macro_rules! wire_hash {
         size => $size: literal,
     } => {
 
-        #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+        #[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
         pub struct $wire([u8; $wire::len()]);
 
         impl $wire {
             pub const fn len() -> usize {
                 $size
+            }
+        }
+
+        impl std::fmt::Debug for $wire {
+            fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(fmt, "{}({:?})", stringify!($wire), types::sha::to_hex(&self.0))
             }
         }
 

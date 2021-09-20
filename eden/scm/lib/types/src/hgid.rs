@@ -206,6 +206,18 @@ impl HgId {
     }
 }
 
+impl From<[u8; HgId::len()]> for HgId {
+    fn from(bytes: [u8; HgId::len()]) -> Self {
+        Self::from_byte_array(bytes)
+    }
+}
+
+impl From<HgId> for [u8; HgId::len()] {
+    fn from(id: HgId) -> Self {
+        id.into_byte_array()
+    }
+}
+
 impl Display for HgId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.to_hex(), fmt)

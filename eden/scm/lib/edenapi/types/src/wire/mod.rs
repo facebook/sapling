@@ -99,7 +99,6 @@ use std::fmt;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde::{self, de::Error, Deserializer, Serializer};
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -278,76 +277,17 @@ impl ToApi for WireEdenApiServerError {
     }
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct WireHgId([u8; WireHgId::len()]);
-
-impl WireHgId {
-    const fn len() -> usize {
-        20
-    }
-}
-
-impl ToWire for HgId {
-    type Wire = WireHgId;
-
-    fn to_wire(self) -> Self::Wire {
-        WireHgId(self.into_byte_array())
-    }
-}
-
-impl ToApi for WireHgId {
-    type Api = HgId;
-    type Error = Infallible;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(HgId::from_byte_array(self.0))
-    }
+wire_hash! {
+    wire => WireHgId,
+    api  => HgId,
+    size => 20,
 }
 
 impl fmt::Display for WireHgId {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self.to_api() {
             Ok(api) => fmt::Display::fmt(&api, fmt),
-            Err(_) => Err(fmt::Error),
-        }
-    }
-}
-
-impl fmt::Debug for WireHgId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match self.to_api() {
-            Ok(api) => write!(fmt, "WireHgId({:?})", &api.to_hex()),
-            Err(_) => Err(fmt::Error),
-        }
-    }
-}
-
-impl serde::Serialize for WireHgId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_bytes(&self.0)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for WireHgId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
-        let bytes = bytes.as_ref();
-
-        if bytes.len() == Self::len() {
-            let mut ary = [0u8; Self::len()];
-            ary.copy_from_slice(&bytes);
-            Ok(WireHgId(ary))
-        } else {
-            Err(D::Error::custom(TryFromBytesError {
-                expected_len: Self::len(),
-                found_len: bytes.len(),
-            }))
+            Err(e) => match e {},
         }
     }
 }
@@ -514,13 +454,6 @@ impl ToApi for WireDagId {
 
 fn is_default<T: Default + PartialEq>(v: &T) -> bool {
     v == &T::default()
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireHgId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        HgId::arbitrary(g).to_wire()
-    }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
