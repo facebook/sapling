@@ -9,7 +9,6 @@ use std::convert::Infallible;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde::{self, de::Error, Deserializer, Serializer};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
@@ -295,60 +294,10 @@ impl ToApi for WireFileType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct WireFsnodeId([u8; WireFsnodeId::len()]);
-
-impl WireFsnodeId {
-    pub const fn len() -> usize {
-        32
-    }
-}
-
-impl ToWire for FsnodeId {
-    type Wire = WireFsnodeId;
-
-    fn to_wire(self) -> Self::Wire {
-        WireFsnodeId(self.0)
-    }
-}
-
-impl ToApi for WireFsnodeId {
-    type Api = FsnodeId;
-    type Error = Infallible;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(FsnodeId(self.0))
-    }
-}
-
-impl serde::Serialize for WireFsnodeId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_bytes(&self.0)
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for WireFsnodeId {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
-        let bytes = bytes.as_ref();
-
-        if bytes.len() == Self::len() {
-            let mut ary = [0u8; Self::len()];
-            ary.copy_from_slice(&bytes);
-            Ok(WireFsnodeId(ary))
-        } else {
-            Err(D::Error::custom(TryFromBytesError {
-                expected_len: Self::len(),
-                found_len: bytes.len(),
-            }))
-        }
-    }
+wire_hash! {
+    wire => WireFsnodeId,
+    api  => FsnodeId,
+    size => 32,
 }
 
 wire_hash! {
@@ -495,15 +444,6 @@ impl Arbitrary for WireFileType {
             3 => Unknown,
             _ => unreachable!(),
         }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireFsnodeId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
-        v
     }
 }
 

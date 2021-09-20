@@ -488,17 +488,7 @@ impl_typed_hash! {
     context_key => "redactionkeylist",
 }
 
-impl From<FsnodeId> for EdenapiFsnodeId {
-    fn from(v: FsnodeId) -> Self {
-        EdenapiFsnodeId(v.0.into_inner())
-    }
-}
-
-impl From<EdenapiFsnodeId> for FsnodeId {
-    fn from(v: EdenapiFsnodeId) -> Self {
-        FsnodeId::new(Blake2::from_byte_array(v.0))
-    }
-}
+impl_edenapi_hash_convert!(FsnodeId, EdenapiFsnodeId);
 
 impl_typed_hash! {
     hash_type => SkeletonManifestId,

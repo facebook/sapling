@@ -63,30 +63,13 @@ pub struct FileMetadataRequest {
 sized_hash!(Sha1, 20);
 sized_hash!(Sha256, 32);
 blake2_hash!(ContentId);
+blake2_hash!(FsnodeId);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FileType {
     Regular,
     Executable,
     Symlink,
-}
-
-#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FsnodeId(pub [u8; 32]);
-
-impl fmt::Display for FsnodeId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        for d in &self.0 {
-            write!(fmt, "{:02x}", d)?;
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Debug for FsnodeId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "FsnodeId(\"{}\")", self)
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
@@ -211,15 +194,6 @@ impl Arbitrary for FileType {
             2 => Symlink,
             _ => unreachable!(),
         }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for FsnodeId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
-        v
     }
 }
 
