@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::{format_err, Error};
 use blobstore::{Blobstore, Loadable};
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data_manager::DerivedDataManager;
+use derived_data_manager::DerivationContext;
 use futures::{
     channel::mpsc,
     future::{
@@ -24,7 +26,6 @@ use mononoke_types::{
     BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPath, MPathElement, MPathHash,
     ManifestUnodeId, MononokeId,
 };
-use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::ErrorKind;
@@ -35,14 +36,14 @@ use crate::ErrorKind;
 /// `create_unode_manifest` and `create_unode_file`).
 pub(crate) async fn derive_unode_manifest(
     ctx: &CoreContext,
-    manager: &DerivedDataManager,
+    derivation_ctx: &DerivationContext,
     cs_id: ChangesetId,
     parents: Vec<ManifestUnodeId>,
     changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
     unode_version: UnodeVersion,
 ) -> Result<ManifestUnodeId, Error> {
     let parents: Vec<_> = parents.into_iter().collect();
-    let blobstore = manager.repo_blobstore();
+    let blobstore = derivation_ctx.blobstore();
 
     let maybe_tree_id = derive_manifest_with_io_sender(
         ctx.clone(),
@@ -120,7 +121,7 @@ pub(crate) async fn derive_unode_manifest(
 async fn create_unode_manifest(
     ctx: CoreContext,
     linknode: ChangesetId,
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<ManifestUnodeId, FileUnodeId, ()>,
     unode_version: UnodeVersion,
@@ -163,14 +164,16 @@ async fn create_unode_manifest(
 async fn create_unode_file(
     ctx: CoreContext,
     linknode: ChangesetId,
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
     unode_version: UnodeVersion,
 ) -> Result<((), FileUnodeId), Error> {
+    borrowed!(ctx, blobstore);
+
     async fn save_unode(
         ctx: &CoreContext,
-        blobstore: &RepoBlobstore,
+        blobstore: &Arc<dyn Blobstore>,
         sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
         parents: Vec<FileUnodeId>,
         content_id: ContentId,
@@ -181,7 +184,7 @@ async fn create_unode_file(
     ) -> Result<FileUnodeId, Error> {
         if can_reuse(unode_version) && parents.len() > 1 {
             if let Some(parent) =
-                reuse_file_parent(&ctx, &blobstore, &parents, &content_id, file_type).await?
+                reuse_file_parent(&ctx, blobstore, &parents, &content_id, file_type).await?
             {
                 return Ok(parent);
             }
@@ -222,8 +225,8 @@ async fn create_unode_file(
 
     let leaf_id = if let Some((content_id, file_type)) = leaf {
         save_unode(
-            &ctx,
-            &blobstore,
+            ctx,
+            blobstore,
             sender,
             parents,
             content_id,
@@ -262,17 +265,19 @@ async fn create_unode_file(
             )
             .into());
         }
-        let parent_unodes = try_join_all(parents.clone().into_iter().map(|id| {
-            borrowed!(ctx, blobstore);
-            async move { id.load(ctx, blobstore).await }
-        }))
+        let parent_unodes = try_join_all(
+            parents
+                .clone()
+                .into_iter()
+                .map(|id| async move { id.load(ctx, blobstore).await }),
+        )
         .await?;
 
         match return_if_unique_filenode(&parent_unodes) {
             Some((content_id, file_type)) => {
                 save_unode(
-                    &ctx,
-                    &blobstore,
+                    ctx,
+                    blobstore,
                     sender,
                     parents,
                     content_id.clone(),
@@ -331,7 +336,7 @@ fn can_reuse(unode_version: UnodeVersion) -> bool {
 
 async fn reuse_manifest_parent(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     parents: &Vec<ManifestUnodeId>,
     subentries: &SortedVectorMap<MPathElement, UnodeEntry>,
 ) -> Result<Option<ManifestUnodeId>, Error> {
@@ -351,7 +356,7 @@ async fn reuse_manifest_parent(
 
 async fn reuse_file_parent(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     parents: &Vec<FileUnodeId>,
     content_id: &ContentId,
     file_type: FileType,
@@ -418,7 +423,7 @@ mod tests {
     #[fbinit::test]
     async fn linear_test(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
-        let manager = repo.repo_derived_data().manager();
+        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
         let ctx = CoreContext::test_mock(fb);
 
         // Derive filenodes because they are going to be used in this test
@@ -430,7 +435,7 @@ mod tests {
             let (bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs).await?;
             let unode_id = derive_unode_manifest(
                 &ctx,
-                manager,
+                &derivation_ctx,
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
@@ -463,7 +468,7 @@ mod tests {
 
             let unode_id = derive_unode_manifest(
                 &ctx,
-                manager,
+                &derivation_ctx,
                 bcs_id,
                 vec![parent_unode_id.clone()],
                 get_file_changes(&bcs),
@@ -510,12 +515,13 @@ mod tests {
             repo: BlobRepo,
             file_changes: BTreeMap<MPath, FileChange>,
         ) -> Result<(), Error> {
+            let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
             let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), file_changes).await?;
             let bcs_id = bcs.get_changeset_id();
 
             let unode_id = derive_unode_manifest(
                 &ctx,
-                repo.repo_derived_data().manager(),
+                &derivation_ctx,
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
@@ -694,7 +700,7 @@ mod tests {
     #[fbinit::test]
     async fn test_parent_order(fb: FacebookInit) -> Result<(), Error> {
         let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
-        let manager = repo.repo_derived_data().manager();
+        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
         let ctx = CoreContext::test_mock(fb);
 
         let p1_root_unode_id = create_changeset_and_derive_unode(
@@ -722,7 +728,7 @@ mod tests {
 
         let root_unode = derive_unode_manifest(
             &ctx,
-            manager,
+            &derivation_ctx,
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
@@ -733,7 +739,7 @@ mod tests {
         // Make sure hash is the same if nothing was changed
         let same_root_unode = derive_unode_manifest(
             &ctx,
-            manager,
+            &derivation_ctx,
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
@@ -745,7 +751,7 @@ mod tests {
         // Now change parent order, make sure hashes are different
         let reverse_root_unode = derive_unode_manifest(
             &ctx,
-            manager,
+            &derivation_ctx,
             bcs_id,
             vec![p2_root_unode_id, p1_root_unode_id],
             get_file_changes(&bcs),
@@ -767,10 +773,11 @@ mod tests {
         let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), file_changes).await?;
 
         let bcs_id = bcs.get_changeset_id();
+        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         derive_unode_manifest(
             &ctx,
-            repo.repo_derived_data().manager(),
+            &derivation_ctx,
             bcs_id,
             vec![],
             get_file_changes(&bcs),
@@ -787,7 +794,7 @@ mod tests {
         changes_merge_p2: BTreeMap<&str, Option<(&str, FileType)>>,
         changes_merge: BTreeMap<&str, Option<(&str, FileType)>>,
     ) -> Result<ManifestUnodeId> {
-        let manager = repo.repo_derived_data().manager();
+        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
         let file_changes = store_files(ctx.clone(), changes_first, repo.clone()).await?;
 
         let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), file_changes).await?;
@@ -795,7 +802,7 @@ mod tests {
 
         let first_unode_id = derive_unode_manifest(
             &ctx,
-            manager,
+            &derivation_ctx,
             first_bcs_id,
             vec![],
             get_file_changes(&bcs),
@@ -816,7 +823,7 @@ mod tests {
             let merge_p1_id = merge_p1.get_changeset_id();
             let merge_p1_unode_id = derive_unode_manifest(
                 &ctx,
-                manager,
+                &derivation_ctx,
                 merge_p1_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p1),
@@ -840,7 +847,7 @@ mod tests {
             let merge_p2_id = merge_p2.get_changeset_id();
             let merge_p2_unode_id = derive_unode_manifest(
                 &ctx,
-                manager,
+                &derivation_ctx,
                 merge_p2_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p2),
@@ -862,7 +869,7 @@ mod tests {
         let merge_id = merge.get_changeset_id();
         derive_unode_manifest(
             &ctx,
-            manager,
+            &derivation_ctx,
             merge_id,
             vec![merge_p1_unode_id, merge_p2_unode_id],
             get_file_changes(&merge),

@@ -19,6 +19,7 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::{BonsaiDerivable, BonsaiDerived};
+use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures_stats::TimedFutureExt;

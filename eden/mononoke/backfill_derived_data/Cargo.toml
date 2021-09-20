@@ -54,6 +54,7 @@ unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 [dev-dependencies]
 async-trait = "0.1.51"
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
+derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }

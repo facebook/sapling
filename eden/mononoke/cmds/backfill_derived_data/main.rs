@@ -1291,6 +1291,7 @@ mod tests {
     use blobrepo_hg::BlobRepoHg;
     use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
     use derived_data::BonsaiDerived;
+    use derived_data_manager::BonsaiDerivable;
     use fixtures::linear;
     use mercurial_types::HgChangesetId;
     use std::{
@@ -1370,15 +1371,12 @@ mod tests {
         let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         // The dependencies haven't been derived yet, so this should be an
         // error.
-        // BUG! currently this does not fail.  The parents are derived using the
-        // write cache, so their mappings may be written before their derived
-        // values.
-        //assert!(
-        //    derived_utils
-        //        .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id], false, None)
-        //        .await
-        //        .is_err()
-        //);
+        assert!(
+            derived_utils
+                .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id], false, None)
+                .await
+                .is_err()
+        );
 
         let parent_hg_cs_id = HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?;
         let parent_bcs_id = repo

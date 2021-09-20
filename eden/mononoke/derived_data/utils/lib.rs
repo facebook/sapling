@@ -57,7 +57,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use topo_sort::sort_topological;
-use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
+use unodes::RootUnodeManifestId;
 
 pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     RootUnodeManifestId::NAME,
@@ -486,7 +486,6 @@ struct DerivedUtilsFromManager<Derivable> {
 }
 
 impl<Derivable> DerivedUtilsFromManager<Derivable> {
-    #[allow(unused)]
     fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Self {
         let lease = repo.repo_derived_data().lease().clone();
         let scuba = repo.repo_derived_data().manager().scuba().clone();
@@ -666,14 +665,9 @@ fn derived_data_utils_impl(
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
     let blobstore = repo.get_blobstore().boxed();
     match name {
-        RootUnodeManifestId::NAME => {
-            let mapping = RootUnodeManifestMapping::new(blobstore, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                fb,
-                mapping,
-                repo.clone(),
-            )))
-        }
+        RootUnodeManifestId::NAME => Ok(Arc::new(
+            DerivedUtilsFromManager::<RootUnodeManifestId>::new(repo, config),
+        )),
         RootFastlog::NAME => {
             let mapping = RootFastlogMapping::new(blobstore, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(

@@ -8,21 +8,17 @@
 use crate::derive::derive_unode_manifest;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{
-    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, DerivedDataTypesConfig,
-};
+use derived_data::impl_bonsai_derived_via_manager;
+use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use futures::TryFutureExt;
 use metaconfig_types::UnodeVersion;
 use mononoke_types::{
-    BlobstoreBytes, BonsaiChangeset, ContentId, FileType, MPath, ManifestUnodeId,
+    BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,
 };
-use repo_derived_data::RepoDerivedDataRef;
 use std::convert::{TryFrom, TryInto};
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RootUnodeManifestId(ManifestUnodeId);
@@ -55,26 +51,32 @@ impl From<RootUnodeManifestId> for BlobstoreBytes {
     }
 }
 
+fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+    let prefix = match derivation_ctx.config().unode_version {
+        UnodeVersion::V1 => "derived_root_unode.",
+        UnodeVersion::V2 => "derived_root_unode_v2.",
+    };
+    format!("{}{}", prefix, changeset_id)
+}
+
 #[async_trait]
 impl BonsaiDerivable for RootUnodeManifestId {
     const NAME: &'static str = "unodes";
 
-    type Options = UnodeVersion;
+    type Dependencies = dependencies![];
 
-    async fn derive_from_parents_impl(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn derive_single(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        options: &Self::Options,
-    ) -> Result<Self, Error> {
-        let unode_version = *options;
-        let bcs_id = bonsai.get_changeset_id();
-        let manager = repo.repo_derived_data().manager();
+    ) -> Result<Self> {
+        let unode_version = derivation_ctx.config().unode_version;
+        let csid = bonsai.get_changeset_id();
         derive_unode_manifest(
-            &ctx,
-            manager,
-            bcs_id,
+            ctx,
+            derivation_ctx,
+            csid,
             parents
                 .into_iter()
                 .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
@@ -85,46 +87,32 @@ impl BonsaiDerivable for RootUnodeManifestId {
         .map_ok(RootUnodeManifestId)
         .await
     }
-}
 
-#[derive(Clone)]
-pub struct RootUnodeManifestMapping {
-    blobstore: Arc<dyn Blobstore>,
-    unode_version: UnodeVersion,
-}
-
-#[async_trait]
-impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
-    type Value = RootUnodeManifestId;
-
-    fn new(blobstore: Arc<dyn Blobstore>, config: &DerivedDataTypesConfig) -> Result<Self> {
-        Ok(Self {
-            blobstore,
-            unode_version: config.unode_version,
-        })
+    async fn store_mapping(
+        self,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<()> {
+        let key = format_key(derivation_ctx, changeset_id);
+        derivation_ctx.blobstore().put(ctx, key, self.into()).await
     }
 
-    fn blobstore(&self) -> &dyn Blobstore {
-        &self.blobstore
-    }
-
-    fn prefix(&self) -> &'static str {
-        match self.unode_version {
-            UnodeVersion::V1 => "derived_root_unode.",
-            UnodeVersion::V2 => "derived_root_unode_v2.",
+    async fn fetch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self>> {
+        let key = format_key(derivation_ctx, changeset_id);
+        match derivation_ctx.blobstore().get(ctx, &key).await? {
+            Some(blob) => Ok(Some(blob.try_into()?)),
+            None => Ok(None),
         }
     }
-
-    fn options(&self) -> UnodeVersion {
-        self.unode_version
-    }
 }
 
-impl_bonsai_derived_mapping!(
-    RootUnodeManifestMapping,
-    BlobstoreRootIdMapping,
-    RootUnodeManifestId
-);
+// For existing users of BonsaiDerived.
+impl_bonsai_derived_via_manager!(RootUnodeManifestId);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
@@ -142,6 +130,7 @@ pub(crate) fn get_file_changes(
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobrepo::BlobRepo;
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;

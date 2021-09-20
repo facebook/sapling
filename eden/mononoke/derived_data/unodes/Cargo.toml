@@ -25,8 +25,6 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
-repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 thiserror = "1.0.29"
 tunables = { version = "0.1.0", path = "../../tunables" }
@@ -41,6 +39,7 @@ fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperiment
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 revset = { version = "0.1.0", path = "../../revset" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

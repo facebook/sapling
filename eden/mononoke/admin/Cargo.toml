@@ -41,6 +41,7 @@ cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sy
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
 deleted_files_manifest = { version = "0.1.0", path = "../derived_data/deleted_files_manifest" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
+derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

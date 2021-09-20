@@ -64,8 +64,7 @@ enable some more derived data types for normal usage and backfilling
 start the tailer with tailing and backfilling some different types
 normally the tailer runs forever, but for this test we will make it
 stop when it becomes idle.
-  $ backfill_derived_data tail --stop-on-idle --backfill --batched --parallel --sliced --slice-size=4 2>&1 | grep derived | wc -l
-  68
+  $ backfill_derived_data tail --stop-on-idle --backfill --batched --parallel --sliced --slice-size=4 &> /dev/null
 
   $ mononoke_admin --log-level ERROR derived-data exists fsnodes main
   Derived: 544c0991ef12b0621aa901dd64ef65f539246646faa940171850f5e11c84cda7

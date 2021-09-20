@@ -21,7 +21,7 @@ use thiserror::Error;
 mod derive;
 mod mapping;
 
-pub use mapping::{RootUnodeManifestId, RootUnodeManifestMapping};
+pub use mapping::RootUnodeManifestId;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {

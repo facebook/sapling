@@ -104,6 +104,17 @@ pub use mapping_impl::{
 };
 pub use metaconfig_types::DerivedDataTypesConfig;
 
+pub mod macro_export {
+    pub use super::{BonsaiDerived, DeriveError};
+    pub use anyhow::Error;
+    pub use async_trait::async_trait;
+    pub use blobrepo::BlobRepo;
+    pub use context::CoreContext;
+    pub use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
+    pub use mononoke_types::ChangesetId;
+    pub use repo_derived_data::RepoDerivedDataRef;
+}
+
 /// Trait for defining how derived data is derived.  This trait should be
 /// implemented by derivable data types.
 #[async_trait]
@@ -260,6 +271,50 @@ impl<T: BonsaiDerivedOld> BonsaiDerived for T {
     ) -> Result<u64, DeriveError> {
         <Self as BonsaiDerivedOld>::count_underived(ctx, repo, csid, limit).await
     }
+}
+
+#[macro_export]
+macro_rules! impl_bonsai_derived_via_manager {
+    ($derivable:ty) => {
+        #[$crate::macro_export::async_trait]
+        impl $crate::macro_export::BonsaiDerived for $derivable {
+            const DERIVABLE_NAME: &'static str =
+                <$derivable as $crate::macro_export::NewBonsaiDerivable>::NAME;
+
+            async fn derive(
+                ctx: &$crate::macro_export::CoreContext,
+                repo: &$crate::macro_export::BlobRepo,
+                csid: $crate::macro_export::ChangesetId,
+            ) -> Result<Self, $crate::macro_export::DeriveError> {
+                $crate::macro_export::RepoDerivedDataRef::repo_derived_data(repo)
+                    .derive::<Self>(ctx, csid)
+                    .await
+            }
+
+            async fn fetch_derived(
+                ctx: &$crate::macro_export::CoreContext,
+                repo: &$crate::macro_export::BlobRepo,
+                csid: &$crate::macro_export::ChangesetId,
+            ) -> Result<Option<Self>, $crate::macro_export::Error> {
+                Ok(
+                    $crate::macro_export::RepoDerivedDataRef::repo_derived_data(repo)
+                        .fetch_derived::<Self>(ctx, *csid)
+                        .await?,
+                )
+            }
+
+            async fn count_underived(
+                ctx: &$crate::macro_export::CoreContext,
+                repo: &$crate::macro_export::BlobRepo,
+                csid: &$crate::macro_export::ChangesetId,
+                limit: u64,
+            ) -> Result<u64, $crate::macro_export::DeriveError> {
+                $crate::macro_export::RepoDerivedDataRef::repo_derived_data(repo)
+                    .count_underived::<Self>(ctx, *csid, Some(limit))
+                    .await
+            }
+        }
+    };
 }
 
 #[async_trait]
