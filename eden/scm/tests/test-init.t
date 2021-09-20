@@ -109,7 +109,7 @@ test failure
 
 init+push to remote2
 
-  $ hg init ssh://user@dummy/remote2
+  $ hg init remote2
   $ hg incoming -R remote2 local
   comparing with local
   commit:      08b9e9f63b32
@@ -128,46 +128,30 @@ init+push to remote2
 
 clone to remote1
 
-  $ hg clone local ssh://user@dummy/remote1
-  searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
+  $ hg clone local remote1
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 init to existing repo
 
-  $ hg clone local ssh://user@dummy/remotelf
-  searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
+  $ hg clone local remotelf
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg init ssh://user@dummy/remote1
+  $ hg init remote1
   abort: repository remote1 already exists!
-  abort: could not create remote repo!
   [255]
 
 clone to existing repo
 
-  $ hg clone local ssh://user@dummy/remote1
-  abort: repository remote1 already exists!
-  abort: could not create remote repo!
+  $ hg clone local remote1
+  abort: destination 'remote1' is not empty
   [255]
 
 output of dummyssh
 
   $ cat dummylog
-  Got arguments 1:user@dummy 2:hg init remote2
   Got arguments 1:user@dummy 2:hg -R remote2 serve --stdio
-  Got arguments 1:user@dummy 2:hg -R remote2 serve --stdio
-  Got arguments 1:user@dummy 2:hg init remote1
-  Got arguments 1:user@dummy 2:hg -R remote1 serve --stdio
-  Got arguments 1:user@dummy 2:hg init remotelf
-  Got arguments 1:user@dummy 2:hg -R remotelf serve --stdio
-  Got arguments 1:user@dummy 2:hg init remote1
-  Got arguments 1:user@dummy 2:hg init remote1
 
 comparing repositories
 

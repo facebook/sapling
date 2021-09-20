@@ -167,40 +167,46 @@ def openpath(ui, path):
 wirepeersetupfuncs = []
 
 
-@perftrace.tracefunc("Repo Setup")
-def _peerorrepo(ui, path, create=False, presetupfuncs=None):
-    """return a repository object for the specified path"""
-    obj = _peerlookup(path).instance(ui, path, create)
-    ui = getattr(obj, "ui", ui)
+def _setuprepo(ui, repo, presetupfuncs=None):
+    ui = getattr(repo, "ui", ui)
     for f in presetupfuncs or []:
-        f(ui, obj)
+        f(ui, repo)
     for name, module in extensions.extensions(ui):
         hook = getattr(module, "reposetup", None)
         if hook:
-            hook(ui, obj)
-    if not obj.local():
+            hook(ui, repo)
+    if not repo.local():
         perftrace.traceflag("remote")
         for f in wirepeersetupfuncs:
-            f(ui, obj)
+            f(ui, repo)
     else:
         perftrace.traceflag("local")
 
-    return obj
 
-
+@perftrace.tracefunc("Repo Setup")
 def repository(ui, path="", create=False, presetupfuncs=None):
     """return a repository object for the specified path"""
-    peer = _peerorrepo(ui, path, create, presetupfuncs=presetupfuncs)
-    repo = peer.local()
+    u = util.url(path)
+    if u.scheme == "bundle":
+        creator = bundlerepo
+    else:
+        creator = _local(path)
+
+    repo = creator.instance(ui, path, create)
+    _setuprepo(ui, repo, presetupfuncs=presetupfuncs)
+    repo = repo.local()
     if not repo:
         raise error.Abort(_("repository '%s' is not local") % (path or peer.url()))
     return repo
 
 
+@perftrace.tracefunc("Peer Setup")
 def peer(uiorrepo, opts, path, create=False):
     """return a repository peer for the specified path"""
     rui = remoteui(uiorrepo, opts)
-    return _peerorrepo(rui, path, create).peer()
+    obj = _peerlookup(path).instance(rui, path, create)
+    _setuprepo(rui, obj)
+    return obj.peer()
 
 
 def defaultdest(source):

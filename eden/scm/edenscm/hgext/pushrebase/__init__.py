@@ -221,7 +221,7 @@ def extsetup(ui):
 
     wrapfunction(exchange, "unbundle", unbundle)
 
-    wrapfunction(hg, "_peerorrepo", _peerorrepo)
+    wrapfunction(hg, "repository", repository)
 
 
 def reposetup(ui, repo):
@@ -269,7 +269,7 @@ def _wireprodispatch(orig, repo, proto, command):
     return orig(repo, proto, command)
 
 
-def _peerorrepo(orig, ui, path, create=False, **kwargs):
+def repository(orig, ui, path, create=False, **kwargs):
     # Force hooks to use a bundle repo
     bundlepath = encoding.environ.get("HG_HOOK_BUNDLEPATH")
     if bundlepath:

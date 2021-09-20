@@ -301,26 +301,6 @@ results here)
 hide outer repo
   $ hg init
 
-Test remote paths with spaces (issue2983):
-
-  $ hg init --ssh "$(dummysshcmd)" "ssh://user@dummy/a repo"
-  $ touch "$TESTTMP/a repo/test"
-  $ hg -R 'a repo' commit -A -m "test"
-  adding test
-  $ hg id --ssh "$(dummysshcmd)" "ssh://user@dummy/a repo"
-  be090ea66256
-
-  $ hg id --ssh "$(dummysshcmd)" "ssh://user@dummy/a repo#noNoNO"
-  abort: unknown revision 'noNoNO'!
-  [255]
-
-Test (non-)escaping of remote paths with spaces when cloning (issue3145):
-
-  $ hg clone --ssh "$(dummysshcmd)" "ssh://user@dummy/a repo"
-  destination directory: a repo
-  abort: destination 'a repo' is not empty
-  [255]
-
 Make sure hg is really paranoid in serve --stdio mode. It used to be
 possible to get a debugger REPL by specifying a repo named --debugger.
   $ hg -R --debugger serve --stdio
@@ -347,22 +327,6 @@ parameters:
   > hg debugpython -- "$TESTDIR/../contrib/hg-ssh" "$TESTTMP/a repo"
   > EOF
 
-  $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a repo"
-  be090ea66256
-
-  $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a'repo"
-  remote: Illegal repository "$TESTTMP/a'repo"
-  abort: no suitable response from remote hg!
-  [255]
-
-  $ hg id --ssh "sh ssh.sh" --remotecmd hacking "ssh://user@dummy/a'repo"
-  remote: Illegal command "hacking -R 'a'\''repo' serve --stdio"
-  abort: no suitable response from remote hg!
-  [255]
-
-  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a'repo' serve --stdio" hg debugpython "$TESTDIR/../contrib/hg-ssh"
-  Illegal command "'hg' -R 'a'repo' serve --stdio": No closing quotation
-  [255]
 
 Test hg-ssh in read-only mode:
 
@@ -477,10 +441,6 @@ debug output
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   changegroup-in-remote hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=1383141674ec756a6056f6a9097618482fe0f4a6 HG_NODE_LAST=1383141674ec756a6056f6a9097618482fe0f4a6 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:ssh:$LOCALIP
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-  Got arguments 1:user@dummy 2:hg init 'a repo'
-  Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
-  Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
-  Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   changegroup-in-remote hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=65c38f4125f9602c8db4af56530cc221d93b8ef8 HG_NODE_LAST=65c38f4125f9602c8db4af56530cc221d93b8ef8 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:ssh:$LOCALIP
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio

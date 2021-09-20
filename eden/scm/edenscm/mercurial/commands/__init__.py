@@ -3910,7 +3910,7 @@ def init(ui, dest=".", **opts):
 
     Returns 0 on success.
     """
-    hg.peer(ui, opts, ui.expandpath(dest), create=True)
+    hg.repository(ui, ui.expandpath(dest), create=True)
 
 
 @command(
