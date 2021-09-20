@@ -3,14 +3,43 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import hg, scmutil, cmdutil
+from edenscm.mercurial import hg, scmutil, cmdutil, error
 from edenscm.mercurial.edenapi_upload import (
     getreponame,
 )
+from edenscm.mercurial.i18n import _
 
 
-def restore(ui, repo, csid, **opts):
-    ui.status(f"Will restore snapshot {csid}\n", component="snapshot")
+def _hasanychanges(repo):
+    wctx = repo[None]
+    return (
+        bool(wctx.dirty(missing=True)) or len(wctx.status(listunknown=True).unknown) > 0
+    )
+
+
+def _fullclean(ui, repo):
+    ui.status(_("cleaning up uncommitted code\n"), component="snapshot")
+    # Remove "tracked changes"
+    cmdutil.revert(
+        ui,
+        repo,
+        scmutil.revsingle(repo, None),
+        repo.dirstate.parents(),
+        all=True,
+        no_backup=True,
+    )
+    # Remove "untracked changes" (e.g. untracked files)
+    repo.dirstate._fs.purge(
+        scmutil.match(repo[None]),
+        removefiles=True,
+        removedirs=True,
+        removeignored=False,
+        dryrun=False,
+    )
+
+
+def restore(ui, repo, csid, clean=False):
+    ui.status(_(f"Will restore snapshot {csid}\n"), component="snapshot")
 
     snapshot = repo.edenapi.fetchsnapshot(
         getreponame(repo),
@@ -23,11 +52,22 @@ def restore(ui, repo, csid, **opts):
     # than one parent
     assert isinstance(snapshot["hg_parents"], bytes)
 
-    ui.status(
-        f"Updating to parent {snapshot['hg_parents'].hex()}\n", component="snapshot"
-    )
-
     with repo.wlock():
+        if _hasanychanges(repo):
+            if clean:
+                _fullclean(ui, repo)
+            else:
+                raise error.Abort(
+                    _(
+                        "Can't restore snapshot with unclean working copy, unless --clean is specified"
+                    )
+                )
+
+        ui.status(
+            _(f"Updating to parent {snapshot['hg_parents'].hex()}\n"),
+            component="snapshot",
+        )
+
         hg.updatetotally(
             ui, repo, repo[snapshot["hg_parents"]], None, updatecheck="abort"
         )

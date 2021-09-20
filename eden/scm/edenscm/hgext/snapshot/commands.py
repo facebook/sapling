@@ -32,7 +32,18 @@ def createremotecmd(*args, **kwargs):
     createremote.createremote(*args, **kwargs)
 
 
-@subcmd("restore", [], _("ID"))
+@subcmd(
+    "restore",
+    [
+        (
+            "C",
+            "clean",
+            None,
+            _("discard uncommitted changes and untracked files (no backup)"),
+        )
+    ],
+    _("ID"),
+)
 def restorecmd(*args, **kwargs):
     restore.restore(*args, **kwargs)
 
