@@ -1362,12 +1362,36 @@ mod tests {
         let repo = linear::getrepo(fb).await;
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?;
-        let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
-        let bcs_id = maybe_bcs_id.unwrap();
+        let bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .await?
+            .unwrap();
 
         let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
+        // The dependencies haven't been derived yet, so this should be an
+        // error.
+        // BUG! currently this does not fail.  The parents are derived using the
+        // write cache, so their mappings may be written before their derived
+        // values.
+        //assert!(
+        //    derived_utils
+        //        .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id], false, None)
+        //        .await
+        //        .is_err()
+        //);
+
+        let parent_hg_cs_id = HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?;
+        let parent_bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), parent_hg_cs_id)
+            .await?
+            .unwrap();
         derived_utils
-            .backfill_batch_dangerous(ctx, repo, vec![bcs_id], false, None)
+            .derive(ctx.clone(), repo.clone(), parent_bcs_id)
+            .await?;
+
+        // Now the parent is derived, we can backfill a batch.
+        derived_utils
+            .backfill_batch_dangerous(ctx.clone(), repo, vec![bcs_id], false, None)
             .await?;
 
         Ok(())
@@ -1380,6 +1404,13 @@ mod tests {
 
         let mut batch = vec![];
         let hg_cs_ids = vec![
+            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
+            "3e0e761030db6e479a7fb58b12881883f9f8c63f",
+            "607314ef579bd2407752361ba1b0c1729d08b281",
+            "d0a361e9022d226ae52f689667bd7d212a19cfe0",
+            "cb15ca4a43a59acff5388cea9648c162afde8372",
+            "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
+            "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
             "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
             "3c15267ebf11807f3d772eb891272b911ec68759",
             "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
@@ -1418,27 +1449,37 @@ mod tests {
         });
 
         let first_hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-        let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), first_hg_cs_id).await?;
-        let bcs_id = maybe_bcs_id.unwrap();
+        let first_bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), first_hg_cs_id)
+            .await?
+            .unwrap();
 
         let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
         let res = derived_utils
-            .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id], false, None)
+            .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![first_bcs_id], false, None)
             .await;
         // Deriving should fail because blobstore writes fail
         assert!(res.is_err());
 
         // Make sure that since deriving for first_hg_cs_id failed it didn't
-        // write any mapping entries. And because it didn't deriving the parent changeset
-        // is now safe
+        // write any mapping entries. And because it didn't deriving the
+        // next changeset is still safe
         let repo = origrepo;
         let second_hg_cs_id = HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f")?;
-        let maybe_bcs_id = repo
+        let second_bcs_id = repo
             .get_bonsai_from_hg(ctx.clone(), second_hg_cs_id)
-            .await?;
-        let bcs_id = maybe_bcs_id.unwrap();
+            .await?
+            .unwrap();
+        let batch = vec![first_bcs_id, second_bcs_id];
+        let derived_utils = derived_data_utils(fb, &repo, RootUnodeManifestId::NAME)?;
+        assert_eq!(
+            derived_utils
+                .pending(ctx.clone(), repo.clone(), batch.clone())
+                .await?,
+            batch,
+        );
         derived_utils
-            .backfill_batch_dangerous(ctx, repo, vec![bcs_id], false, None)
+            .backfill_batch_dangerous(ctx, repo, batch, false, None)
             .await?;
 
         Ok(())
