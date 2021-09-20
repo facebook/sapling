@@ -86,10 +86,9 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use context::{CoreContext, SessionClass};
-use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use std::collections::HashMap;
 use std::sync::Arc;
-use thiserror::Error;
 
 pub mod batch;
 pub mod derive_impl;
@@ -98,19 +97,12 @@ pub mod mapping;
 pub mod mapping_impl;
 
 pub use derive_impl::enabled_type_config;
+pub use derived_data_manager::DerivationError as DeriveError;
 pub use mapping::{BonsaiDerivedMapping, BonsaiDerivedMappingContainer, RegenerateMapping};
 pub use mapping_impl::{
     BlobstoreExistsMapping, BlobstoreExistsWithDataMapping, BlobstoreRootIdMapping,
 };
 pub use metaconfig_types::DerivedDataTypesConfig;
-
-#[derive(Debug, Error)]
-pub enum DeriveError {
-    #[error("Derivation of {0} is not enabled for repo={2} repoid={1}")]
-    Disabled(&'static str, RepositoryId, String),
-    #[error(transparent)]
-    Error(#[from] Error),
-}
 
 /// Trait for defining how derived data is derived.  This trait should be
 /// implemented by derivable data types.

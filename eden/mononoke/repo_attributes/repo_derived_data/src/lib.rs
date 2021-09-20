@@ -14,9 +14,10 @@ use std::sync::Arc;
 use anyhow::Result;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
-use derived_data_manager::DerivedDataManager;
+use context::CoreContext;
+use derived_data_manager::{BonsaiDerivable, DerivationError, DerivedDataManager};
 use metaconfig_types::DerivedDataConfig;
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use repo_blobstore::RepoBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
 
@@ -79,7 +80,49 @@ impl RepoDerivedData {
         self.manager.lease().lease_ops()
     }
 
+    /// Default manager for derivation.
     pub fn manager(&self) -> &DerivedDataManager {
         &self.manager
+    }
+
+    /// Count the number of ancestors of a commit that are underived.
+    pub async fn count_underived<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        limit: Option<u64>,
+    ) -> Result<u64, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        self.manager
+            .count_underived::<Derivable>(ctx, csid, limit, None)
+            .await
+    }
+
+    /// Derive a derived data type using the default manager.
+    pub async fn derive<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+    ) -> Result<Derivable, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        self.manager.derive::<Derivable>(ctx, csid, None).await
+    }
+
+    /// Fetch an already derived derived data type using the default manager.
+    pub async fn fetch_derived<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+    ) -> Result<Option<Derivable>, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        self.manager
+            .fetch_derived::<Derivable>(ctx, csid, None)
+            .await
     }
 }

@@ -16,6 +16,10 @@ use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::lease::DerivedDataLease;
 
+pub mod derive;
+pub mod logging;
+pub mod util;
+
 /// Manager for derived data.
 ///
 /// The manager is responsible for ordering derivation of data based
@@ -79,6 +83,14 @@ impl DerivedDataManager {
                 ..self.inner.as_ref().clone()
             }),
         }
+    }
+
+    pub fn repo_id(&self) -> RepositoryId {
+        self.inner.repo_id
+    }
+
+    pub fn repo_name(&self) -> &str {
+        self.inner.repo_name.as_str()
     }
 
     pub fn changesets(&self) -> &dyn Changesets {

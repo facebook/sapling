@@ -167,8 +167,8 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
-    pub fn add_extra(mut self, key: String, value: Vec<u8>) -> Self {
-        self.extra.insert(key, value);
+    pub fn add_extra(mut self, key: impl Into<String>, value: impl Into<Vec<u8>>) -> Self {
+        self.extra.insert(key.into(), value.into());
         self
     }
 
