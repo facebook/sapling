@@ -257,7 +257,7 @@ mod tests {
     use async_trait::async_trait;
     use cloned::cloned;
     use derived_data::{
-        BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, BonsaiDerivedMappingContainer,
+        BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedMappingContainer, BonsaiDerivedOld,
     };
     use fbinit::FacebookInit;
     use filenodes::{FilenodeRangeResult, Filenodes};

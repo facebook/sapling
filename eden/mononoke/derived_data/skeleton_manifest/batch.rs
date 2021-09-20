@@ -113,7 +113,7 @@ pub async fn derive_skeleton_manifests_in_batch(
 #[cfg(test)]
 mod test {
     use super::*;
-    use derived_data::BonsaiDerived;
+    use derived_data::BonsaiDerivedOld;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::compat::Stream01CompatExt;

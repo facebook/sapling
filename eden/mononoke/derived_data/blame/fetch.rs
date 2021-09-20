@@ -10,7 +10,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::{BonsaiDerivedMapping, BonsaiDerivedOld};
 use filestore::{self, FetchKey};
 use futures::TryStreamExt;
 use metaconfig_types::BlameVersion;

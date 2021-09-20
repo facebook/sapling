@@ -13,7 +13,7 @@ use blobstore::{Blobstore, Loadable};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc};
 use context::CoreContext;
 use derived_data::{
-    BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, BonsaiDerivedMappingContainer,
+    BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedMappingContainer, BonsaiDerivedOld,
     DeriveError, DerivedDataTypesConfig,
 };
 use filenodes::{FilenodeInfo, FilenodeResult, Filenodes, FilenodesArc, PreparedFilenode};
@@ -182,7 +182,7 @@ impl FilenodesOnlyPublicMapping {
 }
 
 #[async_trait]
-impl BonsaiDerived for FilenodesOnlyPublic {
+impl BonsaiDerivedOld for FilenodesOnlyPublic {
     type DefaultMapping = FilenodesOnlyPublicMapping;
 
     fn default_mapping(

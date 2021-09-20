@@ -99,7 +99,7 @@ mod test {
 
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
-    use derived_data::BonsaiDerived;
+    use derived_data::BonsaiDerivedOld;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::compat::Stream01CompatExt;

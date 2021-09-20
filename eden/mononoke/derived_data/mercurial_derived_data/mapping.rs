@@ -17,7 +17,7 @@ use repo_identity::RepoIdentityRef;
 use std::{collections::HashMap, sync::Arc};
 
 use derived_data::{
-    BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError, DerivedDataTypesConfig,
+    BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedOld, DeriveError, DerivedDataTypesConfig,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -118,7 +118,7 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
 }
 
 #[async_trait]
-impl BonsaiDerived for MappedHgChangesetId {
+impl BonsaiDerivedOld for MappedHgChangesetId {
     type DefaultMapping = HgChangesetIdMapping;
 
     fn default_mapping(

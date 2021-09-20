@@ -21,7 +21,7 @@ use std::sync::Arc;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Storable};
 use derived_data::{
-    BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError, DerivedDataTypesConfig,
+    BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedOld, DeriveError, DerivedDataTypesConfig,
 };
 use filestore::{self, FetchKey};
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
@@ -111,7 +111,7 @@ impl BonsaiDerivable for TreeHandle {
 }
 
 #[async_trait]
-impl BonsaiDerived for TreeHandle {
+impl BonsaiDerivedOld for TreeHandle {
     type DefaultMapping = TreeMapping;
 
     fn default_mapping(

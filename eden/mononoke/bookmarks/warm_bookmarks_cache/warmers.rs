@@ -18,7 +18,7 @@ use phases::Phases;
 use slog::{info, o};
 
 pub fn create_derived_data_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
-    info!(ctx.logger(), "Warming {}", D::NAME);
+    info!(ctx.logger(), "Warming {}", D::DERIVABLE_NAME);
     let warmer: Box<WarmerFn> =
         Box::new(|ctx: CoreContext, repo: InnerRepo, cs_id: ChangesetId| {
             async move {
@@ -32,7 +32,7 @@ pub fn create_derived_data_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer
 
     let is_warm: Box<IsWarmFn> =
         Box::new(|ctx: &CoreContext, repo: &InnerRepo, cs_id: &ChangesetId| {
-            let logger = ctx.logger().new(o!("type" => D::NAME));
+            let logger = ctx.logger().new(o!("type" => D::DERIVABLE_NAME));
             D::is_derived(&ctx, &repo.blob_repo, &cs_id)
                 .watched(logger)
                 .map_err(Error::from)

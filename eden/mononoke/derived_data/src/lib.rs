@@ -191,7 +191,87 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone + std::fmt::Deb
 /// as Mercurial or Git changesets, unodes, fsnodes, skeleton manifests and
 /// other derived data.
 #[async_trait]
-pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable {
+pub trait BonsaiDerived: Sized + Send + Sync + Clone + 'static {
+    const DERIVABLE_NAME: &'static str;
+
+    /// This function is the entrypoint for changeset derivation.  It will
+    /// derive an instance of the derived data type based on the bonsai
+    /// changeset representation.
+    ///
+    /// The derived data will be saved in a mapping from the changeset id,
+    /// so that subsequent derives will just fetch.
+    ///
+    /// This function fails immediately if this type of derived data is not
+    /// enabled for this repo.
+    async fn derive(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: ChangesetId,
+    ) -> Result<Self, DeriveError>;
+
+    /// Fetch the derived data in cases where we might not want to trigger
+    /// derivation, e.g. when scrubbing.
+    async fn fetch_derived(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: &ChangesetId,
+    ) -> Result<Option<Self>, Error>;
+
+    /// Returns `true` if derived data has already been derived for this
+    /// changeset.
+    async fn is_derived(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: &ChangesetId,
+    ) -> Result<bool, DeriveError> {
+        Ok(Self::fetch_derived(ctx, repo, csid).await?.is_some())
+    }
+
+    /// Returns the number of ancestors of `csid` that are not yet derived,
+    /// or at most `limit`.
+    ///
+    /// This function fails immediately if derived data is not enabled for
+    /// this repo.
+    async fn count_underived(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: &ChangesetId,
+        limit: u64,
+    ) -> Result<u64, DeriveError>;
+}
+
+#[async_trait]
+impl<T: BonsaiDerivedOld> BonsaiDerived for T {
+    const DERIVABLE_NAME: &'static str = <T as BonsaiDerivable>::NAME;
+
+    async fn derive(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: ChangesetId,
+    ) -> Result<Self, DeriveError> {
+        <Self as BonsaiDerivedOld>::derive(ctx, repo, csid).await
+    }
+
+    async fn fetch_derived(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: &ChangesetId,
+    ) -> Result<Option<Self>, Error> {
+        <Self as BonsaiDerivedOld>::fetch_derived(ctx, repo, csid).await
+    }
+
+    async fn count_underived(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: &ChangesetId,
+        limit: u64,
+    ) -> Result<u64, DeriveError> {
+        <Self as BonsaiDerivedOld>::count_underived(ctx, repo, csid, limit).await
+    }
+}
+
+#[async_trait]
+pub trait BonsaiDerivedOld: Sized + 'static + Send + Sync + Clone + BonsaiDerivable {
     /// The default mapping type when deriving this data.
     type DefaultMapping: BonsaiDerivedMapping<Value = Self>;
 

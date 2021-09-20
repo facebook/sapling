@@ -599,7 +599,7 @@ mod test {
     use tests_utils::{resolve_cs_id, CreateCommitContext};
     use tunables::{override_tunables, with_tunables, MononokeTunables};
 
-    use crate::{BonsaiDerived, BonsaiDerivedMapping};
+    use crate::{BonsaiDerivedMapping, BonsaiDerivedOld};
 
     lazy_static! {
         static ref MAPPINGS: Mutex<HashMap<SessionId, TestMapping>> = Mutex::new(HashMap::new());
@@ -639,7 +639,7 @@ mod test {
     }
 
     #[async_trait]
-    impl BonsaiDerived for TestGenNum {
+    impl BonsaiDerivedOld for TestGenNum {
         type DefaultMapping = TestMapping;
 
         fn default_mapping(

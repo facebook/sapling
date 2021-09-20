@@ -17,14 +17,14 @@ use futures::stream::{self, StreamExt, TryStreamExt};
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::ChangesetId;
 
-use crate::{BonsaiDerivable, BonsaiDerived};
+use crate::BonsaiDerivable;
 
 /// Implementation of a derived data mapping where the root id is stored
 /// in the blobstore.
 #[async_trait]
 pub trait BlobstoreRootIdMapping {
     /// The mapped type that is stored in the blobstore.
-    type Value: BonsaiDerived
+    type Value: BonsaiDerivable
         + TryFrom<BlobstoreGetData, Error = Error>
         + Into<BlobstoreBytes>
         + Send
@@ -93,7 +93,7 @@ pub trait BlobstoreRootIdMapping {
 /// has occurred is stored as an empty blob in the blobstore.
 #[async_trait]
 pub trait BlobstoreExistsMapping {
-    type Value: BonsaiDerived + From<ChangesetId> + Send + Sync + Clone;
+    type Value: BonsaiDerivable + From<ChangesetId> + Send + Sync + Clone;
 
     /// Create a new instance of this mapping.
     fn new(blobstore: Arc<dyn Blobstore>, config: &DerivedDataTypesConfig) -> Result<Self>
@@ -161,7 +161,7 @@ pub trait BlobstoreExistsMapping {
 #[async_trait]
 pub trait BlobstoreExistsWithDataMapping {
     /// The mapped type that is stored in the blobstore.
-    type Value: BonsaiDerived + Send + Sync + Sized;
+    type Value: BonsaiDerivable + Send + Sync + Sized;
 
     /// Create a new instance of this mapping.
     fn new(blobstore: Arc<dyn Blobstore>, config: &DerivedDataTypesConfig) -> Result<Self>
@@ -279,14 +279,17 @@ macro_rules! impl_bonsai_derived_mapping {
         }
 
         #[::async_trait::async_trait]
-        impl $crate::BonsaiDerived for $value {
+        impl $crate::BonsaiDerivedOld for $value {
             type DefaultMapping = $mapping;
 
             fn default_mapping(
                 _ctx: &::context::CoreContext,
                 repo: &::blobrepo::BlobRepo,
             ) -> ::std::result::Result<Self::DefaultMapping, $crate::DeriveError> {
-                let config = $crate::derive_impl::enabled_type_config(repo, Self::NAME)?;
+                let config = $crate::derive_impl::enabled_type_config(
+                    repo,
+                    <Self as $crate::BonsaiDerivable>::NAME,
+                )?;
                 ::std::result::Result::Ok(<$mapping as $mapping_impl>::new(
                     repo.get_blobstore().boxed(),
                     config,

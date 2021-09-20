@@ -455,7 +455,7 @@ pub(crate) async fn derive_or_fetch<T: BonsaiDerived>(
 ) -> Result<T, Error> {
     if fetch_derived {
         let value = T::fetch_derived(ctx, repo, &csid).await?;
-        value.ok_or_else(|| anyhow!("{} are not derived for {}", T::NAME, csid))
+        value.ok_or_else(|| anyhow!("{} are not derived for {}", T::DERIVABLE_NAME, csid))
     } else {
         Ok(T::derive(ctx, repo, csid).await?)
     }
