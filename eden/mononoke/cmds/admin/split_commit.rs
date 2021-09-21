@@ -28,7 +28,7 @@ const ARG_COMMIT_FILE_NUM: &str = "commit-file-num";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(SPLIT_COMMIT)
-        .about("command to split bonsai commit in a stack of ocmmits commits")
+        .about("command to split bonsai commit in a stack of commits")
         .long_about("This command splits a bonsai into a stack of commits while trying to maintain \
         the limits on number of files and size of all files in a commit. However these limits are not strict \
         i.e. resulting commits might have larger size and/or number of files. For example, if input commit has
