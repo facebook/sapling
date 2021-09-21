@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<d55c0fa3a07268a77cb8b9aee5ec761e>>
+ * @generated SignedSource<<50807b13cfd41d6c06ab43ae99fb8ea1>>
  *
  */
 
@@ -160,7 +160,7 @@ void rust_backingstore_get_tree_batch(RustBackingStore *store,
 
 void rust_tree_free(RustTree *tree);
 
-void rust_backingstore_refresh(RustBackingStore *store);
+void rust_backingstore_flush(RustBackingStore *store);
 
 void rust_cbytes_free(RustCBytes *vec);
 

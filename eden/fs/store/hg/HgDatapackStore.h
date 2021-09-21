@@ -61,7 +61,13 @@ class HgDatapackStore {
       const Hash& edenTreeId,
       LocalStore::WriteBatch* writeBatch);
 
-  void refresh();
+  /**
+   * Flush any pending writes to disk.
+   *
+   * As a side effect, this also reloads the current state of Mercurial's
+   * cache, picking up any writes done by Mercurial.
+   */
+  void flush();
 
  private:
   HgNativeBackingStore store_;

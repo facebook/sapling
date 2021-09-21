@@ -82,10 +82,10 @@ impl BackingStore {
 
     /// Forces backing store to write its pending data to disk and to read the latest version from
     /// the disk.
-    pub fn refresh(&self) {
+    pub fn flush(&self) {
         match self {
-            Old(stores) => stores.refresh(),
-            New(stores) => stores.refresh(),
+            Old(stores) => stores.flush(),
+            New(stores) => stores.flush(),
         }
     }
 }
@@ -93,6 +93,6 @@ impl BackingStore {
 impl Drop for BackingStore {
     fn drop(&mut self) {
         // Make sure that all the data that was fetched is written to the hgcache.
-        self.refresh();
+        self.flush();
     }
 }

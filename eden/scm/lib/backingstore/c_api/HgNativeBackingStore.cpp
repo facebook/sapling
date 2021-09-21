@@ -271,10 +271,10 @@ std::shared_ptr<RustTree> HgNativeBackingStore::getTree(
   return manifest.unwrap();
 }
 
-void HgNativeBackingStore::refresh() {
-  XLOG(DBG7) << "Refreshing backing store";
+void HgNativeBackingStore::flush() {
+  XLOG(DBG7) << "Flushing backing store";
 
-  rust_backingstore_refresh(store_.get());
+  rust_backingstore_flush(store_.get());
 }
 
 } // namespace facebook::eden

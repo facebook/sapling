@@ -770,7 +770,7 @@ HgBackingStore::getLiveImportWatches(HgImportObject object) const {
 }
 
 void HgBackingStore::periodicManagementTask() {
-  datapackStore_.refresh();
+  datapackStore_.flush();
 }
 
 } // namespace facebook::eden

@@ -170,9 +170,9 @@ pub extern "C" fn rust_tree_free(tree: *mut Tree) {
 }
 
 #[no_mangle]
-pub extern "C" fn rust_backingstore_refresh(store: *mut BackingStore) {
+pub extern "C" fn rust_backingstore_flush(store: *mut BackingStore) {
     assert!(!store.is_null());
     let store = unsafe { &*store };
 
-    store.refresh();
+    store.flush();
 }

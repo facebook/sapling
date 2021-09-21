@@ -225,7 +225,7 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
   if (!tree && local_only) {
     // Mercurial might have just written the tree to the store. Refresh the
     // store and try again, this time allowing remote fetches.
-    store_.refresh();
+    store_.flush();
     tree = store_.getTree(manifestId.getBytes(), false);
   }
   if (tree) {
@@ -234,8 +234,8 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
   return nullptr;
 }
 
-void HgDatapackStore::refresh() {
-  store_.refresh();
+void HgDatapackStore::flush() {
+  store_.flush();
 }
 
 } // namespace facebook::eden

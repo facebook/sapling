@@ -264,7 +264,7 @@ impl BackingScmStores {
 
     /// Forces backing store to rescan pack files or local indexes
     #[instrument(level = "debug", skip(self))]
-    pub fn refresh(&self) {
+    pub fn flush(&self) {
         self.filestore.refresh().ok();
         self.treestore.refresh().ok();
     }
