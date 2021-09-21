@@ -133,16 +133,24 @@ def _peersetup(ui, peer):
         logargs = clienttelemetryvaluesfromconfig(ui)
         logargs.update({name: f(ui) for name, f in _clienttelemetryfuncs.items()})
         logargs.update(_clienttelemetrydata)
-        peername = decodeutf8(peer._call("clienttelemetry", **logargs))
+        response = decodeutf8(peer._call("clienttelemetry", **logargs))
+        responseitems = response.split()
+        peername = responseitems[0] if responseitems else ""
         peer._realhostname = peername
-        blackbox.log({"clienttelemetry": {"peername": peername}})
-        util.info("client-telemetry", peername=peername)
+        peerinfo = {}
+        for index in range(1, len(responseitems) - 1, 2):
+            peerinfo[responseitems[index]] = responseitems[index + 1]
+        peer._peerinfo = peerinfo
+        blackbox.log({"clienttelemetry": {"peername": peername, "peerinfo": peerinfo}})
+        util.info("client-telemetry", peername=peername, **peerinfo)
         ann = ui.configbool("clienttelemetry", "announceremotehostname", None)
         if ann is None:
             ann = not ui.plain() and ui._isatty(ui.ferr)
         if ann and not ui.quiet:
-            ui.write_err(_("connected to %s\n") % peername)
+            ui.write_err(_("connected to %s\n") % response)
             perftrace.tracevalue("Server", peername)
+            for item, value in peerinfo.items():
+                perftrace.tracevalue(f"Server {item}", value)
 
 
 def uisetup(ui):

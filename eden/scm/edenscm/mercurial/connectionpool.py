@@ -82,14 +82,15 @@ class connectionpool(object):
         peersforreason = self._reasons.setdefault(reason, [])
 
         realhostname = getattr(peer, "_realhostname", None)
-        peersforreason.append((path, realhostname))
+        peerinfo = getattr(peer, "_peerinfo", None)
+        peersforreason.append((path, realhostname, peerinfo))
 
     def reportreasons(self):
         ui = self._repo.ui
         nondefaultreasons = {}
         serverpaths = {}
         for reason, peersforreason in self._reasons.items():
-            for (path, peername) in peersforreason:
+            for (path, peername, peerinfo) in peersforreason:
                 serverpaths[reason] = path
 
                 if peername is None:
@@ -98,10 +99,14 @@ class connectionpool(object):
                 if reason == "default":
                     # default reason logged directly, to support
                     # any existent queries
-                    ui.log("connectionpool", server_realhostname=peername)
+                    ui.log(
+                        "connectionpool",
+                        server_realhostname=peername,
+                        server_session=peerinfo.get("session"),
+                    )
                     break
 
-                nondefaultreasons[reason] = peername
+                nondefaultreasons[reason] = {"name": peername, "info": peerinfo}
                 # we only ever report a single peer for a given reason
                 # for the ease of querying.
                 break
