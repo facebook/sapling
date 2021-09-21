@@ -71,18 +71,62 @@ If the diff is landing, show "Landing" in place of the status name
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [
   >   {"number": 1, "diff_status_name": "Accepted",
-  >    "created_time": 0, "updated_time": 2, "is_landing": true}
+  >    "created_time": 0, "updated_time": 2, "is_landing": true,
+  >    "land_job_status": "LAND_JOB_RUNNING",
+  >    "needs_final_review_status": "NOT_NEEDED"}
   > ]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
   Landing
+
+If the diff has landed, but Phabricator hasn't parsed it yet, show "Committing"
+in place of the status name
+
+  $ cat > $TESTTMP/mockduit << EOF
+  > [{"data": {"query": [{"results": {"nodes": [
+  >   {"number": 1, "diff_status_name": "Accepted",
+  >    "created_time": 0, "updated_time": 2, "is_landing": true,
+  >    "land_job_status": "LAND_RECENTLY_SUCCEEDED",
+  >    "needs_final_review_status": "NOT_NEEDED"}
+  > ]}}]}}]
+  > EOF
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
+  Committing
+
+If the diff recently failed to land, show "Recently Failed to Land"
+
+  $ cat > $TESTTMP/mockduit << EOF
+  > [{"data": {"query": [{"results": {"nodes": [
+  >   {"number": 1, "diff_status_name": "Accepted",
+  >    "created_time": 0, "updated_time": 2, "is_landing": true,
+  >    "land_job_status": "LAND_RECENTLY_FAILED",
+  >    "needs_final_review_status": "NOT_NEEDED"}
+  > ]}}]}}]
+  > EOF
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
+  Recently Failed to Land
+
+If the diff needs a final review, show "Needs Final Review"
+
+  $ cat > $TESTTMP/mockduit << EOF
+  > [{"data": {"query": [{"results": {"nodes": [
+  >   {"number": 1, "diff_status_name": "Accepted",
+  >    "created_time": 0, "updated_time": 2, "is_landing": true,
+  >    "land_job_status": "NO_LAND_RUNNING",
+  >    "needs_final_review_status": "NEEDED"}
+  > ]}}]}}]
+  > EOF
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
+  Needs Final Review
 
 And finally, the success case
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [
   >   {"number": 1, "diff_status_name": "Needs Review",
-  >    "created_time": 0, "updated_time": 2, "is_landing": false}
+  >    "created_time": 0, "updated_time": 2, "is_landing": false,
+  >    "land_job_status": "NO_LAND_RUNNING",
+  >    "needs_final_review_status": "NOT_NEEDED"}
   > ]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -T '{phabstatus}\n' -r .
@@ -93,7 +137,9 @@ Make sure the code works without the smartlog extensions
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [
   >   {"number": 1, "diff_status_name": "Needs Review",
-  >    "created_time": 0, "updated_time": 2, "is_landing": false}
+  >    "created_time": 0, "updated_time": 2, "is_landing": false,
+  >    "land_job_status": "NO_LAND_RUNNING",
+  >    "needs_final_review_status": "NOT_NEEDED"}
   > ]}}]}}]
   > EOF
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg --config 'extensions.smartlog=!' log -T '{phabstatus}\n' -r .

@@ -170,8 +170,16 @@ def showphabstatus(repo, ctx, templ, **args):
 
     result = getdiffstatus(repo, diffnum)[0]
     if isinstance(result, dict) and "status" in result:
-        if result.get("is_landing"):
+        landstatus = result.get("land_job_status")
+        finalreviewstatus = result.get("needs_final_review_status")
+        if landstatus == "LAND_JOB_RUNNING":
             return "Landing"
+        elif landstatus == "LAND_RECENTLY_SUCCEEDED":
+            return "Committing"
+        elif landstatus == "LAND_RECENTLY_FAILED":
+            return "Recently Failed to Land"
+        elif finalreviewstatus == "NEEDED":
+            return "Needs Final Review"
         else:
             return result.get("status")
     else:

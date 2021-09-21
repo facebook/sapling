@@ -73,6 +73,8 @@ sh % "cat" << r"""
   "diff_status_name": "Needs Review",
   "differential_diffs": {"count": 3},
   "is_landing": false,
+  "land_job_status": "NO_LAND_RUNNING",
+  "needs_final_review_status": "NOT_NEEDED",
   "created_time": 123,
   "updated_time": 222
 }]}}]}}]
@@ -90,6 +92,8 @@ sh % "cat" << r"""
   "number": 1,
   "diff_status_name": "Needs Review",
   "is_landing": false,
+  "land_job_status": "NO_LAND_RUNNING",
+  "needs_final_review_status": "NOT_NEEDED",
   "created_time": 123,
   "updated_time": 222
 }]}}]}}]
@@ -118,6 +122,8 @@ sh % "cat" << r"""
   },
   "differential_diffs": {"count": 1},
   "is_landing": false,
+  "land_job_status": "NO_LAND_RUNNING",
+  "needs_final_review_status": "NOT_NEEDED",
   "created_time": 123,
   "updated_time": 222
 }]}}]}}]
@@ -144,6 +150,8 @@ sh % "cat" << r"""
   },
   "differential_diffs": {"count": 1},
   "is_landing": false,
+  "land_job_status": "NO_LAND_RUNNING",
+  "needs_final_review_status": "NOT_NEEDED",
   "created_time": 123,
   "updated_time": 222
 }]}}]}}]

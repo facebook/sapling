@@ -314,6 +314,8 @@ class Client(object):
                 created_time
                 updated_time
                 is_landing
+                land_job_status
+                needs_final_review_status
                 differential_diffs: phabricator_versions {
                   count
                 }
@@ -354,6 +356,8 @@ class Client(object):
                 info["created"] = node["created_time"]
                 info["updated"] = node["updated_time"]
                 info["is_landing"] = node["is_landing"]
+                info["land_job_status"] = node["land_job_status"]
+                info["needs_final_review_status"] = node["needs_final_review_status"]
 
                 info["signal_status"] = None
                 if (
