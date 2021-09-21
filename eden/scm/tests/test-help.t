@@ -311,7 +311,6 @@ Test extension help:
                      disables symlink support when enabled
        drop          drop specified changeset from the stack
        edrecord      (no help text available)
-       eol           automatically manage newlines in repository files
        extdiff       command to allow external programs to compare revisions
        extorder
        extutil       (no help text available)

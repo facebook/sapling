@@ -43,6 +43,7 @@ _ignoreextensions = {
     "configwarn",
     "directaccess",
     "eden",
+    "eol",
     "factotum",
     "fastmanifest",
     "fastpartialmatch",
