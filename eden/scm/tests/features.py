@@ -9,7 +9,6 @@ mutationblacklist = """
     test-fb-hgext-hiddenerror.t
     test-fb-hgext-treemanifest-infinitepush.t
     test-fb-hgext-treemanifest-treeonly-linknodes.t
-    test-hggit-incoming.t
     test-infinitepush-forwardfillerqueue.t
     test-infinitepush-replaybookmarksqueue-ignore-backup.t
     test-infinitepush-replaybookmarksqueue-multiple-updates.t
@@ -248,30 +247,6 @@ segmentedchangelogcompatiblelist = """
     test-help.t
     test-hg-parseurl.py
     test-hgext-logginghelper.t
-    test-hggit-clone.t
-    test-hggit-conflict-1.t
-    test-hggit-conflict-2.t
-    test-hggit-convergedmerge.t
-    test-hggit-empty-working-tree.t
-    test-hggit-encoding.t
-    test-hggit-external-sync.t
-    test-hggit-extra.t
-    test-hggit-file-removal.t
-    test-hggit-git-clone.t
-    test-hggit-hg-author.t
-    test-hggit-illegal-contents.t
-    test-hggit-incoming.t
-    test-hggit-keywords.t
-    test-hggit-merge.t
-    test-hggit-nodemap.t
-    test-hggit-outgoing.t
-    test-hggit-pull-after-strip.t
-    test-hggit-push.t
-    test-hggit-renames.t
-    test-hggit-timezone.t
-    test-hggit-tree-decomposition.t
-    test-hggit-url-parsing.py
-    test-hggit-verify-fail.t
     test-hghave.t
     test-hgrc.t
     test-hint.t
@@ -505,9 +480,6 @@ segmentedchangelogcompatiblelist = """
     test-globalopts.t
     test-hgext-perfsuite.t
     test-hgext-stablerev.t
-    test-hggit-bookmark-workflow.t
-    test-hggit-git-workflow.t
-    test-hggit-updatemeta.t
     test-histedit-arguments.t
     test-histedit-base.t
     test-histedit-commute.t
@@ -683,8 +655,6 @@ ignorerevnumincompatiblelist = """
     test-glog-t.py
     test-gpg.t
     test-graft-t.py
-    test-hggit-bookmark-workflow.t
-    test-hggit-push-r.t
     test-histedit-commute.t
     test-histedit-edit.t
     test-histedit-no-change.t

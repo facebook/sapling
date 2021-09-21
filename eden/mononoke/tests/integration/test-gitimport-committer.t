@@ -104,17 +104,3 @@
   $ hg log -r another_committer -T '{extras}'
   branch=defaultcommitter=second_committer <second_committer@fb.com> 1000000000 0 (no-eol)
 
-# Push to a git repo and check that we have correct committer there
-  $ hg pull --config extensions.hggit= "$TESTTMP/repo-git-clone"
-  pulling from $TESTTMP/repo-git-clone
-  importing git objects into hg
-  $ hgmn push --config extensions.hggit= -r another_committer "$TESTTMP/repo-git-clone" --debug -f &> /dev/null
-  $ cd "$TESTTMP/repo-git-clone"
-  $ git log another_committer --pretty=fuller
-  commit a1368bfa4ec1c5478d03385b567ea2a8541ee566
-  Author:     mononoke <mononoke@mononoke>
-  AuthorDate: Sat Jan 1 00:00:00 2000 +0000
-  Commit:     second_committer <second_committer@fb.com>
-  CommitDate: Sun Sep 9 01:46:40 2001 +0000
-  
-      Add file1

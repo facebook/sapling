@@ -68,7 +68,6 @@ def ispathskipped(path):
         for name in [
             "contrib",
             "doc",
-            "hggit",
             "newdoc",
             "pywatchman",
             # Part of "tests" are hg-git code.

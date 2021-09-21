@@ -21,7 +21,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping edenscm/mercurial/statprof.py it has no-che?k-code (glob)
   edenscm/hgext/extlib/phabricator/graphql.py:*: use foobar, not foo_bar naming --> ca_bundle = repo.ui.configpath("web", "cacerts") (glob)
   edenscm/hgext/extlib/phabricator/graphql.py:*: use foobar, not foo_bar naming --> def scmquery_log( (glob)
-  edenscm/hgext/hggit/git_handler.py:*: use foobar, not foo_bar naming --> git_renames = {} (glob)
 
 @commands in debugcommands.py should be in alphabetical order.
 

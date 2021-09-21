@@ -1314,7 +1314,6 @@ packages = [
     "edenscm.hgext.fastannotate",
     "edenscm.hgext.fsmonitor",
     "edenscm.hgext.hgevents",
-    "edenscm.hgext.hggit",
     "edenscm.hgext.highlight",
     "edenscm.hgext.infinitepush",
     "edenscm.hgext.lfs",

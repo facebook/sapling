@@ -84,7 +84,3 @@
   $ cat "file2"
   this is file2
 
-# Try out hggit compatibility
-  $ hg --config extensions.hggit= git-updatemeta
-  $ hg --config extensions.hggit= log -T '{gitnode}'
-  8ce3eae44760b500bf3f2c3922a95dcd3c908e9e (no-eol)
