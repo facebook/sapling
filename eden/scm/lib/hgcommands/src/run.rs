@@ -117,7 +117,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
                 setup_http(config, global_opts);
 
-                let _ = spawn_progress_thread(config, io, Arc::downgrade(&in_scope));
+                let _ = spawn_progress_thread(config, global_opts, io, Arc::downgrade(&in_scope));
 
                 dispatcher.run_command(&table, io)
             })
@@ -262,15 +262,23 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
     Ok(data)
 }
 
-fn spawn_progress_thread(config: &ConfigSet, io: &IO, in_scope: Weak<()>) -> Result<()> {
+fn spawn_progress_thread(
+    config: &ConfigSet,
+    global_opts: &HgGlobalOpts,
+    io: &IO,
+    in_scope: Weak<()>,
+) -> Result<()> {
     // See 'hg help config.progress' for the config options.
-    let disabled = config.get_or("progress", "disable", || false)?;
-    if disabled {
+    if config.get_or("progress", "disable", || false)? {
         return Ok(());
     }
 
-    let assume_tty = config.get_or("progress", "disable", || false)?;
+    let assume_tty = config.get_or("progress", "assume-tty", || false)?;
     if !assume_tty && !io.error().is_tty() {
+        return Ok(());
+    }
+
+    if global_opts.quiet || global_opts.debug || configparser::hg::is_plain(Some("progress")) {
         return Ok(());
     }
 

@@ -406,44 +406,12 @@ class nullrenderer(baserenderer):
         pass
 
 
-class rustmodelupdater(baserenderer):
-    def __init__(self, bar):
-        super(rustmodelupdater, self).__init__(bar)
-        model = bindings.progress.model.ProgressBar(
-            topic=self._bar._topic,
-            total=self._bar._total,
-            unit=self._bar._unit,
-        )
-        self._model = model
-
-    def show(self, now):
-        # Update data model.
-        model = self._model
-        if model is None:
-            return
-        bar = self._bar
-        total = bar._total or 0
-        pos, message = _progvalue(bar.value)
-        pos = pos or 0
-        model.set_total(total)
-        model.set_position(pos)
-        if message:
-            model.set_message(message)
-
-    def _writeprogress(self, msg, flush=False):
-        # The Rust thread will write the progress.
-        pass
-
-    def complete(self):
-        self._model = None
-
-
 renderers = {
     "classic": classicrenderer,
     "fancy": fancyrenderer,
     "none": nullrenderer,
-    # Does not render directly. But updates Rust progress models.
-    "rust:simple": rustmodelupdater,
+    # Rust model is updated via basebar, so no rendering logic is necessary.
+    "rust:simple": nullrenderer,
 }
 
 
@@ -655,8 +623,11 @@ def _progvalue(value):
         return value, ""
 
 
-class tracedbar(object):
-    """base class for progress bars that generates tracing events"""
+class basebar(object):
+    """bar base class that traces events and updates rust model"""
+
+    def __init__(self):
+        self._rust_model = None
 
     def __enter__(self):
         spanid = _tracer.span(
@@ -664,6 +635,15 @@ class tracedbar(object):
         )
         _tracer.enter(spanid)
         self._spanid = spanid
+
+        # Tell rust about progress bars so it has access to progress
+        # metadata, even if rust isn't rendering progress information.
+        self._rust_model = bindings.progress.model.ProgressBar(
+            topic=self._topic,
+            total=self._total,
+            unit=self._unit,
+        )
+
         return self.enter()
 
     def __exit__(self, exctype, excvalue, traceback):
@@ -672,10 +652,28 @@ class tracedbar(object):
         if total is not None:
             _tracer.edit(spanid, [("total", str(total))])
         _tracer.exit(spanid)
+
+        self._rust_model = None
+
         return self.exit(exctype, excvalue, traceback)
 
+    def __setattr__(self, name, value):
+        super(basebar, self).__setattr__(name, value)
 
-class normalbar(tracedbar):
+        if not self._rust_model:
+            return
+
+        # Proxy value and total updates to rust.
+        if name == "value":
+            pos, message = _progvalue(value)
+            if message:
+                self._rust_model.set_message(str(message))
+            self._rust_model.set_position(pos or 0)
+        elif name == "_total":
+            self._rust_model.set_total(value or 0)
+
+
+class normalbar(basebar):
     """context manager that adds a progress bar to slow operations
 
     To use this, wrap a section of code that takes a long time like this:
@@ -687,6 +685,8 @@ class normalbar(tracedbar):
     """
 
     def __init__(self, ui, topic, unit="", total=None, start=0, formatfunc=None):
+        super(normalbar, self).__init__()
+
         self._ui = ui
         self._topic = topic
         self._unit = unit
@@ -730,8 +730,10 @@ class normalbar(tracedbar):
         getengine().unregister(self)
 
 
-class debugbar(tracedbar):
+class debugbar(basebar):
     def __init__(self, ui, topic, unit="", total=None, start=0, formatfunc=None):
+        super(debugbar, self).__init__()
+
         self._ui = ui
         self._topic = topic
         self._unit = unit
@@ -776,10 +778,17 @@ class debugbar(tracedbar):
         super(debugbar, self).__setattr__(name, value)
 
 
-class nullbar(tracedbar):
-    """A progress bar context manager that just keeps track of state."""
+class nullbar(basebar):
+    """progress bar context manager that just keeps track of state.
+
+    The rust progress registry will still be updated since rust wants
+    to know about all progress metadata, even if progress bars are not
+    being rendered.
+    """
 
     def __init__(self, ui, topic, unit="", total=None, start=0, formatfunc=None):
+        super(nullbar, self).__init__()
+
         self._topic = topic
         self._unit = unit
         self._total = total

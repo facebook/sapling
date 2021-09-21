@@ -3422,10 +3422,11 @@ def debugdrawdag(ui, repo, **opts):
         ("", "with-output", False, _("also print output every 10%")),
     ],
     _("NUMBER"),
-    norepo=True,
+    optionalrepo=True,
 )
 def debugprogress(
     ui,
+    repo,
     number,
     spinner=False,
     nototal=False,
