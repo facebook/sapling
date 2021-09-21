@@ -294,6 +294,49 @@ async fn test_blame_size_rejected_version(
     Ok(())
 }
 
+#[fbinit::test]
+async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: BlobRepo = TestRepoFactory::new()?
+        .with_config_override(|config| {
+            config.derived_data_config.enabled.blame_version = BlameVersion::V2
+        })
+        .build()?;
+    borrowed!(ctx, repo);
+
+    let c1 = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file1", "one\ntwo\nthree\n")
+        .add_file("file2", "zero\none\ntwo\nfour\n")
+        .commit()
+        .await?;
+
+    let data = "none\none\ntwo\nthree\n";
+    let c2 = CreateCommitContext::new(ctx, &repo, vec![c1])
+        .add_file_with_copy_info("file1", data, (c1, "file2"))
+        .commit()
+        .await?;
+
+    let (blame, _) = fetch_blame_compat(ctx, repo, c2, MPath::new("file1")?).await?;
+    let lines = blame
+        .lines()?
+        .map(|line| (line.changeset_id, line.path.to_string(), line.origin_offset))
+        .collect::<Vec<_>>();
+
+    // The "one" and "two" lines are blamed to the copy source, and not the
+    // parent.  The "three" line blames to the commit that performed the copy,
+    // and not the parent.
+    assert_eq!(
+        lines,
+        vec![
+            (c2, "file1".to_string(), 0),
+            (c1, "file2".to_string(), 1),
+            (c1, "file2".to_string(), 2),
+            (c2, "file1".to_string(), 3),
+        ]
+    );
+    Ok(())
+}
+
 fn annotate(
     content: &str,
     blame: CompatBlame,

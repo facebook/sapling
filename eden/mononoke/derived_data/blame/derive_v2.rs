@@ -96,18 +96,11 @@ async fn create_blame_v2(
     let file_unode = file_unode_id.load(ctx, blobstore).await?;
 
     let mut blame_parents = Vec::new();
-    for (parent_index, unode_id) in file_unode.parents().iter().enumerate() {
-        blame_parents.push(fetch_blame_parent(
-            ctx,
-            blobstore,
-            parent_index,
-            path.clone(),
-            *unode_id,
-            filesize_limit,
-        ));
-    }
-
     if let Some(source) = renames.get(&path) {
+        // If the file was copied from another path, then we ignore its
+        // contents in the parents, even if it existed there, and just use the
+        // copy-from source as a parent.  This matches the Mercurial blame
+        // implementation.
         blame_parents.push(fetch_blame_parent(
             ctx,
             blobstore,
@@ -116,6 +109,17 @@ async fn create_blame_v2(
             source.unode_id,
             filesize_limit,
         ));
+    } else {
+        for (parent_index, unode_id) in file_unode.parents().iter().enumerate() {
+            blame_parents.push(fetch_blame_parent(
+                ctx,
+                blobstore,
+                parent_index,
+                path.clone(),
+                *unode_id,
+                filesize_limit,
+            ));
+        }
     }
 
     let (content, blame_parents) = future::try_join(
