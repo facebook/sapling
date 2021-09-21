@@ -38,7 +38,7 @@ import ssl
 from enum import Enum
 from struct import pack, unpack
 
-from bindings import clientinfo, zstd
+from bindings import clientinfo, zstd, cats
 
 from . import error, progress, httpconnection, sslutil, util, stdiopeer
 from .i18n import _
@@ -220,6 +220,7 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._auth_proxy_http = ui.config("auth_proxy", "http_proxy")
         self._confheaders = ui.config("http", "extra_headers_json")
         self._verbose = ui.configwith(bool, "http", "verbose")
+        self._cats = cats.getcats(ui._uiconfig._rcfg._rcfg, raise_if_missing=False)
 
         if self._auth_proxy_http:
             u = util.url(self._auth_proxy_http, parsequery=False, parsefragment=False)
@@ -335,6 +336,9 @@ class mononokepeer(stdiopeer.stdiopeer):
 
                 if self._unix_socket_proxy or self._auth_proxy_http:
                     headers["x-x2pagentd-ws-over-h1"] = "1"
+
+                if self._cats:
+                    headers["x-forwarded-cats"] = self._cats
 
                 if self._compression:
                     headers["X-Client-Compression"] = "zstd=stdin"

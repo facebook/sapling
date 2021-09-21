@@ -20,6 +20,7 @@ lto = false
 cpython_ext = { path = "../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
 pyauth = { path = "modules/pyauth" }
+pycats= { path = "modules/pycats" }
 pyblackbox = { path = "modules/pyblackbox" }
 pybookmarkstore = { path = "modules/pybookmarkstore" }
 pybytes = { path = "modules/pybytes" }
