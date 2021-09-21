@@ -629,6 +629,25 @@ pub fn read_repo_name_from_disk(shared_dot_hg_path: &Path) -> io::Result<String>
     }
 }
 
+/// Return whether plain mode is active, similar to python ui.plain().
+pub fn is_plain(feature: Option<&str>) -> bool {
+    let plain = env::var(HGPLAIN);
+    let plain_except = env::var(HGPLAINEXCEPT);
+
+    if plain.is_err() && plain_except.is_err() {
+        return false;
+    }
+
+    if let Some(feature) = feature {
+        !plain_except
+            .unwrap_or_default()
+            .split(',')
+            .any(|s| s == feature)
+    } else {
+        true
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -687,6 +706,25 @@ mod tests {
         assert_eq!(cfg.get("alias", "l"), Some("log".into()));
         assert_eq!(cfg.get("revsetalias", "@"), Some("master".into()));
         assert_eq!(cfg.get("templatealias", "u"), None);
+    }
+
+    #[test]
+    fn test_is_plain() {
+        let _guard = ENV_LOCK.lock();
+
+        env::remove_var(HGPLAIN);
+        env::remove_var(HGPLAINEXCEPT);
+        assert!(!is_plain(None));
+
+        env::set_var(HGPLAIN, "1");
+        assert!(is_plain(None));
+        assert!(is_plain(Some("banana")));
+
+        env::set_var(HGPLAINEXCEPT, "dog,banana,tree");
+        assert!(!is_plain(Some("banana")));
+
+        env::remove_var(HGPLAIN);
+        assert!(!is_plain(Some("banana")));
     }
 
     #[test]
