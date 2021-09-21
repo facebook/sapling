@@ -211,20 +211,21 @@ def _sync(
         remotepath, connect_opts, reason="cloudsync"
     )
 
-    if ui.configbool("commitcloud", "usehttpupload"):
-        uploaded, failed = upload.upload(repo, None)
-        with repo.lock():
-            state = backupstate.BackupState(repo, remotepath, usehttp=True)
-            state.update(uploaded)
-        # Upload returns a list of all newly uploaded heads and failed nodes (not just heads).
-        # Backup returns a revset for failed. Create a revset for compatibility.
-        failed = repo.revs("%ln", failed)
-    else:
-        # Back up all local commits that are not already backed up.
-        # Load the backup state under the repo lock to ensure a consistent view.
-        with repo.lock():
-            state = backupstate.BackupState(repo, remotepath)
-        backedup, failed = backup._backup(repo, state, remotepath, getconnection)
+    with repo.ui.timesection("commitcloud_sync_push"):
+        if ui.configbool("commitcloud", "usehttpupload"):
+            uploaded, failed = upload.upload(repo, None)
+            with repo.lock():
+                state = backupstate.BackupState(repo, remotepath, usehttp=True)
+                state.update(uploaded)
+            # Upload returns a list of all newly uploaded heads and failed nodes (not just heads).
+            # Backup returns a revset for failed. Create a revset for compatibility.
+            failed = repo.revs("%ln", failed)
+        else:
+            # Back up all local commits that are not already backed up.
+            # Load the backup state under the repo lock to ensure a consistent view.
+            with repo.lock():
+                state = backupstate.BackupState(repo, remotepath)
+            backedup, failed = backup._backup(repo, state, remotepath, getconnection)
 
     # Now that commits are backed up, check that visibleheads are enabled
     # locally, and only sync if visibleheads is enabled.
@@ -423,7 +424,6 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     # Pull all the new heads and any bookmark hashes we don't have. We need to
     # filter cloudrefs before pull as pull doesn't check if a rev is present
     # locally.
-    unfi = repo
     newheads = [
         nodemod.hex(n)
         for n in repo.changelog.filternodes(
@@ -559,11 +559,12 @@ def _pullheadgroups(repo, remotepath, headgroups):
             url = repo.ui.paths.getpath(remotepath).url
             repo.ui.status(_("pulling %s from %s\n") % (headgroupstr, url))
             prog.value = (index, headgroupstr)
-            repo.pull(
-                remotepath,
-                headnodes=[nodemod.bin(hexnode) for hexnode in headgroup],
-                quiet=False,
-            )
+            with repo.ui.timesection("commitcloud_sync_pull"):
+                repo.pull(
+                    remotepath,
+                    headnodes=[nodemod.bin(hexnode) for hexnode in headgroup],
+                    quiet=False,
+                )
             repo.connectionpool.close()
 
 
