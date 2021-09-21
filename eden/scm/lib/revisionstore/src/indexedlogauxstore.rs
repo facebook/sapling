@@ -323,7 +323,7 @@ mod tests {
             .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
             .single()?
             .expect("key not found");
-        assert_eq!(Some(entry), fetched.aux_data().map(|a| a.into()));
+        assert_eq!(entry, fetched.aux_data().expect("no aux data found").into());
         Ok(())
     }
 
@@ -368,7 +368,10 @@ mod tests {
             .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
             .single()?
             .expect("key not found");
-        assert_eq!(Some(expected), fetched.aux_data().map(|a| a.into()));
+        assert_eq!(
+            expected,
+            fetched.aux_data().expect("no aux data found").into()
+        );
 
         // Verify we can read it directly too
         let found = aux.get(k.hgid)?;

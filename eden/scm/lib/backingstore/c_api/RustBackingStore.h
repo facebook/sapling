@@ -7,7 +7,7 @@
  * This file is generated with cbindgen. Please run `./tools/cbindgen.sh` to
  * update this file.
  *
- * @generated SignedSource<<50807b13cfd41d6c06ab43ae99fb8ea1>>
+ * @generated SignedSource<<fefb0d5c71670ab2e7002943b43b542c>>
  *
  */
 
@@ -124,6 +124,13 @@ struct RustTree {
   RustCBytes hash;
 };
 
+struct RustFileAuxData {
+  uint64_t total_size;
+  RustCBytes content_id;
+  RustCBytes content_sha1;
+  RustCBytes content_sha256;
+};
+
 extern "C" {
 
 RustCFallibleBase rust_backingstore_new(const char *repository,
@@ -158,7 +165,21 @@ void rust_backingstore_get_tree_batch(RustBackingStore *store,
                                       void *data,
                                       void (*resolve)(void*, uintptr_t, RustCFallibleBase));
 
+RustCFallibleBase rust_backingstore_get_file_aux(RustBackingStore *store,
+                                                                  const uint8_t *node,
+                                                                  uintptr_t node_len,
+                                                                  bool local);
+
+void rust_backingstore_get_file_aux_batch(RustBackingStore *store,
+                                          const RustRequest *requests,
+                                          uintptr_t size,
+                                          bool local,
+                                          void *data,
+                                          void (*resolve)(void*, uintptr_t, RustCFallibleBase));
+
 void rust_tree_free(RustTree *tree);
+
+void rust_file_aux_free(RustFileAuxData *aux);
 
 void rust_backingstore_flush(RustBackingStore *store);
 

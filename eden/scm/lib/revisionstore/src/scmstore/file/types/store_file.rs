@@ -42,8 +42,9 @@ impl StoreValue for StoreFile {
 }
 
 impl StoreFile {
-    pub fn aux_data(&self) -> Option<FileAuxData> {
-        self.aux_data.clone()
+    pub fn aux_data(&self) -> Result<FileAuxData> {
+        self.aux_data
+            .ok_or_else(|| anyhow!("no aux data available"))
     }
 
     #[instrument(level = "debug", skip(self))]

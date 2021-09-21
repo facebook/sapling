@@ -340,7 +340,7 @@ mod tests {
             .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
             .single()?
             .expect("key not found");
-        assert_eq!(fetched.aux_data(), Some(expected));
+        assert_eq!(fetched.aux_data().expect("no aux data found"), expected);
 
         // Disable EdenApi and local cache, make sure we can read from aux cache.
         store.edenapi = None;
@@ -349,7 +349,7 @@ mod tests {
             .fetch(std::iter::once(k.clone()), FileAttributes::AUX)
             .single()?
             .expect("key not found");
-        assert_eq!(fetched.aux_data(), Some(expected));
+        assert_eq!(fetched.aux_data().expect("no aux data found"), expected);
 
 
         // Content shouldn't have been cached

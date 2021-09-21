@@ -15,8 +15,10 @@ use std::{slice, str};
 use types::Key;
 
 use crate::backingstore::BackingStore;
-use crate::raw::{CBytes, CFallible, Request, Tree};
+use crate::raw::{CBytes, CFallible, FileAuxData, Request, Tree};
+
 use manifest::List;
+use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;
 
 fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Result<&'a [U]> {
     ensure!(!ptr.is_null(), "string ptr is null");
@@ -162,11 +164,70 @@ pub extern "C" fn rust_backingstore_get_tree_batch(
     });
 }
 
+fn backingstore_get_file_aux(
+    store: *mut BackingStore,
+    node: *const u8,
+    node_len: usize,
+    local: bool,
+) -> Result<*mut FileAuxData> {
+    assert!(!store.is_null());
+    let store = unsafe { &*store };
+    let node = stringpiece_to_slice(node, node_len)?;
+
+    store
+        .get_file_aux(node, local)
+        .and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")))
+        .map(|aux| aux.into())
+        .map(|result| Box::into_raw(Box::new(result)))
+}
+
+#[no_mangle]
+pub extern "C" fn rust_backingstore_get_file_aux(
+    store: *mut BackingStore,
+    node: *const u8,
+    node_len: usize,
+    local: bool,
+) -> CFallible<FileAuxData> {
+    backingstore_get_file_aux(store, node, node_len, local).into()
+}
+
+#[no_mangle]
+pub extern "C" fn rust_backingstore_get_file_aux_batch(
+    store: *mut BackingStore,
+    requests: *const Request,
+    size: usize,
+    local: bool,
+    data: *mut c_void,
+    resolve: unsafe extern "C" fn(*mut c_void, usize, CFallible<FileAuxData>),
+) {
+    assert!(!store.is_null());
+    let store = unsafe { &*store };
+    let requests: &[Request] = unsafe { slice::from_raw_parts(requests, size) };
+    let keys: Vec<Result<Key>> = requests.iter().map(|req| req.try_into_key()).collect();
+
+    store.get_file_aux_batch(keys, local, |idx, result| {
+        let result: Result<ScmStoreFileAuxData> =
+            result.and_then(|opt| opt.ok_or_else(|| Error::msg("no file aux data found")));
+        let result: Result<FileAuxData> = result.map(|aux| aux.into());
+        let result: Result<*mut FileAuxData> = result.map(|result| Box::into_raw(Box::new(result)));
+        unsafe {
+            resolve(data, idx, result.into())
+        };
+    });
+}
+
 #[no_mangle]
 pub extern "C" fn rust_tree_free(tree: *mut Tree) {
     assert!(!tree.is_null());
     let tree = unsafe { Box::from_raw(tree) };
     drop(tree);
+}
+
+#[no_mangle]
+pub extern "C" fn rust_file_aux_free(aux: *mut FileAuxData) {
+    assert!(!aux.is_null());
+    let aux = unsafe { Box::from_raw(aux) };
+    drop(aux);
 }
 
 #[no_mangle]

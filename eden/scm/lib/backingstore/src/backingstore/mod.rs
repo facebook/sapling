@@ -10,9 +10,10 @@ mod scmstores;
 
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 use manifest::List;
+use revisionstore::scmstore::file::FileAuxData;
 use types::Key;
 
 use crate::backingstore::{contentstores::BackingContentStores, scmstores::BackingScmStores};
@@ -77,6 +78,34 @@ impl BackingStore {
         match self {
             Old(stores) => stores.get_tree_batch(keys, local_only, resolve),
             New(stores) => stores.get_tree_batch(keys, local_only, resolve),
+        }
+    }
+
+    pub fn get_file_aux(&self, node: &[u8], local_only: bool) -> Result<Option<FileAuxData>> {
+        match self {
+            Old(_stores) => Err(anyhow!(
+                "get_file_aux is not supported on ContentStore-based BackingStores"
+            )),
+            New(stores) => stores.get_file_aux(node, local_only),
+        }
+    }
+
+    pub fn get_file_aux_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    where
+        F: Fn(usize, Result<Option<FileAuxData>>) -> (),
+    {
+        match self {
+            Old(_stores) => {
+                for idx in 0..keys.len() {
+                    resolve(
+                        idx,
+                        Err(anyhow!(
+                            "get_file_aux_batch is not supported on ContentStore-based BackingStores"
+                        )),
+                    )
+                }
+            }
+            New(stores) => stores.get_file_aux_batch(keys, local_only, resolve),
         }
     }
 

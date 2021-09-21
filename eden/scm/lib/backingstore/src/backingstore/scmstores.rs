@@ -18,7 +18,10 @@ use configparser::config::ConfigSet;
 use manifest::List;
 use progress::null::NullProgressFactory;
 use revisionstore::{
-    scmstore::{FileAttributes, FileStore, FileStoreBuilder, TreeStore, TreeStoreBuilder},
+    scmstore::{
+        FileAttributes, FileAuxData, FileStore, FileStoreBuilder, StoreFile, TreeStore,
+        TreeStoreBuilder,
+    },
     HgIdDataStore, MemcacheStore,
 };
 use types::{HgId, Key, RepoPathBuf};
@@ -87,14 +90,14 @@ impl BackingScmStores {
         })
     }
 
-    /// Fetch file contents in batch. Whenever a blob is fetched, the supplied `resolve` function is
-    /// called with the file content or an error message, and the index of the blob in the request
-    /// array. When `local_only` is enabled, this function will only check local disk for the file
-    /// content.
-    #[instrument(level = "debug", skip(self, resolve))]
-    pub fn get_blob_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
-    where
-        F: Fn(usize, Result<Option<Vec<u8>>>) -> (),
+    fn get_file_attrs_batch<F>(
+        &self,
+        keys: Vec<Result<Key>>,
+        local_only: bool,
+        resolve: F,
+        attrs: FileAttributes,
+    ) where
+        F: Fn(usize, Result<Option<StoreFile>>) -> (),
     {
         // Resolve key errors
         let requests = keys
@@ -118,7 +121,7 @@ impl BackingScmStores {
                 resolve(
                     index,
                     Err(anyhow!(
-                        "duplicated keys are not supported by get_blob_batch when using scmstore",
+                        "duplicated keys are not supported by get_file_attrs_batch when using scmstore",
                     )),
                 );
             }
@@ -127,20 +130,16 @@ impl BackingScmStores {
         // Handle local-only fetching
         let local = self.filestore.local();
         let fetch_results = if local_only {
-            event!(Level::TRACE, "attempting to fetch blobs locally");
+            event!(Level::TRACE, "attempting to fetch file aux data locally");
             &local
         } else {
             self.filestore.as_ref()
         }
-        .fetch(indexes.keys().cloned(), FileAttributes::CONTENT)
+        .fetch(indexes.keys().cloned(), attrs)
         .fetch_results();
 
         // Handle fetch results
         for (key, res) in fetch_results {
-            let res = res.and_then(|opt| {
-                opt.map(|mut file| file.file_content().map(|content| content.into_vec()))
-                    .transpose()
-            });
             if let Some(index) = indexes.remove(&key) {
                 resolve(index, res)
             } else {
@@ -150,6 +149,34 @@ impl BackingScmStores {
                 );
             }
         }
+    }
+
+    /// Fetch file contents in batch. Whenever a blob is fetched, the supplied `resolve` function is
+    /// called with the file content or an error message, and the index of the blob in the request
+    /// array. When `local_only` is enabled, this function will only check local disk for the file
+    /// content.
+    #[instrument(level = "debug", skip(self, resolve))]
+    pub fn get_blob_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    where
+        F: Fn(usize, Result<Option<Vec<u8>>>) -> (),
+    {
+        self.get_file_attrs_batch(
+            keys,
+            local_only,
+            move |idx, res| {
+                resolve(
+                    idx,
+                    res.transpose()
+                        .map(|res| {
+                            res.and_then(|mut file| {
+                                file.file_content().map(|content| content.into_vec())
+                            })
+                        })
+                        .transpose(),
+                )
+            },
+            FileAttributes::CONTENT,
+        )
     }
 
     #[instrument(level = "debug", skip(self))]
@@ -260,6 +287,45 @@ impl BackingScmStores {
                 );
             }
         }
+    }
+
+    pub fn get_file_aux(&self, node: &[u8], local_only: bool) -> Result<Option<FileAuxData>> {
+        let hgid = HgId::from_slice(node)?;
+        let key = Key::new(RepoPathBuf::new(), hgid);
+
+        let local = self.filestore.local();
+        let fetch_results = if local_only {
+            event!(Level::TRACE, "attempting to fetch file aux data locally");
+            &local
+        } else {
+            self.filestore.as_ref()
+        }
+        .fetch(std::iter::once(key.clone()), FileAttributes::AUX);
+
+        if let Some(entry) = fetch_results.single()? {
+            Ok(Some(entry.aux_data()?.try_into()?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn get_file_aux_batch<F>(&self, keys: Vec<Result<Key>>, local_only: bool, resolve: F)
+    where
+        F: Fn(usize, Result<Option<FileAuxData>>) -> (),
+    {
+        self.get_file_attrs_batch(
+            keys,
+            local_only,
+            move |idx, res| {
+                resolve(
+                    idx,
+                    res.transpose()
+                        .map(|res| res.and_then(|file| file.aux_data()))
+                        .transpose(),
+                )
+            },
+            FileAttributes::AUX,
+        )
     }
 
     /// Forces backing store to rescan pack files or local indexes

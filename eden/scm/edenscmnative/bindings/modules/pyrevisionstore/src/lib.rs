@@ -1288,7 +1288,7 @@ py_class!(pub class filescmstore |py| {
         }
         for (key, storefile) in fetch_result.complete.into_iter() {
             let key_tuple = from_key_to_tuple(py, &key).into_object();
-            let content_sha256 = storefile.aux_data().ok_or_else(|| format_err!("missing aux data even though result is complete")).map_pyerr(py)?.content_sha256;
+            let content_sha256 = storefile.aux_data().map_pyerr(py)?.content_sha256;
             let content_sha256 = PyBytes::new(py, &content_sha256.into_inner());
             let result_tuple = PyTuple::new(
                 py,
