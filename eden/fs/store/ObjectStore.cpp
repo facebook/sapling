@@ -244,57 +244,59 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
     ObjectFetchContext& fetchContext) const {
   auto self = shared_from_this();
 
-  return localStore_->getBlob(id).thenValue([id, &fetchContext, self](
-                                                shared_ptr<const Blob> blob) {
-    if (blob) {
-      // Not computing the BlobMetadata here because if the blob was found
-      // in the local store, the LocalStore probably also has the metadata
-      // already, and the caller may not even need the SHA-1 here. (If the
-      // caller needed the SHA-1, they would have called getBlobMetadata
-      // instead.)
-      XLOG(DBG4) << "blob " << id << " found in local store";
-      self->updateBlobStats(true, false);
-      fetchContext.didFetch(
-          ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
+  return localStore_->getBlob(id).thenValue(
+      [id, &fetchContext, self](shared_ptr<const Blob> blob) {
+        if (blob) {
+          // Not computing the BlobMetadata here because if the blob was found
+          // in the local store, the LocalStore probably also has the metadata
+          // already, and the caller may not even need the SHA-1 here. (If the
+          // caller needed the SHA-1, they would have called getBlobMetadata
+          // instead.)
+          XLOG(DBG4) << "blob " << id << " found in local store";
+          self->updateBlobStats(true, false);
+          fetchContext.didFetch(
+              ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
 
-      self->updateProcessFetch(fetchContext);
-      return makeFuture(shared_ptr<const Blob>(std::move(blob)));
-    }
+          self->updateProcessFetch(fetchContext);
+          return makeFuture(shared_ptr<const Blob>(std::move(blob)));
+        }
 
-    self->deprioritizeWhenFetchHeavy(fetchContext);
+        self->deprioritizeWhenFetchHeavy(fetchContext);
 
-    // Look in the BackingStore
-    return self->backingStore_->getBlob(id, fetchContext)
-        .via(self->executor_)
-        .thenValue([self, &fetchContext, id](
-                       unique_ptr<const Blob> loadedBlob) {
-          if (loadedBlob) {
-            XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
-            self->updateBlobStats(false, true);
-            fetchContext.didFetch(
-                ObjectFetchContext::Blob,
-                id,
-                ObjectFetchContext::FromBackingStore);
+        // Look in the BackingStore
+        return self->backingStore_->getBlob(id, fetchContext)
+            .via(self->executor_)
+            .thenValue([self, &fetchContext, id](
+                           unique_ptr<const Blob> loadedBlob) {
+              if (loadedBlob) {
+                XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
+                self->updateBlobStats(false, true);
+                fetchContext.didFetch(
+                    ObjectFetchContext::Blob,
+                    id,
+                    ObjectFetchContext::FromBackingStore);
 
-            self->updateProcessFetch(fetchContext);
+                self->updateProcessFetch(fetchContext);
+                self->localStore_->putBlob(id, loadedBlob.get());
 
-            // Quick check in-memory cache first, before doing expensive
-            // calculations. If metadata is present in cache, it most certainly
-            // exists in local store too
-            if (!self->metadataCache_.rlock()->exists(id)) {
-              auto metadata = self->localStore_->putBlob(id, loadedBlob.get());
-              self->metadataCache_.wlock()->set(id, metadata);
-            }
-            return shared_ptr<const Blob>(std::move(loadedBlob));
-          }
+                // Quick check in-memory cache first, before doing expensive
+                // calculations. If metadata is present in cache, it most
+                // certainly exists in local store too
+                if (!self->metadataCache_.rlock()->exists(id)) {
+                  auto metadata =
+                      self->localStore_->putBlobMetadata(id, loadedBlob.get());
+                  self->metadataCache_.wlock()->set(id, metadata);
+                }
+                return shared_ptr<const Blob>(std::move(loadedBlob));
+              }
 
-          XLOG(DBG2) << "unable to find blob " << id;
-          self->updateBlobStats(false, false);
-          // TODO: Perhaps we should do some short-term negative caching?
-          throw std::domain_error(
-              folly::to<string>("blob ", id.toString(), " not found"));
-        });
-  });
+              XLOG(DBG2) << "unable to find blob " << id;
+              self->updateBlobStats(false, false);
+              // TODO: Perhaps we should do some short-term negative caching?
+              throw std::domain_error(
+                  folly::to<string>("blob ", id.toString(), " not found"));
+            });
+      });
 }
 
 void ObjectStore::updateBlobStats(bool local, bool backing) const {
@@ -354,7 +356,9 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
             .thenValue([self, id, &context](std::unique_ptr<Blob> blob) {
               if (blob) {
                 self->updateBlobMetadataStats(false, false, true);
-                auto metadata = self->localStore_->putBlob(id, blob.get());
+                self->localStore_->putBlob(id, blob.get());
+                auto metadata =
+                    self->localStore_->putBlobMetadata(id, blob.get());
                 self->metadataCache_.wlock()->set(id, metadata);
                 // I could see an argument for recording this fetch with
                 // type Blob instead of BlobMetadata, but it's probably more

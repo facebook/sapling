@@ -159,9 +159,7 @@ void LocalStore::WriteBatch::putTree(const Tree& tree) {
   put(KeySpace::TreeFamily, tree.getHash().getBytes(), treeData);
 }
 
-BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
-  BlobMetadata metadata = getMetadataFromBlob(blob);
-
+void LocalStore::putBlob(const Hash& id, const Blob* blob) {
   if (!enableBlobCaching) {
     XLOG(DBG8) << "Skipping caching " << id
                << " because blob cache is disabled via config";
@@ -175,20 +173,16 @@ BlobMetadata LocalStore::putBlob(const Hash& id, const Blob* blob) {
     batch->putBlob(id, blob);
     batch->flush();
   }
+}
 
-  // Even if blob caching is disabled, it's worth caching the size and SHA-1.
+BlobMetadata LocalStore::putBlobMetadata(const Hash& id, const Blob* blob) {
+  BlobMetadata metadata{Hash::sha1(blob->getContents()), blob->getSize()};
   auto hashBytes = id.getBytes();
   SerializedBlobMetadata metadataBytes(metadata);
 
   put(KeySpace::BlobMetaDataFamily, hashBytes, metadataBytes.slice());
 
   return metadata;
-}
-
-BlobMetadata LocalStore::getMetadataFromBlob(const Blob* blob) {
-  Hash sha1 = Hash::sha1(blob->getContents());
-  uint64_t size = blob->getSize();
-  return BlobMetadata{sha1, size};
 }
 
 void LocalStore::putTreeMetadata(

@@ -157,11 +157,13 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
 
   /**
    * Store a Blob.
-   *
-   * Returns a BlobMetadata about the blob, which includes the SHA-1 hash of
-   * its contents.
    */
-  BlobMetadata putBlob(const Hash& id, const Blob* blob);
+  void putBlob(const Hash& id, const Blob* blob);
+
+  /**
+   * Store a blob metadata.
+   */
+  BlobMetadata putBlobMetadata(const Hash& id, const Blob* blob);
 
   /**
    * Store metadata for each of the entries in the Tree. This stores the
@@ -237,8 +239,6 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    private:
     friend class LocalStore;
   };
-
-  BlobMetadata getMetadataFromBlob(const Blob* blob);
 
   /**
    * Construct a LocalStoreBatchWrite object with write batch of size bufSize.
