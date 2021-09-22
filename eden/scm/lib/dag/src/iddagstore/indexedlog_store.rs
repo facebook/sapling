@@ -14,6 +14,7 @@ use crate::segment::describe_segment_bytes;
 use crate::segment::hex;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
+use crate::spanset::Span;
 use crate::Level;
 use crate::Result;
 use byteorder::ReadBytesExt;
@@ -21,6 +22,7 @@ use byteorder::{BigEndian, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
 use minibytes::Bytes;
+use std::convert::TryInto;
 use std::fs::{self, File};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -223,22 +225,26 @@ impl IdDagStore for IndexedLogStore {
         Ok(Box::new(iter))
     }
 
-    fn iter_master_flat_segments_with_parent<'a>(
+    fn iter_master_flat_segments_with_parent_span<'a>(
         &'a self,
-        parent: Id,
-    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
-        let mut key = Vec::with_capacity(9);
-        // child (segment low id) is in the "master" group.
-        key.write_u8(Group::MASTER.0 as u8).unwrap();
-        key.write_u64::<BigEndian>(parent.0).unwrap();
-        let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
-        let iter = iter.map(move |result| {
-            match result {
-                Ok(bytes) => Ok(self.segment_from_slice(bytes)),
-                Err(err) => Err(err.into()),
+        parent_span: Span,
+    ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>> {
+        let low = index_parent_key(Group::MASTER, parent_span.low);
+        let high = index_parent_key(Group::MASTER, parent_span.high);
+        let range = &low[..]..=&high[..];
+        let range_iter = self.log.lookup_range(Self::INDEX_PARENT, range)?;
+        let mut result: Vec<(Id, Segment)> = Vec::new();
+        for entry in range_iter {
+            let (key, segments) = entry?;
+            let parent_id = {
+                let bytes: [u8; 8] = key[1..].try_into().unwrap();
+                Id(u64::from_be_bytes(bytes))
+            };
+            for segment in segments {
+                result.push((parent_id, self.segment_from_slice(segment?)));
             }
-        });
-        Ok(Box::new(iter))
+        }
+        Ok(Box::new(result.into_iter().map(Ok)))
     }
 
     fn iter_flat_segments_with_parent<'a>(

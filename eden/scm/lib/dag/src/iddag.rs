@@ -894,8 +894,8 @@ pub trait IdDagAlgorithm: IdDagStore {
             }
             // Can we use `head` in `seg` as `x`?
             let mut next_id = None;
-            for child_seg in self.iter_master_flat_segments_with_parent(head)? {
-                let child_seg = child_seg?;
+            for entry in self.iter_master_flat_segments_with_parent_span(head.into())? {
+                let child_seg = entry?.1;
                 let child_low = child_seg.span()?.low;
                 if !ancestors.contains(child_low) {
                     // `child_low` is outside `ancestors(heads)`, cannot use it

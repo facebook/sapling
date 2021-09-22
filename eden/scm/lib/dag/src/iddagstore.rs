@@ -8,6 +8,7 @@
 use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::segment::{Segment, SegmentFlags};
+use crate::spanset::Span;
 use crate::Level;
 use crate::Result;
 use serde::{Deserialize, Serialize};
@@ -77,11 +78,12 @@ pub trait IdDagStore: Send + Sync + 'static {
         level: Level,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a + Send + Sync>>;
 
-    /// Iterate through master flat segments that have the given parent.
-    fn iter_master_flat_segments_with_parent<'a>(
+    /// Iterate through `(parent_id, segment)` for master flat segments
+    /// that have a parent in the given span.
+    fn iter_master_flat_segments_with_parent_span<'a>(
         &'a self,
-        parent: Id,
-    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
+        parent_span: Span,
+    ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>>;
 
     /// Iterate through flat segments that have the given parent.
     fn iter_flat_segments_with_parent<'a>(
@@ -180,6 +182,7 @@ enum StoreId {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use itertools::Itertools;
     use once_cell::sync::Lazy;
     use std::ops::Deref;
 
@@ -432,10 +435,20 @@ mod tests {
         assert!(answer.next().is_none());
     }
 
-    fn test_store_iter_master_flat_segments_with_parent(store: &dyn IdDagStore) {
+    fn test_store_iter_master_flat_segments_with_parent_span(store: &dyn IdDagStore) {
         let mut answer = store
-            .iter_master_flat_segments_with_parent(Id(2))
+            .iter_master_flat_segments_with_parent_span(Id(2).into())
             .unwrap()
+            .map_ok(|(_p, s)| s)
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        let mut answer2 = store
+            .iter_master_flat_segments_with_parent_span((Id(0)..=Id(3)).into())
+            .unwrap()
+            .map_ok(|(p, s)| {
+                assert_eq!(p, Id(2));
+                s
+            })
             .collect::<Result<Vec<_>>>()
             .unwrap();
         // LEVEL0_HEAD5 is not in answer because it was merged into MERGED_LEVEL0_HEAD5
@@ -443,14 +456,22 @@ mod tests {
         let expected = segments_to_owned(&[&LEVEL0_HEAD9]);
         answer.sort_by_key(|s| s.head().unwrap());
         assert_eq!(answer, expected);
+        answer2.sort_by_key(|s| s.head().unwrap());
+        assert_eq!(answer2, expected);
 
-        let mut answer = store.iter_master_flat_segments_with_parent(Id(13)).unwrap();
+        let mut answer = store
+            .iter_master_flat_segments_with_parent_span(Id(13).into())
+            .unwrap();
         assert!(answer.next().is_none());
 
-        let mut answer = store.iter_master_flat_segments_with_parent(Id(4)).unwrap();
+        let mut answer = store
+            .iter_master_flat_segments_with_parent_span(Id(4).into())
+            .unwrap();
         assert!(answer.next().is_none());
 
-        let mut answer = store.iter_master_flat_segments_with_parent(nid(2)).unwrap();
+        let mut answer = store
+            .iter_master_flat_segments_with_parent_span(nid(2).into())
+            .unwrap();
         assert!(answer.next().is_none());
     }
 
@@ -508,7 +529,7 @@ mod tests {
         );
         assert!(
             store
-                .iter_master_flat_segments_with_parent(nid(2))
+                .iter_master_flat_segments_with_parent_span(nid(2).into())
                 .unwrap()
                 .next()
                 .is_none()
@@ -578,8 +599,8 @@ mod tests {
     }
 
     #[test]
-    fn test_multi_stores_iter_master_flat_segments_with_parent() {
-        for_each_store(|store| test_store_iter_master_flat_segments_with_parent(store));
+    fn test_multi_stores_iter_master_flat_segments_with_parent_span() {
+        for_each_store(|store| test_store_iter_master_flat_segments_with_parent_span(store));
     }
 
     #[test]
