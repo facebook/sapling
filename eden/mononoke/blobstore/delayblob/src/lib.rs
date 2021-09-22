@@ -14,17 +14,31 @@ use async_trait::async_trait;
 use rand::Rng;
 use rand_distr::Distribution;
 
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreIsPresent};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreIsPresent, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
 pub type Normal = rand_distr::Normal<f64>;
 
+#[derive(Clone, Copy, Default, Debug)]
+pub struct DelayOptions {
+    pub get_dist: Option<Normal>,
+    pub put_dist: Option<Normal>,
+}
+
+impl DelayOptions {
+    pub fn has_delay(&self) -> bool {
+        self.get_dist.is_some() || self.put_dist.is_some()
+    }
+}
+
 #[derive(Debug)]
 pub struct DelayedBlobstore<B> {
     inner: B,
-    get_dist: Normal,
-    put_dist: Normal,
+    get_dist: Option<Normal>,
+    put_dist: Option<Normal>,
 }
 
 impl<B: std::fmt::Display> std::fmt::Display for DelayedBlobstore<B> {
@@ -37,14 +51,22 @@ impl<B> DelayedBlobstore<B> {
     pub fn new(inner: B, get_dist: Normal, put_dist: Normal) -> Self {
         Self {
             inner,
-            get_dist,
-            put_dist,
+            get_dist: Some(get_dist),
+            put_dist: Some(put_dist),
+        }
+    }
+
+    pub fn from_options(inner: B, options: DelayOptions) -> Self {
+        Self {
+            inner,
+            get_dist: options.get_dist,
+            put_dist: options.put_dist,
         }
     }
 }
 
 #[async_trait]
-impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
+impl<B: BlobstorePutOps> Blobstore for DelayedBlobstore<B> {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -60,8 +82,8 @@ impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        delay(self.put_dist).await;
-        self.inner.put(ctx, key, value).await
+        self.put_impl(ctx, key, value, None).await?;
+        Ok(())
     }
 
     async fn is_present<'a>(
@@ -74,14 +96,58 @@ impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
     }
 }
 
-async fn delay<D>(distribution: D)
+impl<T: BlobstorePutOps> DelayedBlobstore<T> {
+    async fn put_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: Option<PutBehaviour>,
+    ) -> Result<OverwriteStatus> {
+        delay(self.put_dist).await;
+
+        if let Some(put_behaviour) = put_behaviour {
+            self.inner
+                .put_explicit(ctx, key.clone(), value, put_behaviour)
+                .await
+        } else {
+            self.inner.put_with_status(ctx, key.clone(), value).await
+        }
+    }
+}
+
+#[async_trait]
+impl<T: BlobstorePutOps> BlobstorePutOps for DelayedBlobstore<T> {
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, Some(put_behaviour)).await
+    }
+
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, None).await
+    }
+}
+
+async fn delay<D>(distribution: Option<D>)
 where
     D: Distribution<f64>,
 {
-    let seconds = rand::thread_rng().sample(distribution).abs();
-    tokio::time::sleep(Duration::new(
-        seconds.trunc() as u64,
-        (seconds.fract() * 1e+9) as u32,
-    ))
-    .await;
+    if let Some(distribution) = distribution {
+        let seconds = rand::thread_rng().sample(distribution).abs();
+        tokio::time::sleep(Duration::new(
+            seconds.trunc() as u64,
+            (seconds.fract() * 1e+9) as u32,
+        ))
+        .await;
+    }
 }

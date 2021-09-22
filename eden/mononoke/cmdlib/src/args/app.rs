@@ -69,6 +69,10 @@ pub const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
 pub const BLOBSTORE_SCRUB_GRACE_ARG: &str = "blobstore-scrub-grace";
 pub const BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG: &str = "blobstore-scrub-write-mostly-missing";
 pub const BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG: &str = "blobstore-scrub-queue-peek";
+pub const PUT_MEAN_DELAY_SECS_ARG: &str = "blobstore-put-mean-delay-secs";
+pub const PUT_STDDEV_DELAY_SECS_ARG: &str = "blobstore-put-stddev-delay-secs";
+pub const GET_MEAN_DELAY_SECS_ARG: &str = "blobstore-get-mean-delay-secs";
+pub const GET_STDDEV_DELAY_SECS_ARG: &str = "blobstore-get-stddev-delay-secs";
 
 pub const WITH_READONLY_STORAGE_ARG: &str = "with-readonly-storage";
 
@@ -722,6 +726,38 @@ impl MononokeAppBuilder {
                 .possible_values(BOOL_VALUES)
                 .default_value(bool_as_str(self.readonly_storage_default.0))
                 .help("Error on any attempts to write to storage if set to true"),
+        )
+        .arg(
+            Arg::with_name(PUT_MEAN_DELAY_SECS_ARG)
+                .long(PUT_MEAN_DELAY_SECS_ARG)
+                .takes_value(true)
+                .value_name(PUT_MEAN_DELAY_SECS_ARG)
+                .requires(PUT_STDDEV_DELAY_SECS_ARG)
+                .help("Mean value of additional delay for blobstore put calls"),
+        )
+        .arg(
+            Arg::with_name(PUT_STDDEV_DELAY_SECS_ARG)
+                .long(PUT_STDDEV_DELAY_SECS_ARG)
+                .takes_value(true)
+                .value_name(PUT_STDDEV_DELAY_SECS_ARG)
+                .requires(PUT_MEAN_DELAY_SECS_ARG)
+                .help("Stddev value of additional delay for blobstore put calls"),
+        )
+        .arg(
+            Arg::with_name(GET_MEAN_DELAY_SECS_ARG)
+                .long(GET_MEAN_DELAY_SECS_ARG)
+                .takes_value(true)
+                .value_name(GET_MEAN_DELAY_SECS_ARG)
+                .requires(GET_STDDEV_DELAY_SECS_ARG)
+                .help("Mean value of additional delay for blobstore get calls"),
+        )
+        .arg(
+            Arg::with_name(GET_STDDEV_DELAY_SECS_ARG)
+                .long(GET_STDDEV_DELAY_SECS_ARG)
+                .takes_value(true)
+                .value_name(GET_STDDEV_DELAY_SECS_ARG)
+                .requires(GET_MEAN_DELAY_SECS_ARG)
+                .help("Stddev value of additional delay for blobstore get calls"),
         );
 
         #[cfg(fbcode_build)]

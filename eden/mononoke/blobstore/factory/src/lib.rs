@@ -16,6 +16,7 @@ pub use ::blobstore::{PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
 pub use blobstore_stats::OperationType;
 pub use cacheblob::CachelibBlobstoreOptions;
 pub use chaosblob::ChaosOptions;
+pub use delayblob::DelayOptions;
 #[cfg(fbcode_build)]
 pub use facebook::ManifoldOptions;
 pub use multiplexedblob::{

@@ -29,8 +29,8 @@ use std::panic::{RefUnwindSafe, UnwindSafe};
 use tokio::runtime::{Handle, Runtime};
 
 use blobstore_factory::{
-    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour,
-    ScrubAction, ScrubWriteMostly, ThrottleOptions,
+    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, DelayOptions, PackOptions,
+    PutBehaviour, ScrubAction, ScrubWriteMostly, ThrottleOptions,
 };
 use environment::{Caching, MononokeEnvironment};
 use metaconfig_types::PackFormat;
@@ -41,6 +41,7 @@ use slog_ext::make_tag_filter_drain;
 use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType};
 use tunables::init_tunables_worker;
 
+pub type Normal = rand_distr::Normal<f64>;
 use crate::helpers::create_runtime;
 use crate::log;
 
@@ -51,13 +52,14 @@ use super::{
         BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG,
         BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG, BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG,
         CACHELIB_ATTEMPT_ZSTD_ARG, CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, ENABLE_MCROUTER,
-        LOCAL_CONFIGERATOR_PATH_ARG, LOGVIEW_ADDITIONAL_LEVEL_FILTER, LOGVIEW_CATEGORY,
-        LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY,
-        MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT, MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT,
-        MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT,
-        MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
-        MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM, READ_BURST_BYTES_ARG,
-        READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG, RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS,
+        GET_MEAN_DELAY_SECS_ARG, GET_STDDEV_DELAY_SECS_ARG, LOCAL_CONFIGERATOR_PATH_ARG,
+        LOGVIEW_ADDITIONAL_LEVEL_FILTER, LOGVIEW_CATEGORY, LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG,
+        MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT,
+        MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT,
+        MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT,
+        MYSQL_SQLBLOB_POOL_LIMIT, MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM,
+        PUT_MEAN_DELAY_SECS_ARG, PUT_STDDEV_DELAY_SECS_ARG, READ_BURST_BYTES_ARG, READ_BYTES_ARG,
+        READ_CHAOS_ARG, READ_QPS_ARG, RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS,
         TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG,
         WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG, WRITE_BYTES_ARG, WRITE_CHAOS_ARG,
         WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
@@ -646,8 +648,17 @@ fn parse_blobstore_options(
         .transpose()
         .context("Provided blobstore-put-behaviour is not PutBehaviour")?;
 
+    let get_delay =
+        parse_norm_distribution(matches, GET_MEAN_DELAY_SECS_ARG, GET_STDDEV_DELAY_SECS_ARG)?;
+    let put_delay =
+        parse_norm_distribution(matches, PUT_MEAN_DELAY_SECS_ARG, PUT_STDDEV_DELAY_SECS_ARG)?;
+
     let blobstore_options = BlobstoreOptions::new(
         ChaosOptions::new(read_chaos, write_chaos),
+        DelayOptions {
+            get_dist: get_delay,
+            put_dist: put_delay,
+        },
         ThrottleOptions {
             read_qps,
             write_qps,
@@ -699,6 +710,23 @@ fn parse_blobstore_options(
     };
 
     Ok(blobstore_options)
+}
+
+fn parse_norm_distribution(
+    matches: &ArgMatches,
+    mean_key: &str,
+    stddev_key: &str,
+) -> Result<Option<Normal>, Error> {
+    let put_mean = crate::args::get_and_parse_opt(matches, mean_key);
+    let put_stddev = crate::args::get_and_parse_opt(matches, stddev_key);
+    match (put_mean, put_stddev) {
+        (Some(put_mean), Some(put_stddev)) => {
+            let dist = Normal::new(put_mean, put_stddev)
+                .map_err(|err| format_err!("can't create normal distribution {:?}", err))?;
+            Ok(Some(dist))
+        }
+        _ => Ok(None),
+    }
 }
 
 fn parse_rendezvous_options(matches: &ArgMatches<'_>) -> Result<RendezVousOptions, Error> {

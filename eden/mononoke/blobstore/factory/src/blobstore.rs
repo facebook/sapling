@@ -14,6 +14,7 @@ use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use cacheblob::CachelibBlobstoreOptions;
 use cached_config::ConfigStore;
 use chaosblob::{ChaosBlobstore, ChaosOptions};
+use delayblob::{DelayOptions, DelayedBlobstore};
 use fbinit::FacebookInit;
 use fileblob::Fileblob;
 use futures::future::{self, BoxFuture, FutureExt};
@@ -44,6 +45,7 @@ use crate::ReadOnlyStorage;
 #[derive(Clone, Debug)]
 pub struct BlobstoreOptions {
     pub chaos_options: ChaosOptions,
+    pub delay_options: DelayOptions,
     pub throttle_options: ThrottleOptions,
     #[cfg(fbcode_build)]
     pub manifold_options: crate::facebook::ManifoldOptions,
@@ -57,6 +59,7 @@ pub struct BlobstoreOptions {
 impl BlobstoreOptions {
     pub fn new(
         chaos_options: ChaosOptions,
+        delay_options: DelayOptions,
         throttle_options: ThrottleOptions,
         #[cfg(fbcode_build)] manifold_options: crate::facebook::ManifoldOptions,
         pack_options: PackOptions,
@@ -66,6 +69,7 @@ impl BlobstoreOptions {
     ) -> Self {
         Self {
             chaos_options,
+            delay_options,
             throttle_options,
             #[cfg(fbcode_build)]
             manifold_options,
@@ -545,9 +549,18 @@ fn make_blobstore_put_ops<'a>(
                 store
             };
 
-            if blobstore_options.chaos_options.has_chaos() {
+            let store = if blobstore_options.chaos_options.has_chaos() {
                 Arc::new(ChaosBlobstore::new(store, blobstore_options.chaos_options))
                     as Arc<dyn BlobstorePutOps>
+            } else {
+                store
+            };
+
+            if blobstore_options.delay_options.has_delay() {
+                Arc::new(DelayedBlobstore::from_options(
+                    store,
+                    blobstore_options.delay_options,
+                )) as Arc<dyn BlobstorePutOps>
             } else {
                 store
             }
