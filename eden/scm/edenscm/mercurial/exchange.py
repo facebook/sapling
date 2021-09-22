@@ -1495,15 +1495,9 @@ def pull(
         # etc).
         if not (cloned and pullop.exactbyteclone):
             _pulldiscovery(pullop)
-            canusegraph = (
-                repo.nullableedenapi is not None
-                and (
-                    "lazychangelog" in repo.storerequirements
-                    or "lazytextchangelog" in repo.storerequirements
-                )
-                and repo.ui.configbool("pull", "httpcommitgraph")
-            )
-            if pullop.canusebundle2 and not canusegraph:
+            if pullop.canusebundle2 and not _httpcommitgraphenabled(
+                repo, pullop.remote
+            ):
                 _pullbundle2(pullop)
             _pullchangeset(pullop)
             if pullop.extras.get("phases", True):
@@ -1526,6 +1520,20 @@ pulldiscoveryorder = []
 #
 # This exists to help extensions wrap steps if necessary
 pulldiscoverymapping = {}
+
+
+def _httpcommitgraphenabled(repo, remote):
+    return (
+        repo.nullableedenapi is not None
+        and (
+            "lazychangelog" in repo.storerequirements
+            or "lazytextchangelog" in repo.storerequirements
+        )
+        and (
+            remote.capable("commitgraph")
+            or repo.ui.configbool("pull", "httpcommitgraph")
+        )
+    )
 
 
 def pulldiscovery(stepname):
@@ -1750,10 +1758,7 @@ def _pullchangeset(pullop):
         pullop.heads = pullop.rheads
 
     repo = pullop.repo
-    if pullop.remote.capable("commitgraph") and (
-        "lazychangelog" in repo.storerequirements
-        or "lazytextchangelog" in repo.storerequirements
-    ):
+    if _httpcommitgraphenabled(repo, pullop.remote):
         return _pullcommitgraph(pullop)
 
     if pullop.remote.capable("getbundle"):

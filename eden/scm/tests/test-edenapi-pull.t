@@ -6,8 +6,8 @@
   $ setconfig infinitepush.httpbookmarks=1
   $ setconfig pull.httpbookmarks=1
   $ setconfig pull.httphashprefix=1
+  $ setconfig pull.httpcommitgraph=1
   $ setconfig exchange.httpcommitlookup=1
-  $ setconfig exchange.httpgraph=1
   $ export LOG=exchange::httpcommitlookup=debug,pull
 
 Disable SSH:
