@@ -302,7 +302,7 @@ def _findcommonheadsnew(
             isselectivepull
             and ui.configbool("pull", "httpbookmarks")
             and ui.configbool("exchange", "httpcommitlookup")
-            and getattr(remote, "edenapi", None) is not None
+            and local.nullableedenapi is not None
         )
 
     from .bookmarks import selectivepullbookmarknames, remotenameforurl
