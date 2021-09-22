@@ -278,7 +278,7 @@ Pushbackup also works
   $ cd ../repo-push
   $ echo aa > aa && hg addremove && hg ci -q -m newrepo
   adding aa
-  $ hgmn cloud backup --dest ssh://user@dummy/repo --debug
+  $ hgmn cloud backup --debug
   running * (glob)
   sending hello command
   sending between command
@@ -308,7 +308,7 @@ Pushbackup to mononoke peer with compression enabled
 (a larger file is needed to repro problems with zstd compression)
   $ dd if=/dev/zero of=aa bs=4048 count=1024 2> /dev/null
   $ hg amend -m "xxx"
-  $ MONONOKE_DIRECT_PEER=1 hgmn cloud backup --dest mononoke://$(mononoke_address)/repo --config infinitepush.bundlecompression=ZS --config mononokepeer.compression=true
+  $ MONONOKE_DIRECT_PEER=1 hgmn cloud backup --config infinitepush.bundlecompression=ZS --config mononokepeer.compression=true
   backing up stack rooted at 47da8b81097c
   commitcloud: backed up 1 commit
 
@@ -352,7 +352,7 @@ Pushbackup to mononoke peer with compression enabled
 Pushbackup that does nothing, as only bookmarks have changed
   $ cd ../repo-push
   $ hg book newbook
-  $ hgmn cloud backup --dest ssh://user@dummy/repo --debug
+  $ hgmn cloud backup --debug
   nothing to back up
 
   $ tglogp
@@ -439,7 +439,7 @@ Check phases on another side (for pull command and pull -r)
   $ echo new > file2
   $ hg addremove -q
   $ hg ci -m "change on top of the release"
-  $ hgmn cloud backup --dest ssh://user@dummy/repo
+  $ hgmn cloud backup
   backing up stack rooted at eca836c7c651
   commitcloud: backed up 1 commit
 
@@ -586,13 +586,13 @@ More sophisticated test for phases
   $ mkcommit zzzzz
   $ hgmn push -r . --to "release 4"  --create -q
 
-  $ hgmn cloud backup --dest ssh://user@dummy/repo -q
+  $ hgmn cloud backup -q
 
-  $ hgmn cloud check --dest ssh://user@dummy/repo -r 7d67c7248d48 --remote
+  $ hgmn cloud check -r 7d67c7248d48 --remote
   7d67c7248d486cb264270530ef906f1d09d6c650 backed up
-  $ hgmn cloud check --dest ssh://user@dummy/repo -r bf677f20a49d --remote
+  $ hgmn cloud check -r bf677f20a49d --remote
   bf677f20a49dc5ac94946f3d91ad181f8a6fdbab backed up
-  $ hgmn cloud check --dest ssh://user@dummy/repo -r 5e59ac0f4dd0 --remote
+  $ hgmn cloud check -r 5e59ac0f4dd0 --remote
   5e59ac0f4dd00fd4d751f9f3663be99df0f4765d backed up
 
   $ tglogp

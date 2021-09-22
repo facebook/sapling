@@ -123,7 +123,6 @@ def _sync(
     cloudversion=None,
     cloudworkspace=None,
     connect_opts=None,
-    dest=None,
 ):
     ui = repo.ui
     start = util.timer()
@@ -151,7 +150,6 @@ def _sync(
                     cloudversion=cloudversion,
                     cloudworkspace=cloudworkspace,
                     connect_opts=connect_opts,
-                    dest=dest,
                 )
                 ui.status(
                     _("latest %d years of commits synchronized\n") % years,
@@ -205,7 +203,7 @@ def _sync(
     origheads = _getheads(repo)
     origbookmarks = _getbookmarks(repo)
 
-    remotepath = ccutil.getremotepath(ui, dest)
+    remotepath = ccutil.getremotepath(ui)
 
     getconnection = lambda: repo.connectionpool.get(
         remotepath, connect_opts, reason="cloudsync"

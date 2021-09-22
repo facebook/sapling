@@ -11,15 +11,13 @@ from edenscm.mercurial.i18n import _, _n
 from . import backuplock, backupstate, dependencies, util as ccutil
 
 
-def backup(repo, revs, connect_opts=None, dest=None, force=False):
+def backup(repo, revs, connect_opts=None, force=False):
     with backuplock.lock(repo):
-        return backupwithlockheld(
-            repo, revs, connect_opts=connect_opts, dest=dest, force=force
-        )
+        return backupwithlockheld(repo, revs, connect_opts=connect_opts, force=force)
 
 
-def backupwithlockheld(repo, revs, connect_opts=None, dest=None, force=False):
-    remotepath = ccutil.getremotepath(repo.ui, dest)
+def backupwithlockheld(repo, revs, connect_opts=None, force=False):
+    remotepath = ccutil.getremotepath(repo.ui)
     getconnection = lambda: repo.connectionpool.get(remotepath, connect_opts)
     with repo.lock():
         # Load the backup state under the repo lock to ensure a consistent view.

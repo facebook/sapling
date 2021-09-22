@@ -63,8 +63,6 @@ pullopts = [
     )
 ]
 
-remoteopts = [("", "dest", "", _("remote that is used for backups"))]
-
 createopts = [
     (
         "",
@@ -146,7 +144,6 @@ subcmd = cloud.subcommand(
     + createopts
     + workspace.workspaceopts
     + pullopts
-    + remoteopts
     + switchopt,
 )
 def cloudjoin(ui, repo, **opts):
@@ -346,7 +343,7 @@ def cloudjoin(ui, repo, **opts):
 
 @subcmd(
     "switch",
-    [] + createopts + workspace.workspaceopts + pullopts + remoteopts + switchopt,
+    [] + createopts + workspace.workspaceopts + pullopts + switchopt,
 )
 def switchworkspace(ui, repo, **opts):
     """switch the local repository to a different commit cloud workspace"""
@@ -354,7 +351,7 @@ def switchworkspace(ui, repo, **opts):
     cloudjoin(ui, repo, **opts)
 
 
-@subcmd("rejoin|reconnect", [] + workspace.workspaceopts + pullopts + remoteopts)
+@subcmd("rejoin|reconnect", [] + workspace.workspaceopts + pullopts)
 def cloudrejoin(ui, repo, **opts):
     """reconnect the local repository to commit cloud
 
@@ -852,8 +849,7 @@ def checkauthenticated(ui, repo, tokenlocator):
             None,
             "reset local state (reinitialise the local cache of backed up heads from the server)",
         ),
-    ]
-    + remoteopts,
+    ],
     _("[-r REV...]"),
 )
 def cloudbackup(ui, repo, *revs, **opts):
@@ -878,16 +874,13 @@ def cloudbackup(ui, repo, *revs, **opts):
     if force and inbackground:
         raise error.Abort("'--background' cannot be used with '--force'")
 
-    dest = opts.get("dest")
-
     if inbackground:
-        background.backgroundbackup(repo, dest=dest)
+        background.backgroundbackup(repo)
         return 0
 
     backedup, failed = backup.backup(
         repo,
         revs,
-        dest=dest,
         connect_opts=opts,
         force=force,
     )
@@ -1285,7 +1278,6 @@ def cloudreclaimworkspaces(ui, repo, **opts):
     "sync",
     scmdaemon.scmdaemonsyncopts
     + pullopts
-    + remoteopts
     + [
         (
             "",
@@ -1297,7 +1289,7 @@ def cloudreclaimworkspaces(ui, repo, **opts):
         )
     ],
 )
-def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
+def cloudsync(ui, repo, cloudrefs=None, **opts):
     """backup and synchronize commits with the commit cloud service"""
     repo.ignoreautobackup = True
     full = opts.get("full")
@@ -1321,13 +1313,12 @@ def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
         full,
         maybeversion,
         maybeworkspace,
-        dest=dest,
         connect_opts=opts,
     )
     return ret
 
 
-@subcmd("recover", [] + pullopts + remoteopts)
+@subcmd("recover", [] + pullopts)
 def cloudrecover(ui, repo, **opts):
     """perform recovery for commit cloud
 
@@ -1347,10 +1338,9 @@ def cloudrecover(ui, repo, **opts):
     [
         ("r", "rev", [], _("show the specified revision or revset"), _("REV")),
         ("", "remote", None, _("check on the remote server")),
-    ]
-    + remoteopts,
+    ],
 )
-def cloudcheck(ui, repo, dest=None, **opts):
+def cloudcheck(ui, repo, **opts):
     """check if commits have been backed up
 
     If no revision are specified then it checks working copy parent.
@@ -1366,7 +1356,7 @@ def cloudcheck(ui, repo, dest=None, **opts):
     nodestocheck = [repo[r].hex() for r in revs]
 
     if remote:
-        remotepath = ccutil.getremotepath(ui, dest)
+        remotepath = ccutil.getremotepath(ui)
         getconnection = lambda: repo.connectionpool.get(remotepath, opts)
         isbackedup = {
             nodestocheck[i]: res
@@ -1549,8 +1539,7 @@ def waitbackup(ui, repo, timeout):
     [
         ("r", "rev", [], _("revisions to back up")),
         ("", "background", None, "run backup in background"),
-    ]
-    + remoteopts,
+    ],
     _("[-r REV...]"),
 )
 def pushbackup(ui, repo, *revs, **opts):
@@ -1570,17 +1559,16 @@ def pushbackup(ui, repo, *revs, **opts):
     [
         ("r", "rev", [], _("show the specified revision or revset"), _("REV")),
         ("", "remote", None, _("check on the remote server")),
-    ]
-    + remoteopts,
+    ],
 )
-def isbackedup(ui, repo, dest=None, **opts):
+def isbackedup(ui, repo, **opts):
     """check if commits have been backed up (DEPRECATED)
 
     If no revision are specified then it checks working copy parent.
 
     'hg isbackedup' is deprecated in favour of 'hg cloud check'.
     """
-    return cloudcheck(ui, repo, dest, **opts)
+    return cloudcheck(ui, repo, **opts)
 
 
 @subcmd(
@@ -1619,8 +1607,7 @@ def getfrombackup(ui, repo, **opts):
             None,
             "reupload commits without checking what is present on the server",
         ),
-    ]
-    + remoteopts,
+    ],
 )
 def cloudupload(ui, repo, **opts):
     """Upload draft commits using EdenApi Uploads

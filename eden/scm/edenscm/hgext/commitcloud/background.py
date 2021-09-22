@@ -150,7 +150,7 @@ def _transaction(orig, self, *args, **kwargs):
     return orig(self, *args, **kwargs)
 
 
-def backgroundbackup(repo, dest=None, reason=None):
+def backgroundbackup(repo, reason=None):
     """start background backup"""
     ui = repo.ui
     if workspace.currentworkspace(repo):
@@ -169,9 +169,6 @@ def backgroundbackup(repo, dest=None, reason=None):
     # developer config: infinitepushbackup.bgdebug
     if ui.configbool("infinitepushbackup", "bgdebug", False):
         background_cmd.append("--debug")
-
-    if dest:
-        background_cmd += ["--dest", dest]
 
     logfile = None
     logdir = ui.config("infinitepushbackup", "logdir")

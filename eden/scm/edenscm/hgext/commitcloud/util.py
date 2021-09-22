@@ -66,11 +66,9 @@ def getreponame(repo):
     return reponame
 
 
-def getremotepath(ui, dest=None):
-    """Select an appopriate remote repository to connect to for commit cloud operations.
-    If dest is empty, it is the default path.
-    """
-    path = ui.paths.getpath(dest or None, default="default")
+def getremotepath(ui):
+    """Select an appopriate remote repository to connect to for commit cloud operations."""
+    path = ui.paths.getpath("default")
     if not path:
         raise error.Abort(
             _("'default' repository isn't configured!"),
