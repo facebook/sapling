@@ -105,7 +105,7 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
         _ctx: &CoreContext,
         _master_heads: Vec<ChangesetId>,
         _cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
+    ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>>>> {
         Err(format_err!(
             "Segmented Changelog is not enabled for this repo",
         ))
@@ -165,7 +165,7 @@ macro_rules! segmented_changelog_delegate {
                 $ctx: &CoreContext,
                 master_heads: Vec<ChangesetId>,
                 cs_ids: Vec<ChangesetId>,
-            ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
+            ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>>>> {
                 let delegate = $delegate;
                 delegate
                     .many_changeset_ids_to_locations($ctx, master_heads, cs_ids)

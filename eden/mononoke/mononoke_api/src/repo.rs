@@ -1469,11 +1469,17 @@ impl RepoContext {
         &self,
         master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>, MononokeError> {
+    ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>, MononokeError>>, MononokeError>
+    {
         let segmented_changelog = self.repo.segmented_changelog();
         let result = segmented_changelog
             .many_changeset_ids_to_locations(&self.ctx, master_heads, cs_ids)
             .await
+            .map(|ok| {
+                ok.into_iter()
+                    .map(|(k, v)| (k, v.map_err(Into::into)))
+                    .collect::<HashMap<ChangesetId, Result<_, MononokeError>>>()
+            })
             .map_err(MononokeError::from)?;
         Ok(result)
     }

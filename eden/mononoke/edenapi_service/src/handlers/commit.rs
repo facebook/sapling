@@ -115,10 +115,14 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
             .many_changeset_ids_to_locations(master_heads, hg_cs_ids.clone())
             .await;
         let responses = hg_cs_ids.into_iter().map(move |hgcsid| {
-            let result = hgcsid_to_location
-                .as_ref()
-                .map(|hsh| hsh.get(&hgcsid).map(|l| l.map_descendant(|x| x.into())))
-                .map_err(|e| (&*e).into());
+            let result = match hgcsid_to_location.as_ref() {
+                Ok(hsh) => match hsh.get(&hgcsid) {
+                    Some(Ok(l)) => Ok(Some(l.map_descendant(|x| x.into()))),
+                    Some(Err(e)) => Err(e.into()),
+                    None => Ok(None),
+                },
+                Err(e) => Err(e.into()),
+            };
             CommitHashToLocationResponse {
                 hgid: hgcsid.into(),
                 result,

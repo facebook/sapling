@@ -583,7 +583,8 @@ impl HgRepoContext {
         &self,
         hg_master_heads: Vec<HgChangesetId>,
         hg_ids: Vec<HgChangesetId>,
-    ) -> Result<HashMap<HgChangesetId, Location<HgChangesetId>>, MononokeError> {
+    ) -> Result<HashMap<HgChangesetId, Result<Location<HgChangesetId>, MononokeError>>, MononokeError>
+    {
         let all_hg_ids: Vec<_> = hg_ids
             .iter()
             .cloned()
@@ -626,7 +627,10 @@ impl HgRepoContext {
                 self.ctx().clone(),
                 cs_to_blocations
                     .iter()
-                    .map(|(_, l)| l.descendant)
+                    .filter_map(|(_, result)| match result {
+                        Ok(l) => Some(l.descendant),
+                        _ => None,
+                    })
                     .collect::<Vec<_>>(),
             )
             .await?
@@ -634,26 +638,28 @@ impl HgRepoContext {
             .map(|(hg_id, cs_id)| (cs_id, hg_id))
             .collect();
         let response = hg_ids
-            .iter()
-            .filter_map(|hg_id| hg_to_bonsai.get(hg_id).map(|cs_id| (hg_id, cs_id)))
+            .into_iter()
+            .filter_map(|hg_id| hg_to_bonsai.get(&hg_id).map(|cs_id| (hg_id, cs_id)))
             .filter_map(|(hg_id, cs_id)| {
                 cs_to_blocations
                     .get(cs_id)
-                    .map(|cs_location| (hg_id, cs_location))
+                    .map(|cs_result| (hg_id, cs_result.clone()))
             })
-            .map(|(hg_id, cs_location)| {
-                cs_location
-                    .try_map_descendant(|descendant| {
+            .map(|(hg_id, cs_result)| {
+                let cs_result = match cs_result {
+                    Ok(cs_location) => cs_location.try_map_descendant(|descendant| {
                         bonsai_to_hg.get(&descendant).cloned().ok_or_else(|| {
                             MononokeError::InvalidRequest(format!(
                                 "failed to find hg equivalent for bonsai {}",
-                                descendant,
+                                descendant
                             ))
                         })
-                    })
-                    .map(|hg_location| (*hg_id, hg_location))
+                    }),
+                    Err(e) => Err(e),
+                };
+                (hg_id, cs_result)
             })
-            .collect::<Result<HashMap<HgChangesetId, Location<HgChangesetId>>, MononokeError>>()?;
+            .collect::<HashMap<HgChangesetId, Result<Location<HgChangesetId>, MononokeError>>>();
 
         Ok(response)
     }

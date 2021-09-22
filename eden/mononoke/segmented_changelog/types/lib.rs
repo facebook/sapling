@@ -174,7 +174,7 @@ pub trait SegmentedChangelog: Send + Sync {
         let mut ids = self
             .many_changeset_ids_to_locations(ctx, master_heads, vec![cs_id])
             .await?;
-        Ok(ids.remove(&cs_id))
+        ids.remove(&cs_id).transpose()
     }
 
     /// Get the graph locations given a set of commit identifier.
@@ -188,7 +188,7 @@ pub trait SegmentedChangelog: Send + Sync {
         ctx: &CoreContext,
         master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>>;
+    ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>>>>;
 
     /// Returns data necessary for SegmentedChangelog to be initialized by a client.
     ///

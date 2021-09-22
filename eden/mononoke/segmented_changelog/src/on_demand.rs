@@ -378,7 +378,7 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         ctx: &CoreContext,
         master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
+    ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>>>> {
         STATS::changeset_id_to_location.add_value(1);
         self.build_up_to_heads(ctx, &master_heads)
             .await

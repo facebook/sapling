@@ -55,7 +55,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         ctx: &CoreContext,
         master_heads: Vec<ChangesetId>,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
+    ) -> Result<HashMap<ChangesetId, Result<Location<ChangesetId>>>> {
         let (master_head_dag_ids, cs_to_dag_id) = futures::try_join!(
             self.idmap.find_many_dag_ids(ctx, master_heads.clone()),
             self.idmap.find_many_dag_ids(ctx, cs_ids),
@@ -76,13 +76,13 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         let constraints = FirstAncestorConstraint::KnownUniversally {
             heads: DagIdSet::from_spans(master_head_dag_ids.into_iter().map(|(_k, v)| v)),
         };
-        let cs_to_vlocation = cs_to_dag_id
+        let cs_to_vlocation: HashMap<ChangesetId, Result<Option<Location<_>>>> = cs_to_dag_id
             .into_iter()
-            .filter_map(|(cs_id, dag_id)| {
-                // We do not return an entry when the asked commit is a descendant of client_head.
-                match self
+            .map(|(cs_id, dag_id)| {
+                let result = self
                     .iddag
-                    .to_first_ancestor_nth(dag_id, constraints.clone())
+                    .to_first_ancestor_nth(dag_id, constraints.clone());
+                let cs_id_result = match result
                 {
                     // Preserve error message in server response by flatten the error.
                     Err(e) => Err(format_err!(
@@ -91,31 +91,40 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
                         &master_heads,
                         e
                     )),
-                    Ok(v) => Ok(v),
-                }
-                .map(|opt| opt.map(|(v, dist)| (cs_id, Location::new(v, dist))))
-                .transpose()
+                    Ok(Some((v, dist))) => Ok(Some(Location::new(v, dist))),
+                    Ok(None) => Ok(None),
+                };
+                (cs_id, cs_id_result)
             })
-            .collect::<Result<HashMap<_, _>>>()?;
+            .collect();
         let common_cs_ids = {
-            let to_fetch = cs_to_vlocation.values().map(|l| l.descendant).collect();
+            let to_fetch = cs_to_vlocation
+                .values()
+                .filter_map(|l| match l {
+                    Ok(Some(l)) => Some(l.descendant),
+                    _ => None,
+                })
+                .collect();
             self.idmap
                 .find_many_changeset_ids(ctx, to_fetch)
                 .await
                 .context("failed fetching dag_id to changeset translations")?
         };
-        let locations = cs_to_vlocation
+        let locations: HashMap<ChangesetId, Result<Location<_>>> = cs_to_vlocation
             .into_iter()
-            .map(|(cs, location)| {
-                location
-                    .try_map_descendant(|dag_id| {
+            .filter_map(|(cs, cs_result)| {
+                let cs_result = match cs_result {
+                    Ok(Some(location)) => Some(location.try_map_descendant(|dag_id| {
                         common_cs_ids.get(&dag_id).cloned().ok_or_else(|| {
                             format_err!("failed to find dag_id translation for {}", dag_id)
                         })
-                    })
-                    .map(|l| (cs, l))
+                    })),
+                    Ok(None) => None,
+                    Err(e) => Some(Err(e)),
+                };
+                cs_result.map(|r| (cs, r))
             })
-            .collect::<Result<HashMap<_, _>>>()?;
+            .collect();
         Ok(locations)
     }
 
