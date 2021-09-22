@@ -18,6 +18,7 @@
 namespace facebook::eden {
 
 class HgProxyHash;
+class HgImportRequest;
 
 class HgDatapackStore {
  public:
@@ -45,9 +46,7 @@ class HgDatapackStore {
    * imported. Otherwise the promise will be left untouched.
    */
   void getBlobBatch(
-      const std::vector<Hash>& ids,
-      const std::vector<HgProxyHash>& hashes,
-      std::vector<folly::Promise<std::unique_ptr<Blob>>*> promises);
+      const std::vector<std::shared_ptr<HgImportRequest>>& requests);
 
   void getTreeBatch(
       const std::vector<Hash>& ids,

@@ -96,48 +96,28 @@ HgQueuedBackingStore::~HgQueuedBackingStore() {
 
 void HgQueuedBackingStore::processBlobImportRequests(
     std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
-  std::vector<Hash> hashes;
-  std::vector<HgProxyHash> proxyHashes;
-  std::vector<folly::Promise<HgImportRequest::BlobImport::Response>*> promises;
-
   folly::stop_watch<std::chrono::milliseconds> watch;
-  hashes.reserve(requests.size());
-  proxyHashes.reserve(requests.size());
-  promises.reserve(requests.size());
 
   XLOG(DBG4) << "Processing blob import batch size=" << requests.size();
 
   for (auto& request : requests) {
     auto* blobImport = request->getRequest<HgImportRequest::BlobImport>();
-    auto& hash = blobImport->hash;
-    auto* promise =
-        request->getPromise<HgImportRequest::BlobImport::Response>();
 
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::BLOB, blobImport->proxyHash));
 
-    XLOGF(
-        DBG4,
-        "Processing blob request for {} ({:p})",
-        hash.toString(),
-        static_cast<void*>(promise));
-    hashes.emplace_back(hash);
-    proxyHashes.emplace_back(blobImport->proxyHash);
-    promises.emplace_back(promise);
+    XLOGF(DBG4, "Processing blob request for {}", blobImport->hash.toString());
   }
 
-  backingStore_->getDatapackStore().getBlobBatch(hashes, proxyHashes, promises);
+  backingStore_->getDatapackStore().getBlobBatch(requests);
 
   {
-    auto request = requests.begin();
-    auto proxyHash = proxyHashes.begin();
-    auto promise = promises.begin();
     std::vector<folly::SemiFuture<folly::Unit>> futures;
     futures.reserve(requests.size());
 
-    XCHECK_EQ(requests.size(), proxyHashes.size());
-    for (; request != requests.end(); ++request, ++proxyHash, ++promise) {
-      if ((*promise)->isFulfilled()) {
+    for (auto& request : requests) {
+      auto* promise = request->getPromise<std::unique_ptr<Blob>>();
+      if (promise->isFulfilled()) {
         stats_->getHgBackingStoreStatsForCurrentThread()
             .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
         continue;
@@ -146,9 +126,11 @@ void HgQueuedBackingStore::processBlobImportRequests(
       // The blobs were either not found locally, or, when EdenAPI is enabled,
       // not found on the server. Let's import the blob through the hg importer.
       // TODO(xavierd): remove when EdenAPI has been rolled out everywhere.
+      auto fetchSemiFuture = backingStore_->fetchBlobFromHgImporter(
+          request->getRequest<HgImportRequest::BlobImport>()->proxyHash);
       futures.emplace_back(
-          backingStore_->fetchBlobFromHgImporter(*proxyHash)
-              .defer([request = std::move(*request), watch, stats = stats_](
+          std::move(fetchSemiFuture)
+              .defer([request = std::move(request), watch, stats = stats_](
                          auto&& result) mutable {
                 auto hash =
                     request->getRequest<HgImportRequest::BlobImport>()->hash;

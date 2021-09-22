@@ -17,6 +17,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/utils/Bug.h"
 
@@ -95,10 +96,10 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
 std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
     const Hash& id,
     const HgProxyHash& hgInfo) {
-  auto content = store_.getBlob(
-      hgInfo.path().stringPiece(), hgInfo.revHash().getBytes(), true);
+  auto content =
+      store_.getBlob(hgInfo.path().stringPiece(), hgInfo.byteHash(), true);
   if (content) {
-    return std::make_unique<Blob>(id, *content);
+    return std::make_unique<Blob>(id, std::move(*content));
   }
 
   return nullptr;
@@ -121,45 +122,35 @@ std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
 }
 
 void HgDatapackStore::getBlobBatch(
-    const std::vector<Hash>& ids,
-    const std::vector<HgProxyHash>& hashes,
-    std::vector<folly::Promise<std::unique_ptr<Blob>>*> promises) {
-  std::vector<Hash> blobhashes;
+    const std::vector<std::shared_ptr<HgImportRequest>>& importRequests) {
   std::vector<std::pair<folly::ByteRange, folly::ByteRange>> requests;
 
-  size_t count = hashes.size();
+  size_t count = importRequests.size();
   requests.reserve(count);
-  blobhashes.reserve(count);
 
-  // `.revHash()` will return an owned `Hash` and `getBytes()` will return a
-  // reference to that newly created `Hash`. We need to store these `Hash` to
-  // avoid storing invalid pointers in `requests`. For a similar reason, we
-  // cannot use iterator-based loop here otherwise the reference we get will be
-  // pointing to the iterator.
-  for (size_t i = 0; i < count; i++) {
-    blobhashes.emplace_back(hashes[i].revHash());
-  }
-
-  auto blobhash = blobhashes.begin();
-  auto hash = hashes.begin();
-  for (; blobhash != blobhashes.end(); blobhash++, hash++) {
-    XCHECK(hash != hashes.end());
-    requests.emplace_back(std::make_pair<>(
-        folly::ByteRange{hash->path().stringPiece()}, blobhash->getBytes()));
+  for (const auto& importRequest : importRequests) {
+    auto& proxyHash =
+        importRequest->getRequest<HgImportRequest::BlobImport>()->proxyHash;
+    requests.emplace_back(
+        folly::ByteRange{proxyHash.path().stringPiece()}, proxyHash.byteHash());
   }
 
   store_.getBlobBatch(
       requests,
       false,
-      [promises = std::move(promises), ids, requests](
+      [&importRequests, &requests](
           size_t index, std::unique_ptr<folly::IOBuf> content) {
         XLOGF(
             DBG9,
             "Imported name={} node={}",
             folly::StringPiece{requests[index].first},
             folly::hexlify(requests[index].second));
-        auto blob = std::make_unique<Blob>(ids[index], *content);
-        promises[index]->setValue(std::move(blob));
+        auto& importRequest = importRequests[index];
+        auto* blobRequest =
+            importRequest->getRequest<HgImportRequest::BlobImport>();
+        auto blob = std::make_unique<Blob>(blobRequest->hash, *content);
+        importRequest->getPromise<std::unique_ptr<Blob>>()->setValue(
+            std::move(blob));
       });
 }
 
