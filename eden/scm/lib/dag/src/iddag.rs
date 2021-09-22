@@ -31,6 +31,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::ops::Deref;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use std::path::Path;
+use tracing::debug;
 use tracing::{debug_span, field, trace};
 
 /// Structure to store a DAG of integers, with indexes to speed up ancestry queries.
@@ -868,61 +869,163 @@ pub trait IdDagAlgorithm: IdDagStore {
 
     /// See `FirstAncestorConstraint::KnownUniversally`.
     ///
+    /// Try to represent `id` as `x~n` (revset notation) form, where `x` must
+    /// be in `heads + parents(merge() & ancestors(heads))`.
+    ///
     /// Return `None` if `id` is not part of `ancestors(heads)`.
     fn to_first_ancestor_nth_known_universally(
         &self,
-        mut id: Id,
+        id: Id,
         heads: IdSet,
     ) -> Result<Option<(Id, u64)>> {
+        // Do not track errors for the first time. This has lower overhead.
+        match self.to_first_ancestor_nth_known_universally_with_errors(id, &heads, None) {
+            Ok(v) => Ok(v),
+            Err(_) => {
+                // Pay additional overhead to get error message.
+                self.to_first_ancestor_nth_known_universally_with_errors(
+                    id,
+                    &heads,
+                    Some(Vec::new()),
+                )
+            }
+        }
+    }
+
+    /// Internal implementation of `to_first_ancestor_nth_known_universally`.
+    ///
+    /// If `details` is not `None`, it is used to store extra error messages
+    /// with some extra overhead.
+    fn to_first_ancestor_nth_known_universally_with_errors(
+        &self,
+        mut id: Id,
+        heads: &IdSet,
+        mut details: Option<Vec<String>>,
+    ) -> Result<Option<(Id, u64)>> {
+        // To figure `x~n` we look at the flat segment containing `id`, and check:
+        // - If the flat segment overlaps with heads, then just use the overlapped id as `x`.
+        // - Try to find parents of merges within the flat segment (the merges belong to other
+        //   "child segment"s). If the merge is an ancestor of `heads`, then the parent of the
+        //   merge can be used as `x`, if `n` is not 0.
+        // - Otherwise, try to follow connected flat segment (with single parent), convert the
+        //   `x~n` question to a `y~(n+m)` question, then start over.
+        let mut trace = |msg: &dyn Fn() -> String| {
+            if let Some(details) = details.as_mut() {
+                details.push(msg().trim().to_string());
+            }
+            trace!(target: "dag::algo::toxn", "{}", msg());
+        };
+
         let ancestors = self.ancestors(heads.clone())?;
         if !ancestors.contains(id) {
             return Ok(None);
         }
 
         let mut n = 0;
+        debug!(target: "dag::algo::toxn", "resolving {:?}", id);
         let result = 'outer: loop {
             let seg = self
                 .find_flat_segment_including_id(id)?
                 .ok_or_else(|| id.not_found_error())?;
-            let head = seg.head()?;
+            let span = seg.span()?;
+            let head = span.high;
+            trace(&|| format!(" in seg {:?}", &seg));
             // Can we use an `id` from `heads` as `x`?
             let intersected = heads.intersection(&(id..=head).into());
             if !intersected.is_empty() {
                 let head = intersected.min().unwrap();
                 n += head.0 - id.0;
+                trace(&|| format!("  contains head ({:?})", head));
                 break 'outer (head, n);
             }
-            // Can we use `head` in `seg` as `x`?
-            let mut next_id = None;
-            for entry in self.iter_master_flat_segments_with_parent_span(head.into())? {
-                let child_seg = entry?.1;
+            // Does this segment contain any `x` that is an ancestor of a merge,
+            // that can be used as `x`?
+            //
+            // Note the `x` does not have to be the head of `seg`. For example,
+            //
+            //      1--2--3--4 (seg, span: 1..=4)
+            //          \
+            //           5--6  (child_seg, span: 5..=6, parents: [2])
+            //
+            // During `to_first_ancestor_nth(2, [6])`, `1` needs to be translated
+            // to `6~3`, not `4~3`. Needs to lookup parents in the range `1..=4`.
+            let mut next_id_n = None;
+            let parent_span = span.low.max(id)..=span.high;
+            for entry in self.iter_master_flat_segments_with_parent_span(parent_span.into())? {
+                let (parent_id, child_seg) = entry?;
+                trace(&|| format!("  {:?} has child seg ({:?})", parent_id, &child_seg));
                 let child_low = child_seg.span()?.low;
                 if !ancestors.contains(child_low) {
                     // `child_low` is outside `ancestors(heads)`, cannot use it
                     // or its parents as references.
+                    trace(&|| "   child seg out of range".to_string());
                     continue;
                 }
+
                 if child_seg.parent_count()? > 1 {
                     // `child_low` is a merge included in `ancestors`, and
-                    // `head` is a parent of the merge. Therefore `head` can be
-                    // used as `x`.
-                    n += head.0 - id.0;
-                    break 'outer (head, n);
+                    // `parent_id` is a parent of the merge. Therefore
+                    // `parent_id` might be used as `x`.
+                    let next_n = n + parent_id.0 - id.0;
+                    if next_n > 0 {
+                        break 'outer (parent_id, next_n);
+                    }
+
+                    // Fragmented linear segments. Convert id~n to next_id~next_n.
+                    let child_parents = child_seg.parents()?;
+                    match child_parents.get(0) {
+                        None => {
+                            return bug(format!(
+                                "segment {:?} should have parent {:?}",
+                                &child_seg, &parent_id
+                            ));
+                        }
+                        Some(p) => {
+                            if &parent_id != p {
+                                // Not the first parent. Do not follow it.
+                                trace(&|| {
+                                    format!(
+                                        "   child seg cannot be followed ({:?} is not p1)",
+                                        &parent_id
+                                    )
+                                });
+                                continue;
+                            }
+                        }
+                    }
                 }
-                // Fragmented segments. Continue search.
+
                 debug_assert!(ancestors.contains(child_low));
-                next_id = Some(child_low);
+                let next_id = child_low;
+                let next_n = n + 1 + parent_id.0 - id.0;
+                trace(&|| format!("  follow {:?}~{}", next_id, next_n));
+                next_id_n = Some((next_id, next_n));
                 break;
             }
-            match next_id {
+            match next_id_n {
                 // This should not happen if indexes and segments are legit.
-                None => return bug(format!("cannot convert {} to x~n form", id)),
-                Some(next_id) => {
-                    n += head.0 - id.0 + 1;
+                None => {
+                    let mut message = format!(
+                        concat!(
+                            "cannot convert {} to x~n form (x must be in ",
+                            "`H + parents(ancestors(H) & merge())` where H = {:?})",
+                        ),
+                        id, &heads,
+                    );
+                    if let Some(details) = details {
+                        if !details.is_empty() {
+                            message += &format!(" (trace: {})", details.join(", "));
+                        }
+                    }
+                    return Err(Programming(message));
+                }
+                Some((next_id, next_n)) => {
                     id = next_id;
+                    n = next_n;
                 }
             }
         };
+        trace!(target: "dag::algo::toxn", " found: {:?}", &result);
         Ok(Some(result))
     }
 

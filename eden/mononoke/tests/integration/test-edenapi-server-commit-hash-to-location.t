@@ -69,11 +69,13 @@ Create and send file data request.
   >   ],
   >   "hgids": [
   >     "$F",
+  >     "$E",
   >     "$D",
   >     "$C",
   >     "$B",
   >     "$A",
   >     "$F",
+  >     "$G",
   >     "$H",
   >     "000000000000000000000000000000123456789a"
   >   ],
@@ -87,11 +89,13 @@ Create and send file data request.
       ),
       hgids: [
           WireHgId("bb56d4161ee371c720dbc8b504810c62a22fe314"),
+          WireHgId("49cb92066bfd0763fff729c354345650b7428554"),
           WireHgId("f585351a92f85104bff7c284233c338b10eb1df7"),
           WireHgId("26805aba1e600a82e93661149f2313866a221a7b"),
           WireHgId("112478962961147124edd43549aedd1a335e44bf"),
           WireHgId("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),
           WireHgId("bb56d4161ee371c720dbc8b504810c62a22fe314"),
+          WireHgId("1b794c59b583e47686701d0142848e90a3a94a7d"),
           WireHgId("06383dd46c9bcbca9300252b4b6cddad88f8af21"),
           WireHgId("000000000000000000000000000000123456789a"),
       ],
@@ -113,15 +117,19 @@ Check files in response.
   06383dd46c9bcbca9300252b4b6cddad88f8af21 =>
       Ok(None)
   112478962961147124edd43549aedd1a335e44bf =>
-      Ok(Some(Location(descendant=49cb92066bfd0763fff729c354345650b7428554, dist=1)))
+      Ok(Some(Location(descendant=f585351a92f85104bff7c284233c338b10eb1df7, dist=2)))
+  1b794c59b583e47686701d0142848e90a3a94a7d =>
+      Ok(Some(Location(descendant=1b794c59b583e47686701d0142848e90a3a94a7d, dist=0)))
   26805aba1e600a82e93661149f2313866a221a7b =>
       Ok(Some(Location(descendant=f585351a92f85104bff7c284233c338b10eb1df7, dist=1)))
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0 =>
-      Ok(Some(Location(descendant=49cb92066bfd0763fff729c354345650b7428554, dist=2)))
+      Ok(Some(Location(descendant=f585351a92f85104bff7c284233c338b10eb1df7, dist=3)))
+  49cb92066bfd0763fff729c354345650b7428554 =>
+      Ok(Some(Location(descendant=1b794c59b583e47686701d0142848e90a3a94a7d, dist=2)))
   bb56d4161ee371c720dbc8b504810c62a22fe314 =>
       Ok(Some(Location(descendant=1b794c59b583e47686701d0142848e90a3a94a7d, dist=1)))
   bb56d4161ee371c720dbc8b504810c62a22fe314 =>
       Ok(Some(Location(descendant=1b794c59b583e47686701d0142848e90a3a94a7d, dist=1)))
   f585351a92f85104bff7c284233c338b10eb1df7 =>
-      Ok(Some(Location(descendant=f585351a92f85104bff7c284233c338b10eb1df7, dist=0)))
+      Err(code=0, msg='InternalError(InternalError(failed to compute the common descendant and distance for 86de925f9338cbc325f5ec1620b6556fb441d1e08466f65ae51930fae6abe120 with heads [ChangesetId(Blake2(a3bb22b98a3f75dbf14a07bcfe4200c4e5e94e3bef536b2f4165ba3db2b35d82))]: Programming("cannot convert 4 to x~n form (x must be in `H + parents(ancestors(H) & merge())` where H = 6) (trace: in seg 3-4[1], 4 has child seg (H5-7[2, 4]), child seg cannot be followed (4 is not p1))")))')
 

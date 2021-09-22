@@ -430,31 +430,36 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     };
 
     // [Id] -> RequestLocationToName (useful for getting commit hashes from ids).
-    let ids: Vec<Id> = (b'A'..=b'L')
-        .map(|b| built.name_dag.map.find_id_by_name(&[b]).unwrap().unwrap())
+    // 3 (D) and 9 (J) are p2 that cannot be resolved.
+    let ids: Vec<Id> = b"ABCEFGHI"
+        .iter()
+        .map(|&b| built.name_dag.map.find_id_by_name(&[b]).unwrap().unwrap())
         .collect();
     let ids = IdSet::from_spans(ids);
     let request1: RequestLocationToName =
         r((&built.name_dag.map, &built.name_dag.dag).process(ids)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &request1)),
-        "RequestLocationToName { paths: [L~0(+2), J~0(+2), H~0(+4), D~0, B~0, D~1, B~1] }"
+        "RequestLocationToName { paths: [J~1, L~2(+5), D~1, B~1] }"
     );
 
     // [name] -> RequestNameToLocation (useful for getting ids from commit hashes).
-    let names = (b'A'..=b'L').map(|b| VertexName::copy_from(&[b])).collect();
+    let names = b"ABCEFGHI"
+        .iter()
+        .map(|&b| VertexName::copy_from(&[b]))
+        .collect();
     let request2: RequestNameToLocation =
         r((&built.name_dag.map, &built.name_dag.dag).process(names)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &request2)),
-        "RequestNameToLocation { names: [A, B, C, D, E, F, G, H, I, J, K, L], heads: [L] }"
+        "RequestNameToLocation { names: [A, B, C, E, F, G, H, I], heads: [L] }"
     );
 
     // RequestLocationToName -> ResponseIdNamePair
     let response1 = r((&built.name_dag.map, &built.name_dag.dag).process(request1)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response1)),
-        "ResponseIdNamePair { path_names: [(L~0(+2), [L, K]), (J~0(+2), [J, I]), (H~0(+4), [H, G, F, E]), (D~0, [D]), (B~0, [B]), (D~1, [C]), (B~1, [A])] }"
+        "ResponseIdNamePair { path_names: [(J~1, [I]), (L~2(+5), [H, G, F, E, B]), (D~1, [C]), (B~1, [A])] }"
     );
 
     // RequestNameToLocation -> ResponseIdNamePair
@@ -462,7 +467,7 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     let response2 = r((&built.name_dag.map, &built.name_dag.dag).process(request2)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response2)),
-        "ResponseIdNamePair { path_names: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
+        "ResponseIdNamePair { path_names: [(B~1, [A]), (J~5, [B]), (D~1, [C]), (J~4, [E]), (J~3, [F]), (J~2, [G]), (L~2, [H]), (J~1, [I])] }"
     );
 
     // Applying responses to IdMap. Should not cause errors.
@@ -504,7 +509,6 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
   F: 5,
   G: 6,
   I: 8,
-  K: 10,
 }
 "#
     );
@@ -916,7 +920,11 @@ Lv1: R0-7[]"#
         let c = FirstAncestorConstraint::KnownUniversally {
             heads: Id(11).into(),
         };
-        format!("{:?}", dag.to_first_ancestor_nth(Id(id), c).unwrap())
+        let res = dag.to_first_ancestor_nth(Id(id), c);
+        match res {
+            Ok(s) => format!("{:?}", s),
+            Err(e) => e.to_string(),
+        }
     };
 
     assert_eq!(parents(vec![]), "");
@@ -959,15 +967,21 @@ Lv1: R0-7[]"#
     assert!(dag.first_ancestor_nth(Id(11), 8).is_err());
 
     assert_eq!(to_first_ancestor_nth(0), "Some((1, 1))");
-    assert_eq!(to_first_ancestor_nth(1), "Some((1, 0))");
+    assert_eq!(to_first_ancestor_nth(1), "Some((9, 5))");
     assert_eq!(to_first_ancestor_nth(2), "Some((3, 1))");
-    assert_eq!(to_first_ancestor_nth(3), "Some((3, 0))");
-    assert_eq!(to_first_ancestor_nth(4), "Some((7, 3))");
-    assert_eq!(to_first_ancestor_nth(5), "Some((7, 2))");
-    assert_eq!(to_first_ancestor_nth(6), "Some((7, 1))");
-    assert_eq!(to_first_ancestor_nth(7), "Some((7, 0))");
+    assert_eq!(
+        to_first_ancestor_nth(3),
+        "ProgrammingError: cannot convert 3 to x~n form (x must be in `H + parents(ancestors(H) & merge())` where H = 11) (trace: in seg R2-3[], 3 has child seg (H4-7[1, 3]), child seg cannot be followed (3 is not p1))"
+    );
+    assert_eq!(to_first_ancestor_nth(4), "Some((9, 4))");
+    assert_eq!(to_first_ancestor_nth(5), "Some((9, 3))");
+    assert_eq!(to_first_ancestor_nth(6), "Some((9, 2))");
+    assert_eq!(to_first_ancestor_nth(7), "Some((11, 2))");
     assert_eq!(to_first_ancestor_nth(8), "Some((9, 1))");
-    assert_eq!(to_first_ancestor_nth(9), "Some((9, 0))");
+    assert_eq!(
+        to_first_ancestor_nth(9),
+        "ProgrammingError: cannot convert 9 to x~n form (x must be in `H + parents(ancestors(H) & merge())` where H = 11) (trace: in seg 8-9[6], 9 has child seg (H10-11[7, 9]), child seg cannot be followed (9 is not p1))"
+    );
     assert_eq!(to_first_ancestor_nth(10), "Some((11, 1))");
     assert_eq!(to_first_ancestor_nth(11), "Some((11, 0))");
 }

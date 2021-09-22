@@ -95,7 +95,7 @@ async fn test_sparse_dag() {
             [
                 "resolve paths: [D~1]",
                 "resolve names: [E], heads: [M]",
-                "resolve paths: [L~1, I~1, I~3(+2)]"
+                "resolve paths: [L~1, I~1, G~1(+2)]"
             ]
         );
     }
@@ -405,18 +405,29 @@ async fn test_resolve_pick_path() {
         r#"
            A-B-C
             \
-             D-F
-              /
-             E  # master: F C"#,
+             \ E
+              \ \
+               D-F 
+                \
+                 G-H-I   # master: F C I"#,
     );
 
-    // The client does not have D, F, E part of the graph.
+    // The client does not have D:: part of the graph.
     let server1 = TestDag::draw("A-B-C # master: C");
     let client1 = server1.client_cloned_data().await.with_remote(&server2);
 
-    // BUG: Cannot resolve A. It is resolved to D~1 but D does not exist locally.
-    client1.dag.vertex_id("A".into()).await.unwrap_err();
+    // Can resolve A using B~1, not D~1.
+    assert_eq!(client1.dag.vertex_id("A".into()).await.unwrap(), Id(0));
     assert_eq!(client1.output(), ["resolve names: [A], heads: [C]"]);
+
+    // The client does not have B::, E:: part of the graph.
+    // D is not considered as a parent of a merge in the graph.
+    let server2 = TestDag::draw("A-D-G-H # master: H");
+    let client2 = server2.client_cloned_data().await.with_remote(&server2);
+
+    // Can resolve A using H~3, not B~1 or D~1 as requested.
+    assert_eq!(client2.dag.vertex_id("A".into()).await.unwrap(), Id(0));
+    assert_eq!(client2.output(), ["resolve names: [A], heads: [H]"]);
 }
 
 async fn client_for_local_cache_test() -> TestDag {
