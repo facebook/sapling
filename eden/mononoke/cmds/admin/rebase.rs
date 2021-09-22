@@ -9,7 +9,11 @@ use anyhow::{anyhow, Error};
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
-use futures::future::try_join;
+use futures::{
+    compat::Stream01CompatExt,
+    future::{try_join, try_join3},
+    TryStreamExt,
+};
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use cmdlib::{
@@ -24,21 +28,40 @@ use crate::error::SubcommandError;
 
 pub const ARG_DEST: &str = "dest";
 pub const ARG_CSID: &str = "csid";
+pub const ARG_REBASE_ANCESTOR: &str = "rebase-ancestor";
+pub const ARG_REBASE_DESCENDANT: &str = "rebase-descendant";
 pub const REBASE: &str = "rebase";
 const ARG_I_KNOW: &str = "i-know-what-i-am-doing";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(REBASE)
         .about(
-            "produce a bonsai changeset clone with p1 changed to a given value. \
+            "rebases a single commit or a stack onto a given destination. \
              DOES NOT RUN ANY SAFETY CHECKS, DOES NOT CHECK FOR CONFLICTS!",
         )
         .arg(
             Arg::with_name(ARG_CSID)
                 .long(ARG_CSID)
                 .takes_value(true)
-                .required(true)
-                .help("{hg|bonsai} changeset id or bookmark name"),
+                .required(false)
+                .conflicts_with_all(&[ARG_REBASE_ANCESTOR, ARG_REBASE_DESCENDANT])
+                .help("{hg|bonsai} changeset id or bookmark name to rebase"),
+        )
+        .arg(
+            Arg::with_name(ARG_REBASE_ANCESTOR)
+                .long(ARG_REBASE_ANCESTOR)
+                .takes_value(true)
+                .required(false)
+                .conflicts_with(ARG_CSID)
+                .help("ancestor of the stack of commits to rebase"),
+        )
+        .arg(
+            Arg::with_name(ARG_REBASE_DESCENDANT)
+                .long(ARG_REBASE_DESCENDANT)
+                .takes_value(true)
+                .required(false)
+                .conflicts_with(ARG_CSID)
+                .help("descendant of the stack of commits to rebase"),
         )
         .arg(
             Arg::with_name(ARG_DEST)
@@ -83,20 +106,70 @@ pub async fn subcommand_rebase<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo: BlobRepo = args::open_repo(fb, &logger, &matches).await?;
 
-    let cs_id = sub_matches
-        .value_of(ARG_CSID)
-        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_CSID))?;
-
     let dest = sub_matches
         .value_of(ARG_DEST)
         .ok_or_else(|| anyhow!("{} arg is not specified", ARG_DEST))?;
 
-    let (cs_id, dest) = try_join(
-        helpers::csid_resolve(&ctx, &repo, cs_id),
+    if let Some(cs_id) = sub_matches.value_of(ARG_CSID) {
+        let (cs_id, dest) = try_join(
+            helpers::csid_resolve(&ctx, &repo, cs_id),
+            helpers::csid_resolve(&ctx, &repo, dest),
+        )
+        .await?;
+
+        let rebased_cs_id = rebase_single_changeset(&ctx, &repo, cs_id, dest).await?;
+
+        println!("{}", rebased_cs_id);
+        return Ok(());
+    }
+
+    let ancestor = sub_matches
+        .value_of(ARG_REBASE_ANCESTOR)
+        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_REBASE_ANCESTOR))?;
+    let descendant = sub_matches
+        .value_of(ARG_REBASE_DESCENDANT)
+        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_REBASE_DESCENDANT))?;
+
+    let (ancestor, descendant, dest) = try_join3(
+        helpers::csid_resolve(&ctx, &repo, ancestor),
+        helpers::csid_resolve(&ctx, &repo, descendant),
         helpers::csid_resolve(&ctx, &repo, dest),
     )
     .await?;
 
+    let ctx = &ctx;
+    let cs_fetcher = &repo.get_changeset_fetcher();
+    let csids = revset::RangeNodeStream::new(ctx.clone(), cs_fetcher.clone(), ancestor, descendant)
+        .compat()
+        .map_ok(|csid| async move {
+            let parents = cs_fetcher.get_parents(ctx.clone(), csid).await?;
+            if parents.len() > 1 {
+                return Err(anyhow!("rebasing stack with merges is not supported"));
+            }
+            Ok(csid)
+        })
+        .try_buffered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    // Reverse since we want to iterate from ancestors to descendants
+    let iter = csids.into_iter().rev();
+    let mut dest = dest;
+    for csid in iter {
+        let rebased_cs_id = rebase_single_changeset(ctx, &repo, csid, dest).await?;
+        println!("{}", rebased_cs_id);
+        dest = rebased_cs_id;
+    }
+
+    Ok(())
+}
+
+async fn rebase_single_changeset(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    dest: ChangesetId,
+) -> Result<ChangesetId, Error> {
     let bcs = cs_id
         .load(&ctx, repo.blobstore())
         .await
@@ -114,7 +187,5 @@ pub async fn subcommand_rebase<'a>(
     let rebased = rebased.freeze()?;
     let rebased_cs_id = rebased.get_changeset_id();
     save_bonsai_changesets(vec![rebased], ctx.clone(), repo).await?;
-
-    println!("{}", rebased_cs_id);
-    Ok(())
+    Ok(rebased_cs_id)
 }
