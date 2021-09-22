@@ -1153,7 +1153,7 @@ pub mod client {
         ::fbthrift::ProtocolEncoded<P>: ::fbthrift::BufMutExt<Final = ::fbthrift::FramingEncodedFinal<T>>,
         P::Deserializer: ::std::marker::Send,
     {
-        #[::tracing::instrument(name = "FacebookService.getCpuProfile", skip(self, arg_profileDurationInSec), fields(r#profileDurationInSec = ?arg_profileDurationInSec,))]
+        #[::tracing::instrument(name = "FacebookService.getCpuProfile", skip_all)]
         fn getCpuProfile(
             &self,
             arg_profileDurationInSec: ::std::primitive::i32,
@@ -1269,7 +1269,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "FacebookService.getCpuProfileWithOptions", skip(self, arg_options), fields(r#options = ?arg_options,))]
+        #[::tracing::instrument(name = "FacebookService.getCpuProfileWithOptions", skip_all)]
         fn getCpuProfileWithOptions(
             &self,
             arg_options: &crate::types::CpuProfileOptions,
@@ -1385,7 +1385,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "FacebookService.getWallTimeProfile", skip(self, arg_profileDurationInSec), fields(r#profileDurationInSec = ?arg_profileDurationInSec,))]
+        #[::tracing::instrument(name = "FacebookService.getWallTimeProfile", skip_all)]
         fn getWallTimeProfile(
             &self,
             arg_profileDurationInSec: ::std::primitive::i32,
@@ -1501,7 +1501,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "FacebookService.getMemoryUsage", skip(self), fields())]
+        #[::tracing::instrument(name = "FacebookService.getMemoryUsage", skip_all)]
         fn getMemoryUsage(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::facebook_service::GetMemoryUsageError>> + ::std::marker::Send + 'static>> {
@@ -1613,7 +1613,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "FacebookService.getLoad", skip(self), fields())]
+        #[::tracing::instrument(name = "FacebookService.getLoad", skip_all)]
         fn getLoad(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::f64, crate::errors::facebook_service::GetLoadError>> + ::std::marker::Send + 'static>> {
@@ -1725,7 +1725,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "FacebookService.getPid", skip(self), fields())]
+        #[::tracing::instrument(name = "FacebookService.getPid", skip_all)]
         fn getPid(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::facebook_service::GetPidError>> + ::std::marker::Send + 'static>> {
@@ -1837,7 +1837,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "FacebookService.getCommandLine", skip(self), fields())]
+        #[::tracing::instrument(name = "FacebookService.getCommandLine", skip_all)]
         fn getCommandLine(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::facebook_service::GetCommandLineError>> + ::std::marker::Send + 'static>> {
@@ -1949,7 +1949,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "FacebookService.reinitialize", skip(self), fields())]
+        #[::tracing::instrument(name = "FacebookService.reinitialize", skip_all)]
         fn reinitialize(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::facebook_service::ReinitializeError>> + ::std::marker::Send + 'static>> {
@@ -2061,7 +2061,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "FacebookService.shutdown", skip(self), fields())]
+        #[::tracing::instrument(name = "FacebookService.shutdown", skip_all)]
         fn shutdown(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::facebook_service::ShutdownError>> + ::std::marker::Send + 'static>> {
@@ -2173,7 +2173,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "FacebookService.translateFrames", skip(self, arg_pointers), fields(r#pointers = ?arg_pointers,))]
+        #[::tracing::instrument(name = "FacebookService.translateFrames", skip_all)]
         fn translateFrames(
             &self,
             arg_pointers: &[::std::primitive::i64],

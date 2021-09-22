@@ -517,6 +517,8 @@ pub mod types {
         #[serde(default)]
         pub background: ::std::primitive::bool,
         pub predictiveGlob: ::std::option::Option<crate::types::PredictiveFetch>,
+        #[serde(default)]
+        pub listOnlyFiles: ::std::primitive::bool,
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -4725,6 +4727,7 @@ pub mod types {
                 searchRoot: ::std::default::Default::default(),
                 background: false,
                 predictiveGlob: ::std::option::Option::None,
+                listOnlyFiles: false,
             }
         }
     }
@@ -4777,6 +4780,9 @@ pub mod types {
                 ::fbthrift::Serialize::write(some, p);
                 p.write_field_end();
             }
+            p.write_field_begin("listOnlyFiles", ::fbthrift::TType::Bool, 12);
+            ::fbthrift::Serialize::write(&self.listOnlyFiles, p);
+            p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -4791,6 +4797,7 @@ pub mod types {
                 ::fbthrift::Field::new("background", ::fbthrift::TType::Bool, 10),
                 ::fbthrift::Field::new("globs", ::fbthrift::TType::List, 2),
                 ::fbthrift::Field::new("includeDotfiles", ::fbthrift::TType::Bool, 3),
+                ::fbthrift::Field::new("listOnlyFiles", ::fbthrift::TType::Bool, 12),
                 ::fbthrift::Field::new("mountPoint", ::fbthrift::TType::String, 1),
                 ::fbthrift::Field::new("predictiveGlob", ::fbthrift::TType::Struct, 11),
                 ::fbthrift::Field::new("prefetchFiles", ::fbthrift::TType::Bool, 4),
@@ -4811,6 +4818,7 @@ pub mod types {
             let mut field_searchRoot = ::std::option::Option::None;
             let mut field_background = ::std::option::Option::None;
             let mut field_predictiveGlob = ::std::option::Option::None;
+            let mut field_listOnlyFiles = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
@@ -4827,6 +4835,7 @@ pub mod types {
                     (::fbthrift::TType::String, 9) => field_searchRoot = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::Bool, 10) => field_background = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::Struct, 11) => field_predictiveGlob = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::Bool, 12) => field_listOnlyFiles = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -4844,6 +4853,7 @@ pub mod types {
                 searchRoot: field_searchRoot.unwrap_or_default(),
                 background: field_background.unwrap_or_else(|| false),
                 predictiveGlob: field_predictiveGlob,
+                listOnlyFiles: field_listOnlyFiles.unwrap_or_else(|| false),
             })
         }
     }
@@ -12562,7 +12572,7 @@ pub mod client {
         ::fbthrift::ProtocolEncoded<P>: ::fbthrift::BufMutExt<Final = ::fbthrift::FramingEncodedFinal<T>>,
         P::Deserializer: ::std::marker::Send,
     {
-        #[::tracing::instrument(name = "EdenService.listMounts", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.listMounts", skip_all)]
         fn listMounts(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError>> + ::std::marker::Send + 'static>> {
@@ -12678,7 +12688,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.mount", skip(self, arg_info), fields(r#info = ?arg_info,))]
+        #[::tracing::instrument(name = "EdenService.mount", skip_all)]
         fn mount(
             &self,
             arg_info: &crate::types::MountArgument,
@@ -12798,7 +12808,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.unmount", skip(self, arg_mountPoint), fields(r#mountPoint = ?arg_mountPoint,))]
+        #[::tracing::instrument(name = "EdenService.unmount", skip_all)]
         fn unmount(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -12918,7 +12928,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.checkOutRevision", skip(self, arg_mountPoint, arg_snapshotHash, arg_checkoutMode, arg_params), fields(r#mountPoint = ?arg_mountPoint,r#snapshotHash = ?arg_snapshotHash,r#checkoutMode = ?arg_checkoutMode,r#params = ?arg_params,))]
+        #[::tracing::instrument(name = "EdenService.checkOutRevision", skip_all)]
         fn checkOutRevision(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -13050,7 +13060,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.resetParentCommits", skip(self, arg_mountPoint, arg_parents, arg_params), fields(r#mountPoint = ?arg_mountPoint,r#parents = ?arg_parents,r#params = ?arg_params,))]
+        #[::tracing::instrument(name = "EdenService.resetParentCommits", skip_all)]
         fn resetParentCommits(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -13178,7 +13188,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getSHA1", skip(self, arg_mountPoint, arg_paths), fields(r#mountPoint = ?arg_mountPoint,r#paths = ?arg_paths,))]
+        #[::tracing::instrument(name = "EdenService.getSHA1", skip_all)]
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -13302,7 +13312,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getBindMounts", skip(self, arg_mountPoint), fields(r#mountPoint = ?arg_mountPoint,))]
+        #[::tracing::instrument(name = "EdenService.getBindMounts", skip_all)]
         fn getBindMounts(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -13422,7 +13432,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.addBindMount", skip(self, arg_mountPoint, arg_repoPath, arg_targetPath), fields(r#mountPoint = ?arg_mountPoint,r#repoPath = ?arg_repoPath,r#targetPath = ?arg_targetPath,))]
+        #[::tracing::instrument(name = "EdenService.addBindMount", skip_all)]
         fn addBindMount(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -13550,7 +13560,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.removeBindMount", skip(self, arg_mountPoint, arg_repoPath), fields(r#mountPoint = ?arg_mountPoint,r#repoPath = ?arg_repoPath,))]
+        #[::tracing::instrument(name = "EdenService.removeBindMount", skip_all)]
         fn removeBindMount(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -13674,7 +13684,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getCurrentJournalPosition", skip(self, arg_mountPoint), fields(r#mountPoint = ?arg_mountPoint,))]
+        #[::tracing::instrument(name = "EdenService.getCurrentJournalPosition", skip_all)]
         fn getCurrentJournalPosition(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -13794,7 +13804,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getFilesChangedSince", skip(self, arg_mountPoint, arg_fromPosition), fields(r#mountPoint = ?arg_mountPoint,r#fromPosition = ?arg_fromPosition,))]
+        #[::tracing::instrument(name = "EdenService.getFilesChangedSince", skip_all)]
         fn getFilesChangedSince(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -13918,7 +13928,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.setJournalMemoryLimit", skip(self, arg_mountPoint, arg_limit), fields(r#mountPoint = ?arg_mountPoint,r#limit = ?arg_limit,))]
+        #[::tracing::instrument(name = "EdenService.setJournalMemoryLimit", skip_all)]
         fn setJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -14042,7 +14052,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getJournalMemoryLimit", skip(self, arg_mountPoint), fields(r#mountPoint = ?arg_mountPoint,))]
+        #[::tracing::instrument(name = "EdenService.getJournalMemoryLimit", skip_all)]
         fn getJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -14162,7 +14172,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.flushJournal", skip(self, arg_mountPoint), fields(r#mountPoint = ?arg_mountPoint,))]
+        #[::tracing::instrument(name = "EdenService.flushJournal", skip_all)]
         fn flushJournal(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -14282,7 +14292,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugGetRawJournal", skip(self, arg_params), fields(r#params = ?arg_params,))]
+        #[::tracing::instrument(name = "EdenService.debugGetRawJournal", skip_all)]
         fn debugGetRawJournal(
             &self,
             arg_params: &crate::types::DebugGetRawJournalParams,
@@ -14402,7 +14412,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getEntryInformation", skip(self, arg_mountPoint, arg_paths), fields(r#mountPoint = ?arg_mountPoint,r#paths = ?arg_paths,))]
+        #[::tracing::instrument(name = "EdenService.getEntryInformation", skip_all)]
         fn getEntryInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -14526,7 +14536,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getFileInformation", skip(self, arg_mountPoint, arg_paths), fields(r#mountPoint = ?arg_mountPoint,r#paths = ?arg_paths,))]
+        #[::tracing::instrument(name = "EdenService.getFileInformation", skip_all)]
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -14650,7 +14660,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.glob", skip(self, arg_mountPoint, arg_globs), fields(r#mountPoint = ?arg_mountPoint,r#globs = ?arg_globs,))]
+        #[::tracing::instrument(name = "EdenService.glob", skip_all)]
         fn glob(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -14774,7 +14784,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.globFiles", skip(self, arg_params), fields(r#params = ?arg_params,))]
+        #[::tracing::instrument(name = "EdenService.globFiles", skip_all)]
         fn globFiles(
             &self,
             arg_params: &crate::types::GlobParams,
@@ -14894,7 +14904,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.predictiveGlobFiles", skip(self, arg_params), fields(r#params = ?arg_params,))]
+        #[::tracing::instrument(name = "EdenService.predictiveGlobFiles", skip_all)]
         fn predictiveGlobFiles(
             &self,
             arg_params: &crate::types::GlobParams,
@@ -15014,7 +15024,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.chown", skip(self, arg_mountPoint, arg_uid, arg_gid), fields(r#mountPoint = ?arg_mountPoint,r#uid = ?arg_uid,r#gid = ?arg_gid,))]
+        #[::tracing::instrument(name = "EdenService.chown", skip_all)]
         fn chown(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -15138,7 +15148,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getScmStatusV2", skip(self, arg_params), fields(r#params = ?arg_params,))]
+        #[::tracing::instrument(name = "EdenService.getScmStatusV2", skip_all)]
         fn getScmStatusV2(
             &self,
             arg_params: &crate::types::GetScmStatusParams,
@@ -15258,7 +15268,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getScmStatus", skip(self, arg_mountPoint, arg_listIgnored, arg_commit), fields(r#mountPoint = ?arg_mountPoint,r#listIgnored = ?arg_listIgnored,r#commit = ?arg_commit,))]
+        #[::tracing::instrument(name = "EdenService.getScmStatus", skip_all)]
         fn getScmStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -15386,7 +15396,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getScmStatusBetweenRevisions", skip(self, arg_mountPoint, arg_oldHash, arg_newHash), fields(r#mountPoint = ?arg_mountPoint,r#oldHash = ?arg_oldHash,r#newHash = ?arg_newHash,))]
+        #[::tracing::instrument(name = "EdenService.getScmStatusBetweenRevisions", skip_all)]
         fn getScmStatusBetweenRevisions(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -15514,7 +15524,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getDaemonInfo", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.getDaemonInfo", skip_all)]
         fn getDaemonInfo(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError>> + ::std::marker::Send + 'static>> {
@@ -15630,7 +15640,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.checkPrivHelper", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.checkPrivHelper", skip_all)]
         fn checkPrivHelper(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::PrivHelperInfo, crate::errors::eden_service::CheckPrivHelperError>> + ::std::marker::Send + 'static>> {
@@ -15746,7 +15756,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getPid", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.getPid", skip_all)]
         fn getPid(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::GetPidError>> + ::std::marker::Send + 'static>> {
@@ -15862,7 +15872,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.initiateShutdown", skip(self, arg_reason), fields(r#reason = ?arg_reason,))]
+        #[::tracing::instrument(name = "EdenService.initiateShutdown", skip_all)]
         fn initiateShutdown(
             &self,
             arg_reason: &::std::primitive::str,
@@ -15982,7 +15992,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getConfig", skip(self, arg_params), fields(r#params = ?arg_params,))]
+        #[::tracing::instrument(name = "EdenService.getConfig", skip_all)]
         fn getConfig(
             &self,
             arg_params: &crate::types::GetConfigParams,
@@ -16102,7 +16112,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.reloadConfig", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.reloadConfig", skip_all)]
         fn reloadConfig(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ReloadConfigError>> + ::std::marker::Send + 'static>> {
@@ -16218,7 +16228,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugGetScmTree", skip(self, arg_mountPoint, arg_id, arg_localStoreOnly), fields(r#mountPoint = ?arg_mountPoint,r#id = ?arg_id,r#localStoreOnly = ?arg_localStoreOnly,))]
+        #[::tracing::instrument(name = "EdenService.debugGetScmTree", skip_all)]
         fn debugGetScmTree(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16346,7 +16356,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugGetScmBlob", skip(self, arg_mountPoint, arg_id, arg_localStoreOnly), fields(r#mountPoint = ?arg_mountPoint,r#id = ?arg_id,r#localStoreOnly = ?arg_localStoreOnly,))]
+        #[::tracing::instrument(name = "EdenService.debugGetScmBlob", skip_all)]
         fn debugGetScmBlob(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16474,7 +16484,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugGetScmBlobMetadata", skip(self, arg_mountPoint, arg_id, arg_localStoreOnly), fields(r#mountPoint = ?arg_mountPoint,r#id = ?arg_id,r#localStoreOnly = ?arg_localStoreOnly,))]
+        #[::tracing::instrument(name = "EdenService.debugGetScmBlobMetadata", skip_all)]
         fn debugGetScmBlobMetadata(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16602,7 +16612,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugInodeStatus", skip(self, arg_mountPoint, arg_path, arg_flags), fields(r#mountPoint = ?arg_mountPoint,r#path = ?arg_path,r#flags = ?arg_flags,))]
+        #[::tracing::instrument(name = "EdenService.debugInodeStatus", skip_all)]
         fn debugInodeStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16730,7 +16740,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugOutstandingFuseCalls", skip(self, arg_mountPoint), fields(r#mountPoint = ?arg_mountPoint,))]
+        #[::tracing::instrument(name = "EdenService.debugOutstandingFuseCalls", skip_all)]
         fn debugOutstandingFuseCalls(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16846,7 +16856,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugOutstandingNfsCalls", skip(self, arg_mountPoint), fields(r#mountPoint = ?arg_mountPoint,))]
+        #[::tracing::instrument(name = "EdenService.debugOutstandingNfsCalls", skip_all)]
         fn debugOutstandingNfsCalls(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16962,7 +16972,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugStartRecordingActivity", skip(self, arg_mountPoint, arg_outputDir), fields(r#mountPoint = ?arg_mountPoint,r#outputDir = ?arg_outputDir,))]
+        #[::tracing::instrument(name = "EdenService.debugStartRecordingActivity", skip_all)]
         fn debugStartRecordingActivity(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17082,7 +17092,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugStopRecordingActivity", skip(self, arg_mountPoint, arg_unique), fields(r#mountPoint = ?arg_mountPoint,r#unique = ?arg_unique,))]
+        #[::tracing::instrument(name = "EdenService.debugStopRecordingActivity", skip_all)]
         fn debugStopRecordingActivity(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17202,7 +17212,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugListActivityRecordings", skip(self, arg_mountPoint), fields(r#mountPoint = ?arg_mountPoint,))]
+        #[::tracing::instrument(name = "EdenService.debugListActivityRecordings", skip_all)]
         fn debugListActivityRecordings(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17318,7 +17328,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugGetInodePath", skip(self, arg_mountPoint, arg_inodeNumber), fields(r#mountPoint = ?arg_mountPoint,r#inodeNumber = ?arg_inodeNumber,))]
+        #[::tracing::instrument(name = "EdenService.debugGetInodePath", skip_all)]
         fn debugGetInodePath(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17442,7 +17452,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.clearFetchCounts", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.clearFetchCounts", skip_all)]
         fn clearFetchCounts(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError>> + ::std::marker::Send + 'static>> {
@@ -17558,7 +17568,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.clearFetchCountsByMount", skip(self, arg_mountPath), fields(r#mountPath = ?arg_mountPath,))]
+        #[::tracing::instrument(name = "EdenService.clearFetchCountsByMount", skip_all)]
         fn clearFetchCountsByMount(
             &self,
             arg_mountPath: &crate::types::PathString,
@@ -17678,7 +17688,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getAccessCounts", skip(self, arg_duration), fields(r#duration = ?arg_duration,))]
+        #[::tracing::instrument(name = "EdenService.getAccessCounts", skip_all)]
         fn getAccessCounts(
             &self,
             arg_duration: ::std::primitive::i64,
@@ -17798,7 +17808,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.startRecordingBackingStoreFetch", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.startRecordingBackingStoreFetch", skip_all)]
         fn startRecordingBackingStoreFetch(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
@@ -17914,7 +17924,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.stopRecordingBackingStoreFetch", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.stopRecordingBackingStoreFetch", skip_all)]
         fn stopRecordingBackingStoreFetch(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
@@ -18030,7 +18040,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.clearAndCompactLocalStore", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.clearAndCompactLocalStore", skip_all)]
         fn clearAndCompactLocalStore(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError>> + ::std::marker::Send + 'static>> {
@@ -18146,7 +18156,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugClearLocalStoreCaches", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.debugClearLocalStoreCaches", skip_all)]
         fn debugClearLocalStoreCaches(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError>> + ::std::marker::Send + 'static>> {
@@ -18262,7 +18272,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.debugCompactLocalStorage", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.debugCompactLocalStorage", skip_all)]
         fn debugCompactLocalStorage(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError>> + ::std::marker::Send + 'static>> {
@@ -18378,7 +18388,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.unloadInodeForPath", skip(self, arg_mountPoint, arg_path, arg_age), fields(r#mountPoint = ?arg_mountPoint,r#path = ?arg_path,r#age = ?arg_age,))]
+        #[::tracing::instrument(name = "EdenService.unloadInodeForPath", skip_all)]
         fn unloadInodeForPath(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -18506,7 +18516,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.flushStatsNow", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.flushStatsNow", skip_all)]
         fn flushStatsNow(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::FlushStatsNowError>> + ::std::marker::Send + 'static>> {
@@ -18622,7 +18632,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.invalidateKernelInodeCache", skip(self, arg_mountPoint, arg_path), fields(r#mountPoint = ?arg_mountPoint,r#path = ?arg_path,))]
+        #[::tracing::instrument(name = "EdenService.invalidateKernelInodeCache", skip_all)]
         fn invalidateKernelInodeCache(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -18746,7 +18756,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getStatInfo", skip(self, arg_params), fields(r#params = ?arg_params,))]
+        #[::tracing::instrument(name = "EdenService.getStatInfo", skip_all)]
         fn getStatInfo(
             &self,
             arg_params: &crate::types::GetStatInfoParams,
@@ -18866,7 +18876,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.enableTracing", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.enableTracing", skip_all)]
         fn enableTracing(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::EnableTracingError>> + ::std::marker::Send + 'static>> {
@@ -18978,7 +18988,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.disableTracing", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.disableTracing", skip_all)]
         fn disableTracing(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DisableTracingError>> + ::std::marker::Send + 'static>> {
@@ -19090,7 +19100,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.getTracePoints", skip(self), fields())]
+        #[::tracing::instrument(name = "EdenService.getTracePoints", skip_all)]
         fn getTracePoints(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError>> + ::std::marker::Send + 'static>> {
@@ -19202,7 +19212,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.injectFault", skip(self, arg_fault), fields(r#fault = ?arg_fault,))]
+        #[::tracing::instrument(name = "EdenService.injectFault", skip_all)]
         fn injectFault(
             &self,
             arg_fault: &crate::types::FaultDefinition,
@@ -19322,7 +19332,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.removeFault", skip(self, arg_fault), fields(r#fault = ?arg_fault,))]
+        #[::tracing::instrument(name = "EdenService.removeFault", skip_all)]
         fn removeFault(
             &self,
             arg_fault: &crate::types::RemoveFaultArg,
@@ -19442,7 +19452,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.unblockFault", skip(self, arg_info), fields(r#info = ?arg_info,))]
+        #[::tracing::instrument(name = "EdenService.unblockFault", skip_all)]
         fn unblockFault(
             &self,
             arg_info: &crate::types::UnblockFaultArg,
@@ -19562,7 +19572,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "EdenService.setPathObjectId", skip(self, arg_params), fields(r#params = ?arg_params,))]
+        #[::tracing::instrument(name = "EdenService.setPathObjectId", skip_all)]
         fn setPathObjectId(
             &self,
             arg_params: &crate::types::SetPathObjectIdParams,

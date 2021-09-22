@@ -1718,7 +1718,7 @@ pub mod client {
         ::fbthrift::ProtocolEncoded<P>: ::fbthrift::BufMutExt<Final = ::fbthrift::FramingEncodedFinal<T>>,
         P::Deserializer: ::std::marker::Send,
     {
-        #[::tracing::instrument(name = "BaseService.getStatus", skip(self), fields())]
+        #[::tracing::instrument(name = "BaseService.getStatus", skip_all)]
         fn getStatus(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + ::std::marker::Send + 'static>> {
@@ -1830,7 +1830,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getName", skip(self), fields())]
+        #[::tracing::instrument(name = "BaseService.getName", skip_all)]
         fn getName(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetNameError>> + ::std::marker::Send + 'static>> {
@@ -1942,7 +1942,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getVersion", skip(self), fields())]
+        #[::tracing::instrument(name = "BaseService.getVersion", skip_all)]
         fn getVersion(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetVersionError>> + ::std::marker::Send + 'static>> {
@@ -2054,7 +2054,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getStatusDetails", skip(self), fields())]
+        #[::tracing::instrument(name = "BaseService.getStatusDetails", skip_all)]
         fn getStatusDetails(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetStatusDetailsError>> + ::std::marker::Send + 'static>> {
@@ -2166,7 +2166,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getCounters", skip(self), fields())]
+        #[::tracing::instrument(name = "BaseService.getCounters", skip_all)]
         fn getCounters(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetCountersError>> + ::std::marker::Send + 'static>> {
@@ -2278,7 +2278,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getRegexCounters", skip(self, arg_regex), fields(r#regex = ?arg_regex,))]
+        #[::tracing::instrument(name = "BaseService.getRegexCounters", skip_all)]
         fn getRegexCounters(
             &self,
             arg_regex: &::std::primitive::str,
@@ -2394,7 +2394,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getSelectedCounters", skip(self, arg_keys), fields(r#keys = ?arg_keys,))]
+        #[::tracing::instrument(name = "BaseService.getSelectedCounters", skip_all)]
         fn getSelectedCounters(
             &self,
             arg_keys: &[::std::string::String],
@@ -2510,7 +2510,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getCounter", skip(self, arg_key), fields(r#key = ?arg_key,))]
+        #[::tracing::instrument(name = "BaseService.getCounter", skip_all)]
         fn getCounter(
             &self,
             arg_key: &::std::primitive::str,
@@ -2626,7 +2626,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getExportedValues", skip(self), fields())]
+        #[::tracing::instrument(name = "BaseService.getExportedValues", skip_all)]
         fn getExportedValues(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetExportedValuesError>> + ::std::marker::Send + 'static>> {
@@ -2738,7 +2738,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getSelectedExportedValues", skip(self, arg_keys), fields(r#keys = ?arg_keys,))]
+        #[::tracing::instrument(name = "BaseService.getSelectedExportedValues", skip_all)]
         fn getSelectedExportedValues(
             &self,
             arg_keys: &[::std::string::String],
@@ -2854,7 +2854,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getRegexExportedValues", skip(self, arg_regex), fields(r#regex = ?arg_regex,))]
+        #[::tracing::instrument(name = "BaseService.getRegexExportedValues", skip_all)]
         fn getRegexExportedValues(
             &self,
             arg_regex: &::std::primitive::str,
@@ -2970,7 +2970,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getExportedValue", skip(self, arg_key), fields(r#key = ?arg_key,))]
+        #[::tracing::instrument(name = "BaseService.getExportedValue", skip_all)]
         fn getExportedValue(
             &self,
             arg_key: &::std::primitive::str,
@@ -3086,7 +3086,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.setOption", skip(self, arg_key, arg_value), fields(r#key = ?arg_key,r#value = ?arg_value,))]
+        #[::tracing::instrument(name = "BaseService.setOption", skip_all)]
         fn setOption(
             &self,
             arg_key: &::std::primitive::str,
@@ -3206,7 +3206,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getOption", skip(self, arg_key), fields(r#key = ?arg_key,))]
+        #[::tracing::instrument(name = "BaseService.getOption", skip_all)]
         fn getOption(
             &self,
             arg_key: &::std::primitive::str,
@@ -3322,7 +3322,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.getOptions", skip(self), fields())]
+        #[::tracing::instrument(name = "BaseService.getOptions", skip_all)]
         fn getOptions(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetOptionsError>> + ::std::marker::Send + 'static>> {
@@ -3434,7 +3434,7 @@ pub mod client {
                 .boxed()
         }
 
-        #[::tracing::instrument(name = "BaseService.aliveSince", skip(self), fields())]
+        #[::tracing::instrument(name = "BaseService.aliveSince", skip_all)]
         fn aliveSince(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::AliveSinceError>> + ::std::marker::Send + 'static>> {
