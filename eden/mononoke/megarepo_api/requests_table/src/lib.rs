@@ -103,6 +103,9 @@ pub trait LongRunningRequestsQueue: Send + Sync {
         blobstore_result_key: BlobstoreKey,
     ) -> Result<bool>;
 
+    /// Mark request as new (used for requeuing requests from CLI)
+    async fn mark_new(&self, ctx: &CoreContext, req_id: &RequestId) -> Result<bool>;
+
     /// Mark request as polled by a client
     /// To be used in tests only
     async fn test_mark(

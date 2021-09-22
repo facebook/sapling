@@ -212,6 +212,14 @@ impl AsyncMethodRequestQueue {
             .await?)
     }
 
+    pub async fn requeue(
+        &self,
+        ctx: &CoreContext,
+        request_id: RequestId,
+    ) -> Result<bool, MegarepoError> {
+        Ok(self.table.mark_new(ctx, &request_id).await?)
+    }
+
     pub async fn list_requests(
         &self,
         ctx: &CoreContext,

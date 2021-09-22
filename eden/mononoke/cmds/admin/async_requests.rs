@@ -22,17 +22,27 @@ use slog::Logger;
 
 use crate::error::SubcommandError;
 
-use async_requests::types::{RequestStatus, RowId, ThriftMegarepoAsynchronousRequestParams};
+use async_requests::types::{
+    MegarepoAsynchronousRequestResult, RequestStatus, RowId,
+    ThriftMegarepoAsynchronousRequestParams,
+};
+use megarepo_error::MegarepoError;
 use mononoke_api::{
     BookmarkUpdateDelay, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData,
 };
 use repo_factory::RepoFactory;
+use source_control::{
+    MegarepoAddBranchingTargetResult, MegarepoAddTargetResult, MegarepoChangeTargetConfigResult,
+    MegarepoRemergeSourceResult, MegarepoSyncChangesetResult,
+};
 
 pub const ASYNC_REQUESTS: &str = "async-requests";
 const LIST_CMD: &str = "list";
 pub const LOOKBACK_SECS: &str = "lookback";
 
 const SHOW_CMD: &str = "show";
+const REQUEUE_CMD: &str = "requeue";
+const ABORT_CMD: &str = "abort";
 pub const REQUEST_ID_ARG: &str = "request-id";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -56,10 +66,33 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true),
         );
 
+    let requeue = SubCommand::with_name(REQUEUE_CMD)
+        .about("changes the request status to new so it's picked up by workers again")
+        .arg(
+            Arg::with_name(REQUEST_ID_ARG)
+                .value_name("ID")
+                .help("id of the request")
+                .takes_value(true),
+        );
+
+    let abort = SubCommand::with_name(ABORT_CMD)
+        .about(
+            "Changes the request status to ready and put error as result. \
+               (this won't stop any currently running workers immediately)",
+        )
+        .arg(
+            Arg::with_name(REQUEST_ID_ARG)
+                .value_name("ID")
+                .help("id of the request")
+                .takes_value(true),
+        );
+
     SubCommand::with_name(ASYNC_REQUESTS)
         .about("view and manage the SCS async requests (used by megarepo)")
         .subcommand(list)
         .subcommand(show)
+        .subcommand(abort)
+        .subcommand(requeue)
 }
 
 pub async fn subcommand_async_requests<'a>(
@@ -95,6 +128,8 @@ pub async fn subcommand_async_requests<'a>(
     match sub_m.subcommand() {
         (LIST_CMD, Some(sub_m)) => handle_list(sub_m, ctx, megarepo).await?,
         (SHOW_CMD, Some(sub_m)) => handle_show(sub_m, ctx, megarepo).await?,
+        (ABORT_CMD, Some(sub_m)) => handle_abort(sub_m, ctx, megarepo).await?,
+        (REQUEUE_CMD, Some(sub_m)) => handle_requeue(sub_m, ctx, megarepo).await?,
         _ => return Err(SubcommandError::InvalidArgs),
     }
     Ok(())
@@ -175,6 +210,69 @@ async fn handle_show(
         {
             // TODO: pretty printing of the request details
             dbg!(entry, params, maybe_result);
+            return Ok(());
+        }
+    }
+    Err(anyhow!("Request not found."))
+}
+
+async fn handle_abort(
+    args: &ArgMatches<'_>,
+    ctx: CoreContext,
+    megarepo: MegarepoApi,
+) -> Result<(), Error> {
+    let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
+
+    let row_id = value_t!(args.value_of(REQUEST_ID_ARG), u64)?;
+
+    for (_repo_ids, queue) in repos_and_queues {
+        if let Some((request_id, _entry, params, maybe_result)) =
+            queue.get_request_by_id(&ctx, &RowId(row_id)).await?
+        {
+            if maybe_result == None {
+                let err = MegarepoError::InternalError(anyhow!("aborted from CLI!").into());
+                let result: MegarepoAsynchronousRequestResult  = match params.thrift() {
+                    ThriftMegarepoAsynchronousRequestParams::megarepo_sync_changeset_params(_) => {
+                        MegarepoSyncChangesetResult::error(err.into()).into()
+                    }
+                    ThriftMegarepoAsynchronousRequestParams::megarepo_add_target_params(_) => {
+                        MegarepoAddTargetResult::error(err.into()).into()
+                    }
+                    ThriftMegarepoAsynchronousRequestParams::megarepo_change_target_params(_) => {
+                        MegarepoChangeTargetConfigResult::error(err.into()).into()
+                    }
+                    ThriftMegarepoAsynchronousRequestParams::megarepo_remerge_source_params(_) => {
+                        MegarepoRemergeSourceResult::error(err.into()).into()
+                    }
+                    ThriftMegarepoAsynchronousRequestParams::megarepo_add_branching_target_params(_) => {
+                        MegarepoAddBranchingTargetResult::error(err.into()).into()
+                    }
+                    _ => return Err(anyhow!("unknown request type!"))
+                };
+                queue.complete(&ctx, &request_id, result).await?;
+            } else {
+                return Err(anyhow!("Request already completed."));
+            }
+            return Ok(());
+        }
+    }
+    Err(anyhow!("Request not found."))
+}
+
+async fn handle_requeue(
+    args: &ArgMatches<'_>,
+    ctx: CoreContext,
+    megarepo: MegarepoApi,
+) -> Result<(), Error> {
+    let repos_and_queues = megarepo.all_async_method_request_queues(&ctx).await?;
+
+    let row_id = value_t!(args.value_of(REQUEST_ID_ARG), u64)?;
+
+    for (_repo_ids, queue) in repos_and_queues {
+        if let Some((request_id, _entry, _params, _maybe_result)) =
+            queue.get_request_by_id(&ctx, &RowId(row_id)).await?
+        {
+            queue.requeue(&ctx, request_id).await?;
             return Ok(());
         }
     }

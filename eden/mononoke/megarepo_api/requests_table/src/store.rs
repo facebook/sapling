@@ -187,6 +187,14 @@ queries! {
         "
     }
 
+    write MarkRequestAsNew(id: RowId, request_type: RequestType) {
+        none,
+        "UPDATE long_running_request_queue
+         SET status = 'new'
+         WHERE id = {id} AND request_type = {request_type}
+        "
+    }
+
     write MarkRequestPolled(id: RowId, request_type: RequestType, polled_at: Timestamp) {
         none,
         "UPDATE long_running_request_queue
@@ -442,6 +450,13 @@ impl LongRunningRequestsQueue for SqlLongRunningRequestsQueue {
             &blobstore_result_key,
         )
         .await?;
+
+        Ok(res.affected_rows() > 0)
+    }
+
+    async fn mark_new(&self, _ctx: &CoreContext, req_id: &RequestId) -> Result<bool> {
+        let res = MarkRequestAsNew::query(&self.connections.write_connection, &req_id.0, &req_id.1)
+            .await?;
 
         Ok(res.affected_rows() > 0)
     }
