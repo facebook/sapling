@@ -140,7 +140,6 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
 
     let batch = parse_wire_request::<WireCommitHashToLocationRequestBatch>(state).await?;
-    let unfiltered = batch.unfiltered;
     let master_heads = batch
         .master_heads
         .into_iter()
@@ -155,20 +154,7 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
             move |chunk| hash_to_location_chunk(ctx.clone(), master_heads.clone(), chunk)
         })
         .buffer_unordered(3)
-        .flatten()
-        .filter(move |v| {
-            // The old behavior is to filter out error and None results. We want to preserve that
-            // behavior for old clients since they will not be able to deserialize other results.
-            let to_keep = if unfiltered == Some(true) {
-                true
-            } else {
-                match v.result {
-                    Ok(Some(_)) => true,
-                    _ => false,
-                }
-            };
-            futures::future::ready(to_keep)
-        });
+        .flatten();
     let cbor_response = custom_cbor_stream(response, |t| t.result.as_ref().err());
     Ok(cbor_response)
 }

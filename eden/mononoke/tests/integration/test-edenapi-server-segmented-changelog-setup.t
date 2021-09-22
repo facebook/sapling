@@ -112,6 +112,8 @@ Create and send file data request.
 Check files in response.
   $ edenapi_read_res commit-hash-to-location res.cbor
   Reading from file: "res.cbor"
+  06383dd46c9bcbca9300252b4b6cddad88f8af21 =>
+      Ok(None)
   112478962961147124edd43549aedd1a335e44bf =>
       Ok(Some(Location(descendant=49cb92066bfd0763fff729c354345650b7428554, dist=1)))
   26805aba1e600a82e93661149f2313866a221a7b =>
