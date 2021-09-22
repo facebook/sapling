@@ -34,6 +34,7 @@
 #include "eden/fs/store/TreeMetadata.h"
 #include "eden/fs/store/hg/HgDatapackStore.h"
 #include "eden/fs/store/hg/HgImportPyError.h"
+#include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/store/hg/MetadataImporter.h"
@@ -241,67 +242,61 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
 }
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
-    const Hash& id,
-    HgProxyHash proxyHash,
-    bool prefetchMetadata,
-    ObjectFetchContext& /*context*/) {
+    const std::shared_ptr<HgImportRequest>& request) {
+  auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
   return importTreeImpl(
-      proxyHash.revHash(), // this is really the manifest node
-      id,
-      proxyHash.path(),
-      prefetchMetadata);
+      treeImport->proxyHash.revHash(), // this is really the manifest node
+      treeImport->hash,
+      treeImport->proxyHash.path(),
+      treeImport->prefetchMetadata);
 }
 
 void HgBackingStore::getTreeBatch(
-    const std::vector<Hash>& ids,
-    const std::vector<HgProxyHash>& hashes,
-    std::vector<folly::Promise<std::unique_ptr<Tree>>*> promises,
+    const std::vector<std::shared_ptr<HgImportRequest>>& requests,
     bool prefetchMetadata) {
-  auto writeBatch = localStore_->beginWrite();
-
   std::vector<folly::Promise<std::unique_ptr<Tree>>> innerPromises;
-  innerPromises.reserve(promises.size());
+  innerPromises.reserve(requests.size());
   std::vector<folly::SemiFuture<std::unique_ptr<TreeMetadata>>> metadataFutures;
-  metadataFutures.reserve(promises.size());
+  metadataFutures.reserve(requests.size());
 
   bool metadataEnabled =
       metadataImporter_->metadataFetchingAvailable() && prefetchMetadata;
 
   // Kick off all the fetching
-  auto proxyHash = hashes.begin();
-  auto id = ids.begin();
-  auto promise = promises.begin();
-  for (; promise != promises.end(); ++id, ++proxyHash, ++promise) {
+  for (const auto& request : requests) {
     innerPromises.emplace_back(folly::Promise<std::unique_ptr<Tree>>());
 
     auto treeMetadataFuture =
         folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
     if (metadataEnabled) {
-      treeMetadataFuture =
-          metadataImporter_->getTreeMetadata(*id, proxyHash->revHash());
+      auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
+      treeMetadataFuture = metadataImporter_->getTreeMetadata(
+          treeImport->hash, treeImport->proxyHash.revHash());
     }
     metadataFutures.push_back(std::move(treeMetadataFuture));
   }
-  datapackStore_.getTreeBatch(ids, hashes, writeBatch.get(), &innerPromises);
+
+  {
+    auto writeBatch = localStore_->beginWrite();
+    datapackStore_.getTreeBatch(requests, writeBatch.get(), &innerPromises);
+  }
 
   // Receive the fetches and tie the content and metadata together if needed.
-  auto innerPromise = innerPromises.begin();
-  promise = promises.begin();
+  auto requestIt = requests.begin();
   auto treeMetadataFuture = std::make_move_iterator(metadataFutures.begin());
-  for (; innerPromise != innerPromises.end();
-       ++innerPromise, ++promise, ++treeMetadataFuture) {
+  for (auto innerPromise = innerPromises.begin();
+       innerPromise != innerPromises.end();
+       ++innerPromise, ++treeMetadataFuture, ++requestIt) {
     // This innerPromise pattern is so we can retrieve the tree from the
     // innerPromise and use it for tree metadata prefetching, without
     // invalidating the passed in Promise.
-    if (!innerPromise->isFulfilled()) {
-      continue;
+    if (innerPromise->isFulfilled()) {
+      (*requestIt)->getPromise<std::unique_ptr<Tree>>()->setWith([&]() mutable {
+        std::unique_ptr<Tree> tree = innerPromise->getSemiFuture().get();
+        this->processTreeMetadata(std::move(*treeMetadataFuture), *tree);
+        return tree;
+      });
     }
-
-    (*promise)->setWith([&]() mutable {
-      std::unique_ptr<Tree> tree = (*innerPromise).getFuture().get();
-      this->processTreeMetadata(std::move(*treeMetadataFuture), *tree);
-      return tree;
-    });
   }
 }
 

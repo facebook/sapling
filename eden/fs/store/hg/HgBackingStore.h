@@ -73,14 +73,9 @@ class HgBackingStore {
       const RootId& rootId,
       bool prefetchMetadata);
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
-      const Hash& id,
-      HgProxyHash proxyHash,
-      bool prefetchMetadata,
-      ObjectFetchContext& context);
+      const std::shared_ptr<HgImportRequest>& request);
   void getTreeBatch(
-      const std::vector<Hash>& ids,
-      const std::vector<HgProxyHash>& hashes,
-      std::vector<folly::Promise<std::unique_ptr<Tree>>*> promises,
+      const std::vector<std::shared_ptr<HgImportRequest>>& requests,
       bool prefetchMetadata);
   void processTreeMetadata(
       folly::SemiFuture<std::unique_ptr<TreeMetadata>>&& treeMetadataFuture,

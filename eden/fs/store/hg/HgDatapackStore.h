@@ -49,8 +49,7 @@ class HgDatapackStore {
       const std::vector<std::shared_ptr<HgImportRequest>>& requests);
 
   void getTreeBatch(
-      const std::vector<Hash>& ids,
-      const std::vector<HgProxyHash>& hashes,
+      const std::vector<std::shared_ptr<HgImportRequest>>& requests,
       LocalStore::WriteBatch* writeBatch,
       std::vector<folly::Promise<std::unique_ptr<Tree>>>* promises);
 

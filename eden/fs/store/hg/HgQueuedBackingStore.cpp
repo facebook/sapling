@@ -132,9 +132,9 @@ void HgQueuedBackingStore::processBlobImportRequests(
           std::move(fetchSemiFuture)
               .defer([request = std::move(request), watch, stats = stats_](
                          auto&& result) mutable {
-                auto hash =
-                    request->getRequest<HgImportRequest::BlobImport>()->hash;
-                XLOG(DBG4) << "Imported blob from HgImporter for " << hash;
+                XLOG(DBG4)
+                    << "Imported blob from HgImporter for "
+                    << request->getRequest<HgImportRequest::BlobImport>()->hash;
                 stats->getHgBackingStoreStatsForCurrentThread()
                     .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
                 request->getPromise<HgImportRequest::BlobImport::Response>()
@@ -148,47 +148,28 @@ void HgQueuedBackingStore::processBlobImportRequests(
 
 void HgQueuedBackingStore::processTreeImportRequests(
     std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
-  std::vector<Hash> hashes;
-  std::vector<HgProxyHash> proxyHashes;
-  std::vector<folly::Promise<HgImportRequest::TreeImport::Response>*> promises;
-
   folly::stop_watch<std::chrono::milliseconds> watch;
-  hashes.reserve(requests.size());
-  proxyHashes.reserve(requests.size());
-  promises.reserve(requests.size());
 
   bool prefetchMetadata = false;
   for (auto& request : requests) {
     auto* treeImport = request->getRequest<HgImportRequest::TreeImport>();
-    auto& hash = treeImport->hash;
-    auto* promise =
-        request->getPromise<HgImportRequest::TreeImport::Response>();
     prefetchMetadata |= treeImport->prefetchMetadata;
 
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
 
-    XLOGF(
-        DBG4,
-        "Processing tree request for {} ({:p})",
-        hash.toString(),
-        static_cast<void*>(promise));
-    hashes.emplace_back(hash);
-    proxyHashes.emplace_back(treeImport->proxyHash);
-    promises.emplace_back(promise);
+    XLOGF(DBG4, "Processing tree request for {}", treeImport->hash.toString());
   }
 
-  backingStore_->getTreeBatch(hashes, proxyHashes, promises, prefetchMetadata);
+  backingStore_->getTreeBatch(requests, prefetchMetadata);
 
   {
-    auto request = requests.begin();
-    auto promise = promises.begin();
     std::vector<folly::SemiFuture<folly::Unit>> futures;
     futures.reserve(requests.size());
 
-    XCHECK_EQ(requests.size(), promises.size());
-    for (; request != requests.end(); ++request, ++promise) {
-      if ((*promise)->isFulfilled()) {
+    for (auto& request : requests) {
+      auto* promise = request->getPromise<std::unique_ptr<Tree>>();
+      if (promise->isFulfilled()) {
         stats_->getHgBackingStoreStatsForCurrentThread()
             .hgBackingStoreGetTree.addValue(watch.elapsed().count());
         continue;
@@ -198,16 +179,18 @@ void HgQueuedBackingStore::processTreeImportRequests(
       // not found on the server. Let's import the trees through the hg
       // importer.
       // TODO(xavierd): remove when EdenAPI has been rolled out everywhere.
-      auto* treeImport = (*request)->getRequest<HgImportRequest::TreeImport>();
+      auto treeSemiFuture = backingStore_->getTree(request);
       futures.emplace_back(
-          backingStore_
-              ->getTree(
-                  treeImport->hash,
-                  treeImport->proxyHash,
-                  treeImport->prefetchMetadata,
-                  ObjectFetchContext::getNullContext())
-              .defer([request = *request, promise = *promise](auto&& result) {
-                promise->setTry(std::move(result));
+          std::move(treeSemiFuture)
+              .defer([request = std::move(request), watch, stats = stats_](
+                         auto&& result) mutable {
+                XLOG(DBG4)
+                    << "Imported blob from HgImporter for "
+                    << request->getRequest<HgImportRequest::BlobImport>()->hash;
+                stats->getHgBackingStoreStatsForCurrentThread()
+                    .hgBackingStoreGetTree.addValue(watch.elapsed().count());
+                request->getPromise<HgImportRequest::TreeImport::Response>()
+                    ->setTry(std::forward<decltype(result)>(result));
               }));
     }
 
