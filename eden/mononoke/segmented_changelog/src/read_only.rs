@@ -80,16 +80,21 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             .into_iter()
             .filter_map(|(cs_id, dag_id)| {
                 // We do not return an entry when the asked commit is a descendant of client_head.
-                self.iddag
+                match self
+                    .iddag
                     .to_first_ancestor_nth(dag_id, constraints.clone())
-                    .with_context(|| {
-                        format!(
-                            "failed to compute the common descendant and distance for {}",
-                            cs_id
-                        )
-                    })
-                    .map(|opt| opt.map(|(v, dist)| (cs_id, Location::new(v, dist))))
-                    .transpose()
+                {
+                    // Preserve error message in server response by flatten the error.
+                    Err(e) => Err(format_err!(
+                        "failed to compute the common descendant and distance for {} with heads {:?}: {:?}",
+                        cs_id,
+                        &master_heads,
+                        e
+                    )),
+                    Ok(v) => Ok(v),
+                }
+                .map(|opt| opt.map(|(v, dist)| (cs_id, Location::new(v, dist))))
+                .transpose()
             })
             .collect::<Result<HashMap<_, _>>>()?;
         let common_cs_ids = {
