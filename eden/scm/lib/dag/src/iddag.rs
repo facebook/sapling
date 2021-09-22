@@ -130,20 +130,6 @@ impl<Store: IdDagStore> IdDag<Store> {
 }
 
 impl<Store: IdDagStore> IdDag<Store> {
-    /// Find segment by level and head.
-    pub(crate) fn find_segment_by_head_and_level(
-        &self,
-        head: Id,
-        level: u8,
-    ) -> Result<Option<Segment>> {
-        self.store.find_segment_by_head_and_level(head, level)
-    }
-
-    /// Find flat segment containing the given id.
-    pub(crate) fn find_flat_segment_including_id(&self, id: Id) -> Result<Option<Segment>> {
-        self.store.find_flat_segment_including_id(id)
-    }
-
     /// Add a new segment.
     ///
     /// For simplicity, it does not check if the new segment overlaps with
@@ -161,49 +147,11 @@ impl<Store: IdDagStore> IdDag<Store> {
         self.store.insert(flags, level, low, high, parents)
     }
 
-    /// Return the next unused id for segments of the specified level.
-    ///
-    /// Useful for building segments incrementally.
-    pub fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
-        self.store.next_free_id(level, group)
-    }
-
     /// Returns whether the iddag contains segments for the given `id`.
     pub fn contains_id(&self, id: Id) -> Result<bool> {
         let group = id.group();
         let level = 0;
         Ok(self.next_free_id(level, group)? > id)
-    }
-
-    /// Find segments that covers `id..` range at the given level, within a same group.
-    pub(crate) fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
-        self.store.next_segments(id, level)
-    }
-
-    /// Iterate through segments at the given level in descending order.
-    pub(crate) fn iter_segments_descending<'a>(
-        &'a self,
-        max_high_id: Id,
-        level: Level,
-    ) -> Result<impl Iterator<Item = Result<Segment>> + 'a> {
-        self.store.iter_segments_descending(max_high_id, level)
-    }
-
-    /// Iterate through segments at the given level in ascending order.
-    pub(crate) fn iter_segments_ascending<'a>(
-        &'a self,
-        min_high_id: Id,
-        level: Level,
-    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a + Send + Sync>> {
-        self.store.iter_segments_ascending(min_high_id, level)
-    }
-
-    /// Iterate through flat segments that have the given parent.
-    pub(crate) fn iter_master_flat_segments_with_parent<'a>(
-        &'a self,
-        parent: Id,
-    ) -> Result<impl Iterator<Item = Result<Segment>> + 'a> {
-        self.store.iter_master_flat_segments_with_parent(parent)
     }
 
     pub(crate) fn version(&self) -> &VerLink {
