@@ -89,7 +89,7 @@ mod paths {
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
     pub const COMMIT_HASH_LOOKUP: &str = "commit/hash_lookup";
-    pub const COMMIT_GRAPH: &str = "commit/commit_graph";
+    pub const COMMIT_GRAPH: &str = "commit/graph";
     pub const BOOKMARKS: &str = "bookmarks";
     pub const LOOKUP: &str = "lookup";
     pub const UPLOAD: &str = "upload/";
