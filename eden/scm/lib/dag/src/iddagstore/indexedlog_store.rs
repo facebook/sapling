@@ -246,9 +246,7 @@ impl IdDagStore for IndexedLogStore {
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
         let get_iter = |group: Group| -> Result<_> {
-            let mut key = Vec::with_capacity(9);
-            key.write_u8(group.0 as u8).unwrap();
-            key.write_u64::<BigEndian>(parent.0).unwrap();
+            let key = index_parent_key(group, parent);
             let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
             let iter = iter.map(move |result| {
                 match result {
@@ -493,9 +491,7 @@ impl IndexedLogStore {
                             "Cross-group segment is unexpected"
                         );
                         for id in parents {
-                            let mut bytes = Vec::with_capacity(9);
-                            bytes.write_u8(group.0 as u8).unwrap();
-                            bytes.write_u64::<BigEndian>(id.0).unwrap();
+                            let bytes = index_parent_key(group, id);
                             result.push(log::IndexOutput::Owned(bytes.into()));
                         }
                     }
@@ -565,6 +561,15 @@ impl IndexedLogStore {
 
 fn default_next_free_ids_without_dirty() -> (Id, Id) {
     (Group::MASTER.min_id(), Group::NON_MASTER.min_id())
+}
+
+// Build index key for the INDEX_PARENT (group-parent) index.
+fn index_parent_key(group: Group, id: Id) -> [u8; 9] {
+    let mut result = [0u8; 9];
+    debug_assert!(group.0 <= 0xff);
+    result[0] = group.0 as u8;
+    result[1..].copy_from_slice(&id.0.to_be_bytes());
+    result
 }
 
 #[cfg(test)]
