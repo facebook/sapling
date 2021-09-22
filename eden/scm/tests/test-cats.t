@@ -29,6 +29,6 @@
   $ cats_file="$(pwd)/cats"
   $ hg push --config http.verbose=True --config cats.some.priority=1 --config cats.some.path="$cats_file" --insecure --config paths.default=mononoke://localhost:$PROXY_PORT/test --config auth.mononoke.cert=$cert --config auth.mononoke.key=$cert_key --config auth.mononoke.prefix=mononoke://* 2> /dev/null | grep -o "x-forwarded-cats: cats"
   x-forwarded-cats: cats
-  $ kill $to_kill
+  $ kill $to_kill 2>/dev/null
 
 #endif
