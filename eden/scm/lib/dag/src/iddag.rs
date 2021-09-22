@@ -948,16 +948,23 @@ pub trait IdDagAlgorithm: IdDagStore {
             let mut next_id = None;
             for child_seg in self.iter_master_flat_segments_with_parent(head)? {
                 let child_seg = child_seg?;
-                if child_seg.parents()?.len() > 1 {
-                    // `child_seg.span().low` is a merge, so `head` is a parent of a merge.
-                    // Therefore `head` can be used as `x`.
+                let child_low = child_seg.span()?.low;
+                if !ancestors.contains(child_low) {
+                    // `child_low` is outside `ancestors(heads)`, cannot use it
+                    // or its parents as references.
+                    continue;
+                }
+                if child_seg.parent_count()? > 1 {
+                    // `child_low` is a merge included in `ancestors`, and
+                    // `head` is a parent of the merge. Therefore `head` can be
+                    // used as `x`.
                     n += head.0 - id.0;
                     break 'outer (head, n);
                 }
-                let child_low = child_seg.span()?.low;
-                if ancestors.contains(child_low) {
-                    next_id = Some(child_low);
-                }
+                // Fragmented segments. Continue search.
+                debug_assert!(ancestors.contains(child_low));
+                next_id = Some(child_low);
+                break;
             }
             match next_id {
                 // This should not happen if indexes and segments are legit.
@@ -1459,8 +1466,9 @@ pub enum FirstAncestorConstraint {
     ///
     /// Practically, this means `x` is either:
     /// - referred explicitly by `heads`.
-    /// - a parent of a merge (multi-parent id).
-    ///   (at clone time, client gets a sparse idmap including them)
+    /// - a parent of a merge that is an ancestor of `heads`.
+    ///   (a merge is a vertex with more than one parents)
+    ///   (at clone and pull time, client gets a sparse idmap including them)
     ///
     /// This also enforces `x` to be part of `ancestors(heads)`.
     KnownUniversally { heads: IdSet },

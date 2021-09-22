@@ -389,8 +389,9 @@ async fn test_resolve_misleading_merges() {
 
     let client1 = server1.client_cloned_data().await.with_remote(&server2);
 
-    // BUG: Cannot resolve A. It is resolved to B~1 but B does not exist locally.
-    client1.dag.vertex_id("A".into()).await.unwrap_err();
+    // A is resolved to C~2, not B~1, since in the ancestors(C) sub-graph,
+    // B is not a parent of a merge.
+    client1.dag.vertex_id("A".into()).await.unwrap();
     assert_eq!(client1.output(), ["resolve names: [A], heads: [C]"]);
 }
 
