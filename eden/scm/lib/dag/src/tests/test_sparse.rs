@@ -430,6 +430,62 @@ async fn test_resolve_pick_path() {
     assert_eq!(client2.output(), ["resolve names: [A], heads: [H]"]);
 }
 
+#[tokio::test]
+async fn test_resolve_mixed_result() {
+    // Test that Ok and Err can be both present in vertex_id_batch return value.
+    let servers: Vec<_> = ["F J", "D J", "C E D F J"]
+        .iter()
+        .map(|master| {
+            TestDag::draw(&format!(
+                r#"
+                    A-B-C-D-G-H-I-J
+                       \   /
+                        E-F   # master: {}"#,
+                master
+            ))
+        })
+        .collect();
+
+    assert_eq!(
+        servers
+            .iter()
+            .map(|s| s.debug_segments(0, Group::MASTER))
+            .collect::<Vec<_>>()
+            .join("\n"),
+        r#"
+        G+6 : J+9 [D+5, F+3] OnlyHead
+        C+4 : D+5 [B+1]
+        A+0 : F+3 [] Root OnlyHead
+
+        G+6 : J+9 [D+3, F+5] OnlyHead
+        E+4 : F+5 [B+1]
+        A+0 : D+3 [] Root OnlyHead
+
+        G+6 : J+9 [D+4, F+5] OnlyHead
+        F+5 : F+5 [E+3]
+        D+4 : D+4 [C+2]
+        E+3 : E+3 [B+1]
+        A+0 : C+2 [] Root OnlyHead"#
+    );
+
+    let names: Vec<_> = "A B C D E F G H I J X".split(' ').map(Into::into).collect();
+    for server in servers {
+        let client = TestDag::draw("A-B-C-D-G-H B-E-F-G # master: H")
+            .client_cloned_data()
+            .await
+            .with_remote(&server);
+        let ids = client.dag.vertex_id_batch(&names).await;
+        assert_eq!(
+            format!("{:?}", ids),
+            "Ok([Ok(0), Ok(1), Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7), Err(VertexNotFound(I)), Err(VertexNotFound(J)), Err(VertexNotFound(X))])",
+        );
+        assert_eq!(
+            client.output(),
+            ["resolve names: [A, B, C, E, G, I, J, X], heads: [H]"]
+        );
+    }
+}
+
 async fn client_for_local_cache_test() -> TestDag {
     let server = TestDag::draw("A-B-C-D-E-F-G # master: G");
     server.client_cloned_data().await
