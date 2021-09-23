@@ -1,5 +1,5 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
+  $ configure modernclient
 
 this structure seems to tickle a bug in bundle's search for
 changesets, so first we have to recreate it
@@ -32,8 +32,7 @@ o  0
 
 setup test repo1
 
-  $ hg init repo1
-  $ cd repo1
+  $ newclientrepo repo1
   $ echo "rev 0" > foo.txt
   $ hg ci -Am"rev 0"
   adding foo.txt
@@ -104,18 +103,12 @@ check that "hg outgoing" really does the right thing
 
 sanity check of outgoing: expect revs 4 5 6 7 8
 
-  $ hg clone -r3 . ../repo2
-  adding changesets
-  adding manifests
-  adding file changes
-  added 4 changesets with 4 changes to 1 files
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg push -q -r 'desc(3)' --to book --create
 
 this should (and does) report 5 outgoing revisions: 4 5 6 7 8
 
-  $ hg outgoing --template "{node}\n" ../repo2
-  comparing with ../repo2
+  $ hg outgoing --template "{node}\n" test:repo1_server
+  comparing with test:repo1_server
   searching for changes
   4afa705929a3d9af58f4b035944e8ee600c7b571
   ee67ca2f52ac8c7904cc477b8cf04da764fea594
@@ -129,7 +122,7 @@ this should bundle the same 5 revisions that outgoing reported, but it
 
 actually bundles 7
 
-  $ hg bundle foo.bundle ../repo2
+  $ hg bundle foo.bundle test:repo1_server
   searching for changes
   5 changesets found
 

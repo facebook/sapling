@@ -207,7 +207,8 @@ def peer(uiorrepo, opts, path, create=False):
     obj = _peerlookup(path).instance(rui, path, create)
     # Uncomment this once we stop using file clones in sandcastle
     # if obj.local() and not rui.configbool("experimental", "allowfilepeer"):
-    #    raise error.Abort(_("cannot create peer for local file repository"))
+    #    raise error.Abort(_("cannot create peer for local file repository '%s'")
+    #        % path)
     _setuprepo(rui, obj)
     return obj.peer()
 

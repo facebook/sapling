@@ -1,27 +1,24 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
+  $ configure modernclient
 
-  $ disable treemanifest
   $ setconfig format.allowbundle1=true format.usegeneraldelta=yes
 
 bundle w/o type option
 
-  $ hg init t1
-  $ hg init t2
-  $ cd t1
+  $ newclientrepo t1
+  $ newclientrepo t2
+  $ cd ../t1
   $ echo blablablablabla > file.txt
   $ hg ci -Ama
   adding file.txt
   $ hg log | grep summary
   summary:     a
-  $ hg bundle ../b1 ../t2
+  $ hg bundle ../b1 test:t2_server
   searching for changes
   1 changesets found
 
   $ cd ../t2
-  $ hg pull ../b1
-  pulling from ../b1
-  requesting all changes
+  $ hg unbundle ../b1
   adding changesets
   adding manifests
   adding file changes
@@ -34,9 +31,8 @@ bundle w/o type option
 
 Unknown compression type is rejected
 
-  $ hg init t3
-  $ cd t3
-  $ hg -q pull ../b1
+  $ newclientrepo t3
+  $ hg -q unbundle ../b1
   $ hg bundle -a -t unknown out.hg
   abort: unknown is not a recognized bundle specification
   (see 'hg help bundlespec' for supported values for --type)
@@ -53,9 +49,9 @@ test bundle types
 
   $ testbundle() {
   >   echo % test bundle type $1
-  >   hg init t$1
-  >   cd t1
-  >   hg bundle -t $1 ../b$1 ../t$1
+  >   newclientrepo t$1
+  >   cd ../t1
+  >   hg bundle -t $1 ../b$1 test:t${1}_server
   >   f -q -B6 -D ../b$1; echo
   >   cd ../t$1
   >   hg debugbundle ../b$1
@@ -74,6 +70,9 @@ test bundle types
   Stream params: {}
   changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      1 data items, 1 history items
+      0b62bb0b3f9ee2ce6305e6e44861804a05547caf 
   none-v2
   
   % test bundle type bzip2
@@ -83,6 +82,9 @@ test bundle types
   Stream params: {Compression: BZ}
   changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      1 data items, 1 history items
+      0b62bb0b3f9ee2ce6305e6e44861804a05547caf 
   bzip2-v2
   
   % test bundle type gzip
@@ -92,6 +94,9 @@ test bundle types
   Stream params: {Compression: GZ}
   changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      1 data items, 1 history items
+      0b62bb0b3f9ee2ce6305e6e44861804a05547caf 
   gzip-v2
   
   % test bundle type none-v2
@@ -101,6 +106,9 @@ test bundle types
   Stream params: {}
   changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      1 data items, 1 history items
+      0b62bb0b3f9ee2ce6305e6e44861804a05547caf 
   none-v2
   
   % test bundle type v2
@@ -110,6 +118,9 @@ test bundle types
   Stream params: {Compression: BZ}
   changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      1 data items, 1 history items
+      0b62bb0b3f9ee2ce6305e6e44861804a05547caf 
   bzip2-v2
   
   % test bundle type v1
@@ -133,8 +144,7 @@ test bundle types
 
 Compression level can be adjusted for bundle2 bundles
 
-  $ hg init test-complevel
-  $ cd test-complevel
+  $ newclientrepo test-complevel
 
   $ cat > file0 << EOF
   > this is a file
@@ -153,14 +163,14 @@ Compression level can be adjusted for bundle2 bundles
   1 changesets found
 #if common-zlib
   $ f --size gzip-v2.hg
-  gzip-v2.hg: size=427
+  gzip-v2.hg: size=488
 #endif
 
   $ hg --config experimental.bundlecomplevel=1 bundle -a -t gzip-v2 gzip-v2-level1.hg
   1 changesets found
 #if common-zlib
   $ f --size gzip-v2-level1.hg
-  gzip-v2-level1.hg: size=435
+  gzip-v2-level1.hg: size=506
 #endif
 
   $ cd ..
@@ -177,6 +187,9 @@ Compression level can be adjusted for bundle2 bundles
   Stream params: {Compression: ZS}
   changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      1 data items, 1 history items
+      0b62bb0b3f9ee2ce6305e6e44861804a05547caf 
   zstd-v2
   
   % test bundle type zstd-v2
@@ -186,15 +199,11 @@ Compression level can be adjusted for bundle2 bundles
   Stream params: {Compression: ZS}
   changegroup -- {nbchanges: 1, version: 02}
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      1 data items, 1 history items
+      0b62bb0b3f9ee2ce6305e6e44861804a05547caf 
   zstd-v2
   
-
-Explicit request for zstd on non-generaldelta repos
-
-  $ hg --config format.usegeneraldelta=false init nogd
-  $ hg -q -R nogd pull t1
-  $ hg -R nogd bundle -a -t zstd nogd-zstd
-  1 changesets found
 
 zstd-v1 always fails
 
@@ -216,10 +225,8 @@ zstd is a valid engine but isn't available
 test garbage file
 
   $ echo garbage > bgarbage
-  $ hg init tgarbage
-  $ cd tgarbage
-  $ hg pull ../bgarbage
-  pulling from ../bgarbage
+  $ newclientrepo tgarbage
+  $ hg unbundle ../bgarbage
   abort: ../bgarbage: not a Mercurial bundle
   [255]
   $ cd ..
