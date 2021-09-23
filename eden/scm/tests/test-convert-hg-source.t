@@ -1,8 +1,5 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 #require execbit
-
-  $ disable treemanifest
 
   $ enable convert
   $ setconfig convert.hg.saverev=False
@@ -56,11 +53,6 @@ Test that template can print all file copies (issue4362)
   0 mark baz executable
   updating bookmarks
   $ cd new
-  $ hg out ../orig
-  comparing with ../orig
-  searching for changes
-  no changes found
-  [1]
   $ hg bookmarks
      premerge1                 973ef48a98a4
      premerge2                 13d9b87cf8f8

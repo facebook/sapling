@@ -1,7 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
-
   $ enable convert
   $ setconfig convert.hg.saverev=False
 
@@ -330,10 +327,6 @@
   2 c
   1 d
   0 e
-  $ hg --cwd a-hg pull ../a
-  pulling from ../a
-  searching for changes
-  no changes found
 
 conversion to existing file should fail
 

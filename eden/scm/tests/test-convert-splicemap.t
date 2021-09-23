@@ -1,6 +1,5 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
+  $ configure modernclient
   $ enable convert
 
   $ glog()
@@ -8,8 +7,7 @@
   >     hg log -G --template '{node|short} "{desc|firstline}"\
   >  files: {files}\n' "$@"
   > }
-  $ hg init repo1
-  $ cd repo1
+  $ newclientrepo repo1
   $ echo a > a
   $ hg ci -Am adda
   adding a
@@ -22,17 +20,17 @@
   $ hg ci -Am addc
   adding c
   $ PARENTID2=`hg id --debug -i`
-  $ cd ..
-  $ glog -R repo1
+  $ glog
   @  e55c719b85b6 "addc" files: c
   │
   o  6d4c2037ddc2 "addb" files: a b
   │
   o  07f494440405 "adda" files: a
   
+  $ hg push -q -r tip --to book --create
+  $ cd ..
 
-  $ hg init repo2
-  $ cd repo2
+  $ newclientrepo repo2
   $ echo b > a
   $ echo d > d
   $ hg ci -Am addaandd
@@ -94,9 +92,8 @@ splice repo2 on repo1
   527cdedf31fbd5ea708aa14eeecf53d4676f38db 6d4c2037ddc2cb2627ac3a244ecce35283268f8e
   e4ea00df91897da3079a10fab658c1eddba6617b e55c719b85b60e5102fac26110ba626e7cb6b7dc,527cdedf31fbd5ea708aa14eeecf53d4676f38db
   
-  $ hg clone repo1 target1
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ newclientrepo target1 test:repo1_server book
+  $ cd ..
   $ hg convert --splicemap splicemap repo2 target1
   scanning source...
   sorting...
@@ -124,8 +121,7 @@ splice repo2 on repo1
 
 Test splicemap and conversion order
 
-  $ hg init ordered
-  $ cd ordered
+  $ newclientrepo ordered
   $ echo a > a
   $ hg ci -Am adda
   adding a
@@ -138,12 +134,21 @@ Test splicemap and conversion order
   $ echo b > b
   $ hg ci -Am addb
   adding b
+  $ glog
+  @  102a90ea7b4a "addb" files: b
+  │
+  │ o  67b3901ca07e "changeaagain" files: a
+  │ │
+  │ o  540395c44225 "changea" files: a
+  ├─╯
+  o  07f494440405 "adda" files: a
+  
 
 We want 2 to depend on 1 and 3. Since 3 is always converted after 2,
 the bug should be exhibited with all conversion orders.
 
   $ cat > ../splicemap <<EOF
-  > `(hg id -r 2 -i --debug)` `(hg id -r 1 -i --debug)`, `(hg id -r 3 -i --debug)`
+  > `(hg id -r 'desc(changeaagain)' -i --debug)` `(hg id -r 'first(desc(changea))' -i --debug)`, `(hg id -r 'desc(addb)' -i --debug)`
   > EOF
   $ cd ..
   $ cat splicemap
@@ -151,8 +156,9 @@ the bug should be exhibited with all conversion orders.
 
 Test regular conversion
 
+  $ newclientrepo ordered-hg1
+  $ cd ..
   $ hg convert --splicemap splicemap ordered ordered-hg1
-  initializing destination ordered-hg1 repository
   scanning source...
   sorting...
   converting...
@@ -174,22 +180,23 @@ Test regular conversion
 Test conversion with parent revisions already in dest, using source
 and destination identifiers. Test unknown splicemap target.
 
-  $ hg convert -r1 ordered ordered-hg2
-  initializing destination ordered-hg2 repository
+  $ newclientrepo ordered-hg2
+  $ cd ..
+  $ hg convert -r 540395c44225 ordered ordered-hg2
   scanning source...
   sorting...
   converting...
   1 adda
   0 changea
-  $ hg convert -r3 ordered ordered-hg2
+  $ hg convert -r 102a90ea7b4a ordered ordered-hg2
   scanning source...
   sorting...
   converting...
   0 addb
   $ cat > splicemap <<EOF
-  > `(hg -R ordered id -r 2 -i --debug)` \
-  > `(hg -R ordered-hg2 id -r 1 -i --debug)`,\
-  > `(hg -R ordered-hg2 id -r 2 -i --debug)`
+  > `(hg -R ordered id -r 'desc(changeaagain)' -i --debug)` \
+  > `(hg -R ordered-hg2 id -r 'desc(adda)' -i --debug)`,\
+  > `(hg -R ordered-hg2 id -r 'desc(addb)' -i --debug)`
   > deadbeef102a90ea7b4a3361e4082ed620918c26 deadbeef102a90ea7b4a3361e4082ed620918c27
   > EOF
   $ hg convert --splicemap splicemap ordered ordered-hg2
@@ -198,13 +205,13 @@ and destination identifiers. Test unknown splicemap target.
   sorting...
   converting...
   0 changeaagain
-  spliced in 540395c442253af3b991be882b539e7e198b5808 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 67b3901ca07e1edc2eeb0971ed1e4647833ec555
+  spliced in 07f4944404050f47db2e5c5071e0e84e7a27bba9 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 67b3901ca07e1edc2eeb0971ed1e4647833ec555
   $ glog -R ordered-hg2
-  o    e87a37405c69 "changeaagain" files: a
+  o    0a1baec1d545 "changeaagain" files: a
   ├─╮
   │ o  102a90ea7b4a "addb" files: b
-  │ │
-  o │  540395c44225 "changea" files: a
+  ├─╯
+  │ o  540395c44225 "changea" files: a
   ├─╯
   o  07f494440405 "adda" files: a
   
@@ -223,18 +230,19 @@ Test clonebranches
   >   --splicemap splicemap ordered ordered-hg3
   initializing destination ordered-hg3 repository
   scanning source...
-  abort: revision 540395c442253af3b991be882b539e7e198b5808 not found in destination repository (lookups with clonebranches=true are not implemented)
+  abort: revision 07f4944404050f47db2e5c5071e0e84e7a27bba9 not found in destination repository (lookups with clonebranches=true are not implemented)
   [255]
 
 Test invalid dependency
 
   $ cat > splicemap <<EOF
-  > `(hg -R ordered id -r 2 -i --debug)` \
+  > `(hg -R ordered id -r 'desc(changeaagain)' -i --debug)` \
   > deadbeef102a90ea7b4a3361e4082ed620918c26,\
-  > `(hg -R ordered-hg2 id -r 2 -i --debug)`
+  > `(hg -R ordered-hg2 id -r 'desc(changeaagain)' -i --debug)`
   > EOF
+  $ newclientrepo ordered-hg4
+  $ cd ..
   $ hg convert --splicemap splicemap ordered ordered-hg4
-  initializing destination ordered-hg4 repository
   scanning source...
   abort: unknown splice map parent: deadbeef102a90ea7b4a3361e4082ed620918c26
   [255]

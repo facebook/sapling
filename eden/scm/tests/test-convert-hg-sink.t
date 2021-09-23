@@ -1,8 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
-  $ disable treemanifest
-
   $ enable convert
   $ setconfig convert.hg.saverev=False
 
@@ -17,7 +13,7 @@
   $ echo file > foo/file
   $ hg ci -qAm 'add foo/file'
   $ hg log
-  commit:      ad681a868e44
+  commit:      f17fa89f2ab1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo/file
@@ -45,18 +41,12 @@
   updating bookmarks
   $ cd new
   $ hg log -G --template '{node|short} ({phase}) "{desc}"\n'
-  o  ad681a868e44 (draft) "add foo/file"
+  o  f17fa89f2ab1 (draft) "add foo/file"
   │
   o  cbba8ecc03b7 (draft) "remove foo"
   │
   o  327daa9251fa (draft) "add foo and bar"
   
-
-  $ hg out ../orig
-  comparing with ../orig
-  searching for changes
-  no changes found
-  [1]
 
 dirstate should be empty:
 
@@ -86,11 +76,6 @@ add a new revision in the original repo
   0 add baz
   updating bookmarks
   $ cd new
-  $ hg out ../orig
-  comparing with ../orig
-  searching for changes
-  no changes found
-  [1]
 
 dirstate should be the same (no output below):
 
@@ -146,23 +131,23 @@ Create a tricky source repo
   0
   a
   b
+  e
   dir/b
   dir/c
   dir/d
-  e
   $ hg bookmark main -r tip
   $ glog
-  @  0613c8e59a3d (draft) "6: change a" files: a
+  @  1867ad0849db (draft) "6: change a" files: a
   │
-  o    717e9b37cdb7 (draft) "5: merge 2 and 3, copy b to dir/d" files: dir/d e
+  o    72f28de01ce6 (draft) "5: merge 2 and 3, copy b to dir/d" files: dir/d e
   ├─╮
-  │ o  86a55cb968d5 (draft) "4: change a" files: a
+  │ o  f8a6227c8908 (draft) "4: change a" files: a
   │ │
-  o │  0e6e235919dd (draft) "3: copy a to e, change b" files: b e
+  o │  998d5cc3a4a2 (draft) "3: copy a to e, change b" files: b e
   │ │
-  o │  0394b0d5e4f7 (draft) "2: add dir/c" files: dir/c
+  o │  c339622f8a56 (draft) "2: add dir/c" files: dir/c
   ├─╯
-  o  333546584845 (draft) "1: add a and dir/b" files: a dir/b
+  o  171bac3f503e (draft) "1: add a and dir/b" files: a dir/b
   │
   o  d1a24e2ebd23 (draft) "0: add 0" files: 0
   
@@ -204,18 +189,18 @@ Verify that conversion skipped rev 2:
 Verify mapping correct in both directions:
 
   $ cat source/.hg/shamap
-  a4a1dae0fe3514cefd9b8541b7abbc8f44f946d5 333546584845f70c4cfecb992341aaef0e708166
-  bd51f17597bf32268e68a560b206898c3960cda2 0e6e235919dd8e9285ba8eb5adf703af9ad99378
-  ab40a95b00725307e79c2fd271000aa8af9759f4 86a55cb968d51770cba2a1630d6cc637b574580a
-  f7cff662c5e581e6f3f1a85ffdd2bcb35825f6ba 717e9b37cdb7eb9917ca8e30aa3f986e6d5b177d
-  78814e84a217894517c2de392b903ed05e6871a4 0613c8e59a3ddb9789072ef52f1ed13496489bb4
+  a4a1dae0fe3514cefd9b8541b7abbc8f44f946d5 171bac3f503e5ef4584c0ef9e85c1fe1dbec6638
+  bd51f17597bf32268e68a560b206898c3960cda2 998d5cc3a4a208d3bf4d12c38659098f6398560b
+  ab40a95b00725307e79c2fd271000aa8af9759f4 f8a6227c8908f34d7c5c36e50e60414e3e78a85f
+  f7cff662c5e581e6f3f1a85ffdd2bcb35825f6ba 72f28de01ce6b624bf0fefc6cb5bffb337af2626
+  78814e84a217894517c2de392b903ed05e6871a4 1867ad0849db8749c5cd94b40b003a47638a277e
   $ cat dest/.hg/shamap
-  333546584845f70c4cfecb992341aaef0e708166 a4a1dae0fe3514cefd9b8541b7abbc8f44f946d5
-  0394b0d5e4f761ced559fd0bbdc6afc16cb3f7d1 a4a1dae0fe3514cefd9b8541b7abbc8f44f946d5
-  0e6e235919dd8e9285ba8eb5adf703af9ad99378 bd51f17597bf32268e68a560b206898c3960cda2
-  86a55cb968d51770cba2a1630d6cc637b574580a ab40a95b00725307e79c2fd271000aa8af9759f4
-  717e9b37cdb7eb9917ca8e30aa3f986e6d5b177d f7cff662c5e581e6f3f1a85ffdd2bcb35825f6ba
-  0613c8e59a3ddb9789072ef52f1ed13496489bb4 78814e84a217894517c2de392b903ed05e6871a4
+  171bac3f503e5ef4584c0ef9e85c1fe1dbec6638 a4a1dae0fe3514cefd9b8541b7abbc8f44f946d5
+  c339622f8a5696ac469991db0d2e30317128d932 a4a1dae0fe3514cefd9b8541b7abbc8f44f946d5
+  998d5cc3a4a208d3bf4d12c38659098f6398560b bd51f17597bf32268e68a560b206898c3960cda2
+  f8a6227c8908f34d7c5c36e50e60414e3e78a85f ab40a95b00725307e79c2fd271000aa8af9759f4
+  72f28de01ce6b624bf0fefc6cb5bffb337af2626 f7cff662c5e581e6f3f1a85ffdd2bcb35825f6ba
+  1867ad0849db8749c5cd94b40b003a47638a277e 78814e84a217894517c2de392b903ed05e6871a4
 
 Verify meta data converted correctly:
 
@@ -275,9 +260,9 @@ exclude merges.)
 Verify the conversion back:
 
   $ hg -R source log --debug -r tip
-  commit:      e6d364a69ff1248b2099e603b0c145504cade6f0
+  commit:      e963ef84c4c280fc1779fc8377b9c88998462ac3
   phase:       draft
-  manifest:    aa3e9542f3b76d4f1f1b2e9c7ce9dbb48b6a95ec
+  manifest:    2f2830baf3f3c6de2b0eb3b1092ed3938b6dae94
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      dest
@@ -293,10 +278,10 @@ Files that had been excluded are still present:
   a
   b
   dest
+  e
   dir/b
   dir/c
   dir/d
-  e
 
 More source changes
 
@@ -316,23 +301,23 @@ More source changes
   a
   b
   dest
+  e
   dir/b
   dir/c
   dir/d
-  e
 
   $ glog -r 6:
-  @  0c8927d1f7f4 (draft) "11: source change" files: a
+  @  9d8c6bc14c8a (draft) "11: source change" files: a
   │
-  o    9ccb7ee8d261 (draft) "10: source merge" files: a
+  o    299eb2311d0f (draft) "10: source merge" files: a
   ├─╮
-  │ o  f131b1518dba (draft) "9: source second branch" files: a
+  │ o  4fab9b4bb9ad (draft) "9: source second branch" files: a
   │ │
-  o │  669cf0e74b50 (draft) "8: source first branch" files: a
+  o │  e1dc5ae7f55e (draft) "8: source first branch" files: a
   │ │
-  │ o  e6d364a69ff1 (draft) "change in dest" files: dest
+  │ o  e963ef84c4c2 (draft) "change in dest" files: dest
   ├─╯
-  o  0613c8e59a3d (draft) "6: change a" files: a
+  o  1867ad0849db (draft) "6: change a" files: a
   │
   ~
   $ cd ..

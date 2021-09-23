@@ -1,8 +1,5 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
   $ configure mutation-norecord
-  $ disable treemanifest
 
   $ setconfig format.usegeneraldelta=yes
 
@@ -195,9 +192,10 @@
       264128213d290d868c54642d13aeaa3675551a78
   phase-heads -- {}
       264128213d290d868c54642d13aeaa3675551a78 draft
-  $ hg pull .hg/strip-backup/*
-  pulling from .hg/strip-backup/264128213d29-0b39d6bf-backup.hg
-  searching for changes
+  b2x:treegroup2 -- {cache: False, category: manifests, version: 1}
+      1 data items, 1 history items
+      812d56fc5e4133f1f57fc44bd22c6d9ea0810dcb 
+  $ hg unbundle .hg/strip-backup/*
   adding changesets
   adding manifests
   adding file changes
@@ -417,7 +415,7 @@ stripping many nodes on a complex graph (issue3299)
 
   $ hg init issue3299
   $ cd issue3299
-  $ hg debugbuilddag '@a.:a@b.:b.:x<a@a.:a<b@b.:b<a@a.:a'
+  $ hg debugbuilddag -n '@a.:a@b.:b.:x<a@a.:a<b@b.:b<a@a.:a'
   $ hg debugstrip 'not ancestors(x)'
 
 test hg debugstrip -B bookmark
@@ -425,7 +423,7 @@ test hg debugstrip -B bookmark
   $ cd ..
   $ hg init bookmarks
   $ cd bookmarks
-  $ hg debugbuilddag '..<2.*1/2:m<2+3:c<m+3:a<2.:b<m+2:d<2.:e<m+1:f'
+  $ hg debugbuilddag -n '..<2.*1/2:m<2+3:c<m+3:a<2.:b<m+2:d<2.:e<m+1:f'
   $ hg bookmark -r 'a' 'todelete'
   $ hg bookmark -r 'b' 'B'
   $ hg bookmark -r 'b' 'nostrip'
@@ -436,27 +434,25 @@ test hg debugstrip -B bookmark
   $ hg bookmark -r 'f' 'singlenode2'
   $ hg book -d a b c d e f m
   $ hg up -C todelete
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  7 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark todelete)
   $ hg debugstrip -B nostrip
   bookmark 'nostrip' deleted
   abort: empty revision set
   [255]
   $ hg debugstrip -B todelete
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   bookmark 'todelete' deleted
   $ hg id -ir dcbb326fdec2
   abort: unknown revision 'dcbb326fdec2'!
   [255]
-  $ hg id -ir d62d843c9a01
-  d62d843c9a01
   $ hg bookmarks
-     B                         ff43616e5d0f
-     delete                    2702dd0c91e7
-     multipledelete1           e46a4836065c
-     multipledelete2           b4594d867745
-     singlenode1               43227190fef8
-     singlenode2               43227190fef8
+     B                         bde800a4ddec
+     delete                    ff38c2200f49
+     multipledelete1           287656a49854
+     multipledelete2           003512c0aeac
+     singlenode1               ffd3d95c59c8
+     singlenode2               ffd3d95c59c8
   $ hg debugstrip -B multipledelete1 -B multipledelete2
   bookmark 'multipledelete1' deleted
   bookmark 'multipledelete2' deleted
@@ -487,7 +483,7 @@ test hg debugstrip -B bookmark
   abort: unknown revision '2702dd0c91e7'!
   [255]
   $ hg update B
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark B)
   $ echo a > a
   $ hg add a
@@ -495,7 +491,7 @@ test hg debugstrip -B bookmark
   abort: local changes found
   [255]
   $ hg bookmarks
-   * B                         ff43616e5d0f
+   * B                         bde800a4ddec
 
 Make sure no one adds back a -b option:
 
@@ -518,10 +514,9 @@ Verify bundles don't get overwritten:
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ ls .hg/strip-backup
   3903775176ed-e68910bd-backup.hg
-  $ hg pull -q -r 3903775176ed .hg/strip-backup/3903775176ed-e68910bd-backup.hg
+  $ hg unbundle -q .hg/strip-backup/3903775176ed-e68910bd-backup.hg
   $ hg debugstrip -r 'desc(a)'
   $ ls .hg/strip-backup
-  3903775176ed-54390173-backup.hg
   3903775176ed-e68910bd-backup.hg
   $ cd ..
 
@@ -616,9 +611,10 @@ unrelated to strip.)
   5c51d8d6557d0cb2ed8ef7d1e19ea477fb90e327
   6625a516847449b6f0fa3737b9ba56e9f0f3032c
   d8db9d1372214336d2b5570f20ee468d2c72fa8b
-  bundle2-output-bundle: "HG20", (1 params) 2 parts total
+  bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   bundle2-output-part: "phase-heads" 24 bytes payload
+  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
   $ hg log -G
   o  commit:      5c51d8d6557d
   │  user:        test

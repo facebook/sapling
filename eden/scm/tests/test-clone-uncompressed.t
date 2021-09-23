@@ -1,7 +1,5 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
   $ configure dummyssh
 #require serve
 
@@ -23,7 +21,7 @@ Basic clone
 
   $ hg clone --stream -U ssh://user@dummy/server clone1
   streaming all changes
-  1028 files to transfer, * of data (glob)
+  1027 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -51,7 +49,7 @@ Block full streaming clones
 
   $ hg clone --uncompressed -U ssh://user@dummy/server clone1-uncompressed
   streaming all changes
-  1028 files to transfer, * of data (glob)
+  1027 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
@@ -62,12 +60,12 @@ Clone with background file closing enabled
   running * 'user@dummy' 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
-  remote: 408
-  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch streamreqs=generaldelta,lz4revlog,revlogv1 stream_option $USUAL_BUNDLE2_CAPS$ unbundle=HG10GZ,HG10BZ,HG10UN
+  remote: 448
+  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch streamreqs=generaldelta,lz4revlog,revlogv1 stream_option $USUAL_BUNDLE2_CAPS$%0Atreemanifest%3DTrue%0Atreeonly%3DTrue unbundle=HG10GZ,HG10BZ,HG10UN
   remote: 1
   streaming all changes
   sending stream_out_option command
-  1028 files to transfer, * of data (glob)
+  1027 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   query 1; heads
   sending batch command

@@ -1,7 +1,5 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
-  $ configure dummyssh
+  $ configure dummyssh modernclient
   $ hg init repo
   $ cd repo
 
