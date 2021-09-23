@@ -171,25 +171,46 @@ class PrefetchCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         checkout_and_patterns = _find_checkout_and_patterns(args)
 
-        with checkout_and_patterns.instance.get_thrift_client_legacy() as client:
-            result = client.globFiles(
-                GlobParams(
-                    mountPoint=bytes(checkout_and_patterns.checkout.path),
-                    globs=checkout_and_patterns.patterns,
-                    includeDotfiles=args.include_dot_files,
-                    prefetchFiles=not args.no_prefetch,
-                    suppressFileList=args.silent,
-                    prefetchMetadata=args.prefetch_metadata,
-                    background=args.background,
-                    listOnlyFiles=args.list_only_files,
-                )
+        with checkout_and_patterns.instance.get_telemetry_logger().new_sample(
+            "prefetch"
+        ) as telemetry_sample:
+            telemetry_sample.add_string(
+                "checkout", checkout_and_patterns.checkout.path.name
             )
-            if not args.background and not args.silent:
-                if checkout_and_patterns.patterns and not result.matchingFiles:
-                    _eprintln(
-                        f"No files were matched by the pattern{'s' if len(checkout_and_patterns.patterns) else ''} specified.\n"
-                        "See `eden prefetch -h` for docs on pattern matching.",
+            telemetry_sample.add_bool("skip_prefetch", args.no_prefetch)
+            telemetry_sample.add_bool("background", args.background)
+            telemetry_sample.add_bool("prefetch_metadata", args.prefetch_metadata)
+            if args.pattern_file:
+                telemetry_sample.add_string("pattern_file", args.pattern_file)
+            if args.PATTERN:
+                telemetry_sample.add_normvector("patterns", args.PATTERN)
+
+            with checkout_and_patterns.instance.get_thrift_client_legacy() as client:
+                result = client.globFiles(
+                    GlobParams(
+                        mountPoint=bytes(checkout_and_patterns.checkout.path),
+                        globs=checkout_and_patterns.patterns,
+                        includeDotfiles=args.include_dot_files,
+                        prefetchFiles=not args.no_prefetch,
+                        suppressFileList=args.silent,
+                        prefetchMetadata=args.prefetch_metadata,
+                        background=args.background,
+                        listOnlyFiles=args.list_only_files,
                     )
-                _println("\n".join(os.fsdecode(name) for name in result.matchingFiles))
+                )
+                if args.background or args.silent:
+                    return 0
+
+                telemetry_sample.add_int("files_fetched", len(result.matchingFiles))
+
+                if not args.silent:
+                    if checkout_and_patterns.patterns and not result.matchingFiles:
+                        _eprintln(
+                            f"No files were matched by the pattern{'s' if len(checkout_and_patterns.patterns) else ''} specified.\n"
+                            "See `eden prefetch -h` for docs on pattern matching.",
+                        )
+                    _println(
+                        "\n".join(os.fsdecode(name) for name in result.matchingFiles)
+                    )
 
         return 0

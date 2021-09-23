@@ -26,7 +26,7 @@ log: logging.Logger = logging.getLogger(__name__)
 
 _session_id: Optional[int] = None
 
-_TelemetryTypes = Union[bool, int, str, float, Set[str]]
+_TelemetryTypes = Union[bool, int, str, float, Set[str], List[str]]
 
 
 class TelemetrySample(abc.ABC):
@@ -70,6 +70,10 @@ class TelemetrySample(abc.ABC):
     def add_tags(self, name: str, value: Set[str]) -> "TelemetrySample":
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def add_normvector(self, name: str, value: List[str]) -> "TelemetrySample":
+        raise NotImplementedError()
+
     def add_bool(self, name: str, value: bool) -> "TelemetrySample":
         return self.add_int(name, int(value))
 
@@ -85,6 +89,8 @@ class TelemetrySample(abc.ABC):
                 self.add_double(name, value)
             elif isinstance(value, set):
                 self.add_tags(name, value)
+            elif isinstance(value, list):
+                self.add_normvector(name, value)
             else:  # unsupported type
                 log.error(
                     f"unsupported value type {type(value)} passed to add_fields()"
@@ -178,6 +184,7 @@ class JsonTelemetrySample(TelemetrySample):
         self.strings: Dict[str, str] = {}
         self.doubles: Dict[str, float] = {}
         self.tags: Dict[str, List[str]] = {}
+        self.normvectors: Dict[str, List[str]] = {}
         self.logger: "BaseJsonTelemetryLogger" = logger
 
     def add_int(self, name: str, value: int) -> "JsonTelemetrySample":
@@ -196,6 +203,10 @@ class JsonTelemetrySample(TelemetrySample):
         self.tags[name] = list(value)
         return self
 
+    def add_normvector(self, name: str, value: List[str]) -> "JsonTelemetrySample":
+        self.normvectors[name] = value
+        return self
+
     def get_json(self) -> str:
         data: Dict[
             str,
@@ -209,6 +220,8 @@ class JsonTelemetrySample(TelemetrySample):
             data["double"] = self.doubles
         if self.tags:
             data["tags"] = self.tags
+        if self.normvectors:
+            data["normvector"] = self.normvectors
         return json.dumps(data)
 
     def _log_impl(self) -> None:
@@ -288,6 +301,11 @@ class NullTelemetrySample(TelemetrySample):
         pass
 
     def add_tags(self, name: str, value: Set[str]) -> "NullTelemetrySample":
+        # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return
+        #  value of `None`.
+        pass
+
+    def add_normvector(self, name: str, value: List[str]) -> "NullTelemetrySample":
         # pyre-fixme[7]: Expected `NullTelemetrySample` but got implicit return
         #  value of `None`.
         pass
