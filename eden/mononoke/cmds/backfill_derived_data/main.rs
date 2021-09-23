@@ -57,9 +57,12 @@ use time_ext::DurationExt;
 use topo_sort::sort_topological;
 use tunables::tunables;
 
+mod commit_discovery;
 mod regenerate;
 mod slice;
 mod warmup;
+
+use commit_discovery::CommitDiscoveryOptions;
 
 define_stats! {
     prefix = "mononoke.derived_data";
@@ -84,7 +87,6 @@ const ARG_SLICED: &str = "sliced";
 const ARG_SLICE_SIZE: &str = "slice-size";
 const ARG_BACKFILL: &str = "backfill";
 const ARG_GAP_SIZE: &str = "gap-size";
-const ARG_INPUT_FILE: &str = "input-file";
 const ARG_JSON: &str = "json";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
@@ -299,6 +301,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                     .about("backfill all/many derived data types at once")
                     .arg(
                         Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                            .conflicts_with(ARG_ALL_TYPES)
                             .possible_values(POSSIBLE_DERIVED_TYPES)
                             .required(false)
                             .takes_value(true)
@@ -307,6 +310,13 @@ fn main(fb: FacebookInit) -> Result<()> {
                                 "derived data type for which backfill will be run, ",
                                 "all enabled and backfilling types if not specified",
                             )),
+                    )
+                    .arg(
+                        Arg::with_name(ARG_ALL_TYPES)
+                            .long(ARG_ALL_TYPES)
+                            .required(false)
+                            .takes_value(false)
+                            .help("derive all derived data types enabled for this repo"),
                     )
                     .arg(
                         Arg::with_name(ARG_BATCH_SIZE)
@@ -336,55 +346,31 @@ fn main(fb: FacebookInit) -> Result<()> {
                     ),
             )
             .subcommand(
-                SubCommand::with_name(SUBCOMMAND_BENCHMARK)
-                    .about("benchmark derivation of a list of commits")
-                    .long_about("note that this command WILL DERIVE data and save it to storage")
-                    .arg(
-                        Arg::with_name(ARG_INPUT_FILE)
-                            .long(ARG_INPUT_FILE)
-                            .takes_value(true)
-                            .required(true)
-                            .help("File with a list of changeset hashes {hd|bonsai} or bookmarks"),
-                    )
-                    .arg(
-                        Arg::with_name(ARG_DERIVED_DATA_TYPE)
-                            .required(true)
-                            .index(1)
-                            .multiple(true)
-                            .conflicts_with(ARG_ALL_TYPES)
-                            .possible_values(POSSIBLE_DERIVED_TYPES)
-                            .help("derived data type for which backfill will be run"),
-                    )
-                    .arg(
-                        Arg::with_name(ARG_BACKFILL)
-                            .long(ARG_BACKFILL)
-                            .required(false)
-                            .takes_value(false)
-                            .help("Whether we need to use backfill mode"),
-                    )
-                    .arg(
-                        Arg::with_name(ARG_PARALLEL)
-                            .long(ARG_PARALLEL)
-                            .required(false)
-                            .takes_value(false)
-                            .requires(ARG_BACKFILL)
-                            .help("Whether we need to us parallel mode"),
-                    )
-                    .arg(
-                        Arg::with_name(ARG_BATCH_SIZE)
-                            .long(ARG_BATCH_SIZE)
-                            .required(false)
-                            .takes_value(true)
-                            .requires(ARG_PARALLEL)
-                            .help("size of batch that will be derived in parallel"),
-                    )
-                    .arg(
-                        Arg::with_name(ARG_JSON)
-                            .long(ARG_JSON)
-                            .required(false)
-                            .takes_value(false)
-                            .help("Print result in json format"),
+                regenerate::DeriveOptions::add_opts(
+                    commit_discovery::CommitDiscoveryOptions::add_opts(
+                        SubCommand::with_name(SUBCOMMAND_BENCHMARK)
+                            .about("benchmark derivation of a list of commits")
+                            .long_about(
+                                "note that this command WILL DERIVE data and save it to storage",
+                            ),
                     ),
+                )
+                .arg(
+                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                        .required(true)
+                        .index(1)
+                        .multiple(true)
+                        .conflicts_with(ARG_ALL_TYPES)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
+                        .help("derived data type for which backfill will be run"),
+                )
+                .arg(
+                    Arg::with_name(ARG_JSON)
+                        .long(ARG_JSON)
+                        .required(false)
+                        .takes_value(false)
+                        .help("Print result in json format"),
+                ),
             );
     let matches = app.get_matches(fb)?;
     let logger = matches.logger();
@@ -413,6 +399,7 @@ async fn run_subcmd<'a>(
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
             let repo: InnerRepo = args::open_repo_unredacted(fb, logger, matches).await?;
+
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
                 || {
                     let config = repo.blob_repo.get_derived_data_config();
@@ -420,6 +407,7 @@ async fn run_subcmd<'a>(
                 },
                 |names| names.map(ToString::to_string).collect(),
             );
+
             let batch_size = sub_m
                 .value_of(ARG_BATCH_SIZE)
                 .expect("batch-size must be set")
@@ -629,28 +617,15 @@ async fn run_subcmd<'a>(
             subcommand_single(&ctx, &repo, csid, types).await
         }
         (SUBCOMMAND_BENCHMARK, Some(sub_m)) => {
-            let input_file = sub_m
-                .value_of(ARG_INPUT_FILE)
-                .ok_or_else(|| anyhow!("{} is not set", ARG_INPUT_FILE))?;
-
             let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
-            let csids = helpers::csids_resolve_from_file(&ctx, &repo, input_file).await?;
+            let csids = CommitDiscoveryOptions::from_matches(&ctx, &repo, sub_m)
+                .await?
+                .get_commits();
 
             let derived_data_type = sub_m
                 .value_of(ARG_DERIVED_DATA_TYPE)
                 .ok_or_else(|| anyhow!("{} is not set", ARG_DERIVED_DATA_TYPE))?;
-
-            let opts = if sub_m.is_present(ARG_BACKFILL) {
-                if sub_m.is_present(ARG_PARALLEL) {
-                    let batch_size = args::get_u64_opt(&sub_m, ARG_BATCH_SIZE);
-
-                    regenerate::DeriveOptions::BackfillParallel { batch_size }
-                } else {
-                    regenerate::DeriveOptions::Backfill
-                }
-            } else {
-                regenerate::DeriveOptions::Simple
-            };
+            let opts = regenerate::DeriveOptions::from_matches(sub_m)?;
 
             let res = regenerate::regenerate_derived_data(
                 &ctx,

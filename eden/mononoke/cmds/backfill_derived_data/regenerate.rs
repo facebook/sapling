@@ -9,6 +9,8 @@ use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use cacheblob::{dummy::DummyLease, LeaseOps};
+use clap::{App, Arg, ArgMatches};
+use cmdlib::args;
 use context::CoreContext;
 use derived_data_utils::{derived_data_utils, BackfillDeriveStats, DerivedUtils};
 use futures::{stream, StreamExt, TryStreamExt};
@@ -17,6 +19,10 @@ use mononoke_types::ChangesetId;
 use serde::ser::SerializeStruct;
 use slog::debug;
 use std::{sync::Arc, time::Duration};
+
+const ARG_BACKFILL: &str = "backfill";
+const ARG_BATCH_SIZE: &str = "batch-size";
+const ARG_PARALLEL: &str = "parallel";
 
 pub enum DeriveOptions {
     // Simple case - derive commits one by one
@@ -29,6 +35,51 @@ pub enum DeriveOptions {
     // some derived data types (e.g. fsnodes, skeleton manifests)
     // can derive the whole stack of commits in parallel.
     BackfillParallel { batch_size: Option<u64> },
+}
+
+impl DeriveOptions {
+    pub fn add_opts<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, 'b> {
+        subcommand
+            .arg(
+                Arg::with_name(ARG_BACKFILL)
+                    .long(ARG_BACKFILL)
+                    .required(false)
+                    .takes_value(false)
+                    .help("Whether we need to use backfill mode"),
+            )
+            .arg(
+                Arg::with_name(ARG_PARALLEL)
+                    .long(ARG_PARALLEL)
+                    .required(false)
+                    .takes_value(false)
+                    .requires(ARG_BACKFILL)
+                    .help("Whether we need to us parallel mode"),
+            )
+            .arg(
+                Arg::with_name(ARG_BATCH_SIZE)
+                    .long(ARG_BATCH_SIZE)
+                    .required(false)
+                    .takes_value(true)
+                    .requires(ARG_PARALLEL)
+                    .help("size of batch that will be derived in parallel"),
+            )
+    }
+
+    pub fn from_matches(matches: &ArgMatches<'_>) -> Result<DeriveOptions, Error> {
+        let opts = if matches.is_present(ARG_BACKFILL) {
+            if matches.is_present(ARG_PARALLEL) {
+                let batch_size = args::get_u64_opt(&matches, ARG_BATCH_SIZE);
+
+                DeriveOptions::BackfillParallel { batch_size }
+            } else {
+                DeriveOptions::Backfill
+            }
+        } else {
+            DeriveOptions::Simple
+        };
+
+        Ok(opts)
+    }
 }
 
 pub enum BenchmarkResult {
