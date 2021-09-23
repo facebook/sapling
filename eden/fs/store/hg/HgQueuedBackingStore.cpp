@@ -253,7 +253,7 @@ std::string HgQueuedBackingStore::renderRootId(const RootId& rootId) {
   }
 }
 
-folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
+folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTree(
     const Hash& id,
     ObjectFetchContext& context) {
   HgProxyHash proxyHash;
@@ -271,13 +271,14 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
 
   if (auto tree = backingStore_->getTreeFromHgCache(
           id, proxyHash, context.prefetchMetadata())) {
-    return folly::makeSemiFuture(std::move(tree));
+    return folly::makeSemiFuture(BackingStore::GetTreeRes{
+        std::move(tree), ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getTreeImpl(id, proxyHash, context);
 }
 
-folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTreeImpl(
+folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTreeImpl(
     const Hash& id,
     const HgProxyHash& proxyHash,
     ObjectFetchContext& context) {
@@ -304,11 +305,13 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTreeImpl(
   return std::move(getTreeFuture)
       .thenTry([this, id](folly::Try<std::unique_ptr<Tree>>&& result) {
         this->queue_.markImportAsFinished<Tree>(id, result);
-        return folly::makeSemiFuture(std::move(result));
+        auto tree = std::move(result).value();
+        return BackingStore::GetTreeRes{
+            std::move(tree), ObjectFetchContext::Origin::FromNetworkFetch};
       });
 }
 
-folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
+folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlob(
     const Hash& id,
     ObjectFetchContext& context) {
   HgProxyHash proxyHash;
@@ -326,13 +329,14 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
 
   if (auto blob =
           backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
-    return folly::makeSemiFuture(std::move(blob));
+    return folly::makeSemiFuture(BackingStore::GetBlobRes{
+        std::move(blob), ObjectFetchContext::Origin::FromDiskCache});
   }
 
   return getBlobImpl(id, proxyHash, context);
 }
 
-folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlobImpl(
+folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlobImpl(
     const Hash& id,
     const HgProxyHash& proxyHash,
     ObjectFetchContext& context) {
@@ -362,7 +366,9 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlobImpl(
   return std::move(getBlobFuture)
       .thenTry([this, id](folly::Try<std::unique_ptr<Blob>>&& result) {
         this->queue_.markImportAsFinished<Blob>(id, result);
-        return folly::makeSemiFuture(std::move(result));
+        auto blob = std::move(result).value();
+        return BackingStore::GetBlobRes{
+            std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
       });
 }
 
@@ -399,7 +405,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
         // when useEdenNativePrefetch is true, fetch blobs one by one instead
         // of grouping them and fetching in batches.
         if (config_->getEdenConfig()->useEdenNativePrefetch.getValue()) {
-          std::vector<folly::SemiFuture<std::unique_ptr<Blob>>> futures;
+          std::vector<folly::SemiFuture<BackingStore::GetBlobRes>> futures;
           futures.reserve(ids.size());
 
           for (size_t i = 0; i < ids.size(); i++) {

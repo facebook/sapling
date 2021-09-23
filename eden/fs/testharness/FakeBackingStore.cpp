@@ -79,7 +79,7 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
       });
 }
 
-SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTree(
+SemiFuture<BackingStore::GetTreeRes> FakeBackingStore::getTree(
     const Hash& id,
     ObjectFetchContext& /*context*/) {
   auto data = data_.wlock();
@@ -95,10 +95,13 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTree(
     throw std::domain_error("tree " + id.toString() + " not found");
   }
 
-  return it->second->getFuture();
+  return it->second->getFuture().thenValue([](std::unique_ptr<Tree> tree) {
+    return BackingStore::GetTreeRes{
+        std::move(tree), ObjectFetchContext::Origin::FromNetworkFetch};
+  });
 }
 
-SemiFuture<unique_ptr<Blob>> FakeBackingStore::getBlob(
+SemiFuture<BackingStore::GetBlobRes> FakeBackingStore::getBlob(
     const Hash& id,
     ObjectFetchContext& /*context*/) {
   auto data = data_.wlock();
@@ -109,7 +112,10 @@ SemiFuture<unique_ptr<Blob>> FakeBackingStore::getBlob(
     throw std::domain_error("blob " + id.toString() + " not found");
   }
 
-  return it->second->getFuture();
+  return it->second->getFuture().thenValue([](std::unique_ptr<Blob> blob) {
+    return BackingStore::GetBlobRes{
+        std::move(blob), ObjectFetchContext::Origin::FromNetworkFetch};
+  });
 }
 
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {

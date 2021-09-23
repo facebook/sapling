@@ -125,10 +125,10 @@ class HgQueuedBackingStore final : public BackingStore {
       ObjectFetchContext& /* context */) override {
     throw std::domain_error("unimplemented");
   }
-  folly::SemiFuture<std::unique_ptr<Tree>> getTree(
+  folly::SemiFuture<BackingStore::GetTreeRes> getTree(
       const Hash& id,
       ObjectFetchContext& context) override;
-  folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
+  folly::SemiFuture<BackingStore::GetBlobRes> getBlob(
       const Hash& id,
       ObjectFetchContext& context) override;
 
@@ -193,7 +193,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * the blob is present locally, as this function will always push the request
    * at the end of the queue.
    */
-  folly::SemiFuture<std::unique_ptr<Blob>> getBlobImpl(
+  folly::SemiFuture<BackingStore::GetBlobRes> getBlobImpl(
       const Hash& id,
       const HgProxyHash& proxyHash,
       ObjectFetchContext& context);
@@ -205,7 +205,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * the tree is present locally, as this function will always push the request
    * at the end of the queue.
    */
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeImpl(
+  folly::SemiFuture<BackingStore::GetTreeRes> getTreeImpl(
       const Hash& id,
       const HgProxyHash& proxyHash,
       ObjectFetchContext& context);

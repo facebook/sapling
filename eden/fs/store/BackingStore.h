@@ -55,10 +55,42 @@ class BackingStore : public RootIdCodec {
       TreeEntryType treeEntryType,
       facebook::eden::PathComponentPiece pathComponentPiece,
       ObjectFetchContext& context) = 0;
-  virtual folly::SemiFuture<std::unique_ptr<Tree>> getTree(
+
+  /**
+   * Return value of the getTree method.
+   */
+  struct GetTreeRes {
+    /** The retrieved tree. */
+    std::unique_ptr<Tree> tree;
+    /** The fetch origin of the tree. */
+    ObjectFetchContext::Origin origin;
+  };
+
+  /**
+   * Fetch a tree from the backing store.
+   *
+   * Return the tree and where it was found.
+   */
+  virtual folly::SemiFuture<GetTreeRes> getTree(
       const Hash& id,
       ObjectFetchContext& context) = 0;
-  virtual folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
+
+  /**
+   * Return value of the getBlob method.
+   */
+  struct GetBlobRes {
+    /** The retrieved blob. */
+    std::unique_ptr<Blob> blob;
+    /** The fetch origin of the tree. */
+    ObjectFetchContext::Origin origin;
+  };
+
+  /**
+   * Fetch a blob from the backing store.
+   *
+   * Return the blob and where it was found.
+   */
+  virtual folly::SemiFuture<GetBlobRes> getBlob(
       const Hash& id,
       ObjectFetchContext& context) = 0;
 

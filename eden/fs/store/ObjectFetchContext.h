@@ -41,10 +41,14 @@ class ObjectFetchContext {
    * Suitable for use as an index into an array of size kOriginEnumMax.
    */
   enum Origin : unsigned {
+    /** The request didn't succeed */
     NotFetched,
+    /** The request was serviced from a memory cache */
     FromMemoryCache,
+    /** The request was serviced from a disk cache */
     FromDiskCache,
-    FromBackingStore,
+    /** The request was serviced with a network request */
+    FromNetworkFetch,
     kOriginEnumMax,
   };
 

@@ -119,11 +119,12 @@ SemiFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
       });
 }
 
-SemiFuture<unique_ptr<Tree>> GitBackingStore::getTree(
+SemiFuture<BackingStore::GetTreeRes> GitBackingStore::getTree(
     const Hash& id,
     ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
-  return makeSemiFuture(getTreeImpl(id));
+  return makeSemiFuture(BackingStore::GetTreeRes{
+      getTreeImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
 unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
@@ -171,11 +172,12 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
   return tree;
 }
 
-SemiFuture<unique_ptr<Blob>> GitBackingStore::getBlob(
+SemiFuture<BackingStore::GetBlobRes> GitBackingStore::getBlob(
     const Hash& id,
     ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
-  return makeSemiFuture(getBlobImpl(id));
+  return makeSemiFuture(BackingStore::GetBlobRes{
+      getBlobImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
 unique_ptr<Blob> GitBackingStore::getBlobImpl(const Hash& id) {

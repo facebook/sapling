@@ -59,7 +59,7 @@ void RequestContext::finishRequest() {
         pal_.recordAccess(
             *pid, ProcessAccessLog::AccessType::FsChannelDiskCacheImport);
         break;
-      case Origin::FromBackingStore:
+      case Origin::FromNetworkFetch:
         pal_.recordAccess(
             *pid, ProcessAccessLog::AccessType::FsChannelBackingStoreImport);
         break;

@@ -76,11 +76,10 @@ FetchStatistics StatsFetchContext::computeStatistics() const {
   auto computeAccessStats = [&](ObjectFetchContext::ObjectType type) {
     uint64_t fromMemory = counts_[type][ObjectFetchContext::FromMemoryCache];
     uint64_t fromDisk = counts_[type][ObjectFetchContext::FromDiskCache];
-    uint64_t fromBackingStore =
-        counts_[type][ObjectFetchContext::FromBackingStore];
-    uint64_t total = fromMemory + fromDisk + fromBackingStore;
+    uint64_t fromNetwork = counts_[type][ObjectFetchContext::FromNetworkFetch];
+    uint64_t total = fromMemory + fromDisk + fromNetwork;
     return FetchStatistics::Access{
-        total, fromBackingStore, computePercent(fromMemory + fromDisk, total)};
+        total, fromNetwork, computePercent(fromMemory + fromDisk, total)};
   };
 
   auto result = FetchStatistics{};

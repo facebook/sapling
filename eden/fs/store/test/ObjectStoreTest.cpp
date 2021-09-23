@@ -87,7 +87,7 @@ TEST_F(ObjectStoreTest, getBlob_tracks_backing_store_read) {
   auto& request = context.requests[0];
   EXPECT_EQ(ObjectFetchContext::Blob, request.type);
   EXPECT_EQ(readyBlobId, request.hash);
-  EXPECT_EQ(ObjectFetchContext::FromBackingStore, request.origin);
+  EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
 TEST_F(ObjectStoreTest, getBlob_tracks_second_read_from_cache) {
@@ -106,7 +106,7 @@ TEST_F(ObjectStoreTest, getTree_tracks_backing_store_read) {
   auto& request = context.requests[0];
   EXPECT_EQ(ObjectFetchContext::Tree, request.type);
   EXPECT_EQ(readyTreeId, request.hash);
-  EXPECT_EQ(ObjectFetchContext::FromBackingStore, request.origin);
+  EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
 TEST_F(ObjectStoreTest, getTree_tracks_second_read_from_cache) {
@@ -139,7 +139,7 @@ TEST_F(ObjectStoreTest, getBlobSize_tracks_backing_store_read) {
   auto& request = context.requests[0];
   EXPECT_EQ(ObjectFetchContext::BlobMetadata, request.type);
   EXPECT_EQ(readyBlobId, request.hash);
-  EXPECT_EQ(ObjectFetchContext::FromBackingStore, request.origin);
+  EXPECT_EQ(ObjectFetchContext::FromNetworkFetch, request.origin);
 }
 
 TEST_F(ObjectStoreTest, getBlobSize_tracks_second_read_from_cache) {

@@ -197,8 +197,8 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
     return self->backingStore_->getTree(id, fetchContext)
         .via(self->executor_)
         .thenValue([self, id, &fetchContext, localStore = self->localStore_](
-                       unique_ptr<const Tree> tree) {
-          if (!tree) {
+                       BackingStore::GetTreeRes result) {
+          if (!result.tree) {
             // TODO: Perhaps we should do some short-term negative
             // caching?
             XLOG(DBG2) << "unable to find tree " << id;
@@ -207,14 +207,11 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
           }
 
           // promote to shared_ptr so we can store in the cache and return
-          std::shared_ptr<const Tree> loadedTree{std::move(tree)};
+          std::shared_ptr<const Tree> loadedTree{std::move(result.tree)};
           localStore->putTree(*loadedTree);
           self->treeCache_->insert(loadedTree);
           XLOG(DBG3) << "tree " << id << " retrieved from backing store";
-          fetchContext.didFetch(
-              ObjectFetchContext::Tree,
-              id,
-              ObjectFetchContext::FromBackingStore);
+          fetchContext.didFetch(ObjectFetchContext::Tree, id, result.origin);
 
           self->updateProcessFetch(fetchContext);
           return shared_ptr<const Tree>(std::move(loadedTree));
@@ -244,59 +241,55 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
     ObjectFetchContext& fetchContext) const {
   auto self = shared_from_this();
 
-  return localStore_->getBlob(id).thenValue(
-      [id, &fetchContext, self](shared_ptr<const Blob> blob) {
-        if (blob) {
-          // Not computing the BlobMetadata here because if the blob was found
-          // in the local store, the LocalStore probably also has the metadata
-          // already, and the caller may not even need the SHA-1 here. (If the
-          // caller needed the SHA-1, they would have called getBlobMetadata
-          // instead.)
-          XLOG(DBG4) << "blob " << id << " found in local store";
-          self->updateBlobStats(true, false);
-          fetchContext.didFetch(
-              ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
+  return localStore_->getBlob(id).thenValue([id, &fetchContext, self](
+                                                shared_ptr<const Blob> blob) {
+    if (blob) {
+      // Not computing the BlobMetadata here because if the blob was found
+      // in the local store, the LocalStore probably also has the metadata
+      // already, and the caller may not even need the SHA-1 here. (If the
+      // caller needed the SHA-1, they would have called getBlobMetadata
+      // instead.)
+      XLOG(DBG4) << "blob " << id << " found in local store";
+      self->updateBlobStats(true, false);
+      fetchContext.didFetch(
+          ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
 
-          self->updateProcessFetch(fetchContext);
-          return makeFuture(shared_ptr<const Blob>(std::move(blob)));
-        }
+      self->updateProcessFetch(fetchContext);
+      return makeFuture(shared_ptr<const Blob>(std::move(blob)));
+    }
 
-        self->deprioritizeWhenFetchHeavy(fetchContext);
+    self->deprioritizeWhenFetchHeavy(fetchContext);
 
-        // Look in the BackingStore
-        return self->backingStore_->getBlob(id, fetchContext)
-            .via(self->executor_)
-            .thenValue([self, &fetchContext, id](
-                           unique_ptr<const Blob> loadedBlob) {
-              if (loadedBlob) {
-                XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
-                self->updateBlobStats(false, true);
-                fetchContext.didFetch(
-                    ObjectFetchContext::Blob,
-                    id,
-                    ObjectFetchContext::FromBackingStore);
+    // Look in the BackingStore
+    return self->backingStore_->getBlob(id, fetchContext)
+        .via(self->executor_)
+        .thenValue([self, &fetchContext, id](BackingStore::GetBlobRes result) {
+          if (result.blob) {
+            XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
+            self->updateBlobStats(false, true);
+            fetchContext.didFetch(ObjectFetchContext::Blob, id, result.origin);
 
-                self->updateProcessFetch(fetchContext);
-                self->localStore_->putBlob(id, loadedBlob.get());
+            self->updateProcessFetch(fetchContext);
+            self->localStore_->putBlob(id, result.blob.get());
 
-                // Quick check in-memory cache first, before doing expensive
-                // calculations. If metadata is present in cache, it most
-                // certainly exists in local store too
-                if (!self->metadataCache_.rlock()->exists(id)) {
-                  auto metadata =
-                      self->localStore_->putBlobMetadata(id, loadedBlob.get());
-                  self->metadataCache_.wlock()->set(id, metadata);
-                }
-                return shared_ptr<const Blob>(std::move(loadedBlob));
-              }
+            // Quick check in-memory cache first, before doing expensive
+            // calculations. If metadata is present in cache, it most
+            // certainly exists in local store too
+            if (!self->metadataCache_.rlock()->exists(id)) {
+              auto metadata =
+                  self->localStore_->putBlobMetadata(id, result.blob.get());
+              self->metadataCache_.wlock()->set(id, metadata);
+            }
+            return shared_ptr<const Blob>(std::move(result.blob));
+          }
 
-              XLOG(DBG2) << "unable to find blob " << id;
-              self->updateBlobStats(false, false);
-              // TODO: Perhaps we should do some short-term negative caching?
-              throw std::domain_error(
-                  folly::to<string>("blob ", id.toString(), " not found"));
-            });
-      });
+          XLOG(DBG2) << "unable to find blob " << id;
+          self->updateBlobStats(false, false);
+          // TODO: Perhaps we should do some short-term negative caching?
+          throw std::domain_error(
+              folly::to<string>("blob ", id.toString(), " not found"));
+        });
+  });
 }
 
 void ObjectStore::updateBlobStats(bool local, bool backing) const {
@@ -353,12 +346,12 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
         // especially when we begin to expire entries in RocksDB.
         return self->backingStore_->getBlob(id, context)
             .via(self->executor_)
-            .thenValue([self, id, &context](std::unique_ptr<Blob> blob) {
-              if (blob) {
+            .thenValue([self, id, &context](BackingStore::GetBlobRes result) {
+              if (result.blob) {
                 self->updateBlobMetadataStats(false, false, true);
-                self->localStore_->putBlob(id, blob.get());
+                self->localStore_->putBlob(id, result.blob.get());
                 auto metadata =
-                    self->localStore_->putBlobMetadata(id, blob.get());
+                    self->localStore_->putBlobMetadata(id, result.blob.get());
                 self->metadataCache_.wlock()->set(id, metadata);
                 // I could see an argument for recording this fetch with
                 // type Blob instead of BlobMetadata, but it's probably more
@@ -366,9 +359,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
                 // occurred. Also, since backing stores don't directly
                 // support fetching metadata, it should be clear.
                 context.didFetch(
-                    ObjectFetchContext::BlobMetadata,
-                    id,
-                    ObjectFetchContext::FromBackingStore);
+                    ObjectFetchContext::BlobMetadata, id, result.origin);
 
                 self->updateProcessFetch(context);
                 return makeFuture(metadata);

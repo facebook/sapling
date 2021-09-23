@@ -82,8 +82,8 @@ TEST_F(FakeBackingStoreTest, getBlob) {
   storedBlob->trigger();
   ASSERT_TRUE(future1.isReady());
   ASSERT_TRUE(future2.isReady());
-  EXPECT_EQ("foobar", blobContents(*std::move(future1).get()));
-  EXPECT_EQ("foobar", blobContents(*std::move(future2).get()));
+  EXPECT_EQ("foobar", blobContents(*std::move(future1).get().blob));
+  EXPECT_EQ("foobar", blobContents(*std::move(future2).get().blob));
 
   // But subsequent calls to getBlob() should still yield unready futures.
   auto future3 = store_->getBlob(hash, ObjectFetchContext::getNullContext());
@@ -117,13 +117,13 @@ TEST_F(FakeBackingStoreTest, getBlob) {
 
   storedBlob->setReady();
   ASSERT_TRUE(future5.isReady());
-  EXPECT_EQ("foobar", blobContents(*std::move(future5).get()));
+  EXPECT_EQ("foobar", blobContents(*std::move(future5).get().blob));
 
   // Subsequent calls to getBlob() should return Futures that are immediately
   // ready since we called setReady() above.
   auto future6 = store_->getBlob(hash, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(future6.isReady());
-  EXPECT_EQ("foobar", blobContents(*std::move(future6).get()));
+  EXPECT_EQ("foobar", blobContents(*std::move(future6).get().blob));
 }
 
 TEST_F(FakeBackingStoreTest, getTree) {
@@ -170,7 +170,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
   ASSERT_TRUE(future2.isReady());
   ASSERT_TRUE(future3.isReady());
 
-  auto tree2 = std::move(future2).get();
+  auto tree2 = std::move(future2).get().tree;
   EXPECT_EQ(rootHash, tree2->getHash());
   EXPECT_EQ(4, tree2->getTreeEntries().size());
   // Tree entries are always alphabetically sorted so we don't have to worry
@@ -190,7 +190,7 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_EQ(foo->get().getHash(), tree2->getEntryAt(3).getHash());
   EXPECT_EQ(TreeEntryType::REGULAR_FILE, tree2->getEntryAt(3).getType());
 
-  EXPECT_EQ(rootHash, std::move(future3).get()->getHash());
+  EXPECT_EQ(rootHash, std::move(future3).get().tree->getHash());
 
   // Now try using setReady()
   auto future4 =
@@ -198,12 +198,12 @@ TEST_F(FakeBackingStoreTest, getTree) {
   EXPECT_FALSE(future4.isReady());
   rootDir->setReady();
   ASSERT_TRUE(future4.isReady());
-  EXPECT_EQ(rootHash, std::move(future4).get()->getHash());
+  EXPECT_EQ(rootHash, std::move(future4).get().tree->getHash());
 
   auto future5 =
       store_->getTree(rootHash, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(future5.isReady());
-  EXPECT_EQ(rootHash, std::move(future5).get()->getHash());
+  EXPECT_EQ(rootHash, std::move(future5).get().tree->getHash());
 }
 
 TEST_F(FakeBackingStoreTest, getRootTree) {
