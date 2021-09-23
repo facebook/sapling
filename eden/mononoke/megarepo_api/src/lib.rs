@@ -93,7 +93,6 @@ impl<K: Clone + Eq + Hash, V: Clone> Cache<K, V> {
     }
 }
 
-#[derive(Clone)]
 pub struct MegarepoApi {
     megarepo_configs: Arc<dyn MononokeMegarepoConfigs>,
     repo_configs: RepoConfigs,
@@ -147,8 +146,8 @@ impl MegarepoApi {
     }
 
     /// Get megarepo configs
-    pub fn configs(&self) -> Arc<dyn MononokeMegarepoConfigs> {
-        self.megarepo_configs.clone()
+    pub fn configs(&self) -> &dyn MononokeMegarepoConfigs {
+        self.megarepo_configs.as_ref()
     }
 
     /// Get mononoke object

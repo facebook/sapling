@@ -116,12 +116,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs.clone()))?);
-    let megarepo_api = runtime.block_on(MegarepoApi::new(
+    let megarepo_api = Arc::new(runtime.block_on(MegarepoApi::new(
         matches.environment(),
         repo_configs,
         repo_factory,
         mononoke.clone(),
-    ))?;
+    ))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
 

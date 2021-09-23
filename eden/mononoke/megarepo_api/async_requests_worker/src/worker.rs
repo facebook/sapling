@@ -43,7 +43,7 @@ const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
 
 #[derive(Clone)]
 pub struct AsyncMethodRequestWorker {
-    megarepo: MegarepoApi,
+    megarepo: Arc<MegarepoApi>,
     name: String,
 }
 
@@ -52,7 +52,7 @@ impl AsyncMethodRequestWorker {
     /// The name argument should uniquely identify tailer instance and will be put
     /// in the queue table so it's possible to find out which instance is working on
     /// a given task (for debugging purposes).
-    pub fn new(megarepo: MegarepoApi, name: String) -> Self {
+    pub fn new(megarepo: Arc<MegarepoApi>, name: String) -> Self {
         Self { megarepo, name }
     }
 

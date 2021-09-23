@@ -84,12 +84,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         skiplist_enabled: true,
     };
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs.clone()))?);
-    let megarepo = runtime.block_on(MegarepoApi::new(
+    let megarepo = Arc::new(runtime.block_on(MegarepoApi::new(
         matches.environment(),
         repo_configs,
         repo_factory,
         mononoke,
-    ))?;
+    ))?);
 
     let tw_job_cluster = std::env::var("TW_JOB_CLUSTER");
     let tw_job_name = std::env::var("TW_JOB_NAME");

@@ -68,7 +68,7 @@ static POPULAR_METHODS: Lazy<HashSet<&'static str>> =
 pub(crate) struct SourceControlServiceImpl {
     pub(crate) fb: FacebookInit,
     pub(crate) mononoke: Arc<Mononoke>,
-    pub(crate) megarepo_api: MegarepoApi,
+    pub(crate) megarepo_api: Arc<MegarepoApi>,
     pub(crate) logger: Logger,
     pub(crate) scuba_builder: MononokeScubaSampleBuilder,
     pub(crate) service_identity: Identity,
@@ -81,7 +81,7 @@ impl SourceControlServiceImpl {
     pub fn new(
         fb: FacebookInit,
         mononoke: Arc<Mononoke>,
-        megarepo_api: MegarepoApi,
+        megarepo_api: Arc<MegarepoApi>,
         logger: Logger,
         mut scuba_builder: MononokeScubaSampleBuilder,
         scribe: Scribe,
