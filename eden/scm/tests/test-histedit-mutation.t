@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation
   $ . "$TESTDIR/histedit-helpers.sh"

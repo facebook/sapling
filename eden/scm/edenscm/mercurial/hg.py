@@ -205,6 +205,9 @@ def peer(uiorrepo, opts, path, create=False):
     """return a repository peer for the specified path"""
     rui = remoteui(uiorrepo, opts)
     obj = _peerlookup(path).instance(rui, path, create)
+    # Uncomment this once we stop using file clones in sandcastle
+    # if obj.local() and not rui.configbool("experimental", "allowfilepeer"):
+    #    raise error.Abort(_("cannot create peer for local file repository"))
     _setuprepo(rui, obj)
     return obj.peer()
 

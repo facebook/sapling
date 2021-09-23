@@ -1,4 +1,5 @@
   $ disable treemanifest
+  $ setconfig experimental.allowfilepeer=True
 
 Stabilize test
 

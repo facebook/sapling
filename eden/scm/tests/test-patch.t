@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ cat > patchtool.py <<EOF
   > from __future__ import absolute_import, print_function
@@ -46,6 +47,7 @@ Issue2417: hg import with # comments in description
 Prepare source repo and patch:
 
   $ rm $HGRCPATH
+  $ setconfig experimental.allowfilepeer=True
   $ hg init c
   $ cd c
   $ printf "a\rc" > a

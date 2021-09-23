@@ -20,6 +20,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 is_py3 = sys.version_info[0] >= 3
 
+sh % "setconfig 'experimental.allowfilepeer=True'"
 sh % "setconfig 'extensions.treemanifest=!'"
 
 sh % "setconfig 'ui.allowemptycommit=1'"

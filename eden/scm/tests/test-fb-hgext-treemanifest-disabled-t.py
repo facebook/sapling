@@ -10,6 +10,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % "'CACHEDIR=`pwd`/hgcache'"
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % '. "$TESTDIR/library.sh"'
 
 sh % "hg init client1"

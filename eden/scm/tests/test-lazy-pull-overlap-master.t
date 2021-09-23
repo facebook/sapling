@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
 This test checks the pull works when:
 

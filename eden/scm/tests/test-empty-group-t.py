@@ -26,6 +26,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 # (plus we test a failure where outgoing
 # wrongly reported the number of csets)
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "hg init a"
 sh % "cd a"
 sh % "touch init"

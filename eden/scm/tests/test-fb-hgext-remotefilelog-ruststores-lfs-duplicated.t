@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ newserver master
   $ setconfig extensions.lfs= lfs.url=file:$TESTTMP/lfs-server remotefilelog.lfs=True

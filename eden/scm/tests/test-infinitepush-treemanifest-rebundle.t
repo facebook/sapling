@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest
   $ . "$TESTDIR/library.sh"

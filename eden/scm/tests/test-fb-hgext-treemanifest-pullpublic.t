@@ -1,4 +1,5 @@
   $ . "$TESTDIR/library.sh"
+  $ setconfig experimental.allowfilepeer=True
   $ setconfig devel.print-metrics=1
   $ setconfig treemanifest.treeonly=False
   $ setconfig scmstore.enableshim=True scmstore.contentstorefallback=True

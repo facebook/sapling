@@ -10,6 +10,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 sh % ". $TESTDIR/library.sh"
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "hginit master"
 sh % "cd master"
 sh % "setconfig 'remotefilelog.server=True'"

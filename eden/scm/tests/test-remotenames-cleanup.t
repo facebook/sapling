@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ configure modern
   $ setconfig 'infinitepush.branchpattern=re:(^hack/.*)'

@@ -13,6 +13,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 # (merge correctly when all the files in a directory are moved
 # but then local changes are added in the same directory)
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "hg init a"
 sh % "cd a"
 sh % "mkdir -p testdir"

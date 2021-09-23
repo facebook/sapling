@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest
 Corrupt an hg repo with two pulls.

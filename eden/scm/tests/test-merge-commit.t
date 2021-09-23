@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
 Check that renames are correctly saved by a commit after a merge
 

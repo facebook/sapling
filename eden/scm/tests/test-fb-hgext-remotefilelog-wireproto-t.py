@@ -10,6 +10,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "setconfig extensions.treemanifest=! treemanifest.sendtrees=False treemanifest.treeonly=False"
+sh % "setconfig experimental.allowfilepeer=True"
 
 sh % '. "$TESTDIR/library.sh"'
 

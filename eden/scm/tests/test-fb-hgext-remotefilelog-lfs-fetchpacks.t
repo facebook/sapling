@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
   $ disable treemanifest
   $ setconfig remotenames.selectivepull=1 remotefilelog.lfs=True
 

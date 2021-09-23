@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ setconfig experimental.nativecheckout=true
   $ newserver server

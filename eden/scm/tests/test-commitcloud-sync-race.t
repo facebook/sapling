@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ enable commitcloud infinitepush amend rebase remotenames
   $ configure dummyssh

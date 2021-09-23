@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest
 Test log FILE history handling with renames / file node collisions.

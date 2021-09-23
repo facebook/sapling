@@ -1,4 +1,5 @@
   $ disable treemanifest
+  $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=1 devel.skip-metrics=scmstore

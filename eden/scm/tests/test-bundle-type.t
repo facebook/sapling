@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest
   $ setconfig format.allowbundle1=true format.usegeneraldelta=yes

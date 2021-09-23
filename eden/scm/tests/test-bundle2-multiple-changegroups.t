@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
 Create an extension to test bundle2 with multiple changegroups
 

@@ -11,6 +11,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # Test for changeset ba7c74081861
 # (update dirstate correctly for non-branchmerge updates)
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "hg init a"
 sh % "cd a"
 sh % "echo a" > "a"

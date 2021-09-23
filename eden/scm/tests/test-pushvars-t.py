@@ -11,6 +11,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # Setup
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "cat" << r"""
 #!/bin/bash
 env | egrep "^HG_USERVAR_(DEBUG|BYPASS_REVIEW)" | sort

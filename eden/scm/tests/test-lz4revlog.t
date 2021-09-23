@@ -1,4 +1,5 @@
   $ disable treemanifest
+  $ setconfig experimental.allowfilepeer=True
   $ configure dummyssh
 
   $ hg init a

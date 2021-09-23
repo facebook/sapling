@@ -24,6 +24,7 @@ def listcommitandmanifesthashes(rev):
     return list(tuple(line.split()) for line in sh.hgexcept(*args).splitlines())
 
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % '. "$TESTDIR/library.sh"'
 
 sh % "configure dummyssh"

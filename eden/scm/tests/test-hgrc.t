@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
 hide outer repo
   $ hg init
@@ -27,7 +28,10 @@ Basic syntax error
     = expected equal_sign
   
   [255]
-  $ echo "" > $HGRC
+  $ cat > $HGRC <<EOF
+  > [experimental]
+  > allowfilepeer=True
+  > EOF
 
 Issue1199: Can't use '%' in hgrc (eg url encoded username)
 
@@ -55,6 +59,7 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   default = $TESTTMP/foo%bar
   $ hg showconfig
   bundle.mainreporoot=$TESTTMP/foobar
+  experimental.allowfilepeer=True
   paths.default=$TESTTMP/foo%bar
   $ cd ..
 

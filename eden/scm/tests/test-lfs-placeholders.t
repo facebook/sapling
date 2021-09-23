@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 #require no-windows
 
 Test the lfs.placeholders config option

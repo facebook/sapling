@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest
 This test makes sure that we don't mark a file as merged with its ancestor

@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
 Remotenames extension has a shortcut that makes heads discovery work faster.
 Unfortunately that may result in sending public commits to the server. This

@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
 This test tries to exercise the ssh functionality with a dummy script
 

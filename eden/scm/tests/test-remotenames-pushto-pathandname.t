@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ enable remotenames
   $ setconfig remotenames.rename.default=remote remotenames.disallowedto="^remote/"

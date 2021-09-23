@@ -9,6 +9,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 sh % "configure dummyssh"
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "enable commitcloud infinitepush"
 
 (

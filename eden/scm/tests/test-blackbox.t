@@ -1,4 +1,5 @@
 #require no-fsmonitor
+  $ setconfig experimental.allowfilepeer=True
 
 setup
   $ readconfig <<EOF

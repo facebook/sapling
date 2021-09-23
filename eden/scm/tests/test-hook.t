@@ -1,4 +1,5 @@
   $ disable treemanifest
+  $ setconfig experimental.allowfilepeer=True
 commit hooks can see env vars
 (and post-transaction one are run unlocked)
 

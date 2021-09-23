@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "setconfig 'extensions.treemanifest=!'"
 # Set up global extensions
 (

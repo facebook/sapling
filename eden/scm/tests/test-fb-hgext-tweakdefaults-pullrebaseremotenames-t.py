@@ -11,6 +11,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 # Set up with remotenames
+sh % "setconfig experimental.allowfilepeer=True"
 (
     sh % "cat"
     << r"""

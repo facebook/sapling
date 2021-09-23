@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
 Test discovery with modern setup: selectivepull, visibility.
 

@@ -1,4 +1,5 @@
   $ enable remotenames
+  $ setconfig experimental.allowfilepeer=True
   > mkcommit()
   > {
   >    echo $1 > $1

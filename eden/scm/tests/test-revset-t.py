@@ -16,6 +16,7 @@ from edenscm.mercurial.pycompat import decodeutf8
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "enable commitextras"
 sh % "setconfig 'ui.allowemptycommit=1'"
 

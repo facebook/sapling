@@ -9,6 +9,7 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "hg init t"
 sh % "cd t"
 sh % "echo 1" > "foo"

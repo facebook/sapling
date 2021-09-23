@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ enable amend
   $ setconfig infinitepushbackup.hostname=testhost

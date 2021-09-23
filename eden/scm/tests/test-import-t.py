@@ -13,6 +13,7 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
+sh % "setconfig experimental.allowfilepeer=True"
 sh % "enable amend"
 
 sh % "hg init a"

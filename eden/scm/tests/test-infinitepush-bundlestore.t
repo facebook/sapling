@@ -1,4 +1,5 @@
 #chg-compatible
+  $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest
   $ setconfig experimental.evolution= experimental.bundle2lazylocking=True

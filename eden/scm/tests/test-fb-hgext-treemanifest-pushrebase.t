@@ -1,4 +1,5 @@
   $ configure mutation-norecord
+  $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/library.sh"
 

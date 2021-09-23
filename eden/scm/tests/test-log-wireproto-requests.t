@@ -1,4 +1,5 @@
   $ . "$TESTDIR/helpers-wireprotologging.sh"
+  $ setconfig experimental.allowfilepeer=True
   $ CACHEDIR="$TESTTMP/hgcache"
 
   $ configure dummyssh
