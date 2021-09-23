@@ -2,9 +2,9 @@ name: EdenSCM Rust Libraries
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -104,4 +104,3 @@ jobs:
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/zstdelta/Cargo.toml
     - name: Run zstore tests
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/zstore/Cargo.toml
-

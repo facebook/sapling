@@ -3,10 +3,10 @@ name: EdenSCM Mac
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
     branches:
-    - master
+    - main
 
 jobs:
   build:
@@ -137,7 +137,7 @@ jobs:
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages build --src-dir=. eden_scm  --project-install-prefix eden_scm:/usr/local
     - name: Copy artifacts
       run: python3 build/fbcode_builder/getdeps.py --allow-system-packages fixup-dyn-deps --src-dir=. eden_scm _artifacts/mac  --project-install-prefix eden_scm:/usr/local --final-install-prefix /usr/local
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@main
       with:
         name: eden_scm
         path: _artifacts
