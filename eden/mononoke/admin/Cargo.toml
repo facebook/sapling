@@ -59,6 +59,7 @@ live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 megarepo_api = { version = "0.1.0", path = "../megarepo_api" }
+megarepo_error = { version = "0.1.0", path = "../megarepo_api/megarepo_error" }
 mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_replay_data" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
@@ -85,6 +86,7 @@ skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manife
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+source_control = { version = "0.1.0", path = "../scs/if" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0.29"

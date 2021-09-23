@@ -16,6 +16,7 @@ cacheblob = { version = "0.1.0", path = "../cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 chaosblob = { version = "0.1.0", path = "../chaosblob" }
 clap = "2.33"
+delayblob = { version = "0.1.0", path = "../delayblob" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fileblob = { version = "0.1.0", path = "../fileblob" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
