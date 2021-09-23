@@ -129,7 +129,6 @@ pub async fn regenerate_derived_data(
         ));
     }
     let csids = topo_sort(&ctx, &repo, csids).await?;
-    derived_utils.regenerate(&csids);
 
     match opts {
         DeriveOptions::Simple => derive_simple(&ctx, &repo, csids, derived_utils).await,
@@ -146,6 +145,7 @@ async fn derive_simple(
     csids: Vec<ChangesetId>,
     derived_data_utils: Arc<dyn DerivedUtils>,
 ) -> Result<BenchmarkResult, Error> {
+    derived_data_utils.regenerate(&csids);
     let (stats, per_commit_stats) = async {
         let mut per_commit_stats = vec![];
         for csid in csids {
@@ -172,6 +172,7 @@ async fn derive_with_backfill(
     csids: Vec<ChangesetId>,
     derived_data_utils: Arc<dyn DerivedUtils>,
 ) -> Result<BenchmarkResult, Error> {
+    derived_data_utils.regenerate(&csids);
     let (stats, backfill_derive_stats) = derived_data_utils
         .backfill_batch_dangerous(
             ctx.clone(),
@@ -209,6 +210,7 @@ async fn derive_with_parallel_backfill(
 
     let (stats, ()) = async {
         for chunk in csids.chunks(batch_size as usize) {
+            derived_data_utils.regenerate(&chunk.to_vec());
             derived_data_utils
                 .backfill_batch_dangerous(
                     ctx.clone(),
@@ -218,6 +220,7 @@ async fn derive_with_parallel_backfill(
                     None,
                 )
                 .await?;
+            derived_data_utils.clear_regenerate();
         }
         Result::<_, Error>::Ok(())
     }

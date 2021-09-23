@@ -116,6 +116,10 @@ impl<M> RegenerateMapping<M> {
     pub fn regenerate<I: IntoIterator<Item = ChangesetId>>(&self, csids: I) {
         self.regenerate.with(|regenerate| regenerate.extend(csids))
     }
+
+    pub fn clear_regenerate(&self) {
+        self.regenerate.with(|regenerate| regenerate.clear());
+    }
 }
 
 #[async_trait]

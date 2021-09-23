@@ -181,6 +181,9 @@ pub trait DerivedUtils: Send + Sync + 'static {
     /// Regenerate derived data for specified set of commits
     fn regenerate(&self, csids: &Vec<ChangesetId>);
 
+    /// Remove all previously set regenerations
+    fn clear_regenerate(&self);
+
     /// Get a name for this type of derived data
     fn name(&self) -> &'static str;
 
@@ -399,6 +402,10 @@ where
         self.orig_mapping.regenerate(csids.iter().copied())
     }
 
+    fn clear_regenerate(&self) {
+        self.orig_mapping.clear_regenerate()
+    }
+
     fn name(&self) -> &'static str {
         Derivable::NAME
     }
@@ -602,6 +609,10 @@ where
     fn regenerate(&self, csids: &Vec<ChangesetId>) {
         self.rederive
             .with(|rederive| rederive.extend(csids.iter().copied()));
+    }
+
+    fn clear_regenerate(&self) {
+        self.rederive.with(|rederive| rederive.clear());
     }
 
     fn name(&self) -> &'static str {
@@ -1399,6 +1410,10 @@ mod tests {
         }
 
         fn regenerate(&self, _csids: &Vec<ChangesetId>) {
+            unimplemented!()
+        }
+
+        fn clear_regenerate(&self) {
             unimplemented!()
         }
 
