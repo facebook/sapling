@@ -73,6 +73,9 @@ newserver() {
     REPONAME=$reponame setup_mononoke_config
     mononoke
     MONONOKE_START_TIMEOUT=60 wait_for_mononoke "$TESTTMP/$reponame"
+  elif [ -f "$TESTTMP/.eagerepo" ] ; then
+    # Do nothing, it will be setup at access time
+    true
   else
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"
@@ -102,7 +105,13 @@ clone() {
   if [ -n "$USE_MONONOKE" ] ; then
     remotecmd="$MONONOKE_HGCLI"
   fi
-  hg clone -q --shallow "ssh://user@dummy/$servername" "$clientname" "$@" \
+  if [ -f "$TESTTMP/.eagerepo" ] ; then
+      serverurl="test:$servername"
+  else
+      serverurl="ssh://user@dummy/$servername"
+  fi
+
+  hg clone -q --shallow "$serverurl" "$clientname" "$@" \
     --config "extensions.lz4revlog=" \
     --config "extensions.remotefilelog=" \
     --config "extensions.remotenames=" \
@@ -212,6 +221,7 @@ configure() {
         configure dummyssh commitcloud narrowheads selectivepull
         ;;
       modernclient)
+        touch $TESTTMP/.eagerepo
         setconfig clone.force-edenapi-clonedata=True
         setconfig remotefilelog.http=True
         setconfig treemanifest.http=True
