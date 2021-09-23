@@ -584,7 +584,7 @@ def run_cmd_quietly(args, check: bool = True) -> int:
     for a in args:
         if isinstance(a, Path):
             # `WindowsPath` is not accepted by subprocess in older version Python
-            formatted_args.append(os.fsencode(a))
+            formatted_args.append(os.fsdecode(a))
         else:
             formatted_args.append(a)
 
