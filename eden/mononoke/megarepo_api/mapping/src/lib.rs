@@ -25,12 +25,12 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 queries! {
-    read GetTargetConfigVersion(
+    read GetMappingEntry(
         target_repo_id: i64,
         target_bookmark: String,
         target_bcs_id: ChangesetId,
-    ) -> (SyncConfigVersion) {
-        "SELECT sync_config_version
+    ) -> (String, ChangesetId, SyncConfigVersion) {
+        "SELECT source_name, source_bcs_id, sync_config_version
           FROM megarepo_changeset_mapping
           WHERE target_repo_id = {target_repo_id}
           AND target_bookmark = {target_bookmark}
@@ -46,8 +46,8 @@ queries! {
         target_bcs_id: ChangesetId,
         sync_config_version: SyncConfigVersion,
     )) {
-        none,
-        "INSERT INTO megarepo_changeset_mapping
+        insert_or_ignore,
+        "{insert_or_ignore} INTO megarepo_changeset_mapping
         (source_name, target_repo_id, target_bookmark, source_bcs_id, target_bcs_id, sync_config_version)
         VALUES {values}"
     }
@@ -200,19 +200,27 @@ impl CommitRemappingState {
     }
 }
 
+pub struct MegarepoMappingEntry {
+    pub source_name: SourceName,
+    pub target: Target,
+    pub source_cs_id: ChangesetId,
+    pub target_cs_id: ChangesetId,
+    pub sync_config_version: SyncConfigVersion,
+}
+
 impl MegarepoMapping {
     /// For a given (target, cs_id) pair return the version that was used
     /// to create target changeset id.
     /// Usually this method is used to find what version do we need to use
     /// for rewriting a commit
-    pub async fn get_target_config_version(
+    pub async fn get_mapping_entry(
         &self,
         ctx: &CoreContext,
         target: &Target,
         target_cs_id: ChangesetId,
-    ) -> Result<Option<SyncConfigVersion>, Error> {
+    ) -> Result<Option<MegarepoMappingEntry>, Error> {
         let maybe_version = self
-            .get_target_config_version_impl(
+            .get_mapping_entry_impl(
                 ctx,
                 target,
                 target_cs_id,
@@ -225,7 +233,7 @@ impl MegarepoMapping {
             return Ok(Some(version));
         }
 
-        self.get_target_config_version_impl(
+        self.get_mapping_entry_impl(
             ctx,
             target,
             target_cs_id,
@@ -235,16 +243,16 @@ impl MegarepoMapping {
         .await
     }
 
-    async fn get_target_config_version_impl(
+    async fn get_mapping_entry_impl(
         &self,
         ctx: &CoreContext,
         target: &Target,
         target_cs_id: ChangesetId,
         sql_perf_counter: PerfCounterType,
         connection: &Connection,
-    ) -> Result<Option<SyncConfigVersion>, Error> {
+    ) -> Result<Option<MegarepoMappingEntry>, Error> {
         ctx.perf_counters().increment_counter(sql_perf_counter);
-        let mut rows = GetTargetConfigVersion::query(
+        let mut rows = GetMappingEntry::query(
             &connection,
             &target.repo_id,
             &target.bookmark,
@@ -258,7 +266,13 @@ impl MegarepoMapping {
             ));
         }
 
-        Ok(rows.pop().map(|x| x.0))
+        Ok(rows.pop().map(|x| MegarepoMappingEntry {
+            source_name: SourceName::new(x.0),
+            source_cs_id: x.1,
+            sync_config_version: x.2,
+            target: target.clone(),
+            target_cs_id: target_cs_id.clone(),
+        }))
     }
 
     /// Add a mapping from a source commit to a target commit
@@ -275,7 +289,7 @@ impl MegarepoMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        InsertMapping::query(
+        let res = InsertMapping::query(
             &self.connections.write_connection,
             &[(
                 source_name.as_str(),
@@ -287,6 +301,25 @@ impl MegarepoMapping {
             )],
         )
         .await?;
+        if res.affected_rows() == 0 {
+            // Becase we insert to mapping before moving bookmark (which is fallible)
+            // the mapping might be already inserted at that point. If it's the same
+            // as what we wanted to insert we can ignore the failure to insert.
+            if let Ok(Some(entry)) = self.get_mapping_entry(&ctx, &target, target_cs_id).await {
+                if &entry.source_name != source_name
+                    || entry.source_cs_id != source_cs_id
+                    || &entry.sync_config_version != version
+                {
+                    return Err(anyhow!(
+                        "trying to insert mapping whille one already exists and it's different!"
+                    ));
+                }
+            } else {
+                return Err(anyhow!(
+                    "unknown error while inserting mapping (affected_rows=0)"
+                ));
+            }
+        }
 
         Ok(())
     }
@@ -336,11 +369,24 @@ mod test {
             )
             .await?;
 
-        let res = mapping
-            .get_target_config_version(&ctx, &target, target_csid)
+        // Test to check if insertion is resilient against
+        // the mapping being already there.
+        mapping
+            .insert_source_target_cs_mapping(
+                &ctx,
+                &SourceName::new("source_name"),
+                &target,
+                source_csid,
+                target_csid,
+                &version,
+            )
             .await?;
 
-        assert_eq!(res, Some(version));
+        let res = mapping
+            .get_mapping_entry(&ctx, &target, target_csid)
+            .await?;
+
+        assert_eq!(res.unwrap().sync_config_version, version);
 
         Ok(())
     }
