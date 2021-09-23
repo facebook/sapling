@@ -235,18 +235,3 @@ verify that clone also expand urls
   revlogv1
   store
   treestate
-
-clone bookmarks
-
-  $ hg -R local bookmark test
-  $ hg -R local bookmarks
-   * test                      08b9e9f63b32
-  $ hg clone local ssh://user@dummy/remote-bookmarks
-  searching for changes
-  exporting bookmark test
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
-  $ hg -R remote-bookmarks bookmarks
-     test                      08b9e9f63b32

@@ -1,7 +1,7 @@
 #require no-fsmonitor
-  $ setconfig experimental.allowfilepeer=True
 
 setup
+  $ configure modernclient
   $ readconfig <<EOF
   > [alias]
   > blackbox = blackbox --no-timestamp --no-sid
@@ -9,8 +9,7 @@ setup
   > so-confusing = confuse --style compact
   > EOF
   $ setconfig tracing.threshold=100000
-  $ hg init blackboxtest
-  $ cd blackboxtest
+  $ newclientrepo blackboxtest
 
 command, exit codes, and duration
 
@@ -33,6 +32,7 @@ alias expansion is logged
   [legacy][dirstate_info]
   [legacy][jobid]
   [legacy][changelog_info]
+  [legacy][clienttelemetry]
   [legacy][visibility] read 0 heads:
   [legacy][dirstate_info]
   [legacy][command_finish] confuse exited 0 after 0.00 seconds
@@ -60,6 +60,7 @@ recursive aliases work correctly
   [legacy][dirstate_info]
   [legacy][jobid]
   [legacy][changelog_info]
+  [legacy][clienttelemetry]
   [legacy][visibility] read 0 heads:
   [legacy][dirstate_info]
   [legacy][command_finish] so-confusing exited 0 after 0.00 seconds
@@ -79,6 +80,7 @@ incoming change tracking
 
 create two heads to verify that we only see one change in the log later
   $ hg commit -ma
+  $ hg push -q -r . --to head1 --create
   $ hg up null
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > b
@@ -86,20 +88,17 @@ create two heads to verify that we only see one change in the log later
   adding b
 
 clone, commit, pull
-  $ hg clone . ../blackboxtest2
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg push -q -r . --to head2 --create
+  $ newclientrepo blackboxtest2 test:blackboxtest_server head1 head2
+  $ cd ../blackboxtest
   $ echo c > c
   $ hg commit -Amc
   adding c
+  $ hg push -q -r . --to head2
   $ cd ../blackboxtest2
   $ hg pull
-  pulling from $TESTTMP/blackboxtest
+  pulling from test:blackboxtest_server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg blackbox --pattern '{"legacy_log":{"service":["or","command","command_finish","command_alias"]}}'
   [legacy][command] pull
   [legacy][command_finish] pull exited 0 after 0.00 seconds
@@ -111,16 +110,14 @@ we must not cause a failure if we cannot write to the log
   $ mkdir -p .hg/blackbox
   $ touch .hg/blackbox/v1
   $ hg --debug incoming
-  comparing with $TESTTMP/blackboxtest
+  comparing with test:blackboxtest_server
   query 1; heads
   searching for changes
   local heads: 2; remote heads: 2 (explicit: 0); initial common: 2
   all remote heads known locally
   no changes found
   $ hg pull
-  pulling from $TESTTMP/blackboxtest
-  searching for changes
-  no changes found
+  pulling from test:blackboxtest_server
 
   $ rm .hg/blackbox/v1
 
@@ -148,7 +145,7 @@ log rotation (tested in the Rust land)
 
 blackbox does not crash with empty log message
 
-  $ newrepo
+  $ newclientrepo
   $ cat > $TESTTMP/uilog.py << EOF
   > from __future__ import absolute_import
   > from edenscm.mercurial import registrar, scmutil, util

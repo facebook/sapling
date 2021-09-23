@@ -34,6 +34,29 @@ newrepo() {
   hg init "$@"
 }
 
+newclientrepo() {
+  reponame="$1"
+  server="$2"
+  shift
+  shift
+  bookmarks="$@"
+  if [ -z "$reponame" ]; then
+    _repocount=$((_repocount+1))
+    reponame=repo$_repocount
+  fi
+  if [ -z "$server" ]; then
+      server="test:${reponame}_server"
+  fi
+  hg clone -q "$server" "$TESTTMP/$reponame"
+
+  cd "$TESTTMP/$reponame"
+  for book in $bookmarks ; do
+      hg pull -q -B $book
+  done
+  hg up -q tip
+  rm -rf .hg/blackbox*
+}
+
 # create repo connected to remote repo ssh://user@dummy/server.
 # `newserver server` needs to be called at least once before this call to setup ssh repo
 newremoterepo() {
@@ -188,6 +211,11 @@ configure() {
         setconfig experimental.changegroup3=True
         configure dummyssh commitcloud narrowheads selectivepull
         ;;
+      modernclient)
+        setconfig clone.force-edenapi-clonedata=True
+        setconfig remotefilelog.http=True
+        setconfig treemanifest.http=True
+        configure modern
     esac
   done
 }
