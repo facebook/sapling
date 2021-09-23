@@ -57,7 +57,7 @@ use time_ext::DurationExt;
 use topo_sort::sort_topological;
 use tunables::tunables;
 
-mod benchmark;
+mod regenerate;
 mod slice;
 mod warmup;
 
@@ -644,15 +644,15 @@ async fn run_subcmd<'a>(
                 if sub_m.is_present(ARG_PARALLEL) {
                     let batch_size = args::get_u64_opt(&sub_m, ARG_BATCH_SIZE);
 
-                    benchmark::BenchmarkOptions::BackfillParallel { batch_size }
+                    regenerate::DeriveOptions::BackfillParallel { batch_size }
                 } else {
-                    benchmark::BenchmarkOptions::Backfill
+                    regenerate::DeriveOptions::Backfill
                 }
             } else {
-                benchmark::BenchmarkOptions::Simple
+                regenerate::DeriveOptions::Simple
             };
 
-            let res = benchmark::benchmark_derived_data(
+            let res = regenerate::regenerate_derived_data(
                 &ctx,
                 &repo,
                 csids,
@@ -661,7 +661,7 @@ async fn run_subcmd<'a>(
             )
             .await?;
 
-            benchmark::print_benchmark_result(&res, sub_m.is_present(ARG_JSON))?;
+            regenerate::print_benchmark_result(&res, sub_m.is_present(ARG_JSON))?;
 
             Ok(())
         }

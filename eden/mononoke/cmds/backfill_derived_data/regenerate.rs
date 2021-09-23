@@ -18,7 +18,7 @@ use serde::ser::SerializeStruct;
 use slog::debug;
 use std::{sync::Arc, time::Duration};
 
-pub enum BenchmarkOptions {
+pub enum DeriveOptions {
     // Simple case - derive commits one by one
     Simple,
     // Derive commits one by one, but send all writes
@@ -53,12 +53,12 @@ pub enum BenchmarkResult {
     },
 }
 
-pub async fn benchmark_derived_data(
+pub async fn regenerate_derived_data(
     ctx: &CoreContext,
     repo: &BlobRepo,
     csids: Vec<ChangesetId>,
     derived_data_type: String,
-    opts: BenchmarkOptions,
+    opts: DeriveOptions,
 ) -> Result<BenchmarkResult, Error> {
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
 
@@ -72,7 +72,7 @@ pub async fn benchmark_derived_data(
     if !pending.is_empty() {
         return Err(anyhow!(
             "{} commits are not derived yet. \
-        Benchmarking requires all commits to be derived. List of underived commits: {:?}",
+        Regenerating requires all commits to be derived. List of underived commits: {:?}",
             pending.len(),
             pending
         ));
@@ -81,9 +81,9 @@ pub async fn benchmark_derived_data(
     derived_utils.regenerate(&csids);
 
     match opts {
-        BenchmarkOptions::Simple => derive_simple(&ctx, &repo, csids, derived_utils).await,
-        BenchmarkOptions::Backfill => derive_with_backfill(&ctx, &repo, csids, derived_utils).await,
-        BenchmarkOptions::BackfillParallel { batch_size } => {
+        DeriveOptions::Simple => derive_simple(&ctx, &repo, csids, derived_utils).await,
+        DeriveOptions::Backfill => derive_with_backfill(&ctx, &repo, csids, derived_utils).await,
+        DeriveOptions::BackfillParallel { batch_size } => {
             derive_with_parallel_backfill(&ctx, &repo, csids, derived_utils, batch_size).await
         }
     }
