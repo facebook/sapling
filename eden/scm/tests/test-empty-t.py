@@ -77,7 +77,6 @@ sh % "ls .hg/store" == r"""
     undo
     undo.backupfiles
     undo.bookmarks
-    undo.phaseroots
-    undo.visibleheads"""
+    undo.phaseroots"""
 
 sh % "cd .."

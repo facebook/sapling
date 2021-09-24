@@ -164,19 +164,15 @@ more there after
   fncache
   journal.bookmarks
   journal.phaseroots
-  journal.visibleheads
   metalog
   mutation
   requires
   tip
   undo
   undo.backup.fncache
-  undo.backup.visibleheads
   undo.backupfiles
   undo.bookmarks
   undo.phaseroots
-  undo.visibleheads
-  visibleheads
 
 
 precommit hook can prevent commit
@@ -764,8 +760,6 @@ pretxnclose hook failure should abort the transaction
   > EOF
   $ hg debugstrip -r 'desc(a)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  transaction abort!
-  rollback completed
   abort: pretxnclose.error hook exited with status 1
   [255]
   $ hg recover

@@ -69,7 +69,7 @@ Test that 'hg doctor' can fix them:
   metalog:
     Checking blobs at "*": (glob)
     Processing IndexedLog: Filesystem("*") (glob)
-    Verified 23 entries, * bytes in log (glob)
+    Verified * entries, * bytes in log (glob)
     Index "id" passed integrity check
     
     Checking roots at "*": (glob)
@@ -361,7 +361,6 @@ in the new repo, while keeping changelog unchanged.
   $ cd client2
   $ hg doctor
   checking internal storage
-  visibleheads: removed 0 heads, added tip
   checking commit references
   remote/master points to an unknown commit - trying to move it to a known commit
   setting remote/master to 426bada5c67598ca65036d57d9e4b64b0c1ce7a0

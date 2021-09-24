@@ -82,18 +82,10 @@ class visibleheads(object):
     def __init__(self, vfs):
         self.vfs = vfs
         self._invisiblerevs = None
-        try:
-            self.heads = decodeheads(self.vfs.tryread("visibleheads"))
-            self.dirty = False
-            self._logheads("read", visibility_headcount=len(self.heads))
-        except IOError as err:
-            if err.errno != errno.ENOENT:
-                raise
-            self.heads = []
-            self.dirty = True
         self._allheads = bindings.nodemap.nodeset(vfs.join("allheads"))
 
         heads = self.heads
+        self._logheads("read", visibility_headcount=len(heads))
         if heads:
             # Populate allheads with heads
             add = self._allheads.add
@@ -104,21 +96,26 @@ class visibleheads(object):
     def changecount(self):
         return self._changecount
 
-    def _write(self, fp):
-        fp.write(encodeheads(self.heads))
-        self.dirty = False
+    @property
+    def heads(self):
+        return decodeheads(self.vfs.metalog["visibleheads"])
+
+    @heads.setter
+    def heads(self, heads):
+        self.vfs.metalog["visibleheads"] = encodeheads(heads)
+
+    def _logposttransaction(self, fp):
         self._logheads("wrote", visibility_newheadcount=len(self.heads))
 
     def _logheads(self, op, **opts):
+        heads = self.heads
         util.log(
             "visibility",
             "%s %d heads: %s%s\n",
             op,
-            len(self.heads),
-            ", ".join(
-                node.short(h) for h in reversed(self.heads[-self.LOGHEADLIMIT :])
-            ),
-            ", ..." if len(self.heads) > self.LOGHEADLIMIT else "",
+            len(heads),
+            ", ".join(node.short(h) for h in reversed(heads[-self.LOGHEADLIMIT :])),
+            ", ..." if len(heads) > self.LOGHEADLIMIT else "",
             **opts
         )
 
@@ -160,14 +157,12 @@ class visibleheads(object):
             self._changecount += 1
             self._logchange(oldheads, newheads)
             self.heads = newheads
-            self.dirty = True
             self._invisiblerevs = None
             add = self._allheads.add
             for head in newheads:
                 add(head)
             repo.invalidatevolatilesets()
-        if self.dirty:
-            tr.addfilegenerator("visibility", ("visibleheads",), self._write)
+            tr.addpostclose("log-visibility", self._logposttransaction)
             tr.addpostclose("allheads", lambda _tr: self._allheads.flush())
 
     def setvisibleheads(self, repo, newheads, tr):
