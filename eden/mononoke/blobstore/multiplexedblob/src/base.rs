@@ -304,10 +304,10 @@ impl MultiplexedBlobstoreBase {
                 }
             }
             _ => {
-                let answered = all_values.drain().map(|(_, stores)| stores).collect();
+                let answered = all_values.into_iter().map(|(_, stores)| stores).collect();
                 let mut all_missing = HashSet::new();
-                all_missing.extend(missing_main.drain());
-                all_missing.extend(missing_write_mostly.drain());
+                all_missing.extend(missing_main.into_iter());
+                all_missing.extend(missing_write_mostly.into_iter());
                 Err(ErrorKind::ValueMismatch(
                     Arc::new(answered),
                     Arc::new(all_missing),
@@ -805,7 +805,7 @@ impl MultiplexedBlobstoreBase {
                 let mut errors = put_errors;
                 errors.extend(handler_errors.into_iter());
                 if errors.len() == 1 {
-                    let (_, error) = errors.drain().next().unwrap();
+                    let (_, error) = errors.into_iter().next().unwrap();
                     Err(error)
                 } else {
                     Err(ErrorKind::MultiplePutFailures(Arc::new(errors)).into())
