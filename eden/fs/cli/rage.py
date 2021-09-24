@@ -83,7 +83,7 @@ def print_diagnostic_info(
     for checkout_path in mountpoint_paths:
         out.write(b"\nMount point info for path %s:\n" % checkout_path.encode())
         for k, v in instance.get_checkout_info(checkout_path).items():
-            out.write("{:>10} : {}\n".format(k, v).encode())
+            out.write("{:>20} : {}\n".format(k, v).encode())
     if health_status.is_healthy() and sys.platform != "win32":
         # TODO(zeyi): enable this when memory usage collecting is implemented on Windows
         with io.StringIO() as stats_stream:

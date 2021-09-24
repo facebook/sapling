@@ -27,6 +27,7 @@ from eden.fs.cli.util import (
     check_health_using_lockfile,
     wait_for_instance_healthy,
     is_apple_silicon,
+    get_protocol,
 )
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
@@ -850,10 +851,7 @@ class CloneCmd(Subcmd):
         if repo is None:
             raise RepoError(f"{repo_arg!r} does not look like a valid repository")
 
-        if sys.platform == "win32":
-            mount_protocol = "prjfs"
-        else:
-            mount_protocol = "nfs" if nfs else "fuse"
+        mount_protocol = get_protocol(nfs)
 
         enable_tree_overlay = self._get_enable_tree_overlay(instance, overlay_type)
 

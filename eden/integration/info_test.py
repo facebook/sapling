@@ -7,6 +7,7 @@
 import json
 import os
 
+from ..fs.cli.util import get_protocol
 from .lib import testcase
 
 
@@ -27,12 +28,14 @@ class InfoTest(testcase.EdenRepoTest):
         client_dir = os.path.join(
             self.eden_dir, "clients", os.path.basename(self.mount)
         )
+
         self.assertEqual(
             {
                 "state_dir": client_dir,
                 "scm_type": self.repo.get_type(),
                 "mount": self.mount,
                 "snapshot": self.repo.get_head_hash(),
+                "mount_protocol": get_protocol(self.use_nfs()),
             },
             client_info,
         )

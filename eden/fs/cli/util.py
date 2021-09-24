@@ -712,3 +712,10 @@ def is_apple_silicon() -> bool:
         return "ARM64" in os.uname().version
     else:
         return False
+
+
+def get_protocol(nfs: bool) -> str:
+    if sys.platform == "win32":
+        return "prjfs"
+    else:
+        return "nfs" if nfs else "fuse"

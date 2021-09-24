@@ -464,6 +464,7 @@ class EdenInstance:
                 ("scm_type", checkout_config.scm_type),
                 ("snapshot", snapshot),
                 ("state_dir", str(checkout.state_dir)),
+                ("mount_protocol", checkout_config.mount_protocol),
             ]
         )
 
