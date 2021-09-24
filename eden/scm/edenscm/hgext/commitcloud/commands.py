@@ -1307,6 +1307,9 @@ def cloudsync(ui, repo, cloudrefs=None, **opts):
     reason = opts.get("reason")
     if reason:
         ui.log("commitcloud_sync_reason", commitcloud_sync_reason=reason)
+    elif ui.interactive():
+        ui.log("commitcloud_sync_reason", commitcloud_sync_reason="manual run")
+
     ret = sync.sync(
         repo,
         cloudrefs,

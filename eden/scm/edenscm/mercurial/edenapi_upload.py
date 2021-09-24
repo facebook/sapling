@@ -31,8 +31,11 @@ def getreponame(repo):
 def _filtercommits(repo, nodes):
     """Returns list of missing commits"""
     try:
-        stream, _stats = repo.edenapi.commitknown(getreponame(repo), nodes)
-        return [item["hgid"] for item in stream if item["known"].get("Ok") is not True]
+        with repo.ui.timesection("http.edenapi.upload_filter_commits"):
+            stream, _stats = repo.edenapi.commitknown(getreponame(repo), nodes)
+            return [
+                item["hgid"] for item in stream if item["known"].get("Ok") is not True
+            ]
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
 
@@ -40,27 +43,31 @@ def _filtercommits(repo, nodes):
 def _filterfilenodes(repo, keys):
     """Returns list of missing filenodes"""
     try:
-        stream, _stats = repo.edenapi.lookup_filenodes(
-            getreponame(repo), [key[1] for key in keys]
-        )
-        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+        with repo.ui.timesection("http.edenapi.upload_lookup"):
+            stream, _stats = repo.edenapi.lookup_filenodes(
+                getreponame(repo), [key[1] for key in keys]
+            )
+            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+            return [
+                fnode for index, fnode in enumerate(keys) if index not in foundindices
+            ]
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
-
-    return [fnode for index, fnode in enumerate(keys) if index not in foundindices]
 
 
 def _filtertrees(repo, keys):
     """Returns list of missing trees"""
     try:
-        stream, _stats = repo.edenapi.lookup_trees(
-            getreponame(repo), [key[0] for key in keys]
-        )
-        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+        with repo.ui.timesection("http.edenapi.upload_lookup"):
+            stream, _stats = repo.edenapi.lookup_trees(
+                getreponame(repo), [key[0] for key in keys]
+            )
+            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+            return [
+                tree for index, tree in enumerate(keys) if index not in foundindices
+            ]
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
-
-    return [tree for index, tree in enumerate(keys) if index not in foundindices]
 
 
 def _uploadfilenodes(repo, keys):
@@ -69,19 +76,19 @@ def _uploadfilenodes(repo, keys):
         return
     dpack, _hpack = repo.fileslog.getmutablelocalpacks()
     try:
-        stream, _stats = repo.edenapi.uploadfiles(dpack, getreponame(repo), keys)
-        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
-        repo.ui.status(
-            _n(
-                "uploaded %d file\n",
-                "uploaded %d files\n",
-                len(foundindices),
+        with repo.ui.timesection("http.edenapi.upload_files"):
+            stream, _stats = repo.edenapi.uploadfiles(dpack, getreponame(repo), keys)
+            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+            repo.ui.status(
+                _n(
+                    "uploaded %d file\n",
+                    "uploaded %d files\n",
+                    len(foundindices),
+                )
+                % len(foundindices),
+                component="edenapi",
             )
-            % len(foundindices),
-            component="edenapi",
-        )
-
-        return foundindices
+            return foundindices
 
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
@@ -92,17 +99,18 @@ def _uploadtrees(repo, trees):
     if not trees:
         return
     try:
-        stream, _stats = repo.edenapi.uploadtrees(getreponame(repo), trees)
-        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
-        repo.ui.status(
-            _n(
-                "uploaded %d tree\n",
-                "uploaded %d trees\n",
-                len(foundindices),
+        with repo.ui.timesection("http.edenapi.upload_trees"):
+            stream, _stats = repo.edenapi.uploadtrees(getreponame(repo), trees)
+            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+            repo.ui.status(
+                _n(
+                    "uploaded %d tree\n",
+                    "uploaded %d trees\n",
+                    len(foundindices),
+                )
+                % len(foundindices),
+                component="edenapi",
             )
-            % len(foundindices),
-            component="edenapi",
-        )
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
 
@@ -113,25 +121,26 @@ def _uploadchangesets(repo, changesets, mutations):
     if not changesets:
         return uploaded, failed
     try:
-        stream, _stats = repo.edenapi.uploadchangesets(
-            getreponame(repo), changesets, mutations
-        )
-        foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
-        repo.ui.status(
-            _n(
-                "uploaded %d changeset\n",
-                "uploaded %d changesets\n",
-                len(foundindices),
+        with repo.ui.timesection("http.edenapi.upload_changesets"):
+            stream, _stats = repo.edenapi.uploadchangesets(
+                getreponame(repo), changesets, mutations
             )
-            % len(foundindices),
-            component="edenapi",
-        )
-        for index, cs in enumerate(changesets):
-            if index in foundindices:
-                uploaded.append(cs[0])
-            else:
-                failed.append(cs[0])
-        return uploaded, failed
+            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+            repo.ui.status(
+                _n(
+                    "uploaded %d changeset\n",
+                    "uploaded %d changesets\n",
+                    len(foundindices),
+                )
+                % len(foundindices),
+                component="edenapi",
+            )
+            for index, cs in enumerate(changesets):
+                if index in foundindices:
+                    uploaded.append(cs[0])
+                else:
+                    failed.append(cs[0])
+            return uploaded, failed
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
 
