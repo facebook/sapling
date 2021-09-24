@@ -200,8 +200,7 @@ def _sync(
         # The line below makes sure that working copy is updated.
         return _maybeupdateworkingcopy(repo, startnode), None
 
-    origheads = _getheads(repo)
-    origbookmarks = _getbookmarks(repo)
+    origmlroot = repo.metalog().root()
 
     remotepath = ccutil.getremotepath(ui)
 
@@ -246,14 +245,6 @@ def _sync(
         {("treemanifest", "prefetchdraftparents"): False}, "cloudsync"
     ), repo.wlock(), repo.lock():
 
-        if origheads != _getheads(repo) or origbookmarks != _getbookmarks(repo):
-            # Another transaction changed the repository while we were backing
-            # up commits. This may have introduced new commits that also need
-            # backing up.  That transaction should have started its own sync
-            # process, so give up on this sync, and let the later one perform
-            # the sync.
-            raise ccerror.SynchronizationError(ui, _("repo changed while backing up"))
-
         synced = False
         attempt = 0
         while not synced:
@@ -265,6 +256,16 @@ def _sync(
             attempt += 1
 
             with repo.transaction("cloudsync") as tr:
+
+                if repo.metalog().root() != origmlroot:
+                    # Another transaction changed the repository while we were backing
+                    # up commits. This may have introduced new commits that also need
+                    # backing up.  That transaction should have started its own sync
+                    # process, so give up on this sync, and let the later one perform
+                    # the sync.
+                    raise ccerror.SynchronizationError(
+                        ui, _("repo changed while backing up")
+                    )
 
                 # Apply any changes from the cloud to the local repo.
                 if cloudrefs.version != fetchversion:

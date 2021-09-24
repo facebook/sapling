@@ -124,4 +124,6 @@ Wait for the background backup to finish and check its output.
   $ cat $TESTTMP/bgsync.out
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 0 heads: 
-  abort: unknown revision '1292cc1f1c1783567cebc137763d8fcf042370c6'!
+  abort: commitcloud: failed to synchronize commits: 'repo changed while backing up'
+  (please retry 'hg cloud sync')
+  (please contact the Source Control Team if this error persists)
