@@ -137,7 +137,7 @@ pub fn deserialize_skiplist_index(logger: Logger, bytes: Bytes) -> Result<Skipli
 }
 
 fn deserialize_skiplist_mapping(logger: Logger, bytes: Bytes) -> Result<SkiplistEdgeMapping> {
-    let map: HashMap<_, skiplist_thrift::SkiplistNodeType> = compact_protocol::deserialize(&bytes)?;
+    let map: HashMap<_, skiplist_thrift::SkiplistNodeType> = compact_protocol::deserialize(bytes)?;
     let cmap: DashMap<ChangesetId, SkiplistNodeType> = DashMap::with_capacity(map.len());
     let mut pnodecount = 0;
     let mut snodecount = 0;
