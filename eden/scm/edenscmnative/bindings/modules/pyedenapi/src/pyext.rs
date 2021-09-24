@@ -522,6 +522,28 @@ pub trait EdenApiPyExt: EdenApi {
         )
     }
 
+    fn lookup_filenodes_and_trees(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        filenodes_ids: Vec<PyBytes>,
+        trees_ids: Vec<PyBytes>,
+    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+        self.lookup_py(
+            py,
+            repo,
+            filenodes_ids
+                .into_iter()
+                .map(|id| AnyId::HgFilenodeId(to_hgid(py, &id)))
+                .chain(
+                    trees_ids
+                        .into_iter()
+                        .map(|id| AnyId::HgTreeId(to_hgid(py, &id))),
+                )
+                .collect(),
+        )
+    }
+
     fn lookup_py(
         self: Arc<Self>,
         py: Python,

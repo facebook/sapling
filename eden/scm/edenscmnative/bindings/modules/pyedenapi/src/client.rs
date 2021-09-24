@@ -278,6 +278,14 @@ py_class!(pub class client |py| {
         self.inner(py).clone().lookup_trees(py, repo, hgids)
     }
 
+
+    /// lookup_filenodes_and_trees(repo: str, filenodes: [bytes], trees: [bytes])
+    def lookup_filenodes_and_trees(&self, repo: String, filenodes: Vec<PyBytes>, trees: Vec<PyBytes>)
+        -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)>
+    {
+        self.inner(py).clone().lookup_filenodes_and_trees(py, repo, filenodes, trees)
+    }
+
     /// Upload file contents only
     def uploadfileblobs(
         &self,

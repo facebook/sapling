@@ -117,7 +117,7 @@ This test also checks file content deduplication. We upload 1 file content and 1
   commitcloud: head '536d3fb3929e' hasn't been uploaded yet
    INFO edenapi::client: Requesting lookup for 1 item(s)
   edenapi: queue 1 commit for upload
-   INFO edenapi::client: Requesting lookup for 100 item(s)
+   INFO edenapi::client: Requesting lookup for 102 item(s)
   edenapi: queue 100 files for upload
    INFO edenapi::client: Requesting lookup for 1 item(s)
    INFO edenapi::client: Received 0 token(s) from the lookup_batch request
@@ -125,7 +125,6 @@ This test also checks file content deduplication. We upload 1 file content and 1
    INFO edenapi::client: Received 1 new token(s) from upload requests
    INFO edenapi::client: Requesting hg filenodes upload for 100 item(s)
   edenapi: uploaded 100 files
-   INFO edenapi::client: Requesting lookup for 2 item(s)
   edenapi: queue 2 trees for upload
    INFO edenapi::client: Requesting trees upload for 2 item(s)
   edenapi: uploaded 2 trees
@@ -149,9 +148,8 @@ The files of the second commit are identical to the files of the first commit, s
   commitcloud: head '65289540f44d' hasn't been uploaded yet
    INFO edenapi::client: Requesting lookup for 1 item(s)
   edenapi: queue 1 commit for upload
-   INFO edenapi::client: Requesting lookup for 100 item(s)
+   INFO edenapi::client: Requesting lookup for 102 item(s)
   edenapi: queue 0 files for upload
-   INFO edenapi::client: Requesting lookup for 2 item(s)
   edenapi: queue 1 tree for upload
    INFO edenapi::client: Requesting trees upload for 1 item(s)
   edenapi: uploaded 1 tree
@@ -252,14 +250,13 @@ Also, dedup for file contents is expected to work (see queue 100 files but only 
   commitcloud: head '32551ca74417' hasn't been uploaded yet
    INFO edenapi::client: Requesting lookup for 3 item(s)
   edenapi: queue 1 commit for upload
-   INFO edenapi::client: Requesting lookup for 100 item(s)
+   INFO edenapi::client: Requesting lookup for 102 item(s)
   edenapi: queue 100 files for upload
    INFO edenapi::client: Requesting lookup for 1 item(s)
    INFO edenapi::client: Received 1 token(s) from the lookup_batch request
    INFO edenapi::client: Received 0 new token(s) from upload requests
    INFO edenapi::client: Requesting hg filenodes upload for 100 item(s)
   edenapi: uploaded 100 files
-   INFO edenapi::client: Requesting lookup for 2 item(s)
   edenapi: queue 2 trees for upload
    INFO edenapi::client: Requesting trees upload for 2 item(s)
   edenapi: uploaded 2 trees

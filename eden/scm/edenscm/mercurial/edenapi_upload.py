@@ -40,32 +40,42 @@ def _filtercommits(repo, nodes):
         raise error.Abort(e)
 
 
-def _filterfilenodes(repo, keys):
-    """Returns list of missing filenodes"""
+def _filteruploaded(repo, blobs, trees):
+    """Returns list of missing blobs and trees"""
     try:
         with repo.ui.timesection("http.edenapi.upload_lookup"):
-            stream, _stats = repo.edenapi.lookup_filenodes(
-                getreponame(repo), [key[1] for key in keys]
+            stream, _stats = repo.edenapi.lookup_filenodes_and_trees(
+                getreponame(repo),
+                [blob[1] for blob in blobs],
+                [tree[0] for tree in trees],
             )
-            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
-            return [
-                fnode for index, fnode in enumerate(keys) if index not in foundindices
-            ]
-    except (error.RustError, error.HttpError) as e:
-        raise error.Abort(e)
 
+            results = list(stream)
+            blobslen = len(blobs)
 
-def _filtertrees(repo, keys):
-    """Returns list of missing trees"""
-    try:
-        with repo.ui.timesection("http.edenapi.upload_lookup"):
-            stream, _stats = repo.edenapi.lookup_trees(
-                getreponame(repo), [key[0] for key in keys]
-            )
-            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
-            return [
-                tree for index, tree in enumerate(keys) if index not in foundindices
+            foundindicesblobs = {
+                item[INDEX_KEY]
+                for item in results
+                if item[TOKEN_KEY] and "HgFilenodeId" in item[TOKEN_KEY]["data"]["id"]
+            }
+            foundindicestrees = {
+                item[INDEX_KEY] - blobslen
+                for item in results
+                if item[TOKEN_KEY] and "HgTreeId" in item[TOKEN_KEY]["data"]["id"]
+            }
+
+            missingblobs = [
+                blob
+                for index, blob in enumerate(blobs)
+                if index not in foundindicesblobs
             ]
+            missingtrees = [
+                tree
+                for index, tree in enumerate(trees)
+                if index not in foundindicestrees
+            ]
+
+            return missingblobs, missingtrees
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
 
@@ -220,11 +230,11 @@ def uploadhgchangesets(repo, revs, force=False):
 
         * Check and skip commits that have been already uploaded building ``uploadcommitqueue``.
         * Check and skip hg filenodes that have been already uploaded buiding ``uploadblobqueue``.
+        * Check and skip hg trees that have been already uploaded buiding ``uploadtreesqueue``.
         * Calculate ContentIds hashes and upload all file contents for the ``uploadblobqueue``
           but skipping already uploaded content ids first (this step also deduplicates content ids
           if they are the same for some filenodes). See edenapi.uploadfiles.
         * Upload hg filenodes (``uploadblobqueue``).
-        * Check and skip hg trees that have been already uploaded buiding ``uploadtreesqueue``.
         * Upload hg trees (``uploadtreesqueue``).
         * Finally, upload hg changesets and hg mutation information (``uploadcommitqueue``).
 
@@ -254,7 +264,13 @@ def uploadhgchangesets(repo, revs, force=False):
     # Build a queue of missing filenodes to upload
     blobs = list(_getblobs(repo, uploadcommitqueue))
 
-    uploadblobqueue = blobs if force else _filterfilenodes(repo, blobs)
+    # Build a queue of missing trees to upload
+    trees = list(_gettrees(repo, uploadcommitqueue))
+
+    uploadblobqueue, uploadtreesqueue = (
+        (blobs, trees) if force else _filteruploaded(repo, blobs, trees)
+    )
+
     repo.ui.status(
         _n(
             "queue %d file for upload\n",
@@ -268,9 +284,6 @@ def uploadhgchangesets(repo, revs, force=False):
     # Upload missing files and filenodes for the selected set of filenodes
     _uploadfilenodes(repo, uploadblobqueue)
 
-    # Build a queue of missing trees to upload
-    trees = list(_gettrees(repo, uploadcommitqueue))
-    uploadtreesqueue = trees if force else _filtertrees(repo, trees)
     repo.ui.status(
         _n(
             "queue %d tree for upload\n",
