@@ -565,6 +565,7 @@ class localrepository(object):
             except IOError as inst:
                 if inst.errno != errno.ENOENT:
                     raise
+
         if create:
             self._writerequirements()
             self._writestorerequirements()
@@ -1164,6 +1165,11 @@ class localrepository(object):
                 self.ui.log("features", feature="remove-svfs-dottmp")
 
             return _openchangelog(self)
+
+        # Trigger loading of the metalog, before loading changelog.
+        # This avoids potential races such as metalog refers to
+        # unknown commits.
+        self.svfs.metalog
 
         cl = loadchangelog(self)
 

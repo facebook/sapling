@@ -96,7 +96,8 @@ Test that 'hg doctor' can fix them:
   
   allheads:
     Processing IndexedLog: Filesystem("*") (glob)
-    Verified 0 entries, 12 bytes in log
+    Rebuilt metadata
+    Verified 3 entries, 90 bytes in log
     Index "node" passed integrity check
   
   

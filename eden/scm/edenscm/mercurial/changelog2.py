@@ -53,14 +53,17 @@ class changelog(object):
         svfs = repo.svfs
         self.svfs = svfs
         self.inner = inner
-        # TODO: Consider moving visibleheads out?
-        self._visibleheads = self._loadvisibleheads(svfs)
         self._uiconfig = uiconfig
         # Do not verify hg hash if git hash is being used.
         self._verifyhghash = not svfs.exists(GIT_DIR_FILE)
         # Number of commit texts to buffer. Useful for bounding memory usage.
         self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
         self._reporef = weakref.ref(repo)
+
+    @util.propertycache
+    def _visibleheads(self):
+        # TODO: Consider moving visibleheads out?
+        return self._loadvisibleheads(self.svfs)
 
     @property
     def algorithmbackend(self):
