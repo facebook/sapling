@@ -92,10 +92,12 @@ class visibleheads(object):
             self.heads = []
             self.dirty = True
         self._allheads = bindings.nodemap.nodeset(vfs.join("allheads"))
-        if self.heads:
+
+        heads = self.heads
+        if heads:
             # Populate allheads with heads
             add = self._allheads.add
-            for head in self.heads:
+            for head in heads:
                 add(head)
 
     @property
@@ -150,12 +152,13 @@ class visibleheads(object):
         else:
             realnewheads = list(newheads)
         realnewheadsset = set(realnewheads)
+        oldheads = self.heads
         newheads = util.removeduplicates(
-            [head for head in self.heads if head in realnewheadsset] + realnewheads
+            [head for head in oldheads if head in realnewheadsset] + realnewheads
         )
-        if self.heads != newheads:
+        if oldheads != newheads:
             self._changecount += 1
-            self._logchange(self.heads, newheads)
+            self._logchange(oldheads, newheads)
             self.heads = newheads
             self.dirty = True
             self._invisiblerevs = None
