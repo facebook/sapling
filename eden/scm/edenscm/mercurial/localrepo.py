@@ -2115,6 +2115,8 @@ class localrepository(object):
         # extension should hook this to invalidate its caches
         self.invalidate()
         self.invalidatedirstate()
+        self.invalidatemetalog()
+        self.invalidatechangelog()
 
     def _refreshfilecachestats(self, tr):
         """Reload stats of cached files so that they are flagged as valid"""
