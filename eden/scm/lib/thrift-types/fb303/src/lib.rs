@@ -1186,7 +1186,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.getCpuProfile"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -1302,7 +1302,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.getCpuProfileWithOptions"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -1418,7 +1418,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.getWallTimeProfile"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -1530,7 +1530,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.getMemoryUsage"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -1642,7 +1642,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.getLoad"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -1754,7 +1754,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.getPid"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -1866,7 +1866,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.getCommandLine"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -1978,7 +1978,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.reinitialize"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2090,7 +2090,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.shutdown"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2206,7 +2206,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "FacebookService.translateFrames"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {

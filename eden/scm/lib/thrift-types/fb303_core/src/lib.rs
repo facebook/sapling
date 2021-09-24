@@ -1747,7 +1747,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getStatus"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -1859,7 +1859,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getName"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -1971,7 +1971,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getVersion"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2083,7 +2083,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getStatusDetails"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2195,7 +2195,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getCounters"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2311,7 +2311,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getRegexCounters"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2427,7 +2427,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getSelectedCounters"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2543,7 +2543,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getCounter"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2655,7 +2655,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getExportedValues"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2771,7 +2771,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getSelectedExportedValues"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -2887,7 +2887,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getRegexExportedValues"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -3003,7 +3003,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getExportedValue"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -3123,7 +3123,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.setOption"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -3239,7 +3239,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getOption"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -3351,7 +3351,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.getOptions"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -3463,7 +3463,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "BaseService.aliveSince"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {

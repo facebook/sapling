@@ -12601,7 +12601,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.listMounts"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -12721,7 +12721,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.mount"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -12841,7 +12841,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.unmount"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -12973,7 +12973,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.checkOutRevision"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -13101,7 +13101,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.resetParentCommits"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -13225,7 +13225,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getSHA1"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -13345,7 +13345,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getBindMounts"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -13473,7 +13473,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.addBindMount"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -13597,7 +13597,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.removeBindMount"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -13717,7 +13717,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getCurrentJournalPosition"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -13841,7 +13841,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getFilesChangedSince"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -13965,7 +13965,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.setJournalMemoryLimit"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -14085,7 +14085,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getJournalMemoryLimit"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -14205,7 +14205,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.flushJournal"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -14325,7 +14325,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugGetRawJournal"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -14449,7 +14449,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getEntryInformation"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -14573,7 +14573,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getFileInformation"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -14697,7 +14697,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.glob"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -14817,7 +14817,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.globFiles"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -14937,7 +14937,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.predictiveGlobFiles"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -15065,7 +15065,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.chown"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -15181,7 +15181,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getScmStatusV2"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -15309,7 +15309,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getScmStatus"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -15437,7 +15437,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getScmStatusBetweenRevisions"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -15553,7 +15553,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getDaemonInfo"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -15669,7 +15669,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.checkPrivHelper"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -15785,7 +15785,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getPid"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -15905,7 +15905,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.initiateShutdown"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -16025,7 +16025,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getConfig"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -16141,7 +16141,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.reloadConfig"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -16269,7 +16269,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugGetScmTree"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -16397,7 +16397,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugGetScmBlob"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -16525,7 +16525,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugGetScmBlobMetadata"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -16653,7 +16653,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugInodeStatus"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -16773,7 +16773,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugOutstandingFuseCalls"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -16889,7 +16889,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugOutstandingNfsCalls"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -17009,7 +17009,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugStartRecordingActivity"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -17129,7 +17129,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugStopRecordingActivity"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -17245,7 +17245,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugListActivityRecordings"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -17365,7 +17365,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugGetInodePath"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -17481,7 +17481,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.clearFetchCounts"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -17601,7 +17601,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.clearFetchCountsByMount"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -17721,7 +17721,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getAccessCounts"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -17837,7 +17837,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.startRecordingBackingStoreFetch"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -17953,7 +17953,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.stopRecordingBackingStoreFetch"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -18069,7 +18069,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.clearAndCompactLocalStore"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -18185,7 +18185,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugClearLocalStoreCaches"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -18301,7 +18301,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.debugCompactLocalStorage"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -18429,7 +18429,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.unloadInodeForPath"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -18545,7 +18545,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.flushStatsNow"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -18669,7 +18669,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.invalidateKernelInodeCache"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -18789,7 +18789,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getStatInfo"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -18905,7 +18905,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.enableTracing"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -19017,7 +19017,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.disableTracing"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -19129,7 +19129,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.getTracePoints"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -19245,7 +19245,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.injectFault"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -19365,7 +19365,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.removeFault"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -19485,7 +19485,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.unblockFault"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
@@ -19605,7 +19605,7 @@ pub mod client {
                 ))
             });
             self.transport()
-                .call(SERVICE_NAME, METHOD_NAME, request)
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
                 .instrument(::tracing::info_span!("call", function = "EdenService.setPathObjectId"))
                 .map_err(::std::convert::From::from)
                 .and_then(|reply| {
