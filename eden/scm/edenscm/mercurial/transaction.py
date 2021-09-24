@@ -21,9 +21,9 @@ from __future__ import absolute_import
 import errno
 import functools
 
-from . import encoding, error, pycompat, util
+from . import encoding, error, pycompat, util, json
 from .i18n import _
-from .node import hex
+from .node import hex, bin
 from .pycompat import decodeutf8, encodeutf8
 
 
@@ -37,6 +37,28 @@ postfinalizegenerators = {"bookmarks", "dirstate"}
 gengroupall = "all"
 gengroupprefinalize = "prefinalize"
 gengrouppostfinalize = "postfinalize"
+
+# Environment variable name to store metalog pending.
+# Format: JSON-serialized {path: hex(root)}
+ENV_PENDING_METALOG = "HG_PENDING_METALOG"
+
+
+def decodependingmetalog(content):
+    result = {}
+    try:
+        if content:
+            parsed = json.loads(content)
+            if isinstance(parsed, dict):
+                result = {path: bin(hexroot) for path, hexroot in parsed.items()}
+    except Exception:
+        pass
+    return result
+
+
+def encodependingmetalog(pathroots):
+    return json.dumps(
+        {path: hex(binroot) for path, binroot in (pathroots or {}).items()}
+    )
 
 
 def active(func):
@@ -432,14 +454,47 @@ class transaction(util.transactional):
         self._pendingcallback[category] = callback
 
     @active
-    def writepending(self):
+    def writepending(self, env=None):
         """write pending files
 
-        This is used to allow hooks to view a transaction before commit"""
+        This is used to allow hooks to view a transaction before commit
+
+        Returns a bool, `isanypending`.
+
+        `isanypending` indicates if there are anything pending (whether
+        HG_PENDING should be set).
+
+        If `env` is not None, it is a dictionary that will be mutated to
+        include information to pick up _metalog_ pending changes.
+        """
         for cat, callback in sorted(self._pendingcallback.items()):
             any = callback(self)
             self._anypending = self._anypending or any
         self._anypending |= self._generatefiles(suffix=".pending")
+
+        # Write pending metalog changes. Other processes can load the
+        # metalog with rootid set to `mlrootid` explicitly to see the
+        # changes. But the changes won't be visible if the rootid is
+        # not explicitly set.
+        ml = self._vfsmap[""].metalog
+        if ml.isdirty():
+            self._anypending = True
+            rootid = ml.commit("(transaction pending)", pending=True)
+            if env is not None:
+                # Set the environment variable to specify metalog root for the
+                # current metalog.
+                pathroots = decodependingmetalog(env.get(ENV_PENDING_METALOG))
+                pathroots[ml.path()] = rootid
+                env[ENV_PENDING_METALOG] = encodependingmetalog(pathroots)
+        else:
+            if env is not None:
+                # Clear the environment variable for metalog path.
+                pathroots = decodependingmetalog(env.get(ENV_PENDING_METALOG))
+                pathroots.pop(ml.path(), None)
+                if pathroots:
+                    env[ENV_PENDING_METALOG] = encodependingmetalog(pathroots)
+                else:
+                    env.pop(ENV_PENDING_METALOG, None)
         return self._anypending
 
     @active

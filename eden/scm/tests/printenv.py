@@ -1,5 +1,14 @@
 #!/usr/bin/env python
+# Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+# Copyright (c) Mercurial Contributors.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # simple script to be used in hooks
 #
 # put something like this in the repo .hg/hgrc:
@@ -40,9 +49,20 @@ if len(sys.argv) > 2:
     if len(sys.argv) > 3:
         out = open(sys.argv[3], "ab")
 
+
+def _escape(k, v):
+    # mask out unstable hashes in HG_PENDING_METALOG
+    if k == "HG_PENDING_METALOG":
+        import json
+
+        v = json.dumps({k: "x" * len(v) for k, v in json.loads(v).items()})
+    return v
+
+
 # variables with empty values may not exist on all platforms, filter
 # them now for portability sake.
-env = [(k, v) for k, v in os.environ.items() if k.startswith("HG_") and v]
+env = [(k, _escape(k, v)) for k, v in os.environ.items() if k.startswith("HG_") and v]
+
 env.sort()
 
 out.write(b"%s hook: " % name.encode("utf-8"))

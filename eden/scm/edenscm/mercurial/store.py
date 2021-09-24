@@ -580,12 +580,22 @@ class metavfs(object):
     def metalog(self):
         vfs = self.vfs
         metarootenv = encoding.environ.get("HGFORCEMETALOGROOT")
+        metapath = vfs.join("metalog")
         if metarootenv:
             hintutil.trigger("metalog-root-override", metarootenv)
             metaroot = bin(metarootenv)
         else:
+            # Respect pending changes from parent processes set by
+            # environment variable.
+            from . import transaction
+
             metaroot = None
-        metalog = bindings.metalog.metalog(vfs.join("metalog"), metaroot)
+            metarootpendingenv = encoding.environ.get(transaction.ENV_PENDING_METALOG)
+            if metarootpendingenv:
+                pathroots = transaction.decodependingmetalog(metarootpendingenv)
+                metaroot = pathroots.pop(metapath, None)
+
+        metalog = bindings.metalog.metalog(metapath, metaroot)
 
         # Keys that are previously tracked in metalog.
         tracked = set(pycompat.decodeutf8((metalog.get("tracked") or b"")).split())
