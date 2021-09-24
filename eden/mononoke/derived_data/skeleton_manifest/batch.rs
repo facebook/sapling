@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_batch_in_linear_stacks, FileChangeAggregation, FileConflicts};
+use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
 use derived_data::{derive_impl, BonsaiDerivedMappingContainer};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::{ChangesetId, SkeletonManifestId};
@@ -40,7 +40,6 @@ pub async fn derive_skeleton_manifests_in_batch(
         manager.repo_blobstore(),
         batch,
         FileConflicts::ChangeDelete,
-        FileChangeAggregation::Aggregate,
     )
     .await?;
     let mut res = HashMap::new();
@@ -80,18 +79,19 @@ pub async fn derive_skeleton_manifests_in_batch(
 
         let new_skeleton_manifests = to_derive
             .into_iter()
-            .map(|(cs_id, fc)| {
+            .map(|item| {
                 // Clone the values that we need owned copies of to move
                 // into the future we are going to spawn, which means it
                 // must have static lifetime.
                 cloned!(ctx, manager, parent_skeleton_manifests);
                 async move {
+                    let cs_id = item.cs_id;
                     let derivation_fut = async move {
                         derive_skeleton_manifest(
                             &ctx,
                             &manager,
                             parent_skeleton_manifests,
-                            fc.into_iter().collect(),
+                            item.combined_file_changes.into_iter().collect(),
                         )
                         .await
                     };

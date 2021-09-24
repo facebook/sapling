@@ -12,7 +12,7 @@ use anyhow::{anyhow, Error, Result};
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_bonsais_in_linear_stacks, FileChangeAggregation, FileConflicts};
+use derived_data::batch::{split_bonsais_in_linear_stacks, FileConflicts};
 use derived_data_manager::DerivationContext;
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use lock_ext::LockExt;
@@ -30,13 +30,7 @@ pub async fn derive_blame_v2_in_batch(
 ) -> Result<HashMap<ChangesetId, RootBlameV2>, Error> {
     let batch_len = bonsais.len();
     // We must split on any change as blame data must use the parent file.
-    let linear_stacks = split_bonsais_in_linear_stacks(
-        &bonsais,
-        FileConflicts::AnyChange,
-        // For blame we don't care about file changes, so FileChangeAggregation can be anything
-        FileChangeAggregation::Aggregate,
-    )
-    .await?;
+    let linear_stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::AnyChange).await?;
     let bonsais = Mutex::new(
         bonsais
             .into_iter()
@@ -47,11 +41,11 @@ pub async fn derive_blame_v2_in_batch(
 
     let mut res = HashMap::new();
     for linear_stack in linear_stacks {
-        if let Some((cs_id, _fc)) = linear_stack.file_changes.first() {
+        if let Some(item) = linear_stack.file_changes.first() {
             debug!(
                 ctx.logger(),
                 "derive blame batch at {} (stack of {} from batch of {})",
-                cs_id.to_hex(),
+                item.cs_id.to_hex(),
                 linear_stack.file_changes.len(),
                 batch_len,
             );
@@ -60,10 +54,11 @@ pub async fn derive_blame_v2_in_batch(
         let new_blames = linear_stack
             .file_changes
             .into_iter()
-            .map(|(csid, _fc)| {
+            .map(|item| {
                 // Clone owning copied to pass into the spawned future.
                 cloned!(ctx, derivation_ctx);
                 async move {
+                    let csid = item.cs_id;
                     let bonsai = bonsais
                         .with(|bonsais| bonsais.remove(&csid))
                         .ok_or_else(|| anyhow!("changeset {} should be in bonsai batch", csid))?;

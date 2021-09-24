@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_batch_in_linear_stacks, FileChangeAggregation, FileConflicts};
+use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
 use derived_data::{derive_impl, BonsaiDerivedMappingContainer};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::{ChangesetId, FsnodeId};
@@ -62,7 +62,6 @@ pub async fn derive_fsnode_in_batch(
         manager.repo_blobstore(),
         batch,
         FileConflicts::ChangeDelete,
-        FileChangeAggregation::Aggregate,
     )
     .await?;
     let mut res = HashMap::new();
@@ -101,15 +100,21 @@ pub async fn derive_fsnode_in_batch(
 
         let new_fsnodes = to_derive
             .into_iter()
-            .map(|(cs_id, fc)| {
+            .map(|item| {
                 // Clone the values that we need owned copies of to move
                 // into the future we are going to spawn, which means it
                 // must have static lifetime.
                 cloned!(ctx, manager, parent_fsnodes);
                 async move {
+                    let cs_id = item.cs_id;
                     let derivation_fut = async move {
-                        derive_fsnode(&ctx, &manager, parent_fsnodes, fc.into_iter().collect())
-                            .await
+                        derive_fsnode(
+                            &ctx,
+                            &manager,
+                            parent_fsnodes,
+                            item.combined_file_changes.into_iter().collect(),
+                        )
+                        .await
                     };
                     let derivation_handle = tokio::spawn(derivation_fut);
                     let fsnode_id: FsnodeId = derivation_handle.await??;
