@@ -194,9 +194,9 @@ fn record_for_packer<L>(
 ) where
     L: PackInfoLogger,
 {
-    if let Some(mut sample) = sample {
-        for (blobstore_key, mut store_to_key_sizes) in sample.data.drain() {
-            for (blobstore_id, key_sample) in store_to_key_sizes.drain() {
+    if let Some(sample) = sample {
+        for (blobstore_key, store_to_key_sizes) in sample.data {
+            for (blobstore_id, key_sample) in store_to_key_sizes {
                 logger.log(PackInfo {
                     blobstore_id,
                     blobstore_key: blobstore_key.as_str(),
