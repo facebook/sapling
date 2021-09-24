@@ -70,6 +70,10 @@ def doctor(ui, **opts):
     svfs = vfsmod.vfs(os.path.join(sharedhgpath, "store"))
 
     ui.write(_("checking internal storage\n"))
+
+    ml = repairsvfs(ui, svfs, "metalog", metalog.metalog)
+    svfs.metalog = ml
+
     if ui.configbool("mutation", "enabled"):
         repairsvfs(ui, svfs, "mutation", mutationstore.mutationstore)
 
@@ -85,7 +89,6 @@ def doctor(ui, **opts):
         ui.write_err(_("changelog: cannot fix automatically (consider reclone)\n"))
         return 1
 
-    ml = repairsvfs(ui, svfs, "metalog", metalog.metalog)
     repairvisibleheads(ui, ml, cl)
     repairtreestate(ui, vfs, repopath, cl)
 

@@ -66,18 +66,6 @@ Test that 'hg doctor' can fix them:
 
   $ hg doctor -v
   checking internal storage
-  mutation:
-    Processing IndexedLog: Filesystem(*) (glob)
-    Fixed header in log
-    Extended log to 82 bytes required by meta
-    Verified first 0 entries, 12 of 82 bytes in log
-    Backed up corrupted log to "*" (glob)
-    Reset log size to 12
-    Rebuilt index "pred"
-    Rebuilt index "succ"
-    Rebuilt index "split"
-  
-  
   metalog:
     Checking blobs at "*": (glob)
     Processing IndexedLog: Filesystem("*") (glob)
@@ -92,6 +80,18 @@ Test that 'hg doctor' can fix them:
     
     Checking blobs referred by 10 Roots:
     All Roots are verified.
+  
+  
+  mutation:
+    Processing IndexedLog: Filesystem("*") (glob)
+    Fixed header in log
+    Extended log to 82 bytes required by meta
+    Verified first 0 entries, 12 of 82 bytes in log
+    Backed up corrupted log to "*" (glob)
+    Reset log size to 12
+    Rebuilt index "pred"
+    Rebuilt index "succ"
+    Rebuilt index "split"
   
   
   allheads:
