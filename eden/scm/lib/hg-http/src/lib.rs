@@ -78,7 +78,7 @@ pub fn enable_progress_reporting() {
 }
 
 /// State for progress reporting. Lazily initialized.
-static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Drop + Send + Sync>> = Lazy::new(|| {
+static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Send + Sync>> = Lazy::new(|| {
     Request::on_new_request(move |req| {
         TOTAL.request_count.fetch_add(1, Relaxed);
         let req_listeners = req.ctx_mut().event_listeners();
