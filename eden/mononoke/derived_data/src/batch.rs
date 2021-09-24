@@ -169,8 +169,8 @@ fn has_file_conflict(
     right: BTreeMap<&MPath, &FileChange>,
     file_conflicts: FileConflicts,
 ) -> bool {
-    let mut left = left.iter();
-    let mut right = right.into_iter();
+    let mut left = left.iter().peekable();
+    let mut right = right.into_iter().peekable();
     let mut state = (left.next(), right.next());
     loop {
         state = match state {
@@ -187,6 +187,20 @@ fn has_file_conflict(
                             }
                         }
                         FileConflicts::AnyChange => {
+                            return true;
+                        }
+                    }
+
+                    // It's possible for a single conflict to have a path
+                    // conflict (usually it happens when a file is replaced
+                    // with a directory). The code below checks if we have
+                    // a conflict like that and exists early if we do.
+                    if let Some((next_l_path, _)) = left.peek() {
+                        if r_path.is_prefix_of(*next_l_path) {
+                            return true;
+                        }
+                    } else if let Some((next_r_path, _)) = right.peek() {
+                        if l_path.is_prefix_of(*next_r_path) {
                             return true;
                         }
                     }
@@ -536,6 +550,63 @@ mod test {
             ],
         )
         .await?;
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_split_batch_in_linear_stacks_replace_file_with_dir(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = test_repo_factory::build_empty()?;
+
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir", "content1")
+            .commit()
+            .await?;
+        let second = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .delete_file("dir")
+            .add_file("dir/file", "content1")
+            .commit()
+            .await?;
+        let third = CreateCommitContext::new(&ctx, &repo, vec![second])
+            .delete_file("dir")
+            .commit()
+            .await?;
+
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            repo.blobstore(),
+            vec![root, second, third],
+            FileConflicts::ChangeDelete,
+        )
+        .await?;
+        assert_linear_stacks(
+            &ctx,
+            &repo,
+            linear_stacks,
+            vec![
+                (
+                    vec![],
+                    vec![btreemap! {"dir" => Some(("content1".to_string(), FileType::Regular))}],
+                ),
+                (
+                    vec![root],
+                    vec![btreemap! {
+                        "dir" => None,
+                        "dir/file" => Some(("content1".to_string(), FileType::Regular))
+                    }],
+                ),
+                (
+                    vec![second],
+                    vec![btreemap! {
+                        "dir" => None,
+                    }],
+                ),
+            ],
+        )
+        .await?;
+
         Ok(())
     }
 
