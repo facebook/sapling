@@ -642,6 +642,14 @@ def can_run_fake_edenfs() -> bool:
 
 
 def _compute_can_run_eden(require_fuse: bool = True) -> bool:
+    if "SANDCASTLE" in os.environ and sys.platform != "darwin":
+        # On Sandcastle, pretend that we can always run EdenFS, this prevents
+        # blindspots where tests are suddenly skipped but still marked as
+        # passed.
+        # TODO(T100403433): The tests aren't compatible with macOS right now
+        # due to Sandcastle not running the job as root.
+        return True
+
     if sys.platform == "win32":
         # On Windows ProjectedFS must be installed.
         # Our CMake configure step checks for the availability of ProjectedFSLib.lib
