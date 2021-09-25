@@ -207,7 +207,7 @@ configitem("remotefilelog", "simplecacheserverstore", default=False)
 configitem("remotefilelog", "server", default=None)
 configitem("remotefilelog", "getpackversion", default=1)
 configitem("remotefilelog", "commitsperrepack", default=100)
-configitem("remotefilelog", "http", default=False)
+configitem("remotefilelog", "http", default=True)
 configitem("edenapi", "url", default=None)
 
 testedwith = "ships-with-fb-hgext"

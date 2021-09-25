@@ -143,7 +143,7 @@ configitem = registrar.configitem(configtable)
 
 configitem("treemanifest", "fetchdepth", default=TREE_DEPTH_MAX)
 configitem("treemanifest", "stickypushpath", default=True)
-configitem("treemanifest", "http", default=False)
+configitem("treemanifest", "http", default=True)
 
 PACK_CATEGORY = "manifests"
 
