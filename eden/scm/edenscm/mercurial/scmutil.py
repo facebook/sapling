@@ -1301,27 +1301,6 @@ def extdatasource(repo, source):
     return data
 
 
-def _locksub(repo, lock, envvar, cmd, environ=None, *args, **kwargs):
-    if lock is None:
-        raise error.LockInheritanceContractViolation(
-            "lock can only be inherited while held"
-        )
-    if environ is None:
-        environ = {}
-    with lock.inherit() as lockname:
-        environ[envvar] = lockname
-        return repo.ui.system(cmd, environ=environ, *args, **kwargs)
-
-
-def wlocksub(repo, cmd, *args, **kwargs):
-    """run cmd as a subprocess that allows inheriting repo's wlock
-
-    This can only be called while the wlock is held. This takes all the
-    arguments that ui.system does, and returns the exit code of the
-    subprocess."""
-    return _locksub(repo, repo.currentwlock(), "HG_WLOCK_LOCKER", cmd, *args, **kwargs)
-
-
 def gdinitconfig(ui):
     """helper function to know if a repo should be created as general delta"""
     # experimental config: format.generaldelta

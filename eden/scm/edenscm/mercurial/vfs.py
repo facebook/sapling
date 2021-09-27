@@ -244,9 +244,9 @@ class abstractvfs(pycompat.ABC):
         # type: (Optional[str], Optional[int]) -> None
         return util.makedirs(self.join(path), mode)
 
-    def makelock(self, info, path, checkdeadlock=True):
+    def makelock(self, info, path):
         # type: (str, str, bool) -> Optional[int]
-        return util.makelock(info, self.join(path), checkdeadlock)
+        return util.makelock(info, self.join(path))
 
     def mkdir(self, path=None):
         # type: (Optional[str]) -> None

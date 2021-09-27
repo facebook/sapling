@@ -136,7 +136,7 @@ def _issymlinklockstale(oldinfo, newinfo):
     return not testpid(pid)
 
 
-def makelock(info, pathname, checkdeadlock=True):
+def makelock(info, pathname):
     # type: (str, str, bool) -> Optional[int]
     """Try to make a lock at given path. Write info inside it.
 
@@ -201,7 +201,7 @@ def makelock(info, pathname, checkdeadlock=True):
     #     the flock. So it knows nobody else has the lock. Therefore it can do
     #     the unlink without extra locking.
     dirname = os.path.dirname(pathname)
-    if pathname in _processlocks and checkdeadlock:
+    if pathname in _processlocks:
         raise error.ProgrammingError(
             "deadlock: %s was locked in the same process" % pathname
         )

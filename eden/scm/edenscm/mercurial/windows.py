@@ -654,7 +654,7 @@ def _cleanuptemplockfiles(dirname, basename):
             pass
 
 
-def makelock(info, pathname, checkdeadlock=True):
+def makelock(info, pathname):
     # type: (str, str, bool) -> Optional[int]
     dirname = os.path.dirname(pathname)
     basename = os.path.basename(pathname)

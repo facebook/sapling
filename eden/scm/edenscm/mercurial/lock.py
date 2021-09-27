@@ -216,8 +216,6 @@ class lock(object):
         releasefn=None,
         acquirefn=None,
         desc=None,
-        inheritchecker=None,
-        parentlock=None,
         dolock=True,
         ui=None,
         showspinner=False,
@@ -230,10 +228,6 @@ class lock(object):
         self.releasefn = releasefn
         self.acquirefn = acquirefn
         self.desc = desc
-        self._inheritchecker = inheritchecker
-        self.parentlock = parentlock
-        self._parentheld = False
-        self._inherited = False
         self.postrelease = []
         self.pid = self._getpid()
         self.ui = ui
@@ -319,11 +313,8 @@ class lock(object):
 
         while not self.held and retry:
             retry -= 1
-            checkdeadlock = not bool(self.parentlock)
             try:
-                self._lockfd = self.vfs.makelock(
-                    self._getlockname(), self.f, checkdeadlock=checkdeadlock
-                )
+                self._lockfd = self.vfs.makelock(self._getlockname(), self.f)
                 self.held = 1
             except (OSError, IOError) as why:
                 # EEXIST: lockfile exists (Windows)
@@ -334,15 +325,6 @@ class lock(object):
                     if lockfilecontents is None:
                         continue
                     info = lockinfo(lockfilecontents, path=self.vfs.join(self.f))
-
-                    # special case where a parent process holds the lock -- this
-                    # is different from the pid being different because we do
-                    # want the unlock and postrelease functions to be called,
-                    # but the lockfile to not be removed.
-                    if info == self.parentlock:
-                        self._parentheld = True
-                        self.held = 1
-                        return
                     info = self._testlock(info)
                     if info is not None:
                         raise error.LockHeld(
@@ -435,38 +417,6 @@ class lock(object):
         info = lockinfo(self._readlock(), path=self.vfs.join(self.f))
         return self._testlock(info)
 
-    @contextlib.contextmanager
-    def inherit(self):
-        """context for the lock to be inherited by a Mercurial subprocess.
-
-        Yields a string that will be recognized by the lock in the subprocess.
-        Communicating this string to the subprocess needs to be done separately
-        -- typically by an environment variable.
-        """
-        if not self.held:
-            raise error.LockInheritanceContractViolation(
-                "inherit can only be called while lock is held"
-            )
-        if self._inherited:
-            raise error.LockInheritanceContractViolation(
-                "inherit cannot be called while lock is already inherited"
-            )
-        if self._inheritchecker is not None:
-            self._inheritchecker()
-        if self.releasefn:
-            self.releasefn()
-        if self._parentheld:
-            lockname = self.parentlock
-        else:
-            lockname = self._getlockname()
-        self._inherited = True
-        try:
-            yield lockname
-        finally:
-            if self.acquirefn:
-                self.acquirefn()
-            self._inherited = False
-
     def release(self):
         """release the lock and execute callback function if any
 
@@ -483,19 +433,15 @@ class lock(object):
                 if self.releasefn:
                     self.releasefn()
             finally:
-                if not self._parentheld:
-                    try:
-                        util.releaselock(self._lockfd, self.vfs.join(self.f))
-                        self._lockfd = None
-                    except OSError:
-                        pass
-            # The postrelease functions typically assume the lock is not held
-            # at all.
-            if not self._parentheld:
-                for callback in self.postrelease:
-                    callback()
-                # Prevent double usage and help clear cycles.
-                self.postrelease = None
+                try:
+                    util.releaselock(self._lockfd, self.vfs.join(self.f))
+                    self._lockfd = None
+                except OSError:
+                    pass
+            for callback in self.postrelease:
+                callback()
+            # Prevent double usage and help clear cycles.
+            self.postrelease = None
 
 
 def release(*locks):
