@@ -14,7 +14,7 @@ mod batch;
 mod derive;
 mod mapping;
 
-pub use mapping::{RootSkeletonManifestId, RootSkeletonManifestMapping};
+pub use mapping::RootSkeletonManifestId;
 
 #[derive(Debug, Error)]
 pub enum SkeletonManifestDerivationError {

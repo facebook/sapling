@@ -9,13 +9,12 @@ use std::cmp::Ordering as CmpOrdering;
 use std::collections::BTreeMap;
 
 use anyhow::Error;
-use blobstore::Loadable;
+use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use mononoke_types::{BonsaiChangeset, FileChange, MPath};
 use mononoke_types::{ChangesetId, ContentId, FileType};
-use repo_blobstore::RepoBlobstore;
 
 pub type FileToContent = BTreeMap<MPath, Option<(ContentId, FileType)>>;
 
@@ -30,7 +29,7 @@ pub enum FileConflicts {
 
 pub async fn split_batch_in_linear_stacks(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &impl Blobstore,
     batch: Vec<ChangesetId>,
     file_conflicts: FileConflicts,
 ) -> Result<Vec<LinearStack>, Error> {

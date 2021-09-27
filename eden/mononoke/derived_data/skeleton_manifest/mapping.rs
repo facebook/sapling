@@ -7,29 +7,23 @@
 
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
-use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{
-    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable,
-    BonsaiDerivedMappingContainer, DerivedDataTypesConfig,
-};
-use futures::stream::{self, StreamExt, TryStreamExt};
+use derived_data::impl_bonsai_derived_via_manager;
+use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, SkeletonManifestId,
 };
-use repo_derived_data::RepoDerivedDataRef;
 
 use crate::batch::derive_skeleton_manifests_in_batch;
 use crate::derive::derive_skeleton_manifest;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct RootSkeletonManifestId(SkeletonManifestId);
+pub struct RootSkeletonManifestId(pub(crate) SkeletonManifestId);
 
 impl RootSkeletonManifestId {
     pub fn skeleton_manifest_id(&self) -> &SkeletonManifestId {
@@ -64,23 +58,25 @@ impl From<RootSkeletonManifestId> for BlobstoreBytes {
     }
 }
 
+fn format_key(changeset_id: ChangesetId) -> String {
+    format!("derived_root_skeletonmanifest.{}", changeset_id)
+}
+
 #[async_trait]
 impl BonsaiDerivable for RootSkeletonManifestId {
     const NAME: &'static str = "skeleton_manifests";
 
-    type Options = ();
+    type Dependencies = dependencies![];
 
-    async fn derive_from_parents_impl(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn derive_single(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        _options: &Self::Options,
     ) -> Result<Self, Error> {
-        let manager = repo.repo_derived_data().manager();
-        let skeleton_manifest_id = derive_skeleton_manifest(
-            &ctx,
-            manager,
+        let id = derive_skeleton_manifest(
+            ctx,
+            derivation_ctx,
             parents
                 .into_iter()
                 .map(RootSkeletonManifestId::into_skeleton_manifest_id)
@@ -88,59 +84,50 @@ impl BonsaiDerivable for RootSkeletonManifestId {
             get_file_changes(&bonsai),
         )
         .await?;
-        Ok(RootSkeletonManifestId(skeleton_manifest_id))
+        Ok(RootSkeletonManifestId(id))
     }
 
-    async fn batch_derive_impl(
+    async fn derive_batch(
         ctx: &CoreContext,
-        repo: &BlobRepo,
-        csids: Vec<ChangesetId>,
-        mapping: &BonsaiDerivedMappingContainer<Self>,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
         gap_size: Option<usize>,
-    ) -> Result<HashMap<ChangesetId, Self>, Error> {
-        let derived =
-            derive_skeleton_manifests_in_batch(ctx, repo, mapping, csids.clone(), gap_size).await?;
-
-        stream::iter(derived.into_iter().map(|(cs_id, derived)| async move {
-            let derived = RootSkeletonManifestId(derived);
-            mapping.put(ctx, cs_id, &derived).await?;
-            Ok((cs_id, derived))
-        }))
-        .buffered(100)
-        .try_collect::<HashMap<_, _>>()
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        derive_skeleton_manifests_in_batch(
+            ctx,
+            derivation_ctx,
+            bonsais.into_iter().map(|b| b.get_changeset_id()).collect(),
+            gap_size,
+        )
         .await
     }
-}
 
-#[derive(Clone)]
-pub struct RootSkeletonManifestMapping {
-    blobstore: Arc<dyn Blobstore>,
-}
-
-#[async_trait]
-impl BlobstoreRootIdMapping for RootSkeletonManifestMapping {
-    type Value = RootSkeletonManifestId;
-
-    fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Result<Self> {
-        Ok(Self { blobstore })
+    async fn store_mapping(
+        self,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<()> {
+        let key = format_key(changeset_id);
+        derivation_ctx.blobstore().put(ctx, key, self.into()).await
     }
 
-    fn blobstore(&self) -> &dyn Blobstore {
-        &self.blobstore
+    async fn fetch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self>> {
+        let key = format_key(changeset_id);
+        Ok(derivation_ctx
+            .blobstore()
+            .get(ctx, &key)
+            .await?
+            .map(TryInto::try_into)
+            .transpose()?)
     }
-
-    fn prefix(&self) -> &'static str {
-        "derived_root_skeletonmanifest."
-    }
-
-    fn options(&self) {}
 }
 
-impl_bonsai_derived_mapping!(
-    RootSkeletonManifestMapping,
-    BlobstoreRootIdMapping,
-    RootSkeletonManifestId
-);
+impl_bonsai_derived_via_manager!(RootSkeletonManifestId);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
@@ -160,11 +147,11 @@ pub(crate) fn get_file_changes(
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobrepo::BlobRepo;
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use borrowed::borrowed;
-    use derived_data::BonsaiDerived;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{
@@ -178,6 +165,7 @@ mod test {
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use mononoke_types::ChangesetId;
+    use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use tokio::runtime::Runtime;
 
@@ -195,7 +183,9 @@ mod test {
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> Result<()> {
-        let root_skeleton_manifest_id = RootSkeletonManifestId::derive(ctx, repo, bcs_id)
+        let manager = repo.repo_derived_data().manager();
+        let root_skeleton_manifest_id = manager
+            .derive::<RootSkeletonManifestId>(ctx, bcs_id, None)
             .await?
             .into_skeleton_manifest_id();
 

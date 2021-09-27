@@ -46,17 +46,7 @@ enable some more derived data types for normal usage and backfilling
 start the tailer with tailing and backfilling some different types
 normally the tailer runs forever, but for this test we will make it
 stop when it becomes idle.
-  $ backfill_derived_data backfill-all --parallel --batch-size=10 --gap-size=3 2>&1 | grep -v count:8
-  *] enabled stdlog with level: Error (set RUST_LOG to configure) (glob)
-  *] Initializing tunables: * (glob)
-  *] using repo "repo" repoid RepositoryId(0) (glob)
-  *] derived data types: {*} (glob)
-  *] Deriving 1 heads (glob)
-  *] found changesets: 8 * (glob)
-  *] deriving data 32 (glob)
-  *] backfill unodes batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298 (glob)
-  *] backfill blame batch from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec to 8ea58cff262ad56732037fb42189d6262dacdaf8032c18ddebcb6b5b310d1298 (glob)
-  *] derive blame batch at 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec (stack of 8 from batch of 8) (glob)
+  $ backfill_derived_data backfill-all --parallel --batch-size=10 --gap-size=3 &>/dev/null
 
 Heads should all be derived
   $ mononoke_admin --log-level ERROR derived-data exists fsnodes main

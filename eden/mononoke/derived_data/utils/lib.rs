@@ -47,7 +47,7 @@ use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::RepoDerivedDataRef;
 use scuba_ext::MononokeScubaSampleBuilder;
-use skeleton_manifest::{RootSkeletonManifestId, RootSkeletonManifestMapping};
+use skeleton_manifest::RootSkeletonManifestId;
 use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
@@ -729,14 +729,9 @@ fn derived_data_utils_impl(
                 repo.clone(),
             )))
         }
-        RootSkeletonManifestId::NAME => {
-            let mapping = RootSkeletonManifestMapping::new(blobstore, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                fb,
-                mapping,
-                repo.clone(),
-            )))
-        }
+        RootSkeletonManifestId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
+            RootSkeletonManifestId,
+        >::new(repo, config))),
         TreeHandle::NAME => {
             let mapping = TreeMapping::new(blobstore, config);
             Ok(Arc::new(DerivedUtilsFromMapping::new(
