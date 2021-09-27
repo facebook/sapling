@@ -7,19 +7,14 @@
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, BlobstoreBytes, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::{
-    impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerivable, BonsaiDerived,
-    DerivedDataTypesConfig,
-};
-use futures::future;
+use derived_data::impl_bonsai_derived_via_manager;
+use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use futures::stream::TryStreamExt;
 use manifest::{find_intersection_of_diffs, Entry};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
-use std::sync::Arc;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
@@ -53,28 +48,36 @@ impl From<ChangesetId> for RootFastlog {
     }
 }
 
+fn format_key(changeset_id: ChangesetId) -> String {
+    format!("derived_rootfastlog.{}", changeset_id)
+}
+
 #[async_trait]
 impl BonsaiDerivable for RootFastlog {
     const NAME: &'static str = "fastlog";
 
-    type Options = ();
+    type Dependencies = dependencies![RootUnodeManifestId];
 
-    async fn derive_from_parents_impl(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn derive_single(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
-        _options: &Self::Options,
     ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
-        let (root_unode_mf_id, parents) = future::try_join(
-            async { Ok(RootUnodeManifestId::derive(&ctx, &repo, bcs_id).await?) },
-            fetch_parent_root_unodes(&ctx, &repo, bonsai),
-        )
-        .await?;
+        let unode_mf_id = derivation_ctx
+            .derive_dependency::<RootUnodeManifestId>(ctx, bonsai.get_changeset_id())
+            .await?
+            .manifest_unode_id()
+            .clone();
+        let parents = derivation_ctx
+            .fetch_parents::<RootUnodeManifestId>(ctx, &bonsai)
+            .await?
+            .into_iter()
+            .map(|id| id.manifest_unode_id().clone())
+            .collect::<Vec<_>>();
 
-        let blobstore = repo.get_blobstore().boxed();
-        let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
+        let blobstore = derivation_ctx.blobstore();
 
         find_intersection_of_diffs(ctx.clone(), blobstore.clone(), unode_mf_id, parents)
             .map_ok(move |(_, entry)| {
@@ -97,20 +100,31 @@ impl BonsaiDerivable for RootFastlog {
 
         Ok(RootFastlog(bcs_id))
     }
-}
 
-pub async fn fetch_parent_root_unodes(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    bonsai: BonsaiChangeset,
-) -> Result<Vec<ManifestUnodeId>, Error> {
-    future::try_join_all(bonsai.parents().map(move |p| async move {
-        Ok(RootUnodeManifestId::derive(ctx, repo, p)
-            .await?
-            .manifest_unode_id()
-            .clone())
-    }))
-    .await
+    async fn store_mapping(
+        self,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<()> {
+        let key = format_key(changeset_id);
+        derivation_ctx
+            .blobstore()
+            .put(ctx, key, BlobstoreBytes::empty())
+            .await
+    }
+
+    async fn fetch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self>> {
+        let key = format_key(changeset_id);
+        match derivation_ctx.blobstore().get(ctx, &key).await? {
+            Some(_) => Ok(Some(RootFastlog(changeset_id))),
+            None => Ok(None),
+        }
+    }
 }
 
 async fn fetch_unode_parents<B: Blobstore>(
@@ -137,36 +151,13 @@ async fn fetch_unode_parents<B: Blobstore>(
     Ok(res)
 }
 
-#[derive(Clone)]
-pub struct RootFastlogMapping {
-    blobstore: Arc<dyn Blobstore>,
-}
-
-impl BlobstoreExistsMapping for RootFastlogMapping {
-    type Value = RootFastlog;
-
-    fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Result<Self> {
-        Ok(Self { blobstore })
-    }
-
-    fn blobstore(&self) -> &dyn Blobstore {
-        &self.blobstore
-    }
-
-    fn prefix(&self) -> &'static str {
-        "derived_rootfastlog."
-    }
-
-    fn options(&self) {}
-}
-
-impl_bonsai_derived_mapping!(RootFastlogMapping, BlobstoreExistsMapping, RootFastlog);
+impl_bonsai_derived_via_manager!(RootFastlog);
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
-    use blobrepo::save_bonsai_changesets;
+    use blobrepo::{save_bonsai_changesets, BlobRepo};
     use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkName;
     use context::CoreContext;
@@ -188,10 +179,12 @@ mod tests {
     use pretty_assertions::assert_eq;
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
+    use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use simulated_repo::{GenManifest, GenSettings};
     use std::collections::{BTreeMap, HashSet, VecDeque};
     use std::str::FromStr;
+    use std::sync::Arc;
 
     #[fbinit::test]
     async fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {
@@ -393,6 +386,7 @@ mod tests {
         ) -> Result<(), Error> {
             let repo = linear::getrepo(fb).await;
             let ctx = CoreContext::test_mock(fb);
+            let manager = repo.repo_derived_data().manager();
 
             let mut bonsais = vec![];
             let mut parents = vec![];
@@ -418,12 +412,14 @@ mod tests {
             let mut parent_unodes = vec![];
 
             for p in parents {
-                let parent_unode = RootUnodeManifestId::derive(&ctx, &repo, p).await?;
+                let parent_unode = manager.derive::<RootUnodeManifestId>(&ctx, p, None).await?;
                 let parent_unode = parent_unode.manifest_unode_id().clone();
                 parent_unodes.push(parent_unode);
             }
 
-            let merge_unode = RootUnodeManifestId::derive(&ctx, &repo, merge_bcs_id).await?;
+            let merge_unode = manager
+                .derive::<RootUnodeManifestId>(&ctx, merge_bcs_id, None)
+                .await?;
             let merge_unode = merge_unode.manifest_unode_id().clone();
 
             let mut entries: Vec<_> = find_intersection_of_diffs(
@@ -660,12 +656,15 @@ mod tests {
         repo: &BlobRepo,
         hg_cs: &str,
     ) -> Result<ManifestUnodeId, Error> {
+        let manager = repo.repo_derived_data().manager();
         let hg_cs_id = HgChangesetId::from_str(hg_cs)?;
         let bcs_id = repo
             .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
             .await?
             .unwrap();
-        let root_unode = RootUnodeManifestId::derive(&ctx, &repo, bcs_id).await?;
+        let root_unode = manager
+            .derive::<RootUnodeManifestId>(&ctx, bcs_id, None)
+            .await?;
         Ok(root_unode.manifest_unode_id().clone())
     }
 
@@ -674,9 +673,14 @@ mod tests {
         bcs_id: ChangesetId,
         repo: &BlobRepo,
     ) -> ManifestUnodeId {
-        RootFastlog::derive(&ctx, &repo, bcs_id).await.unwrap();
+        let manager = repo.repo_derived_data().manager();
+        manager
+            .derive::<RootFastlog>(&ctx, bcs_id, None)
+            .await
+            .unwrap();
 
-        let root_unode = RootUnodeManifestId::derive(&ctx, &repo, bcs_id)
+        let root_unode = manager
+            .derive::<RootUnodeManifestId>(&ctx, bcs_id, None)
             .await
             .unwrap();
         root_unode.manifest_unode_id().clone()

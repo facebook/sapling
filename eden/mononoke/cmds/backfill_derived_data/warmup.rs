@@ -12,10 +12,10 @@ use blobstore::Loadable;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
-use fastlog::{fetch_parent_root_unodes, RootFastlog};
+use fastlog::RootFastlog;
 use fsnodes::{prefetch_content_metadata, RootFsnodeId};
 use futures::{
-    future::{self, try_join, try_join3, try_join4, FutureExt},
+    future::{self, try_join3, try_join4, FutureExt},
     stream::{self, StreamExt, TryStreamExt},
     TryFutureExt,
 };
@@ -130,13 +130,18 @@ async fn unode_warmup(
             |cs_id| {
                 async move {
                     let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+                    let manager = repo.repo_derived_data().manager();
 
-                    let root_mf_id =
-                        RootUnodeManifestId::derive(&ctx, &repo, bcs.get_changeset_id())
-                            .map_err(Error::from);
-
-                    let parent_unodes = fetch_parent_root_unodes(ctx, repo, bcs);
-                    let (root_mf_id, parent_unodes) = try_join(root_mf_id, parent_unodes).await?;
+                    let root_mf_id = manager
+                        .derive::<RootUnodeManifestId>(ctx, *cs_id, None)
+                        .await?;
+                    let parent_unodes = manager
+                        .derivation_context(None)
+                        .fetch_parents::<RootUnodeManifestId>(ctx, &bcs)
+                        .await?
+                        .into_iter()
+                        .map(|id| id.manifest_unode_id().clone())
+                        .collect();
                     let unode_mf_id = root_mf_id.manifest_unode_id().clone();
                     find_intersection_of_diffs(
                         ctx.clone(),

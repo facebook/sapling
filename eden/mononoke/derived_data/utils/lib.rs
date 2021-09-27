@@ -21,15 +21,15 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::{
-    derive_impl, BlobstoreExistsMapping, BonsaiDerivable, BonsaiDerivedMapping,
-    BonsaiDerivedMappingContainer, DerivedDataTypesConfig, RegenerateMapping,
+    derive_impl, BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedMappingContainer,
+    DerivedDataTypesConfig, RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use derived_data_manager::{
     BatchDeriveOptions, BatchDeriveStats, BonsaiDerivable as NewBonsaiDerivable,
     DerivedDataManager, Rederivation,
 };
-use fastlog::{RootFastlog, RootFastlogMapping};
+use fastlog::RootFastlog;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
@@ -678,14 +678,9 @@ fn derived_data_utils_impl(
         RootUnodeManifestId::NAME => Ok(Arc::new(
             DerivedUtilsFromManager::<RootUnodeManifestId>::new(repo, config),
         )),
-        RootFastlog::NAME => {
-            let mapping = RootFastlogMapping::new(blobstore, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                fb,
-                mapping,
-                repo.clone(),
-            )))
-        }
+        RootFastlog::NAME => Ok(Arc::new(DerivedUtilsFromManager::<RootFastlog>::new(
+            repo, config,
+        ))),
         MappedHgChangesetId::NAME => {
             let mapping = HgChangesetIdMapping::new(repo, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
