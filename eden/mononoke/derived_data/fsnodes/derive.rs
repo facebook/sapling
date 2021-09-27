@@ -14,7 +14,7 @@ use blobstore::{Blobstore, Loadable};
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data_manager::DerivedDataManager;
+use derived_data_manager::DerivationContext;
 use digest::Digest;
 use filestore::{get_metadata, FetchKey};
 use futures::channel::mpsc;
@@ -25,7 +25,6 @@ use mononoke_types::fsnode::{Fsnode, FsnodeDirectory, FsnodeEntry, FsnodeFile, F
 use mononoke_types::hash::{Sha1, Sha256};
 use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, FileType, FsnodeId, MononokeId};
 use mononoke_types::{MPath, MPathElement};
-use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
@@ -37,11 +36,11 @@ use crate::FsnodeDerivationError;
 /// during merges.
 pub(crate) async fn derive_fsnode(
     ctx: &CoreContext,
-    manager: &DerivedDataManager,
+    derivation_ctx: &DerivationContext,
     parents: Vec<FsnodeId>,
     changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
 ) -> Result<FsnodeId> {
-    let blobstore = manager.repo_blobstore();
+    let blobstore = derivation_ctx.blobstore();
     let content_ids = changes
         .iter()
         .filter_map(|(_mpath, content_id_and_file_type)| {
@@ -105,7 +104,7 @@ pub(crate) async fn derive_fsnode(
 // Prefetch metadata for all content IDs introduced by a changeset.
 pub async fn prefetch_content_metadata(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &impl Blobstore,
     content_ids: HashSet<ContentId>,
 ) -> Result<HashMap<ContentId, ContentMetadata>> {
     content_ids
@@ -128,7 +127,7 @@ pub async fn prefetch_content_metadata(
 /// fsnodes to avoid fetching too much.
 async fn collect_fsnode_subentries(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &impl Blobstore,
     prefetched_content_metadata: &HashMap<ContentId, ContentMetadata>,
     parents: Vec<FsnodeId>,
     subentries: BTreeMap<
@@ -241,12 +240,11 @@ async fn collect_fsnode_subentries(
 /// Create a new fsnode for the tree described by `tree_info`.
 async fn create_fsnode(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadata>>,
     tree_info: TreeInfo<FsnodeId, (ContentId, FileType), Option<FsnodeSummary>>,
 ) -> Result<(Option<FsnodeSummary>, FsnodeId)> {
-    let blobstore = blobstore.clone();
     let entries = collect_fsnode_subentries(
         ctx,
         &blobstore,
@@ -308,7 +306,7 @@ async fn create_fsnode(
     let blob = fsnode.into_blob();
     let fsnode_id = *blob.id();
     let key = fsnode_id.blobstore_key();
-    cloned!(ctx);
+    cloned!(blobstore, ctx);
     let f = async move { blobstore.put(&ctx, key, blob.into()).await };
 
     match sender {
@@ -408,7 +406,7 @@ mod test {
     fn flat_linear_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         let repo = runtime.block_on(linear::getrepo(fb));
-        let manager = repo.repo_derived_data().manager();
+        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);
         let parent_fsnode_id = {
@@ -417,7 +415,7 @@ mod test {
                 .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
                 .unwrap();
 
-            let f = derive_fsnode(&ctx, manager, vec![], get_file_changes(&bcs));
+            let f = derive_fsnode(&ctx, &derivation_ctx, vec![], get_file_changes(&bcs));
 
             let root_fsnode_id = runtime.block_on(f).unwrap();
 
@@ -470,7 +468,7 @@ mod test {
 
             let f = derive_fsnode(
                 &ctx,
-                manager,
+                &derivation_ctx,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
@@ -523,7 +521,7 @@ mod test {
     fn nested_directories_test(fb: FacebookInit) {
         let runtime = Runtime::new().unwrap();
         let repo = runtime.block_on(many_files_dirs::getrepo(fb));
-        let manager = repo.repo_derived_data().manager();
+        let derivation_ctx = repo.repo_derived_data().manager().derivation_context(None);
 
         let ctx = CoreContext::test_mock(fb);
 
@@ -533,7 +531,7 @@ mod test {
             let (_bcs_id, bcs) = runtime
                 .block_on(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
                 .unwrap();
-            let f = derive_fsnode(&ctx, manager, vec![], get_file_changes(&bcs));
+            let f = derive_fsnode(&ctx, &derivation_ctx, vec![], get_file_changes(&bcs));
             runtime.block_on(f).unwrap()
         };
 
@@ -544,7 +542,7 @@ mod test {
                 .unwrap();
             let f = derive_fsnode(
                 &ctx,
-                manager,
+                &derivation_ctx,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
@@ -559,7 +557,7 @@ mod test {
 
             let f = derive_fsnode(
                 &ctx,
-                manager,
+                &derivation_ctx,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
@@ -744,7 +742,7 @@ mod test {
 
             let f = derive_fsnode(
                 &ctx,
-                manager,
+                &derivation_ctx,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );

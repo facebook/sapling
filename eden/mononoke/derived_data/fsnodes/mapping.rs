@@ -7,29 +7,23 @@
 
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
-use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{
-    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable,
-    BonsaiDerivedMappingContainer, DerivedDataTypesConfig,
-};
-use futures::stream::{self, StreamExt, TryStreamExt};
+use derived_data::impl_bonsai_derived_via_manager;
+use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, FsnodeId, MPath,
 };
-use repo_derived_data::RepoDerivedDataRef;
 
 use crate::batch::derive_fsnode_in_batch;
 use crate::derive::derive_fsnode;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct RootFsnodeId(FsnodeId);
+pub struct RootFsnodeId(pub(crate) FsnodeId);
 
 impl RootFsnodeId {
     pub fn fsnode_id(&self) -> &FsnodeId {
@@ -62,23 +56,25 @@ impl From<RootFsnodeId> for BlobstoreBytes {
     }
 }
 
+fn format_key(changeset_id: ChangesetId) -> String {
+    format!("derived_root_fsnode.{}", changeset_id)
+}
+
 #[async_trait]
 impl BonsaiDerivable for RootFsnodeId {
     const NAME: &'static str = "fsnodes";
 
-    type Options = ();
+    type Dependencies = dependencies![];
 
-    async fn derive_from_parents_impl(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn derive_single(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        _options: &Self::Options,
     ) -> Result<Self, Error> {
-        let manager = repo.repo_derived_data().manager();
         let fsnode_id = derive_fsnode(
             &ctx,
-            manager,
+            derivation_ctx,
             parents
                 .into_iter()
                 .map(|root_fsnode_id| root_fsnode_id.into_fsnode_id())
@@ -89,51 +85,48 @@ impl BonsaiDerivable for RootFsnodeId {
         Ok(RootFsnodeId(fsnode_id))
     }
 
-    async fn batch_derive_impl(
+    async fn derive_batch(
         ctx: &CoreContext,
-        repo: &BlobRepo,
-        csids: Vec<ChangesetId>,
-        mapping: &BonsaiDerivedMappingContainer<Self>,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
         gap_size: Option<usize>,
-    ) -> Result<HashMap<ChangesetId, Self>, Error> {
-        let derived = derive_fsnode_in_batch(ctx, repo, mapping, csids.clone(), gap_size).await?;
-
-        stream::iter(derived.into_iter().map(|(cs_id, derived)| async move {
-            let derived = RootFsnodeId(derived);
-            mapping.put(ctx, cs_id, &derived).await?;
-            Ok((cs_id, derived))
-        }))
-        .buffered(100)
-        .try_collect::<HashMap<_, _>>()
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        derive_fsnode_in_batch(
+            ctx,
+            derivation_ctx,
+            bonsais.into_iter().map(|b| b.get_changeset_id()).collect(),
+            gap_size,
+        )
         .await
     }
-}
 
-#[derive(Clone)]
-pub struct RootFsnodeMapping {
-    blobstore: Arc<dyn Blobstore>,
-}
 
-#[async_trait]
-impl BlobstoreRootIdMapping for RootFsnodeMapping {
-    type Value = RootFsnodeId;
-
-    fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Result<Self> {
-        Ok(Self { blobstore })
+    async fn store_mapping(
+        self,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<()> {
+        let key = format_key(changeset_id);
+        derivation_ctx.blobstore().put(ctx, key, self.into()).await
     }
 
-    fn blobstore(&self) -> &dyn Blobstore {
-        &self.blobstore
+    async fn fetch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self>> {
+        let key = format_key(changeset_id);
+        Ok(derivation_ctx
+            .blobstore()
+            .get(ctx, &key)
+            .await?
+            .map(TryInto::try_into)
+            .transpose()?)
     }
-
-    fn prefix(&self) -> &'static str {
-        "derived_root_fsnode."
-    }
-
-    fn options(&self) {}
 }
 
-impl_bonsai_derived_mapping!(RootFsnodeMapping, BlobstoreRootIdMapping, RootFsnodeId);
+impl_bonsai_derived_via_manager!(RootFsnodeId);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
@@ -153,6 +146,7 @@ pub(crate) fn get_file_changes(
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobrepo::BlobRepo;
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
@@ -166,7 +160,7 @@ mod test {
     };
     use futures::compat::Stream01CompatExt;
     use futures::future::Future;
-    use futures::stream::Stream;
+    use futures::stream::{Stream, TryStreamExt};
     use futures::try_join;
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};

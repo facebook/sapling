@@ -8,15 +8,13 @@
 use std::collections::HashMap;
 
 use anyhow::Error;
-use blobrepo::BlobRepo;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
-use derived_data::{derive_impl, BonsaiDerivedMappingContainer};
+use derived_data_manager::DerivationContext;
 use futures::stream::{FuturesOrdered, TryStreamExt};
-use mononoke_types::{ChangesetId, FsnodeId};
-use repo_derived_data::RepoDerivedDataRef;
+use mononoke_types::ChangesetId;
 
 use crate::derive::derive_fsnode;
 use crate::RootFsnodeId;
@@ -51,20 +49,18 @@ use crate::RootFsnodeId;
 /// tokio tasks - this allows us to use more cpu.
 pub async fn derive_fsnode_in_batch(
     ctx: &CoreContext,
-    repo: &BlobRepo,
-    mapping: &BonsaiDerivedMappingContainer<RootFsnodeId>,
+    derivation_ctx: &DerivationContext,
     batch: Vec<ChangesetId>,
     gap_size: Option<usize>,
-) -> Result<HashMap<ChangesetId, FsnodeId>, Error> {
-    let manager = repo.repo_derived_data().manager();
+) -> Result<HashMap<ChangesetId, RootFsnodeId>, Error> {
     let linear_stacks = split_batch_in_linear_stacks(
         ctx,
-        manager.repo_blobstore(),
+        derivation_ctx.blobstore(),
         batch,
         FileConflicts::ChangeDelete,
     )
     .await?;
-    let mut res = HashMap::new();
+    let mut res: HashMap<ChangesetId, RootFsnodeId> = HashMap::new();
     for linear_stack in linear_stacks {
         // Fetch the parent fsnodes, either from a previous iteration of this
         // loop (which will have stored the mapping in `res`), or from the
@@ -75,14 +71,13 @@ pub async fn derive_fsnode_in_batch(
             .map(|p| {
                 borrowed!(res);
                 async move {
-                    match res.get(&p) {
-                        Some(fsnode_id) => Ok::<_, Error>(*fsnode_id),
-                        None => Ok(
-                            derive_impl::derive_impl::<RootFsnodeId>(ctx, repo, mapping, p)
-                                .await?
-                                .into_fsnode_id(),
-                        ),
-                    }
+                    anyhow::Result::<_>::Ok(
+                        match res.get(&p) {
+                            Some(fsnode_id) => fsnode_id.clone(),
+                            None => derivation_ctx.fetch_dependency(ctx, p).await?,
+                        }
+                        .into_fsnode_id(),
+                    )
                 }
             })
             .collect::<FuturesOrdered<_>>()
@@ -104,21 +99,21 @@ pub async fn derive_fsnode_in_batch(
                 // Clone the values that we need owned copies of to move
                 // into the future we are going to spawn, which means it
                 // must have static lifetime.
-                cloned!(ctx, manager, parent_fsnodes);
+                cloned!(ctx, derivation_ctx, parent_fsnodes);
                 async move {
                     let cs_id = item.cs_id;
                     let derivation_fut = async move {
                         derive_fsnode(
                             &ctx,
-                            &manager,
+                            &derivation_ctx,
                             parent_fsnodes,
                             item.combined_file_changes.into_iter().collect(),
                         )
                         .await
                     };
                     let derivation_handle = tokio::spawn(derivation_fut);
-                    let fsnode_id: FsnodeId = derivation_handle.await??;
-                    Result::<_, Error>::Ok((cs_id, fsnode_id))
+                    let fsnode_id = RootFsnodeId(derivation_handle.await??);
+                    anyhow::Result::<_>::Ok((cs_id, fsnode_id))
                 }
             })
             .collect::<FuturesOrdered<_>>()
@@ -134,12 +129,12 @@ pub async fn derive_fsnode_in_batch(
 #[cfg(test)]
 mod test {
     use super::*;
-    use derived_data::BonsaiDerivedOld;
+    use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::compat::Stream01CompatExt;
+    use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
-    use std::sync::Arc;
     use tests_utils::resolve_cs_id;
 
     #[fbinit::test]
@@ -149,26 +144,34 @@ mod test {
             let repo = linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
-            let mapping = BonsaiDerivedMappingContainer::new(
-                ctx.fb,
-                repo.name(),
-                repo.get_derived_data_config().scuba_table.as_deref(),
-                Arc::new(RootFsnodeId::default_mapping(&ctx, &repo)?),
-            );
             let mut cs_ids =
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
                     .compat()
                     .try_collect::<Vec<_>>()
                     .await?;
             cs_ids.reverse();
-            let fsnode_ids = derive_fsnode_in_batch(&ctx, &repo, &mapping, cs_ids, None).await?;
-            fsnode_ids.get(&master_cs_id).unwrap().clone()
+            let manager = repo.repo_derived_data().manager();
+            manager
+                .backfill_batch::<RootFsnodeId>(
+                    &ctx,
+                    cs_ids,
+                    BatchDeriveOptions::Parallel { gap_size: None },
+                    None,
+                )
+                .await?;
+            manager
+                .fetch_derived::<RootFsnodeId>(&ctx, master_cs_id, None)
+                .await?
+                .unwrap()
+                .into_fsnode_id()
         };
 
         let sequential = {
             let repo = linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-            RootFsnodeId::derive(&ctx, &repo, master_cs_id)
+            repo.repo_derived_data()
+                .manager()
+                .derive::<RootFsnodeId>(&ctx, master_cs_id, None)
                 .await?
                 .into_fsnode_id()
         };

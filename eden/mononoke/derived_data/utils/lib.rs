@@ -31,7 +31,7 @@ use derived_data_manager::{
 };
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fbinit::FacebookInit;
-use fsnodes::{RootFsnodeId, RootFsnodeMapping};
+use fsnodes::RootFsnodeId;
 use futures::{
     future::{self, ready, try_join_all, BoxFuture, FutureExt},
     stream::futures_unordered::FuturesUnordered,
@@ -694,14 +694,9 @@ fn derived_data_utils_impl(
                 repo.clone(),
             )))
         }
-        RootFsnodeId::NAME => {
-            let mapping = RootFsnodeMapping::new(blobstore, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                fb,
-                mapping,
-                repo.clone(),
-            )))
-        }
+        RootFsnodeId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<RootFsnodeId>::new(
+            repo, config,
+        ))),
         BlameRoot::NAME => match config.blame_version {
             BlameVersion::V1 => Ok(Arc::new(DerivedUtilsFromManager::<BlameRoot>::new(
                 repo, config,

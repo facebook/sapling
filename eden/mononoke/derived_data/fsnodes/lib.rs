@@ -15,7 +15,7 @@ mod derive;
 mod mapping;
 
 pub use derive::prefetch_content_metadata;
-pub use mapping::{RootFsnodeId, RootFsnodeMapping};
+pub use mapping::RootFsnodeId;
 
 #[derive(Debug, Error)]
 pub enum FsnodeDerivationError {

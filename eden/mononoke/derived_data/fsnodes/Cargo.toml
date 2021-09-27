@@ -14,7 +14,6 @@ path = "lib.rs"
 anyhow = "1.0"
 ascii = "1.0"
 async-trait = "0.1.51"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bytes = { version = "1.0", features = ["serde"] }
@@ -27,8 +26,6 @@ filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
-repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 sha-1 = "0.8"
 sha2 = "0.8"
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -36,6 +33,7 @@ thiserror = "1.0.29"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }
@@ -43,6 +41,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 revset = { version = "0.1.0", path = "../../revset" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 
