@@ -86,6 +86,7 @@ async fn lfs_store_request(
 async fn do_upload<B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     blobstore: &B,
+    filestore_config: FilestoreConfig,
     pool: GitPool,
     oid: Oid,
     path: &MPath,
@@ -110,7 +111,7 @@ async fn do_upload<B: Blobstore + Clone + 'static>(
         (req, bstream.right_stream())
     };
 
-    let meta = filestore::store(blobstore, FilestoreConfig::default(), ctx, &req, bstream).await?;
+    let meta = filestore::store(blobstore, filestore_config, ctx, &req, bstream).await?;
 
     Ok(meta)
 }
@@ -119,6 +120,7 @@ async fn do_upload<B: Blobstore + Clone + 'static>(
 async fn find_file_changes<S, B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     blobstore: &B,
+    filestore_config: &FilestoreConfig,
     pool: GitPool,
     changes: S,
     lfs: &GitImportLfs,
@@ -129,12 +131,21 @@ where
     changes
         .map_ok(|change| async {
             task::spawn({
-                cloned!(pool, ctx, blobstore, lfs);
+                cloned!(pool, ctx, blobstore, filestore_config, lfs);
                 async move {
                     match change {
                         BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
                         | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
-                            let meta = do_upload(&ctx, &blobstore, pool, oid, &path, &lfs).await?;
+                            let meta = do_upload(
+                                &ctx,
+                                &blobstore,
+                                filestore_config,
+                                pool,
+                                oid,
+                                &path,
+                                &lfs,
+                            )
+                            .await?;
                             Ok((
                                 path,
                                 FileChange::tracked(meta.content_id, ty, meta.total_size, None),
@@ -237,6 +248,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
                     let file_changes = find_file_changes(
                         &ctx,
                         repo.blobstore(),
+                        &repo.filestore_config(),
                         pool.clone(),
                         bonsai_diff(ctx.clone(), pool, tree, parent_trees),
                         &lfs,
@@ -540,8 +552,16 @@ pub async fn import_tree_as_single_bonsai_changeset(
                 cloned!(lfs);
                 async move {
                     let path = MPath::new(path)?;
-                    let content_metadata =
-                        do_upload(&ctx, repo.blobstore(), pool.clone(), oid, &path, &lfs).await?;
+                    let content_metadata = do_upload(
+                        &ctx,
+                        repo.blobstore(),
+                        repo.filestore_config(),
+                        pool.clone(),
+                        oid,
+                        &path,
+                        &lfs,
+                    )
+                    .await?;
                     let file_type = convert_git_filemode(mode)?;
                     let file_change = FileChange::tracked(
                         content_metadata.content_id,
