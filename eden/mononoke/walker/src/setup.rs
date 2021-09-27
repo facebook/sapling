@@ -34,6 +34,7 @@ use cmdlib::args::{
 };
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
+use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
 use itertools::{process_results, Itertools};
 use maplit::hashset;

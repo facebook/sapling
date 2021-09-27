@@ -10,8 +10,10 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use blobstore::Blobstore;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::MemWritesBlobstore;
 use context::CoreContext;
+use filenodes::Filenodes;
 use futures::future::try_join_all;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
@@ -181,6 +183,14 @@ impl DerivationContext {
             Some((blobstore, _)) => blobstore,
             None => &self.blobstore,
         }
+    }
+
+    pub fn bonsai_hg_mapping(&self) -> &dyn BonsaiHgMapping {
+        self.manager.bonsai_hg_mapping()
+    }
+
+    pub fn filenodes(&self) -> &dyn Filenodes {
+        self.manager.filenodes()
     }
 
     /// The config that should be used for derivation.

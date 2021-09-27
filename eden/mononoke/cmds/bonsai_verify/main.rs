@@ -364,7 +364,7 @@ fn subcommmand_hg_manifest_verify(
 
                         get_manifest_from_bonsai(
                             ctx.clone(),
-                            repo.get_blobstore(),
+                            repo.get_blobstore().boxed(),
                             bonsai.clone(),
                             parents,
                         )

@@ -724,6 +724,8 @@ impl RepoFactory {
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
         changesets: &ArcChangesets,
+        bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcRepoDerivedData> {
         let config = repo_config.derived_data_config.clone();
@@ -742,6 +744,8 @@ impl RepoFactory {
             repo_identity.id(),
             repo_identity.name().to_string(),
             changesets.clone(),
+            bonsai_hg_mapping.clone(),
+            filenodes.clone(),
             repo_blobstore.as_ref().clone(),
             lease,
             scuba,

@@ -5,20 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Error};
+use anyhow::{bail, Error, Result};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc, BonsaiHgMappingEntry};
+use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use context::CoreContext;
+use derived_data::impl_bonsai_derived_via_manager;
+use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use mercurial_types::HgChangesetId;
-use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
-use repo_identity::RepoIdentityRef;
-
-use std::{collections::HashMap, sync::Arc};
-
-use derived_data::{
-    BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedOld, DeriveError, DerivedDataTypesConfig,
-};
+use mononoke_types::{BonsaiChangeset, ChangesetId};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct MappedHgChangesetId(pub HgChangesetId);
@@ -32,100 +27,75 @@ pub struct HgChangesetDeriveOptions {
 impl BonsaiDerivable for MappedHgChangesetId {
     const NAME: &'static str = "hgchangesets";
 
-    type Options = HgChangesetDeriveOptions;
+    type Dependencies = dependencies![];
 
-    async fn derive_from_parents_impl(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn derive_single(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        options: &Self::Options,
     ) -> Result<Self, Error> {
-        let blobstore = repo.blobstore();
         if bonsai.is_snapshot() {
             bail!("Can't derive Hg changeset for snapshot")
         }
-        crate::derive_hg_changeset::derive_from_parents(ctx, blobstore, bonsai, parents, options)
-            .await
+        crate::derive_hg_changeset::derive_from_parents(
+            ctx,
+            derivation_ctx.blobstore(),
+            bonsai,
+            parents,
+            &HgChangesetDeriveOptions {
+                set_committer_field: derivation_ctx.config().hg_set_committer_extra,
+            },
+        )
+        .await
     }
-}
 
-#[derive(Clone)]
-pub struct HgChangesetIdMapping {
-    repo_id: RepositoryId,
-    mapping: Arc<dyn BonsaiHgMapping>,
-    options: HgChangesetDeriveOptions,
-}
 
-impl HgChangesetIdMapping {
-    pub fn new(
-        repo: &(impl RepoIdentityRef + BonsaiHgMappingArc),
-        config: &DerivedDataTypesConfig,
-    ) -> Result<Self, DeriveError> {
-        let options = HgChangesetDeriveOptions {
-            set_committer_field: config.hg_set_committer_extra,
-        };
-
-        Ok(Self {
-            repo_id: repo.repo_identity().id(),
-            mapping: repo.bonsai_hg_mapping_arc(),
-            options,
-        })
-    }
-}
-
-#[async_trait]
-impl BonsaiDerivedMapping for HgChangesetIdMapping {
-    type Value = MappedHgChangesetId;
-
-    async fn get(
-        &self,
+    async fn store_mapping(
+        self,
         ctx: &CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        let map = self
-            .mapping
-            .get(ctx, self.repo_id, csids.into())
-            .await?
-            .into_iter()
-            .map(|entry| (entry.bcs_id, MappedHgChangesetId(entry.hg_cs_id)))
-            .collect();
-        Ok(map)
-    }
-
-    async fn put(
-        &self,
-        ctx: &CoreContext,
-        csid: ChangesetId,
-        id: &Self::Value,
-    ) -> Result<(), Error> {
-        self.mapping
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<()> {
+        derivation_ctx
+            .bonsai_hg_mapping()
             .add(
                 ctx,
                 BonsaiHgMappingEntry {
-                    repo_id: self.repo_id,
-                    hg_cs_id: id.0,
-                    bcs_id: csid,
+                    repo_id: derivation_ctx.repo_id(),
+                    hg_cs_id: self.0,
+                    bcs_id: changeset_id,
                 },
             )
             .await?;
         Ok(())
     }
 
-    fn options(&self) -> HgChangesetDeriveOptions {
-        self.options.clone()
+    async fn fetch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self>> {
+        Ok(Self::fetch_batch(ctx, derivation_ctx, &[changeset_id])
+            .await?
+            .into_iter()
+            .next()
+            .map(|(_, hg_id)| hg_id))
+    }
+
+    async fn fetch_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_ids: &[ChangesetId],
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        Ok(derivation_ctx
+            .bonsai_hg_mapping()
+            .get(ctx, derivation_ctx.repo_id(), changeset_ids.to_vec().into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.bcs_id, MappedHgChangesetId(entry.hg_cs_id)))
+            .collect())
     }
 }
 
-#[async_trait]
-impl BonsaiDerivedOld for MappedHgChangesetId {
-    type DefaultMapping = HgChangesetIdMapping;
-
-    fn default_mapping(
-        _ctx: &CoreContext,
-        repo: &BlobRepo,
-    ) -> Result<Self::DefaultMapping, DeriveError> {
-        let config = derived_data::enabled_type_config(repo, Self::NAME)?;
-        Ok(HgChangesetIdMapping::new(repo, config)?)
-    }
-}
+impl_bonsai_derived_via_manager!(MappedHgChangesetId);

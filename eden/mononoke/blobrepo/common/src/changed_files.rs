@@ -6,13 +6,14 @@
  */
 
 use anyhow::Error;
+use blobstore::Blobstore;
 use context::CoreContext;
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, MPath};
-use repo_blobstore::RepoBlobstore;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 /// NOTE: To be used only for generating list of files for old, Mercurial format of Changesets.
 ///
@@ -23,7 +24,7 @@ use std::collections::HashSet;
 /// It sorts the returned Vec<MPath> in the order expected by Mercurial.
 pub async fn compute_changed_files(
     ctx: CoreContext,
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     root: HgManifestId,
     p1: Option<HgManifestId>,
     p2: Option<HgManifestId>,
@@ -66,7 +67,7 @@ pub async fn compute_changed_files(
 
 async fn compute_changed_files_pair(
     ctx: CoreContext,
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     to: HgManifestId,
     from: HgManifestId,
 ) -> Result<HashSet<MPath>, Error> {
@@ -88,7 +89,7 @@ async fn compute_changed_files_pair(
 
 async fn compute_removed_files(
     ctx: &CoreContext,
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     child: HgManifestId,
     parent: Option<HgManifestId>,
 ) -> Result<Vec<MPath>, Error> {
@@ -106,7 +107,7 @@ async fn compute_removed_files(
 
 async fn compute_files_with_status(
     ctx: &CoreContext,
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
     child: HgManifestId,
     parent: Option<HgManifestId>,
     filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> Option<MPath>,

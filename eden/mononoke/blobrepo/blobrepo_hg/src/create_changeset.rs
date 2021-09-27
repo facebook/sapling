@@ -206,7 +206,7 @@ impl CreateChangeset {
                     STATS::create_changeset_compute_cf.add_value(1);
                     compute_changed_files(
                         ctx.clone(),
-                        repo.get_blobstore(),
+                        repo.get_blobstore().boxed(),
                         root_mf_id,
                         parent_manifest_hashes.get(0).cloned(),
                         parent_manifest_hashes.get(1).cloned(),

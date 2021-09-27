@@ -17,6 +17,7 @@ blame = { version = "0.1.0", path = "../blame" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
@@ -30,6 +31,7 @@ derived_data_filenodes = { version = "0.1.0", path = "../filenodes" }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 fastlog = { version = "0.1.0", path = "../fastlog" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+filenodes = { version = "0.1.0", path = "../../filenodes" }
 fsnodes = { version = "0.1.0", path = "../fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

@@ -369,6 +369,8 @@ impl TestRepoFactory {
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
         changesets: &ArcChangesets,
+        bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        filenodes: &ArcFilenodes,
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcRepoDerivedData> {
         let lease = self.derived_data_lease.as_ref().map_or_else(
@@ -379,6 +381,8 @@ impl TestRepoFactory {
             repo_identity.id(),
             repo_identity.name().to_string(),
             changesets.clone(),
+            bonsai_hg_mapping.clone(),
+            filenodes.clone(),
             repo_blobstore.as_ref().clone(),
             lease,
             MononokeScubaSampleBuilder::with_discard(),

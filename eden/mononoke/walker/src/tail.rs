@@ -22,6 +22,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
+use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, Future},

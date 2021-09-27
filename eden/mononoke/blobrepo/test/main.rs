@@ -498,7 +498,7 @@ async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
 
     let diff = (compute_changed_files(
         ctx.clone(),
-        repo.get_blobstore(),
+        repo.get_blobstore().boxed(),
         cs.manifestid(),
         None,
         None,
@@ -542,7 +542,7 @@ async fn test_compute_changed_files_one_parent(fb: FacebookInit) {
 
     let diff = compute_changed_files(
         ctx.clone(),
-        repo.get_blobstore(),
+        repo.get_blobstore().boxed(),
         cs.manifestid(),
         Some(parent_cs.manifestid()),
         None,
@@ -699,7 +699,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
-            repo.get_blobstore(),
+            repo.get_blobstore().boxed(),
             make_bonsai_changeset(None, None, vec![]),
             vec![ms1, ms2],
         ))
@@ -716,7 +716,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     {
         let ms_hash = (get_manifest_from_bonsai(
             ctx.clone(),
-            repo.get_blobstore(),
+            repo.get_blobstore().boxed(),
             make_bonsai_changeset(None, None, vec![("base", FileChange::Deletion)]),
             vec![ms1, ms2],
         ))
@@ -752,10 +752,14 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             None,
             vec![("base", FileChange::Deletion), ("new", fc)],
         );
-        let ms_hash =
-            (get_manifest_from_bonsai(ctx.clone(), repo.get_blobstore(), bcs, vec![ms1, ms2]))
-                .await
-                .expect("adding new file should not produce coflict");
+        let ms_hash = (get_manifest_from_bonsai(
+            ctx.clone(),
+            repo.get_blobstore().boxed(),
+            bcs,
+            vec![ms1, ms2],
+        ))
+        .await
+        .expect("adding new file should not produce coflict");
         let entries = get_entries(ms_hash).await.unwrap();
         let new = entries.get("new").expect("new file should be in entries");
         let bytes = entry_content(&ctx, &repo, new).await.unwrap();

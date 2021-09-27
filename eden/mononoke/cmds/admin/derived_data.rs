@@ -15,8 +15,8 @@ use cmdlib::{
     helpers::csid_resolve,
 };
 use context::CoreContext;
-use derived_data::{BonsaiDerivable, BonsaiDerived};
-use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
+use derived_data::BonsaiDerived;
+use derived_data_manager::BonsaiDerivable;
 use derived_data_utils::{
     derived_data_utils, derived_data_utils_for_backfill, POSSIBLE_DERIVED_TYPES,
 };

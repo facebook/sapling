@@ -26,7 +26,6 @@ use cross_repo_sync::{
     create_commit_syncer_lease, types::Target, CandidateSelectionHint, CommitSyncContext,
     CommitSyncRepos, CommitSyncer,
 };
-use derived_data::BonsaiDerivable;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use ephemeral_blobstore::RepoEphemeralBlobstore;
 use fbinit::FacebookInit;

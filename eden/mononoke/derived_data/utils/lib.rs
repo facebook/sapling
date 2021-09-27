@@ -13,6 +13,7 @@ use blame::{BlameRoot, RootBlameV2};
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
+use bonsai_hg_mapping::BonsaiHgMappingArc;
 use borrowed::borrowed;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changeset_info::ChangesetInfo;
@@ -31,6 +32,7 @@ use derived_data_manager::{
 };
 use fastlog::RootFastlog;
 use fbinit::FacebookInit;
+use filenodes::FilenodesArc;
 use fsnodes::RootFsnodeId;
 use futures::{
     future::{self, ready, try_join_all, BoxFuture, FutureExt},
@@ -41,7 +43,7 @@ use futures_stats::TimedTryFutureExt;
 use git_types::{TreeHandle, TreeMapping};
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
-use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
+use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::BlameVersion;
 use mononoke_types::ChangesetId;
 use repo_blobstore::RepoBlobstoreRef;
@@ -499,6 +501,8 @@ impl<Derivable> DerivedUtilsFromManager<Derivable> {
             repo.get_repoid(),
             repo.name().clone(),
             repo.changesets_arc(),
+            repo.bonsai_hg_mapping_arc(),
+            repo.filenodes_arc(),
             repo.repo_blobstore().clone(),
             lease,
             scuba,
@@ -681,14 +685,9 @@ fn derived_data_utils_impl(
         RootFastlog::NAME => Ok(Arc::new(DerivedUtilsFromManager::<RootFastlog>::new(
             repo, config,
         ))),
-        MappedHgChangesetId::NAME => {
-            let mapping = HgChangesetIdMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                fb,
-                mapping,
-                repo.clone(),
-            )))
-        }
+        MappedHgChangesetId::NAME => Ok(Arc::new(
+            DerivedUtilsFromManager::<MappedHgChangesetId>::new(repo, config),
+        )),
         RootFsnodeId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<RootFsnodeId>::new(
             repo, config,
         ))),

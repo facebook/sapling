@@ -7,8 +7,10 @@
 
 use std::sync::Arc;
 
+use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
+use filenodes::Filenodes;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::RepositoryId;
 use repo_blobstore::RepoBlobstore;
@@ -35,6 +37,8 @@ pub struct DerivedDataManagerInner {
     repo_id: RepositoryId,
     repo_name: String,
     changesets: Arc<dyn Changesets>,
+    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    filenodes: Arc<dyn Filenodes>,
     repo_blobstore: RepoBlobstore,
     lease: DerivedDataLease,
     scuba: MononokeScubaSampleBuilder,
@@ -46,6 +50,8 @@ impl DerivedDataManager {
         repo_id: RepositoryId,
         repo_name: String,
         changesets: Arc<dyn Changesets>,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+        filenodes: Arc<dyn Filenodes>,
         repo_blobstore: RepoBlobstore,
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
@@ -58,6 +64,8 @@ impl DerivedDataManager {
                 repo_name,
                 config,
                 changesets,
+                bonsai_hg_mapping,
+                filenodes,
                 repo_blobstore,
                 lease,
                 scuba,
@@ -111,5 +119,13 @@ impl DerivedDataManager {
 
     pub fn config(&self) -> &DerivedDataTypesConfig {
         &self.inner.config
+    }
+
+    pub fn bonsai_hg_mapping(&self) -> &dyn BonsaiHgMapping {
+        self.inner.bonsai_hg_mapping.as_ref()
+    }
+
+    pub fn filenodes(&self) -> &dyn Filenodes {
+        self.inner.filenodes.as_ref()
     }
 }

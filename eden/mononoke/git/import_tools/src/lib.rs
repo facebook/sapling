@@ -383,7 +383,7 @@ pub async fn gitimport(
 
             let manifest = get_manifest_from_bonsai(
                 ctx.clone(),
-                repo.get_blobstore(),
+                repo.get_blobstore().boxed(),
                 bcs.clone(),
                 parent_manifests,
             )

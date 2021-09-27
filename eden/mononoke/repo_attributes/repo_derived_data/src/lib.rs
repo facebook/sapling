@@ -12,10 +12,12 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
 use context::CoreContext;
 use derived_data_manager::{BonsaiDerivable, DerivationError, DerivedDataManager};
+use filenodes::Filenodes;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
 use repo_blobstore::RepoBlobstore;
@@ -37,6 +39,8 @@ impl RepoDerivedData {
         repo_id: RepositoryId,
         repo_name: String,
         changesets: Arc<dyn Changesets>,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+        filenodes: Arc<dyn Filenodes>,
         repo_blobstore: RepoBlobstore,
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
@@ -46,6 +50,8 @@ impl RepoDerivedData {
             repo_id,
             repo_name,
             changesets,
+            bonsai_hg_mapping,
+            filenodes,
             repo_blobstore,
             lease,
             scuba,
