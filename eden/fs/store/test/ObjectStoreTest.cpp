@@ -9,6 +9,7 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 
+#include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -38,8 +39,10 @@ struct ObjectStoreTest : ::testing::Test {
         rawEdenConfig, ConfigReloadBehavior::NoReload);
     treeCache = TreeCache::create(edenConfig);
     localStore = std::make_shared<MemoryLocalStore>();
-    backingStore = std::make_shared<FakeBackingStore>();
     stats = std::make_shared<EdenStats>();
+    fakeBackingStore = std::make_shared<FakeBackingStore>();
+    backingStore = std::make_shared<LocalStoreCachedBackingStore>(
+        fakeBackingStore, localStore, stats);
     executor = &folly::QueuedImmediateExecutor::instance();
     objectStore = ObjectStore::create(
         localStore,
@@ -56,20 +59,21 @@ struct ObjectStoreTest : ::testing::Test {
   }
 
   Hash putReadyBlob(folly::StringPiece data) {
-    StoredBlob* storedBlob = backingStore->putBlob(data);
+    StoredBlob* storedBlob = fakeBackingStore->putBlob(data);
     storedBlob->setReady();
     return storedBlob->get().getHash();
   }
 
   Hash putReadyTree() {
-    StoredTree* storedTree = backingStore->putTree({});
+    StoredTree* storedTree = fakeBackingStore->putTree({});
     storedTree->setReady();
     return storedTree->get().getHash();
   }
 
   LoggingFetchContext context;
   std::shared_ptr<LocalStore> localStore;
-  std::shared_ptr<FakeBackingStore> backingStore;
+  std::shared_ptr<FakeBackingStore> fakeBackingStore;
+  std::shared_ptr<BackingStore> backingStore;
   std::shared_ptr<TreeCache> treeCache;
   std::shared_ptr<EdenStats> stats;
   std::shared_ptr<ObjectStore> objectStore;
@@ -214,7 +218,7 @@ TEST_F(ObjectStoreTest, get_size_and_sha1_only_imports_blob_once) {
   objectStore->getBlobSize(readyBlobId, context).get(0ms);
   objectStore->getBlobSha1(readyBlobId, context).get(0ms);
 
-  EXPECT_EQ(1, backingStore->getAccessCount(readyBlobId));
+  EXPECT_EQ(1, fakeBackingStore->getAccessCount(readyBlobId));
 }
 
 class PidFetchContext : public ObjectFetchContext {

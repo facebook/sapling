@@ -118,23 +118,19 @@ Future<shared_ptr<const Tree>> ObjectStore::getRootTree(
     const RootId& rootId,
     ObjectFetchContext& context) const {
   XLOG(DBG3) << "getRootTree(" << rootId << ")";
-
   return backingStore_->getRootTree(rootId, context)
       .via(executor_)
-      .thenValue([treeCache = treeCache_,
-                  rootId,
-                  localStore = localStore_,
-                  edenConfig = edenConfig_](std::shared_ptr<const Tree> tree) {
-        if (!tree) {
-          throw std::domain_error(
-              folly::to<string>("unable to import root ", rootId));
-        }
+      .thenValue(
+          [treeCache = treeCache_, rootId](std::shared_ptr<const Tree> tree) {
+            if (!tree) {
+              throw std::domain_error(
+                  folly::to<string>("unable to import root ", rootId));
+            }
 
-        localStore->putTree(*tree);
-        treeCache->insert(tree);
+            treeCache->insert(tree);
 
-        return tree;
-      });
+            return tree;
+          });
 }
 
 folly::Future<std::shared_ptr<TreeEntry>> ObjectStore::getTreeEntryForRootId(
@@ -144,8 +140,6 @@ folly::Future<std::shared_ptr<TreeEntry>> ObjectStore::getTreeEntryForRootId(
     ObjectFetchContext& context) const {
   XLOG(DBG3) << "getTreeEntryForRootId(" << rootId << ")";
 
-  // TODO: We can cache the treeEntry to the localStore like Tree or
-  // blob
   return backingStore_
       ->getTreeEntryForRootId(
           rootId, treeEntryType, pathComponentPiece, context)
@@ -177,46 +171,27 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
     return maybeTree;
   }
 
-  return localStore_->getTree(id).thenValue([self = shared_from_this(),
-                                             id,
-                                             &fetchContext](
-                                                shared_ptr<const Tree> tree) {
-    if (tree) {
-      XLOG(DBG4) << "tree " << id << " found in local store";
-      fetchContext.didFetch(
-          ObjectFetchContext::Tree, id, ObjectFetchContext::FromDiskCache);
+  deprioritizeWhenFetchHeavy(fetchContext);
 
-      self->updateProcessFetch(fetchContext);
-      self->treeCache_->insert(tree);
-      return makeFuture(std::move(tree));
-    }
+  return backingStore_->getTree(id, fetchContext)
+      .via(executor_)
+      .thenValue([self = shared_from_this(), id, &fetchContext](
+                     BackingStore::GetTreeRes result) {
+        if (!result.tree) {
+          // TODO: Perhaps we should do some short-term negative
+          // caching?
+          XLOG(DBG2) << "unable to find tree " << id;
+          throw std::domain_error(
+              folly::to<string>("tree ", id.toString(), " not found"));
+        }
 
-    self->deprioritizeWhenFetchHeavy(fetchContext);
-
-    // Load the tree from the BackingStore.
-    return self->backingStore_->getTree(id, fetchContext)
-        .via(self->executor_)
-        .thenValue([self, id, &fetchContext, localStore = self->localStore_](
-                       BackingStore::GetTreeRes result) {
-          if (!result.tree) {
-            // TODO: Perhaps we should do some short-term negative
-            // caching?
-            XLOG(DBG2) << "unable to find tree " << id;
-            throw std::domain_error(
-                folly::to<string>("tree ", id.toString(), " not found"));
-          }
-
-          // promote to shared_ptr so we can store in the cache and return
-          std::shared_ptr<const Tree> loadedTree{std::move(result.tree)};
-          localStore->putTree(*loadedTree);
-          self->treeCache_->insert(loadedTree);
-          XLOG(DBG3) << "tree " << id << " retrieved from backing store";
-          fetchContext.didFetch(ObjectFetchContext::Tree, id, result.origin);
-
-          self->updateProcessFetch(fetchContext);
-          return shared_ptr<const Tree>(std::move(loadedTree));
-        });
-  });
+        // promote to shared_ptr so we can store in the cache and return
+        auto sharedTree = std::shared_ptr<Tree>(std::move(result.tree));
+        self->treeCache_->insert(sharedTree);
+        fetchContext.didFetch(ObjectFetchContext::Tree, id, result.origin);
+        self->updateProcessFetch(fetchContext);
+        return sharedTree;
+      });
 }
 
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
@@ -239,63 +214,29 @@ folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
 Future<shared_ptr<const Blob>> ObjectStore::getBlob(
     const Hash& id,
     ObjectFetchContext& fetchContext) const {
-  auto self = shared_from_this();
-
-  return localStore_->getBlob(id).thenValue([id, &fetchContext, self](
-                                                shared_ptr<const Blob> blob) {
-    if (blob) {
-      // Not computing the BlobMetadata here because if the blob was found
-      // in the local store, the LocalStore probably also has the metadata
-      // already, and the caller may not even need the SHA-1 here. (If the
-      // caller needed the SHA-1, they would have called getBlobMetadata
-      // instead.)
-      XLOG(DBG4) << "blob " << id << " found in local store";
-      self->updateBlobStats(true, false);
-      fetchContext.didFetch(
-          ObjectFetchContext::Blob, id, ObjectFetchContext::FromDiskCache);
-
-      self->updateProcessFetch(fetchContext);
-      return makeFuture(shared_ptr<const Blob>(std::move(blob)));
-    }
-
-    self->deprioritizeWhenFetchHeavy(fetchContext);
-
-    // Look in the BackingStore
-    return self->backingStore_->getBlob(id, fetchContext)
-        .via(self->executor_)
-        .thenValue([self, &fetchContext, id](BackingStore::GetBlobRes result) {
-          if (result.blob) {
-            XLOG(DBG3) << "blob " << id << "  retrieved from backing store";
-            self->updateBlobStats(false, true);
-            fetchContext.didFetch(ObjectFetchContext::Blob, id, result.origin);
-
-            self->updateProcessFetch(fetchContext);
-            self->localStore_->putBlob(id, result.blob.get());
-
-            // Quick check in-memory cache first, before doing expensive
-            // calculations. If metadata is present in cache, it most
-            // certainly exists in local store too
-            if (!self->metadataCache_.rlock()->exists(id)) {
-              auto metadata =
-                  self->localStore_->putBlobMetadata(id, result.blob.get());
-              self->metadataCache_.wlock()->set(id, metadata);
-            }
-            return shared_ptr<const Blob>(std::move(result.blob));
-          }
-
-          XLOG(DBG2) << "unable to find blob " << id;
-          self->updateBlobStats(false, false);
+  deprioritizeWhenFetchHeavy(fetchContext);
+  return backingStore_->getBlob(id, fetchContext)
+      .via(executor_)
+      .thenValue([self = shared_from_this(), id, &fetchContext](
+                     BackingStore::GetBlobRes result) {
+        if (!result.blob) {
           // TODO: Perhaps we should do some short-term negative caching?
+          XLOG(DBG2) << "unable to find blob " << id;
           throw std::domain_error(
               folly::to<string>("blob ", id.toString(), " not found"));
-        });
-  });
-}
-
-void ObjectStore::updateBlobStats(bool local, bool backing) const {
-  ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
-  stats.getBlobFromLocalStore.addValue(local);
-  stats.getBlobFromBackingStore.addValue(backing);
+        }
+        // Quick check in-memory cache first, before doing expensive
+        // calculations. If metadata is present in cache, it most certainly
+        // exists in local store too
+        if (!self->metadataCache_.rlock()->exists(id)) {
+          auto metadata =
+              self->localStore_->putBlobMetadata(id, result.blob.get());
+          self->metadataCache_.wlock()->set(id, metadata);
+        }
+        self->updateProcessFetch(fetchContext);
+        fetchContext.didFetch(ObjectFetchContext::Blob, id, result.origin);
+        return std::move(result.blob);
+      });
 }
 
 Future<BlobMetadata> ObjectStore::getBlobMetadata(

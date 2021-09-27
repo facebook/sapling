@@ -83,13 +83,9 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
       XLOG(WARN) << "Ignoring directory entry: " << ex.what();
     }
   }
-
-  auto edenTree = std::make_unique<Tree>(std::move(entries), edenTreeId);
-  auto serialized = LocalStore::serializeTree(*edenTree);
-  writeBatch->put(KeySpace::TreeFamily, edenTreeId, serialized.coalesce());
   writeBatch->flush();
 
-  return edenTree;
+  return std::make_unique<Tree>(std::move(entries), edenTreeId);
 }
 } // namespace
 

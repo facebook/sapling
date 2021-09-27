@@ -299,7 +299,6 @@ class ObjectStore : public IObjectStore,
   std::shared_ptr<StructuredLogger> structuredLogger_;
   std::shared_ptr<const EdenConfig> edenConfig_;
 
-  void updateBlobStats(bool local, bool backing) const;
   void updateBlobMetadataStats(bool memory, bool local, bool backing) const;
 };
 

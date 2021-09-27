@@ -52,6 +52,7 @@
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/EmptyBackingStore.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
@@ -1780,26 +1781,35 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         reloadableConfig,
         getSharedStats(),
         metadataImporterFactory_);
-    return make_shared<HgQueuedBackingStore>(
-        localStore_,
-        getSharedStats(),
-        std::move(store),
-        reloadableConfig,
-        serverState_->getStructuredLogger(),
-        std::make_unique<BackingStoreLogger>(
+    return std::make_shared<LocalStoreCachedBackingStore>(
+        make_shared<HgQueuedBackingStore>(
+            localStore_,
+            getSharedStats(),
+            std::move(store),
+            reloadableConfig,
             serverState_->getStructuredLogger(),
-            serverState_->getProcessNameCache()));
+            std::make_unique<BackingStoreLogger>(
+                serverState_->getStructuredLogger(),
+                serverState_->getProcessNameCache())),
+        localStore_,
+        getSharedStats());
   } else if (type == "git") {
 #ifdef EDEN_HAVE_GIT
     const auto repoPath = realpath(name);
-    return make_shared<GitBackingStore>(repoPath, localStore_.get());
+    return make_shared<LocalStoreCachedBackingStore>(
+        make_shared<GitBackingStore>(repoPath, localStore_.get()),
+        localStore_,
+        getSharedStats());
 #else // EDEN_HAVE_GIT
     throw std::domain_error(
         "support for Git was not enabled in this EdenFS build");
 #endif // EDEN_HAVE_GIT
   } else if (type == "recas") {
 #ifdef EDEN_HAVE_RECAS
-    return make_shared<ReCasBackingStore>(localStore_);
+    return make_shared<LocalStoreCachedBackingStore>(
+        make_shared<ReCasBackingStore>(localStore_),
+        localStore_,
+        getSharedStats());
 #else // EDEN_HAVE_RECAS
     throw std::domain_error(
         "support for RE CAS was not enabled in this EdenFS build");

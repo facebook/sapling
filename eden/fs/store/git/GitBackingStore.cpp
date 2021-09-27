@@ -167,9 +167,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
     auto entryHash = oid2Hash(git_tree_entry_id(gitEntry));
     entries.emplace_back(entryHash, PathComponent{entryName}, fileType);
   }
-  auto tree = make_unique<Tree>(std::move(entries), id);
-  localStore_->putTree(*tree);
-  return tree;
+  return make_unique<Tree>(std::move(entries), id);
 }
 
 SemiFuture<BackingStore::GetBlobRes> GitBackingStore::getBlob(

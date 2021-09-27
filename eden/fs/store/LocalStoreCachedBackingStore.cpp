@@ -1,0 +1,138 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+#include "eden/fs/store/LocalStoreCachedBackingStore.h"
+#include "eden/fs/model/Blob.h"
+#include "eden/fs/model/Tree.h"
+#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/telemetry/EdenStats.h"
+
+namespace facebook::eden {
+
+LocalStoreCachedBackingStore::LocalStoreCachedBackingStore(
+    std::shared_ptr<BackingStore> backingStore,
+    std::shared_ptr<LocalStore> localStore,
+    std::shared_ptr<EdenStats> stats)
+    : backingStore_{std::move(backingStore)},
+      localStore_{std::move(localStore)},
+      stats_{std::move(stats)} {}
+
+folly::SemiFuture<std::unique_ptr<Tree>>
+LocalStoreCachedBackingStore::getRootTree(
+    const RootId& rootId,
+    ObjectFetchContext& context) {
+  return backingStore_->getRootTree(rootId, context)
+      .deferValue([localStore = localStore_](std::unique_ptr<Tree> tree) {
+        if (tree) {
+          localStore->putTree(*tree);
+        }
+        return tree;
+      });
+}
+
+folly::SemiFuture<std::unique_ptr<TreeEntry>>
+LocalStoreCachedBackingStore::getTreeEntryForRootId(
+    const RootId& rootId,
+    TreeEntryType treeEntryType,
+    facebook::eden::PathComponentPiece pathComponentPiece,
+    ObjectFetchContext& context) {
+  return backingStore_->getTreeEntryForRootId(
+      rootId, treeEntryType, pathComponentPiece, context);
+}
+
+folly::SemiFuture<BackingStore::GetTreeRes>
+LocalStoreCachedBackingStore::getTree(
+    const Hash& id,
+    ObjectFetchContext& context) {
+  return localStore_->getTree(id).thenValue(
+      [id = id,
+       &context,
+       localStore = localStore_,
+       backingStore = backingStore_](std::unique_ptr<Tree> tree) mutable {
+        if (tree) {
+          return folly::makeSemiFuture(BackingStore::GetTreeRes{
+              std::move(tree), ObjectFetchContext::FromDiskCache});
+        }
+
+        return backingStore->getTree(id, context)
+            .deferValue([localStore = std::move(localStore)](
+                            BackingStore::GetTreeRes result) {
+              if (result.tree) {
+                localStore->putTree(*result.tree);
+              }
+
+              return result;
+            });
+      });
+}
+
+folly::SemiFuture<BackingStore::GetBlobRes>
+LocalStoreCachedBackingStore::getBlob(
+    const Hash& id,
+    ObjectFetchContext& context) {
+  return localStore_->getBlob(id).thenValue(
+      [id = id,
+       &context,
+       localStore = localStore_,
+       backingStore = backingStore_,
+       stats = stats_](std::unique_ptr<Blob> blob) mutable {
+        if (blob) {
+          stats->getObjectStoreStatsForCurrentThread()
+              .getBlobFromLocalStore.addValue(1);
+          return folly::makeSemiFuture(BackingStore::GetBlobRes{
+              std::move(blob), ObjectFetchContext::FromDiskCache});
+        }
+
+        return backingStore->getBlob(id, context)
+            .deferValue([localStore = std::move(localStore),
+                         stats = std::move(stats),
+                         id](BackingStore::GetBlobRes result) {
+              if (result.blob) {
+                localStore->putBlob(id, result.blob.get());
+                stats->getObjectStoreStatsForCurrentThread()
+                    .getBlobFromBackingStore.addValue(1);
+              }
+              return result;
+            });
+      });
+}
+
+folly::SemiFuture<folly::Unit> LocalStoreCachedBackingStore::prefetchBlobs(
+    HashRange ids,
+    ObjectFetchContext& context) {
+  return backingStore_->prefetchBlobs(ids, context);
+}
+
+void LocalStoreCachedBackingStore::periodicManagementTask() {
+  backingStore_->periodicManagementTask();
+}
+
+void LocalStoreCachedBackingStore::startRecordingFetch() {
+  backingStore_->startRecordingFetch();
+}
+
+std::unordered_set<std::string>
+LocalStoreCachedBackingStore::stopRecordingFetch() {
+  return backingStore_->stopRecordingFetch();
+}
+
+folly::SemiFuture<folly::Unit>
+LocalStoreCachedBackingStore::importManifestForRoot(
+    const RootId& rootId,
+    const Hash& manifest) {
+  return backingStore_->importManifestForRoot(rootId, manifest);
+}
+
+RootId LocalStoreCachedBackingStore::parseRootId(folly::StringPiece rootId) {
+  return backingStore_->parseRootId(rootId);
+}
+
+std::string LocalStoreCachedBackingStore::renderRootId(const RootId& rootId) {
+  return backingStore_->renderRootId(rootId);
+}
+
+} // namespace facebook::eden
