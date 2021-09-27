@@ -42,7 +42,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/PathMap.h"
 
-constexpr folly::StringPiece kPeriodicUnloadCounterKey{"PeriodicUnloadCounter"};
 DECLARE_bool(takeover);
 
 namespace cpptoml {

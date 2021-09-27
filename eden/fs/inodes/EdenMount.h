@@ -118,7 +118,22 @@ enum class CounterName {
   /**
    * Represents the maximum deltas iterated over in the Journal's forEachDelta
    */
-  JOURNAL_MAX_FILES_ACCUMULATED
+  JOURNAL_MAX_FILES_ACCUMULATED,
+
+  /**
+   * Represents the number of inodes unloaded for this mount by periodic
+   * linked inode unloading. This is used as an optimization to prevent inode
+   * build up.
+   */
+  PERIODIC_INODE_UNLOAD,
+
+  /**
+   * Represents the number of inodes unloaded for this mount by periodic
+   * unlinked inode unloading. This is used on NFS mounts to clean up old
+   * inodes.
+   */
+  PERIODIC_UNLINKED_INODE_UNLOAD
+
 };
 
 /**

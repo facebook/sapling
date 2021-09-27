@@ -1398,6 +1398,12 @@ std::string EdenMount::getCounterName(CounterName name) {
       return folly::to<std::string>("journal.", base, ".duration_secs");
     case CounterName::JOURNAL_MAX_FILES_ACCUMULATED:
       return folly::to<std::string>("journal.", base, ".files_accumulated.max");
+    case CounterName::PERIODIC_INODE_UNLOAD:
+      return folly::to<std::string>(
+          "inodemap.", base, ".unloaded_linked_inodes");
+    case CounterName::PERIODIC_UNLINKED_INODE_UNLOAD:
+      return folly::to<std::string>(
+          "inodemap.", base, ".unloaded_unlinked_inodes");
   }
   EDEN_BUG() << "unknown counter name "
              << static_cast<std::underlying_type_t<CounterName>>(name);

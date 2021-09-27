@@ -715,32 +715,31 @@ void EdenServer::unloadInodes() {
   struct Root {
     AbsolutePath mountName;
     TreeInodePtr rootInode;
+    shared_ptr<EdenMount> mount;
   };
   std::vector<Root> roots;
   {
     const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
-      roots.emplace_back(
-          Root{entry.first, entry.second.edenMount->getRootInode()});
+      roots.emplace_back(Root{
+          entry.first,
+          entry.second.edenMount->getRootInode(),
+          entry.second.edenMount});
     }
   }
 
   if (!roots.empty()) {
-    auto serviceData = fb303::ServiceData::get();
-
-    uint64_t totalUnloaded = serviceData->getCounter(kPeriodicUnloadCounterKey);
     auto cutoff = std::chrono::system_clock::now() -
         std::chrono::minutes(FLAGS_unload_age_minutes);
     auto cutoff_ts = folly::to<timespec>(cutoff);
-    for (auto& [name, rootInode] : roots) {
+    for (auto& [name, rootInode, mount] : roots) {
       auto unloaded = rootInode->unloadChildrenLastAccessedBefore(cutoff_ts);
       if (unloaded) {
         XLOG(INFO) << "Unloaded " << unloaded
                    << " inodes in background from mount " << name;
       }
-      totalUnloaded += unloaded;
+      mount->getInodeMap()->recordPeriodicInodeUnload(unloaded);
     }
-    serviceData->setCounter(kPeriodicUnloadCounterKey, totalUnloaded);
   }
 
   scheduleInodeUnload(std::chrono::minutes(FLAGS_unload_interval_minutes));
@@ -843,10 +842,6 @@ Future<Unit> EdenServer::prepareImpl(
         serverState_->getEdenConfig()->registerMountd.getValue());
   }
 #endif
-
-  // Set the ServiceData counter for tracking number of inodes unloaded by
-  // periodic job for unloading inodes to zero on EdenServer start.
-  fb303::ServiceData::get()->setCounter(kPeriodicUnloadCounterKey, 0);
 
   startPeriodicTasks();
 
@@ -1256,6 +1251,20 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
         return edenMount->getInodeMap()->getInodeCounts().unloadedInodeCount;
       });
   counters->registerCallback(
+      edenMount->getCounterName(CounterName::PERIODIC_INODE_UNLOAD),
+      [edenMount] {
+        return edenMount->getInodeMap()
+            ->getInodeCounts()
+            .periodicLinkedUnloadInodeCount;
+      });
+  counters->registerCallback(
+      edenMount->getCounterName(CounterName::PERIODIC_UNLINKED_INODE_UNLOAD),
+      [edenMount] {
+        return edenMount->getInodeMap()
+            ->getInodeCounts()
+            .periodicUnlinkedUnloadInodeCount;
+      });
+  counters->registerCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MEMORY),
       [edenMount] { return edenMount->getJournal().estimateMemoryUsage(); });
   counters->registerCallback(
@@ -1312,6 +1321,10 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
       edenMount->getCounterName(CounterName::INODEMAP_LOADED));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::INODEMAP_UNLOADED));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::PERIODIC_INODE_UNLOAD));
+  counters->unregisterCallback(
+      edenMount->getCounterName(CounterName::PERIODIC_UNLINKED_INODE_UNLOAD));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MEMORY));
   counters->unregisterCallback(

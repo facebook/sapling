@@ -2260,8 +2260,13 @@ void EdenServiceHandler::getStatInfo(
     // job.
     auto counters = fb303::ServiceData::get()->getCounters();
     result.counters_ref() = counters;
-    result.periodicUnloadCount_ref() =
-        counters[kPeriodicUnloadCounterKey.toString()];
+    size_t periodicUnloadCount{0};
+    for (auto& mount : server_->getMountPoints()) {
+      periodicUnloadCount +=
+          counters[mount->getCounterName(CounterName::PERIODIC_INODE_UNLOAD)];
+    }
+
+    result.periodicUnloadCount_ref() = periodicUnloadCount;
   }
 
   if (statsMask & eden_constants::STATS_PRIVATE_BYTES_) {

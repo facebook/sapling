@@ -704,6 +704,8 @@ void InodeMap::forgetStaleInodes() {
         }
       }
     }
+    numPeriodicallyUnloadedUnlinkedInodes_.fetch_add(
+        toClearFSRef.size(), std::memory_order_relaxed);
   }
 
   for (auto& inodePtr : toClearFSRef) {
@@ -1108,6 +1110,11 @@ void InodeMap::inodeCreated(const InodePtr& inode) {
   insertLoadedInode(data, inode.get());
 }
 
+void InodeMap::recordPeriodicInodeUnload(size_t numInodesToUnload) {
+  numPeriodicallyUnloadedLinkedInodes_.fetch_add(
+      numInodesToUnload, std::memory_order_relaxed);
+}
+
 InodeMap::InodeCounts InodeMap::getInodeCounts() const {
   InodeCounts counts;
   auto data = data_.rlock();
@@ -1116,6 +1123,10 @@ InodeMap::InodeCounts InodeMap::getInodeCounts() const {
   counts.treeCount = data->numTreeInodes_;
   counts.fileCount = data->numFileInodes_;
   counts.unloadedInodeCount = data->unloadedInodes_.size();
+  counts.periodicUnlinkedUnloadInodeCount =
+      numPeriodicallyUnloadedUnlinkedInodes_.load(std::memory_order_relaxed);
+  counts.periodicLinkedUnloadInodeCount =
+      numPeriodicallyUnloadedLinkedInodes_.load(std::memory_order_relaxed);
   return counts;
 }
 

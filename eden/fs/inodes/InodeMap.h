@@ -386,6 +386,8 @@ class InodeMap {
     size_t fileCount = 0;
     size_t treeCount = 0;
     size_t unloadedInodeCount = 0;
+    size_t periodicUnlinkedUnloadInodeCount = 0;
+    size_t periodicLinkedUnloadInodeCount = 0;
   };
 
   /**
@@ -394,6 +396,7 @@ class InodeMap {
    */
   InodeCounts getInodeCounts() const;
 
+  void recordPeriodicInodeUnload(size_t numInodesToUnload);
   /*
    * Return all referenced inodes (loaded and unloaded inodes whose
    * fs references is greater than zero).
@@ -691,6 +694,24 @@ class InodeMap {
    * NFSv3).
    */
   bool throwEstaleIfInodeIsMissing_;
+
+  /**
+   * The number of inodes that we have unloaded with our periodic
+   * unlinked inode unloading. Periodic unlinked inode unloading is run after
+   * operations that unlink lots of inodes like checkout on NFS mounts.
+   *
+   * This number will only increase for the life time of this inode map.
+   */
+  std::atomic<size_t> numPeriodicallyUnloadedUnlinkedInodes_{0};
+
+  /**
+   * The number of inodes that we have unloaded with our periodic
+   * linked inode unloading. Periodic linked inode unloading can be run
+   * at regular intervals on any mount type.
+   *
+   * This number will only increase for the life time of this inode map.
+   */
+  std::atomic<size_t> numPeriodicallyUnloadedLinkedInodes_{0};
 };
 
 /**

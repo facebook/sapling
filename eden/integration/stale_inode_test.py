@@ -95,3 +95,23 @@ class StaleInodeTestHgNFS(EdenHgTestCase):
             # this should error as the file has been unlinked during checkout.
             # and the inode should be unloaded by the periodic unloading
             self.assertRaises(OSError, fd.read)
+
+    # tests the counter is properly updated when unloading is run.
+    def test_unlinked_unload_counter(self) -> None:
+        counter_name = "inodemap.main.unloaded_unlinked_inodes"
+        old_unloaded_count = self.get_counters()[counter_name]
+
+        # load an inode that will be removed by checkout
+        hola = self.get_path("hola")
+        with open(hola, "r") as fd:
+            fd.read()
+
+        self.repo.update(self.commit0)
+        # checkout triggers an unlinked inode unload
+        # POST_CHECKOUT_UNLOADING_DELAY_S later
+        time.sleep(POST_CHECKOUT_UNLOADING_DELAY_S * 2)
+
+        new_unloaded_counter = self.get_counters()[counter_name]
+
+        # at least hola should have been unloaded.
+        self.assertLessEqual(old_unloaded_count + 1, new_unloaded_counter)
