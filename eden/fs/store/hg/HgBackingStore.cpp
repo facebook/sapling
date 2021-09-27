@@ -689,37 +689,25 @@ SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
       .via(serverThreadPool_);
 }
 
-folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
+folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
     const Hash& commitID,
     const Hash& rootTreeHash,
     bool prefetchMetadata) {
   return localStore_->getTree(rootTreeHash)
-      .thenValue(
-          [this, rootTreeHash, commitID, prefetchMetadata](
-              std::unique_ptr<Tree> tree) -> folly::Future<unique_ptr<Tree>> {
-            if (tree) {
-              return folly::makeFuture(std::move(tree));
-            }
+      .thenValue([this, rootTreeHash, commitID, prefetchMetadata](
+                     std::unique_ptr<Tree> tree) {
+        if (tree) {
+          return folly::makeSemiFuture(std::move(tree));
+        }
 
-            return localStore_->getTree(rootTreeHash)
-                .thenValue(
-                    [this, rootTreeHash, commitID, prefetchMetadata](
-                        std::unique_ptr<Tree> tree)
-                        -> folly::SemiFuture<unique_ptr<Tree>> {
-                      if (tree) {
-                        return std::move(tree);
-                      }
-
-                      // No corresponding tree for this commit ID! Must
-                      // re-import. This could happen if RocksDB is corrupted
-                      // in some way or deleting entries races with
-                      // population.
-                      XLOG(WARN) << "No corresponding tree " << rootTreeHash
-                                 << " for commit " << commitID
-                                 << "; will import again";
-                      return importTreeForCommit(commitID, prefetchMetadata);
-                    });
-          });
+        // No corresponding tree for this commit ID! Must
+        // re-import. This could happen if RocksDB is corrupted
+        // in some way or deleting entries races with
+        // population.
+        XLOG(WARN) << "No corresponding tree " << rootTreeHash << " for commit "
+                   << commitID << "; will import again";
+        return importTreeForCommit(commitID, prefetchMetadata);
+      });
 }
 
 folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(

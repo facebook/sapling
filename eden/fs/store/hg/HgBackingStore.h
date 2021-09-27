@@ -162,7 +162,7 @@ class HgBackingStore {
       Hash commitID,
       bool prefetchMetadata);
 
-  folly::Future<std::unique_ptr<Tree>> getTreeForRootTreeImpl(
+  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForRootTreeImpl(
       const Hash& commitID,
       const Hash& rootTreeHash,
       bool prefetchMetadata);
