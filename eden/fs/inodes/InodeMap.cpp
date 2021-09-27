@@ -25,6 +25,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/SystemError.h"
+#include "eden/fs/utils/TimeUtil.h"
 
 using folly::Future;
 using folly::Promise;
@@ -656,7 +657,7 @@ void InodeMap::forgetStaleInodes() {
   // TODO add a checkout decRef counter
   // TODO: this will unload by atime, atime is not updated by stat -- fix it
 
-  XLOG(DBG2) << "dereferencing stale inodes";
+  XLOG(DBG2) << "forgetting stale inodes";
   // We have to destroy InodePtrs outside of the data lock. These hold all the
   // InodePtrs we created.
   std::vector<InodePtr> toClearFSRef;
@@ -669,6 +670,7 @@ void InodeMap::forgetStaleInodes() {
     auto data = data_.wlock();
 
     for (auto& inode : data->unloadedInodes_) {
+      XLOG(DBG9) << "Considering forgetting unloaded inode " << inode.first;
       if (inode.second.isUnlinked) {
         auto inodePtr = decFsRefcountHelper(
             data,
@@ -679,6 +681,9 @@ void InodeMap::forgetStaleInodes() {
         XCHECK(!inodePtr)
             << "decFsRefcountHelper should not return a loaded inode that  "
             << "needs to be dereferenced for an inode we know to be unloaded.";
+      } else {
+        XLOG(DBG9) << "Not forgetting unloaded inode " << inode.first
+                   << " because inode is still linked";
       }
     }
 
@@ -686,6 +691,7 @@ void InodeMap::forgetStaleInodes() {
     // be unloaded. Thus this will create lots of unloaded inodes. we don't want
     // to double decRef them, so we decref loaded inodes after unloaded ones.
     for (auto& inode : data->loadedInodes_) {
+      XLOG(DBG9) << "Considering forgetting loaded inode " << inode.first;
       auto inodePtr = decFsRefcountHelper(
           data,
           inode.first,
@@ -693,13 +699,31 @@ void InodeMap::forgetStaleInodes() {
                        // going to clear the ref count.
           /*clearRefCount=*/true);
       if (inodePtr) {
-        if (inodePtr->isUnlinked() &&
+        auto unlinked = inodePtr->isUnlinked();
+        if (unlinked &&
             inode.second->getMetadata().timestamps.atime < cutoff_ts) {
+          XLOG(DBG9) << "Will forget loaded inode " << inode.first;
           toClearFSRef.push_back(inodePtr);
         } else {
           // even though we are not going to do anything with these inodes we
           // need to keep them around until we let go of the lock. It is not
-          // safe to dereference an inodePtr whild holding the lock.
+          // safe to drop an inodePtr while holding the lock.
+          if (!unlinked) {
+            XLOG(DBG9) << "Not forgetting loaded inode " << inode.first
+                       << " because it is still linked";
+          } else {
+            XLOG(DBG9) << "Not forgetting loaded inode " << inode.first
+                       << " because it was referenced."
+                       << durationStr(
+                              config_->getEdenConfig()
+                                  ->postCheckoutDelayToUnloadInodes.getValue() -
+                              std::chrono::nanoseconds{
+                                  inode.second->getMetadata()
+                                      .timestamps.atime.toTimespec()
+                                      .tv_nsec -
+                                  cutoff_ts.tv_nsec})
+                       << " ago";
+          }
           justToHoldBeyondScopeOfLock.push_back(inodePtr);
         }
       }
@@ -709,10 +733,10 @@ void InodeMap::forgetStaleInodes() {
   }
 
   for (auto& inodePtr : toClearFSRef) {
-    XLOG(DBG7) << "De-referencing NFS inode: " << inodePtr->getNodeId();
+    XLOG(DBG7) << "forgetting NFS inode: " << inodePtr->getNodeId();
     inodePtr->clearFsRefcount();
   }
-  XLOG(DBG2) << "dereferencing stale inodes complete";
+  XLOG(DBG2) << "forgetting stale inodes complete";
 #endif
 }
 

@@ -76,6 +76,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/ProcessNameCache.h"
+#include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UserInfo.h"
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
@@ -1702,18 +1703,21 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
           // before the mount points are destoryed during normal destruction.
           // However, the mount pont might have been unmounted before this
           // function is run outside of shutdown.
+          auto delay = serverState_->getReloadableConfig()
+                           .getEdenConfig()
+                           ->postCheckoutDelayToUnloadInodes.getValue();
+          XLOG(DBG9) << "Scheduling unlinked inode cleanup for mount "
+                     << mountPath << " in " << durationStr(delay)
+                     << " seconds.";
           this->scheduleCallbackOnMainEventBase(
-              std::chrono::duration_cast<std::chrono::milliseconds>(
-                  serverState_->getReloadableConfig()
-                      .getEdenConfig()
-                      ->postCheckoutDelayToUnloadInodes.getValue()),
+              std::chrono::duration_cast<std::chrono::milliseconds>(delay),
               [this, mountPath = mountPath.copy()]() {
                 try {
                   auto edenMount = this->getMount(mountPath);
                   edenMount->forgetStaleInodes();
                 } catch (EdenError& err) {
-                  // This is an expected error if the mount has been unmounted
-                  // before this callback ran.
+                  // This is an expected error if the mount has been
+                  // unmounted before this callback ran.
                   if (err.errorCode_ref() == ENOENT) {
                     XLOG(DBG3)
                         << "Callback to clear inodes: Mount cannot be found. "
