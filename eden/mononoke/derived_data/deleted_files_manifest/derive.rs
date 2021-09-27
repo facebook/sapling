@@ -6,13 +6,12 @@
  */
 
 use anyhow::{anyhow, format_err, Error};
-use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data_manager::DerivationContext;
 use futures::{
     channel::{mpsc, oneshot},
     future::{self, BoxFuture, FutureExt},
@@ -24,7 +23,6 @@ use mononoke_types::{
     BonsaiChangeset, ChangesetId, DeletedManifestId, MPath, MPathElement, ManifestUnodeId,
     MononokeId,
 };
-use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
 use std::sync::Arc;
 use std::{collections::BTreeMap, collections::HashSet, iter::FromIterator};
@@ -68,8 +66,8 @@ use unodes::RootUnodeManifestId;
 ///   - if there are subentries, create a live manifest or mark the existing node as live.
 ///
 pub(crate) async fn derive_deleted_files_manifest(
-    ctx: CoreContext,
-    blobstore: RepoBlobstore,
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
     cs_id: ChangesetId,
     parents: Vec<DeletedManifestId>,
     changes: PathTree<Option<PathChange>>,
@@ -78,6 +76,7 @@ pub(crate) async fn derive_deleted_files_manifest(
     // Stream is used to batch writes to blobstore
     let (sender, receiver) = mpsc::unbounded();
     let created = Arc::new(Mutex::new(HashSet::new()));
+    cloned!(blobstore, ctx);
     let f = async move {
         borrowed!(ctx, blobstore);
         let manifest_opt = bounded_traversal(
@@ -182,10 +181,9 @@ pub(crate) enum PathChange {
 
 pub(crate) async fn get_changes(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    derivation_ctx: &DerivationContext,
     bonsai: BonsaiChangeset,
 ) -> Result<PathTree<Option<PathChange>>, Error> {
-    let blobstore = repo.get_blobstore();
     // Get file/directory changes between the current changeset and its parents
     //
     // get unode manifests first
@@ -195,13 +193,15 @@ pub(crate) async fn get_changes(
     let parent_cs_ids: Vec<_> = bonsai.parents().collect();
     let parent_unodes = parent_cs_ids.into_iter().map({
         move |cs_id| async move {
-            let root_mf_id = RootUnodeManifestId::derive(ctx, repo, cs_id).await?;
+            let root_mf_id = derivation_ctx
+                .derive_dependency::<RootUnodeManifestId>(ctx, cs_id)
+                .await?;
             Ok(root_mf_id.manifest_unode_id().clone())
         }
     });
 
     let (root_unode_mf_id, parent_mf_ids) = future::try_join(
-        RootUnodeManifestId::derive(ctx, repo, bcs_id),
+        derivation_ctx.derive_dependency::<RootUnodeManifestId>(ctx, bcs_id),
         future::try_join_all(parent_unodes),
     )
     .await?;
@@ -210,7 +210,7 @@ pub(crate) async fn get_changes(
     let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
     let changes = if parent_mf_ids.is_empty() {
         unode_mf_id
-            .list_all_entries(ctx.clone(), blobstore)
+            .list_all_entries(ctx.clone(), derivation_ctx.blobstore().clone())
             .try_filter_map(move |(path, _)| async {
                 match path {
                     Some(path) => Ok(Some((path, PathChange::Add))),
@@ -220,7 +220,7 @@ pub(crate) async fn get_changes(
             .try_collect::<Vec<_>>()
             .await
     } else {
-        diff_against_parents(ctx, repo, unode_mf_id, parent_mf_ids).await
+        diff_against_parents(ctx, derivation_ctx, unode_mf_id, parent_mf_ids).await
     }?;
 
     Ok(PathTree::from_iter(
@@ -232,15 +232,16 @@ pub(crate) async fn get_changes(
 
 async fn diff_against_parents(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    derivation_ctx: &DerivationContext,
     unode: ManifestUnodeId,
     parents: Vec<ManifestUnodeId>,
 ) -> Result<Vec<(MPath, PathChange)>, Error> {
+    let blobstore = derivation_ctx.blobstore();
     let parent_diffs_fut = parents.into_iter().map({
-        cloned!(ctx, repo, unode);
+        cloned!(ctx, blobstore, unode);
         move |parent| {
             parent
-                .diff(ctx.clone(), repo.get_blobstore(), unode.clone())
+                .diff(ctx.clone(), blobstore.clone(), unode.clone())
                 .try_collect::<Vec<_>>()
         }
     });
@@ -287,7 +288,7 @@ struct DeletedManifestUnfoldNode {
 
 async fn do_derive_unfold(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     changes: PathTree<Option<PathChange>>,
     parents: Vec<DeletedManifestId>,
 ) -> Result<(DeletedManifestChange, Vec<DeletedManifestUnfoldNode>), Error> {
@@ -392,7 +393,7 @@ async fn do_derive_unfold(
 
 async fn create_manifest(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     linknode: Option<ChangesetId>,
     subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
     sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
@@ -419,7 +420,7 @@ async fn create_manifest(
 
 async fn do_derive_create(
     ctx: &CoreContext,
-    blobstore: &RepoBlobstore,
+    blobstore: &Arc<dyn Blobstore>,
     cs_id: ChangesetId,
     change: DeletedManifestChange,
     subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
@@ -452,7 +453,7 @@ async fn do_derive_create(
 mod tests {
     use super::*;
     use crate::mapping::RootDeletedManifestId;
-    use blobrepo::save_bonsai_changesets;
+    use blobrepo::{save_bonsai_changesets, BlobRepo};
     use bounded_traversal::bounded_traversal_stream;
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use fbinit::FacebookInit;
@@ -460,6 +461,7 @@ mod tests {
     use futures::{pin_mut, stream::iter, Stream, TryStreamExt};
     use maplit::btreemap;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
+    use repo_derived_data::RepoDerivedDataRef;
     use sorted_vector_map::SortedVectorMap;
     use tests_utils::CreateCommitContext;
 
@@ -941,7 +943,11 @@ mod tests {
         repo: &BlobRepo,
         bonsai: ChangesetId,
     ) -> Result<Vec<(Option<MPath>, Status)>, Error> {
-        let manifest = RootDeletedManifestId::derive(ctx, repo, bonsai).await?;
+        let manifest = repo
+            .repo_derived_data()
+            .manager()
+            .derive::<RootDeletedManifestId>(ctx, bonsai, None)
+            .await?;
         let mut deleted_nodes =
             iterate_all_entries(ctx.clone(), repo.clone(), *manifest.deleted_manifest_id())
                 .map_ok(|(path, st, ..)| (path, st))
@@ -976,21 +982,21 @@ mod tests {
         bcs: BonsaiChangeset,
         parent_mf_ids: Vec<DeletedManifestId>,
     ) -> (ChangesetId, DeletedManifestId, Vec<(Option<MPath>, Status)>) {
-        let blobstore = repo.blobstore();
+        let blobstore = repo.blobstore().boxed();
         let bcs_id = bcs.get_changeset_id();
 
-        let changes = get_changes(ctx, repo, bcs).await.unwrap();
-        let f = derive_deleted_files_manifest(
-            ctx.clone(),
-            blobstore.clone(),
-            bcs_id,
-            parent_mf_ids,
-            changes,
-        );
+        let changes = get_changes(
+            ctx,
+            &repo.repo_derived_data().manager().derivation_context(None),
+            bcs,
+        )
+        .await
+        .unwrap();
+        let f = derive_deleted_files_manifest(ctx, &blobstore, bcs_id, parent_mf_ids, changes);
 
         let dfm_id = f.await.unwrap();
         // Make sure it's saved in the blobstore
-        dfm_id.load(&ctx, blobstore).await.unwrap();
+        dfm_id.load(&ctx, &blobstore).await.unwrap();
 
         let mut deleted_nodes = iterate_all_entries(ctx.clone(), repo.clone(), dfm_id.clone())
             .map_ok(|(path, st, ..)| (path, st))

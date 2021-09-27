@@ -35,7 +35,7 @@ use crate::typed_hash::{ChangesetId, DeletedManifestContext, DeletedManifestId};
 /// to know whether the path is a directory or a file, the only important information is "if the
 /// path was deleted, which changeset did it?"
 ///
-/// Why we don't keep a path_hash even though it provides uniquness of entries?
+/// Why we don't keep a path_hash even though it provides uniqueness of entries?
 ///
 /// The deleted manifest entry doesn't have a path_hash, that means the entries are identical
 /// for different files deleted in the same commit. This is fine as soon as we don't care about the

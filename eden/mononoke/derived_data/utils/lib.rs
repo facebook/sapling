@@ -19,10 +19,10 @@ use changeset_info::ChangesetInfo;
 use changesets::ChangesetsArc;
 use cloned::cloned;
 use context::CoreContext;
-use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
+use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::{
-    derive_impl, BlobstoreExistsMapping, BlobstoreRootIdMapping, BonsaiDerivable,
-    BonsaiDerivedMapping, BonsaiDerivedMappingContainer, DerivedDataTypesConfig, RegenerateMapping,
+    derive_impl, BlobstoreExistsMapping, BonsaiDerivable, BonsaiDerivedMapping,
+    BonsaiDerivedMappingContainer, DerivedDataTypesConfig, RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use derived_data_manager::{
@@ -708,14 +708,9 @@ fn derived_data_utils_impl(
         ChangesetInfo::NAME => Ok(Arc::new(DerivedUtilsFromManager::<ChangesetInfo>::new(
             repo, config,
         ))),
-        RootDeletedManifestId::NAME => {
-            let mapping = RootDeletedManifestMapping::new(blobstore, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                fb,
-                mapping,
-                repo.clone(),
-            )))
-        }
+        RootDeletedManifestId::NAME => Ok(Arc::new(
+            DerivedUtilsFromManager::<RootDeletedManifestId>::new(repo, config),
+        )),
         FilenodesOnlyPublic::NAME => {
             let mapping = FilenodesOnlyPublicMapping::new(repo, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(

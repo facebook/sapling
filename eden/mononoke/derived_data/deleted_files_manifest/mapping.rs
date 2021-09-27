@@ -8,16 +8,14 @@
 use crate::derive::{derive_deleted_files_manifest, get_changes};
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{
-    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, DerivedDataTypesConfig,
-};
-use mononoke_types::{BlobstoreBytes, BonsaiChangeset, DeletedManifestId};
+use derived_data::impl_bonsai_derived_via_manager;
+use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
+use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId, DeletedManifestId};
 use std::convert::{TryFrom, TryInto};
-use std::sync::Arc;
+use unodes::RootUnodeManifestId;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootDeletedManifestId(DeletedManifestId);
@@ -48,25 +46,27 @@ impl From<RootDeletedManifestId> for BlobstoreBytes {
     }
 }
 
+fn format_key(changeset_id: ChangesetId) -> String {
+    format!("derived_root_deleted_manifest.{}", changeset_id)
+}
+
 #[async_trait]
 impl BonsaiDerivable for RootDeletedManifestId {
     const NAME: &'static str = "deleted_manifest";
 
-    type Options = ();
+    type Dependencies = dependencies![RootUnodeManifestId];
 
-    async fn derive_from_parents_impl(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn derive_single(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        _options: &Self::Options,
     ) -> Result<Self, Error> {
-        let blobstore = repo.blobstore().clone();
         let bcs_id = bonsai.get_changeset_id();
-        let changes = get_changes(&ctx, &repo, bonsai).await?;
+        let changes = get_changes(ctx, derivation_ctx, bonsai).await?;
         let id = derive_deleted_files_manifest(
             ctx,
-            blobstore,
+            derivation_ctx.blobstore(),
             bcs_id,
             parents
                 .into_iter()
@@ -77,34 +77,30 @@ impl BonsaiDerivable for RootDeletedManifestId {
         .await?;
         Ok(RootDeletedManifestId(id))
     }
-}
 
-#[derive(Clone)]
-pub struct RootDeletedManifestMapping {
-    blobstore: Arc<dyn Blobstore>,
-}
-
-#[async_trait]
-impl BlobstoreRootIdMapping for RootDeletedManifestMapping {
-    type Value = RootDeletedManifestId;
-
-    fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Result<Self> {
-        Ok(Self { blobstore })
+    async fn store_mapping(
+        self,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<()> {
+        let key = format_key(changeset_id);
+        derivation_ctx.blobstore().put(ctx, key, self.into()).await
     }
 
-    fn blobstore(&self) -> &dyn Blobstore {
-        &self.blobstore
+    async fn fetch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self>> {
+        let key = format_key(changeset_id);
+        Ok(derivation_ctx
+            .blobstore()
+            .get(ctx, &key)
+            .await?
+            .map(TryInto::try_into)
+            .transpose()?)
     }
-
-    fn prefix(&self) -> &'static str {
-        "derived_root_deleted_manifest."
-    }
-
-    fn options(&self) {}
 }
 
-impl_bonsai_derived_mapping!(
-    RootDeletedManifestMapping,
-    BlobstoreRootIdMapping,
-    RootDeletedManifestId
-);
+impl_bonsai_derived_via_manager!(RootDeletedManifestId);

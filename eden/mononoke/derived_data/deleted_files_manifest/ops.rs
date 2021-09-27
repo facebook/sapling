@@ -21,9 +21,10 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::{BonsaiDerivable, BonsaiDerived};
+use derived_data_manager::BonsaiDerivable;
 use manifest::{Entry, ManifestOps, PathOrPrefix, PathTree};
 use mononoke_types::{ChangesetId, DeletedManifestId, FileUnodeId, MPath, ManifestUnodeId};
+use repo_derived_data::RepoDerivedDataRef;
 use unodes::RootUnodeManifestId;
 //use time_ext::DurationExt;
 
@@ -109,10 +110,13 @@ async fn resolve_path_state_unfold(
     )>,
     Error,
 > {
+    let manager = repo.repo_derived_data().manager();
     // let's get deleted manifests for each changeset id
     // and try to find the given path
     if let Some(cs_id) = queue.pop_front() {
-        let root_dfm_id = RootDeletedManifestId::derive(&ctx, &repo, cs_id.clone()).await?;
+        let root_dfm_id = manager
+            .derive::<RootDeletedManifestId>(&ctx, cs_id, None)
+            .await?;
         let dfm_id = root_dfm_id.deleted_manifest_id();
         let entry = find_entry(&ctx, repo.blobstore(), *dfm_id, path.clone()).await?;
 
@@ -205,7 +209,11 @@ async fn derive_unode_entry(
     cs_id: ChangesetId,
     path: &Option<MPath>,
 ) -> Result<Option<UnodeEntry>, Error> {
-    let root_unode_mf_id = RootUnodeManifestId::derive(ctx, repo, cs_id).await?;
+    let root_unode_mf_id = repo
+        .repo_derived_data()
+        .manager()
+        .derive::<RootUnodeManifestId>(ctx, cs_id, None)
+        .await?;
     root_unode_mf_id
         .manifest_unode_id()
         .find_entry(ctx.clone(), repo.get_blobstore(), path.clone())
@@ -398,6 +406,7 @@ mod tests {
     use mononoke_types::{
         BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, MPath,
     };
+    use repo_derived_data::RepoDerivedDataRef;
     use sorted_vector_map::SortedVectorMap;
 
     #[fbinit::test]
@@ -577,10 +586,16 @@ mod tests {
     ) -> DeletedManifestId {
         let bcs_id = bcs.get_changeset_id();
 
-        let changes = get_changes(&ctx, &repo, bcs).await.unwrap();
+        let changes = get_changes(
+            &ctx,
+            &repo.repo_derived_data().manager().derivation_context(None),
+            bcs,
+        )
+        .await
+        .unwrap();
         derive_deleted_files_manifest(
-            ctx,
-            repo.blobstore().clone(),
+            &ctx,
+            &repo.blobstore().boxed(),
             bcs_id,
             parent_mf_ids,
             changes,
