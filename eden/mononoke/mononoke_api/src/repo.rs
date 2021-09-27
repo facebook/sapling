@@ -27,6 +27,7 @@ use cross_repo_sync::{
     CommitSyncRepos, CommitSyncer,
 };
 use derived_data::BonsaiDerivable;
+use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use ephemeral_blobstore::RepoEphemeralBlobstore;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};

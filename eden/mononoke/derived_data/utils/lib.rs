@@ -15,7 +15,7 @@ use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
 use borrowed::borrowed;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
-use changeset_info::{ChangesetInfo, ChangesetInfoMapping};
+use changeset_info::ChangesetInfo;
 use changesets::ChangesetsArc;
 use cloned::cloned;
 use context::CoreContext;
@@ -710,14 +710,9 @@ fn derived_data_utils_impl(
                 repo, config,
             ))),
         },
-        ChangesetInfo::NAME => {
-            let mapping = ChangesetInfoMapping::new(blobstore, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                fb,
-                mapping,
-                repo.clone(),
-            )))
-        }
+        ChangesetInfo::NAME => Ok(Arc::new(DerivedUtilsFromManager::<ChangesetInfo>::new(
+            repo, config,
+        ))),
         RootDeletedManifestId::NAME => {
             let mapping = RootDeletedManifestMapping::new(blobstore, config)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(
