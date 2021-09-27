@@ -63,10 +63,11 @@ def upload(repo, revs, force=False):
         repo.dageval(lambda: ancestors(missingheads) & draft())
     )
 
+    # If the only draft revs are the missing heads then we can skip the
+    # known checks, as we know they are all missing.
+    skipknowncheck = len(draftrevs) == len(missingheads)
     newuploaded, failed = edenapi_upload.uploadhgchangesets(
-        repo,
-        draftrevs,
-        force,
+        repo, draftrevs, force, skipknowncheck
     )
 
     failednodes = {repo[r].node() for r in failed}

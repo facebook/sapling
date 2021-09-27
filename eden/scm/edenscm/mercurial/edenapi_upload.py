@@ -215,7 +215,7 @@ def parentsfromctx(ctx):
         return None
 
 
-def uploadhgchangesets(repo, revs, force=False):
+def uploadhgchangesets(repo, revs, force=False, skipknowncheck=False):
     """Upload list of revs via EdenApi Uploads protocol
 
     EdenApi Uploads API consists of the following:
@@ -241,13 +241,18 @@ def uploadhgchangesets(repo, revs, force=False):
     If ``force`` is True (the default is False) the lookup check isn't performed prior to upload for commits, filenodes and trees.
     It will be still performed for file contents.
 
+    If ``skipknowncheck`` is True (the default is False) the lookup check isn't performed to filter out already uploaded commits.
+    Assumed it is known already that they are missing on the server.
+
     Returns newly uploaded revs and failed revs.
     """
 
     nodes = [repo[r].node() for r in revs]
 
     # Build a queue of commits to upload
-    uploadcommitqueue = nodes if force else _filtercommits(repo, nodes)
+    uploadcommitqueue = (
+        nodes if (force or skipknowncheck) else _filtercommits(repo, nodes)
+    )
     repo.ui.status(
         _n(
             "queue %d commit for upload\n",
