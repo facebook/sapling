@@ -7,6 +7,8 @@
 
 #include "eden/fs/model/RootId.h"
 #include <folly/String.h>
+#include <ostream>
+#include <string>
 
 namespace facebook::eden {
 
