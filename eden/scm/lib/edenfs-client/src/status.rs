@@ -10,10 +10,7 @@ use thrift_types::edenfs as eden;
 use crate::path_relativizer::PathRelativizer;
 use anyhow::{bail, ensure, Error, Result};
 use byteorder::{BigEndian, ByteOrder};
-use clidispatch::{
-    errors::FallbackToPython,
-    io::{CanColor, IO},
-};
+use clidispatch::{errors::FallbackToPython, io::IO};
 use eden::client::EdenService;
 use eden::{GetScmStatusParams, GetScmStatusResult, ScmFileStatus, ScmStatus};
 #[cfg(unix)]
@@ -28,6 +25,7 @@ use std::io;
 use std::io::BufReader;
 use std::io::Read;
 #[cfg(unix)]
+use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str;
@@ -121,7 +119,7 @@ async fn maybe_status_fastpath_internal(
     }
 
     let stdout = io::stdout();
-    let use_color = stdout.can_color();
+    let use_color = should_colorize_output(&stdout);
 
     let status = get_status_helper(
         &client,
@@ -198,6 +196,18 @@ fn needs_morestatus_extension(hg_dir: &Path, p2: &[u8; 20]) -> bool {
         }
     }
 
+    false
+}
+
+#[cfg(unix)]
+fn should_colorize_output(stdout: &dyn AsRawFd) -> bool {
+    let fd = stdout.as_raw_fd();
+    let istty = unsafe { libc::isatty(fd as i32) } != 0;
+    istty
+}
+
+#[cfg(not(unix))]
+fn should_colorize_output(stdout: &io::Stdout) -> bool {
     false
 }
 

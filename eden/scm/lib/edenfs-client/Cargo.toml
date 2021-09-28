@@ -9,6 +9,7 @@ anyhow = "1.0"
 byteorder = "1.3"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clidispatch = { path = "../clidispatch" }
+libc = "0.2.98"
 sha2 = "0.8"
 thrift-types = { path = "../thrift-types" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }

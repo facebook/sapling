@@ -90,14 +90,6 @@ pub trait IsTty {
     }
 }
 
-pub trait CanColor: IsTty {
-    fn can_color(&self) -> bool {
-        self.is_tty() && !configparser::hg::is_plain(Some("color"))
-    }
-}
-
-impl<T: IsTty> CanColor for T {}
-
 pub trait Read: io::Read + IsTty + Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 
