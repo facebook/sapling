@@ -6,19 +6,20 @@
  */
 
 use anyhow::{anyhow, format_err, Error, Result};
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bytes::BytesMut;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::RepoEphemeralBlobstore;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
     future::{self, TryFutureExt},
     stream::TryStreamExt,
 };
-use mononoke_api_types::InnerRepo;
 use mononoke_types::{
     hash::{Sha1, Sha256},
     ContentId, FileContents,
@@ -48,6 +49,16 @@ const ARG_BUBBLE_ID: &str = "bubble-id";
 
 // NOTE: Fetching by GitSha1 is not concurrently supported since that needs a size to instantiate.
 const VALID_KINDS: [&str; 3] = ["id", "sha1", "sha256"];
+
+#[facet::container]
+#[derive(Clone)]
+pub struct CustomRepo {
+    #[delegate()]
+    pub blob_repo: BlobRepo,
+
+    #[facet]
+    pub ephemeral_blobstore: RepoEphemeralBlobstore,
+}
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let kind_arg = Arg::with_name(ARG_KIND)
@@ -107,8 +118,8 @@ pub async fn execute_command<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let inner_repo: InnerRepo = args::open_repo(fb, &logger, &matches).await?;
-    let blobrepo = inner_repo.blob_repo.clone();
+    let custom_repo: CustomRepo = args::open_repo(fb, &logger, &matches).await?;
+    let blobrepo = custom_repo.blob_repo.clone();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_matches.subcommand() {
@@ -143,7 +154,7 @@ pub async fn execute_command<'a>(
         }
         (COMMAND_FETCH, Some(matches)) => {
             let fetch_key = extract_fetch_key(matches)?;
-            let blobstore = get_blobstore(matches, &inner_repo).await?;
+            let blobstore = get_blobstore(matches, &custom_repo).await?;
             let mut stream = filestore::fetch(blobstore, ctx.clone(), &fetch_key)
                 .await?
                 .ok_or_else(|| anyhow!("content not found"))?;
@@ -158,7 +169,7 @@ pub async fn execute_command<'a>(
         }
         (COMMAND_VERIFY, Some(matches)) => {
             let key = extract_fetch_key(matches)?;
-            let blobstore = get_blobstore(matches, &inner_repo).await?;
+            let blobstore = get_blobstore(matches, &custom_repo).await?;
 
             let metadata = filestore::get_metadata(&blobstore, &ctx, &key).await?;
             let metadata = match metadata {
@@ -201,7 +212,7 @@ pub async fn execute_command<'a>(
         }
         (COMMAND_IS_CHUNKED, Some(matches)) => {
             let fetch_key = extract_fetch_key(matches)?;
-            let blobstore = get_blobstore(matches, &inner_repo).await?;
+            let blobstore = get_blobstore(matches, &custom_repo).await?;
             let maybe_metadata = filestore::get_metadata(&blobstore, &ctx, &fetch_key).await?;
             match maybe_metadata {
                 Some(metadata) => {
@@ -249,7 +260,7 @@ fn extract_bubble_id(matches: &ArgMatches<'_>) -> Result<Option<BubbleId>> {
         .transpose()
 }
 
-async fn get_blobstore(matches: &ArgMatches<'_>, repo: &'_ InnerRepo) -> Result<RepoBlobstore> {
+async fn get_blobstore(matches: &ArgMatches<'_>, repo: &'_ CustomRepo) -> Result<RepoBlobstore> {
     let bubble_id = extract_bubble_id(matches)?;
     let main_blobstore = repo.blob_repo.get_blobstore();
     if let Some(id) = bubble_id {
