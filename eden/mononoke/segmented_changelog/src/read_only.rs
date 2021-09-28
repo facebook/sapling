@@ -236,6 +236,32 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         Ok(stream_clone_data)
     }
 
+    /// Test if `ancestor` is an ancestor of `descendant`.
+    /// Returns None in case segmented changelog doesn't know about either of those commit.
+    async fn is_ancestor(
+        &self,
+        ctx: &CoreContext,
+        ancestor: ChangesetId,
+        descendant: ChangesetId,
+    ) -> Result<Option<bool>> {
+        let request_ids = self
+            .idmap
+            .find_many_dag_ids(ctx, vec![ancestor, descendant])
+            .await?;
+        let ancestor_id = if let Some(ancestor_id) = request_ids.get(&ancestor) {
+            ancestor_id
+        } else {
+            return Ok(None);
+        };
+        let descendant_id = if let Some(descendant_id) = request_ids.get(&descendant) {
+            descendant_id
+        } else {
+            return Ok(None);
+        };
+
+        Ok(Some(self.iddag.is_ancestor(*ancestor_id, *descendant_id)?))
+    }
+
     async fn disabled(&self, _ctx: &CoreContext) -> Result<bool> {
         Ok(false)
     }

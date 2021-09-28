@@ -114,6 +114,16 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
     async fn disabled(&self, _ctx: &CoreContext) -> Result<bool> {
         Ok(true)
     }
+
+    async fn is_ancestor(
+        &self,
+        _ctx: &CoreContext,
+        _ancestor: ChangesetId,
+        _descendant: ChangesetId,
+    ) -> Result<Option<bool>> {
+        // None means inconclusive result, it can be returned safely
+        Ok(None)
+    }
 }
 
 #[macro_export]
@@ -175,6 +185,16 @@ macro_rules! segmented_changelog_delegate {
             async fn disabled(&$self, $ctx: &CoreContext) -> Result<bool> {
                 let delegate = $delegate;
                 delegate.disabled($ctx).await
+            }
+
+            async fn is_ancestor(
+                &$self,
+                $ctx: &CoreContext,
+                ancestor: ChangesetId,
+                descendant: ChangesetId,
+            ) -> Result<Option<bool>> {
+                let delegate = $delegate;
+                delegate.is_ancestor($ctx, ancestor, descendant).await
             }
         }
     };

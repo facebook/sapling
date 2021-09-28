@@ -219,6 +219,15 @@ pub trait SegmentedChangelog: Send + Sync {
     ///
     /// Return true if it is disabled.
     async fn disabled(&self, ctx: &CoreContext) -> Result<bool>;
+
+    /// Test if `ancestor` is an ancestor of `descendant`.
+    /// Returns None in case segmented changelog doesn't know about either of those commit.
+    async fn is_ancestor(
+        &self,
+        ctx: &CoreContext,
+        ancestor: ChangesetId,
+        descendant: ChangesetId,
+    ) -> Result<Option<bool>>;
 }
 
 pub struct StreamCloneData<T> {

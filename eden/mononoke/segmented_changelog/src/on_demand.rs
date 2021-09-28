@@ -424,6 +424,16 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
     async fn disabled(&self, _ctx: &CoreContext) -> Result<bool> {
         Ok(false)
     }
+    async fn is_ancestor(
+        &self,
+        ctx: &CoreContext,
+        ancestor: ChangesetId,
+        descendant: ChangesetId,
+    ) -> Result<Option<bool>> {
+        let iddag = self.iddag.read().await;
+        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
+        read_dag.is_ancestor(ctx, ancestor, descendant).await
+    }
 }
 
 pub struct PeriodicUpdateSegmentedChangelog {
