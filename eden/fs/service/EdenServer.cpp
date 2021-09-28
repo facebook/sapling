@@ -130,6 +130,7 @@ DEFINE_int32(
     apache::thrift::concurrency::ThreadManager::DEFAULT_MAX_QUEUE_SIZE,
     "Maximum number of active thrift requests");
 DEFINE_bool(thrift_enable_codel, false, "Enable Codel queuing timeout");
+DEFINE_int32(thrift_queue_timeout, 5000, "Request queue timeout in ms");
 
 DEFINE_int64(
     unload_interval_minutes,
@@ -1852,6 +1853,8 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->setMaxRequests(FLAGS_thrift_max_requests);
   server_->setNumIOWorkerThreads(FLAGS_thrift_num_workers);
   server_->setEnableCodel(FLAGS_thrift_enable_codel);
+  server_->setQueueTimeout(
+      std::chrono::milliseconds{FLAGS_thrift_queue_timeout});
 
   // Setting this allows us to to only do stopListening() on the stop() call
   // and delay thread-pool join (stop cpu workers + stop workers) untill
