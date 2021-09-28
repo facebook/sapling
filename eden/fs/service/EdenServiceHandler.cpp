@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <typeinfo>
 #include "eden/fs/utils/ProcessNameCache.h"
 
 #include <fb303/ServiceData.h>
@@ -946,10 +947,17 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
-  auto hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
-      edenMount->getObjectStore()->getBackingStore());
+  auto backingStore = edenMount->getObjectStore()->getBackingStore();
+  auto hgBackingStore =
+      std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
   if (!hgBackingStore) {
-    throw std::runtime_error("mount must use hg backing store");
+    // typeid() does not evaluate expressions
+    auto& r = *backingStore.get();
+    throw std::runtime_error(folly::to<std::string>(
+        "mount ",
+        mountPath,
+        " must use HgQueuedBackingStore, type is ",
+        typeid(r).name()));
   }
 
   struct Context {
@@ -1533,13 +1541,17 @@ EdenServiceHandler::future_predictiveGlobFiles(
   // if user is not specified, get user info from the server state
   auto user = folly::StringPiece{
       server_->getServerState()->getUserInfo().getUsername()};
+  auto backingStore = server_->getMount(AbsolutePathPiece{mountPoint})
+                          ->getObjectStore()
+                          ->getBackingStore();
   // if repo is not specified, get repository name from the hgBackingStore
-  auto hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
-      server_->getMount(AbsolutePathPiece{mountPoint})
-          ->getObjectStore()
-          ->getBackingStore());
+  auto hgBackingStore =
+      std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
   if (!hgBackingStore) {
-    throw std::runtime_error("Mount must use hg backing store.");
+    // typeid() does not evaluate expressions
+    auto& r = *backingStore.get();
+    throw std::runtime_error(folly::to<std::string>(
+        "mount must use HgQueuedBackingStore, type is ", typeid(r).name()));
   }
   auto repo = hgBackingStore->getRepoName();
   // currently, predictiveGlobFiles is only supported on Linux
