@@ -72,11 +72,10 @@ py_class!(pub class client |py| {
         &self,
         store: PyObject,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>,
-        callback: Option<PyObject> = None
+        keys: Vec<(PyPathBuf, PyBytes)>
     ) -> PyResult<stats> {
         let progress = self.progress(py).clone();
-        self.inner(py).clone().files_py(py, store, repo, keys, callback, progress)
+        self.inner(py).clone().files_py(py, store, repo, keys, progress)
     }
 
     def history(
@@ -84,11 +83,10 @@ py_class!(pub class client |py| {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        length: Option<u32> = None,
-        callback: Option<PyObject> = None
+        length: Option<u32> = None
     ) -> PyResult<stats> {
         let progress = self.progress(py).clone();
-        self.inner(py).clone().history_py(py, store, repo, keys, length, callback, progress)
+        self.inner(py).clone().history_py(py, store, repo, keys, length, progress)
     }
 
     def storetrees(
@@ -96,18 +94,17 @@ py_class!(pub class client |py| {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        attributes: Option<PyDict> = None,
-        callback: Option<PyObject> = None
+        attributes: Option<PyDict> = None
     ) -> PyResult<stats> {
         let progress = self.progress(py).clone();
-        self.inner(py).clone().storetrees_py(py, store, repo, keys, attributes, callback, progress)
+        self.inner(py).clone().storetrees_py(py, store, repo, keys, attributes, progress)
     }
 
     def trees(
         &self,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        attributes: Option<PyDict> = None,
+        attributes: Option<PyDict> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<TreeEntry>>>, PyFuture)> {
         self.inner(py).clone().trees_py(py, repo, keys, attributes)
     }
@@ -119,8 +116,7 @@ py_class!(pub class client |py| {
         rootdir: PyPathBuf,
         mfnodes: Vec<PyBytes>,
         basemfnodes: Vec<PyBytes>,
-        depth: Option<usize> = None,
-        callback: Option<PyObject> = None
+        depth: Option<usize> = None
     )  -> PyResult<stats> {
         let progress = self.progress(py).clone();
         self.inner(py).clone().complete_trees_py(
@@ -131,7 +127,6 @@ py_class!(pub class client |py| {
             mfnodes,
             basemfnodes,
             depth,
-            callback,
             progress,
         )
     }
@@ -143,19 +138,17 @@ py_class!(pub class client |py| {
     def commitdata(
         &self,
         repo: String,
-        nodes: Vec<PyBytes>,
-        callback: Option<PyObject> = None
+        nodes: Vec<PyBytes>
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitRevlogData>>>, PyFuture)> {
-        self.inner(py).clone().commit_revlog_data_py(py, repo, nodes, callback)
+        self.inner(py).clone().commit_revlog_data_py(py, repo, nodes)
     }
 
     def bookmarks(
         &self,
         repo: String,
-        bookmarks: Vec<String>,
-        callback: Option<PyObject> = None
+        bookmarks: Vec<String>
     ) -> PyResult<(PyDict, stats)> {
-        self.inner(py).clone().bookmarks_py(py, repo, bookmarks, callback)
+        self.inner(py).clone().bookmarks_py(py, repo, bookmarks)
     }
 
     def hashlookup(
@@ -199,9 +192,8 @@ py_class!(pub class client |py| {
         &self,
         repo: String,
         requests: Vec<(PyBytes, u64, u64)>,
-        callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitLocationToHashResponse>>>, PyFuture)> {
-        self.inner(py).clone().commit_location_to_hash_py(py, repo, requests, callback)
+        self.inner(py).clone().commit_location_to_hash_py(py, repo, requests)
     }
 
     /// commithashtolocation(repo: str, master_heads: [bytes], hghds: [bytes], progress = None) ->
@@ -217,9 +209,8 @@ py_class!(pub class client |py| {
         repo: String,
         master_heads: Vec<PyBytes>,
         hgids: Vec<PyBytes>,
-        callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitHashToLocationResponse>>>, PyFuture)> {
-        self.inner(py).clone().commit_hash_to_location_py(py, repo, master_heads, hgids, callback)
+        self.inner(py).clone().commit_hash_to_location_py(py, repo, master_heads, hgids)
     }
 
     /// commitknown(repo: str, nodes: [bytes]) -> [{'hgid': bytes, 'known': Result[bool]}]

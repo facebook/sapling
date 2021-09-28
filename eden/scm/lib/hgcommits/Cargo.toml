@@ -19,5 +19,4 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 streams = { path = "../streams" }
 thiserror = "1.0.29"
 tracing = "0.1.27"
-tracing-futures = "0.2.5"
 zstore = { path = "../zstore" }

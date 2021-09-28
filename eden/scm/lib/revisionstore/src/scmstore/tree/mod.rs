@@ -138,7 +138,7 @@ impl TreeStore {
                     download_speed = field::Empty,
                 );
                 let _enter = span.enter();
-                let response = edenapi.trees_blocking(pending, None, None)?;
+                let response = edenapi.trees_blocking(pending, None)?;
                 for entry in response.entries {
                     let entry = entry?;
                     if self.indexedlog_cache.is_some() && self.cache_to_local_cache {

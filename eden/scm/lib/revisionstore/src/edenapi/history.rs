@@ -59,7 +59,7 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
                 Unit::Named("entries"),
             )?;
 
-            let mut response = client.history(repo, keys, None, None).await?;
+            let mut response = client.history(repo, keys, None).await?;
             while let Some(entry) = response.entries.try_next().await? {
                 self.store.add_entry(&entry)?;
                 prog.increment(1)?;

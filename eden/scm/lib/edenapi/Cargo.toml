@@ -25,7 +25,6 @@ env_logger = "0.7"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 hg-http = { path = "../hg-http" }
 http-client = { path = "../http-client" }
-indicatif = { version = "0.15", features = ["with_rayon"] }
 itertools = "0.10.1"
 log = { version = "0.4.8", features = ["kv_unstable"] }
 metrics = { path = "../metrics" }

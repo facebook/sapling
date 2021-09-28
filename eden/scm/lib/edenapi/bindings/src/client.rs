@@ -59,7 +59,7 @@ fn edenapi_trees_blocking(
         .map(|k| k.try_into())
         .collect::<Result<Vec<ApiKey>, _>>()?;
     Ok(client
-        .trees_blocking(repo, keys, Some(attrs.into()), None)
+        .trees_blocking(repo, keys, Some(attrs.into()))
         .map(|f| f.entries)?)
 }
 

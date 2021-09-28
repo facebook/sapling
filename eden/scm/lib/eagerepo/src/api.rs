@@ -51,7 +51,6 @@ use edenapi::types::UploadTreeEntry;
 use edenapi::types::UploadTreeResponse;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
-use edenapi::ProgressCallback;
 use edenapi::Response;
 use edenapi::ResponseMeta;
 use edenapi_trait as edenapi;
@@ -74,12 +73,7 @@ impl EdenApi for EagerRepo {
         Ok(default_response_meta())
     }
 
-    async fn files(
-        &self,
-        _repo: String,
-        keys: Vec<Key>,
-        _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<Response<FileEntry>> {
+    async fn files(&self, _repo: String, keys: Vec<Key>) -> edenapi::Result<Response<FileEntry>> {
         debug!("files {}", debug_key_list(&keys));
         let mut values = Vec::with_capacity(keys.len());
         for key in keys {
@@ -106,7 +100,6 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         reqs: Vec<FileSpec>,
-        _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Response<FileEntry>> {
         debug!("files {}", debug_spec_list(&reqs));
         let mut values = Vec::with_capacity(reqs.len());
@@ -137,7 +130,6 @@ impl EdenApi for EagerRepo {
         _repo: String,
         keys: Vec<Key>,
         _length: Option<u32>,
-        _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Response<HistoryEntry>> {
         debug!("history {}", debug_key_list(&keys));
         let mut values = Vec::new();
@@ -189,7 +181,6 @@ impl EdenApi for EagerRepo {
         _repo: String,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-        _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Response<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
         debug!("trees {}", debug_key_list(&keys));
         let mut values = Vec::new();
@@ -225,7 +216,6 @@ impl EdenApi for EagerRepo {
         _mfnodes: Vec<HgId>,
         _basemfnodes: Vec<HgId>,
         _depth: Option<usize>,
-        _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Response<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
         Err(not_implemented_error(
             "EagerRepo does not support complete_trees endpoint".to_string(),
@@ -236,7 +226,6 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         hgids: Vec<HgId>,
-        _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Response<CommitRevlogData>> {
         debug!("revlog_data {}", debug_hgid_list(&hgids));
         let mut values = Vec::new();
@@ -275,11 +264,7 @@ impl EdenApi for EagerRepo {
         convert_clone_data(clone_data)
     }
 
-    async fn full_idmap_clone_data(
-        &self,
-        _repo: String,
-        _progress: Option<ProgressCallback>,
-    ) -> edenapi::Result<dag::CloneData<HgId>> {
+    async fn full_idmap_clone_data(&self, _repo: String) -> edenapi::Result<dag::CloneData<HgId>> {
         Err(not_implemented_error(
             "EagerRepo does not support full_idmap_clone_data endpoint".to_string(),
         ))
@@ -289,7 +274,6 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         requests: Vec<CommitLocationToHashRequest>,
-        _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Response<CommitLocationToHashResponse>> {
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let paths: Vec<AncestorPath> = requests
@@ -336,7 +320,6 @@ impl EdenApi for EagerRepo {
         _repo: String,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
-        _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Response<CommitHashToLocationResponse>> {
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let heads: Vec<Vertex> = master_heads
@@ -438,7 +421,6 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         bookmarks: Vec<String>,
-        _progress: Option<ProgressCallback>,
     ) -> edenapi::Result<Response<BookmarkEntry>> {
         debug!("bookmarks {}", debug_string_list(&bookmarks),);
         let mut values = Vec::new();

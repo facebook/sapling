@@ -13,7 +13,7 @@ mod response;
 pub use edenapi_trait::api;
 pub use edenapi_trait::errors;
 
-pub use crate::api::{EdenApi, ProgressCallback};
+pub use crate::api::EdenApi;
 pub use crate::blocking::EdenApiBlocking;
 pub use crate::builder::Builder;
 pub use crate::builder::HttpClientBuilder;
@@ -25,6 +25,6 @@ pub use edenapi_trait::{Entries, Response, ResponseMeta};
 // Re-export for convenience.
 pub use configmodel;
 pub use edenapi_types as types;
-pub use http_client::{Progress, Stats};
+pub use http_client::Stats;
 
 pub type Result<T> = std::result::Result<T, EdenApiError>;

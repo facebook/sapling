@@ -10,7 +10,7 @@ use std::{collections::HashMap, num::NonZeroU64, path::Path, sync::Arc};
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use configparser::config::ConfigSet;
-use edenapi::{EdenApi, EdenApiError, ProgressCallback, Response, ResponseMeta, Stats};
+use edenapi::{EdenApi, EdenApiError, Response, ResponseMeta, Stats};
 use edenapi_types::{
     AnyFileContentId, AnyId, BonsaiChangesetContent, BookmarkEntry, CloneData,
     CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashRequest,
@@ -308,7 +308,6 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         keys: Vec<Key>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<FileEntry>, EdenApiError> {
         Self::get_files(
             &self.files,
@@ -326,7 +325,6 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         reqs: Vec<FileSpec>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<FileEntry>, EdenApiError> {
         Self::get_files(&self.files, reqs.into_iter())
     }
@@ -336,7 +334,6 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         keys: Vec<Key>,
         _length: Option<u32>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<HistoryEntry>, EdenApiError> {
         let entries = keys
             .into_iter()
@@ -357,7 +354,6 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         keys: Vec<Key>,
         _attrs: Option<TreeAttributes>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         Self::get_trees(&self.trees, keys)
     }
@@ -369,7 +365,6 @@ impl EdenApi for FakeEdenApi {
         _mfnodes: Vec<HgId>,
         _basemfnodes: Vec<HgId>,
         _depth: Option<usize>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         unimplemented!()
     }
@@ -378,7 +373,6 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _hgids: Vec<HgId>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<CommitRevlogData>, EdenApiError> {
         unimplemented!()
     }
@@ -396,11 +390,7 @@ impl EdenApi for FakeEdenApi {
         unimplemented!()
     }
 
-    async fn full_idmap_clone_data(
-        &self,
-        _repo: String,
-        _progress: Option<ProgressCallback>,
-    ) -> Result<CloneData<HgId>, EdenApiError> {
+    async fn full_idmap_clone_data(&self, _repo: String) -> Result<CloneData<HgId>, EdenApiError> {
         unimplemented!()
     }
 
@@ -408,7 +398,6 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _requests: Vec<CommitLocationToHashRequest>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError> {
         unimplemented!()
     }
@@ -418,7 +407,6 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _master_heads: Vec<HgId>,
         _hgids: Vec<HgId>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError> {
         unimplemented!()
     }
@@ -427,7 +415,6 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _bookmarks: Vec<String>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<BookmarkEntry>, EdenApiError> {
         unimplemented!()
     }

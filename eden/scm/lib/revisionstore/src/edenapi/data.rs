@@ -56,7 +56,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
                 Unit::Named("files"),
             )?;
 
-            let mut response = File::prefetch_files(client, repo, hgidkeys, None).await?;
+            let mut response = File::prefetch_files(client, repo, hgidkeys).await?;
             while let Some(entry) = response.entries.try_next().await? {
                 self.store.add_file(&entry)?;
                 prog.increment(1)?;
@@ -103,7 +103,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
                 Unit::Named("trees"),
             )?;
 
-            let mut response = Tree::prefetch_trees(client, repo, hgidkeys, None, None).await?;
+            let mut response = Tree::prefetch_trees(client, repo, hgidkeys, None).await?;
             while let Some(Ok(entry)) = response.entries.try_next().await? {
                 self.store.add_tree(&entry)?;
                 prog.increment(1)?;

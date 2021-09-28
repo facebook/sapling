@@ -13,7 +13,6 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use env_logger::Env;
 use futures::prelude::*;
-use indicatif::{ProgressBar, ProgressStyle};
 use serde::Serialize;
 use serde_json::Deserializer;
 use structopt::StructOpt;
@@ -21,7 +20,7 @@ use tokio::io;
 use tokio::io::AsyncWriteExt;
 
 use configparser::config::{ConfigSet, Options};
-use edenapi::{Builder, EdenApi, Entries, Progress, ProgressCallback, Response};
+use edenapi::{Builder, EdenApi, Entries, Response};
 use edenapi_types::{
     json::FromJson, wire::ToWire, BookmarkRequest, CommitRevlogDataRequest, CompleteTreeRequest,
     FileRequest, HistoryRequest, TreeRequest,
@@ -110,9 +109,8 @@ async fn cmd_files(args: Args) -> Result<()> {
     for req in requests {
         log::info!("Requesting content for {} files", req.keys.len(),);
 
-        let (bar, cb) = progress_bar();
-        let response = client.files(repo.clone(), req.keys, Some(cb)).await?;
-        handle_response(response, bar).await?;
+        let response = client.files(repo.clone(), req.keys).await?;
+        handle_response(response).await?;
     }
 
     Ok(())
@@ -127,11 +125,8 @@ async fn cmd_bookmarks(args: Args) -> Result<()> {
     for req in requests {
         log::info!("Requesting values for {} bookmarks", req.bookmarks.len(),);
 
-        let (bar, cb) = progress_bar();
-        let response = client
-            .bookmarks(repo.clone(), req.bookmarks, Some(cb))
-            .await?;
-        handle_response(response, bar).await?;
+        let response = client.bookmarks(repo.clone(), req.bookmarks).await?;
+        handle_response(response).await?;
     }
 
     Ok(())
@@ -147,11 +142,8 @@ async fn cmd_history(args: Args) -> Result<()> {
     for req in requests {
         log::info!("Requesting history for {} files", req.keys.len(),);
 
-        let (bar, cb) = progress_bar();
-        let res = client
-            .history(repo.clone(), req.keys, req.length, Some(cb))
-            .await?;
-        handle_response_raw(res, bar).await?;
+        let res = client.history(repo.clone(), req.keys, req.length).await?;
+        handle_response_raw(res).await?;
     }
 
     Ok(())
@@ -168,9 +160,8 @@ async fn cmd_trees(args: Args) -> Result<()> {
         log::info!("Requesting {} tree nodes", req.keys.len());
         log::trace!("{:?}", &req);
 
-        let (bar, cb) = progress_bar();
-        let res = client.trees(repo.clone(), req.keys, None, Some(cb)).await?;
-        handle_response(res, bar).await?;
+        let res = client.trees(repo.clone(), req.keys, None).await?;
+        handle_response(res).await?;
     }
 
     Ok(())
@@ -189,7 +180,6 @@ async fn cmd_complete_trees(args: Args) -> Result<()> {
             req.mfnodes.len(),
         );
 
-        let (bar, cb) = progress_bar();
         let res = client
             .complete_trees(
                 repo.clone(),
@@ -197,10 +187,9 @@ async fn cmd_complete_trees(args: Args) -> Result<()> {
                 req.mfnodes,
                 req.basemfnodes,
                 req.depth,
-                Some(cb),
             )
             .await?;
-        handle_response(res, bar).await?;
+        handle_response(res).await?;
     }
 
     Ok(())
@@ -216,11 +205,8 @@ async fn cmd_commit_revlog_data(args: Args) -> Result<()> {
     for req in requests {
         log::info!("Requesting revlog data for {} commits", req.hgids.len());
 
-        let (bar, cb) = progress_bar();
-        let res = client
-            .commit_revlog_data(repo.clone(), req.hgids, Some(cb))
-            .await?;
-        handle_response_raw(res, bar).await?;
+        let res = client.commit_revlog_data(repo.clone(), req.hgids).await?;
+        handle_response_raw(res).await?;
     }
 
     Ok(())
@@ -229,12 +215,9 @@ async fn cmd_commit_revlog_data(args: Args) -> Result<()> {
 /// Handle the incoming deserialized response by reserializing it
 /// and dumping it to stdout (only if stdout isn't a TTY, to avoid
 /// messing up the user's terminal).
-async fn handle_response<T: ToWire>(res: Response<T>, bar: ProgressBar) -> Result<()> {
+async fn handle_response<T: ToWire>(res: Response<T>) -> Result<()> {
     let buf = serialize_and_concat(res.entries).await?;
-
     let stats = res.stats.await?;
-    bar.finish_at_current_pos();
-
     log::info!("{}", &stats);
 
     if atty::is(atty::Stream::Stdout) {
@@ -248,12 +231,9 @@ async fn handle_response<T: ToWire>(res: Response<T>, bar: ProgressBar) -> Resul
 }
 
 // TODO(meyer): Remove when all types have wire type
-async fn handle_response_raw<T: Serialize>(res: Response<T>, bar: ProgressBar) -> Result<()> {
+async fn handle_response_raw<T: Serialize>(res: Response<T>) -> Result<()> {
     let buf = serialize_and_concat_raw(res.entries).await?;
-
     let stats = res.stats.await?;
-    bar.finish_at_current_pos();
-
     log::info!("{}", &stats);
 
     if atty::is(atty::Stream::Stdout) {
@@ -318,19 +298,4 @@ fn read_requests<R: FromJson>() -> Result<Vec<R>> {
         .into_iter()
         .map(|json| Ok(R::from_json(&json?)?))
         .collect()
-}
-
-fn progress_bar() -> (ProgressBar, ProgressCallback) {
-    let template = "Downloaded: {decimal_bytes}\n\
-                    Speed: {bytes_per_sec}\n\
-                    Elapsed: {elapsed_precise}";
-
-    let style = ProgressStyle::default_spinner().template(template);
-    let bar = ProgressBar::new_spinner().with_style(style);
-    let cb = Box::new({
-        let bar = bar.clone();
-        move |prog: Progress| bar.set_position(prog.downloaded as u64)
-    });
-
-    (bar, cb)
 }

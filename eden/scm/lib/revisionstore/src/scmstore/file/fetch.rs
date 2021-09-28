@@ -380,7 +380,7 @@ impl FetchState {
             })
             .collect();
 
-        let response = store.files_attrs_blocking(pending_attrs, None)?;
+        let response = store.files_attrs_blocking(pending_attrs)?;
         for entry in response.entries.into_iter() {
             self.found_edenapi(entry);
         }

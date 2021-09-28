@@ -9,7 +9,7 @@ pub mod api;
 pub mod errors;
 pub mod response;
 
-pub use crate::api::{EdenApi, ProgressCallback};
+pub use crate::api::EdenApi;
 pub use crate::errors::{ConfigError, EdenApiError};
 pub use crate::response::{Entries, Response, ResponseMeta};
 

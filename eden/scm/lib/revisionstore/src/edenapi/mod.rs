@@ -10,9 +10,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use edenapi::{
-    BlockingResponse, EdenApi, EdenApiBlocking, EdenApiError, ProgressCallback, Response,
-};
+use edenapi::{BlockingResponse, EdenApi, EdenApiBlocking, EdenApiError, Response};
 use edenapi_types::{EdenApiServerError, FileEntry, FileSpec, TreeAttributes, TreeEntry};
 use progress::{NullProgressFactory, ProgressFactory};
 use types::Key;
@@ -127,19 +125,15 @@ impl EdenApiFileStore {
     pub fn files_blocking(
         &self,
         keys: Vec<Key>,
-        progress: Option<ProgressCallback>,
     ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
-        self.client
-            .files_blocking(self.repo.clone(), keys, progress)
+        self.client.files_blocking(self.repo.clone(), keys)
     }
 
     pub fn files_attrs_blocking(
         &self,
         reqs: Vec<FileSpec>,
-        progress: Option<ProgressCallback>,
     ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
-        self.client
-            .files_attrs_blocking(self.repo.clone(), reqs, progress)
+        self.client.files_attrs_blocking(self.repo.clone(), reqs)
     }
 }
 
@@ -148,10 +142,9 @@ impl EdenApiTreeStore {
         &self,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-        progress: Option<ProgressCallback>,
     ) -> Result<BlockingResponse<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         self.client
-            .trees_blocking(self.repo.clone(), keys, attributes, progress)
+            .trees_blocking(self.repo.clone(), keys, attributes)
     }
 }
 
@@ -163,7 +156,6 @@ pub trait EdenApiStoreKind: Send + Sync + 'static {
         _client: Arc<dyn EdenApi>,
         _repo: String,
         _keys: Vec<Key>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<FileEntry>, EdenApiError> {
         unimplemented!("fetching files not supported for this store")
     }
@@ -173,7 +165,6 @@ pub trait EdenApiStoreKind: Send + Sync + 'static {
         _repo: String,
         _keys: Vec<Key>,
         _attributes: Option<TreeAttributes>,
-        _progress: Option<ProgressCallback>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         unimplemented!("fetching trees not supported for this store")
     }
@@ -185,9 +176,8 @@ impl EdenApiStoreKind for File {
         client: Arc<dyn EdenApi>,
         repo: String,
         keys: Vec<Key>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<FileEntry>, EdenApiError> {
-        client.files(repo, keys, progress).await
+        client.files(repo, keys).await
     }
 }
 
@@ -198,9 +188,8 @@ impl EdenApiStoreKind for Tree {
         repo: String,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        client.trees(repo, keys, attributes, progress).await
+        client.trees(repo, keys, attributes).await
     }
 }
 

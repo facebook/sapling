@@ -10,7 +10,7 @@ use std::sync::Arc;
 use cpython::*;
 
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
-use edenapi::{Progress, ProgressCallback, ResponseMeta};
+use edenapi::ResponseMeta;
 use edenapi_types::{ContentId, TreeAttributes, UploadTreeEntry};
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
@@ -123,14 +123,6 @@ pub fn to_trees_upload_items<'a>(
         .into_iter()
         .map(|(hgid, p1, p2, data)| to_trees_upload_item(py, hgid, p1, p2, data))
         .collect()
-}
-
-pub fn wrap_callback(callback: PyObject) -> ProgressCallback {
-    Box::new(move |progress: Progress| {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let _ = callback.call(py, progress.as_tuple(), None);
-    })
 }
 
 pub fn as_deltastore(py: Python, store: PyObject) -> PyResult<Arc<dyn HgIdMutableDeltaStore>> {

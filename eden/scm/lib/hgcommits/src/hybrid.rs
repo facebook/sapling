@@ -128,7 +128,7 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
                 .collect::<dag::Result<Vec<_>>>()?;
             let repo = self.reponame.clone();
             self.client
-                .commit_hash_to_location(repo, heads, hgids, None)
+                .commit_hash_to_location(repo, heads, hgids)
                 .await
                 .map_err(to_dag_error)?
         };
@@ -176,7 +176,7 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
             }
             let repo = self.reponame.clone();
             self.client
-                .commit_location_to_hash(repo, requests, None)
+                .commit_location_to_hash(repo, requests)
                 .await
                 .map_err(to_dag_error)?
         };
@@ -413,8 +413,7 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
             .collect::<std::result::Result<Vec<_>, _>>()?;
         let reponame = self.reponame.clone();
         let client = self.client.clone();
-        let progress = None;
-        let response = client.commit_revlog_data(reponame, ids, progress).await?;
+        let response = client.commit_revlog_data(reponame, ids).await?;
         let zstore = self.zstore.clone();
         let commits = response.entries.map(move |e| {
             let e = e?;

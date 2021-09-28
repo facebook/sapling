@@ -19,14 +19,11 @@ use edenapi_types::{
     HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes, TreeEntry,
     UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeResponse,
 };
-use http_client::Progress;
 use minibytes::Bytes;
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::errors::EdenApiError;
 use crate::response::{Response, ResponseMeta};
-
-pub type ProgressCallback = Box<dyn FnMut(Progress) + Send + 'static>;
 
 #[async_trait]
 pub trait EdenApi: Send + Sync + 'static {
@@ -36,14 +33,12 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         keys: Vec<Key>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<FileEntry>, EdenApiError>;
 
     async fn files_attrs(
         &self,
         repo: String,
         reqs: Vec<FileSpec>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<FileEntry>, EdenApiError>;
 
     async fn history(
@@ -51,7 +46,6 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         keys: Vec<Key>,
         length: Option<u32>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<HistoryEntry>, EdenApiError>;
 
     async fn trees(
@@ -59,7 +53,6 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError>;
 
     async fn complete_trees(
@@ -69,14 +62,12 @@ pub trait EdenApi: Send + Sync + 'static {
         mfnodes: Vec<HgId>,
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError>;
 
     async fn commit_revlog_data(
         &self,
         repo: String,
         hgids: Vec<HgId>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<CommitRevlogData>, EdenApiError>;
 
     async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError>;
@@ -88,17 +79,12 @@ pub trait EdenApi: Send + Sync + 'static {
         new_master: HgId,
     ) -> Result<CloneData<HgId>, EdenApiError>;
 
-    async fn full_idmap_clone_data(
-        &self,
-        repo: String,
-        progress: Option<ProgressCallback>,
-    ) -> Result<CloneData<HgId>, EdenApiError>;
+    async fn full_idmap_clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError>;
 
     async fn commit_location_to_hash(
         &self,
         repo: String,
         requests: Vec<CommitLocationToHashRequest>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError>;
 
     async fn commit_hash_to_location(
@@ -106,7 +92,6 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError>;
 
     /// Return a subset of commits that are known by the server.
@@ -143,7 +128,6 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         bookmarks: Vec<String>,
-        progress: Option<ProgressCallback>,
     ) -> Result<Response<BookmarkEntry>, EdenApiError>;
 
     /// Lookup items and return signed upload tokens if an item has been uploaded
