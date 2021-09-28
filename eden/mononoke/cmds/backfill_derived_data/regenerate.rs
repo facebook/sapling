@@ -109,7 +109,7 @@ pub async fn regenerate_derived_data(
     repo: &BlobRepo,
     csids: Vec<ChangesetId>,
     derived_data_type: String,
-    opts: DeriveOptions,
+    opts: &DeriveOptions,
 ) -> Result<BenchmarkResult, Error> {
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
 
@@ -134,7 +134,7 @@ pub async fn regenerate_derived_data(
         DeriveOptions::Simple => derive_simple(&ctx, &repo, csids, derived_utils).await,
         DeriveOptions::Backfill => derive_with_backfill(&ctx, &repo, csids, derived_utils).await,
         DeriveOptions::BackfillParallel { batch_size } => {
-            derive_with_parallel_backfill(&ctx, &repo, csids, derived_utils, batch_size).await
+            derive_with_parallel_backfill(&ctx, &repo, csids, derived_utils, *batch_size).await
         }
     }
 }
