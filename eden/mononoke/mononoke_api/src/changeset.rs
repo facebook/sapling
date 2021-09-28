@@ -571,32 +571,34 @@ impl ChangesetContext {
                                 // If the source still exists in the current
                                 // commit, or this isn't the first place it
                                 // was copied to, it was a copy.
+                                let from = ChangesetPathContentContext::new_with_fsnode_entry(
+                                    other.clone(),
+                                    (**from_path).clone(),
+                                    *from_entry,
+                                );
                                 Some(ChangesetPathDiffContext::Copied(
                                     ChangesetPathContentContext::new_with_fsnode_entry(
                                         self.clone(),
-                                        path.clone(),
+                                        path,
                                         entry,
                                     ),
-                                    ChangesetPathContentContext::new_with_fsnode_entry(
-                                        other.clone(),
-                                        (**from_path).clone(),
-                                        *from_entry,
-                                    ),
+                                    from,
                                 ))
                             } else {
                                 // If it doesn't, and this is the first place
                                 // it was copied to, it was a move.
+                                let from = ChangesetPathContentContext::new_with_fsnode_entry(
+                                    other.clone(),
+                                    (**from_path).clone(),
+                                    *from_entry,
+                                );
                                 Some(ChangesetPathDiffContext::Moved(
                                     ChangesetPathContentContext::new_with_fsnode_entry(
                                         self.clone(),
-                                        path.clone(),
+                                        path,
                                         entry,
                                     ),
-                                    ChangesetPathContentContext::new_with_fsnode_entry(
-                                        other.clone(),
-                                        (**from_path).clone(),
-                                        *from_entry,
-                                    ),
+                                    from,
                                 ))
                             }
                         } else {
