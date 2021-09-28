@@ -2165,10 +2165,13 @@ void EdenServiceHandler::startRecordingBackingStoreFetch() {
 void EdenServiceHandler::stopRecordingBackingStoreFetch(
     GetFetchedFilesResult& results) {
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
-  for (const auto& backingStore : server_->getHgQueuedBackingStores()) {
+  for (const auto& backingStore : server_->getBackingStores()) {
     auto filePaths = backingStore->stopRecordingFetch();
-    (*results.fetchedFilePaths_ref())["HgQueuedBackingStore"].insert(
-        filePaths.begin(), filePaths.end());
+    // recording is only implemented for HgQueuedBackingStore at the moment
+    if (!filePaths.empty()) {
+      (*results.fetchedFilePaths_ref())["HgQueuedBackingStore"].insert(
+          filePaths.begin(), filePaths.end());
+    }
   }
 } // namespace eden
 
