@@ -62,6 +62,7 @@
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/LocalStoreCachedBackingStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/PathLoader.h"
@@ -948,8 +949,22 @@ apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto backingStore = edenMount->getObjectStore()->getBackingStore();
-  auto hgBackingStore =
-      std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
+  std::shared_ptr<HgQueuedBackingStore> hgBackingStore{nullptr};
+
+  // TODO: remove these dynamic casts in favor of a QueryInterface method
+  // BackingStore -> LocalStoreCachedBackingStore
+  auto localStoreCachedBackingStore =
+      std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(backingStore);
+  if (!localStoreCachedBackingStore) {
+    // BackingStore -> HgQueuedBackingStore
+    hgBackingStore =
+        std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
+  } else {
+    // LocalStoreCachedBackingStore -> HgQueuedBackingStore
+    hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+        localStoreCachedBackingStore->getBackingStore());
+  }
+
   if (!hgBackingStore) {
     // typeid() does not evaluate expressions
     auto& r = *backingStore.get();

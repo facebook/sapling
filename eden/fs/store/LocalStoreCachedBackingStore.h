@@ -67,6 +67,14 @@ class LocalStoreCachedBackingStore : public BackingStore {
 
   std::optional<folly::StringPiece> getRepoName() override;
 
+  /**
+   * Get the underlying BackingStore. This should only be used for operations
+   * that need to be made directly on the BackingStore, like getting a TraceBus
+   */
+  const std::shared_ptr<BackingStore>& getBackingStore() {
+    return backingStore_;
+  }
+
  private:
   std::shared_ptr<BackingStore> backingStore_;
   std::shared_ptr<LocalStore> localStore_;
