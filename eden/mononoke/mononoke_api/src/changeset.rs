@@ -36,7 +36,7 @@ use crate::changeset_path::{
 };
 use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
-use crate::path::MononokePath;
+use crate::path::{is_related_to, MononokePath};
 use crate::repo::RepoContext;
 use crate::specifiers::{ChangesetId, GitSha1, HgChangesetId};
 
@@ -442,13 +442,12 @@ impl ChangesetContext {
     ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
         // Helper to that checks if a path is within the givien path restrictions
         fn within_restrictions(
-            path: Option<MPath>,
+            path: Option<&MPath>,
             path_restrictions: &Option<Vec<MononokePath>>,
         ) -> bool {
-            let mononoke_path = MononokePath::new(path);
             path_restrictions.as_ref().map_or(true, |i| {
                 i.iter()
-                    .any(|path_restriction| mononoke_path.is_related_to(&path_restriction))
+                    .any(|path_restriction| is_related_to(path, path_restriction.as_mpath()))
             })
         }
         let other = ChangesetContext::new(self.repo.clone(), other);
@@ -547,7 +546,7 @@ impl ChangesetContext {
                         ManifestDiff::Added(path, ..)
                         | ManifestDiff::Changed(path, ..)
                         | ManifestDiff::Removed(path, ..) => {
-                            within_restrictions(path.clone(), &path_restrictions)
+                            within_restrictions(path.as_ref(), &path_restrictions)
                         }
                     }
                 },
@@ -555,9 +554,7 @@ impl ChangesetContext {
             .try_filter_map(|diff_entry| {
                 future::ok(match diff_entry {
                     ManifestDiff::Added(Some(path), entry @ ManifestEntry::Leaf(_)) => {
-                        if !diff_files
-                            || !within_restrictions(Some(path.clone()), &path_restrictions)
-                        {
+                        if !diff_files || !within_restrictions(Some(&path), &path_restrictions) {
                             None
                         } else if let Some((from_path, from_entry)) = inv_copy_path_map.get(&&path)
                         {
@@ -616,7 +613,7 @@ impl ChangesetContext {
                             // The file is was moved (not removed), it will be covered by a "Moved" entry.
                             None
                         } else if !diff_files
-                            || !within_restrictions(Some(path.clone()), &path_restrictions)
+                            || !within_restrictions(Some(&path), &path_restrictions)
                         {
                             None
                         } else {
@@ -634,9 +631,7 @@ impl ChangesetContext {
                         from_entry @ ManifestEntry::Leaf(_),
                         to_entry @ ManifestEntry::Leaf(_),
                     ) => {
-                        if !diff_files
-                            || !within_restrictions(Some(path.clone()), &path_restrictions)
-                        {
+                        if !diff_files || !within_restrictions(Some(&path), &path_restrictions) {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Changed(
@@ -654,9 +649,7 @@ impl ChangesetContext {
                         }
                     }
                     ManifestDiff::Added(Some(path), entry @ ManifestEntry::Tree(_)) => {
-                        if !diff_trees
-                            || !within_restrictions(Some(path.clone()), &path_restrictions)
-                        {
+                        if !diff_trees || !within_restrictions(Some(&path), &path_restrictions) {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Added(
@@ -669,9 +662,7 @@ impl ChangesetContext {
                         }
                     }
                     ManifestDiff::Removed(Some(path), entry @ ManifestEntry::Tree(_)) => {
-                        if !diff_trees
-                            || !within_restrictions(Some(path.clone()), &path_restrictions)
-                        {
+                        if !diff_trees || !within_restrictions(Some(&path), &path_restrictions) {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Removed(
@@ -688,9 +679,7 @@ impl ChangesetContext {
                         from_entry @ ManifestEntry::Tree(_),
                         to_entry @ ManifestEntry::Tree(_),
                     ) => {
-                        if !diff_trees
-                            || !within_restrictions(Some(path.clone()), &path_restrictions)
-                        {
+                        if !diff_trees || !within_restrictions(Some(&path), &path_restrictions) {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Changed(

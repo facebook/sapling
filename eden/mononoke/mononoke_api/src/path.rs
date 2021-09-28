@@ -17,6 +17,20 @@ use crate::errors::MononokeError;
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MononokePath(Option<MPath>);
 
+/// Whether this path is a path prefix of the given path.
+/// `foo` is a prefix of `foo/bar`, but not of `foo1`.
+pub fn is_prefix_of(lhs: Option<&MPath>, rhs: Option<&MPath>) -> bool {
+    match (lhs, rhs) {
+        (None, _) => true,
+        (_, None) => false,
+        (Some(lhs_mpath), Some(rhs_mpath)) => lhs_mpath.is_prefix_of(rhs_mpath),
+    }
+}
+
+pub fn is_related_to(lhs: Option<&MPath>, rhs: Option<&MPath>) -> bool {
+    is_prefix_of(lhs, rhs) || is_prefix_of(rhs, lhs)
+}
+
 impl MononokePath {
     pub fn new(path: Option<MPath>) -> Self {
         Self(path)
@@ -34,19 +48,9 @@ impl MononokePath {
         MononokePathPrefixes::new(self)
     }
 
-    /// Whether this path is a path prefix of the given path.
-    /// `foo` is a prefix of `foo/bar`, but not of `foo1`.
-    pub fn is_prefix_of(&self, other: &Self) -> bool {
-        match (self.0.as_ref(), other.0.as_ref()) {
-            (None, _) => true,
-            (_, None) => false,
-            (Some(self_mpath), Some(other_mpath)) => self_mpath.is_prefix_of(other_mpath),
-        }
-    }
-
     /// Whether self is prefix of other or the other way arround.
     pub fn is_related_to(&self, other: &Self) -> bool {
-        self.is_prefix_of(other) || other.is_prefix_of(&self)
+        is_related_to(self.as_mpath(), other.as_mpath())
     }
 }
 
@@ -147,12 +151,12 @@ mod test {
         let x = MononokePath::try_from("a/b/c")?;
         let y = MononokePath::try_from("a/b")?;
         let z = MononokePath::try_from("a/d")?;
-        assert!(y.is_prefix_of(&x));
-        assert!(!z.is_prefix_of(&x));
-        assert!(x.is_prefix_of(&x));
-        assert!(!x.is_prefix_of(&y));
-        assert!(x.is_related_to(&y));
-        assert!(!x.is_related_to(&z));
+        assert!(is_prefix_of(y.as_mpath(), x.as_mpath()));
+        assert!(!is_prefix_of(z.as_mpath(), x.as_mpath()));
+        assert!(is_prefix_of(x.as_mpath(), x.as_mpath()));
+        assert!(!is_prefix_of(x.as_mpath(), y.as_mpath()));
+        assert!(is_related_to(x.as_mpath(), y.as_mpath()));
+        assert!(!is_related_to(x.as_mpath(), z.as_mpath()));
         Ok(())
     }
 }
