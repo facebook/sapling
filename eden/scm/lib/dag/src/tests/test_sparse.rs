@@ -486,6 +486,14 @@ async fn test_resolve_mixed_result() {
     }
 }
 
+#[tokio::test]
+async fn test_flush_lazy_vertex() {
+    // Test flushing with main vertex set to a lazy vertex.
+    let server = TestDag::draw("A-B-C-D # master: D");
+    let mut client = server.client_cloned_data().await;
+    client.dag.flush(&["B".into()]).await.unwrap();
+}
+
 async fn client_for_local_cache_test() -> TestDag {
     let server = TestDag::draw("A-B-C-D-E-F-G # master: G");
     server.client_cloned_data().await

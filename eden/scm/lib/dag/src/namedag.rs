@@ -214,10 +214,8 @@ where
     /// flush directly (see `add_heads_and_flush`, `import_clone_data`).
     async fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
         // Sanity check.
-        for head in master_heads.iter() {
-            if !self.map.contains_vertex_name(head).await? {
-                return head.not_found();
-            }
+        for result in self.vertex_id_batch(&master_heads).await? {
+            result?;
         }
 
         // Write cached IdMap to disk.
