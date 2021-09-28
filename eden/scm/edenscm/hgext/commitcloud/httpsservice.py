@@ -22,6 +22,7 @@ from edenscm.mercurial import (
     util,
     commands,
     httpconnection,
+    httpclient,
 )
 from edenscm.mercurial.i18n import _
 
@@ -117,12 +118,14 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                     ),
                 )
 
-        self.connection = httplib.HTTPSConnection(
+        self.connection = httpclient.HTTPConnection(
             remotehost,
             remoteport,
-            context=sslcontext,
             timeout=DEFAULT_TIMEOUT,
+            use_ssl=True,
+            ssl_wrap_socket=sslcontext.wrap_socket,
         )
+
         self.ui.debug(
             "will be connecting to %s:%d\n" % (remotehost, remoteport),
             component="commitcloud",
@@ -135,7 +138,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         return self.headers.get(s)
 
     def _send(self, path, data):
-        e = None
+        lastretriableex = None
         rdata = None
         # print request if debugrequests and debug are both on
         if self.debugrequests:
@@ -156,13 +159,14 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             try:
                 self.connection.request("POST", path, rdata, self.headers)
                 resp = self.connection.getresponse()
-                if resp.status == httplib.UNAUTHORIZED:
+
+                if resp.status == int(httplib.UNAUTHORIZED):
                     raise ccerror.RegistrationError(self.ui, _("unauthorized client"))
-                if resp.status == httplib.FORBIDDEN:
+                if resp.status == int(httplib.FORBIDDEN):
                     raise ccerror.RegistrationError(self.ui, _("forbidden client"))
-                if resp.status == httplib.BAD_REQUEST:
+                if resp.status == int(httplib.BAD_REQUEST):
                     raise ccerror.BadRequestError(self.ui, resp.reason)
-                if resp.status != httplib.OK:
+                if resp.status != int(httplib.OK):
                     raise ccerror.ServiceError(
                         self.ui, "%d %s" % (resp.status, resp.reason)
                     )
@@ -175,9 +179,9 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                 if "error" in data:
                     raise ccerror.ServiceError(self.ui, data["error"])
                 return data
-            except httplib.HTTPException:
+            except httplib.HTTPException as e:
+                lastretriableex = e
                 self.connection.close()
-                self.connection.connect()
             except (socket.timeout, socket.gaierror) as e:
                 raise error.Abort(
                     _("network error: %s") % e, hint=_("check your network connection")
@@ -190,8 +194,14 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                 raise ccerror.TLSAccessError(self.ui, str(e))
             time.sleep(sl)
             sl *= 2
-        if e:
-            raise ccerror.ServiceError(self.ui, str(e))
+
+        # Control flow can only end up here if we have failed all retries.
+        raise ccerror.ServiceError(
+            self.ui,
+            "Failed after {} tries. {}".format(
+                MAX_CONNECT_RETRIES, str(lastretriableex)
+            ),
+        )
 
     def _timedsend(self, path, data):
         start = util.timer()
