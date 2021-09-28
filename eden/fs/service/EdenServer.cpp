@@ -1764,9 +1764,20 @@ EdenServer::getHgQueuedBackingStores() {
   {
     auto lockedStores = this->backingStores_.rlock();
     for (auto entry : *lockedStores) {
+      // TODO: remove these dynamic casts in favor of a QueryInterface method
       if (auto store =
               std::dynamic_pointer_cast<HgQueuedBackingStore>(entry.second)) {
         hgBackingStores.emplace(std::move(store));
+      } else if (
+          auto store = std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(
+              entry.second)) {
+        auto inner_store = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+            store->getBackingStore());
+        if (inner_store) {
+          // dynamic_pointer_cast returns a copy of the shared pointer, so it is
+          // safe to be moved
+          hgBackingStores.emplace(std::move(inner_store));
+        }
       }
     }
   }
