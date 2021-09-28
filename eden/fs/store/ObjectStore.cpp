@@ -247,7 +247,8 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
     auto metadataCache = metadataCache_.wlock();
     auto cacheIter = metadataCache->find(id);
     if (cacheIter != metadataCache->end()) {
-      updateBlobMetadataStats(true, false, false);
+      stats_->getObjectStoreStatsForCurrentThread()
+          .getBlobMetadataFromMemory.addValue(1);
       context.didFetch(
           ObjectFetchContext::BlobMetadata,
           id,
@@ -264,7 +265,8 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
   return localStore_->getBlobMetadata(id).thenValue(
       [self, id, &context](std::optional<BlobMetadata>&& metadata) {
         if (metadata) {
-          self->updateBlobMetadataStats(false, true, false);
+          self->stats_->getObjectStoreStatsForCurrentThread()
+              .getBlobMetadataFromLocalStore.addValue(1);
           self->metadataCache_.wlock()->set(id, *metadata);
           context.didFetch(
               ObjectFetchContext::BlobMetadata,
@@ -289,7 +291,8 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
             .via(self->executor_)
             .thenValue([self, id, &context](BackingStore::GetBlobRes result) {
               if (result.blob) {
-                self->updateBlobMetadataStats(false, false, true);
+                self->stats_->getObjectStoreStatsForCurrentThread()
+                    .getBlobMetadataFromBackingStore.addValue(1);
                 self->localStore_->putBlob(id, result.blob.get());
                 auto metadata =
                     self->localStore_->putBlobMetadata(id, result.blob.get());
@@ -306,19 +309,10 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
                 return makeFuture(metadata);
               }
 
-              self->updateBlobMetadataStats(false, false, false);
               throw std::domain_error(
                   folly::to<string>("blob ", id.toString(), " not found"));
             });
       });
-}
-
-void ObjectStore::updateBlobMetadataStats(bool memory, bool local, bool backing)
-    const {
-  ObjectStoreThreadStats& stats = stats_->getObjectStoreStatsForCurrentThread();
-  stats.getBlobMetadataFromMemory.addValue(memory);
-  stats.getBlobMetadataFromLocalStore.addValue(local);
-  stats.getBlobMetadataFromBackingStore.addValue(backing);
 }
 
 Future<Hash> ObjectStore::getBlobSha1(

@@ -298,8 +298,6 @@ class ObjectStore : public IObjectStore,
   std::shared_ptr<ProcessNameCache> processNameCache_;
   std::shared_ptr<StructuredLogger> structuredLogger_;
   std::shared_ptr<const EdenConfig> edenConfig_;
-
-  void updateBlobMetadataStats(bool memory, bool local, bool backing) const;
 };
 
 } // namespace facebook::eden
