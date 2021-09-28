@@ -30,6 +30,7 @@ use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement, Svnrev};
 use reachabilityindex::ReachabilityIndex;
 use skeleton_manifest::RootSkeletonManifestId;
 use sorted_vector_map::SortedVectorMap;
+use tunables::tunables;
 
 use crate::changeset_path::{
     ChangesetPathContentContext, ChangesetPathContext, ChangesetPathHistoryContext,
@@ -389,6 +390,21 @@ impl ChangesetContext {
     /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
     /// own ancestor for the purpose of this call.
     pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
+        if !tunables().get_segmented_changelog_disable_for_server_side_ops() {
+            let segmented_changelog = self.repo().segmented_changelog();
+            // If we have segmeneted changelog enabled...
+            if !segmented_changelog.disabled(&self.ctx()).await? {
+                // ... and it has the answer for us ...
+                if let Some(result) = segmented_changelog
+                    .is_ancestor(&self.ctx(), self.id, other_commit)
+                    .await?
+                {
+                    // ... it's cheaper to return it.
+                    return Ok(result);
+                }
+            }
+        }
+
         let is_ancestor_of = self
             .repo()
             .skiplist_index()

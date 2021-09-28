@@ -94,7 +94,6 @@ pub struct MononokeTunables {
     skiplist_max_skips_without_yield: AtomicI64,
     skiplist_reload_disabled: AtomicBool,
     skiplist_reload_interval: AtomicI64,
-
     deduplicated_put_sampling_rate: AtomicI64,
     disable_repo_client_warm_bookmarks_cache: AtomicBool,
     remotefilelog_file_history_limit: AtomicI64,
@@ -209,6 +208,10 @@ pub struct MononokeTunables {
     // to reload segmented changelog. One can also specify jitter (or use default)
     segmented_changelog_force_reload: TunableI64ByRepo,
     segmented_changelog_force_reload_jitter_secs: AtomicI64,
+
+    // This tunable gates the usage of segmented changelog for speeding up
+    // server-side operations (like for example SCS ancestry checks)
+    segmented_changelog_disable_for_server_side_ops: AtomicBool,
 
     // Use comprehensive mode for is_present method in multiplexed blobstore for edenapi lookup api.
     edenapi_lookup_use_comprehensive_mode: AtomicBool,

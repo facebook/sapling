@@ -796,6 +796,11 @@ impl RepoContext {
         self.repo.ephemeral_blobstore()
     }
 
+    /// The segmeneted changelog for the referenced repository.
+    pub fn segmented_changelog(&self) -> &dyn SegmentedChangelog {
+        self.repo.segmented_changelog()
+    }
+
     /// The commit sync mapping for the referenced repository
     pub fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
         self.repo.synced_commit_mapping()
