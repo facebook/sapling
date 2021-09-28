@@ -146,6 +146,14 @@ class BackingStore : public RootIdCodec {
     return folly::unit;
   }
 
+  /**
+   * If supported, returns the name of the underlying repo. The result name is
+   * primarily for logging and may not be unique.
+   */
+  virtual std::optional<folly::StringPiece> getRepoName() {
+    return std::nullopt;
+  }
+
  private:
   // Forbidden copy constructor and assignment operator
   BackingStore(BackingStore const&) = delete;

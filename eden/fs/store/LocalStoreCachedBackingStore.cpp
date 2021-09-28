@@ -135,4 +135,8 @@ std::string LocalStoreCachedBackingStore::renderRootId(const RootId& rootId) {
   return backingStore_->renderRootId(rootId);
 }
 
+std::optional<folly::StringPiece> LocalStoreCachedBackingStore::getRepoName() {
+  return backingStore_->getRepoName();
+}
+
 } // namespace facebook::eden

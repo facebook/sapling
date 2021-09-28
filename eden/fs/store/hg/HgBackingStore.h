@@ -149,8 +149,8 @@ class HgBackingStore {
     return *metadataImporter_;
   }
 
-  folly::StringPiece getRepoName() {
-    return repoName_;
+  std::optional<folly::StringPiece> getRepoName() {
+    return std::optional<folly::StringPiece>{repoName_};
   }
 
  private:

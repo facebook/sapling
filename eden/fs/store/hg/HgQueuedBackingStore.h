@@ -159,12 +159,12 @@ class HgQueuedBackingStore final : public BackingStore {
 
   void periodicManagementTask() override;
 
-  HgBackingStore& getHgBackingStore() {
-    return *backingStore_;
+  std::optional<folly::StringPiece> getRepoName() override {
+    return backingStore_->getRepoName();
   }
 
-  folly::StringPiece getRepoName() {
-    return backingStore_->getRepoName();
+  HgBackingStore& getHgBackingStore() {
+    return *backingStore_;
   }
 
  private:

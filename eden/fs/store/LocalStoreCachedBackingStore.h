@@ -65,6 +65,8 @@ class LocalStoreCachedBackingStore : public BackingStore {
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;
 
+  std::optional<folly::StringPiece> getRepoName() override;
+
  private:
   std::shared_ptr<BackingStore> backingStore_;
   std::shared_ptr<LocalStore> localStore_;

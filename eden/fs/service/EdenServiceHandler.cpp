@@ -1544,16 +1544,15 @@ EdenServiceHandler::future_predictiveGlobFiles(
   auto backingStore = server_->getMount(AbsolutePathPiece{mountPoint})
                           ->getObjectStore()
                           ->getBackingStore();
-  // if repo is not specified, get repository name from the hgBackingStore
-  auto hgBackingStore =
-      std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
-  if (!hgBackingStore) {
+  // if repo is not specified, get repository name from the backingstore
+  auto repo_optional = backingStore->getRepoName();
+  if (repo_optional == std::nullopt) {
     // typeid() does not evaluate expressions
     auto& r = *backingStore.get();
     throw std::runtime_error(folly::to<std::string>(
         "mount must use HgQueuedBackingStore, type is ", typeid(r).name()));
   }
-  auto repo = hgBackingStore->getRepoName();
+  auto repo = repo_optional.value();
   // currently, predictiveGlobFiles is only supported on Linux
   // TODO: infer default OS from current OS
   folly::StringPiece os = "Linux";

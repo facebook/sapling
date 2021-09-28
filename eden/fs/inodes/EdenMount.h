@@ -428,9 +428,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   }
 
   /**
-   * Used for getting the repo name for logging purposes.
+   * Used for getting the repo name for logging purposes. This is the repo name
+   * as specified by the checkout config
    */
-  folly::StringPiece getRepoName() const {
+  folly::StringPiece getRepoSourceName() const {
     return basename(checkoutConfig_->getRepoSource());
   }
 
