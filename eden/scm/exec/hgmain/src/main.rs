@@ -34,7 +34,9 @@ fn main() {
     {
         if let Ok(cwd) = std::env::current_dir() {
             if is_edenfs_stopped(&cwd) {
-                eprintln!("error: EdenFS is not running. Please start it with `edenfsctl start`");
+                eprintln!(
+                    "error: repository is not mounted. Check if EdenFS is running and ensure repository is mounted.\nhint: try `edenfsctl doctor`."
+                );
                 std::process::exit(255);
             }
         }
