@@ -320,8 +320,9 @@ class TakeoverTest(testcase.EdenRepoTest):
         self.assertTrue(self.eden.wait_for_is_healthy())
 
     def run_restart(self) -> "pexpect.spawn[bytes]":
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         restart_cmd = [
-            FindExe.EDEN_CLI,
+            edenfsctl,
             "--config-dir",
             str(self.eden_dir),
             "--etc-eden-dir",
@@ -335,7 +336,11 @@ class TakeoverTest(testcase.EdenRepoTest):
 
         print("Restarting eden: %r" % (restart_cmd,))
         return pexpect.spawn(
-            restart_cmd[0], restart_cmd[1:], logfile=sys.stdout.buffer, timeout=5
+            restart_cmd[0],
+            restart_cmd[1:],
+            logfile=sys.stdout.buffer,
+            timeout=5,
+            env=env,
         )
 
     def assert_restart_fails_with_in_progress_graceful_restart(

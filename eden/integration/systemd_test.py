@@ -33,13 +33,14 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
         self.unsetenv("EDEN_EXPERIMENTAL_SYSTEMD")
 
         def test(start_args: typing.List[str]) -> None:
-            eden_cli: str = FindExe.EDEN_CLI
+            edenfsctl, env = FindExe.get_edenfsctl_env()
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
-                    eden_cli,
+                    edenfsctl,
                     self.get_required_eden_cli_args()
                     + ["start", "--foreground"]
                     + start_args,
+                    env=env,
                     encoding="utf-8",
                     logfile=sys.stderr,
                 )
@@ -48,9 +49,10 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
                     "Running in experimental systemd mode", start_process.before
                 )
                 subprocess.check_call(
-                    [eden_cli]
+                    [edenfsctl]
                     + self.get_required_eden_cli_args()
-                    + ["stop", "--timeout", "0"]
+                    + ["stop", "--timeout", "0"],
+                    env=env,
                 )
                 start_process.wait()
 
@@ -63,22 +65,25 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
         test(start_args=["--daemon-binary", FindExe.FAKE_EDENFS])
 
     def test_eden_start_starts_systemd_service(self) -> None:
+        edenfsctl, env = self.get_edenfsctl_cmd()
         subprocess.check_call(
-            self.get_edenfsctl_cmd() + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
+            edenfsctl + ["start", "--daemon-binary", FindExe.FAKE_EDENFS], env=env
         )
         self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
 
     def test_systemd_service_is_failed_if_edenfs_crashes_on_start(self) -> None:
         self.assert_systemd_service_is_stopped(eden_dir=self.eden_dir)
+        edenfsctl, env = self.get_edenfsctl_cmd()
         subprocess.call(
-            self.get_edenfsctl_cmd()
+            edenfsctl
             + [
                 "start",
                 "--daemon-binary",
                 FindExe.FAKE_EDENFS,
                 "--",
                 "--failDuringStartup",
-            ]
+            ],
+            env=env,
         )
         self.assert_systemd_service_is_failed(eden_dir=self.eden_dir)
 
@@ -161,17 +166,22 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
     def spawn_start_with_fake_edenfs(
         self, extra_args: typing.Sequence[str] = ()
     ) -> PexpectSpawnType:
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         return pexpect_spawn(
-            FindExe.EDEN_CLI,
+            edenfsctl,
             self.get_required_eden_cli_args()
             + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
             + list(extra_args),
+            env=env,
             encoding="utf-8",
             logfile=sys.stderr,
         )
 
-    def get_edenfsctl_cmd(self) -> typing.List[str]:
-        return [FindExe.EDEN_CLI] + self.get_required_eden_cli_args()
+    def get_edenfsctl_cmd(
+        self,
+    ) -> typing.Tuple[typing.List[str], typing.Dict[str, str]]:
+        edenfsctl, env = FindExe.get_edenfsctl_env()
+        return [edenfsctl] + self.get_required_eden_cli_args(), env
 
     def get_required_eden_cli_args(self) -> typing.List[str]:
         return [

@@ -8,7 +8,7 @@ import os
 import pathlib
 import subprocess
 import sys
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple, Dict
 
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
@@ -199,14 +199,17 @@ class StartFakeEdenFSTestBase(ServiceTestCaseBase):
         super().setUp()
         self.eden_dir = self.make_temp_dir("eden")
 
-    def _get_base_eden_args(self, eden_dir: Optional[pathlib.Path] = None) -> List[str]:
+    def _get_base_eden_args(
+        self, eden_dir: Optional[pathlib.Path] = None
+    ) -> Tuple[List[str], Dict[str, str]]:
         if eden_dir is None:
             eden_dir = self.eden_dir
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         return [
-            FindExe.EDEN_CLI,
+            edenfsctl,
             "--config-dir",
             str(eden_dir),
-        ] + self.get_required_eden_cli_args()
+        ] + self.get_required_eden_cli_args(), env
 
     def expect_start_failure(
         self,
@@ -214,7 +217,8 @@ class StartFakeEdenFSTestBase(ServiceTestCaseBase):
         eden_dir: Optional[pathlib.Path] = None,
         extra_args: Optional[Sequence[str]] = None,
     ) -> subprocess.CompletedProcess:
-        start_cmd = self._get_base_eden_args(eden_dir) + [
+        base_cmd, env = self._get_base_eden_args(eden_dir)
+        start_cmd = base_cmd + [
             "start",
             "--daemon-binary",
             FindExe.FAKE_EDENFS,
@@ -223,6 +227,7 @@ class StartFakeEdenFSTestBase(ServiceTestCaseBase):
             start_cmd.extend(extra_args)
         proc = subprocess.run(
             start_cmd,
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding="utf-8",
@@ -242,15 +247,15 @@ class StartFakeEdenFSTestBase(ServiceTestCaseBase):
         eden_dir: Optional[pathlib.Path] = None,
         extra_args: Optional[Sequence[str]] = None,
     ) -> None:
-        base_args = self._get_base_eden_args(eden_dir)
+        base_args, env = self._get_base_eden_args(eden_dir)
         start_cmd = base_args + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
         if extra_args:
             start_cmd.extend(extra_args)
-        subprocess.check_call(start_cmd)
+        subprocess.check_call(start_cmd, env=env)
 
         def cleanup():
             stop_cmd = base_args + ["stop"]
-            subprocess.call(stop_cmd)
+            subprocess.call(stop_cmd, env=env)
 
         self.exit_stack.callback(cleanup)
 
@@ -392,12 +397,12 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
             config_dir_args = ["--config-dir", str(input_path)]
         else:
             config_dir_args = []
-        eden_cli: str = FindExe.EDEN_CLI
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         fake_edenfs: str = FindExe.FAKE_EDENFS
-        base_args = [eden_cli] + self.get_required_eden_cli_args() + config_dir_args
+        base_args = [edenfsctl] + self.get_required_eden_cli_args() + config_dir_args
         start_cmd = base_args + ["start", "--daemon-binary", fake_edenfs]
         stop_cmd = base_args + ["stop"]
-        subprocess.check_call(start_cmd)
+        subprocess.check_call(start_cmd, env=env)
         try:
             argv = get_fake_edenfs_argv(resolved_path)
             self.assert_eden_dir(argv, resolved_path)

@@ -17,7 +17,7 @@ import tempfile
 import threading
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Dict, List, Optional, Union, cast, TextIO
+from typing import Any, Dict, List, Optional, Union, cast, TextIO, Tuple
 
 from eden.fs.cli import util
 from eden.thrift.legacy import EdenClient, create_thrift_client
@@ -150,10 +150,9 @@ class EdenFS(object):
         Usage example: run_cmd('mount', 'my_eden_client')
         Throws a subprocess.CalledProcessError if eden exits unsuccessfully.
         """
-        cmd = self.get_eden_cli_args(command, *args)
+        cmd, env = self.get_edenfsctl_cmd_env(command, *args)
         try:
             stderr = subprocess.STDOUT if capture_stderr else subprocess.PIPE
-            env = dict(os.environ)
             # TODO(T37669726): Re-enable LSAN.
             env["LSAN_OPTIONS"] = "detect_leaks=0:verbosity=1:log_threads=1"
             completed_process = subprocess.run(
@@ -180,10 +179,17 @@ class EdenFS(object):
         Usage example: run_cmd('mount', 'my_eden_client')
         Returns a subprocess.CompletedProcess object.
         """
-        cmd = self.get_eden_cli_args(command, *args)
+        cmd, edenfsctl_env = self.get_edenfsctl_cmd_env(command, *args)
+
+        if "env" in kwargs:
+            edenfsctl_env.update(kwargs["env"])
+        kwargs["env"] = edenfsctl_env
+
         return subprocess.run(cmd, **kwargs)
 
-    def get_eden_cli_args(self, command: str, *args: str) -> List[str]:
+    def get_edenfsctl_cmd_env(
+        self, command: str, *args: str
+    ) -> Tuple[List[str], Dict[str, str]]:
         """Combines the specified eden command args with the appropriate
         defaults.
 
@@ -194,8 +200,9 @@ class EdenFS(object):
             A list of arguments to run Eden that can be used with
             subprocess.Popen() or subprocess.check_call().
         """
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         cmd = [
-            FindExe.EDEN_CLI,
+            edenfsctl,
             "--config-dir",
             str(self._eden_dir),
             "--etc-eden-dir",
@@ -205,7 +212,7 @@ class EdenFS(object):
         ]
         cmd.append(command)
         cmd.extend(args)
-        return cmd
+        return cmd, env
 
     def wait_for_is_healthy(self, timeout: float = EDENFS_START_TIMEOUT) -> bool:
         process = self._process
@@ -295,7 +302,7 @@ class EdenFS(object):
         if self._process is not None:
             raise Exception("cannot start an already-running eden client")
 
-        args = self.get_eden_cli_args(
+        args, env = self.get_edenfsctl_cmd_env(
             "daemon", "--daemon-binary", FindExe.EDEN_DAEMON, "--foreground"
         )
 
@@ -342,6 +349,7 @@ class EdenFS(object):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
+            env=env,
         )
 
         # TODO(T69605343): Until TPX properly knows how to redirect writes done

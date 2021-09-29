@@ -30,18 +30,20 @@ class RestartTestBase(ServiceTestCaseBase):
         self.eden_dir.mkdir()
 
         def ensure_stopped() -> None:
+            edenfsctl, env = FindExe.get_edenfsctl_env()
             stop_cmd = (
-                [FindExe.EDEN_CLI, "--config-dir", str(self.eden_dir)]
+                [edenfsctl, "--config-dir", str(self.eden_dir)]
                 + self.get_required_eden_cli_args()
                 + ["stop"]
             )
-            subprocess.call(stop_cmd)
+            subprocess.call(stop_cmd, env=env)
 
         self.addCleanup(ensure_stopped)
 
     def _spawn_restart(self, *args: str) -> PexpectSpawnType:
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         restart_cmd = (
-            [FindExe.EDEN_CLI, "--config-dir", str(self.eden_dir)]
+            [edenfsctl, "--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
             + ["restart", "--daemon-binary", FindExe.FAKE_EDENFS]
         )
@@ -49,7 +51,11 @@ class RestartTestBase(ServiceTestCaseBase):
 
         print("Retarting EdenFS: %r" % (restart_cmd,))
         return pexpect_spawn(
-            restart_cmd[0], restart_cmd[1:], logfile=sys.stdout.buffer, timeout=30
+            restart_cmd[0],
+            restart_cmd[1:],
+            logfile=sys.stdout.buffer,
+            timeout=30,
+            env=env,
         )
 
     def _start_fake_edenfs(self) -> int:

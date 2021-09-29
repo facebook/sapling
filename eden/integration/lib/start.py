@@ -21,13 +21,15 @@ def run_eden_start_with_real_daemon(
     home_dir: pathlib.Path,
     systemd: bool,
 ) -> Generator[None, None, None]:
+    edenfsctl, edenfsctl_env = FindExe.get_edenfsctl_env()
     env = dict(os.environ)
+    env.update(edenfsctl_env)
     if systemd:
         env["EDEN_EXPERIMENTAL_SYSTEMD"] = "1"
     else:
         env.pop("EDEN_EXPERIMENTAL_SYSTEMD", None)
     eden_cli_args: List[str] = [
-        FindExe.EDEN_CLI,
+        edenfsctl,
         "--config-dir",
         str(eden_dir),
         "--etc-eden-dir",

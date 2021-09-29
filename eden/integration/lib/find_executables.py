@@ -76,13 +76,28 @@ class FindExeClass(object):
                 self._EDEN_SRC_ROOT = src_root
         return src_root
 
+    def get_edenfsctl_env(self) -> Tuple[str, Dict[str, str]]:
+        """Get path to edenfsctl and environmental variable required to run it."""
+        env = os.environ.copy()
+        env["EDENFSCTL_REAL"] = self._EDENFSCTL_REAL
+        return self._EDENFSCTL, env
+
     @cached_property
-    def EDEN_CLI(self) -> str:
+    def _EDENFSCTL_REAL(self) -> str:
         return self._find_exe(
-            "eden CLI",
-            env="EDENFS_CLI_PATH",
+            "edenfsctl (Python)",
+            env="EDENFSCTL_REAL_PATH",
             buck_path="eden/fs/cli/edenfsctl.par",
             cmake_path="eden/fs/cli/edenfsctl.real",
+        )
+
+    @cached_property
+    def _EDENFSCTL(self) -> str:
+        return self._find_exe(
+            "edenfsctl (Rust)",
+            env="EDENFSCTL_RUST_PATH",
+            buck_path="eden/fs/cli_rs/edenfsctl/edenfsctl#binary/edenfsctl",
+            cmake_path="eden/fs/cli_rs/edenfsctl/release/edenfsctl",
         )
 
     @cached_property

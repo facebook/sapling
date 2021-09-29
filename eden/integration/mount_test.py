@@ -131,8 +131,10 @@ class MountTest(testcase.EdenRepoTest):
 
             # Run the "eden mount" CLI command.
             # This won't succeed until we unblock the mount.
-            mount_cmd = self.eden.get_eden_cli_args("mount", self.mount)
-            mount_proc = subprocess.Popen(mount_cmd)
+            mount_cmd, edenfsctl_env = self.eden.get_edenfsctl_cmd_env(
+                "mount", self.mount
+            )
+            mount_proc = subprocess.Popen(mount_cmd, env=edenfsctl_env)
 
             # Wait for the new mount to be reported by edenfs
             def mount_started() -> Optional[bool]:

@@ -47,12 +47,14 @@ class StopTestBase(ServiceTestCaseBase):
         self.eden_dir.mkdir()
 
     def spawn_stop(self, extra_args: List[str]) -> PexpectSpawnType:
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         return pexpect_spawn(
-            FindExe.EDEN_CLI,
+            edenfsctl,
             ["--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
             + ["stop"]
             + extra_args,
+            env=env,
             encoding="utf-8",
             logfile=sys.stderr,
         )

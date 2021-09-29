@@ -50,8 +50,9 @@ class FakeEdenFS(typing.ContextManager[int]):
         home_dir: pathlib.Path,
         extra_arguments: typing.Optional[typing.Sequence[str]] = None,
     ) -> "FakeEdenFS":
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         command: typing.List[str] = [
-            FindExe.EDEN_CLI,
+            edenfsctl,
             "--config-dir",
             str(eden_dir),
             "--etc-eden-dir",
@@ -65,7 +66,7 @@ class FakeEdenFS(typing.ContextManager[int]):
         if extra_arguments:
             command.append("--")
             command.extend(extra_arguments)
-        subprocess.check_call(command)
+        subprocess.check_call(command, env=env)
         return cls.from_existing_process(eden_dir=eden_dir)
 
     @staticmethod

@@ -315,10 +315,10 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase):
         mount_path: Path,
         extra_args: Optional[Sequence[str]] = None,
     ) -> subprocess.CompletedProcess:
-        eden_cli: str = FindExe.EDEN_CLI
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         fake_edenfs: str = FindExe.FAKE_EDENFS
         base_args = [
-            eden_cli,
+            edenfsctl,
             "--config-dir",
             str(self.eden_dir),
         ] + self.get_required_eden_cli_args()
@@ -334,6 +334,7 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase):
 
         proc = subprocess.run(
             clone_cmd,
+            env=env,
             encoding="utf-8",
             errors="replace",
             stdout=subprocess.PIPE,

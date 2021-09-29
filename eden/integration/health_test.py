@@ -67,12 +67,14 @@ class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
             self.assert_process_succeeds(status_process)
 
     def spawn_status(self, extra_args: typing.List[str]) -> PexpectSpawnType:
+        edenfsctl, env = FindExe.get_edenfsctl_env()
         return pexpect_spawn(
-            FindExe.EDEN_CLI,
+            edenfsctl,
             ["--config-dir", str(self.temp_dir)]
             + self.get_required_eden_cli_args()
             + ["status"]
             + extra_args,
+            env=env,
             encoding="utf-8",
             logfile=sys.stderr,
         )
