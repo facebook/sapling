@@ -52,12 +52,23 @@ async fn check_request_item(
         AnyId::AnyFileContentId(id) => {
             let content_id = repo.convert_file_to_content_id(id, bubble_id).await?;
             if let Some(content_id) = content_id {
-                Lookup::Present(Some(
-                    FileContentTokenMetadata {
-                        content_size: repo.fetch_file_content_size(content_id, bubble_id).await?,
-                    }
-                    .into(),
-                ))
+                // Reasons why check if content id is present:
+                // 1. If content_id is provided, we haven't yet checked it is actually
+                // in the blobstore
+                // 2. Maybe alias was written to blobstore but the actual blob has not
+                // 3. We want to do a comprehensive lookup here
+                if repo.is_file_present_by_contentid(content_id).await? {
+                    Lookup::Present(Some(
+                        FileContentTokenMetadata {
+                            content_size: repo
+                                .fetch_file_content_size(content_id, bubble_id)
+                                .await?,
+                        }
+                        .into(),
+                    ))
+                } else {
+                    Lookup::NotPresent
+                }
             } else {
                 Lookup::NotPresent
             }

@@ -65,8 +65,10 @@ impl Loadable for FetchKey {
     type Value = ContentId;
 
     /// Return the canonical ID for a key. It doesn't check if the corresponding content actually
-    /// exists (its possible for an alias to exist before the ID if there was an interrupted store
-    /// operation).
+    /// exists:
+    /// - When called with content_id, it doesn't check the content id is stored in the blobstore
+    /// - It is possible for an alias to exist before the ID if there was an interrupted store
+    /// operation.
     async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: &'a CoreContext,
