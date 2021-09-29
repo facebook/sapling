@@ -456,7 +456,7 @@ impl PeriodicUpdateSegmentedChangelog {
             let notify = Arc::clone(&notify);
             async move {
                 // jitter is here so not all repos try to update at the same time
-                let jitter = rand::thread_rng().gen_range(Duration::from_secs(0), period);
+                let jitter = rand::thread_rng().gen_range(Duration::from_secs(0)..period);
                 // there's lots of warmup happenning at server startup so wait at least a period
                 // before starting to update
                 tokio::time::sleep(period + jitter).await;

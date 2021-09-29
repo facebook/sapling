@@ -458,23 +458,22 @@ fn is_default<T: Default + PartialEq>(v: &T) -> bool {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireRepoPathBuf {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         RepoPathBuf::arbitrary(g).to_wire()
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireKey {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Key::arbitrary(g).to_wire()
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireEdenApiServerError {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        use rand::Rng;
-        let variant = g.gen_range(0, 2);
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let variant = u32::arbitrary(g) % 2;
         match variant {
             0 => WireEdenApiServerError::Unknown,
             1 => WireEdenApiServerError::OpaqueError(Arbitrary::arbitrary(g)),
@@ -485,14 +484,14 @@ impl Arbitrary for WireEdenApiServerError {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireParents {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Parents::arbitrary(g).to_wire()
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireRevisionstoreMetadata {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             size: Arbitrary::arbitrary(g),
             flags: Arbitrary::arbitrary(g),
@@ -502,7 +501,7 @@ impl Arbitrary for WireRevisionstoreMetadata {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireDagId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         DagId::arbitrary(g).to_wire()
     }
 }

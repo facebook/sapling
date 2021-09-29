@@ -49,7 +49,7 @@ use quickcheck::Arbitrary;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Key {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Key::new(RepoPathBuf::arbitrary(g), HgId::arbitrary(g))
     }
 }

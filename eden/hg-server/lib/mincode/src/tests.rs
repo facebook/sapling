@@ -18,6 +18,12 @@ struct Foo {
 
 quickcheck! {
     fn test_roundtrip(bar: String, baz: Option<(f64, i32, u8)>, derp: bool, list: Vec<u32>) -> bool {
+        if let Some((f, _, _)) = baz {
+            if f.is_nan() {
+                return true;
+            }
+        };
+
         let foo = Foo { bar, baz, derp, list };
         let bytes = crate::serialize(&foo).unwrap();
         let foo_deserialized: Foo = crate::deserialize(&bytes).unwrap();

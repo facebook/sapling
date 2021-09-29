@@ -85,7 +85,7 @@ impl UploadToken {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for UploadToken {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             data: Arbitrary::arbitrary(g),
             signature: Arbitrary::arbitrary(g),
@@ -95,7 +95,7 @@ impl Arbitrary for UploadToken {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for UploadTokenData {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             id: Arbitrary::arbitrary(g),
             bubble_id: Arbitrary::arbitrary(g),
@@ -106,7 +106,7 @@ impl Arbitrary for UploadTokenData {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for UploadTokenSignature {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             signature: Arbitrary::arbitrary(g),
         }

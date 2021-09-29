@@ -10,7 +10,7 @@ memmap = "0.7"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 
 [dev-dependencies]
-quickcheck = "0.9"
+quickcheck = "1.0"
 
 [features]
 default = ["frombytes"]

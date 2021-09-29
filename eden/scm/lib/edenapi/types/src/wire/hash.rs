@@ -76,7 +76,7 @@ macro_rules! wire_hash {
 
         #[cfg(any(test, feature = "for-tests"))]
         impl quickcheck::Arbitrary for $wire {
-            fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+            fn arbitrary(g: &mut quickcheck::Gen) -> Self {
                 $api::arbitrary(g).to_wire()
             }
         }

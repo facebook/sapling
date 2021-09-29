@@ -15,8 +15,8 @@ vlqencoding = { path = "../vlqencoding" }
 
 [dev-dependencies]
 drawdag = { path = "../drawdag" }
-rand = { version = "0.7", features = ["small_rng"] }
-rand_chacha = "0.2"
+rand = { version = "0.8", features = ["small_rng"] }
+rand_chacha = "0.3"
 renderdag = { path = "../renderdag" }
 tempdir = "0.3"
 types = { path = "../types", features = ["for-tests"], default-features = false }

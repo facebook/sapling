@@ -42,21 +42,27 @@ impl OrdTree {
         }
     }
 
-    fn make_arbitrary<G: Gen>(g: &mut G, size: usize) -> Self {
+    fn make_arbitrary(g: &mut Gen, size: usize) -> Self {
         if size <= 1 {
             OrdTree::Leaf(usize::arbitrary(g))
         } else {
             let id = usize::arbitrary(g);
-            let child_count = g.gen_range(0, size) + 1;
+            let child_count = 1 + usize::arbitrary(g) % size;
             let mut children = Vec::new();
             let mut spare_size = size - child_count;
             for _ in 0..=child_count {
-                let child_size = g.gen_range(0, spare_size + 1);
+                let child_size = usize::arbitrary(g) % (spare_size + 1);
                 spare_size -= child_size;
                 children.push(OrdTree::make_arbitrary(g, child_size + 1));
             }
             children.push(OrdTree::make_arbitrary(g, spare_size + 1));
-            children.shuffle(g);
+            // shuffle the children using the Fisher–Yates algorithm
+            let n = children.len();
+            for i in 0..(n - 1) {
+                // j <- random index such that i <= j < n
+                let j = i + usize::arbitrary(g) % (n - i);
+                children.swap(i, j);
+            }
             OrdTree::Node(id, children)
         }
     }
@@ -74,7 +80,7 @@ impl OrdTree {
 }
 
 impl Arbitrary for OrdTree {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let size = g.size();
         OrdTree::make_arbitrary(g, size)
     }

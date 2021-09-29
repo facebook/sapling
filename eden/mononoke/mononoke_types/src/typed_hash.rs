@@ -237,7 +237,7 @@ macro_rules! impl_typed_hash_no_context {
         }
 
         impl $crate::private::Arbitrary for $typed {
-            fn arbitrary<G: $crate::private::Gen>(g: &mut G) -> Self {
+            fn arbitrary(g: &mut $crate::private::Gen) -> Self {
                 Self::new($crate::private::Blake2::arbitrary(g))
             }
 

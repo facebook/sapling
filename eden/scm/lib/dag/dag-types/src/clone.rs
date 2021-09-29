@@ -30,14 +30,14 @@ impl<Name> CloneData<Name> {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 
 #[cfg(any(test, feature = "for-tests"))]
 impl<Name> Arbitrary for CloneData<Name>
 where
     Name: Arbitrary,
 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let flat_segments = PreparedFlatSegments {
             segments: Vec::arbitrary(g),
         };

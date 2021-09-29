@@ -153,11 +153,10 @@ impl ToApi for WireLookupResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireAnyId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        use rand::Rng;
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use WireAnyId::*;
 
-        let variant = g.gen_range(0, 5);
+        let variant = u32::arbitrary(g) % 5;
         match variant {
             0 => WireAnyFileContentId(Arbitrary::arbitrary(g)),
             1 => WireHgFilenodeId(Arbitrary::arbitrary(g)),
@@ -171,7 +170,7 @@ impl Arbitrary for WireAnyId {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireLookupRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             id: Arbitrary::arbitrary(g),
             bubble_id: Arbitrary::arbitrary(g),

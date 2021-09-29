@@ -1099,7 +1099,7 @@ impl LfsRemoteInner {
 
             if retry {
                 if let Some(backoff_time) = backoff.next() {
-                    let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0, backoff_time));
+                    let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0..backoff_time));
                     sleep(sleep_time).await;
                     continue;
                 }

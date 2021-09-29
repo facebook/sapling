@@ -131,7 +131,7 @@ impl fmt::Display for HgChangesetEnvelope {
 }
 
 impl Arbitrary for HgChangesetEnvelope {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         HgChangesetEnvelope {
             inner: HgChangesetEnvelopeMut {
                 // XXX this doesn't ensure that the node ID actually matches the contents.

@@ -32,8 +32,8 @@ failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
-quickcheck = "0.9"
-rand = { version = "0.7", features = ["small_rng"] }
+quickcheck = "1.0"
+rand = { version = "0.8", features = ["small_rng"] }
 revset_test_helper = { version = "0.1.0", path = "revset-test-helper" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }

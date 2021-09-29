@@ -29,7 +29,7 @@ hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 libc = "0.2.98"
 openssl = "0.10.35"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
-rand = { version = "0.7", features = ["small_rng"] }
+rand = { version = "0.8", features = ["small_rng"] }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 session_id = { version = "0.1.0", path = "../server/session_id" }

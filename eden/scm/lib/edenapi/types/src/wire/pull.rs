@@ -52,14 +52,14 @@ impl ToApi for WirePullFastForwardRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WirePullFastForwardRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         PullFastForwardRequest::arbitrary(g).to_wire()
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for PullFastForwardRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         PullFastForwardRequest {
             old_master: HgId::arbitrary(g),
             new_master: HgId::arbitrary(g),

@@ -35,7 +35,7 @@ pub struct BlobDelay {
 // Adds a small amount of random delay to desynchronise when waiting
 async fn jitter_delay(raw_lag: Duration) {
     let delay =
-        thread_rng().gen_range(Duration::from_secs(0), min(Duration::from_secs(1), raw_lag));
+        thread_rng().gen_range(Duration::from_secs(0)..min(Duration::from_secs(1), raw_lag));
     tokio::time::sleep(delay).await;
 }
 

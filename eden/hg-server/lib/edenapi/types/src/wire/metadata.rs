@@ -521,7 +521,7 @@ impl<'de> serde::Deserialize<'de> for WireSha256 {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireDirectoryMetadata {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             fsnode_id: Arbitrary::arbitrary(g),
             simple_format_sha1: Arbitrary::arbitrary(g),
@@ -537,7 +537,7 @@ impl Arbitrary for WireDirectoryMetadata {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireDirectoryMetadataRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             with_fsnode_id: Arbitrary::arbitrary(g),
             with_simple_format_sha1: Arbitrary::arbitrary(g),
@@ -552,7 +552,7 @@ impl Arbitrary for WireDirectoryMetadataRequest {
 }
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileMetadata {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             revisionstore_flags: Arbitrary::arbitrary(g),
             content_id: Arbitrary::arbitrary(g),
@@ -566,7 +566,7 @@ impl Arbitrary for WireFileMetadata {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileMetadataRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             with_revisionstore_flags: Arbitrary::arbitrary(g),
             with_content_id: Arbitrary::arbitrary(g),
@@ -580,11 +580,10 @@ impl Arbitrary for WireFileMetadataRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileType {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        use rand::Rng;
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use WireFileType::*;
 
-        let variant = g.gen_range(0, 4);
+        let variant = u32::arbitrary(g) % 4;
         match variant {
             0 => Regular,
             1 => Executable,
@@ -597,36 +596,44 @@ impl Arbitrary for WireFileType {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFsnodeId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
+        for b in v.0.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         v
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireContentId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
+        for b in v.0.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         v
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireSha1 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
+        for b in v.0.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         v
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireSha256 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
+        for b in v.0.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         v
     }
 }

@@ -162,7 +162,7 @@ impl ToApi for WireFileAttributes {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileAttributes {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             content: Arbitrary::arbitrary(g),
             aux_data: Arbitrary::arbitrary(g),
@@ -204,7 +204,7 @@ impl ToApi for WireFileSpec {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileSpec {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             key: Arbitrary::arbitrary(g),
             attrs: Arbitrary::arbitrary(g),
@@ -347,7 +347,7 @@ impl ToApi for WireUploadHgFilenodeRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let bytes: Option<Vec<u8>> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
@@ -361,7 +361,7 @@ impl Arbitrary for WireFileEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileAuxData {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             total_size: Arbitrary::arbitrary(g),
             content_id: Arbitrary::arbitrary(g),
@@ -373,7 +373,7 @@ impl Arbitrary for WireFileAuxData {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
             reqs: Arbitrary::arbitrary(g),
@@ -383,7 +383,7 @@ impl Arbitrary for WireFileRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireUploadHgFilenodeRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             data: Arbitrary::arbitrary(g),
         }
@@ -392,7 +392,7 @@ impl Arbitrary for WireUploadHgFilenodeRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireHgFilenodeData {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             node_id: Arbitrary::arbitrary(g),
             parents: Arbitrary::arbitrary(g),

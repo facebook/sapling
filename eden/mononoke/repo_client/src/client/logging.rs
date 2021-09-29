@@ -319,7 +319,11 @@ fn do_wireproto_logging<'a>(
 }
 
 fn generate_random_string(len: usize) -> String {
-    thread_rng().sample_iter(&Alphanumeric).take(len).collect()
+    thread_rng()
+        .sample_iter(&Alphanumeric)
+        .map(char::from)
+        .take(len)
+        .collect()
 }
 
 fn debug_format_directory<T: AsRef<[u8]>>(directory: &T) -> String {

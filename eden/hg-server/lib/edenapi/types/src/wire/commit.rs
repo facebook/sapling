@@ -76,7 +76,7 @@ impl ToApi for WireCommitLocation {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireCommitLocation {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Location::arbitrary(g).to_wire()
     }
 }
@@ -107,7 +107,7 @@ impl ToApi for WireCommitLocationToHashRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireCommitLocationToHashRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitLocationToHashRequest::arbitrary(g).to_wire()
     }
 }
@@ -140,7 +140,7 @@ impl ToApi for WireCommitLocationToHashResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireCommitLocationToHashResponse {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitLocationToHashResponse::arbitrary(g).to_wire()
     }
 }
@@ -169,7 +169,7 @@ impl ToApi for WireCommitLocationToHashRequestBatch {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireCommitLocationToHashRequestBatch {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitLocationToHashRequestBatch::arbitrary(g).to_wire()
     }
 }
@@ -216,7 +216,7 @@ impl ToApi for WireCommitHashToLocationRequestBatch {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireCommitHashToLocationRequestBatch {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitHashToLocationRequestBatch::arbitrary(g).to_wire()
     }
 }
@@ -247,7 +247,7 @@ impl ToApi for WireCommitHashToLocationResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireCommitHashToLocationResponse {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitHashToLocationResponse::arbitrary(g).to_wire()
     }
 }

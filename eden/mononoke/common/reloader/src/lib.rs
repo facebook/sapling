@@ -162,7 +162,7 @@ impl<R: 'static + Send + Sync> Reloader<R> {
             move || {
                 if first {
                     first = false;
-                    let jitter = rand::thread_rng().gen_range(Duration::from_secs(0), period / 10);
+                    let jitter = rand::thread_rng().gen_range(Duration::from_secs(0)..period / 10);
                     period + jitter
                 } else {
                     period

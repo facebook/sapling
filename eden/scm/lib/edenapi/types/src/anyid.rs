@@ -45,11 +45,10 @@ pub struct LookupResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for AnyId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        use rand::Rng;
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use AnyId::*;
 
-        let variant = g.gen_range(0, 5);
+        let variant = u32::arbitrary(g) % 5;
         match variant {
             0 => AnyFileContentId(Arbitrary::arbitrary(g)),
             1 => HgFilenodeId(Arbitrary::arbitrary(g)),
@@ -63,7 +62,7 @@ impl Arbitrary for AnyId {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for LookupRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             id: Arbitrary::arbitrary(g),
             bubble_id: Arbitrary::arbitrary(g),

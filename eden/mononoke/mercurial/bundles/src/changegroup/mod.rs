@@ -52,7 +52,7 @@ mod test {
 
     use futures::compat::Future01CompatExt;
     use futures_old::{Future, Stream};
-    use quickcheck::{QuickCheck, StdGen, TestResult};
+    use quickcheck::{Gen, QuickCheck, TestResult};
     use tokio_codec::{FramedRead, FramedWrite};
 
     use futures_ext::StreamLayeredExt;
@@ -69,8 +69,8 @@ mod test {
         // Each test case gets pretty big (O(size**2) parts (because of
         // filelogs), each part with O(size) deltas), so reduce the size a bit
         // and generate a smaller number of test cases.
-        let rng = StdGen::new(rand::thread_rng(), 50);
-        let mut quickcheck = QuickCheck::new().gen(rng).tests(50);
+        let gen = Gen::new(50);
+        let mut quickcheck = QuickCheck::new().gen(gen).tests(50);
         // Use NoErrors here because:
         // - AsyncWrite impls aren't supposed to return Interrupted errors.
         // - WouldBlock would require parking and unparking the task, which
@@ -89,8 +89,8 @@ mod test {
     #[test]
     fn test_roundtrip_giant() {
         // Test a smaller number of cases with much larger inputs.
-        let rng = StdGen::new(rand::thread_rng(), 200);
-        let mut quickcheck = QuickCheck::new().gen(rng).tests(1);
+        let gen = Gen::new(200);
+        let mut quickcheck = QuickCheck::new().gen(gen).tests(1);
         quickcheck.quickcheck(
             roundtrip
                 as

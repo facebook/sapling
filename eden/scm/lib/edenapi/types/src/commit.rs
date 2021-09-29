@@ -54,7 +54,7 @@ pub struct CommitLocationToHashRequestBatch {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitLocationToHashRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitLocationToHashRequest {
             location: Arbitrary::arbitrary(g),
             count: Arbitrary::arbitrary(g),
@@ -64,7 +64,7 @@ impl Arbitrary for CommitLocationToHashRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitLocationToHashResponse {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitLocationToHashResponse {
             location: Arbitrary::arbitrary(g),
             count: Arbitrary::arbitrary(g),
@@ -75,7 +75,7 @@ impl Arbitrary for CommitLocationToHashResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitLocationToHashRequestBatch {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitLocationToHashRequestBatch {
             requests: Arbitrary::arbitrary(g),
         }
@@ -123,7 +123,7 @@ pub struct CommitGraphRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitGraphEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitGraphEntry {
             hgid: Arbitrary::arbitrary(g),
             parents: Arbitrary::arbitrary(g),
@@ -133,7 +133,7 @@ impl Arbitrary for CommitGraphEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitGraphRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitGraphRequest {
             common: Arbitrary::arbitrary(g),
             heads: Arbitrary::arbitrary(g),
@@ -143,7 +143,7 @@ impl Arbitrary for CommitGraphRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitHashToLocationRequestBatch {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitHashToLocationRequestBatch {
             master_heads: Arbitrary::arbitrary(g),
             hgids: Arbitrary::arbitrary(g),
@@ -154,7 +154,7 @@ impl Arbitrary for CommitHashToLocationRequestBatch {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitHashToLocationResponse {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitHashToLocationResponse {
             hgid: Arbitrary::arbitrary(g),
             result: Arbitrary::arbitrary(g),
@@ -171,7 +171,7 @@ pub struct CommitRevlogDataRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitRevlogDataRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitRevlogDataRequest {
             hgids: Arbitrary::arbitrary(g),
         }
@@ -223,7 +223,7 @@ pub fn make_hash_lookup_request(prefix: String) -> Result<CommitHashLookupReques
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitHashLookupRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitHashLookupRequest::InclusiveRange(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g))
     }
 }
@@ -238,7 +238,7 @@ pub struct CommitHashLookupResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitHashLookupResponse {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitHashLookupResponse {
             request: Arbitrary::arbitrary(g),
             hgids: Arbitrary::arbitrary(g),
@@ -381,14 +381,14 @@ pub struct EphemeralPrepareResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for EphemeralPrepareRequest {
-    fn arbitrary<G: quickcheck::Gen>(_g: &mut G) -> Self {
+    fn arbitrary(_g: &mut quickcheck::Gen) -> Self {
         EphemeralPrepareRequest {}
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for EphemeralPrepareResponse {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         EphemeralPrepareResponse {
             bubble_id: Arbitrary::arbitrary(g),
         }

@@ -223,7 +223,7 @@ mod tests {
     #[derive(Clone, Debug)]
     struct Chunks(Vec<Vec<u8>>);
     impl Arbitrary for Chunks {
-        fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        fn arbitrary(g: &mut Gen) -> Self {
             Chunks(
                 (0..g.size())
                     .map(|_| Arbitrary::arbitrary(g))

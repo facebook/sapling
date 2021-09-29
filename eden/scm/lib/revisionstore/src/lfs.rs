@@ -1232,7 +1232,7 @@ impl LfsRemoteInner {
                 };
 
                 if let Some(backoff_time) = backoff_time {
-                    let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0, backoff_time));
+                    let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0..backoff_time));
                     tracing::debug!(
                         sleep_time = ?sleep_time,
                         retry_strategy = ?retry_strategy,

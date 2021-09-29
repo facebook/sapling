@@ -23,7 +23,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
-rand = { version = "0.7", features = ["small_rng"] }
+rand = { version = "0.8", features = ["small_rng"] }
 reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
 repo_read_write_status = { version = "0.1.0", path = "../repo_read_write_status" }

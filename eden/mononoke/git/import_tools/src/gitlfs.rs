@@ -248,7 +248,7 @@ impl GitImportLfs {
                     );
                     // Sleep on avarage time_ms_between_attempts between attempts.
                     let sleep_time_ms =
-                        thread_rng().gen_range(0, inner.time_ms_between_attempts * 2);
+                        thread_rng().gen_range(0..inner.time_ms_between_attempts * 2);
                     sleep(Duration::from_millis(sleep_time_ms.into())).await;
                 }
             }

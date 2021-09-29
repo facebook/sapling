@@ -106,7 +106,7 @@ impl Debug for RawBundle2 {
 }
 
 impl Arbitrary for RawBundle2 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         RawBundle2::new_bytes(Vec::arbitrary(g))
     }
 

@@ -50,7 +50,7 @@ pub struct CommitLocationToHashRequestBatch {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitLocationToHashRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitLocationToHashRequest {
             location: Arbitrary::arbitrary(g),
             count: Arbitrary::arbitrary(g),
@@ -60,7 +60,7 @@ impl Arbitrary for CommitLocationToHashRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitLocationToHashResponse {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitLocationToHashResponse {
             location: Arbitrary::arbitrary(g),
             count: Arbitrary::arbitrary(g),
@@ -71,7 +71,7 @@ impl Arbitrary for CommitLocationToHashResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitLocationToHashRequestBatch {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitLocationToHashRequestBatch {
             requests: Arbitrary::arbitrary(g),
         }
@@ -94,7 +94,7 @@ pub struct CommitHashToLocationResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitHashToLocationRequestBatch {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitHashToLocationRequestBatch {
             client_head: Arbitrary::arbitrary(g),
             hgids: Arbitrary::arbitrary(g),
@@ -104,7 +104,7 @@ impl Arbitrary for CommitHashToLocationRequestBatch {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitHashToLocationResponse {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitHashToLocationResponse {
             hgid: Arbitrary::arbitrary(g),
             location: Arbitrary::arbitrary(g),
@@ -121,7 +121,7 @@ pub struct CommitRevlogDataRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for CommitRevlogDataRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CommitRevlogDataRequest {
             hgids: Arbitrary::arbitrary(g),
         }

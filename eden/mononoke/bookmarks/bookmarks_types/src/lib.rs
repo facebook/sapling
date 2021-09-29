@@ -10,7 +10,6 @@
 use anyhow::{format_err, Error};
 use ascii::{AsciiChar, AsciiString};
 use quickcheck::{Arbitrary, Gen};
-use rand::Rng;
 use sql::mysql;
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
@@ -33,10 +32,10 @@ pub enum Freshness {
 }
 
 impl Arbitrary for Freshness {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         use Freshness::*;
 
-        match g.gen_range(0, 2) {
+        match u32::arbitrary(g) & 2 {
             0 => MostRecent,
             1 => MaybeStale,
             _ => unreachable!(),
@@ -51,7 +50,7 @@ pub struct Bookmark {
 }
 
 impl Arbitrary for Bookmark {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let name = BookmarkName::arbitrary(g);
         Self {
             name,
@@ -118,7 +117,7 @@ impl fmt::Display for BookmarkName {
 }
 
 impl Arbitrary for BookmarkName {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         // NOTE: We use a specific large size here because our tests exercise DB Bookmarks, which
         // require unique names in the DB.
         let size = 128;
@@ -282,10 +281,10 @@ impl From<BookmarkKind> for Value {
 }
 
 impl Arbitrary for BookmarkKind {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         use BookmarkKind::*;
 
-        match g.gen_range(0, 3) {
+        match u32::arbitrary(g) % 3 {
             0 => Scratch,
             1 => Publishing,
             2 => PullDefaultPublishing,

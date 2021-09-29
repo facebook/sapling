@@ -13,7 +13,6 @@ use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use faster_hex::{hex_decode, hex_encode};
 use quickcheck::{single_shrinker, Arbitrary, Gen};
-use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 use sha1::Digest;
 
@@ -154,11 +153,13 @@ impl Debug for Sha1 {
 }
 
 impl Arbitrary for Sha1 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let mut bytes = [0; SHA1_HASH_LENGTH_BYTES];
         // The null hash is special, so give it a 5% chance of happening
-        if !g.gen_ratio(1, SHA1_HASH_LENGTH_BYTES as u32) {
-            g.fill_bytes(&mut bytes);
+        if !(usize::arbitrary(g) % SHA1_HASH_LENGTH_BYTES < 1) {
+            for b in bytes.iter_mut() {
+                *b = u8::arbitrary(g);
+            }
         }
         Sha1::from_bytes(&bytes).unwrap()
     }

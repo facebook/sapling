@@ -69,7 +69,7 @@ use quickcheck::Arbitrary;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireCompleteTreeRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             rootdir: Arbitrary::arbitrary(g),
             mfnodes: Arbitrary::arbitrary(g),

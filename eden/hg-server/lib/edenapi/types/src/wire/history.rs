@@ -120,7 +120,7 @@ impl ToApi for WireHistoryResponseChunk {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireHistoryRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
             length: Arbitrary::arbitrary(g),
@@ -130,7 +130,7 @@ impl Arbitrary for WireHistoryRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireWireHistoryEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             node: Arbitrary::arbitrary(g),
             parents: Arbitrary::arbitrary(g),
@@ -142,7 +142,7 @@ impl Arbitrary for WireWireHistoryEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireHistoryResponseChunk {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             path: Arbitrary::arbitrary(g),
             entries: Arbitrary::arbitrary(g),

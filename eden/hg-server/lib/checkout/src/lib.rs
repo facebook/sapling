@@ -582,9 +582,7 @@ mod test {
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::Diff;
     use pathmatcher::{AlwaysMatcher, TreeMatcher};
-    use quickcheck::{Arbitrary, StdGen};
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
+    use quickcheck::{Arbitrary, Gen};
     use std::collections::HashMap;
     use std::fs::create_dir;
     use std::path::Path;
@@ -713,8 +711,7 @@ mod test {
 
     fn generate_trees(tree_size: usize, count: usize) -> Vec<Vec<(RepoPathBuf, FileMetadata)>> {
         let mut result = vec![];
-        let rng = ChaChaRng::from_seed([0u8; 32]);
-        let mut gen = StdGen::new(rng, 5);
+        let mut gen = Gen::new(5);
         let paths = generate_repo_paths(tree_size * count, &mut gen);
 
         for i in 0..count {

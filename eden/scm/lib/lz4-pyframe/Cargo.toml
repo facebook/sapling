@@ -16,4 +16,4 @@ lz4-sys = "1.8"
 thiserror = "1.0.29"
 
 [dev-dependencies]
-quickcheck = "0.9"
+quickcheck = "1.0"

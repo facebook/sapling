@@ -88,9 +88,11 @@ macro_rules! sized_hash {
 
         #[cfg(any(test, feature = "for-tests"))]
         impl quickcheck::Arbitrary for $name {
-            fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+            fn arbitrary(g: &mut quickcheck::Gen) -> Self {
                 let mut v = Self::default();
-                g.fill_bytes(&mut v.0);
+                for b in v.0.iter_mut() {
+                    *b = u8::arbitrary(g);
+                }
                 v
             }
         }

@@ -54,7 +54,7 @@ async fn handle_one_key(key: String, store: Arc<Sqlblob>) -> Result<()> {
         if res.is_ok() {
             return res;
         }
-        let delay = thread_rng().gen_range(MIN_RETRY_DELAY, MAX_RETRY_DELAY);
+        let delay = thread_rng().gen_range(MIN_RETRY_DELAY..MAX_RETRY_DELAY);
         eprintln!(
             "Failure {:#?} on key {} - delaying for {:#?}",
             res, &key, delay
@@ -74,7 +74,7 @@ async fn handle_initial_generation(store: &Sqlblob, shard: usize) -> Result<()> 
         if res.is_ok() {
             return res;
         }
-        let delay = thread_rng().gen_range(MIN_RETRY_DELAY, MAX_RETRY_DELAY);
+        let delay = thread_rng().gen_range(MIN_RETRY_DELAY..MAX_RETRY_DELAY);
         eprintln!(
             "Failure {:#?} on shard {} - delaying for {:#?}",
             res, shard, delay

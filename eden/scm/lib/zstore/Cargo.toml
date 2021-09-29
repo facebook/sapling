@@ -18,5 +18,5 @@ types = { path = "../types" }
 zstdelta = { path = "../zstdelta" }
 
 [dev-dependencies]
-quickcheck = "0.9"
+quickcheck = "1.0"
 tempfile = "3.1"

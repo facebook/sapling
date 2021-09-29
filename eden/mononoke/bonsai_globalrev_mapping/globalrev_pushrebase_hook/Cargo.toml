@@ -28,7 +28,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 maplit = "1.0"
 pushrebase = { version = "0.1.0", path = "../../pushrebase" }
-rand = { version = "0.7", features = ["small_rng"] }
+rand = { version = "0.8", features = ["small_rng"] }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }

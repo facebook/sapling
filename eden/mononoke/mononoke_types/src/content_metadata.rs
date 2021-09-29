@@ -98,7 +98,7 @@ impl ContentMetadata {
 }
 
 impl Arbitrary for ContentMetadata {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let total_size = u64::arbitrary(g);
 
         Self {

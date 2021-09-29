@@ -207,7 +207,7 @@ impl Display for HgNodeHash {
 }
 
 impl Arbitrary for HgNodeHash {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         HgNodeHash(Sha1::arbitrary(g))
     }
 }
@@ -320,7 +320,7 @@ impl<'de> serde::de::Deserialize<'de> for HgChangesetId {
 }
 
 impl Arbitrary for HgChangesetId {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         HgChangesetId(HgNodeHash::arbitrary(g))
     }
 }
@@ -455,7 +455,7 @@ impl Display for HgManifestId {
 }
 
 impl Arbitrary for HgManifestId {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         HgManifestId(HgNodeHash::arbitrary(g))
     }
 }
@@ -513,7 +513,7 @@ impl Display for HgFileNodeId {
 }
 
 impl Arbitrary for HgFileNodeId {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         HgFileNodeId(HgNodeHash::arbitrary(g))
     }
 }

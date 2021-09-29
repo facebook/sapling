@@ -136,10 +136,10 @@ mod tests {
 
     #[test]
     fn test_variant_key_round_trip() {
-        let rng = thread_rng();
         let mut buf = Vec::<u8>::new();
         let keys: Vec<Vec<u8>> = (0..1000usize)
             .map(|i| {
+                let mut rng = thread_rng();
                 rng.sample_iter(&Alphanumeric)
                     .take(i % 40)
                     .map(|ch| ch as u8)

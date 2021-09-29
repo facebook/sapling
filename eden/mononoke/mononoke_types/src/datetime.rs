@@ -13,7 +13,6 @@ use chrono::{
     NaiveDateTime, TimeZone,
 };
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
-use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
 use sql::mysql;
 
@@ -132,12 +131,12 @@ impl Display for DateTime {
 }
 
 impl Arbitrary for DateTime {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         // Ensure a large domain from which to get second values.
-        let secs = g.gen_range(i32::min_value(), i32::max_value()) as i64;
+        let secs = i32::arbitrary(g) as i64;
         // Timezone offsets in the range [-86399, 86399] (both inclusive) are valid.
         // gen_range generates a value in the range [low, high).
-        let tz_offset_secs = g.gen_range(-86_399, 86_400);
+        let tz_offset_secs = (u64::arbitrary(g) % 172_799) as i32 - 86_399;
         DateTime::from_timestamp(secs, tz_offset_secs)
             .expect("Arbitrary instances should always be valid")
     }

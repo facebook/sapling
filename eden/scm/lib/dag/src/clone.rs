@@ -28,7 +28,7 @@ impl<Name> Arbitrary for CloneData<Name>
 where
     Name: Arbitrary,
 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let flat_segments = PreparedFlatSegments {
             segments: Vec::arbitrary(g),
         };

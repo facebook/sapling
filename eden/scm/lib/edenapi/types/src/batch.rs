@@ -28,7 +28,7 @@ impl<T> Arbitrary for Batch<T>
 where
     T: Arbitrary,
 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Batch {
             batch: Arbitrary::arbitrary(g),
         }

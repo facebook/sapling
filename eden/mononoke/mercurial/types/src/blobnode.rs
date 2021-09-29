@@ -45,7 +45,7 @@ impl HgParents {
 }
 
 impl Arbitrary for HgParents {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         // We make single-parent a litle more common because it's a) little simpler b) a little
         // more common anyway.
         if bool::arbitrary(g) {

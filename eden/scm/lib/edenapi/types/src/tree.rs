@@ -162,7 +162,7 @@ impl TreeChildEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for TreeEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let bytes: Option<Vec<u8>> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
@@ -176,9 +176,8 @@ impl Arbitrary for TreeEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for TreeChildEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        use rand::Rng;
-        let variant = g.gen_range(0, 2);
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let variant = u32::arbitrary(g) % 2;
         match variant {
             0 => TreeChildEntry::File(Arbitrary::arbitrary(g)),
             1 => TreeChildEntry::Directory(Arbitrary::arbitrary(g)),
@@ -189,7 +188,7 @@ impl Arbitrary for TreeChildEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for TreeChildFileEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             key: Arbitrary::arbitrary(g),
             file_metadata: Arbitrary::arbitrary(g),
@@ -199,7 +198,7 @@ impl Arbitrary for TreeChildFileEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for TreeChildDirectoryEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             key: Arbitrary::arbitrary(g),
             directory_metadata: Arbitrary::arbitrary(g),
@@ -242,7 +241,7 @@ impl Default for TreeAttributes {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for TreeAttributes {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             manifest_blob: Arbitrary::arbitrary(g),
             parents: Arbitrary::arbitrary(g),
@@ -253,7 +252,7 @@ impl Arbitrary for TreeAttributes {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for TreeRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
             attributes: Arbitrary::arbitrary(g),

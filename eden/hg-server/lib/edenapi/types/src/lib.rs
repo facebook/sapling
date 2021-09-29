@@ -126,7 +126,7 @@ pub enum EdenApiServerErrorKind {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for EdenApiServerError {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             err: Arbitrary::arbitrary(g),
             key: Arbitrary::arbitrary(g),
@@ -136,9 +136,9 @@ impl Arbitrary for EdenApiServerError {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for EdenApiServerErrorKind {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        use rand::Rng;
-        let variant = g.gen_range(0, 1);
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        #[allow(clippy::modulo_one)]
+        let variant = u32::arbitrary(g) % 1;
         match variant {
             0 => EdenApiServerErrorKind::OpaqueError(Arbitrary::arbitrary(g)),
             _ => unreachable!(),

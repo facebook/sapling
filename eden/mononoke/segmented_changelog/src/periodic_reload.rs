@@ -65,8 +65,7 @@ impl PeriodicReloadSegmentedChangelog {
                     jitter = 30;
                 }
                 let jitter = rand::thread_rng().gen_range(
-                    Duration::from_secs(0),
-                    Duration::from_secs(jitter.try_into().unwrap()),
+                    Duration::from_secs(0)..Duration::from_secs(jitter.try_into().unwrap()),
                 );
                 tokio::time::sleep(jitter).await;
 

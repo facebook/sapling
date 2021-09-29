@@ -21,11 +21,11 @@ pub struct FlatSegment {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FlatSegment {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Self {
             low: Id::arbitrary(g),
             high: Id::arbitrary(g),

@@ -195,7 +195,7 @@ impl FileEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             key: Arbitrary::arbitrary(g),
             parents: Arbitrary::arbitrary(g),
@@ -213,7 +213,7 @@ pub struct FileAttributes {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileAttributes {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             content: Arbitrary::arbitrary(g),
             aux_data: Arbitrary::arbitrary(g),
@@ -229,7 +229,7 @@ pub struct FileSpec {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileSpec {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             key: Arbitrary::arbitrary(g),
             attrs: Arbitrary::arbitrary(g),
@@ -246,7 +246,7 @@ pub struct FileRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
             reqs: Arbitrary::arbitrary(g),
@@ -256,7 +256,7 @@ impl Arbitrary for FileRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileAuxData {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             total_size: Arbitrary::arbitrary(g),
             content_id: Arbitrary::arbitrary(g),
@@ -268,7 +268,7 @@ impl Arbitrary for FileAuxData {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileContent {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let bytes: Vec<u8> = Arbitrary::arbitrary(g);
         Self {
             hg_file_blob: Bytes::from(bytes),
@@ -298,7 +298,7 @@ pub struct UploadTokensResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for UploadHgFilenodeRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             data: Arbitrary::arbitrary(g),
         }
@@ -307,7 +307,7 @@ impl Arbitrary for UploadHgFilenodeRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for HgFilenodeData {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             node_id: Arbitrary::arbitrary(g),
             parents: Arbitrary::arbitrary(g),

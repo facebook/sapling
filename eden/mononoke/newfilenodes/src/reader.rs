@@ -236,7 +236,7 @@ impl FilenodesReader {
         let ratio = tunables().get_filenodes_master_fallback_ratio();
         if ratio > 0 {
             let mut rng = thread_rng();
-            let n = rng.gen_range(0, ratio);
+            let n = rng.gen_range(0..ratio);
             if n > 0 {
                 return Ok(FilenodeResult::Disabled);
             }

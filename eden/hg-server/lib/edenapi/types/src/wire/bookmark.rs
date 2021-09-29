@@ -42,7 +42,7 @@ impl ToApi for WireBookmarkRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireBookmarkRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         BookmarkRequest::arbitrary(g).to_wire()
     }
 }
@@ -81,7 +81,7 @@ impl ToApi for WireBookmarkEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireBookmarkEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         BookmarkEntry::arbitrary(g).to_wire()
     }
 }

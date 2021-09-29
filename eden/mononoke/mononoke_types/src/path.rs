@@ -17,7 +17,6 @@ use std::slice::Iter;
 use anyhow::{bail, Context as _, Error, Result};
 use lazy_static::lazy_static;
 use quickcheck::{Arbitrary, Gen};
-use rand::{seq::SliceRandom, Rng};
 use regex::bytes::Regex as BytesRegex;
 use regex::Regex;
 use serde_derive::{Deserialize, Serialize};
@@ -908,12 +907,12 @@ lazy_static! {
 }
 
 impl Arbitrary for MPathElement {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let size = cmp::max(g.size(), 1);
         let size = cmp::min(size, MPATH_ELEMENT_MAX_LENGTH);
         let mut element = SmallVec::with_capacity(size);
         for _ in 0..size {
-            let c = COMPONENT_CHARS[..].choose(g).unwrap();
+            let c = g.choose(&COMPONENT_CHARS[..]).unwrap();
             element.push(*c);
         }
         MPathElement(element)
@@ -922,7 +921,7 @@ impl Arbitrary for MPathElement {
 
 impl Arbitrary for MPath {
     #[inline]
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let size = g.size();
         // Up to sqrt(size) components, each with length from 1 to 2 *
         // sqrt(size) -- don't generate zero-length components. (This isn't
@@ -940,13 +939,14 @@ impl Arbitrary for MPath {
 
         let mut path = Vec::new();
 
-        for i in 0..g.gen_range(1, size_sqrt) {
+        for i in 0..(1 + usize::arbitrary(g) % (size_sqrt - 1)) {
             if i > 0 {
                 path.push(b'/');
             }
+            let range_max = cmp::min(MPATH_ELEMENT_MAX_LENGTH, 2 * size_sqrt);
             path.extend(
-                (0..g.gen_range(1, cmp::min(MPATH_ELEMENT_MAX_LENGTH, 2 * size_sqrt)))
-                    .map(|_| *COMPONENT_CHARS[..].choose(g).unwrap()),
+                (0..(1 + usize::arbitrary(g) % (range_max - 1)))
+                    .map(|_| *g.choose(&COMPONENT_CHARS[..]).unwrap()),
             );
         }
 
@@ -956,8 +956,8 @@ impl Arbitrary for MPath {
 
 impl Arbitrary for RepoPath {
     #[inline]
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        match g.next_u32() % 3 {
+    fn arbitrary(g: &mut Gen) -> Self {
+        match u32::arbitrary(g) % 3 {
             0 => RepoPath::RootPath,
             1 => RepoPath::DirectoryPath(MPath::arbitrary(g)),
             2 => RepoPath::FilePath(MPath::arbitrary(g)),

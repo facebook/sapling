@@ -89,7 +89,7 @@ where
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for WireError {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         WireError::new(String::arbitrary(g), u64::arbitrary(g))
     }
 }

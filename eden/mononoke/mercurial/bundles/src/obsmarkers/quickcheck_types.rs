@@ -10,7 +10,7 @@ use quickcheck::{Arbitrary, Gen};
 use super::MetadataEntry;
 
 impl Arbitrary for MetadataEntry {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let key = String::arbitrary(g);
         let value = String::arbitrary(g);
         Self { key, value }

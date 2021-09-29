@@ -13,7 +13,6 @@ use anyhow::{bail, Context, Result};
 use bytes::Bytes as BytesNew;
 use bytes_old::{BufMut, Bytes};
 use quickcheck::{Arbitrary, Gen};
-use rand::seq::SliceRandom;
 
 use crate::chunk::Chunk;
 use crate::errors::ErrorKind;
@@ -437,17 +436,16 @@ impl PartHeaderBuilder {
 }
 
 impl Arbitrary for PartHeaderType {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         use self::PartHeaderType::*;
-        [
+        g.choose(&[
             Changegroup,
             ReplyChangegroup,
             Replycaps,
             Listkeys,
             B2xTreegroup2,
             CheckHeads,
-        ]
-        .choose(g)
+        ])
         .expect("empty choice provided")
         .clone()
     }

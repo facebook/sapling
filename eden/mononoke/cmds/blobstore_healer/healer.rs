@@ -116,7 +116,7 @@ impl Healer {
                     }
 
                     let delay =
-                        thread_rng().gen_range(MIN_FETCH_FAILURE_DELAY, MAX_FETCH_FAILURE_DELAY);
+                        thread_rng().gen_range(MIN_FETCH_FAILURE_DELAY..MAX_FETCH_FAILURE_DELAY);
                     tokio::time::sleep(delay).await;
                 }
             }

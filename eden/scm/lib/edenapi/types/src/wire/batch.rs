@@ -49,7 +49,7 @@ impl<T> quickcheck::Arbitrary for WireBatch<T>
 where
     T: quickcheck::Arbitrary,
 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         WireBatch {
             batch: Arbitrary::arbitrary(g),
         }

@@ -91,7 +91,7 @@ fn should_admit(config: &FastReplayConfig) -> bool {
         return false;
     }
 
-    let roll = thread_rng().gen_range(1, 100);
+    let roll = thread_rng().gen_range(1..100);
     roll <= admission_rate
 }
 

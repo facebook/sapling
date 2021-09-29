@@ -8,7 +8,6 @@
 //! QuickCheck support for wire packs.
 
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
-use rand::Rng;
 
 use mercurial_types::{Delta, HgNodeHash, MPath, RepoPath, NULL_HASH};
 use revisionstore_types::Metadata;
@@ -22,16 +21,16 @@ pub struct WirePackPartSequence {
 }
 
 impl Arbitrary for WirePackPartSequence {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let size = g.size();
 
-        let kind = if g.gen_ratio(1, 2) {
+        let kind = if bool::arbitrary(g) {
             Kind::Tree
         } else {
             Kind::File
         };
 
-        let file_count = g.gen_range(0, size);
+        let file_count = usize::arbitrary(g) % size;
         let files = (0..file_count)
             .map(|_| FileEntries::arbitrary_params(g, kind))
             .collect();
@@ -52,15 +51,15 @@ pub struct FileEntries {
 }
 
 impl FileEntries {
-    fn arbitrary_params<G: Gen>(g: &mut G, kind: Kind) -> Self {
+    fn arbitrary_params(g: &mut Gen, kind: Kind) -> Self {
         let size = g.size();
-        let history_len = g.gen_range(0, size);
-        let data_len = g.gen_range(0, size);
+        let history_len = usize::arbitrary(g) % size;
+        let data_len = usize::arbitrary(g) % size;
 
         let filename = match kind {
             Kind::Tree => {
                 // 10% chance for it to be the root
-                if g.gen_ratio(1, 10) {
+                if u32::arbitrary(g) % 10 == 0 {
                     RepoPath::root()
                 } else {
                     RepoPath::DirectoryPath(MPath::arbitrary(g))
@@ -81,7 +80,7 @@ impl FileEntries {
 }
 
 impl Arbitrary for FileEntries {
-    fn arbitrary<G: Gen>(_g: &mut G) -> Self {
+    fn arbitrary(_g: &mut Gen) -> Self {
         // FileEntries depends on the kind of the overall wirepack, so this can't be implemented.
         unimplemented!("use WirePackPartSequence::arbitrary instead")
     }
@@ -103,11 +102,11 @@ impl Arbitrary for FileEntries {
 }
 
 impl HistoryEntry {
-    pub fn arbitrary_kind<G: Gen>(g: &mut G, kind: Kind) -> Self {
+    pub fn arbitrary_kind(g: &mut Gen, kind: Kind) -> Self {
         let copy_from = match kind {
             Kind::File => {
                 // 20% chance of generating copy-from info
-                if g.gen_ratio(1, 5) {
+                if u32::arbitrary(g) % 5 == 0 {
                     Some(RepoPath::FilePath(MPath::arbitrary(g)))
                 } else {
                     None
@@ -126,7 +125,7 @@ impl HistoryEntry {
 }
 
 impl Arbitrary for HistoryEntry {
-    fn arbitrary<G: Gen>(_g: &mut G) -> Self {
+    fn arbitrary(_g: &mut Gen) -> Self {
         // HistoryEntry depends on the kind of the overall wirepack, so this can't be implemented.
         unimplemented!("use WirePackPartSequence::arbitrary instead")
     }
@@ -135,9 +134,9 @@ impl Arbitrary for HistoryEntry {
 }
 
 impl Arbitrary for DataEntry {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         // 20% chance of a fulltext revision
-        let (delta_base, delta) = if g.gen_ratio(1, 5) {
+        let (delta_base, delta) = if u32::arbitrary(g) % 5 == 0 {
             (NULL_HASH, Delta::new_fulltext(Vec::arbitrary(g)))
         } else {
             let mut delta_base = NULL_HASH;
@@ -148,11 +147,11 @@ impl Arbitrary for DataEntry {
         };
 
         // 50% chance of having metadata (i.e. being v2)
-        let metadata = if g.gen_ratio(1, 2) {
+        let metadata = if bool::arbitrary(g) {
             // 50% chance of flags being present
-            let flags = if g.gen_ratio(1, 2) { Some(1) } else { None };
+            let flags = if bool::arbitrary(g) { Some(1) } else { None };
             // 50% chance of size being present
-            let size = if g.gen_ratio(1, 2) { Some(2) } else { None };
+            let size = if bool::arbitrary(g) { Some(2) } else { None };
             Some(Metadata { flags, size })
         } else {
             None

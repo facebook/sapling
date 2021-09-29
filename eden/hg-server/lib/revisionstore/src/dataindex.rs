@@ -384,9 +384,18 @@ mod tests {
             let mut nodes = nodes;
             let last_hgid = nodes.pop();
 
-            let mut offset = 0;
+            let mut offset: u64 = 0;
             for &(hgid, size) in nodes.iter() {
-                let size = size + 1;
+                let size = match size.checked_add(1) {
+                    Some(size) => size,
+                    None => return true,
+                };
+
+                let new_offset = match offset.checked_add(size) {
+                    Some(offset) => offset,
+                    None => return true,
+                };
+
                 values.insert(
                     hgid.clone(),
                     DeltaLocation {
@@ -396,7 +405,7 @@ mod tests {
                     },
                 );
 
-                offset += size;
+                offset = new_offset;
             }
 
             let index = make_index(&values);

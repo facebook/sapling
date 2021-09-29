@@ -138,7 +138,7 @@ impl FileEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let bytes: Vec<u8> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
@@ -156,7 +156,7 @@ pub struct FileRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
         }

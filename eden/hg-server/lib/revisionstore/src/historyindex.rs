@@ -407,19 +407,19 @@ fn sha1(value: &[u8]) -> HgId {
 
 #[cfg(test)]
 impl quickcheck::Arbitrary for FileSectionLocation {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         FileSectionLocation {
-            offset: g.next_u64(),
-            size: g.next_u64(),
+            offset: u64::arbitrary(g),
+            size: u64::arbitrary(g),
         }
     }
 }
 
 #[cfg(test)]
 impl quickcheck::Arbitrary for NodeLocation {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         NodeLocation {
-            offset: g.next_u64(),
+            offset: u64::arbitrary(g),
         }
     }
 }

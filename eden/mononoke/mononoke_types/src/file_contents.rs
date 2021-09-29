@@ -123,7 +123,7 @@ impl Debug for FileContents {
 }
 
 impl Arbitrary for FileContents {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         if bool::arbitrary(g) {
             FileContents::new_bytes(Vec::arbitrary(g))
         } else {
@@ -207,7 +207,7 @@ impl ChunkedFileContents {
 }
 
 impl Arbitrary for ChunkedFileContents {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Self::new(ContentId::arbitrary(g), Vec::arbitrary(g))
     }
 }
@@ -254,7 +254,7 @@ impl ContentChunkPointer {
 }
 
 impl Arbitrary for ContentChunkPointer {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Self::new(ContentChunkId::arbitrary(g), u64::arbitrary(g))
     }
 }

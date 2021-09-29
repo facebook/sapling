@@ -17,7 +17,7 @@ types = { path = "../types" }
 zstore = { path = "../zstore" }
 
 [dev-dependencies]
-quickcheck = "0.9"
-rand_chacha = "0.2"
-rand_core = "0.5"
+quickcheck = "1.0"
+rand_chacha = "0.3"
+rand_core = "0.6"
 tempfile = "3.1"

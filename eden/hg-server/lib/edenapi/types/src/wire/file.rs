@@ -89,7 +89,7 @@ impl ToApi for WireFileRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let bytes: Vec<u8> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
@@ -102,7 +102,7 @@ impl Arbitrary for WireFileEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
         }

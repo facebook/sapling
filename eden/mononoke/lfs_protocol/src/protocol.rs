@@ -48,7 +48,7 @@ impl Display for Operation {
 }
 
 impl Arbitrary for Operation {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         if bool::arbitrary(g) {
             Operation::Download
         } else {
@@ -66,7 +66,7 @@ pub enum Transfer {
 }
 
 impl Arbitrary for Transfer {
-    fn arbitrary<G: Gen>(_g: &mut G) -> Self {
+    fn arbitrary(_g: &mut Gen) -> Self {
         // We don't generate invalid Transfer instances for testing.
         Transfer::Basic
     }
@@ -84,7 +84,7 @@ pub struct Ref {
 }
 
 impl Arbitrary for Ref {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Self {
             name: String::arbitrary(g),
         }
@@ -134,9 +134,11 @@ pub struct RequestObject {
 }
 
 impl Arbitrary for RequestObject {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let mut oid = [0; mem::size_of::<Sha256>()];
-        g.fill_bytes(&mut oid);
+    fn arbitrary(g: &mut Gen) -> Self {
+        let mut oid = [0u8; mem::size_of::<Sha256>()];
+        for b in oid.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         Self {
             oid: Sha256(oid),
             size: u64::arbitrary(g),
@@ -158,7 +160,7 @@ pub struct RequestBatch {
 }
 
 impl Arbitrary for RequestBatch {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Self {
             operation: Operation::arbitrary(g),
             transfers: Vec::arbitrary(g),
@@ -181,7 +183,7 @@ pub struct ObjectAction {
 }
 
 impl Arbitrary for ObjectAction {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         // We generate a basic URL here. Nothing very fancy.
         let proto = if bool::arbitrary(g) { "http" } else { "https" };
 
@@ -222,7 +224,7 @@ pub struct ObjectError {
 }
 
 impl Arbitrary for ObjectError {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Self {
             code: u16::arbitrary(g),
             message: String::arbitrary(g),
@@ -244,7 +246,7 @@ pub enum ObjectStatus {
 }
 
 impl Arbitrary for ObjectStatus {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         if bool::arbitrary(g) {
             let mut actions = HashMap::new();
 
@@ -277,7 +279,7 @@ pub struct ResponseObject {
 }
 
 impl Arbitrary for ResponseObject {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Self {
             object: RequestObject::arbitrary(g),
             status: ObjectStatus::arbitrary(g),
@@ -293,7 +295,7 @@ pub struct ResponseBatch {
 }
 
 impl Arbitrary for ResponseBatch {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Self {
             transfer: Transfer::arbitrary(g),
             objects: Vec::arbitrary(g),
@@ -310,7 +312,7 @@ pub struct ResponseError {
 }
 
 impl Arbitrary for ResponseError {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Self {
             message: String::arbitrary(g),
             // TODO: It'd be nice to generate those too.

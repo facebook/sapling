@@ -8,7 +8,6 @@
 use std::{collections::HashSet, str::FromStr};
 
 use quickcheck::{Arbitrary, Gen};
-use rand::Rng;
 
 use crate::{
     hgid::HgId,
@@ -62,8 +61,8 @@ pub fn null_key(path: &str) -> Key {
     Key::new(repo_path_buf(path), HgId::null_id().clone())
 }
 
-pub fn generate_repo_paths<G: Gen>(count: usize, qc_gen: &mut G) -> Vec<RepoPathBuf> {
-    struct Generator<'a, G: Gen> {
+pub fn generate_repo_paths(count: usize, qc_gen: &mut Gen) -> Vec<RepoPathBuf> {
+    struct Generator<'a> {
         current_path: RepoPathBuf,
         current_component_length: usize,
         min_files_per_dir: usize,
@@ -71,15 +70,16 @@ pub fn generate_repo_paths<G: Gen>(count: usize, qc_gen: &mut G) -> Vec<RepoPath
         directory_component_max: usize,
         generated_paths: Vec<RepoPathBuf>,
         generate_paths_cnt: usize,
-        qc_gen: &'a mut G,
+        qc_gen: &'a mut Gen,
     }
-    impl<'a, G: Gen> Generator<'a, G> {
+    impl<'a> Generator<'a> {
         fn generate_directory(&mut self) {
             let dir_components_cnt = if self.current_component_length == 0 {
                 std::usize::MAX
             } else {
-                self.qc_gen
-                    .gen_range(self.directory_component_min, self.directory_component_max)
+                self.directory_component_min
+                    + usize::arbitrary(&mut self.qc_gen)
+                        % (self.directory_component_max - self.directory_component_min)
             };
             let mut component_hash = HashSet::new();
             for i in 0..dir_components_cnt {
@@ -97,7 +97,9 @@ pub fn generate_repo_paths<G: Gen>(count: usize, qc_gen: &mut G) -> Vec<RepoPath
                 // Decide if this is a directory. As we nest more and more directories, the
                 // probabilty of having directories decreses.
                 let u = self.current_component_length as u32;
-                if i < self.min_files_per_dir || self.qc_gen.gen_ratio(u + 1, u + 2) {
+                if i < self.min_files_per_dir
+                    || ((u64::arbitrary(self.qc_gen) % ((u + 2) as u64)) as u32) < u + 1
+                {
                     self.generated_paths.push(self.current_path.clone());
                 } else {
                     self.generate_directory();
@@ -127,14 +129,11 @@ pub fn generate_repo_paths<G: Gen>(count: usize, qc_gen: &mut G) -> Vec<RepoPath
 mod tests {
     use super::*;
 
-    use quickcheck::StdGen;
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
+    use quickcheck::Gen;
 
     #[test]
     fn test_generate_repo_paths() {
-        let rng = ChaChaRng::from_seed([0u8; 32]);
-        let mut qc_gen = StdGen::new(rng, 10);
+        let mut qc_gen = Gen::new(10);
         let count = 10000;
         let paths = generate_repo_paths(count, &mut qc_gen);
         assert_eq!(paths.len(), count);

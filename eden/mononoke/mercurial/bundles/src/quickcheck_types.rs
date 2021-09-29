@@ -19,7 +19,6 @@ use bytes::Bytes;
 #[cfg(test)]
 use futures_old::stream;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
-use rand::Rng;
 
 use mercurial_types::{Delta, HgNodeHash, MPath, RevFlags};
 
@@ -35,7 +34,7 @@ impl From<QCBytes> for Bytes {
 }
 
 impl Arbitrary for QCBytes {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         // Just use the Vec<u8> quickcheck underneath.
         let v: Vec<u8> = Vec::arbitrary(g);
         QCBytes(v.into())
@@ -109,11 +108,11 @@ impl PartialEq<[changegroup::Part]> for CgPartSequence {
 }
 
 impl Arbitrary for CgPartSequence {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         use crate::changegroup::unpacker::*;
         use crate::changegroup::*;
 
-        let version_ind = g.gen_ratio(1, 2);
+        let version_ind = bool::arbitrary(g);
         let version = match version_ind {
             true => CgVersion::Cg2Version,
             false => CgVersion::Cg3Version,
@@ -133,7 +132,7 @@ impl Arbitrary for CgPartSequence {
         let changesets = gen_parts(Section::Changeset, g);
         let manifests = gen_parts(Section::Manifest, g);
 
-        let nfilelogs = g.gen_range(0, size);
+        let nfilelogs = usize::arbitrary(g) % size;
         let mut filelogs = Vec::with_capacity(nfilelogs);
 
         for _ in 0..nfilelogs {
@@ -169,18 +168,18 @@ impl Arbitrary for CgPartSequence {
     }
 }
 
-fn gen_parts_v2<G: Gen>(section: changegroup::Section, g: &mut G) -> Vec<changegroup::Part> {
+fn gen_parts_v2(section: changegroup::Section, g: &mut Gen) -> Vec<changegroup::Part> {
     let size = g.size();
-    (0..g.gen_range(0, size))
+    (0..usize::arbitrary(g) % size)
         .map(|_| {
             changegroup::Part::CgChunk(section.clone(), changegroup::CgDeltaChunk::arbitrary(g))
         })
         .collect()
 }
 
-fn gen_parts_v3<G: Gen>(section: changegroup::Section, g: &mut G) -> Vec<changegroup::Part> {
+fn gen_parts_v3(section: changegroup::Section, g: &mut Gen) -> Vec<changegroup::Part> {
     let size = g.size();
-    (0..g.gen_range(0, size))
+    (0..usize::arbitrary(g) % size)
         .map(|_| {
             changegroup::Part::CgChunk(
                 section.clone(),
@@ -228,7 +227,7 @@ fn gen_sequence_v3(
 }
 
 impl Arbitrary for changegroup::Part {
-    fn arbitrary<G: Gen>(_g: &mut G) -> Self {
+    fn arbitrary(_g: &mut Gen) -> Self {
         unimplemented!()
     }
 
@@ -251,7 +250,7 @@ impl Arbitrary for changegroup::Part {
 }
 
 impl Arbitrary for changegroup::CgDeltaChunk {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         // TODO: should these be more structured? e.g. base = p1 some of the time
         changegroup::CgDeltaChunk {
             node: HgNodeHash::arbitrary(g),
@@ -284,7 +283,7 @@ impl Arbitrary for changegroup::CgDeltaChunk {
 }
 
 impl changegroup::CgDeltaChunk {
-    fn arbitrary_with_flags<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary_with_flags(g: &mut Gen) -> Self {
         let flags = u8::arbitrary(g) % 3;
         let flags = if flags == 0 {
             RevFlags::REVIDX_DEFAULT_FLAGS

@@ -8,13 +8,13 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 pathmatcher = { path = "../pathmatcher" }
-quickcheck = { version = "0.9", optional = true }
-rand = { version = "0.7", features = ["small_rng"], optional = true }
+quickcheck = { version = "1.0", optional = true }
+rand = { version = "0.8", features = ["small_rng"], optional = true }
 types = { path = "../types" }
 
 [dev-dependencies]
-quickcheck = "0.9"
-rand = { version = "0.7", features = ["small_rng"] }
+quickcheck = "1.0"
+rand = { version = "0.8", features = ["small_rng"] }
 types = { path = "../types", features = ["for-tests"], default-features = false }
 
 [features]

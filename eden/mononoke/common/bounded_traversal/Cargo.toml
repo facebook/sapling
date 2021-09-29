@@ -19,9 +19,9 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
 pretty_assertions = "0.6"
-quickcheck = "0.9"
+quickcheck = "1.0"
 quickcheck_async = "0.1.1"
-rand = { version = "0.7", features = ["small_rng"] }
+rand = { version = "0.8", features = ["small_rng"] }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [patch.crates-io]

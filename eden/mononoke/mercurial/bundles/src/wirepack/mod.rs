@@ -360,12 +360,9 @@ impl DataEntry {
 
 #[cfg(test)]
 mod test {
-    use std::cmp;
-
     use itertools::iproduct;
     use maplit::hashset;
-    use quickcheck::{quickcheck, Gen, StdGen};
-    use rand::Rng;
+    use quickcheck::{quickcheck, Arbitrary, Gen};
 
     use mercurial_types::delta::Fragment;
     use mercurial_types_mocks::nodehash::{AS_HASH, BS_HASH};
@@ -413,7 +410,7 @@ mod test {
 
     #[test]
     fn test_history_verify_arbitrary() {
-        let mut rng = StdGen::new(rand::thread_rng(), 100);
+        let mut rng = Gen::new(100);
         for _n in 0..100 {
             HistoryEntry::arbitrary_kind(&mut rng, Kind::Tree)
                 .verify(Kind::Tree)
@@ -426,14 +423,14 @@ mod test {
 
     #[test]
     fn test_history_roundtrip() {
-        let mut rng = StdGen::new(rand::thread_rng(), 100);
+        let mut rng = Gen::new(100);
         for _n in 0..100 {
             history_roundtrip(&mut rng, Kind::Tree);
             history_roundtrip(&mut rng, Kind::File);
         }
     }
 
-    fn history_roundtrip<G: Gen>(g: &mut G, kind: Kind) {
+    fn history_roundtrip(g: &mut Gen, kind: Kind) {
         let entry = HistoryEntry::arbitrary_kind(g, kind);
         let mut encoded = vec![];
         entry
@@ -445,7 +442,11 @@ mod test {
         // Ensure that a partial entry results in None.
         let bytes_len = encoded_bytes.len();
         let reduced_len = unsafe {
-            let reduced_len = cmp::max(bytes_len - g.gen_range(1, bytes_len), 0);
+            let reduced_len = if bytes_len == 0 {
+                0
+            } else {
+                1 + usize::arbitrary(g) % (bytes_len - 1)
+            };
             encoded_bytes.set_len(reduced_len);
             reduced_len
         };
@@ -505,7 +506,7 @@ mod test {
                 DataEntryVersion::V2
             };
 
-            let mut rng = StdGen::new(rand::thread_rng(), 100);
+            let mut rng = Gen::new(100);
 
             let mut encoded = vec![];
             entry.encode(&mut encoded).expect("encoding this data entry should succeed");
@@ -515,7 +516,7 @@ mod test {
             // Ensure that a partial entry results in None.
             let bytes_len = encoded_bytes.len();
             let reduced_len = unsafe {
-                let reduced_len = cmp::max(bytes_len - rng.gen_range(1, bytes_len), 0);
+                let reduced_len = if bytes_len == 0 { 0 } else { 1 + usize::arbitrary(&mut rng) % (bytes_len - 1) };
                 encoded_bytes.set_len(reduced_len);
                 reduced_len
             };

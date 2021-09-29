@@ -45,7 +45,6 @@ use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[cfg(any(test, feature = "for-tests"))]
-use rand::Rng;
 
 /// An owned version of a `RepoPath`.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
@@ -643,8 +642,8 @@ impl<'a> Iterator for Ancestors<'a> {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for RepoPathBuf {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let size = g.gen_range(0, 8);
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let size = usize::arbitrary(g) % 8;
         let mut path_buf = RepoPathBuf::new();
         for _ in 0..size {
             path_buf.push(PathComponentBuf::arbitrary(g).as_ref());
@@ -655,15 +654,15 @@ impl quickcheck::Arbitrary for RepoPathBuf {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for PathComponentBuf {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         // Most strings should be valid `PathComponent` so it is reasonable to loop until a valid
         // string is found. To note that generating Arbitrary Unicode on `char` is implemented
         // using a loop where random bytes are validated against the `char` constructor.
         loop {
-            let size = g.gen_range(1, 8);
+            let size = usize::arbitrary(g) % 7 + 1;
             let mut s = String::with_capacity(size);
             for _ in 0..size {
-                let x = g.gen_range(0u8, 25);
+                let x = (u32::arbitrary(g) % 25) as u8;
                 let x = (b'a' + x) as char;
                 s.push(x);
             }

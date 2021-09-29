@@ -158,7 +158,7 @@ impl fmt::Debug for FsnodeId {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for DirectoryMetadata {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             fsnode_id: Arbitrary::arbitrary(g),
             simple_format_sha1: Arbitrary::arbitrary(g),
@@ -174,7 +174,7 @@ impl Arbitrary for DirectoryMetadata {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for DirectoryMetadataRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             with_fsnode_id: Arbitrary::arbitrary(g),
             with_simple_format_sha1: Arbitrary::arbitrary(g),
@@ -190,7 +190,7 @@ impl Arbitrary for DirectoryMetadataRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileMetadata {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             revisionstore_flags: Arbitrary::arbitrary(g),
             content_id: Arbitrary::arbitrary(g),
@@ -204,7 +204,7 @@ impl Arbitrary for FileMetadata {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileMetadataRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             with_revisionstore_flags: Arbitrary::arbitrary(g),
             with_content_id: Arbitrary::arbitrary(g),
@@ -218,11 +218,10 @@ impl Arbitrary for FileMetadataRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileType {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        use rand::Rng;
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use FileType::*;
 
-        let variant = g.gen_range(0, 3);
+        let variant = u32::arbitrary(g) % 3;
         match variant {
             0 => Regular,
             1 => Executable,
@@ -234,36 +233,44 @@ impl Arbitrary for FileType {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FsnodeId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
+        for b in v.0.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         v
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for ContentId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
+        for b in v.0.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         v
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Sha1 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
+        for b in v.0.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         v
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Sha256 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let mut v = Self::default();
-        g.fill_bytes(&mut v.0);
+        for b in v.0.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         v
     }
 }

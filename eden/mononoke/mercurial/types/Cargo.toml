@@ -34,9 +34,9 @@ mercurial_thrift = { version = "0.1.0", path = "if" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 percent-encoding = "2.1"
-quickcheck = "0.9"
-rand = { version = "0.7", features = ["small_rng"] }
-rand_distr = "0.2"
+quickcheck = "1.0"
+rand = { version = "0.8", features = ["small_rng"] }
+rand_distr = "0.4"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sha-1 = "0.8"

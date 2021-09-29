@@ -136,8 +136,8 @@ use quickcheck::Arbitrary;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Parents {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        match g.next_u64() % 3 {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        match u64::arbitrary(g) % 3 {
             0 => Parents::None,
             1 => Parents::One(HgId::arbitrary(g)),
             2 => Parents::Two(HgId::arbitrary(g), HgId::arbitrary(g)),

@@ -10,9 +10,6 @@ use std::io::Write;
 use minibytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 
-#[cfg(any(test, feature = "for-tests"))]
-use rand::Rng;
-
 use edenapi_types::{ContentId, Sha1};
 use types::{Key, Sha256};
 
@@ -139,15 +136,15 @@ impl<'a> From<&'a ContentHash> for StoreKey {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for ContentHash {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         ContentHash::Sha256(Sha256::arbitrary(g))
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for StoreKey {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        if g.gen() {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        if bool::arbitrary(g) {
             StoreKey::HgId(Key::arbitrary(g))
         } else {
             StoreKey::Content(ContentHash::arbitrary(g), Option::arbitrary(g))

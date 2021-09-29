@@ -13,6 +13,6 @@ libc = "0.2.98"
 zstd-sys = { version = "=1.5.0+zstd.1.4.9", features = ["experimental"] }
 
 [dev-dependencies]
-quickcheck = "0.9"
-rand = { version = "0.7", features = ["small_rng"] }
-rand_chacha = "0.2"
+quickcheck = "1.0"
+rand = { version = "0.8", features = ["small_rng"] }
+rand_chacha = "0.3"

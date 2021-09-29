@@ -170,7 +170,7 @@ impl fmt::Display for HgFileEnvelope {
 }
 
 impl Arbitrary for HgFileEnvelope {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         HgFileEnvelope {
             inner: HgFileEnvelopeMut {
                 node_id: Arbitrary::arbitrary(g),

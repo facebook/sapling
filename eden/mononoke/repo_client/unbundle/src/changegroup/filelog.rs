@@ -251,7 +251,7 @@ impl DeltaCache {
 }
 
 impl Arbitrary for Filelog {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Filelog {
             node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::arbitrary(g)),

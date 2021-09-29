@@ -10,7 +10,6 @@ use std::collections::BTreeMap;
 use anyhow::{bail, Context, Error, Result};
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
-use rand::Rng;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::blob::{Blob, BlobstoreValue, ChangesetBlob};
@@ -285,19 +284,19 @@ impl BlobstoreValue for BonsaiChangeset {
 }
 
 impl Arbitrary for BonsaiChangeset {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         // In the future Mononoke would like to support changesets with more parents than 2.
         // Start testing that now.
         let size = g.size();
-        let num_parents = g.gen_range(0, 8);
+        let num_parents = usize::arbitrary(g) % 8;
         let parents: Vec<_> = (0..num_parents)
             .map(|_| ChangesetId::arbitrary(g))
             .collect();
 
-        let num_changes = g.gen_range(0, size);
+        let num_changes = usize::arbitrary(g) % size;
         let file_changes: BTreeMap<_, _> = (0..num_changes)
             .map(|_| {
-                let fc_opt = if g.gen_ratio(1, 3) {
+                let fc_opt = if u32::arbitrary(g) % 3 < 1 {
                     FileChange::arbitrary_from_parents(g, &parents)
                 } else {
                     FileChange::Deletion

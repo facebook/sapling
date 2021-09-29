@@ -84,14 +84,14 @@ impl<Name> Location<Name> {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 
 #[cfg(any(test, feature = "for-tests"))]
 impl<Name> Arbitrary for Location<Name>
 where
     Name: Arbitrary,
 {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         Location {
             descendant: Name::arbitrary(g),
             distance: u64::arbitrary(g),

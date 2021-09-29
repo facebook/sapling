@@ -233,13 +233,14 @@ mod tests {
 
     #[test]
     fn test_segment_roundtrip() {
-        fn prop(has_root: bool, level: Level, low: u64, delta: u64, parents: Vec<u64>) -> bool {
+        fn prop(has_root: bool, level: Level, range1: u64, range2: u64, parents: Vec<u64>) -> bool {
             let flags = if has_root {
                 SegmentFlags::HAS_ROOT
             } else {
                 SegmentFlags::empty()
             };
-            let high = low + delta;
+            let low = u64::min(range1, range2);
+            let high = u64::max(range1, range2);
             let parents: Vec<Id> = parents.into_iter().filter(|&p| p < low).map(Id).collect();
             let low = Id(low);
             let high = Id(high);

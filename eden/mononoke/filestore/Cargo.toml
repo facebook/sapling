@@ -35,8 +35,8 @@ fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperiment
 lazy_static = "1.0"
 memblob = { version = "0.1.0", path = "../blobstore/memblob" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
-quickcheck = "0.9"
-rand = { version = "0.7", features = ["small_rng"] }
+quickcheck = "1.0"
+rand = { version = "0.8", features = ["small_rng"] }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }

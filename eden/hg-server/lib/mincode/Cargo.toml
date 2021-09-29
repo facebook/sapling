@@ -14,4 +14,4 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 vlqencoding = { path = "../vlqencoding" }
 
 [dev-dependencies]
-quickcheck = "0.9"
+quickcheck = "1.0"

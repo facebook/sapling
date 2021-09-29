@@ -19,7 +19,7 @@ pub struct Metadata {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for Metadata {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             size: quickcheck::Arbitrary::arbitrary(g),
             flags: quickcheck::Arbitrary::arbitrary(g),

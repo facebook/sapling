@@ -29,8 +29,8 @@ mercurial_types = { version = "0.1.0", path = "../types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../../phases" }
-quickcheck = "0.9"
-rand = { version = "0.7", features = ["small_rng"] }
+quickcheck = "1.0"
+rand = { version = "0.8", features = ["small_rng"] }
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.29"
@@ -46,7 +46,7 @@ assert_matches = "1.5"
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mercurial_types-mocks = { version = "0.1.0", path = "../types/mocks" }
-partial-io = { git = "https://github.com/lukaspiatkowski/rust-partial-io", rev = "9cab8b8a2b41f2c78aa109dcba5d00212cbe43cf", features = ["quickcheck_types", "tokio"] }
+partial-io = { git = "https://github.com/vgao1996/rust-partial-io", rev = "919bf89e8a5ccda789d5a53052d30ed6fc8b1988", features = ["quickcheck_types", "tokio"] }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }

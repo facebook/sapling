@@ -261,11 +261,8 @@ impl DiffType {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for FileType {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        use rand::seq::SliceRandom;
-
-        [FileType::Regular, FileType::Executable, FileType::Symlink]
-            .choose(g)
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        g.choose(&[FileType::Regular, FileType::Executable, FileType::Symlink])
             .unwrap()
             .to_owned()
     }
@@ -273,7 +270,7 @@ impl quickcheck::Arbitrary for FileType {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for FileMetadata {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let hgid = HgId::arbitrary(g);
         let file_type = FileType::arbitrary(g);
         FileMetadata::new(hgid, file_type)

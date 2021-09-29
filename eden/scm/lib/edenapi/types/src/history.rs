@@ -181,7 +181,7 @@ use quickcheck::Arbitrary;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for HistoryEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let key = Key::arbitrary(g);
         let mut nodeinfo = NodeInfo::arbitrary(g);
 
@@ -211,7 +211,7 @@ impl Arbitrary for HistoryEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireHistoryEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         // It doesn't make sense to have a non-None copyfrom containing
         // an empty name, so set copyfrom to None in such cases.
         let mut copyfrom = <Option<RepoPathBuf>>::arbitrary(g).filter(|name| !name.is_empty());
@@ -234,7 +234,7 @@ impl Arbitrary for WireHistoryEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for HistoryRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
             length: Arbitrary::arbitrary(g),
@@ -244,7 +244,7 @@ impl Arbitrary for HistoryRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for HistoryResponseChunk {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             path: Arbitrary::arbitrary(g),
             entries: Arbitrary::arbitrary(g),

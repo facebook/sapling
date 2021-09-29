@@ -141,7 +141,7 @@ impl fmt::Display for HgManifestEnvelope {
 }
 
 impl Arbitrary for HgManifestEnvelope {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         HgManifestEnvelope {
             inner: HgManifestEnvelopeMut {
                 node_id: Arbitrary::arbitrary(g),

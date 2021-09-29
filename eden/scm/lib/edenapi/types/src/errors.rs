@@ -44,7 +44,7 @@ impl ServerError {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for ServerError {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         ServerError::new(String::arbitrary(g), u64::arbitrary(g))
     }
 }

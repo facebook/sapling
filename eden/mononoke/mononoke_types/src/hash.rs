@@ -205,9 +205,11 @@ impl Debug for Blake2 {
 }
 
 impl Arbitrary for Blake2 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let mut bytes = [0; BLAKE2_HASH_LENGTH_BYTES];
-        g.fill_bytes(&mut bytes);
+        for b in bytes.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         Blake2(bytes)
     }
 
@@ -510,9 +512,11 @@ impl Display for RichGitSha1 {
 }
 
 impl Arbitrary for GitSha1 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let mut bytes = [0; 20];
-        g.fill_bytes(&mut bytes);
+        for b in bytes.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         GitSha1(bytes)
     }
 }
@@ -530,9 +534,11 @@ impl From<EdenapiSha1> for Sha1 {
 }
 
 impl Arbitrary for Sha1 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let mut bytes = [0; 20];
-        g.fill_bytes(&mut bytes);
+        for b in bytes.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         Sha1(bytes)
     }
 }
@@ -562,9 +568,11 @@ impl From<lfs_protocol::Sha256> for Sha256 {
 }
 
 impl Arbitrary for Sha256 {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let mut bytes = [0; 32];
-        g.fill_bytes(&mut bytes);
+        for b in bytes.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         Sha256(bytes)
     }
 

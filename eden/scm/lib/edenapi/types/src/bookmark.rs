@@ -18,7 +18,7 @@ pub struct BookmarkRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for BookmarkRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         BookmarkRequest {
             bookmarks: Arbitrary::arbitrary(g),
         }
@@ -34,7 +34,7 @@ pub struct BookmarkEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for BookmarkEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         BookmarkEntry {
             bookmark: Arbitrary::arbitrary(g),
             hgid: Arbitrary::arbitrary(g),

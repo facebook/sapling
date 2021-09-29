@@ -178,7 +178,7 @@ impl ToApi for WireFileContentTokenMetadata {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireUploadToken {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             data: Arbitrary::arbitrary(g),
             signature: Arbitrary::arbitrary(g),
@@ -188,7 +188,7 @@ impl Arbitrary for WireUploadToken {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireUploadTokenData {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             id: Arbitrary::arbitrary(g),
             bubble_id: Arbitrary::arbitrary(g),
@@ -199,7 +199,7 @@ impl Arbitrary for WireUploadTokenData {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireUploadTokenSignature {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             signature: Arbitrary::arbitrary(g),
         }

@@ -10,7 +10,6 @@ use std::fmt;
 use anyhow::{bail, Context, Result};
 use edenapi_types::FileType as EdenapiFileType;
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
-use rand::{seq::SliceRandom, Rng};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::errors::ErrorKind;
@@ -255,10 +254,9 @@ impl FileChange {
 
     /// Generate a random FileChange which picks copy-from parents from the list of parents
     /// provided.
-    pub(crate) fn arbitrary_from_parents<G: Gen>(g: &mut G, parents: &[ChangesetId]) -> Self {
-        let copy_from = if g.gen_ratio(1, 5) {
-            parents
-                .choose(g)
+    pub(crate) fn arbitrary_from_parents(g: &mut Gen, parents: &[ChangesetId]) -> Self {
+        let copy_from = if u32::arbitrary(g) % 5 < 1 {
+            g.choose(parents)
                 .map(|parent| (MPath::arbitrary(g), *parent))
         } else {
             None
@@ -273,8 +271,8 @@ impl FileChange {
 }
 
 impl Arbitrary for FileChange {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let copy_from = if g.gen_ratio(1, 5) {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let copy_from = if u32::arbitrary(g) % 5 < 1 {
             Some((MPath::arbitrary(g), ChangesetId::arbitrary(g)))
         } else {
             None
@@ -401,8 +399,8 @@ impl fmt::Display for FileType {
 }
 
 impl Arbitrary for FileType {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        match g.gen_range(0, 10) {
+    fn arbitrary(g: &mut Gen) -> Self {
+        match u32::arbitrary(g) % 10 {
             0 => FileType::Executable,
             1 => FileType::Symlink,
             _ => FileType::Regular,

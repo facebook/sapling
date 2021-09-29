@@ -7,7 +7,6 @@
 
 use anyhow::{bail, ensure, format_err, Context, Result};
 use quickcheck::{Arbitrary, Gen};
-use rand::Rng;
 use rand_distr::{Distribution, LogNormal};
 
 use crate::errors::ErrorKind;
@@ -86,9 +85,9 @@ impl Default for Delta {
 }
 
 impl Arbitrary for Delta {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let size = g.size();
-        let nfrags = g.gen_range(0, size);
+        let nfrags = usize::arbitrary(g) % size;
 
         // Maintain invariants (start <= end, no overlap).
         let mut start = 0;
@@ -96,8 +95,8 @@ impl Arbitrary for Delta {
 
         let frags = (0..nfrags)
             .map(|_| {
-                start = end + g.gen_range(0, size);
-                end = start + g.gen_range(0, size);
+                start = end + usize::arbitrary(g) % size;
+                end = start + usize::arbitrary(g) % size;
                 let val = Fragment {
                     start,
                     end,
@@ -160,12 +159,12 @@ impl Fragment {
 }
 
 impl Arbitrary for Fragment {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut Gen) -> Self {
         let size = g.size();
 
         // Maintain invariant start <= end.
-        let start = g.gen_range(0, size);
-        let end = start + g.gen_range(0, size);
+        let start = usize::arbitrary(g) % size;
+        let end = start + usize::arbitrary(g) % size;
 
         Fragment {
             start,
@@ -191,7 +190,32 @@ impl Arbitrary for Fragment {
     }
 }
 
-fn arbitrary_frag_content<G: Gen>(g: &mut G) -> Vec<u8> {
+struct GenRngWrapper<'a> {
+    gen: &'a mut Gen,
+}
+
+impl<'a> rand::RngCore for GenRngWrapper<'a> {
+    fn next_u32(&mut self) -> u32 {
+        u32::arbitrary(self.gen)
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        u64::arbitrary(self.gen)
+    }
+
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        for b in dest {
+            *b = u8::arbitrary(self.gen);
+        }
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        self.fill_bytes(dest);
+        Ok(())
+    }
+}
+
+fn arbitrary_frag_content(g: &mut Gen) -> Vec<u8> {
     let size = g.size();
     // Using a uniform distribution over size here can lead to extremely bloated
     // data structures. We also want to test zero-length data with more than a
@@ -200,11 +224,14 @@ fn arbitrary_frag_content<G: Gen>(g: &mut G) -> Vec<u8> {
     // The choice of mean and stdev are pretty arbitrary, but they work well for
     // common sizes (~100).
     // TODO: make this more rigorous, e.g. by using params such that p95 = size.
+
     let lognormal = LogNormal::new(-3.0, 2.0).expect("Failed to make LogNormal");
-    let content_len = ((size as f64) * lognormal.sample(g)) as usize;
+    let content_len = ((size as f64) * lognormal.sample(&mut GenRngWrapper { gen: g })) as usize;
 
     let mut v = Vec::with_capacity(content_len);
-    g.fill_bytes(&mut v);
+    for b in v.iter_mut() {
+        *b = u8::arbitrary(g);
+    }
     v
 }
 

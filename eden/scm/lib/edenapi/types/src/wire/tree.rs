@@ -355,7 +355,7 @@ impl ToApi for WireUploadTreeResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireTreeEntry {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let bytes: Option<Vec<u8>> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
@@ -371,7 +371,7 @@ impl Arbitrary for WireTreeEntry {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireTreeAttributesRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             with_data: Arbitrary::arbitrary(g),
             with_parents: Arbitrary::arbitrary(g),
@@ -382,7 +382,7 @@ impl Arbitrary for WireTreeAttributesRequest {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireTreeKeysQuery {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
         }
@@ -391,9 +391,8 @@ impl Arbitrary for WireTreeKeysQuery {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireTreeQuery {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        use rand::Rng;
-        let variant = g.gen_range(0, 2);
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let variant = u32::arbitrary(g) % 2;
         match variant {
             0 => WireTreeQuery::Other,
             1 => WireTreeQuery::ByKeys(Arbitrary::arbitrary(g)),
@@ -404,7 +403,7 @@ impl Arbitrary for WireTreeQuery {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireTreeRequest {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self {
             query: Arbitrary::arbitrary(g),
             attributes: Arbitrary::arbitrary(g),

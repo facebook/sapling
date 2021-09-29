@@ -130,7 +130,7 @@ pub fn main() {
     } else if matches.is_present(ARG_FORCE_FB) {
         true
     } else {
-        rand::thread_rng().gen_range(0, 100) == 0usize
+        rand::thread_rng().gen_range(0..100) == 0usize
     };
 
     let (fb, mut fb_destroy_guard) = if use_fb {

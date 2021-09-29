@@ -12,7 +12,11 @@ use std::fmt;
 pub struct SessionId(String);
 
 pub fn generate_session_id() -> SessionId {
-    let s: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+    let s: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .map(char::from)
+        .take(16)
+        .collect();
     SessionId::from_string(s)
 }
 

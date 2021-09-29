@@ -31,7 +31,7 @@ use quickcheck::Arbitrary;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for NodeInfo {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         NodeInfo {
             parents: [Key::arbitrary(g), Key::arbitrary(g)],
             linknode: HgId::arbitrary(g),

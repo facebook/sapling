@@ -321,9 +321,11 @@ impl<R: Read + ?Sized> ReadHgIdExt for R {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl quickcheck::Arbitrary for HgId {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let mut bytes = [0u8; HgId::len()];
-        g.fill_bytes(&mut bytes);
+        for b in bytes.iter_mut() {
+            *b = u8::arbitrary(g);
+        }
         HgId::from(&bytes)
     }
 }

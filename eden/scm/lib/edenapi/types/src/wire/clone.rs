@@ -108,14 +108,14 @@ impl ToApi for WireFlatSegment {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFlatSegment {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         FlatSegment::arbitrary(g).to_wire()
     }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireCloneData {
-    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         CloneData::arbitrary(g).to_wire()
     }
 }

@@ -517,8 +517,10 @@ mod tests {
     use super::*;
     use indexedlog::DefaultOpenOptions;
     use quickcheck::quickcheck;
-    use rand_chacha::ChaChaRng;
-    use rand_core::{RngCore, SeedableRng};
+    use rand_chacha::{
+        rand_core::{RngCore, SeedableRng},
+        ChaChaRng,
+    };
     use std::fs;
     use std::io::{Seek, SeekFrom, Write};
     use tempfile::TempDir;
