@@ -2095,3 +2095,31 @@ function check_git_wc() {
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "$@"
 }
+
+function derived_data_service() {
+  export PORT_2DS
+  PORT_2DS="$(get_free_socket)"
+  GLOG_minloglevel=5 "$DERIVED_DATA_SERVICE" "$@" \
+    -p "$PORT_2DS" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "${COMMON_ARGS[@]}" >> "$TESTTMP/derived_data_service.out" 2>&1 &
+
+  # Wait for derived_data_service to start up
+  # MONONOKE_START_TIMEOUT is set in seconds
+  # Number of attempts is timeout multiplied by 10, since we
+  # sleep every 0.1 seconds.
+  local attempts timeout
+  timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
+  attempts="$((timeout * 10))"
+
+  for _ in $(seq 1 "$attempts"); do
+    derived_data_client get-status >/dev/null 2>&1 && break
+    sleep 0.1
+  done
+}
+
+function derived_data_client() {
+  GLOG_minloglevel=5 "$DERIVED_DATA_CLIENT" \
+  -h "localhost:$PORT_2DS" \
+  "$@"
+}
