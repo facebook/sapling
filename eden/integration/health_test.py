@@ -39,7 +39,7 @@ class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def test_healthy_daemon_is_healthy(self) -> None:
         with self.spawn_fake_edenfs(self.temp_dir):
             status_process = self.spawn_status([])
-            status_process.expect_exact("edenfs running normally")
+            status_process.expect_exact("EdenFS is running normally")
             self.assert_process_succeeds(status_process)
 
     def test_killed_daemon_is_not_running(self) -> None:
@@ -48,7 +48,7 @@ class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
             wait_for_shutdown(pid=daemon_pid, timeout=5)
 
             status_process = self.spawn_status([])
-            status_process.expect_exact("EdenFS not running")
+            status_process.expect_exact("EdenFS is not running")
             self.assert_process_fails(status_process, exit_code=1)
 
     def test_hanging_thrift_call_reports_daemon_is_unresponsive(self) -> None:
@@ -63,7 +63,7 @@ class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def test_slow_thrift_call_reports_daemon_is_healthy(self) -> None:
         with self.spawn_fake_edenfs(self.temp_dir, ["--sleepBeforeGetPid=2"]):
             status_process = self.spawn_status(["--timeout", "10"])
-            status_process.expect_exact("edenfs running normally")
+            status_process.expect_exact("EdenFS is running normally")
             self.assert_process_succeeds(status_process)
 
     def spawn_status(self, extra_args: typing.List[str]) -> PexpectSpawnType:

@@ -20,6 +20,7 @@ use thrift_types::edenfs::{client::EdenService, types::DaemonInfo};
 use thrift_types::fb303_core::types::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use tokio_uds_compat::UnixStream;
+use tracing::{event, Level};
 
 use crate::utils::get_executable;
 use crate::EdenFsClient;
@@ -33,6 +34,13 @@ pub struct EdenFsInstance {
 
 impl EdenFsInstance {
     pub fn new(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Option<PathBuf>) -> Self {
+        event!(
+            Level::TRACE,
+            ?config_dir,
+            ?etc_eden_dir,
+            ?home_dir,
+            "Creating EdenFsInstance"
+        );
         Self {
             config_dir,
             etc_eden_dir,
@@ -103,9 +111,15 @@ impl EdenFsInstance {
         let exe = get_executable(pid).ok_or_else(|| anyhow!("EdenFS is not running as {}", pid))?;
         let name = exe
             .file_name()
-            .ok_or_else(|| anyhow!("Unable to retrieve process information of PID={}", pid))?;
+            .ok_or_else(|| anyhow!("Unable to retrieve process information of PID={}", pid))?
+            .to_string_lossy();
 
-        if name == "edenfs" || name == "fake_edenfs" {
+        tracing::trace!(?name, "executable name");
+
+        if name == "edenfs"
+            || name == "fake_edenfs"
+            || (cfg!(windows) && name.ends_with("edenfs.exe"))
+        {
             Err(anyhow!(
                 "EdenFS's Thrift server does not appear to be running, \
                 but the process is still alive (PID={})",
@@ -119,7 +133,9 @@ impl EdenFsInstance {
     pub async fn get_health(&self, timeout: Option<Duration>) -> Result<DaemonInfo> {
         let client = self
             .connect(timeout.or_else(|| Some(Duration::from_secs(3))))
-            .await?;
+            .await
+            .context("Unable to connect to EdenFS daemon")?;
+        event!(Level::DEBUG, "connected to EdenFS daemon");
         client.getDaemonInfo().await.from_err()
     }
 }

@@ -11,6 +11,8 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use structopt::StructOpt;
+use tokio::time;
+use tracing::{event, Level};
 
 use edenfs_client::{DaemonHealthy, EdenFsInstance};
 use edenfs_error::Result;
@@ -27,13 +29,26 @@ pub struct StatusCmd {
 
 impl StatusCmd {
     async fn get_status(&self, instance: &EdenFsInstance) -> Result<i32> {
-        let health = instance
-            .get_health(Some(Duration::from_secs(self.timeout)))
-            .await;
+        let timeout = Duration::from_secs(self.timeout);
+        let health = instance.get_health(Some(timeout));
+        let health = time::timeout(timeout, health).await;
 
-        if let Ok(health) = health {
-            if health.is_healthy() {
-                return Ok(health.pid);
+        event!(Level::TRACE, ?health, "get_health");
+
+        match health {
+            Ok(Ok(health)) if health.is_healthy() => return Ok(health.pid),
+            Ok(Ok(health)) => {
+                event!(
+                    Level::DEBUG,
+                    ?health,
+                    "Connected to EdenFS daemon but daemon reported unhealthy status"
+                );
+            }
+            Ok(Err(e)) => {
+                event!(Level::DEBUG, ?e, "Error while connecting to EdenFS daemon");
+            }
+            Err(_) => {
+                event!(Level::DEBUG, ?timeout, "Timeout exceeded");
             }
         }
 

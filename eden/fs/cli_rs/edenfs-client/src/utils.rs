@@ -7,13 +7,15 @@
 
 use std::path::PathBuf;
 use sysinfo::{ProcessExt, SystemExt};
+use tracing::trace;
 
 pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
     let mut system = sysinfo::System::new();
 
-    if !system.refresh_process(pid) {
+    if system.refresh_process(pid) {
         if let Some(process) = system.get_process(pid) {
             let executable = process.exe();
+            trace!(pid, ?executable, "found process executable");
 
             #[cfg(unix)]
             {
@@ -28,7 +30,11 @@ pub fn get_executable(pid: sysinfo::Pid) -> Option<PathBuf> {
             {
                 return Some(executable.into());
             }
+        } else {
+            trace!(pid, "unable to find process");
         }
+    } else {
+        trace!("unable to load process information");
     }
 
     None
