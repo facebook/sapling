@@ -30,8 +30,8 @@ use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
 use std::sync::Arc;
 use std::sync::Weak;
 use std::thread;
-use std::time::Duration;
 use std::time::SystemTime;
+use std::time::{Duration, Instant};
 use tracing::dispatcher::{self, Dispatch};
 use tracing::Level;
 use tracing_collector::TracingData;
@@ -121,7 +121,13 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
                 setup_http(config, global_opts);
 
-                let _ = spawn_progress_thread(config, global_opts, io, Arc::downgrade(&in_scope));
+                let _ = spawn_progress_thread(
+                    config,
+                    global_opts,
+                    io,
+                    run_logger.as_ref().unwrap().clone(),
+                    Arc::downgrade(&in_scope),
+                );
 
                 dispatcher.run_command(&table, io)
             })
@@ -277,29 +283,38 @@ fn spawn_progress_thread(
     config: &ConfigSet,
     global_opts: &HgGlobalOpts,
     io: &IO,
+    run_logger: Arc<runlog::Logger>,
     in_scope: Weak<()>,
 ) -> Result<()> {
     // See 'hg help config.progress' for the config options.
+    let mut disable_rendering = false;
+
     if config.get_or("progress", "disable", || false)? {
-        return Ok(());
+        disable_rendering = true;
     }
 
     let assume_tty = config.get_or("progress", "assume-tty", || false)?;
     if !assume_tty && !io.error().is_tty() {
-        return Ok(());
+        disable_rendering = true;
     }
 
     if global_opts.quiet || global_opts.debug || configparser::hg::is_plain(Some("progress")) {
-        return Ok(());
+        disable_rendering = true;
     }
 
+    let render_function = progress_render::simple::render;
     let renderer_name = config.get_or("progress", "renderer", || "classic".to_string())?;
-    let render_function = match renderer_name.as_str() {
-        "rust:simple" => progress_render::simple::render,
-        _ => return Ok(()),
-    };
+    if renderer_name != "rust:simple" {
+        disable_rendering = true;
+    }
 
-    let interval = Duration::from_secs_f64(config.get_or("progress", "refresh", || 0.1)?);
+    let interval = Duration::from_secs_f64(config.get_or("progress", "refresh", || 0.1)?)
+        .max(Duration::from_millis(50));
+
+    // Limit how often we write runlog. This config knob is primarily for tests to lower.
+    let runlog_interval =
+        Duration::from_secs_f64(config.get_or("runlog", "progress_refresh", || 0.5)?).max(interval);
+
     let mut config = progress_render::RenderingConfig {
         delay: Duration::from_secs_f64(config.get_or("progress", "delay", || 3.0)?),
         term_width: term_width(),
@@ -308,26 +323,49 @@ fn spawn_progress_thread(
 
     let registry = Registry::main();
     let progress = io.progress();
+
+    let mut stderr = io.error();
+
     hg_http::enable_progress_reporting();
 
     // Not fatal if we cannot spawn the progress rendering thread.
     let thread_name = "rust-progress".to_string();
     let _ = thread::Builder::new().name(thread_name).spawn(move || {
         let mut last_text = String::new();
-        let interval = interval.max(Duration::from_millis(50));
+        let mut last_runlog_time: Option<Instant> = None;
+
         while Weak::upgrade(&in_scope).is_some() {
-            let mut text = (render_function)(&registry, &config);
-            registry.remove_orphan_progress_bar();
-            if text != last_text {
-                let term_width = term_width();
-                if term_width != config.term_width {
-                    config.term_width = term_width;
-                    text = (render_function)(&registry, &config);
+            let now = Instant::now();
+
+            if !disable_rendering {
+                let mut text = (render_function)(&registry, &config);
+                if text != last_text {
+                    let term_width = term_width();
+                    if term_width != config.term_width {
+                        config.term_width = term_width;
+                        text = (render_function)(&registry, &config);
+                    }
+                    // This might block (so we use a thread, not an async task)
+                    let _ = progress.set(&text);
+                    last_text = text;
                 }
-                // This might block (so we use a thread, not an async task)
-                let _ = progress.set(&text);
-                last_text = text;
             }
+
+            if last_runlog_time.map_or(true, |i| now - i >= runlog_interval) {
+                let progress = registry
+                    .list_progress_bar()
+                    .into_iter()
+                    .map(runlog::Progress::new)
+                    .collect();
+
+                if let Err(err) = run_logger.update_progress(progress) {
+                    let _ = write!(stderr, "Error updating runlog progress: {}\n", err);
+                }
+
+                last_runlog_time = Some(now);
+            }
+
+            registry.remove_orphan_progress_bar();
             thread::sleep(interval);
         }
     });

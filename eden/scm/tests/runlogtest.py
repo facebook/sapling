@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os.path
 import time
 
-from edenscm.mercurial import registrar
+from edenscm.mercurial import progress, registrar
 
 
 cmdtable = {}
@@ -31,6 +31,30 @@ command = registrar.command(cmdtable)
 def basiccommandtest(ui, exit_code, **opts):
     waitforfile(opts.get("waitfile"))
     exit(int(exit_code))
+
+
+@command(
+    "progresstest",
+    [
+        (
+            "",
+            "waitfile",
+            "",
+            "if set, wait for file to exist before updating progress",
+        ),
+    ],
+    "hg progresstest total",
+    norepo=True,
+)
+def progresstest(ui, total, **opts):
+    total = int(total)
+
+    waitforfile(opts.get("waitfile"))
+
+    with progress.bar(ui, "eating", "apples", total) as bar:
+        for i in range(1, total + 1):
+            bar.value = i
+            waitforfile(opts.get("waitfile"))
 
 
 def waitforfile(path):

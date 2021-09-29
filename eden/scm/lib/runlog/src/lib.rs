@@ -52,8 +52,18 @@ impl Logger {
         let mut entry = self.entry.lock();
         entry.exit_code = Some(exit_code);
         entry.end_time = Some(chrono::Utc::now());
+        entry.progress = Vec::new();
 
         self.write(&entry)?;
+
+        Ok(())
+    }
+
+    pub fn update_progress(&self, progress: Vec<Progress>) -> Result<()> {
+        let mut entry = self.entry.lock();
+        if entry.exit_code.is_none() && entry.set_progress(progress) {
+            self.write(&entry)?;
+        }
 
         Ok(())
     }
@@ -78,6 +88,15 @@ struct Entry {
     start_time: chrono::DateTime<chrono::Utc>,
     end_time: Option<chrono::DateTime<chrono::Utc>>,
     exit_code: Option<i32>,
+    progress: Vec<Progress>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct Progress {
+    topic: String,
+    unit: String,
+    total: u64,
+    position: u64,
 }
 
 impl Entry {
@@ -89,6 +108,29 @@ impl Entry {
             start_time: chrono::Utc::now(),
             end_time: None,
             exit_code: None,
+            progress: Vec::new(),
         }
+    }
+
+    /// Return whether passed progress differs from current progress.
+    pub fn set_progress(&mut self, progress: Vec<Progress>) -> bool {
+        if self.progress == progress {
+            false
+        } else {
+            self.progress = progress;
+            true
+        }
+    }
+}
+
+impl Progress {
+    pub fn new(bar: Arc<progress_model::ProgressBar>) -> Progress {
+        let (position, total) = bar.position_total();
+        return Progress {
+            topic: bar.topic().to_string(),
+            position,
+            total,
+            unit: bar.unit().to_string(),
+        };
     }
 }
