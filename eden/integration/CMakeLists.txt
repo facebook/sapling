@@ -41,7 +41,7 @@ add_fb_python_unittest(
   SOURCES ${INTEGRATION_SRCS}
   WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   DEPENDS
-    edenfsctl.main_lib
+    edenfsctl.real.main_lib
     eden_integration_lib
     eden_hg_integration_lib
   ENV

@@ -14,7 +14,7 @@ add_fb_python_library(
   eden_integration_lib
   SOURCES ${INTEGRATION_LIB_SRCS}
   DEPENDS
-    edenfsctl.main_lib
+    edenfsctl.real.main_lib
     eden_py
     eden_service_thrift_py
     eden_test_support

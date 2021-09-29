@@ -82,7 +82,7 @@ class FindExeClass(object):
             "eden CLI",
             env="EDENFS_CLI_PATH",
             buck_path="eden/fs/cli/edenfsctl.par",
-            cmake_path="eden/fs/cli/edenfsctl",
+            cmake_path="eden/fs/cli/edenfsctl.real",
         )
 
     @cached_property

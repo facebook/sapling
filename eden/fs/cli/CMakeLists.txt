@@ -5,7 +5,7 @@
 
 file(GLOB EDENFSCTL_SRCS "*.py" "doctor/*.py")
 add_fb_python_executable(
-  edenfsctl
+  edenfsctl.real
   MAIN_MODULE eden.fs.cli.main:zipapp_main
   SOURCES ${EDENFSCTL_SRCS}
   DEPENDS
@@ -15,4 +15,4 @@ add_fb_python_executable(
     FBThrift::thrift_py_inspect
     python-toml::python-toml
 )
-install_fb_python_executable(edenfsctl)
+install_fb_python_executable(edenfsctl.real)
