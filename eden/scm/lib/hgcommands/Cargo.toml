@@ -39,6 +39,7 @@ python3-sys = { version = "0.5", optional = true }
 pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-features = false }
 rand = { version = "0.8", features = ["small_rng"] }
 revisionstore = { path = "../revisionstore" }
+runlog = { path = "../runlog" }
 taggederror = { path = "../taggederror" }
 terminal_size = "0.1"
 tracing = "0.1.27"

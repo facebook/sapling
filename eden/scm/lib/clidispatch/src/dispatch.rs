@@ -9,7 +9,7 @@ use crate::command::{CommandDefinition, CommandFunc, CommandTable};
 use crate::errors;
 use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
-use crate::repo::OptionalRepo;
+use crate::repo::{OptionalRepo, Repo};
 use anyhow::Error;
 use cliparser::alias::{expand_aliases, find_command_name};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
@@ -204,6 +204,13 @@ impl Dispatcher {
     /// Get a reference to the global options.
     pub fn global_opts(&self) -> &HgGlobalOpts {
         &self.global_opts
+    }
+
+    pub fn repo(&self) -> Option<&Repo> {
+        match &self.optional_repo {
+            OptionalRepo::Some(repo) => Some(repo),
+            _ => None,
+        }
     }
 
     /// Run a command. Return exit code if the command completes.

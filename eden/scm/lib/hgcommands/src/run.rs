@@ -103,6 +103,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
         Ok(dir) => dir,
     };
 
+    let mut run_logger: Option<Arc<runlog::Logger>> = None;
+
     let exit_code = {
         let _guard = span.enter();
         let in_scope = Arc::new(()); // Used to tell progress rendering thread to stop.
@@ -114,6 +116,8 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
             dispatch::Dispatcher::from_args(args[1..].to_vec()).and_then(|dispatcher| {
                 let config = dispatcher.config();
                 let global_opts = dispatcher.global_opts();
+
+                run_logger = Some(runlog::Logger::new(dispatcher.repo(), args[1..].to_vec())?);
 
                 setup_http(config, global_opts);
 
@@ -173,6 +177,13 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // Sync the blackbox before returning: this exit code is going to be used to process::exit(),
     // so we need to flush now.
     blackbox::sync();
+
+    if let Some(rl) = run_logger {
+        if let Err(err) = rl.close(exit_code) {
+            // Command has already finished - not worth bailing due to this error.
+            let _ = write!(io.error(), "Error writing final runlog: {}\n", err);
+        }
+    }
 
     if let Some(scenario) = scenario {
         scenario.teardown();
