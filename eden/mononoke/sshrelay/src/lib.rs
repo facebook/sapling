@@ -76,6 +76,7 @@ pub struct Metadata {
     client_ip: Option<IpAddr>,
     client_hostname: Option<String>,
     revproxy_region: Option<String>,
+    raw_encoded_cats: Option<String>,
 }
 
 impl Metadata {
@@ -87,6 +88,7 @@ impl Metadata {
         client_debug: bool,
         client_ip: Option<IpAddr>,
         revproxy_region: Option<String>,
+        raw_encoded_cats: Option<String>,
     ) -> Self {
         let session_id: SessionId = match session_id {
             Some(id) => SessionId::from_string(id.to_owned()),
@@ -106,6 +108,7 @@ impl Metadata {
         };
 
         Self {
+            raw_encoded_cats,
             session_id,
             is_trusted_client,
             identities,
@@ -142,6 +145,10 @@ impl Metadata {
 
     pub fn identities(&self) -> &MononokeIdentitySet {
         &self.identities
+    }
+
+    pub fn raw_encoded_cats(&self) -> &Option<String> {
+        &self.raw_encoded_cats
     }
 
     pub fn is_trusted_client(&self) -> bool {

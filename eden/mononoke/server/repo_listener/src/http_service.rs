@@ -437,6 +437,7 @@ async fn try_convert_headers_to_metadata(
 
     const HEADER_ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
     const HEADER_CLIENT_IP: &str = "tfb-orig-client-ip";
+    const HEADER_FORWARDED_CATS: &str = "x-forwarded-cats";
 
     if !is_trusted {
         return Ok(None);
@@ -461,6 +462,12 @@ async fn try_convert_headers_to_metadata(
             .map(|r| r.to_str().ok().map(|r| r.to_string()))
             .flatten();
 
+        let cats = if let Some(cats) = headers.get(HEADER_FORWARDED_CATS) {
+            Some(cats.to_str().context("Invalid encoded cats")?.to_string())
+        } else {
+            None
+        };
+
         // In the case of HTTP proxied/trusted requests we only have the
         // guarantee that we can trust the forwarded credentials. Beyond
         // this point we can't trust anything else, ACL checks have not
@@ -475,6 +482,7 @@ async fn try_convert_headers_to_metadata(
                 headers.contains_key(HEADER_CLIENT_DEBUG),
                 Some(ip_addr),
                 src_region,
+                cats,
             )
             .await,
         ))
