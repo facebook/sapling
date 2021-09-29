@@ -10,7 +10,7 @@ use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 use anyhow::{anyhow, Context, Result};
-use structopt::StructOpt;
+use structopt::{clap, StructOpt};
 use tracing_subscriber::filter::EnvFilter;
 
 fn python_fallback() -> Result<Command> {
@@ -87,9 +87,17 @@ fn main() -> Result<()> {
         rust_main(cmd)
     } else if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
         fallback()
-    } else if let Ok(cmd) = edenfs_commands::MainCommand::from_args_safe() {
-        rust_main(cmd)
     } else {
-        fallback()
+        match edenfs_commands::MainCommand::from_args_safe() {
+            Ok(cmd) => rust_main(cmd),
+            Err(e) if e.kind == clap::ErrorKind::HelpDisplayed => {
+                // If we get a help message, we don't want to fallback to the Python version. The
+                // help flag has been disabled for the main command and debug subcommand so they
+                // will fallback correct while we still show help message for enabled commands
+                // correctly.
+                e.exit();
+            }
+            Err(_) => fallback(),
+        }
     }
 }

@@ -17,7 +17,8 @@ use edenfs_error::EdenFsError;
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Core {
-    eden_directory: String,
+    #[stack(default)]
+    eden_directory: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, StackConfig, Debug)]
@@ -103,6 +104,8 @@ pub fn load_config(
             "Unable to load system configuration, skipped: {:?}",
             e
         );
+    } else {
+        event!(Level::DEBUG, "System configuration loaded");
     }
 
     if let Err(e) = load_system_rcs(&mut loader, &etc_eden_dir) {
@@ -112,11 +115,15 @@ pub fn load_config(
             "Unable to load system RC configurations, skipped: {:?}",
             e
         );
+    } else {
+        event!(Level::DEBUG, "System RC configurations loaded");
     }
 
     if let Some(home) = home_dir {
         if let Err(e) = load_user(&mut loader, &home) {
             event!(Level::INFO, home = ?home, "Unable to load user configuration, skipped: {:?}", e);
+        } else {
+            event!(Level::DEBUG, "User configuration loaded");
         }
     } else {
         event!(

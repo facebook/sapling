@@ -30,7 +30,7 @@ impl crate::Subcommand for ConfigCmd {
             }
         };
 
-        match toml::to_string_pretty(&config) {
+        match toml::to_string(&config) {
             Ok(st) => {
                 println!("{}", st);
                 Ok(0)

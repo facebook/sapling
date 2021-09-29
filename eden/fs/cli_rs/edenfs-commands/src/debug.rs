@@ -8,7 +8,7 @@
 //! edenfsctl config
 
 use async_trait::async_trait;
-use structopt::StructOpt;
+use structopt::{clap::AppSettings, StructOpt};
 
 use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
@@ -19,7 +19,10 @@ mod clear_local_caches;
 mod compact_local_storage;
 
 #[derive(StructOpt, Debug)]
-#[structopt(about = "Internal commands for examining eden state")]
+#[structopt(
+    about = "Internal commands for examining eden state",
+    setting = AppSettings::DisableHelpFlags,
+)]
 pub struct DebugCmd {
     #[structopt(subcommand)]
     subcommand: DebugSubcommand,

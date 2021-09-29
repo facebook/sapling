@@ -30,7 +30,7 @@ const DEFAULT_CONFIG_DIR: &str = "~/local/.eden";
 const DEFAULT_ETC_EDEN_DIR: &str = "/etc/eden";
 
 #[cfg(windows)]
-const DEFAULT_CONFIG_DIR: &str = "~/.eden";
+const DEFAULT_CONFIG_DIR: &str = "~\\.eden";
 #[cfg(windows)]
 const DEFAULT_ETC_EDEN_DIR: &str = "C:\\ProgramData\\facebook\\eden";
 
@@ -40,6 +40,7 @@ type ExitCode = i32;
 #[structopt(
     name = "edenfsctl",
     setting = AppSettings::DisableVersion,
+    setting = AppSettings::DisableHelpFlags,
     setting = AppSettings::VersionlessSubcommands,
 )]
 pub struct MainCommand {
@@ -77,10 +78,10 @@ pub enum TopLevelSubcommand {
     Status(crate::status::StatusCmd),
     Pid(crate::pid::PidCmd),
     Uptime(crate::uptime::UptimeCmd),
-    Gc(crate::gc::GcCmd),
+    // Gc(crate::gc::GcCmd),
     Config(crate::config::ConfigCmd),
     Debug(crate::debug::DebugCmd),
-    Top(crate::top::TopCmd),
+    // Top(crate::top::TopCmd),
 }
 
 #[async_trait]
@@ -91,10 +92,10 @@ impl Subcommand for TopLevelSubcommand {
             Status(cmd) => cmd,
             Pid(cmd) => cmd,
             Uptime(cmd) => cmd,
-            Gc(cmd) => cmd,
+            // Gc(cmd) => cmd,
             Config(cmd) => cmd,
             Debug(cmd) => cmd,
-            Top(cmd) => cmd,
+            // Top(cmd) => cmd,
         };
         sc.run(instance).await
     }
