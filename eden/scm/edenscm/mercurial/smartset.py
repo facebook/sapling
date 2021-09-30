@@ -742,13 +742,19 @@ class nameset(abstractsmartset):
         assert isinstance(nameset, bindings.dag.nameset)
         self._changelog = changelog
         self._set = nameset
-        self._torev = changelog.idmap.node2id
-        self._tonode = changelog.idmap.id2node
         # This controls the order of the set.
         self._reversed = reverse
         if repo is None:
             raise TypeError("nameset requires repo")
         self._reporef = weakref.ref(repo)
+
+    @property
+    def _torev(self):
+        return self._changelog.idmap.node2id
+
+    @property
+    def _tonode(self):
+        return self._changelog.idmap.id2node
 
     @staticmethod
     def range(repo, start, end, ascending=False):
