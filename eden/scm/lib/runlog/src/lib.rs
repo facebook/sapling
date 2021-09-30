@@ -102,7 +102,11 @@ pub struct Progress {
 impl Entry {
     fn new(command: Vec<String>) -> Self {
         Self {
-            id: thread_rng().sample_iter(Alphanumeric).take(16).collect(),
+            id: thread_rng()
+                .sample_iter(Alphanumeric)
+                .take(16)
+                .map(char::from)
+                .collect(),
             command,
             pid: unsafe { libc::getpid() } as u64,
             start_time: chrono::Utc::now(),

@@ -34,6 +34,7 @@ use unodes::RootUnodeManifestId;
 fn gen_filename(rng: &mut impl Rng, len: usize) -> String {
     std::iter::repeat_with(|| rng.sample(Alphanumeric))
         .take(len)
+        .map(char::from)
         .collect()
 }
 

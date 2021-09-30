@@ -69,6 +69,7 @@ impl Connection {
         let correlator: String = rand::thread_rng()
             .sample_iter(&Alphanumeric)
             .take(16)
+            .map(char::from)
             .collect();
         let headers = hashmap! {
             String::from("client_type") => String::from("scsc CLI"),

@@ -140,10 +140,7 @@ mod tests {
         let keys: Vec<Vec<u8>> = (0..1000usize)
             .map(|i| {
                 let rng = thread_rng();
-                rng.sample_iter(&Alphanumeric)
-                    .take(i % 40)
-                    .map(|ch| ch as u8)
-                    .collect()
+                rng.sample_iter(&Alphanumeric).take(i % 40).collect()
             })
             .collect();
         let key_ids: Vec<KeyId> = keys

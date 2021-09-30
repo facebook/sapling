@@ -46,7 +46,11 @@ async fn read_write_size(
     test_chunking_methods(fb, put_behaviour, |ctx, bs, _| async move {
         borrowed!(ctx);
         // Generate unique keys.
-        let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let suffix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
         let key = format!("manifoldblob_test_{}", suffix);
 
         let mut bytes_in = vec![0u8; blob_size];
@@ -92,7 +96,11 @@ async fn double_put(fb: FacebookInit) -> Result<(), Error> {
     test_chunking_methods(fb, DEFAULT_PUT_BEHAVIOUR, |ctx, bs, _| async move {
         borrowed!(ctx);
         // Generate unique keys.
-        let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let suffix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
         let key = format!("manifoldblob_test_{}", suffix);
 
         let mut bytes_in = [0u8; 64];
@@ -124,7 +132,11 @@ async fn overwrite(fb: FacebookInit) -> Result<(), Error> {
     test_chunking_methods(fb, PutBehaviour::Overwrite, |ctx, bs, _| async move {
         borrowed!(ctx);
         // Generate unique keys.
-        let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let suffix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
         let key = format!("manifoldblob_test_{}", suffix);
 
         let mut bytes_1 = [0u8; 64];
@@ -154,9 +166,17 @@ async fn dedup(fb: FacebookInit) -> Result<(), Error> {
     test_chunking_methods(fb, DEFAULT_PUT_BEHAVIOUR, |ctx, bs, _| async move {
         borrowed!(ctx);
         // Generate unique keys.
-        let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let suffix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
         let key1 = format!("manifoldblob_test_{}", suffix);
-        let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let suffix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
         let key2 = format!("manifoldblob_test_{}", suffix);
 
         let mut bytes_in = [0u8; 64];
@@ -203,9 +223,17 @@ async fn link(fb: FacebookInit) -> Result<(), Error> {
     test_chunking_methods(fb, DEFAULT_PUT_BEHAVIOUR, |ctx, bs, _| async move {
         borrowed!(ctx);
         // Generate unique keys.
-        let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let suffix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
         let key1 = format!("manifoldblob_test_{}", suffix);
-        let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        let suffix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
         let key2 = format!("manifoldblob_test_{}", suffix);
 
         let mut bytes_in = [0u8; 64];
@@ -263,9 +291,17 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
         |ctx, bs, test_source| async move {
             borrowed!(ctx);
             // Generate unique keys.
-            let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+            let suffix: String = thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(10)
+                .map(char::from)
+                .collect();
             let key1 = format!("manifoldblob_test_{}", suffix);
-            let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+            let suffix: String = thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(10)
+                .map(char::from)
+                .collect();
             let key2 = format!("manifoldblob_test_{}", suffix);
 
             let mut bytes_in = [0u8; 1024];
