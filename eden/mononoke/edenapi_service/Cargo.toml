@@ -38,7 +38,7 @@ rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_cbor = "0.11"
-serde_json = { version = "1.0", features = ["float_roundtrip"] }
+serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sshrelay = { version = "0.1.0", path = "../sshrelay" }

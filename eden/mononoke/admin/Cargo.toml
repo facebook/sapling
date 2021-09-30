@@ -81,7 +81,7 @@ revset = { version = "0.1.0", path = "../revset" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
-serde_json = { version = "1.0", features = ["float_roundtrip"] }
+serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }

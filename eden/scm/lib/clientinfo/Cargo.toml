@@ -9,7 +9,7 @@ anyhow = "1.0"
 configparser = { path = "../configparser" }
 hostname = { path = "../../../../common/rust/shed/hostname" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
-serde_json = { version = "1.0", features = ["float_roundtrip"] }
+serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
 
 [features]
 default = []
