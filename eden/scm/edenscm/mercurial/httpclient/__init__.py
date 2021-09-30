@@ -442,6 +442,7 @@ class HTTPConnection(object):
         proxy_hostport=None,
         proxy_headers=None,
         ssl_wrap_socket=None,
+        unix_socket_path=None,
         **ssl_opts
     ):
         """Create a new HTTPConnection.
@@ -519,6 +520,7 @@ class HTTPConnection(object):
         self.ssl_opts = ssl_opts
         self._ssl_validator = ssl_validator
         self.host = host
+        self._unix_socket_path = unix_socket_path
         self.sock = None
         self._current_response = None
         self._current_response_taken = False
@@ -546,7 +548,14 @@ class HTTPConnection(object):
             logger.info(
                 "Connecting to http proxy %s:%s", self._proxy_host, self._proxy_port
             )
-            sock = socket.create_connection((self._proxy_host, self._proxy_port))
+
+            if self._unix_socket_path:
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                sock.settimeout(self.timeout)
+                sock.connect(self._unix_socket_path)
+            else:
+                sock = socket.create_connection((self._proxy_host, self._proxy_port))
+
             if self.ssl:
                 data = self._buildheaders(
                     b"CONNECT",
@@ -585,7 +594,13 @@ class HTTPConnection(object):
                     self.port,
                 )
         else:
-            sock = socket.create_connection((self.host, self.port))
+            if self._unix_socket_path:
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                sock.settimeout(self.timeout)
+                sock.connect(self._unix_socket_path)
+            else:
+                sock = socket.create_connection((self.host, self.port))
+
         if self.ssl:
             # This is the default, but in the case of proxied SSL
             # requests the proxy logic above will have cleared
