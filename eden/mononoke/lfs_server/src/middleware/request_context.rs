@@ -9,9 +9,12 @@ use std::fmt;
 
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
-use gotham::state::{request_id, FromState, State};
+use gotham::state::{FromState, State};
 use gotham_derive::StateData;
-use gotham_ext::middleware::{ClientIdentity, Middleware};
+use gotham_ext::{
+    middleware::{ClientIdentity, Middleware},
+    state_ext::StateExt,
+};
 use hyper::{body::Body, Response};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{o, Logger};
@@ -77,7 +80,7 @@ impl RequestContextMiddleware {
 #[async_trait::async_trait]
 impl Middleware for RequestContextMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
-        let request_id = request_id(&state);
+        let request_id = state.short_request_id();
 
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
         let session = SessionContainer::new_with_defaults(self.fb);

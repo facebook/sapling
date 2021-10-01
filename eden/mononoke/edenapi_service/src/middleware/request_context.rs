@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use gotham::state::{request_id, FromState, State};
+use gotham::state::{FromState, State};
 use gotham_derive::StateData;
 use hyper::{Body, Response};
 use rate_limiting::RateLimitEnvironment;
@@ -14,7 +14,10 @@ use std::sync::Arc;
 
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
-use gotham_ext::middleware::{ClientIdentity, Middleware};
+use gotham_ext::{
+    middleware::{ClientIdentity, Middleware},
+    state_ext::StateExt,
+};
 use scuba_ext::MononokeScubaSampleBuilder;
 use sshrelay::Metadata;
 
@@ -69,7 +72,7 @@ impl Middleware for RequestContextMiddleware {
             .rate_limiter(self.rate_limiter.as_ref().map(|r| r.get_rate_limiter()))
             .build();
 
-        let request_id = request_id(&state);
+        let request_id = state.short_request_id();
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
         let ctx = session.new_context(logger.clone(), (*self.scuba).clone());
 

@@ -20,13 +20,14 @@ use gotham::{
         builder::{build_router as gotham_build_router, DefineSingleRoute, DrawRoutes},
         Router,
     },
-    state::{request_id, FromState, State},
+    state::{FromState, State},
 };
 use gotham_derive::StateData;
 use gotham_ext::{
     content_encoding::ContentEncoding,
     error::{ErrorFormatter, HttpError},
     response::{build_response, encode_stream, ResponseTryStreamExt, StreamBody, TryIntoResponse},
+    state_ext::StateExt,
 };
 use hyper::{Body, Response};
 use mime::Mime;
@@ -148,7 +149,7 @@ impl ErrorFormatter for JsonErrorFomatter {
         // Package the error message into a JSON response.
         let res = JsonError {
             message,
-            request_id: request_id(&state).to_string(),
+            request_id: state.short_request_id().to_string(),
         };
 
         let body = serde_json::to_vec(&res).context("Failed to serialize error")?;

@@ -6,8 +6,8 @@
  */
 
 use anyhow::{Context, Error};
-use gotham::state::{request_id, State};
-use gotham_ext::error::ErrorFormatter;
+use gotham::state::State;
+use gotham_ext::{error::ErrorFormatter, state_ext::StateExt};
 use lfs_protocol::{git_lfs_mime, ResponseError};
 use mime::Mime;
 
@@ -22,7 +22,7 @@ impl ErrorFormatter for LfsErrorFormatter {
         let res = ResponseError {
             message,
             documentation_url: None,
-            request_id: Some(request_id(&state).to_string()),
+            request_id: Some(state.short_request_id().to_string()),
         };
 
         let body = serde_json::to_vec(&res).context("Failed to serialize error")?;

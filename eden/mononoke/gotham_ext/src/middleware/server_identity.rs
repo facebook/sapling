@@ -10,11 +10,12 @@ use std::env;
 
 use anyhow::Error;
 use gotham::helpers::http::header::X_REQUEST_ID;
-use gotham::state::{request_id, State};
+use gotham::state::State;
 use hyper::header::HeaderValue;
 use hyper::{Body, Response};
 
 use super::Middleware;
+use crate::state_ext::StateExt;
 
 pub struct ServerIdentityMiddleware {
     headers: HashMap<&'static str, HeaderValue>,
@@ -73,7 +74,7 @@ impl Middleware for ServerIdentityMiddleware {
             headers.insert(*header, value.clone());
         }
 
-        if let Ok(id) = HeaderValue::from_str(request_id(&state)) {
+        if let Ok(id) = HeaderValue::from_str(state.short_request_id()) {
             headers.insert(X_REQUEST_ID, id);
         }
     }

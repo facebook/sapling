@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use gotham::state::{request_id, FromState, State};
+use gotham::state::{FromState, State};
 use hyper::{Body, Response};
 use hyper::{Method, StatusCode, Uri, Version};
 use slog::{info, o, Logger};
@@ -14,6 +14,7 @@ use std::time::Duration;
 use time_ext::DurationExt;
 
 use super::{ClientIdentity, Middleware, PostResponseCallbacks, RequestLoad};
+use crate::state_ext::StateExt;
 
 const DIRECTION_REQUEST_IN: &str = "IN  >";
 const DIRECTION_RESPONSE_OUT: &str = "OUT <";
@@ -85,7 +86,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
     let load = *RequestLoad::borrow_from(&state);
     let method = Method::borrow_from(&state).clone();
     let version = *Version::borrow_from(&state);
-    let request_id = request_id(state).to_string();
+    let request_id = state.short_request_id().to_string();
     let address = ClientIdentity::try_borrow_from(&state)
         .map(|client_identity| *client_identity.address())
         .flatten()

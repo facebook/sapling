@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 use std::num::NonZeroU64;
 use std::panic::RefUnwindSafe;
 
-use gotham::state::{request_id, FromState, State};
+use gotham::state::{FromState, State};
 use gotham_derive::StateData;
 use hyper::{
     header::{self, AsHeaderName, HeaderMap},
@@ -22,6 +22,7 @@ use time_ext::DurationExt;
 use crate::{
     middleware::{ClientIdentity, Middleware, PostResponseCallbacks, PostResponseInfo},
     response::HeadersMeta,
+    state_ext::StateExt,
 };
 
 use super::{HeadersDuration, RequestLoad};
@@ -233,7 +234,7 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
         scuba.add(HttpScubaKey::RequestLoad, request_load.0);
     }
 
-    scuba.add(HttpScubaKey::RequestId, request_id(&state));
+    scuba.add(HttpScubaKey::RequestId, state.short_request_id());
 
     if let Some(HeadersDuration(duration)) = HeadersDuration::try_borrow_from(&state) {
         scuba.add(
