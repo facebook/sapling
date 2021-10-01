@@ -44,7 +44,7 @@ impl GitPool {
         T: Send + Sync + 'static,
         E: Into<Error> + Send + Sync + 'static,
     {
-        let _permit = self.sem.acquire().await?;
+        let permit = self.sem.clone().acquire_owned().await?;
         let pool = self.pool.clone();
         let ret = tokio_shim::task::spawn_blocking(move || {
             let result_repo = pool.get()?;
@@ -55,6 +55,8 @@ impl GitPool {
                 }
             };
             let ret = f(&repo).map_err(|e| e.into())?;
+            drop(result_repo);
+            drop(permit);
             Result::<_, Error>::Ok(ret)
         })
         .await??;
