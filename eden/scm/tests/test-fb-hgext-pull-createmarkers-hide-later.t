@@ -8,6 +8,8 @@ Setup
   $ enable amend pullcreatemarkers pushrebase rebase remotenames
   $ setconfig ui.username="nobody <no.reply@fb.com>" experimental.rebaseskipobsolete=true
   $ setconfig remotenames.allownonfastforward=true
+  $ setconfig pullcreatemarkers.use-graphql=false
+  $ setconfig pullcreatemarkers.hook-pull=true
 
 Test that hg pull creates obsolescence markers for landed diffs
   $ hg init server

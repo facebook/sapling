@@ -5,6 +5,8 @@
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
+  $ setconfig pullcreatemarkers.use-graphql=false
+  $ setconfig pullcreatemarkers.hook-pull=true
 
   $ hg init server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
   $ cd server

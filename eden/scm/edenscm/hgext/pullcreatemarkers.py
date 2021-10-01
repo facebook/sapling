@@ -12,6 +12,15 @@ Config::
     # Use graphql to query what diffs are landed, instead of scanning
     # through pulled commits.
     use-graphql = true
+
+    # Make sure commits being hidden matches the commit hashes in
+    # Phabricator. Locally modified commits won't be hidden.
+    check-local-versions = true
+
+    # Hook the pull command to preform a "mark landed" operation.
+    # Note: This is suspected to hide commits unexpectedly.
+    # It is currently only useful for test compatibility.
+    hook-pull = true
 """
 from ..mercurial import (
     commands,
@@ -34,6 +43,8 @@ command = registrar.command(cmdtable)
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("pullcreatemarkers", "check-local-versions", default=False)
+configitem("pullcreatemarkers", "hook-pull", default=False)
+configitem("pullcreatemarkers", "use-graphql", default=True)
 
 
 def _isrevert(message, diffid):
@@ -143,7 +154,8 @@ def getdiff(rev):
 
 
 def extsetup(ui):
-    extensions.wrapcommand(commands.table, "pull", _pull)
+    if ui.configbool("pullcreatemarkers", "hook-pull"):
+        extensions.wrapcommand(commands.table, "pull", _pull)
 
 
 def _pull(orig, ui, repo, *args, **opts):
