@@ -143,7 +143,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * The Inode object in question, and all intervening TreeInode objects,
    * will be loaded if they are not already loaded.
    */
-  folly::Future<InodePtr> getChildRecursive(
+  ImmediateFuture<InodePtr> getChildRecursive(
       RelativePathPiece name,
       ObjectFetchContext& context);
 

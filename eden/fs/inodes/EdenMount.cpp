@@ -910,7 +910,10 @@ InodeNumber EdenMount::getDotEdenInodeNumber() const {
 Future<InodePtr> EdenMount::getInode(
     RelativePathPiece path,
     ObjectFetchContext& context) const {
-  return inodeMap_->getRootInode()->getChildRecursive(path, context);
+  return inodeMap_->getRootInode()
+      ->getChildRecursive(path, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<std::string> EdenMount::loadFileContentsFromPath(

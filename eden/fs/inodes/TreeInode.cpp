@@ -349,22 +349,20 @@ class LookupProcessor {
 };
 } // namespace
 
-Future<InodePtr> TreeInode::getChildRecursive(
+ImmediateFuture<InodePtr> TreeInode::getChildRecursive(
     RelativePathPiece path,
     ObjectFetchContext& context) {
   auto pathStr = path.stringPiece();
   if (pathStr.empty()) {
-    return makeFuture<InodePtr>(inodePtrFromThis());
+    return ImmediateFuture<InodePtr>{static_cast<InodePtr>(inodePtrFromThis())};
   }
 
   auto processor = std::make_unique<LookupProcessor>(path, context);
   auto future = processor->next(inodePtrFromThis());
   // This ensure() callback serves to hold onto the unique_ptr,
   // and makes sure it only gets destroyed when the future is finally resolved.
-  return std::move(future)
-      .ensure([p = std::move(processor)]() mutable { p.reset(); })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return std::move(future).ensure(
+      [p = std::move(processor)]() mutable { p.reset(); });
 }
 
 InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
