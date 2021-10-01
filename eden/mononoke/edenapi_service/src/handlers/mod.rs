@@ -26,6 +26,7 @@ use gotham_derive::StateData;
 use gotham_ext::{
     content_encoding::ContentEncoding,
     error::{ErrorFormatter, HttpError},
+    middleware::scuba::ScubaMiddlewareState,
     response::{build_response, encode_stream, ResponseTryStreamExt, StreamBody, TryIntoResponse},
     state_ext::StateExt,
 };
@@ -214,6 +215,12 @@ async fn handler_wrapper<Handler: EdenApiHandler>(
 
         let repo = get_repo(&sctx, &rctx, path.repo(), None).await?;
         let request = parse_wire_request::<<Handler::Request as ToWire>::Wire>(&mut state).await?;
+
+        let sampling_rate = Handler::sampling_rate(&request);
+        if sampling_rate.get() > 1 {
+            ScubaMiddlewareState::try_set_sampling_rate(&mut state, sampling_rate);
+        }
+
         match Handler::handler(repo, path, query_string, request).await {
             Ok(responses) => Ok(encode_response_stream(responses, content_encoding)),
             Err(HandlerError::E500(err)) => Err(HttpError::e500(err)),

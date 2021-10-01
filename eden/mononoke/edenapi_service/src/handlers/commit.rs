@@ -90,6 +90,10 @@ impl EdenApiHandler for LocationToHashHandler {
     const API_METHOD: EdenApiMethod = EdenApiMethod::CommitLocationToHash;
     const ENDPOINT: &'static str = "/commit/location_to_hash";
 
+    fn sampling_rate(_request: &Self::Request) -> NonZeroU64 {
+        nonzero_ext::nonzero!(100u64)
+    }
+
     async fn handler(
         repo: HgRepoContext,
         _path: Self::PathExtractor,

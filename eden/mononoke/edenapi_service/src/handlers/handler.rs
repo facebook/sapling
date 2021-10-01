@@ -13,7 +13,9 @@ use gotham::extractor::{PathExtractor, QueryStringExtractor};
 use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::body::Body;
 use mononoke_api_hg::HgRepoContext;
+use nonzero_ext::nonzero;
 use serde::Deserialize;
+use std::num::NonZeroU64;
 
 pub trait PathExtractorWithRepo: PathExtractor<Body> + Send + Sync {
     fn repo(&self) -> &str;
@@ -61,6 +63,10 @@ pub trait EdenApiHandler: 'static {
     /// DON'T include the /:repo prefix.
     /// Example: "/ephemeral/prepare"
     const ENDPOINT: &'static str;
+
+    fn sampling_rate(_request: &Self::Request) -> NonZeroU64 {
+        nonzero!(1u64)
+    }
 
     async fn handler(
         repo: HgRepoContext,
