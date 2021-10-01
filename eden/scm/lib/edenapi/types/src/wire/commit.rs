@@ -994,6 +994,14 @@ mod tests {
 
     use quickcheck::quickcheck;
 
+    #[test]
+    fn test_snapshot() {
+        insta_ext::assert_json!(WireSnapshotState {});
+        insta_ext::assert_json!(WireEphemeralPrepareResponse {
+            bubble_id: NonZeroU64::new(12)
+        });
+    }
+
     quickcheck! {
         fn test_roundtrip_serialize_location(v: WireCommitLocation) -> bool {
             check_serialize_roundtrip(v)

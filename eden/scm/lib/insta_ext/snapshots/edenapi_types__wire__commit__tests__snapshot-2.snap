@@ -1,0 +1,6 @@
+---
+source: commit.rs
+expression: "WireEphemeralPrepareResponse{bubble_id: NonZeroU64::new(12),}"
+
+---
+{"1":12}
