@@ -859,6 +859,9 @@ def cloudbackup(ui, repo, *revs, **opts):
 
     If no revision is specified, backs up all visible commits.
     """
+    if ui.configbool("commitcloud", "usehttpupload"):
+        return cloudupload(ui, repo, *revs, **opts)
+
     repo.ignoreautobackup = True
 
     force = opts.get("force")
@@ -1618,6 +1621,9 @@ def cloudupload(ui, repo, **opts):
     Commits that have already been uploaded will be skipped.
     If no revision is specified, uploads all visible commits.
     """
+
+    repo.ignoreautobackup = True
+
     revs = opts.get("rev")
     if revs:
         revs = scmutil.revrange(repo, revs)
