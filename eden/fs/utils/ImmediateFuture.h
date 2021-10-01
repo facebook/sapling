@@ -19,6 +19,10 @@ namespace facebook::eden {
  * or a folly::Try<T>. This allows code to not pay the overhead of
  * folly::SemiFuture for when an immediate value is available. In particular, an
  * ImmediateFuture will not allocate memory in this case.
+ *
+ * All methods can throw an DestroyedImmediateFutureError if an ImmediateFuture
+ * is used after being destroyed. This can happen if an ImmediateFuture is used
+ * after being moved.
  */
 template <typename T>
 class ImmediateFuture {
@@ -32,7 +36,7 @@ class ImmediateFuture {
    * Default construct an ImmediateFuture with T's default constructor.
    */
   ImmediateFuture() noexcept(std::is_nothrow_default_constructible_v<T>)
-      : inner_{folly::Try<T>{T{}}} {}
+      : immediate_{folly::Try<T>{T{}}}, kind_{Kind::Immediate} {}
 
   /**
    * Construct an ImmediateFuture with an already constructed value. No
@@ -40,7 +44,7 @@ class ImmediateFuture {
    */
   /* implicit */ ImmediateFuture(folly::Try<T>&& value) noexcept(
       std::is_nothrow_move_constructible_v<folly::Try<T>>)
-      : inner_{std::move(value)} {}
+      : immediate_{std::move(value)}, kind_{Kind::Immediate} {}
 
   /**
    * Construct an ImmediateFuture with an already constructed value. No
@@ -55,15 +59,15 @@ class ImmediateFuture {
    */
   /* implicit */ ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept(
       std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>)
-      : inner_{std::move(fut)} {}
+      : semi_{std::move(fut)}, kind_{Kind::SemiFuture} {}
 
-  ~ImmediateFuture() = default;
+  ~ImmediateFuture();
 
   ImmediateFuture(const ImmediateFuture<T>&) = delete;
-  ImmediateFuture& operator=(const ImmediateFuture<T>&) = delete;
+  ImmediateFuture<T>& operator=(const ImmediateFuture<T>&) = delete;
 
-  ImmediateFuture(ImmediateFuture<T>&&) = default;
-  ImmediateFuture& operator=(ImmediateFuture<T>&&) = default;
+  ImmediateFuture(ImmediateFuture<T>&&) noexcept;
+  ImmediateFuture<T>& operator=(ImmediateFuture<T>&&) noexcept;
 
   /**
    * Queue the func continuation once this future is ready.
@@ -172,11 +176,41 @@ class ImmediateFuture {
   folly::Try<T> getTry(folly::HighResDuration timeout) &&;
 
   bool hasImmediate() const {
-    return std::holds_alternative<folly::Try<T>>(inner_);
+    return kind_ == Kind::Immediate;
   }
 
  private:
-  std::variant<folly::Try<T>, folly::SemiFuture<T>> inner_;
+  /**
+   * Destroy this ImmediatureFuture.
+   *
+   * Any subsequent access to it will throw a DestroyedImmediateFutureError.
+   */
+  void destroy();
+
+  union {
+    folly::Try<T> immediate_;
+    folly::SemiFuture<T> semi_;
+  };
+
+  enum class Kind {
+    /** Holds an immediate value, immediate_ is valid. */
+    Immediate,
+    /** Holds a SemiFuture, semi_ is valid. */
+    SemiFuture,
+    /** Doesn't hold anything, neither immediate_ nor semi_ are valid. */
+    Nothing,
+  };
+
+  Kind kind_;
+};
+
+/**
+ * Exception thrown if the ImmediateFuture is used after being destroyed.
+ */
+class DestroyedImmediateFutureError : public std::logic_error {
+ public:
+  DestroyedImmediateFutureError()
+      : std::logic_error{"ImmediateFuture used after destruction"} {}
 };
 
 /**
