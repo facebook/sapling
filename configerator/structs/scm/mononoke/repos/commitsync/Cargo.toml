@@ -26,7 +26,6 @@ repos = { version = "0.1.0", path = "../repos" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 thiserror = "1.0.29"
-tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tracing = "0.1.27"
 tracing-futures = "0.2.5"
 
