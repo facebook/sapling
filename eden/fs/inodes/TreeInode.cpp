@@ -324,13 +324,16 @@ class LookupProcessor {
         iter_{iterRange_.begin()},
         context_{context} {}
 
-  Future<InodePtr> next(TreeInodePtr tree) {
+  ImmediateFuture<InodePtr> next(TreeInodePtr tree) {
     auto name = *iter_++;
     if (iter_ == iterRange_.end()) {
-      return tree->getOrLoadChild(name, context_);
+      return ImmediateFuture<InodePtr>{
+          tree->getOrLoadChild(name, context_).semi()};
     } else {
-      return tree->getOrLoadChildTree(name, context_)
-          .then(&LookupProcessor::next, this);
+      return ImmediateFuture<TreeInodePtr>{
+          tree->getOrLoadChildTree(name, context_).semi()}
+          .thenValue(
+              [this](TreeInodePtr tree) { return next(std::move(tree)); });
     }
   }
 
@@ -358,8 +361,10 @@ Future<InodePtr> TreeInode::getChildRecursive(
   auto future = processor->next(inodePtrFromThis());
   // This ensure() callback serves to hold onto the unique_ptr,
   // and makes sure it only gets destroyed when the future is finally resolved.
-  return std::move(future).ensure(
-      [p = std::move(processor)]() mutable { p.reset(); });
+  return std::move(future)
+      .ensure([p = std::move(processor)]() mutable { p.reset(); })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
