@@ -14,6 +14,7 @@
 
 DEFINE_string(query, "", "Query to run");
 DEFINE_string(repo, "", "Repository to run the query against");
+DEFINE_string(root, "", "Root of the query");
 DEFINE_string(watchman_socket, "", "Socket to the watchman daemon");
 
 namespace {
@@ -55,6 +56,7 @@ void eden_glob(benchmark::State& state) {
   param.suppressFileList_ref() = false;
   param.wantDtype_ref() = false;
   param.prefetchMetadata_ref() = false;
+  param.searchRoot_ref() = FLAGS_root;
 
   for (auto _ : state) {
     auto start = std::chrono::high_resolution_clock::now();
@@ -86,7 +88,7 @@ void watchman_glob(benchmark::State& state) {
 
   folly::dynamic query =
       folly::dynamic::object("glob", folly::dynamic::array(FLAGS_query))(
-          "fields", folly::dynamic::array("name"));
+          "fields", folly::dynamic::array("name"))("relative_root", FLAGS_root);
 
   for (auto _ : state) {
     auto start = std::chrono::high_resolution_clock::now();
