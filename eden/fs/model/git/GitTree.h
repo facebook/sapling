@@ -13,6 +13,7 @@
 
 namespace facebook::eden {
 
+class ObjectId;
 class Hash20;
 using Hash = Hash20;
 class Tree;
@@ -23,10 +24,10 @@ class TreeEntry;
  * As such, the SHA-1 of the gitTreeObject should match the hash.
  */
 std::unique_ptr<Tree> deserializeGitTree(
-    const Hash& hash,
+    const ObjectId& hash,
     const folly::IOBuf* treeData);
 std::unique_ptr<Tree> deserializeGitTree(
-    const Hash& hash,
+    const ObjectId& hash,
     folly::ByteRange treeData);
 
 /*

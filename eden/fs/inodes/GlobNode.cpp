@@ -111,10 +111,10 @@ struct TreeInodePtrRoot {
 
   /** Returns the hash for the given ENTRY */
   template <typename ENTRY>
-  const Hash entryHash(const ENTRY& entry) {
+  const ObjectId entryHash(const ENTRY& entry) {
     return entry.second.getHash();
   }
-  const Hash entryHash(const DirEntry* entry) {
+  const ObjectId entryHash(const DirEntry* entry) {
     return entry->getHash();
   }
 
@@ -197,10 +197,10 @@ struct TreeRoot {
   }
 
   template <typename ENTRY>
-  const Hash entryHash(const ENTRY& entry) {
+  const ObjectId entryHash(const ENTRY& entry) {
     return entry.getHash();
   }
-  const Hash entryHash(const TreeEntry* entry) {
+  const ObjectId entryHash(const TreeEntry* entry) {
     return entry->getHash();
   }
 

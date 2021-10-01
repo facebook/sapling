@@ -565,7 +565,7 @@ void processBothPresent(
                   wdEntry.getHash(), context->getFetchContext());
               return collectSafe(scmFuture, wdFuture)
                   .thenValue([entryPath = entryPath.copy(),
-                              context](const std::tuple<Hash, Hash>& info) {
+                              context](const std::tuple<Hash20, Hash20>& info) {
                     const auto& [scmHash, wdHash] = info;
                     if (scmHash != wdHash) {
                       context->callback->modifiedFile(entryPath);
@@ -649,8 +649,8 @@ Future<std::unique_ptr<ScmStatus>> diffCommitsForStatus(
 FOLLY_NODISCARD Future<Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
-    Hash scmHash,
-    Hash wdHash,
+    ObjectId scmHash,
+    ObjectId wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
   auto scmTreeFuture =
@@ -683,7 +683,7 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
 FOLLY_NODISCARD Future<Unit> diffAddedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
-    Hash wdHash,
+    ObjectId wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
   auto wdFuture = context->store->getTree(wdHash, context->getFetchContext());
@@ -704,7 +704,7 @@ FOLLY_NODISCARD Future<Unit> diffAddedTree(
 FOLLY_NODISCARD Future<Unit> diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
-    Hash scmHash) {
+    ObjectId scmHash) {
   auto scmFuture = context->store->getTree(scmHash, context->getFetchContext());
   // Optimization for the case when the tree object is immediately ready.
   // We can avoid copying the input path in this case.

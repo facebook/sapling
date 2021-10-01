@@ -14,6 +14,7 @@
 
 namespace facebook::eden {
 
+class ObjectId;
 class Hash20;
 using Hash = Hash20;
 
@@ -61,7 +62,7 @@ class ObjectFetchContext {
 
   virtual ~ObjectFetchContext() = default;
 
-  virtual void didFetch(ObjectType, const Hash&, Origin) {}
+  virtual void didFetch(ObjectType, const ObjectId&, Origin) {}
 
   virtual std::optional<pid_t> getClientPid() const {
     return std::nullopt;

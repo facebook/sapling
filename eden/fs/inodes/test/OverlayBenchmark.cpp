@@ -34,8 +34,8 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
       std::make_shared<NullStructuredLogger>());
   overlay->initialize().get();
 
-  Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
-  Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
+  ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
+  ObjectId hash2{folly::ByteRange{"01234012340123401234"_sp}};
 
   DirContents contents(kPathMapDefaultCaseSensitive);
   contents.emplace(

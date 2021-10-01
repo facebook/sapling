@@ -47,7 +47,7 @@ class StatsFetchContext : public ObjectFetchContext {
       folly::StringPiece causeDetail);
   StatsFetchContext(const StatsFetchContext& other);
 
-  void didFetch(ObjectType type, const Hash& id, Origin origin) override;
+  void didFetch(ObjectType type, const ObjectId& id, Origin origin) override;
 
   std::optional<pid_t> getClientPid() const override;
 

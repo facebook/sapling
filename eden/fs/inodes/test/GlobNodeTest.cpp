@@ -117,7 +117,7 @@ class GlobNodeTest : public ::testing::TestWithParam<
     return GetParam().second;
   }
 
-  std::vector<Hash> getPrefetchHashes() const {
+  std::vector<ObjectId> getPrefetchHashes() const {
     return *prefetchHashes_->rlock();
   }
 
@@ -135,11 +135,11 @@ TEST_P(GlobNodeTest, starTxt) {
 }
 
 // hash of "a"
-const Hash AHash{"86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"};
+const ObjectId AHash{"86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"};
 // hash of "b"
-const Hash BHash{"e9d71f5ee7c92d6dc9e92ffdad17b8bd49418f98"};
+const ObjectId BHash{"e9d71f5ee7c92d6dc9e92ffdad17b8bd49418f98"};
 // hash of "wat"
-const Hash WatHash{"a3bbe1a8f2f025b8b6c5b66937763bb2b9bebdf2"};
+const ObjectId WatHash{"a3bbe1a8f2f025b8b6c5b66937763bb2b9bebdf2"};
 
 TEST_P(GlobNodeTest, matchFilesByExtensionRecursively) {
   auto matches = doGlobIncludeDotFiles("**/*.txt", kZeroRootId);
@@ -151,7 +151,7 @@ TEST_P(GlobNodeTest, matchFilesByExtensionRecursively) {
   EXPECT_EQ(expect, matches);
 
   if (shouldPrefetch()) {
-    std::vector<Hash> expectHashes{AHash, BHash};
+    std::vector<ObjectId> expectHashes{AHash, BHash};
     EXPECT_EQ(expectHashes, getPrefetchHashes());
   }
 }
@@ -166,7 +166,7 @@ TEST_P(GlobNodeTest, star) {
   EXPECT_EQ(expect, matches);
 
   if (shouldPrefetch()) {
-    std::vector<Hash> expectHashes{WatHash};
+    std::vector<ObjectId> expectHashes{WatHash};
     EXPECT_EQ(expectHashes, getPrefetchHashes());
   }
 }
@@ -225,7 +225,7 @@ TEST_P(GlobNodeTest, recursiveTxtWithChanges) {
   EXPECT_EQ(expect, matches);
 
   if (shouldPrefetch()) {
-    std::vector<Hash> expectHashes{
+    std::vector<ObjectId> expectHashes{
         // No root.txt, as it is in the overlay
         // No sym.txt, as it is in the overlay
         // No AHash as we chmod'd the file and thus materialized it
@@ -412,7 +412,7 @@ TEST_P(GlobNodeTest, testCommitHashSet) {
   EXPECT_EQ(expect, matches);
 
   if (shouldPrefetch()) {
-    std::vector<Hash> expectHashes{AHash, BHash};
+    std::vector<ObjectId> expectHashes{AHash, BHash};
     EXPECT_EQ(expectHashes, getPrefetchHashes());
   }
 }

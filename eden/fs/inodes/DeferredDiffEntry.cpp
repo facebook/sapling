@@ -241,7 +241,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
       DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
-      Hash currentBlobHash)
+      ObjectId currentBlobHash)
       : DeferredDiffEntry{context, std::move(path)},
         scmEntry_{scmEntry},
         currentBlobHash_{currentBlobHash} {}
@@ -263,7 +263,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
 
  private:
   TreeEntry scmEntry_;
-  Hash currentBlobHash_;
+  ObjectId currentBlobHash_;
 };
 
 class ModifiedScmDiffEntry : public DeferredDiffEntry {
@@ -271,8 +271,8 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
   ModifiedScmDiffEntry(
       DiffContext* context,
       RelativePath path,
-      Hash scmHash,
-      Hash wdHash,
+      ObjectId scmHash,
+      ObjectId wdHash,
       const GitIgnoreStack* ignore,
       bool isIgnored)
       : DeferredDiffEntry{context, std::move(path)},
@@ -289,8 +289,8 @@ class ModifiedScmDiffEntry : public DeferredDiffEntry {
  private:
   const GitIgnoreStack* ignore_{nullptr};
   bool isIgnored_{false};
-  Hash scmHash_;
-  Hash wdHash_;
+  ObjectId scmHash_;
+  ObjectId wdHash_;
 };
 
 class AddedScmDiffEntry : public DeferredDiffEntry {
@@ -298,7 +298,7 @@ class AddedScmDiffEntry : public DeferredDiffEntry {
   AddedScmDiffEntry(
       DiffContext* context,
       RelativePath path,
-      Hash wdHash,
+      ObjectId wdHash,
       const GitIgnoreStack* ignore,
       bool isIgnored)
       : DeferredDiffEntry{context, std::move(path)},
@@ -313,12 +313,12 @@ class AddedScmDiffEntry : public DeferredDiffEntry {
  private:
   const GitIgnoreStack* ignore_{nullptr};
   bool isIgnored_{false};
-  Hash wdHash_;
+  ObjectId wdHash_;
 };
 
 class RemovedScmDiffEntry : public DeferredDiffEntry {
  public:
-  RemovedScmDiffEntry(DiffContext* context, RelativePath path, Hash scmHash)
+  RemovedScmDiffEntry(DiffContext* context, RelativePath path, ObjectId scmHash)
       : DeferredDiffEntry{context, std::move(path)}, scmHash_{scmHash} {}
 
   folly::Future<folly::Unit> run() override {
@@ -326,7 +326,7 @@ class RemovedScmDiffEntry : public DeferredDiffEntry {
   }
 
  private:
-  Hash scmHash_;
+  ObjectId scmHash_;
 };
 
 } // unnamed namespace
@@ -384,7 +384,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
     DiffContext* context,
     RelativePath path,
     const TreeEntry& scmEntry,
-    Hash currentBlobHash) {
+    ObjectId currentBlobHash) {
   return make_unique<ModifiedBlobDiffEntry>(
       context, std::move(path), scmEntry, currentBlobHash);
 }
@@ -392,8 +392,8 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedEntry(
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedScmEntry(
     DiffContext* context,
     RelativePath path,
-    Hash scmHash,
-    Hash wdHash,
+    ObjectId scmHash,
+    ObjectId wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
   return make_unique<ModifiedScmDiffEntry>(
@@ -403,7 +403,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createModifiedScmEntry(
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createAddedScmEntry(
     DiffContext* context,
     RelativePath path,
-    Hash wdHash,
+    ObjectId wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
   return make_unique<AddedScmDiffEntry>(
@@ -413,7 +413,7 @@ unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createAddedScmEntry(
 unique_ptr<DeferredDiffEntry> DeferredDiffEntry::createRemovedScmEntry(
     DiffContext* context,
     RelativePath path,
-    Hash scmHash) {
+    ObjectId scmHash) {
   return make_unique<RemovedScmDiffEntry>(context, std::move(path), scmHash);
 }
 

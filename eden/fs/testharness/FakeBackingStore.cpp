@@ -62,7 +62,7 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
   }
 
   return storedTreeHash->getFuture().thenValue(
-      [this, commitID](const std::unique_ptr<Hash>& hash) {
+      [this, commitID](const std::unique_ptr<ObjectId>& hash) {
         auto data = data_.rlock();
         auto treeIter = data->trees.find(*hash);
         if (treeIter == data->trees.end()) {
@@ -80,7 +80,7 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
 }
 
 SemiFuture<BackingStore::GetTreeRes> FakeBackingStore::getTree(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& /*context*/) {
   auto data = data_.wlock();
   ++data->accessCounts[id];
@@ -102,7 +102,7 @@ SemiFuture<BackingStore::GetTreeRes> FakeBackingStore::getTree(
 }
 
 SemiFuture<BackingStore::GetBlobRes> FakeBackingStore::getBlob(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& /*context*/) {
   auto data = data_.wlock();
   ++data->accessCounts[id];
@@ -119,19 +119,21 @@ SemiFuture<BackingStore::GetBlobRes> FakeBackingStore::getBlob(
 }
 
 Blob FakeBackingStore::makeBlob(folly::StringPiece contents) {
-  return makeBlob(Hash::sha1(contents), contents);
+  return makeBlob(ObjectId::sha1(contents), contents);
 }
 
-Blob FakeBackingStore::makeBlob(Hash hash, folly::StringPiece contents) {
+Blob FakeBackingStore::makeBlob(ObjectId hash, folly::StringPiece contents) {
   auto buf = IOBuf{IOBuf::COPY_BUFFER, ByteRange{contents}};
   return Blob(hash, std::move(buf));
 }
 
 StoredBlob* FakeBackingStore::putBlob(StringPiece contents) {
-  return putBlob(Hash::sha1(contents), contents);
+  return putBlob(ObjectId::sha1(contents), contents);
 }
 
-StoredBlob* FakeBackingStore::putBlob(Hash hash, folly::StringPiece contents) {
+StoredBlob* FakeBackingStore::putBlob(
+    ObjectId hash,
+    folly::StringPiece contents) {
   auto ret = maybePutBlob(hash, contents);
   if (!ret.second) {
     throw std::domain_error(
@@ -142,11 +144,11 @@ StoredBlob* FakeBackingStore::putBlob(Hash hash, folly::StringPiece contents) {
 
 std::pair<StoredBlob*, bool> FakeBackingStore::maybePutBlob(
     folly::StringPiece contents) {
-  return maybePutBlob(Hash::sha1(contents), contents);
+  return maybePutBlob(ObjectId::sha1(contents), contents);
 }
 
 std::pair<StoredBlob*, bool> FakeBackingStore::maybePutBlob(
-    Hash hash,
+    ObjectId hash,
     folly::StringPiece contents) {
   auto storedBlob = make_unique<StoredBlob>(makeBlob(hash, contents));
 
@@ -205,7 +207,7 @@ StoredTree* FakeBackingStore::putTree(
 }
 
 StoredTree* FakeBackingStore::putTree(
-    Hash hash,
+    ObjectId hash,
     const std::initializer_list<TreeEntryData>& entryArgs) {
   auto entries = buildTreeEntries(entryArgs);
   return putTreeImpl(hash, std::move(entries));
@@ -218,7 +220,7 @@ StoredTree* FakeBackingStore::putTree(std::vector<TreeEntry> entries) {
 }
 
 StoredTree* FakeBackingStore::putTree(
-    Hash hash,
+    ObjectId hash,
     std::vector<TreeEntry> entries) {
   sortTreeEntries(entries);
   return putTreeImpl(hash, std::move(entries));
@@ -254,7 +256,7 @@ void FakeBackingStore::sortTreeEntries(std::vector<TreeEntry>& entries) {
   std::sort(entries.begin(), entries.end(), cmpEntry);
 }
 
-Hash FakeBackingStore::computeTreeHash(
+ObjectId FakeBackingStore::computeTreeHash(
     const std::vector<TreeEntry>& sortedEntries) {
   // Compute a SHA-1 hash over the entry contents.
   // This doesn't match how we generate hashes for either git or mercurial
@@ -271,14 +273,14 @@ Hash FakeBackingStore::computeTreeHash(
         ByteRange(reinterpret_cast<const uint8_t*>(&mode), sizeof(mode)));
   }
 
-  Hash::Storage computedHashBytes;
+  ObjectId::Storage computedHashBytes;
   digest.hash_final(folly::MutableByteRange{
       computedHashBytes.data(), computedHashBytes.size()});
-  return Hash{computedHashBytes};
+  return ObjectId{computedHashBytes};
 }
 
 StoredTree* FakeBackingStore::putTreeImpl(
-    Hash hash,
+    ObjectId hash,
     std::vector<TreeEntry>&& sortedEntries) {
   auto ret = maybePutTreeImpl(hash, std::move(sortedEntries));
   if (!ret.second) {
@@ -289,7 +291,7 @@ StoredTree* FakeBackingStore::putTreeImpl(
 }
 
 std::pair<StoredTree*, bool> FakeBackingStore::maybePutTreeImpl(
-    Hash hash,
+    ObjectId hash,
     std::vector<TreeEntry>&& sortedEntries) {
   auto storedTree =
       make_unique<StoredTree>(Tree{std::move(sortedEntries), hash});
@@ -309,7 +311,7 @@ StoredHash* FakeBackingStore::putCommit(
 
 StoredHash* FakeBackingStore::putCommit(
     const RootId& commitHash,
-    Hash treeHash) {
+    ObjectId treeHash) {
   auto storedHash = make_unique<StoredHash>(treeHash);
   {
     auto data = data_.wlock();
@@ -334,7 +336,7 @@ StoredHash* FakeBackingStore::putCommit(
   return putCommit(RootId(commitStr.str()), builder);
 }
 
-StoredTree* FakeBackingStore::getStoredTree(Hash hash) {
+StoredTree* FakeBackingStore::getStoredTree(ObjectId hash) {
   auto data = data_.rlock();
   auto it = data->trees.find(hash);
   if (it == data->trees.end()) {
@@ -343,7 +345,7 @@ StoredTree* FakeBackingStore::getStoredTree(Hash hash) {
   return it->second.get();
 }
 
-StoredBlob* FakeBackingStore::getStoredBlob(Hash hash) {
+StoredBlob* FakeBackingStore::getStoredBlob(ObjectId hash) {
   auto data = data_.rlock();
   auto it = data->blobs.find(hash);
   if (it == data->blobs.end()) {
@@ -359,7 +361,7 @@ void FakeBackingStore::discardOutstandingRequests() {
 
   std::vector<folly::Promise<std::unique_ptr<Tree>>> trees;
   std::vector<folly::Promise<std::unique_ptr<Blob>>> blobs;
-  std::vector<folly::Promise<std::unique_ptr<Hash>>> commits;
+  std::vector<folly::Promise<std::unique_ptr<ObjectId>>> commits;
   {
     auto data = data_.wlock();
     for (const auto& tree : data->trees) {
@@ -380,7 +382,7 @@ void FakeBackingStore::discardOutstandingRequests() {
   }
 }
 
-size_t FakeBackingStore::getAccessCount(const Hash& hash) const {
+size_t FakeBackingStore::getAccessCount(const ObjectId& hash) const {
   return folly::get_default(data_.rlock()->accessCounts, hash, 0);
 }
 } // namespace eden

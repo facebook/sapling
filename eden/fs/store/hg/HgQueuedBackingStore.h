@@ -126,14 +126,14 @@ class HgQueuedBackingStore final : public BackingStore {
     throw std::domain_error("unimplemented");
   }
   folly::SemiFuture<BackingStore::GetTreeRes> getTree(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
   folly::SemiFuture<BackingStore::GetBlobRes> getBlob(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
-      HashRange ids,
+      ObjectIdRange ids,
       ObjectFetchContext& context) override;
 
   /**
@@ -194,7 +194,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * at the end of the queue.
    */
   folly::SemiFuture<BackingStore::GetBlobRes> getBlobImpl(
-      const Hash& id,
+      const ObjectId& id,
       const HgProxyHash& proxyHash,
       ObjectFetchContext& context);
 
@@ -206,7 +206,7 @@ class HgQueuedBackingStore final : public BackingStore {
    * at the end of the queue.
    */
   folly::SemiFuture<BackingStore::GetTreeRes> getTreeImpl(
-      const Hash& id,
+      const ObjectId& id,
       const HgProxyHash& proxyHash,
       ObjectFetchContext& context);
 

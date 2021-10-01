@@ -32,11 +32,12 @@ using namespace facebook::eden;
 using namespace std::chrono_literals;
 
 static DirEntry makeDirEntry() {
-  return DirEntry{S_IFREG | 0644, 1_ino, Hash{}};
+  return DirEntry{S_IFREG | 0644, 1_ino, ObjectId{}};
 }
 
 static TreeEntry makeTreeEntry(folly::StringPiece name) {
-  return TreeEntry{Hash{}, PathComponent{name}, TreeEntryType::REGULAR_FILE};
+  return TreeEntry{
+      ObjectId{}, PathComponent{name}, TreeEntryType::REGULAR_FILE};
 }
 
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {

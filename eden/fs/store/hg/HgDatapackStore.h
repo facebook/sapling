@@ -29,14 +29,16 @@ class HgDatapackStore {
    * Imports the blob identified by the given hash from the local store.
    * Returns nullptr if not found.
    */
-  std::unique_ptr<Blob> getBlobLocal(const Hash& id, const HgProxyHash& hgInfo);
+  std::unique_ptr<Blob> getBlobLocal(
+      const ObjectId& id,
+      const HgProxyHash& hgInfo);
 
   /**
    * Imports the tree identified by the given hash from the local store.
    * Returns nullptr if not found.
    */
   std::unique_ptr<Tree> getTreeLocal(
-      const Hash& edenTreeId,
+      const ObjectId& edenTreeId,
       const HgProxyHash& proxyHash,
       LocalStore& localStore);
 
@@ -56,7 +58,7 @@ class HgDatapackStore {
   std::unique_ptr<Tree> getTree(
       const RelativePath& path,
       const Hash& manifestId,
-      const Hash& edenTreeId,
+      const ObjectId& edenTreeId,
       LocalStore::WriteBatch* writeBatch);
 
   /**

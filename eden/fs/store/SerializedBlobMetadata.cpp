@@ -31,7 +31,7 @@ folly::ByteRange SerializedBlobMetadata::slice() const {
 }
 
 BlobMetadata SerializedBlobMetadata::parse(
-    Hash blobID,
+    ObjectId blobID,
     const StoreResult& result) {
   auto bytes = result.bytes();
   if (bytes.size() != SIZE) {

@@ -43,7 +43,7 @@ class LocalStore;
 class TreeInode;
 template <typename T>
 class StoredObject;
-using StoredHash = StoredObject<Hash>;
+using StoredHash = StoredObject<ObjectId>;
 
 struct TestMountFile {
   RelativePath path;
@@ -124,7 +124,7 @@ class TestMount {
    * This should only be used if the TestMount was default-constructed.
    * The caller must have already defined the root Tree in the object store.
    */
-  void initialize(const RootId& initialCommitHash, Hash rootTreeHash);
+  void initialize(const RootId& initialCommitHash, ObjectId rootTreeHash);
 
   /**
    * Initialize the mount from the given root tree.
@@ -349,7 +349,7 @@ class TestMount {
   void createMount();
   void initTestDirectory();
   void setInitialCommit(const RootId& commitHash);
-  void setInitialCommit(const RootId& commitHash, Hash rootTreeHash);
+  void setInitialCommit(const RootId& commitHash, ObjectId rootTreeHash);
 
   /**
    * Initialize the Eden mount. This is an internal function to initialize and

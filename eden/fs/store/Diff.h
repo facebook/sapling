@@ -17,6 +17,7 @@ class Future;
 
 namespace facebook::eden {
 
+class ObjectId;
 class Hash20;
 using Hash = Hash20;
 class ObjectStore;
@@ -55,8 +56,8 @@ folly::Future<std::unique_ptr<ScmStatus>> diffCommitsForStatus(
 folly::Future<folly::Unit> diffTrees(
     DiffContext* context,
     RelativePathPiece currentPath,
-    Hash scmHash,
-    Hash wdHash,
+    ObjectId scmHash,
+    ObjectId wdHash,
     const GitIgnoreStack* parentIgnore,
     bool isIgnored);
 
@@ -77,7 +78,7 @@ folly::Future<folly::Unit> diffTrees(
 folly::Future<folly::Unit> diffAddedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
-    Hash wdHash,
+    ObjectId wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored);
 
@@ -98,6 +99,6 @@ folly::Future<folly::Unit> diffAddedTree(
 folly::Future<folly::Unit> diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
-    Hash scmHash);
+    ObjectId scmHash);
 
 } // namespace facebook::eden

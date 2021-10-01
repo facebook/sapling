@@ -39,26 +39,26 @@ class FakeObjectStore final : public IObjectStore {
       ObjectFetchContext& context =
           ObjectFetchContext::getNullContext()) const override;
   folly::Future<std::shared_ptr<const Tree>> getTree(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context =
           ObjectFetchContext::getNullContext()) const override;
   folly::Future<std::shared_ptr<const Blob>> getBlob(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context =
           ObjectFetchContext::getNullContext()) const override;
   folly::Future<folly::Unit> prefetchBlobs(
-      HashRange ids,
+      ObjectIdRange ids,
       ObjectFetchContext& context =
           ObjectFetchContext::getNullContext()) const override;
 
-  size_t getAccessCount(const Hash& hash) const;
+  size_t getAccessCount(const ObjectId& hash) const;
 
  private:
   std::unordered_map<RootId, Tree> commits_;
-  std::unordered_map<Hash, Tree> trees_;
-  std::unordered_map<Hash, Blob> blobs_;
+  std::unordered_map<ObjectId, Tree> trees_;
+  std::unordered_map<ObjectId, Blob> blobs_;
   mutable std::unordered_map<RootId, size_t> commitAccessCounts_;
-  mutable std::unordered_map<Hash, size_t> accessCounts_;
+  mutable std::unordered_map<ObjectId, size_t> accessCounts_;
 };
 } // namespace eden
 } // namespace facebook

@@ -23,15 +23,23 @@ namespace facebook::eden {
  * Convert a Hash to a std::string to be returned via thrift as a thrift
  * BinaryHash data type.
  */
-inline std::string thriftHash(const Hash& hash) {
+inline std::string thriftHash(const ObjectId& hash) {
   return folly::StringPiece{hash.getBytes()}.str();
 }
 
 /**
- * Convert an optional<Hash> to a std::string to be returned via thrift
+ * Convert a Hash to a std::string to be returned via thrift as a thrift
+ * BinaryHash data type.
+ */
+inline std::string thriftHash20(const Hash20& hash) {
+  return folly::StringPiece{hash.getBytes()}.str();
+}
+
+/**
+ * Convert an optional<ObjectId> to a std::string to be returned via thrift
  * as a thrift BinaryHash data type.
  */
-inline std::string thriftHash(const std::optional<Hash>& hash) {
+inline std::string thriftHash(const std::optional<ObjectId>& hash) {
   if (hash.has_value()) {
     return thriftHash(hash.value());
   }
@@ -39,18 +47,53 @@ inline std::string thriftHash(const std::optional<Hash>& hash) {
 }
 
 /**
- * Convert thrift BinaryHash data type into a Hash object.
+ * Convert an optional<Hash> to a std::string to be returned via thrift
+ * as a thrift BinaryHash data type.
+ */
+inline std::string thriftHash20(const std::optional<Hash20>& hash) {
+  if (hash.has_value()) {
+    return thriftHash20(hash.value());
+  }
+  return std::string{};
+}
+
+/**
+ * Convert thrift BinaryHash data type into a ObjectId.
  *
  * This allows the input to be either a 20-byte binary string, or a 40-byte
  * hexadecimal string.
  */
-inline Hash hashFromThrift(folly::StringPiece commitID) {
+inline ObjectId hashFromThrift(folly::StringPiece commitID) {
   if (commitID.size() == Hash::RAW_SIZE) {
     // This looks like 20 bytes of binary data.
-    return Hash(folly::ByteRange(folly::StringPiece(commitID)));
+    return ObjectId(folly::ByteRange(folly::StringPiece(commitID)));
   } else if (commitID.size() == 2 * Hash::RAW_SIZE) {
     // This looks like 40 bytes of hexadecimal data.
-    return Hash(commitID);
+    return ObjectId(commitID);
+  } else {
+    throw newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "expected argument to be a 20-byte binary hash or "
+        "40-byte hexadecimal hash; got \"",
+        commitID,
+        "\"");
+  }
+}
+
+/**
+ * Convert thrift BinaryHash data type into a Hash20 object.
+ *
+ * This allows the input to be either a 20-byte binary string, or a 40-byte
+ * hexadecimal string.
+ */
+inline Hash20 hash20FromThrift(folly::StringPiece commitID) {
+  if (commitID.size() == Hash::RAW_SIZE) {
+    // This looks like 20 bytes of binary data.
+    return Hash20(folly::ByteRange(folly::StringPiece(commitID)));
+  } else if (commitID.size() == 2 * Hash::RAW_SIZE) {
+    // This looks like 40 bytes of hexadecimal data.
+    return Hash20(commitID);
   } else {
     throw newEdenError(
         EINVAL,

@@ -292,7 +292,8 @@ DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     }
 
     if (value.hash_ref() && !value.hash_ref()->empty()) {
-      auto hash = Hash{folly::ByteRange{folly::StringPiece{*value.hash_ref()}}};
+      auto hash =
+          ObjectId{folly::ByteRange{folly::StringPiece{*value.hash_ref()}}};
       result.emplace(PathComponentPiece{name}, *value.mode_ref(), ino, hash);
     } else {
       // The inode is materialized

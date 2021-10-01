@@ -36,10 +36,10 @@ class EmptyBackingStore final : public BackingStore {
     throw std::domain_error("unimplemented");
   }
   folly::SemiFuture<BackingStore::GetTreeRes> getTree(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
   folly::SemiFuture<BackingStore::GetBlobRes> getBlob(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
 };
 

@@ -46,7 +46,7 @@ class TreeCache : public ObjectCache<Tree, ObjectCacheFlavor::Simple> {
    * If a tree for the given hash is in cache, return it. If the tree is not in
    * cache, return nullptr.
    */
-  std::shared_ptr<const Tree> get(const Hash& hash);
+  std::shared_ptr<const Tree> get(const ObjectId& hash);
 
   /**
    * Inserts a tree into the cache for future lookup. If the new total size

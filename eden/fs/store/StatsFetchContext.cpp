@@ -25,7 +25,10 @@ StatsFetchContext::StatsFetchContext(const StatsFetchContext& other) {
   }
 }
 
-void StatsFetchContext::didFetch(ObjectType type, const Hash&, Origin origin) {
+void StatsFetchContext::didFetch(
+    ObjectType type,
+    const ObjectId&,
+    Origin origin) {
   XCHECK(type < ObjectFetchContext::kObjectTypeEnumMax)
       << "type is out of range: " << type;
   XCHECK(origin < ObjectFetchContext::kOriginEnumMax)

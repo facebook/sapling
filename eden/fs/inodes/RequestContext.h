@@ -67,7 +67,7 @@ class RequestContext : public ObjectFetchContext {
    * Unlike other RequestContext function, this may be called concurrently by
    * arbitrary threads.
    */
-  void didFetch(ObjectType /*type*/, const Hash& /*hash*/, Origin origin)
+  void didFetch(ObjectType /*type*/, const ObjectId& /*hash*/, Origin origin)
       override {
     edenTopStats_.setFetchOrigin(origin);
   }

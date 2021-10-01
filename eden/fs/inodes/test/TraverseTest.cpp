@@ -22,7 +22,7 @@ struct TestCallbacks : TraversalCallbacks {
   void visitTreeInode(
       RelativePathPiece path,
       InodeNumber ino,
-      const std::optional<Hash>& hash,
+      const std::optional<ObjectId>& hash,
       uint64_t fuseRefcount,
       const std::vector<ChildEntry>& entries) override {
     paths.emplace_back(path);

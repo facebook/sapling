@@ -10,7 +10,7 @@
 #include "eden/fs/config/EdenConfig.h"
 
 namespace facebook::eden {
-std::shared_ptr<const Tree> TreeCache::get(const Hash& hash) {
+std::shared_ptr<const Tree> TreeCache::get(const ObjectId& hash) {
   if (config_->getEdenConfig()->enableInMemoryTreeCaching.getValue()) {
     return getSimple(hash);
   }

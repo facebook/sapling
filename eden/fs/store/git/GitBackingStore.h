@@ -56,23 +56,23 @@ class GitBackingStore final : public BackingStore {
     throw std::domain_error("unimplemented");
   }
   folly::SemiFuture<BackingStore::GetTreeRes> getTree(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
   folly::SemiFuture<BackingStore::GetBlobRes> getBlob(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
 
  private:
   GitBackingStore(GitBackingStore const&) = delete;
   GitBackingStore& operator=(GitBackingStore const&) = delete;
 
-  std::unique_ptr<Tree> getTreeImpl(const Hash& id);
-  std::unique_ptr<Blob> getBlobImpl(const Hash& id);
+  std::unique_ptr<Tree> getTreeImpl(const ObjectId& id);
+  std::unique_ptr<Blob> getBlobImpl(const ObjectId& id);
 
   static git_oid root2Oid(const RootId& rootId);
 
-  static git_oid hash2Oid(const Hash& hash);
-  static Hash oid2Hash(const git_oid* oid);
+  static git_oid hash2Oid(const ObjectId& hash);
+  static ObjectId oid2Hash(const git_oid* oid);
 
   LocalStore* localStore_{nullptr};
   git_repository* repo_{nullptr};

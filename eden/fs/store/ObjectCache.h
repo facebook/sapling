@@ -55,7 +55,7 @@ class ObjectInterestHandle {
   ObjectInterestHandle(
       std::weak_ptr<ObjectCache<ObjectType, ObjectCacheFlavor::InterestHandle>>
           objectCache,
-      const Hash& hash,
+      const ObjectId& hash,
       std::weak_ptr<const ObjectType> object,
       uint64_t generation) noexcept;
 
@@ -63,7 +63,7 @@ class ObjectInterestHandle {
       objectCache_;
 
   // hash_ is only accessed if ObjectCache_ is non-expired.
-  Hash hash_;
+  ObjectId hash_;
 
   // In the situation that the object exists even if it's been evicted, allow
   // retrieving it anyway.
@@ -171,7 +171,7 @@ class ObjectCache
       F == ObjectCacheFlavor::InterestHandle,
       typename ObjectCache<ObjectType, Flavor>::GetResult>
   getInterestHandle(
-      const Hash& hash,
+      const ObjectId& hash,
       Interest interest = Interest::LikelyNeededAgain);
 
   /**
@@ -182,7 +182,7 @@ class ObjectCache
   typename std::enable_if_t<
       F == ObjectCacheFlavor::Simple,
       typename ObjectCache<ObjectType, Flavor>::ObjectPtr>
-  getSimple(const Hash& hash);
+  getSimple(const ObjectId& hash);
 
   /**
    * Inserts a object into the cache for future lookup. If the new total size
@@ -212,7 +212,7 @@ class ObjectCache
   /**
    * Returns true if the cache contains a object for the given hash.
    */
-  bool contains(const Hash& hash) const;
+  bool contains(const ObjectId& hash) const;
 
   /**
    * Evicts everything from cache.
@@ -261,7 +261,7 @@ class ObjectCache
 
   struct State {
     size_t totalSize{0};
-    std::unordered_map<Hash, CacheItem> items;
+    std::unordered_map<ObjectId, CacheItem> items;
 
     /// Entries are evicted from the front of the queue.
     std::list<CacheItem*> evictionQueue;
@@ -313,7 +313,7 @@ class ObjectCache
    *
    * Does not do anything related to interest handles.
    */
-  CacheItem* getImpl(const Hash& hash, LockedState& state);
+  CacheItem* getImpl(const ObjectId& hash, LockedState& state);
 
   /**
    * Inserts an object into the cache for future lookup. If the new total size
@@ -326,7 +326,7 @@ class ObjectCache
    */
   std::pair<CacheItem*, bool> insertImpl(ObjectPtr object, LockedState& state);
 
-  void dropInterestHandle(const Hash& hash, uint64_t generation) noexcept;
+  void dropInterestHandle(const ObjectId& hash, uint64_t generation) noexcept;
 
   void evictUntilFits(LockedState& state) noexcept;
   void evictOne(LockedState& state) noexcept;

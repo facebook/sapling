@@ -68,7 +68,7 @@ class TestMetadataImporter : public MetadataImporter {
       std::shared_ptr<LocalStore> /*localStore*/) {}
 
   folly::SemiFuture<std::unique_ptr<TreeMetadata>> getTreeMetadata(
-      const Hash& /*edenId*/,
+      const ObjectId& /*edenId*/,
       const Hash& /*manifestId*/) override {
     getTreeMetadataCalled = true;
     return folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();

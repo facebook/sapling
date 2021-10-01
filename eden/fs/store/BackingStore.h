@@ -72,7 +72,7 @@ class BackingStore : public RootIdCodec {
    * Return the tree and where it was found.
    */
   virtual folly::SemiFuture<GetTreeRes> getTree(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) = 0;
 
   /**
@@ -91,7 +91,7 @@ class BackingStore : public RootIdCodec {
    * Return the blob and where it was found.
    */
   virtual folly::SemiFuture<GetBlobRes> getBlob(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) = 0;
 
   /**
@@ -101,7 +101,7 @@ class BackingStore : public RootIdCodec {
    * for as long as the returned SemiFuture.
    */
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
-      HashRange /*ids*/,
+      ObjectIdRange /*ids*/,
       ObjectFetchContext& /*context*/) {
     return folly::unit;
   }

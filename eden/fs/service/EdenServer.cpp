@@ -1669,7 +1669,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
     // ask the import helper to map the commit to its root manifest because it
     // won't know about the new commit until it reopens the repo.  Instead,
     // import the manifest for this commit directly.
-    auto rootManifest = hashFromThrift(rootHgManifest.value());
+    auto rootManifest = hash20FromThrift(rootHgManifest.value());
     edenMount->getObjectStore()
         ->getBackingStore()
         ->importManifestForRoot(rootId, rootManifest)

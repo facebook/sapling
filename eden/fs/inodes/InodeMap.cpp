@@ -46,7 +46,7 @@ InodeMap::UnloadedInode::UnloadedInode(
     PathComponentPiece entryName,
     bool isUnlinked,
     mode_t mode,
-    std::optional<Hash> hash,
+    std::optional<ObjectId> hash,
     uint32_t fsRefcount)
     : parent(parentNum),
       name(entryName),
@@ -63,7 +63,7 @@ InodeMap::UnloadedInode::UnloadedInode(
     TreeInode* parent,
     PathComponentPiece entryName,
     bool isUnlinked,
-    std::optional<Hash> hash,
+    std::optional<ObjectId> hash,
     uint32_t fsRefcount)
     : parent{parent->getNodeId()},
       name{entryName},
@@ -195,7 +195,7 @@ void InodeMap::initializeFromTakeover(
         *entry.mode_ref(),
         entry.hash_ref()->empty()
             ? std::nullopt
-            : std::optional<Hash>{hashFromThrift(*entry.hash_ref())},
+            : std::optional<ObjectId>{hashFromThrift(*entry.hash_ref())},
         folly::to<uint32_t>(*entry.numFsReferences_ref()));
   }
 
@@ -407,7 +407,7 @@ void InodeMap::setupParentLookupPromise(
     PathComponentPiece childName,
     bool isUnlinked,
     InodeNumber childInodeNumber,
-    std::optional<Hash> hash,
+    std::optional<ObjectId> hash,
     mode_t mode) {
   promise.getFuture()
       .thenValue([name = PathComponent(childName),
@@ -429,7 +429,7 @@ void InodeMap::startChildLookup(
     PathComponentPiece childName,
     bool isUnlinked,
     InodeNumber childInodeNumber,
-    std::optional<Hash> hash,
+    std::optional<ObjectId> hash,
     mode_t mode) {
   auto treeInode = parent.asTreePtrOrNull();
   if (!treeInode) {

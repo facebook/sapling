@@ -369,7 +369,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
  * FileInode::State methods
  ********************************************************************/
 
-FileInodeState::FileInodeState(const std::optional<Hash>& h)
+FileInodeState::FileInodeState(const std::optional<ObjectId>& h)
     : nonMaterializedState(
           h ? std::optional(NonMaterializedState{*h}) : std::nullopt) {
   tag = nonMaterializedState ? BLOB_NOT_LOADING : MATERIALIZED_IN_OVERLAY;
@@ -424,7 +424,7 @@ FileInode::FileInode(
     PathComponentPiece name,
     mode_t initialMode,
     const std::optional<InodeTimestamps>& initialTimestamps,
-    const std::optional<Hash>& hash)
+    const std::optional<ObjectId>& hash)
     : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
       state_(folly::in_place, hash) {}
 
@@ -512,7 +512,7 @@ folly::Future<std::string> FileInode::readlink(
 #endif // !_WIN32
 
 std::optional<bool> FileInode::isSameAsFast(
-    const Hash& blobID,
+    const ObjectId& blobID,
     TreeEntryType entryType) {
   auto state = state_.rlock();
 #ifndef _WIN32
@@ -571,7 +571,7 @@ folly::Future<bool> FileInode::isSameAs(
 }
 
 folly::Future<bool> FileInode::isSameAs(
-    const Hash& blobID,
+    const ObjectId& blobID,
     const Hash& blobSha1,
     TreeEntryType entryType,
     ObjectFetchContext& fetchContext) {
@@ -584,7 +584,7 @@ folly::Future<bool> FileInode::isSameAs(
 }
 
 folly::Future<bool> FileInode::isSameAs(
-    const Hash& blobID,
+    const ObjectId& blobID,
     TreeEntryType entryType,
     ObjectFetchContext& fetchContext) {
   auto result = isSameAsFast(blobID, entryType);
@@ -628,7 +628,7 @@ mode_t FileInode::getMode() const {
 }
 #endif // !_WIN32
 
-std::optional<Hash> FileInode::getBlobHash() const {
+std::optional<ObjectId> FileInode::getBlobHash() const {
   if (auto state = state_.rlock(); state->nonMaterializedState) {
     return state->nonMaterializedState->hash;
   } else {

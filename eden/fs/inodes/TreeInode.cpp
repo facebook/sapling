@@ -163,7 +163,7 @@ TreeInode::TreeInode(
     mode_t initialMode,
     const std::optional<InodeTimestamps>& initialTimestamps,
     DirContents&& dir,
-    std::optional<Hash> treeHash)
+    std::optional<ObjectId> treeHash)
     : Base(ino, initialMode, initialTimestamps, parent, name),
       contents_(folly::in_place, std::move(dir), treeHash) {
   XDCHECK_NE(ino, kRootNodeId);
@@ -178,7 +178,7 @@ TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
 TreeInode::TreeInode(
     EdenMount* mount,
     DirContents&& dir,
-    std::optional<Hash> treeHash)
+    std::optional<ObjectId> treeHash)
     : Base(mount), contents_(folly::in_place, std::move(dir), treeHash) {}
 
 TreeInode::~TreeInode() {}
@@ -380,7 +380,7 @@ InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
 void TreeInode::loadUnlinkedChildInode(
     PathComponentPiece name,
     InodeNumber number,
-    std::optional<Hash> hash,
+    std::optional<ObjectId> hash,
     mode_t mode) {
   try {
     InodeMap::PromiseVector promises;
@@ -786,7 +786,7 @@ void TreeInode::childMaterialized(
 void TreeInode::childDematerialized(
     const RenameLock& renameLock,
     PathComponentPiece childName,
-    Hash childScmHash) {
+    ObjectId childScmHash) {
   {
     auto contents = contents_.wlock();
     auto iter = contents->entries.find(childName);
@@ -2578,7 +2578,7 @@ Future<Unit> TreeInode::checkout(
 
 bool TreeInode::canShortCircuitCheckout(
     CheckoutContext* ctx,
-    const Hash& treeHash,
+    const ObjectId& treeHash,
     const Tree* fromTree,
     const Tree* toTree) {
   if (ctx->isDryRun()) {
@@ -3185,7 +3185,7 @@ void TreeInode::saveOverlayPostCheckout(
     //
     // If we can confirm that we are identical to the source control Tree we do
     // not need to be materialized.
-    auto tryToDematerialize = [&]() -> std::optional<Hash> {
+    auto tryToDematerialize = [&]() -> std::optional<ObjectId> {
       // If the new tree does not exist in source control, we must be
       // materialized, since there is no source control Tree to refer to.
       // (If we are empty in this case we will set deleteSelf and try to remove

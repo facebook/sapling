@@ -43,14 +43,14 @@ class LocalStoreCachedBackingStore : public BackingStore {
       facebook::eden::PathComponentPiece pathComponentPiece,
       ObjectFetchContext& context) override;
   folly::SemiFuture<GetTreeRes> getTree(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
   folly::SemiFuture<GetBlobRes> getBlob(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
 
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
-      HashRange ids,
+      ObjectIdRange ids,
       ObjectFetchContext& context) override;
 
   void periodicManagementTask() override;

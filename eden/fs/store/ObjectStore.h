@@ -152,7 +152,7 @@ class ObjectStore : public IObjectStore,
    * exist, or possibly other exceptions on error.
    */
   folly::Future<std::shared_ptr<const Tree>> getTree(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) const override;
 
   /**
@@ -162,7 +162,7 @@ class ObjectStore : public IObjectStore,
    * for as long as the returned SemiFuture.
    */
   folly::Future<folly::Unit> prefetchBlobs(
-      HashRange ids,
+      ObjectIdRange ids,
       ObjectFetchContext& context) const override;
 
   /**
@@ -173,21 +173,22 @@ class ObjectStore : public IObjectStore,
    * exist, or possibly other exceptions on error.
    */
   folly::Future<std::shared_ptr<const Blob>> getBlob(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) const override;
 
   /**
    * Returns the size of the contents of the blob with the given ID.
    */
   folly::Future<uint64_t> getBlobSize(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) const;
 
   /**
    * Returns the SHA-1 hash of the contents of the blob with the given ID.
    */
-  folly::Future<Hash> getBlobSha1(const Hash& id, ObjectFetchContext& context)
-      const;
+  folly::Future<Hash> getBlobSha1(
+      const ObjectId& id,
+      ObjectFetchContext& context) const;
 
   /**
    * Get the LocalStore used by this ObjectStore
@@ -234,7 +235,7 @@ class ObjectStore : public IObjectStore,
    * not exist, or possibly other exceptions on error.
    */
   folly::Future<BlobMetadata> getBlobMetadata(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) const;
 
   static constexpr size_t kCacheSize = 1000000;
@@ -253,7 +254,7 @@ class ObjectStore : public IObjectStore,
    * TODO: It never makes sense to rlock an LRU cache, since cache hits mutate
    * the data structure. Thus, should we use a more appropriate type of lock?
    */
-  mutable folly::Synchronized<folly::EvictingCacheMap<Hash, BlobMetadata>>
+  mutable folly::Synchronized<folly::EvictingCacheMap<ObjectId, BlobMetadata>>
       metadataCache_;
 
   /**

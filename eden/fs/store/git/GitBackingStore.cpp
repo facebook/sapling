@@ -106,7 +106,7 @@ SemiFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
   };
 
   // Get the tree ID for this commit.
-  Hash treeID = oid2Hash(git_commit_tree_id(commit));
+  ObjectId treeID = oid2Hash(git_commit_tree_id(commit));
 
   // Now get the specified tree.
   return localStore_->getTree(treeID).thenValue(
@@ -120,14 +120,14 @@ SemiFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
 }
 
 SemiFuture<BackingStore::GetTreeRes> GitBackingStore::getTree(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(BackingStore::GetTreeRes{
       getTreeImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
-unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
+unique_ptr<Tree> GitBackingStore::getTreeImpl(const ObjectId& id) {
   XLOG(DBG4) << "importing tree " << id;
 
   git_oid treeOID = hash2Oid(id);
@@ -171,14 +171,14 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
 }
 
 SemiFuture<BackingStore::GetBlobRes> GitBackingStore::getBlob(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(BackingStore::GetBlobRes{
       getBlobImpl(id), ObjectFetchContext::Origin::FromDiskCache});
 }
 
-unique_ptr<Blob> GitBackingStore::getBlobImpl(const Hash& id) {
+unique_ptr<Blob> GitBackingStore::getBlobImpl(const ObjectId& id) {
   XLOG(DBG5) << "importing blob " << id;
 
   auto blobOID = hash2Oid(id);
@@ -212,18 +212,18 @@ git_oid GitBackingStore::root2Oid(const RootId& rootId) {
   return oid;
 }
 
-git_oid GitBackingStore::hash2Oid(const Hash& hash) {
+git_oid GitBackingStore::hash2Oid(const ObjectId& hash) {
   git_oid oid;
   static_assert(
-      Hash::RAW_SIZE == GIT_OID_RAWSZ,
+      ObjectId::RAW_SIZE == GIT_OID_RAWSZ,
       "git hash size and eden hash size do not match");
   memcpy(oid.id, hash.getBytes().data(), GIT_OID_RAWSZ);
   return oid;
 }
 
-Hash GitBackingStore::oid2Hash(const git_oid* oid) {
+ObjectId GitBackingStore::oid2Hash(const git_oid* oid) {
   ByteRange oidBytes(oid->id, GIT_OID_RAWSZ);
-  return Hash(oidBytes);
+  return ObjectId(oidBytes);
 }
 
 } // namespace facebook::eden

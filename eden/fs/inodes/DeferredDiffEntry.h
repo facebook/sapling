@@ -22,6 +22,7 @@ namespace eden {
 
 class DiffContext;
 class GitIgnoreStack;
+class ObjectId;
 class Hash20;
 using Hash = Hash20;
 class ObjectStore;
@@ -97,25 +98,27 @@ class DeferredDiffEntry {
       DiffContext* context,
       RelativePath path,
       const TreeEntry& scmEntry,
-      Hash currentBlobHash);
+      ObjectId currentBlobHash);
 
   static std::unique_ptr<DeferredDiffEntry> createModifiedScmEntry(
       DiffContext* context,
       RelativePath path,
-      Hash scmHash,
-      Hash wdHash,
+      ObjectId scmHash,
+      ObjectId wdHash,
       const GitIgnoreStack* ignore,
       bool isIgnored);
 
   static std::unique_ptr<DeferredDiffEntry> createAddedScmEntry(
       DiffContext* context,
       RelativePath path,
-      Hash wdHash,
+      ObjectId wdHash,
       const GitIgnoreStack* ignore,
       bool isIgnored);
 
-  static std::unique_ptr<DeferredDiffEntry>
-  createRemovedScmEntry(DiffContext* context, RelativePath path, Hash scmHash);
+  static std::unique_ptr<DeferredDiffEntry> createRemovedScmEntry(
+      DiffContext* context,
+      RelativePath path,
+      ObjectId scmHash);
 
  protected:
   DiffContext* const context_;

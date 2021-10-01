@@ -14,6 +14,7 @@ namespace facebook {
 namespace eden {
 
 class Blob;
+class ObjectId;
 class Hash20;
 using Hash = Hash20;
 class Tree;
@@ -21,7 +22,7 @@ class Tree;
 template <typename T>
 class StoredObject;
 using StoredBlob = StoredObject<Blob>;
-using StoredHash = StoredObject<Hash>;
+using StoredHash = StoredObject<ObjectId>;
 using StoredTree = StoredObject<Tree>;
 
 /**

@@ -77,10 +77,10 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
       std::make_shared<NullStructuredLogger>());
   overlay->initialize().get();
 
-  Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
-  Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
-  Hash hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
-  Hash hash4{folly::ByteRange{"44444444444444444444"_sp}};
+  ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
+  ObjectId hash2{folly::ByteRange{"01234012340123401234"_sp}};
+  ObjectId hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
+  ObjectId hash4{folly::ByteRange{"44444444444444444444"_sp}};
 
   auto rootTree = overlay->loadOverlayDir(kRootNodeId);
   auto file = overlay->openFile(2_ino, FsOverlay::kHeaderIdentifierFile);
@@ -220,7 +220,7 @@ TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
 }
 
 TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
-  auto hash = Hash{"0123456789012345678901234567890123456789"};
+  auto hash = ObjectId{"0123456789012345678901234567890123456789"};
 
   auto overlay = mount_.getEdenMount()->getOverlay();
 

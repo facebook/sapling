@@ -147,7 +147,7 @@ folly::Future<std::shared_ptr<TreeEntry>> ObjectStore::getTreeEntryForRootId(
 }
 
 Future<shared_ptr<const Tree>> ObjectStore::getTree(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& fetchContext) const {
   // Check in the LocalStore first
 
@@ -195,7 +195,7 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
 }
 
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
-    HashRange ids,
+    ObjectIdRange ids,
     ObjectFetchContext& fetchContext) const {
   // In theory we could/should ask the localStore_ to filter the list
   // of ids down to just the set that we need to load, but there is no
@@ -212,7 +212,7 @@ folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
 }
 
 Future<shared_ptr<const Blob>> ObjectStore::getBlob(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& fetchContext) const {
   deprioritizeWhenFetchHeavy(fetchContext);
   return backingStore_->getBlob(id, fetchContext)
@@ -240,7 +240,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
 }
 
 Future<BlobMetadata> ObjectStore::getBlobMetadata(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& context) const {
   // Check in-memory cache
   {
@@ -316,14 +316,14 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
 }
 
 Future<Hash> ObjectStore::getBlobSha1(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& context) const {
   return getBlobMetadata(id, context)
       .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; });
 }
 
 Future<uint64_t> ObjectStore::getBlobSize(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& context) const {
   return getBlobMetadata(id, context)
       .thenValue([](const BlobMetadata& metadata) { return metadata.size; });

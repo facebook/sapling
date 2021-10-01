@@ -15,7 +15,7 @@ namespace {
 
 class CacheObject {
  public:
-  const Hash& getHash() const {
+  const ObjectId& getHash() const {
     return hash_;
   }
 
@@ -23,22 +23,22 @@ class CacheObject {
     return size_;
   }
 
-  CacheObject(Hash hash, size_t size) : hash_{hash}, size_{size} {}
+  CacheObject(ObjectId hash, size_t size) : hash_{hash}, size_{size} {}
 
  private:
-  Hash hash_;
+  ObjectId hash_;
   size_t size_;
 };
 
-constexpr auto hash3 = Hash{"0000000000000000000000000000000000000000"_sp};
-constexpr auto hash3a = Hash{"0000000000000000000000000000000000000010"_sp};
-constexpr auto hash3b = Hash{"0000000000000000000000000000000000000020"_sp};
-constexpr auto hash3c = Hash{"0000000000000000000000000000000000000030"_sp};
-constexpr auto hash4 = Hash{"0000000000000000000000000000000000000001"_sp};
-constexpr auto hash5 = Hash{"0000000000000000000000000000000000000002"_sp};
-constexpr auto hash6 = Hash{"0000000000000000000000000000000000000003"_sp};
-constexpr auto hash9 = Hash{"0000000000000000000000000000000000000004"_sp};
-constexpr auto hash11 = Hash{"0000000000000000000000000000000000000005"_sp};
+constexpr auto hash3 = ObjectId{"0000000000000000000000000000000000000000"_sp};
+constexpr auto hash3a = ObjectId{"0000000000000000000000000000000000000010"_sp};
+constexpr auto hash3b = ObjectId{"0000000000000000000000000000000000000020"_sp};
+constexpr auto hash3c = ObjectId{"0000000000000000000000000000000000000030"_sp};
+constexpr auto hash4 = ObjectId{"0000000000000000000000000000000000000001"_sp};
+constexpr auto hash5 = ObjectId{"0000000000000000000000000000000000000002"_sp};
+constexpr auto hash6 = ObjectId{"0000000000000000000000000000000000000003"_sp};
+constexpr auto hash9 = ObjectId{"0000000000000000000000000000000000000004"_sp};
+constexpr auto hash11 = ObjectId{"0000000000000000000000000000000000000005"_sp};
 
 // Each object's name corresponds to its length in bytes.
 
@@ -423,7 +423,7 @@ TEST(ObjectCache, interest_handle_redundant_inserts_are_ignored) {
   auto cache =
       ObjectCache<CacheObject, ObjectCacheFlavor::InterestHandle>::create(
           10, 0);
-  auto object = std::make_shared<CacheObject>(Hash{}, 9);
+  auto object = std::make_shared<CacheObject>(ObjectId{}, 9);
   cache->insertInterestHandle(object);
   EXPECT_EQ(9, cache->getStats().totalSizeInBytes);
   cache->insertInterestHandle(object);

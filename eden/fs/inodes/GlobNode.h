@@ -35,7 +35,8 @@ class GlobNode {
   // globs that will be parsed into the overall glob tree.
   explicit GlobNode(bool includeDotfiles) : includeDotfiles_(includeDotfiles) {}
 
-  using PrefetchList = std::shared_ptr<folly::Synchronized<std::vector<Hash>>>;
+  using PrefetchList =
+      std::shared_ptr<folly::Synchronized<std::vector<ObjectId>>>;
 
   GlobNode(folly::StringPiece pattern, bool includeDotfiles, bool hasSpecials);
 

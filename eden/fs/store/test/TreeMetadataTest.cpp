@@ -20,8 +20,8 @@
 using namespace facebook::eden;
 
 TEST_P(LocalStoreTest, testReadAndWriteTreeMetadata) {
-  Hash hash{"3a8f8eb91101860fd8484154885838bf322964d0"};
-  Hash childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
+  ObjectId hash{"3a8f8eb91101860fd8484154885838bf322964d0"};
+  ObjectId childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
 
   StringPiece childContents("blah\n");
   auto childSha1 = Hash::sha1(folly::ByteRange{childContents});
@@ -61,7 +61,7 @@ TEST_P(LocalStoreTest, testDeserializeEmptyMetadata) {
 }
 
 TEST_P(LocalStoreTest, testDeserializeClippedTreeMetadata) {
-  Hash childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
+  ObjectId childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
 
   StringPiece childContents("blah\n");
   auto childSha1 = Hash::sha1(folly::ByteRange{childContents});
@@ -82,8 +82,8 @@ TEST_P(LocalStoreTest, testDeserializeClippedTreeMetadata) {
 }
 
 TEST_P(LocalStoreTest, putTreeMetadata) {
-  Hash hash{"3a8f8eb91101860fd8484154885838bf322964d0"};
-  Hash childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
+  ObjectId hash{"3a8f8eb91101860fd8484154885838bf322964d0"};
+  ObjectId childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
 
   StringPiece childContents("blah\n");
   auto childSha1 = Hash::sha1(folly::ByteRange{childContents});

@@ -21,7 +21,7 @@ BlobAccess::BlobAccess(
 BlobAccess::~BlobAccess() {}
 
 folly::Future<BlobCache::GetResult> BlobAccess::getBlob(
-    const Hash& hash,
+    const ObjectId& hash,
     ObjectFetchContext& context,
     BlobCache::Interest interest) {
   auto result = blobCache_->get(hash, interest);

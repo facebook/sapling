@@ -96,7 +96,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * May throw exceptions on error.
    */
   virtual StoreResult get(KeySpace keySpace, folly::ByteRange key) const = 0;
-  StoreResult get(KeySpace keySpace, const Hash& id) const;
+  StoreResult get(KeySpace keySpace, const ObjectId& id) const;
 
   FOLLY_NODISCARD virtual folly::Future<StoreResult> getFuture(
       KeySpace keySpace,
@@ -113,7 +113,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * May throw exceptions on error (e.g., if this ID refers to a non-tree
    * object).
    */
-  folly::Future<std::unique_ptr<Tree>> getTree(const Hash& id) const;
+  folly::Future<std::unique_ptr<Tree>> getTree(const ObjectId& id) const;
 
   /**
    * Get a Blob from the store.
@@ -124,7 +124,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * May throw exceptions on error (e.g., if this ID refers to a non-blob
    * object).
    */
-  folly::Future<std::unique_ptr<Blob>> getBlob(const Hash& id) const;
+  folly::Future<std::unique_ptr<Blob>> getBlob(const ObjectId& id) const;
 
   /**
    * Get the size of a blob and the SHA-1 hash of its contents.
@@ -133,7 +133,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * exception on error.
    */
   folly::Future<std::optional<BlobMetadata>> getBlobMetadata(
-      const Hash& id) const;
+      const ObjectId& id) const;
 
   /**
    * Compute the serialized version of the tree in a (not coalesced) IOBuf.
@@ -148,7 +148,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * Test whether the key is stored.
    */
   virtual bool hasKey(KeySpace keySpace, folly::ByteRange key) const = 0;
-  bool hasKey(KeySpace keySpace, const Hash& id) const;
+  bool hasKey(KeySpace keySpace, const ObjectId& id) const;
 
   /**
    * Store a Tree into the TreeFamily KeySpace.
@@ -158,12 +158,12 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   /**
    * Store a Blob.
    */
-  void putBlob(const Hash& id, const Blob* blob);
+  void putBlob(const ObjectId& id, const Blob* blob);
 
   /**
    * Store a blob metadata.
    */
-  BlobMetadata putBlobMetadata(const Hash& id, const Blob* blob);
+  BlobMetadata putBlobMetadata(const ObjectId& id, const Blob* blob);
 
   /**
    * Store metadata for each of the entries in the Tree. This stores the
@@ -178,7 +178,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    */
   virtual void
   put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value) = 0;
-  void put(KeySpace keySpace, const Hash& id, folly::ByteRange value);
+  void put(KeySpace keySpace, const ObjectId& id, folly::ByteRange value);
 
   /*
    * WriteBatch is a helper class for facilitating a bulk store operation.
@@ -205,14 +205,14 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
     /**
      * Store a Blob.
      */
-    void putBlob(const Hash& id, const Blob* blob);
+    void putBlob(const ObjectId& id, const Blob* blob);
 
     /**
      * Put arbitrary data in the store.
      */
     virtual void
     put(KeySpace keySpace, folly::ByteRange key, folly::ByteRange value) = 0;
-    void put(KeySpace keySpace, const Hash& id, folly::ByteRange value);
+    void put(KeySpace keySpace, const ObjectId& id, folly::ByteRange value);
 
     /**
      * Put arbitrary data in the store where the value is split across
@@ -272,7 +272,7 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
    * note: this assumes `treeMetadata` contains HashIndexedEntryMetadata
    */
   void putNormalizedTreeMetadata(
-      const Hash& hash,
+      const ObjectId& hash,
       const TreeMetadata& treeMetadata);
 };
 

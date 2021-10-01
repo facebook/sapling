@@ -42,7 +42,7 @@ constexpr folly::StringPiece kDotEdenName{".eden"};
  * The state of a TreeInode as held in memory.
  */
 struct TreeInodeState {
-  explicit TreeInodeState(DirContents&& dir, std::optional<Hash> hash)
+  explicit TreeInodeState(DirContents&& dir, std::optional<ObjectId> hash)
       : entries{std::forward<DirContents>(dir)}, treeHash{hash} {}
 
   bool isMaterialized() const {
@@ -63,7 +63,7 @@ struct TreeInodeState {
    * control, and backed by the Overlay instead of a source control Tree),
    * treeHash will be none.
    */
-  std::optional<Hash> treeHash;
+  std::optional<ObjectId> treeHash;
 };
 
 /**
@@ -95,7 +95,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       mode_t initialMode,
       const std::optional<InodeTimestamps>& initialTimestamps,
       DirContents&& dir,
-      std::optional<Hash> treeHash);
+      std::optional<ObjectId> treeHash);
 
   /**
    * Construct the root TreeInode from a source control commit's root.
@@ -105,7 +105,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Construct the root inode from data saved in the overlay.
    */
-  TreeInode(EdenMount* mount, DirContents&& dir, std::optional<Hash> treeHash);
+  TreeInode(
+      EdenMount* mount,
+      DirContents&& dir,
+      std::optional<ObjectId> treeHash);
 
   ~TreeInode() override;
 
@@ -313,7 +316,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   void childDematerialized(
       const RenameLock& renameLock,
       PathComponentPiece childName,
-      Hash childScmHash);
+      ObjectId childScmHash);
 
   /**
    * Internal API only for use by InodeMap.
@@ -336,7 +339,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   void loadUnlinkedChildInode(
       PathComponentPiece name,
       InodeNumber number,
-      std::optional<Hash> hash,
+      std::optional<ObjectId> hash,
       mode_t mode);
 
   /**
@@ -658,7 +661,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   static bool canShortCircuitCheckout(
       CheckoutContext* ctx,
-      const Hash& treeHash,
+      const ObjectId& treeHash,
       const Tree* fromTree,
       const Tree* toTree);
   void computeCheckoutActions(

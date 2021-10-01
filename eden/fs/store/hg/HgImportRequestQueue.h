@@ -74,7 +74,7 @@ class HgImportRequestQueue {
   /* ====== De-duplication methods ====== */
   template <typename T>
   void markImportAsFinished(
-      const Hash& id,
+      const ObjectId& id,
       folly::Try<std::unique_ptr<T>>& importTry) {
     std::shared_ptr<HgImportRequest> import;
     {
@@ -137,13 +137,14 @@ class HgImportRequestQueue {
     std::vector<std::shared_ptr<HgImportRequest>> prefetchQueue;
 
     /**
-     * Map of a Hash to an element in the queue. Any changes to this type can
-     * have a significant effect on EdenFS performance and thus changes to it
-     * needs to be carefully studied and measured. The
+     * Map of a ObjectId to an element in the queue. Any changes to this type
+     * can have a significant effect on EdenFS performance and thus changes to
+     * it needs to be carefully studied and measured. The
      * benchmarks/hg_import_request_queue.cpp is a good way to measure the
      * potential performance impact.
      */
-    folly::F14FastMap<Hash, std::shared_ptr<HgImportRequest>> requestTracker;
+    folly::F14FastMap<ObjectId, std::shared_ptr<HgImportRequest>>
+        requestTracker;
   };
   std::shared_ptr<ReloadableConfig> config_;
   folly::Synchronized<State, std::mutex> state_;

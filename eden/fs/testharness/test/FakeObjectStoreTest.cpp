@@ -18,11 +18,11 @@ using folly::IOBuf;
 using std::vector;
 
 namespace {
-Hash fileHash("0000000000000000000000000000000000000000");
-Hash tree1Hash("1111111111111111111111111111111111111111");
-Hash tree2Hash("2222222222222222222222222222222222222222");
+ObjectId fileHash("0000000000000000000000000000000000000000");
+ObjectId tree1Hash("1111111111111111111111111111111111111111");
+ObjectId tree2Hash("2222222222222222222222222222222222222222");
 RootId commHash("4444444444444444444444444444444444444444");
-Hash blobHash("5555555555555555555555555555555555555555");
+ObjectId blobHash("5555555555555555555555555555555555555555");
 } // namespace
 
 TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
@@ -59,7 +59,7 @@ TEST(FakeObjectStore, getObjectsOfAllTypesFromStore) {
 
 TEST(FakeObjectStore, getMissingObjectThrows) {
   FakeObjectStore store;
-  Hash hash("4242424242424242424242424242424242424242");
+  ObjectId hash("4242424242424242424242424242424242424242");
   EXPECT_THROW(store.getTree(hash).get(), std::domain_error);
   EXPECT_THROW(store.getBlob(hash).get(), std::domain_error);
   RootId rootId{"missing"};

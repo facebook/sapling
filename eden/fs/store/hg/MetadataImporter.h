@@ -16,6 +16,7 @@
 
 namespace facebook::eden {
 
+class ObjectId;
 class Hash20;
 using Hash = Hash20;
 class LocalStore;
@@ -38,7 +39,7 @@ class MetadataImporter {
    * edenId
    */
   virtual folly::SemiFuture<std::unique_ptr<TreeMetadata>> getTreeMetadata(
-      const Hash& edenId,
+      const ObjectId& edenId,
       const Hash& manifestId) = 0;
 
   /**
@@ -70,7 +71,7 @@ class DefaultMetadataImporter : public MetadataImporter {
       std::shared_ptr<LocalStore> /*localStore*/) {}
 
   folly::SemiFuture<std::unique_ptr<TreeMetadata>> getTreeMetadata(
-      const Hash& edenId,
+      const ObjectId& edenId,
       const Hash& manifestId) override;
 
   bool metadataFetchingAvailable() override;

@@ -18,7 +18,7 @@ template <typename ObjectType>
 ObjectInterestHandle<ObjectType>::ObjectInterestHandle(
     std::weak_ptr<ObjectCache<ObjectType, ObjectCacheFlavor::InterestHandle>>
         objectCache,
-    const Hash& hash,
+    const ObjectId& hash,
     std::weak_ptr<const ObjectType> object,
     uint64_t generation) noexcept
     : objectCache_{std::move(objectCache)},
@@ -82,7 +82,7 @@ typename std::enable_if_t<
     F == ObjectCacheFlavor::InterestHandle,
     typename ObjectCache<ObjectType, Flavor>::GetResult>
 ObjectCache<ObjectType, Flavor>::getInterestHandle(
-    const Hash& hash,
+    const ObjectId& hash,
     Interest interest) {
   XLOG(DBG6) << "BlobCache::getInterestHandle " << hash;
   // Acquires ObjectCache's lock upon destruction by calling dropInterestHandle,
@@ -127,7 +127,7 @@ template <ObjectCacheFlavor F>
 typename std::enable_if_t<
     F == ObjectCacheFlavor::Simple,
     typename ObjectCache<ObjectType, Flavor>::ObjectPtr>
-ObjectCache<ObjectType, Flavor>::getSimple(const Hash& hash) {
+ObjectCache<ObjectType, Flavor>::getSimple(const ObjectId& hash) {
   XLOG(DBG6) << "BlobCache::getSimple " << hash;
   auto state = lockState();
 
@@ -139,7 +139,9 @@ ObjectCache<ObjectType, Flavor>::getSimple(const Hash& hash) {
 
 template <typename ObjectType, ObjectCacheFlavor Flavor>
 typename ObjectCache<ObjectType, Flavor>::CacheItem*
-ObjectCache<ObjectType, Flavor>::getImpl(const Hash& hash, LockedState& state) {
+ObjectCache<ObjectType, Flavor>::getImpl(
+    const ObjectId& hash,
+    LockedState& state) {
   XLOG(DBG6) << "ObjectCache::getImpl " << hash;
   auto* item = folly::get_ptr(state->items, hash);
   if (!item) {
@@ -255,7 +257,7 @@ ObjectCache<ObjectType, Flavor>::insertImpl(
 }
 
 template <typename ObjectType, ObjectCacheFlavor Flavor>
-bool ObjectCache<ObjectType, Flavor>::contains(const Hash& hash) const {
+bool ObjectCache<ObjectType, Flavor>::contains(const ObjectId& hash) const {
   auto state = lockState();
   return 1 == state->items.count(hash);
 }
@@ -285,7 +287,7 @@ ObjectCache<ObjectType, Flavor>::getStats() const {
 
 template <typename ObjectType, ObjectCacheFlavor Flavor>
 void ObjectCache<ObjectType, Flavor>::dropInterestHandle(
-    const Hash& hash,
+    const ObjectId& hash,
     uint64_t generation) noexcept {
   XLOG(DBG6) << "dropInterestHandle " << hash << " generation=" << generation;
   auto state = lockState();

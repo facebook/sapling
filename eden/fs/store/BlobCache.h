@@ -50,7 +50,7 @@ class BlobCache : public ObjectCache<Blob, ObjectCacheFlavor::InterestHandle> {
    * it still exists in memory and the BlobCache has evicted its reference.
    */
   GetResult get(
-      const Hash& hash,
+      const ObjectId& hash,
       Interest interest = Interest::LikelyNeededAgain) {
     return getInterestHandle(hash, interest);
   }

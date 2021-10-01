@@ -16,10 +16,12 @@ namespace facebook::eden {
 
 class Tree {
  public:
-  explicit Tree(std::vector<TreeEntry>&& entries, const Hash& hash = Hash())
+  explicit Tree(
+      std::vector<TreeEntry>&& entries,
+      const ObjectId& hash = ObjectId())
       : hash_(hash), entries_(std::move(entries)) {}
 
-  const Hash& getHash() const {
+  const ObjectId& getHash() const {
     return hash_;
   }
 
@@ -83,7 +85,7 @@ class Tree {
   }
 
  private:
-  const Hash hash_;
+  const ObjectId hash_;
   const std::vector<TreeEntry> entries_;
 };
 

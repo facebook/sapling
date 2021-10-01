@@ -13,7 +13,7 @@
 
 namespace facebook {
 namespace eden {
-Hash makeTestHash(folly::StringPiece value) {
+ObjectId makeTestHash(folly::StringPiece value) {
   constexpr size_t ASCII_SIZE = 2 * Hash::RAW_SIZE;
   if (value.size() > ASCII_SIZE) {
     throw std::invalid_argument(value.toString() + " is too big for Hash");
@@ -24,7 +24,21 @@ Hash makeTestHash(folly::StringPiece value) {
       fullValue.data() + fullValue.size() - value.size(),
       value.data(),
       value.size());
-  return Hash{folly::StringPiece{folly::range(fullValue)}};
+  return ObjectId{folly::StringPiece{folly::range(fullValue)}};
+}
+
+Hash20 makeTestHash20(folly::StringPiece value) {
+  constexpr size_t ASCII_SIZE = 2 * Hash::RAW_SIZE;
+  if (value.size() > ASCII_SIZE) {
+    throw std::invalid_argument(value.toString() + " is too big for Hash");
+  }
+  std::array<char, ASCII_SIZE> fullValue;
+  memset(fullValue.data(), '0', fullValue.size());
+  memcpy(
+      fullValue.data() + fullValue.size() - value.size(),
+      value.data(),
+      value.size());
+  return Hash20{folly::StringPiece{folly::range(fullValue)}};
 }
 } // namespace eden
 } // namespace facebook

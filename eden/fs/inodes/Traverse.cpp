@@ -37,7 +37,7 @@ void traverseTreeInodeChildren(
     const std::vector<ChildEntry>& children,
     RelativePathPiece rootPath,
     InodeNumber ino,
-    const std::optional<Hash>& hash,
+    const std::optional<ObjectId>& hash,
     uint64_t fsRefcount,
     TraversalCallbacks& callbacks) {
   callbacks.visitTreeInode(rootPath, ino, hash, fsRefcount, children);
@@ -78,7 +78,7 @@ void traverseObservedInodes(
   auto* overlay = root.getMount()->getOverlay();
 
   std::vector<ChildEntry> children;
-  std::optional<Hash> hash;
+  std::optional<ObjectId> hash;
   {
     auto contents = root.getContents().rlock();
     children = parseDirContents(contents->entries);

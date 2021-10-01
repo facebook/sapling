@@ -48,7 +48,7 @@ class HgProxyHash {
    * edenObjectId is only used in error messages to correlate the proxy hash
    * with Eden's object ID.
    */
-  HgProxyHash(const Hash& edenObjectId, std::string value)
+  HgProxyHash(const ObjectId& edenObjectId, std::string value)
       : value_{std::move(value)} {
     validate(edenObjectId);
   }
@@ -56,7 +56,7 @@ class HgProxyHash {
   /**
    * Create a ProxyHash given the specified values.
    */
-  HgProxyHash(RelativePathPiece path, const Hash& hgRevHash);
+  HgProxyHash(RelativePathPiece path, const Hash20& hgRevHash);
 
   ~HgProxyHash() = default;
 
@@ -83,13 +83,13 @@ class HgProxyHash {
   /**
    * Extract the hash part of the HgProxyHash and return a copy of it.
    */
-  Hash revHash() const noexcept;
+  Hash20 revHash() const noexcept;
 
   /**
    * Returns the SHA-1 of the canonical serialization of this ProxyHash, which
    * is used as the object ID throughout EdenFS.
    */
-  Hash sha1() const noexcept;
+  ObjectId sha1() const noexcept;
 
   bool operator==(const HgProxyHash&) const;
   bool operator<(const HgProxyHash&) const;
@@ -101,18 +101,20 @@ class HgProxyHash {
   /**
    * Load all the proxy hashes given.
    *
-   * The caller is responsible for keeping the HashRange alive for the duration
-   * of the future.
+   * The caller is responsible for keeping the ObjectIdRange alive for the
+   * duration of the future.
    */
   static folly::Future<std::vector<HgProxyHash>> getBatch(
       LocalStore* store,
-      HashRange blobHashes);
+      ObjectIdRange blobHashes);
 
   /**
    * Load HgProxyHash data for the given eden blob hash from the LocalStore.
    */
-  static HgProxyHash
-  load(LocalStore* store, const Hash& edenObjectId, folly::StringPiece context);
+  static HgProxyHash load(
+      LocalStore* store,
+      const ObjectId& edenObjectId,
+      folly::StringPiece context);
 
   /**
    * Store HgProxyHash data in the LocalStore.
@@ -120,9 +122,9 @@ class HgProxyHash {
    * Returns an eden blob hash that can be used to retrieve the data later
    * (using the HgProxyHash constructor defined above).
    */
-  static Hash store(
+  static ObjectId store(
       RelativePathPiece path,
-      Hash hgRevHash,
+      Hash20 hgRevHash,
       LocalStore::WriteBatch* writeBatch);
 
   /**
@@ -134,21 +136,21 @@ class HgProxyHash {
    * the caller is responsible for passing the pair to the HgProxyHash::store()
    * method below at the appropriate time.
    */
-  static std::pair<Hash, std::string> prepareToStore(
+  static std::pair<ObjectId, std::string> prepareToStore(
       RelativePathPiece path,
-      Hash hgRevHash);
+      Hash20 hgRevHash);
 
   /**
    * Store precomputed proxy hash information.
    * Stores the data computed by prepareToStore().
    */
   static void store(
-      const std::pair<Hash, std::string>& computedPair,
+      const std::pair<ObjectId, std::string>& computedPair,
       LocalStore::WriteBatch* writeBatch);
 
  private:
   HgProxyHash(
-      Hash edenBlobHash,
+      ObjectId edenBlobHash,
       StoreResult& infoResult,
       folly::StringPiece context);
 
@@ -156,7 +158,7 @@ class HgProxyHash {
    * Serialize the (path, hgRevHash) data into a buffer that will be stored in
    * the LocalStore.
    */
-  static std::string serialize(RelativePathPiece path, const Hash& hgRevHash);
+  static std::string serialize(RelativePathPiece path, const Hash20& hgRevHash);
 
   /**
    * Validate data found in value_.
@@ -166,7 +168,7 @@ class HgProxyHash {
    *
    * Note there will be an exception being thrown if `value_` is invalid.
    */
-  void validate(Hash edenBlobHash);
+  void validate(ObjectId edenBlobHash);
 
   /**
    * The serialized data as written in the LocalStore.

@@ -52,10 +52,10 @@ class FakeBackingStore final : public BackingStore {
     throw std::domain_error("unimplemented");
   }
   folly::SemiFuture<BackingStore::GetTreeRes> getTree(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
   folly::SemiFuture<BackingStore::GetBlobRes> getBlob(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) override;
 
   /**
@@ -67,7 +67,7 @@ class FakeBackingStore final : public BackingStore {
    * duration of the test.)
    */
   StoredBlob* putBlob(folly::StringPiece contents);
-  StoredBlob* putBlob(Hash hash, folly::StringPiece contents);
+  StoredBlob* putBlob(ObjectId hash, folly::StringPiece contents);
 
   /**
    * Add a blob to the backing store, or return the StoredBlob already present
@@ -78,11 +78,11 @@ class FakeBackingStore final : public BackingStore {
    */
   std::pair<StoredBlob*, bool> maybePutBlob(folly::StringPiece contents);
   std::pair<StoredBlob*, bool> maybePutBlob(
-      Hash hash,
+      ObjectId hash,
       folly::StringPiece contents);
 
   static Blob makeBlob(folly::StringPiece contents);
-  static Blob makeBlob(Hash hash, folly::StringPiece contents);
+  static Blob makeBlob(ObjectId hash, folly::StringPiece contents);
 
   /**
    * Helper functions for building a tree.
@@ -97,10 +97,10 @@ class FakeBackingStore final : public BackingStore {
    */
   StoredTree* putTree(const std::initializer_list<TreeEntryData>& entries);
   StoredTree* putTree(
-      Hash hash,
+      ObjectId hash,
       const std::initializer_list<TreeEntryData>& entries);
   StoredTree* putTree(std::vector<TreeEntry> entries);
-  StoredTree* putTree(Hash hash, std::vector<TreeEntry> entries);
+  StoredTree* putTree(ObjectId hash, std::vector<TreeEntry> entries);
 
   /**
    * Add a tree to the backing store, or return the StoredTree already present
@@ -117,7 +117,7 @@ class FakeBackingStore final : public BackingStore {
    * Add a mapping from a commit ID to a root tree hash.
    */
   StoredHash* putCommit(const RootId& commitHash, const StoredTree* tree);
-  StoredHash* putCommit(const RootId& commitHash, Hash treeHash);
+  StoredHash* putCommit(const RootId& commitHash, ObjectId treeHash);
   StoredHash* putCommit(
       const RootId& commitHash,
       const FakeTreeBuilder& builder);
@@ -130,14 +130,14 @@ class FakeBackingStore final : public BackingStore {
    *
    * Throws an error if the specified hash does not exist.  Never returns null.
    */
-  StoredTree* getStoredTree(Hash hash);
+  StoredTree* getStoredTree(ObjectId hash);
 
   /**
    * Look up a StoredBlob.
    *
    * Throws an error if the specified hash does not exist.  Never returns null.
    */
-  StoredBlob* getStoredBlob(Hash hash);
+  StoredBlob* getStoredBlob(ObjectId hash);
 
   /**
    * Manually clear the list of outstanding requests to avoid cycles during
@@ -149,25 +149,27 @@ class FakeBackingStore final : public BackingStore {
    * Returns the number of times this hash has been queried by either getTree,
    * getBlob, or getTreeForCommit.
    */
-  size_t getAccessCount(const Hash& hash) const;
+  size_t getAccessCount(const ObjectId& hash) const;
 
  private:
   struct Data {
     std::unordered_map<RootId, std::unique_ptr<StoredHash>> commits;
-    std::unordered_map<Hash, std::unique_ptr<StoredTree>> trees;
-    std::unordered_map<Hash, std::unique_ptr<StoredBlob>> blobs;
+    std::unordered_map<ObjectId, std::unique_ptr<StoredTree>> trees;
+    std::unordered_map<ObjectId, std::unique_ptr<StoredBlob>> blobs;
 
     std::unordered_map<RootId, size_t> commitAccessCounts;
-    std::unordered_map<Hash, size_t> accessCounts;
+    std::unordered_map<ObjectId, size_t> accessCounts;
   };
 
   static std::vector<TreeEntry> buildTreeEntries(
       const std::initializer_list<TreeEntryData>& entryArgs);
   static void sortTreeEntries(std::vector<TreeEntry>& entries);
-  static Hash computeTreeHash(const std::vector<TreeEntry>& sortedEntries);
-  StoredTree* putTreeImpl(Hash hash, std::vector<TreeEntry>&& sortedEntries);
+  static ObjectId computeTreeHash(const std::vector<TreeEntry>& sortedEntries);
+  StoredTree* putTreeImpl(
+      ObjectId hash,
+      std::vector<TreeEntry>&& sortedEntries);
   std::pair<StoredTree*, bool> maybePutTreeImpl(
-      Hash hash,
+      ObjectId hash,
       std::vector<TreeEntry>&& sortedEntries);
 
   folly::Synchronized<Data> data_;

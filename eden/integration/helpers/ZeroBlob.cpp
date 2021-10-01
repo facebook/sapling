@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     return EX_USAGE;
   }
 
-  Hash blobID(FLAGS_blobID);
+  ObjectId blobID(FLAGS_blobID);
 
   auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
   const auto rocksPath = edenDir + RelativePathPiece{kRocksDBPath};

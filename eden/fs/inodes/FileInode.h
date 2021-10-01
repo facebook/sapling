@@ -61,7 +61,7 @@ struct FileInodeState {
     MATERIALIZED_IN_OVERLAY,
   };
 
-  explicit FileInodeState(const std::optional<Hash>& hash);
+  explicit FileInodeState(const std::optional<ObjectId>& hash);
   explicit FileInodeState();
   ~FileInodeState();
 
@@ -81,7 +81,7 @@ struct FileInodeState {
   Tag tag;
 
   struct NonMaterializedState {
-    Hash hash;
+    ObjectId hash;
 
     /**
      * Cached size to speedup FileInode::stat calls. The max uint64_t value is
@@ -92,7 +92,7 @@ struct FileInodeState {
         std::numeric_limits<uint64_t>::max();
     uint64_t size{kUnknownSize};
 
-    explicit NonMaterializedState(const Hash& hash) : hash(hash) {}
+    explicit NonMaterializedState(const ObjectId& hash) : hash(hash) {}
   };
 
   /**
@@ -149,7 +149,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       PathComponentPiece name,
       mode_t initialMode,
       const std::optional<InodeTimestamps>& initialTimestamps,
-      const std::optional<Hash>& hash);
+      const std::optional<ObjectId>& hash);
 
   /**
    * Construct an inode using a freshly created overlay file.
@@ -191,12 +191,12 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       TreeEntryType entryType,
       ObjectFetchContext& fetchContext);
   folly::Future<bool> isSameAs(
-      const Hash& blobID,
+      const ObjectId& blobID,
       const Hash& blobSha1,
       TreeEntryType entryType,
       ObjectFetchContext& fetchContext);
   folly::Future<bool> isSameAs(
-      const Hash& blobID,
+      const ObjectId& blobID,
       TreeEntryType entryType,
       ObjectFetchContext& fetchContext);
 
@@ -234,7 +234,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * generally cannot be trusted in situations where there may be concurrent
    * modifications by other threads.
    */
-  std::optional<Hash> getBlobHash() const;
+  std::optional<ObjectId> getBlobHash() const;
 
   /**
    * Read the entire file contents, and return them as a string.
@@ -416,7 +416,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * std::nullopt if the contents need to be checked against sha1 of file
    * contents.
    */
-  std::optional<bool> isSameAsFast(const Hash& blobID, TreeEntryType entryType);
+  std::optional<bool> isSameAsFast(
+      const ObjectId& blobID,
+      TreeEntryType entryType);
 
   /**
    * Helper function for isSameAs().

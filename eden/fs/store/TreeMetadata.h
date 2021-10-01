@@ -35,7 +35,8 @@ class TreeMetadata {
    * Store BlobMetadata from stored TreeMetadata since BlobMetadata is stored
    * under the eden hash for a blob.
    */
-  using HashIndexedEntryMetadata = std::vector<std::pair<Hash, BlobMetadata>>;
+  using HashIndexedEntryMetadata =
+      std::vector<std::pair<ObjectId, BlobMetadata>>;
 
   /** Used when TreeMetdata was just fethed from the server --
    * the server is unaware of the eden specific hashes we use in eden, so
@@ -71,7 +72,7 @@ class TreeMetadata {
   size_t getNumberOfEntries() const;
 
   static constexpr size_t ENTRY_SIZE =
-      Hash::RAW_SIZE + SerializedBlobMetadata::SIZE;
+      ObjectId::RAW_SIZE + SerializedBlobMetadata::SIZE;
 
   EntryMetadata entryMetadata_;
 };

@@ -110,7 +110,7 @@ class TestDir {
 
   TestDir mkdir(
       StringPiece name,
-      std::optional<Hash> hash = std::nullopt,
+      std::optional<ObjectId> hash = std::nullopt,
       mode_t permissions = 0755) {
     auto number = addEntry(name, hash, S_IFDIR | (permissions & 07777));
     return TestDir(overlay_, number);
@@ -119,7 +119,7 @@ class TestDir {
   TestDir linkFile(
       InodeNumber number,
       StringPiece name,
-      std::optional<Hash> hash = std::nullopt,
+      std::optional<ObjectId> hash = std::nullopt,
       mode_t permissions = 0755) {
     addEntry(name, hash, S_IFREG | (permissions & 07777), number.get());
     return TestDir(overlay_, number);
@@ -128,7 +128,7 @@ class TestDir {
   TestFile create(
       StringPiece name,
       ByteRange contents,
-      std::optional<Hash> hash = std::nullopt,
+      std::optional<ObjectId> hash = std::nullopt,
       mode_t permissions = 0644) {
     auto number = addEntry(name, hash, S_IFREG | (permissions & 07777));
     // The file should only be created in the overlay if it is materialized
@@ -142,7 +142,7 @@ class TestDir {
   TestFile create(
       StringPiece name,
       StringPiece contents,
-      std::optional<Hash> hash = std::nullopt,
+      std::optional<ObjectId> hash = std::nullopt,
       mode_t permissions = 0644) {
     return create(name, ByteRange(contents), hash, permissions);
   }
@@ -154,7 +154,7 @@ class TestDir {
  private:
   InodeNumber addEntry(
       StringPiece name,
-      std::optional<Hash> hash,
+      std::optional<ObjectId> hash,
       mode_t mode,
       uint64_t number = 0) {
     auto insertResult =

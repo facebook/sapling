@@ -39,7 +39,7 @@ class DirEntry {
   /**
    * Create a hash for a non-materialized entry.
    */
-  DirEntry(mode_t m, InodeNumber number, Hash hash)
+  DirEntry(mode_t m, InodeNumber number, ObjectId hash)
       : initialMode_{m},
         hasHash_{true},
         hasInodePointer_{false},
@@ -73,7 +73,7 @@ class DirEntry {
     return !hasHash_;
   }
 
-  Hash getHash() const {
+  ObjectId getHash() const {
     // TODO: In the future we should probably only allow callers to invoke
     // this method when inode is not set.  If inode is set it should be the
     // authoritative source of data.
@@ -81,7 +81,7 @@ class DirEntry {
     return hash_;
   }
 
-  std::optional<Hash> getOptionalHash() const {
+  std::optional<ObjectId> getOptionalHash() const {
     if (hasHash_) {
       return hash_;
     } else {
@@ -95,7 +95,7 @@ class DirEntry {
     hasHash_ = false;
   }
 
-  void setDematerialized(Hash hash) {
+  void setDematerialized(ObjectId hash) {
     XDCHECK(hasInodePointer_);
     hasHash_ = true;
     hash_ = hash;
@@ -201,7 +201,7 @@ class DirEntry {
    * TODO: If inode is set, this field generally should not be used, and the
    * child InodeBase should be consulted instead.
    */
-  Hash hash_;
+  ObjectId hash_;
 
   union {
     /**

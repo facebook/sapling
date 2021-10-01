@@ -416,13 +416,13 @@ class InodeMap {
         PathComponentPiece entryName,
         bool isUnlinked,
         mode_t mode,
-        std::optional<Hash> hash,
+        std::optional<ObjectId> hash,
         uint32_t fsRefcount);
     UnloadedInode(
         TreeInode* parent,
         PathComponentPiece entryName,
         bool isUnlinked,
-        std::optional<Hash> hash,
+        std::optional<ObjectId> hash,
         uint32_t fsRefcount);
     UnloadedInode(
         FileInode* inode,
@@ -449,7 +449,7 @@ class InodeMap {
      *
      * If the entry is materialized, this field is not set.
      */
-    std::optional<Hash> const hash;
+    std::optional<ObjectId> const hash;
 
     /**
      * A list of promises waiting on this inode to be loaded.
@@ -566,14 +566,14 @@ class InodeMap {
       PathComponentPiece childName,
       bool isUnlinked,
       InodeNumber childInodeNumber,
-      std::optional<Hash> hash,
+      std::optional<ObjectId> hash,
       mode_t mode);
   void startChildLookup(
       const InodePtr& parent,
       PathComponentPiece childName,
       bool isUnlinked,
       InodeNumber childInodeNumber,
-      std::optional<Hash> hash,
+      std::optional<ObjectId> hash,
       mode_t mode);
 
   /**

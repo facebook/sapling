@@ -318,8 +318,10 @@ unique_ptr<Blob> HgImporter::importFileContents(
 
   XLOG(DBG4) << "imported blob " << blobHash << " (" << path << ", " << blobHash
              << "); length=" << bodyLength;
-
-  return make_unique<Blob>(blobHash, std::move(buf));
+  auto blobId =
+      ObjectId{blobHash.getBytes()}; // fixme: this is a curious case where we
+                                     // create blob using HgId as an Id
+  return make_unique<Blob>(blobId, std::move(buf));
 }
 
 void HgImporter::prefetchFiles(const std::vector<HgProxyHash>& files) {

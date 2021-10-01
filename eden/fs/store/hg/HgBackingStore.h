@@ -86,7 +86,7 @@ class HgBackingStore {
    * couldn't fetch the tree.
    */
   std::unique_ptr<Tree> getTreeFromHgCache(
-      const Hash& edenTreeId,
+      const ObjectId& edenTreeId,
       const HgProxyHash& proxyHash,
       bool prefetchMetadata);
 
@@ -111,7 +111,7 @@ class HgBackingStore {
    * treemanifest data.
    */
   folly::Future<std::unique_ptr<Tree>> importTreeManifest(
-      const Hash& commitId,
+      const ObjectId& commitId,
       bool prefetchMetadata);
 
   /**
@@ -159,12 +159,12 @@ class HgBackingStore {
   HgBackingStore& operator=(HgBackingStore const&) = delete;
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(
-      Hash commitID,
+      ObjectId commitID,
       bool prefetchMetadata);
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForRootTreeImpl(
-      const Hash& commitID,
-      const Hash& rootTreeHash,
+      const ObjectId& commitID,
+      const ObjectId& rootTreeHash,
       bool prefetchMetadata);
 
   folly::Future<std::unique_ptr<Tree>> importTreeManifestImpl(
@@ -173,28 +173,28 @@ class HgBackingStore {
 
   // Import the Tree from Hg and cache it in the LocalStore before returning it.
   folly::SemiFuture<std::unique_ptr<Tree>> importTreeForCommit(
-      Hash commitID,
+      ObjectId commitID,
       bool prefetchMetadata);
 
   void initializeDatapackImport(AbsolutePathPiece repository);
   folly::Future<std::unique_ptr<Tree>> importTreeImpl(
       const Hash& manifestNode,
-      const Hash& edenTreeID,
+      const ObjectId& edenTreeID,
       RelativePathPiece path,
       bool prefetchMetadata);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromHgCacheOrImporter(
       Hash manifestNode,
-      Hash edenTreeID,
+      ObjectId edenTreeID,
       RelativePath path);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromImporter(
       Hash manifestNode,
-      Hash edenTreeID,
+      ObjectId edenTreeID,
       RelativePath path,
       std::shared_ptr<LocalStore::WriteBatch> writeBatch);
   std::unique_ptr<Tree> processTree(
       std::unique_ptr<folly::IOBuf> content,
       const Hash& manifestNode,
-      const Hash& edenTreeID,
+      const ObjectId& edenTreeID,
       RelativePathPiece path,
       LocalStore::WriteBatch* writeBatch);
 

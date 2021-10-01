@@ -505,7 +505,7 @@ void EdenServiceHandler::resetParentCommits(
     // ask the import helper to map the commit to its root manifest because it
     // won't know about the new commit until it reopens the repo.  Instead,
     // import the manifest for this commit directly.
-    auto rootManifest = hashFromThrift(*params->hgRootManifest_ref());
+    auto rootManifest = hash20FromThrift(*params->hgRootManifest_ref());
     edenMount->getObjectStore()
         ->getBackingStore()
         ->importManifestForRoot(parent1, rootManifest)
@@ -532,7 +532,7 @@ void EdenServiceHandler::getSHA1(
     out.emplace_back();
     SHA1Result& sha1Result = out.back();
     if (result.hasValue()) {
-      sha1Result.set_sha1(thriftHash(result.value()));
+      sha1Result.set_sha1(thriftHash20(result.value()));
     } else {
       sha1Result.set_error(newEdenError(result.exception()));
     }
@@ -1307,7 +1307,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
   }
 
   auto fileBlobsToPrefetch = globOptions.prefetchFiles
-      ? std::make_shared<folly::Synchronized<std::vector<Hash>>>()
+      ? std::make_shared<folly::Synchronized<std::vector<ObjectId>>>()
       : nullptr;
 
   auto& fetchContext = helper->getFetchContext();
@@ -1844,7 +1844,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
         id.toString());
   }
   result.size_ref() = metadata->size;
-  result.contentsSha1_ref() = thriftHash(metadata->sha1);
+  result.contentsSha1_ref() = thriftHash20(metadata->sha1);
 }
 
 namespace {
@@ -1860,7 +1860,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
   void visitTreeInode(
       RelativePathPiece path,
       InodeNumber ino,
-      const std::optional<Hash>& hash,
+      const std::optional<ObjectId>& hash,
       uint64_t fsRefcount,
       const std::vector<ChildEntry>& entries) override {
 #ifndef _WIN32
@@ -1972,7 +1972,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
   struct RequestedSize {
     size_t resultIndex;
     size_t entryIndex;
-    Hash hash;
+    ObjectId hash;
   };
 
   EdenMount* mount_;

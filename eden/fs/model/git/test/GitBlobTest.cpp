@@ -15,7 +15,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 
-using facebook::eden::Hash;
+using facebook::eden::ObjectId;
 using folly::IOBuf;
 using folly::StringPiece;
 using std::string;
@@ -24,12 +24,12 @@ using std::string;
 // lifetime of the underlying data
 TEST(GitBlob, testDeserializeUnmanaged) {
   string blobHash("3a8f8eb91101860fd8484154885838bf322964d0");
-  Hash hash(blobHash);
+  ObjectId hash(blobHash);
 
   string contents("{\n  \"breakConfig\": true\n}\n");
   auto gitBlobObjectStr = folly::to<string>(string("blob 26\x00", 8), contents);
   folly::ByteRange gitBlobObject = folly::StringPiece{gitBlobObjectStr};
-  EXPECT_EQ(blobHash, Hash::sha1(gitBlobObject).toString())
+  EXPECT_EQ(blobHash, ObjectId::sha1(gitBlobObject).toString())
       << "SHA-1 of contents should match key";
 
   IOBuf buf(IOBuf::WRAP_BUFFER, gitBlobObject);
@@ -50,7 +50,7 @@ TEST(GitBlob, testDeserializeUnmanaged) {
 
 TEST(GitBlob, testDeserializeManaged) {
   string blobHash("3a8f8eb91101860fd8484154885838bf322964d0");
-  Hash hash(blobHash);
+  ObjectId hash(blobHash);
 
   string contents("{\n  \"breakConfig\": true\n}\n");
 

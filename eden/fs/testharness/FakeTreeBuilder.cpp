@@ -285,7 +285,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
   std::vector<TreeEntry> treeEntries;
   for (const auto& e : *entries) {
     const auto& entryInfo = e.second;
-    Hash hash;
+    ObjectId hash;
     if (entryInfo.type == TreeEntryType::TREE) {
       auto* storedTree = entryInfo.finalizeTree(builder, setReady);
       hash = storedTree->get().getHash();

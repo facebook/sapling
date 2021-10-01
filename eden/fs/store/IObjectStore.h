@@ -25,6 +25,7 @@ namespace facebook::eden {
 
 class Blob;
 class BlobMetadata;
+class ObjectId;
 class Hash20;
 using Hash = Hash20;
 class Tree;
@@ -45,10 +46,10 @@ class IObjectStore {
       const RootId& rootId,
       ObjectFetchContext& context) const = 0;
   virtual folly::Future<std::shared_ptr<const Tree>> getTree(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) const = 0;
   virtual folly::Future<std::shared_ptr<const Blob>> getBlob(
-      const Hash& id,
+      const ObjectId& id,
       ObjectFetchContext& context) const = 0;
 
   /**
@@ -58,7 +59,7 @@ class IObjectStore {
    * for as long as the returned SemiFuture.
    */
   virtual folly::Future<folly::Unit> prefetchBlobs(
-      HashRange ids,
+      ObjectIdRange ids,
       ObjectFetchContext& context) const = 0;
 };
 

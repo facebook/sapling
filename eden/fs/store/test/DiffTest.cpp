@@ -92,8 +92,8 @@ class DiffTest : public ::testing::Test {
   }
 
   ScmStatus diffCommitsWithGitIgnore(
-      Hash hash1,
-      Hash hash2,
+      ObjectId hash1,
+      ObjectId hash2,
       std::string gitIgnoreContents = {},
       std::string userIgnoreContents = {},
       std::string systemIgnoreContents = {},

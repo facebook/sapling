@@ -57,7 +57,7 @@ Future<shared_ptr<const Tree>> FakeObjectStore::getRootTree(
 }
 
 Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext&) const {
   ++accessCounts_[id];
   auto iter = trees_.find(id);
@@ -69,7 +69,7 @@ Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
 }
 
 Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext&) const {
   ++accessCounts_[id];
   auto iter = blobs_.find(id);
@@ -81,12 +81,12 @@ Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
 }
 
 folly::Future<folly::Unit> FakeObjectStore::prefetchBlobs(
-    HashRange,
+    ObjectIdRange,
     ObjectFetchContext&) const {
   return folly::unit;
 }
 
-size_t FakeObjectStore::getAccessCount(const Hash& hash) const {
+size_t FakeObjectStore::getAccessCount(const ObjectId& hash) const {
   if (auto* item = folly::get_ptr(accessCounts_, hash)) {
     return *item;
   } else {

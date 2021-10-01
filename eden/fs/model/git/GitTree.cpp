@@ -33,7 +33,7 @@ enum GitModeMask {
 };
 
 std::unique_ptr<Tree> deserializeGitTree(
-    const Hash& hash,
+    const ObjectId& hash,
     const IOBuf* treeData) {
   folly::io::Cursor cursor(treeData);
 
@@ -68,7 +68,7 @@ std::unique_ptr<Tree> deserializeGitTree(
     auto name = cursor.readTerminatedString();
 
     // Extract the hash.
-    Hash::Storage hashBytes;
+    ObjectId::Storage hashBytes;
     cursor.pull(hashBytes.data(), hashBytes.size());
 
     // Determine the individual fields from the mode.
@@ -93,7 +93,7 @@ std::unique_ptr<Tree> deserializeGitTree(
     }
 
     entries.emplace_back(
-        Hash(hashBytes), PathComponent{std::move(name)}, fileType);
+        ObjectId(hashBytes), PathComponent{std::move(name)}, fileType);
   }
 
   return std::make_unique<Tree>(std::move(entries), hash);
@@ -101,7 +101,7 @@ std::unique_ptr<Tree> deserializeGitTree(
 
 // Convenience wrapper which accepts a ByteRange
 std::unique_ptr<Tree> deserializeGitTree(
-    const Hash& hash,
+    const ObjectId& hash,
     folly::ByteRange treeData) {
   IOBuf buf(IOBuf::WRAP_BUFFER, treeData);
   return deserializeGitTree(hash, &buf);

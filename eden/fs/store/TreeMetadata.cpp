@@ -78,9 +78,9 @@ TreeMetadata TreeMetadata::deserialize(const StoreResult& result) {
   HashIndexedEntryMetadata entryMetadata;
   entryMetadata.reserve(numberOfEntries);
   for (uint32_t i = 0; i < numberOfEntries; ++i) {
-    auto temp = ByteRange{StringPiece{data, 0, Hash::RAW_SIZE}};
-    auto hash = Hash{temp};
-    data.advance(Hash::RAW_SIZE);
+    auto temp = ByteRange{StringPiece{data, 0, ObjectId::RAW_SIZE}};
+    auto hash = ObjectId{temp};
+    data.advance(ObjectId::RAW_SIZE);
 
     auto serializedMetadata =
         ByteRange{StringPiece{data, 0, SerializedBlobMetadata::SIZE}};

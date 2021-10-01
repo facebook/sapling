@@ -93,7 +93,7 @@ Importer& getThreadLocalImporter() {
   return *threadLocalImporter;
 }
 
-Hash hashFromRootId(const RootId& root) {
+ObjectId hashFromRootId(const RootId& root) {
   return hashFromThrift(root.value());
 }
 
@@ -222,7 +222,7 @@ HgBackingStore::~HgBackingStore() = default;
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
     const RootId& rootId,
     bool prefetchMetadata) {
-  Hash commitId = hashFromRootId(rootId);
+  ObjectId commitId = hashFromRootId(rootId);
 
   return localStore_
       ->getFuture(KeySpace::HgCommitToTreeFamily, commitId.getBytes())
@@ -233,7 +233,7 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
               return importTreeForCommit(commitId, prefetchMetadata);
             }
 
-            auto rootTreeHash = Hash{result.bytes()};
+            auto rootTreeHash = ObjectId{result.bytes()};
             XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
                        << " for mercurial commit " << commitId.toString();
             return getTreeForRootTreeImpl(
@@ -302,7 +302,7 @@ void HgBackingStore::getTreeBatch(
 
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     const Hash& manifestNode,
-    const Hash& edenTreeID,
+    const ObjectId& edenTreeID,
     RelativePathPiece path,
     bool prefetchMetadata) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
@@ -381,7 +381,7 @@ void HgBackingStore::processTreeMetadata(
 folly::Future<std::unique_ptr<Tree>>
 HgBackingStore::fetchTreeFromHgCacheOrImporter(
     Hash manifestNode,
-    Hash edenTreeID,
+    ObjectId edenTreeID,
     RelativePath path) {
   auto writeBatch = localStore_->beginWrite();
   if (auto tree = datapackStore_.getTree(
@@ -403,7 +403,7 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     Hash manifestNode,
-    Hash edenTreeID,
+    ObjectId edenTreeID,
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
   auto fut =
@@ -549,7 +549,7 @@ class Manifest {
 std::unique_ptr<Tree> HgBackingStore::processTree(
     std::unique_ptr<IOBuf> content,
     const Hash& manifestNode,
-    const Hash& edenTreeID,
+    const ObjectId& edenTreeID,
     RelativePathPiece path,
     LocalStore::WriteBatch* writeBatch) {
   auto manifest = Manifest(std::move(content));
@@ -602,7 +602,7 @@ folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
 }
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
-    const Hash& commitId,
+    const ObjectId& commitId,
     bool prefetchMetadata) {
   return folly::via(
              importThreadPool_.get(),
@@ -637,7 +637,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
 }
 
 unique_ptr<Tree> HgBackingStore::getTreeFromHgCache(
-    const Hash& edenTreeId,
+    const ObjectId& edenTreeId,
     const HgProxyHash& proxyHash,
     bool prefetchMetadata) {
   if (auto tree =
@@ -690,8 +690,8 @@ SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
 }
 
 folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
-    const Hash& commitID,
-    const Hash& rootTreeHash,
+    const ObjectId& commitID,
+    const ObjectId& rootTreeHash,
     bool prefetchMetadata) {
   return localStore_->getTree(rootTreeHash)
       .thenValue([this, rootTreeHash, commitID, prefetchMetadata](
@@ -711,7 +711,7 @@ folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
 }
 
 folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
-    Hash commitID,
+    ObjectId commitID,
     bool prefetchMetadata) {
   return importTreeManifest(commitID, prefetchMetadata)
       .thenValue([this, commitID](std::unique_ptr<Tree> rootTree) {

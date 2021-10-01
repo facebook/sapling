@@ -21,7 +21,7 @@ class SerializedBlobMetadata {
   SerializedBlobMetadata(const Hash& contentsHash, uint64_t blobSize);
   folly::ByteRange slice() const;
 
-  static BlobMetadata parse(Hash blobID, const StoreResult& result);
+  static BlobMetadata parse(ObjectId blobID, const StoreResult& result);
 
   static constexpr size_t SIZE = sizeof(uint64_t) + Hash::RAW_SIZE;
 

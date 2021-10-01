@@ -42,11 +42,14 @@ std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
 class TreeEntry {
  public:
-  explicit TreeEntry(const Hash& hash, PathComponent name, TreeEntryType type)
+  explicit TreeEntry(
+      const ObjectId& hash,
+      PathComponent name,
+      TreeEntryType type)
       : type_(type), hash_(hash), name_(std::move(name)) {}
 
   explicit TreeEntry(
-      const Hash& hash,
+      const ObjectId& hash,
       PathComponent name,
       TreeEntryType type,
       std::optional<uint64_t> size,
@@ -57,7 +60,7 @@ class TreeEntry {
         size_(size),
         contentSha1_(contentSha1) {}
 
-  const Hash& getHash() const {
+  const ObjectId& getHash() const {
     return hash_;
   }
 
@@ -120,7 +123,7 @@ class TreeEntry {
 
  private:
   TreeEntryType type_;
-  Hash hash_;
+  ObjectId hash_;
   PathComponent name_;
   std::optional<uint64_t> size_;
   std::optional<Hash> contentSha1_;

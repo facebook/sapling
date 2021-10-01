@@ -34,14 +34,14 @@ std::shared_ptr<HgImportRequest> HgImportRequest::makeRequest(
 }
 
 std::shared_ptr<HgImportRequest> HgImportRequest::makeBlobImportRequest(
-    Hash hash,
+    ObjectId hash,
     HgProxyHash proxyHash,
     ImportPriority priority) {
   return makeRequest<BlobImport>(priority, hash, std::move(proxyHash));
 }
 
 std::shared_ptr<HgImportRequest> HgImportRequest::makeTreeImportRequest(
-    Hash hash,
+    ObjectId hash,
     HgProxyHash proxyHash,
     ImportPriority priority,
     bool prefetchMetadata) {

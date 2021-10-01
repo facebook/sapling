@@ -34,10 +34,10 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
       << "given overlay path " << overlayPath << " already exists";
   XCHECK_EQ(ENOENT, errno) << "error must be ENOENT";
 
-  Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
-  Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
-  Hash hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
-  Hash hash4{folly::ByteRange{"44444444444444444444"_sp}};
+  ObjectId hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
+  ObjectId hash2{folly::ByteRange{"01234012340123401234"_sp}};
+  ObjectId hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
+  ObjectId hash4{folly::ByteRange{"44444444444444444444"_sp}};
 
   auto overlay = Overlay::create(
       overlayPath,

@@ -46,7 +46,7 @@ Hash uniqueHash() {
   return Hash{bytes};
 }
 
-std::pair<Hash, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(
+std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
@@ -57,9 +57,8 @@ std::pair<Hash, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(
           hash, std::move(proxyHash), priority));
 }
 
-std::pair<Hash, std::shared_ptr<HgImportRequest>> makeBlobImportRequestWithHash(
-    ImportPriority priority,
-    HgProxyHash proxyHash) {
+std::pair<ObjectId, std::shared_ptr<HgImportRequest>>
+makeBlobImportRequestWithHash(ImportPriority priority, HgProxyHash proxyHash) {
   auto hash = proxyHash.sha1();
   return std::make_pair(
       hash,
@@ -67,7 +66,7 @@ std::pair<Hash, std::shared_ptr<HgImportRequest>> makeBlobImportRequestWithHash(
           hash, std::move(proxyHash), priority));
 }
 
-std::pair<Hash, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
+std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
     ImportPriority priority) {
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_tree"}, hgRevHash};
@@ -78,7 +77,7 @@ std::pair<Hash, std::shared_ptr<HgImportRequest>> makeTreeImportRequest(
           hash, std::move(proxyHash), priority, true));
 }
 
-Hash insertBlobImportRequest(
+ObjectId insertBlobImportRequest(
     HgImportRequestQueue& queue,
     ImportPriority priority) {
   auto [hash, request] = makeBlobImportRequest(priority);
@@ -87,7 +86,7 @@ Hash insertBlobImportRequest(
   return hash;
 }
 
-Hash insertTreeImportRequest(
+ObjectId insertTreeImportRequest(
     HgImportRequestQueue& queue,
     ImportPriority priority) {
   auto [hash, request] = makeTreeImportRequest(priority);
@@ -98,7 +97,7 @@ Hash insertTreeImportRequest(
 
 TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
   auto queue = HgImportRequestQueue{edenConfig};
-  std::vector<Hash> enqueued;
+  std::vector<ObjectId> enqueued;
 
   for (int i = 0; i < 10; i++) {
     auto [hash, request] =
@@ -146,7 +145,7 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriority) {
 
 TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
   auto queue = HgImportRequestQueue{edenConfig};
-  std::deque<Hash> enqueued;
+  std::deque<ObjectId> enqueued;
 
   for (int i = 0; i < 10; i++) {
     auto [hash, request] = makeBlobImportRequest(
@@ -193,8 +192,8 @@ TEST_F(HgImportRequestQueueTest, getRequestByPriorityReverse) {
 
 TEST_F(HgImportRequestQueueTest, mixedPriority) {
   auto queue = HgImportRequestQueue{edenConfig};
-  std::set<Hash> enqueued_blob;
-  std::set<Hash> enqueued_tree;
+  std::set<ObjectId> enqueued_blob;
+  std::set<ObjectId> enqueued_tree;
 
   for (int i = 0; i < 10; i++) {
     {
@@ -262,8 +261,8 @@ TEST_F(HgImportRequestQueueTest, mixedPriority) {
 
 TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
   auto queue = HgImportRequestQueue{edenConfig};
-  std::set<Hash> enqueued_blob;
-  std::set<Hash> enqueued_tree;
+  std::set<ObjectId> enqueued_blob;
+  std::set<ObjectId> enqueued_tree;
 
   for (int i = 0; i < 10; i++) {
     {
@@ -320,7 +319,7 @@ TEST_F(HgImportRequestQueueTest, getMultipleRequests) {
 
 TEST_F(HgImportRequestQueueTest, duplicateRequestAfterEnqueue) {
   auto queue = HgImportRequestQueue{edenConfig};
-  std::vector<Hash> enqueued;
+  std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
@@ -356,7 +355,7 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterEnqueue) {
 
 TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
   auto queue = HgImportRequestQueue{edenConfig};
-  std::vector<Hash> enqueued;
+  std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
@@ -394,7 +393,7 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterDequeue) {
 
 TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
   auto queue = HgImportRequestQueue{edenConfig};
-  std::vector<Hash> enqueued;
+  std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
@@ -429,7 +428,7 @@ TEST_F(HgImportRequestQueueTest, duplicateRequestAfterMarkedDone) {
 
 TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
   auto queue = HgImportRequestQueue{edenConfig};
-  std::vector<Hash> enqueued;
+  std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
@@ -475,7 +474,7 @@ TEST_F(HgImportRequestQueueTest, multipleDuplicateRequests) {
 
 TEST_F(HgImportRequestQueueTest, twoDuplicateRequestsDifferentPriority) {
   auto queue = HgImportRequestQueue{edenConfig};
-  std::vector<Hash> enqueued;
+  std::vector<ObjectId> enqueued;
 
   auto hgRevHash = uniqueHash();
   auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};

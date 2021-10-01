@@ -77,7 +77,7 @@ TEST_F(HgImportTest, importTest) {
   EXPECT_BLOB_EQ(blob, barData);
 
   // Test importing objects that do not exist
-  Hash noSuchHash = makeTestHash("123");
+  Hash noSuchHash = makeTestHash20("123");
   EXPECT_THROW_RE(
       importer.importFileContents(filePath, noSuchHash),
       std::exception,

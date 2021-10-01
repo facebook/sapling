@@ -20,7 +20,7 @@ using namespace facebook::eden;
 
 TEST(HgProxyHashTest, testCopyMove) {
   auto store = std::make_shared<MemoryLocalStore>();
-  Hash hash1, hash2;
+  ObjectId hash1, hash2;
   {
     auto write = store->beginWrite();
     hash1 = HgProxyHash::store(

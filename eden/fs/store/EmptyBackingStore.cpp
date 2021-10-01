@@ -39,14 +39,14 @@ SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getRootTree(
 }
 
 SemiFuture<BackingStore::GetTreeRes> EmptyBackingStore::getTree(
-    const Hash& /* id */,
+    const ObjectId& /* id */,
     ObjectFetchContext& /* context */) {
   return makeSemiFuture<BackingStore::GetTreeRes>(
       std::domain_error("empty backing store"));
 }
 
 SemiFuture<BackingStore::GetBlobRes> EmptyBackingStore::getBlob(
-    const Hash& /* id */,
+    const ObjectId& /* id */,
     ObjectFetchContext& /* context */) {
   return makeSemiFuture<BackingStore::GetBlobRes>(
       std::domain_error("empty backing store"));

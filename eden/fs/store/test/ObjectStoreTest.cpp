@@ -58,13 +58,13 @@ struct ObjectStoreTest : ::testing::Test {
     readyTreeId = putReadyTree();
   }
 
-  Hash putReadyBlob(folly::StringPiece data) {
+  ObjectId putReadyBlob(folly::StringPiece data) {
     StoredBlob* storedBlob = fakeBackingStore->putBlob(data);
     storedBlob->setReady();
     return storedBlob->get().getHash();
   }
 
-  Hash putReadyTree() {
+  ObjectId putReadyTree() {
     StoredTree* storedTree = fakeBackingStore->putTree({});
     storedTree->setReady();
     return storedTree->get().getHash();
@@ -79,8 +79,8 @@ struct ObjectStoreTest : ::testing::Test {
   std::shared_ptr<ObjectStore> objectStore;
   folly::QueuedImmediateExecutor* executor;
 
-  Hash readyBlobId;
-  Hash readyTreeId;
+  ObjectId readyBlobId;
+  ObjectId readyTreeId;
 };
 
 } // namespace
@@ -158,7 +158,7 @@ TEST_F(ObjectStoreTest, getBlobSize_tracks_second_read_from_cache) {
 
 TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
   auto data = "A"_sp;
-  Hash id = putReadyBlob(data);
+  ObjectId id = putReadyBlob(data);
 
   // Get blob size from backing store, caches in local store
   objectStore->getBlobSize(id, context);
@@ -180,7 +180,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromLocalStore) {
 
 TEST_F(ObjectStoreTest, getBlobSizeFromBackingStore) {
   auto data = "A"_sp;
-  Hash id = putReadyBlob(data);
+  ObjectId id = putReadyBlob(data);
 
   size_t expectedSize = data.size();
   size_t size = objectStore->getBlobSize(id, context).get();
@@ -188,7 +188,7 @@ TEST_F(ObjectStoreTest, getBlobSizeFromBackingStore) {
 }
 
 TEST_F(ObjectStoreTest, getBlobSizeNotFound) {
-  Hash id;
+  ObjectId id;
 
   EXPECT_THROW_RE(
       objectStore->getBlobSize(id, context).get(),
@@ -198,7 +198,7 @@ TEST_F(ObjectStoreTest, getBlobSizeNotFound) {
 
 TEST_F(ObjectStoreTest, getBlobSha1) {
   auto data = "A"_sp;
-  Hash id = putReadyBlob(data);
+  ObjectId id = putReadyBlob(data);
 
   Hash expectedSha1 = Hash::sha1(data);
   Hash sha1 = objectStore->getBlobSha1(id, context).get();
@@ -206,7 +206,7 @@ TEST_F(ObjectStoreTest, getBlobSha1) {
 }
 
 TEST_F(ObjectStoreTest, getBlobSha1NotFound) {
-  Hash id;
+  ObjectId id;
 
   EXPECT_THROW_RE(
       objectStore->getBlobSha1(id, context).get(),

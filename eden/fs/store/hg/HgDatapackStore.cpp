@@ -70,7 +70,7 @@ TreeEntry fromRawTreeEntry(
 
 FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
     const RustTree* tree,
-    const Hash& edenTreeId,
+    const ObjectId& edenTreeId,
     RelativePathPiece path,
     LocalStore::WriteBatch* writeBatch) {
   std::vector<TreeEntry> entries;
@@ -90,7 +90,7 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
 } // namespace
 
 std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
-    const Hash& id,
+    const ObjectId& id,
     const HgProxyHash& hgInfo) {
   auto content =
       store_.getBlob(hgInfo.path().stringPiece(), hgInfo.byteHash(), true);
@@ -102,7 +102,7 @@ std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
 }
 
 std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
-    const Hash& edenTreeId,
+    const ObjectId& edenTreeId,
     const HgProxyHash& proxyHash,
     LocalStore& localStore) {
   auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
@@ -193,7 +193,7 @@ void HgDatapackStore::getTreeBatch(
 std::unique_ptr<Tree> HgDatapackStore::getTree(
     const RelativePath& path,
     const Hash& manifestId,
-    const Hash& edenTreeId,
+    const ObjectId& edenTreeId,
     LocalStore::WriteBatch* writeBatch) {
   // For root trees we will try getting the tree locally first.  This allows
   // us to catch when Mercurial might have just written a tree to the store,

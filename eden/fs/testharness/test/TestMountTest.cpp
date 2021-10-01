@@ -43,7 +43,7 @@ TEST(TestMount, createSimpleTestMount) {
 
   auto blobHash = path1Inode->getBlobHash();
   ASSERT_TRUE(blobHash.has_value());
-  auto expectedSha1 = Hash::sha1(ByteRange(StringPiece("first!")));
+  auto expectedSha1 = ObjectId::sha1(ByteRange(StringPiece("first!")));
   EXPECT_EQ(expectedSha1, blobHash.value())
       << "For simplicity, TestMount uses the SHA-1 of the contents as "
       << "the id for a Blob.";

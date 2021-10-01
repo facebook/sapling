@@ -15,6 +15,7 @@ class IOBuf;
 
 namespace facebook::eden {
 
+class ObjectId;
 class Hash20;
 using Hash = Hash20;
 class Blob;
@@ -24,7 +25,7 @@ class Blob;
  * As such, the SHA-1 of the gitBlobObject should match the hash.
  */
 std::unique_ptr<Blob> deserializeGitBlob(
-    const Hash& hash,
+    const ObjectId& hash,
     const folly::IOBuf* data);
 
 } // namespace facebook::eden

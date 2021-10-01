@@ -68,5 +68,6 @@ TEST(TreeEntry, testEntrySize) {
   auto getEntryIndirectBytesSize = rwFile.getIndirectSizeBytes();
   auto totalSize = sizeofSize + getEntryIndirectBytesSize;
 
-  EXPECT_LE(name.length() + Hash::RAW_SIZE + sizeof(TreeEntryType), totalSize);
+  EXPECT_LE(
+      name.length() + ObjectId::RAW_SIZE + sizeof(TreeEntryType), totalSize);
 }

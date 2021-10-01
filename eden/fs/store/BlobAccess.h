@@ -54,7 +54,7 @@ class BlobAccess {
    * be dropped when the blob is no longer needed.
    */
   folly::Future<BlobCache::GetResult> getBlob(
-      const Hash& hash,
+      const ObjectId& hash,
       ObjectFetchContext& context,
       BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain);
 

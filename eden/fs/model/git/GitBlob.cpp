@@ -18,7 +18,9 @@ using std::invalid_argument;
 
 namespace facebook::eden {
 
-std::unique_ptr<Blob> deserializeGitBlob(const Hash& hash, const IOBuf* data) {
+std::unique_ptr<Blob> deserializeGitBlob(
+    const ObjectId& hash,
+    const IOBuf* data) {
   folly::io::Cursor cursor(data);
 
   // Find the end of the header and extract the size.

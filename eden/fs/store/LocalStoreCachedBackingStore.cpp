@@ -46,7 +46,7 @@ LocalStoreCachedBackingStore::getTreeEntryForRootId(
 
 folly::SemiFuture<BackingStore::GetTreeRes>
 LocalStoreCachedBackingStore::getTree(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& context) {
   return localStore_->getTree(id).thenValue(
       [id = id,
@@ -72,7 +72,7 @@ LocalStoreCachedBackingStore::getTree(
 
 folly::SemiFuture<BackingStore::GetBlobRes>
 LocalStoreCachedBackingStore::getBlob(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& context) {
   return localStore_->getBlob(id).thenValue(
       [id = id,
@@ -102,7 +102,7 @@ LocalStoreCachedBackingStore::getBlob(
 }
 
 folly::SemiFuture<folly::Unit> LocalStoreCachedBackingStore::prefetchBlobs(
-    HashRange ids,
+    ObjectIdRange ids,
     ObjectFetchContext& context) {
   return backingStore_->prefetchBlobs(ids, context);
 }

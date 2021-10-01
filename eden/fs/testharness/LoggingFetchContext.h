@@ -15,14 +15,14 @@ namespace eden {
 class LoggingFetchContext : public ObjectFetchContext {
  public:
   struct Request {
-    Request(ObjectType t, Hash h, Origin o) : type{t}, hash{h}, origin{o} {}
+    Request(ObjectType t, ObjectId h, Origin o) : type{t}, hash{h}, origin{o} {}
 
     ObjectType type;
-    Hash hash;
+    ObjectId hash;
     Origin origin;
   };
 
-  void didFetch(ObjectType type, const Hash& hash, Origin origin) override {
+  void didFetch(ObjectType type, const ObjectId& hash, Origin origin) override {
     requests.emplace_back(type, hash, origin);
   }
 

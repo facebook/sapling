@@ -24,10 +24,10 @@ using namespace std::chrono_literals;
 using namespace facebook::eden;
 
 namespace {
-const auto hash3 = Hash{"0000000000000000000000000000000000000000"_sp};
-const auto hash4 = Hash{"0000000000000000000000000000000000000001"_sp};
-const auto hash5 = Hash{"0000000000000000000000000000000000000002"_sp};
-const auto hash6 = Hash{"0000000000000000000000000000000000000003"_sp};
+const auto hash3 = ObjectId{"0000000000000000000000000000000000000000"_sp};
+const auto hash4 = ObjectId{"0000000000000000000000000000000000000001"_sp};
+const auto hash5 = ObjectId{"0000000000000000000000000000000000000002"_sp};
+const auto hash6 = ObjectId{"0000000000000000000000000000000000000003"_sp};
 
 const auto blob3 = std::make_shared<Blob>(hash3, "333"_sp);
 const auto blob4 = std::make_shared<Blob>(hash4, "4444"_sp);
@@ -103,7 +103,7 @@ struct BlobAccessTest : ::testing::Test {
     backingStore->putBlob(hash6, "666666"_sp)->setReady();
   }
 
-  std::shared_ptr<const Blob> getBlobBlocking(const Hash& hash) {
+  std::shared_ptr<const Blob> getBlobBlocking(const ObjectId& hash) {
     return blobAccess->getBlob(hash, ObjectFetchContext::getNullContext())
         .get(0ms)
         .object;

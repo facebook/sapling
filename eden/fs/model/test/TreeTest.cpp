@@ -14,7 +14,7 @@
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-using facebook::eden::Hash;
+using facebook::eden::ObjectId;
 using facebook::eden::PathComponent;
 using facebook::eden::PathComponentPiece;
 using facebook::eden::Tree;
@@ -31,7 +31,7 @@ string testHashHex = folly::to<string>(
     "1badb002",
     "8badf00d");
 
-Hash testHash(testHashHex);
+ObjectId testHash(testHashHex);
 } // namespace
 
 TEST(Tree, testGetEntryPtr) {
@@ -89,5 +89,5 @@ TEST(Tree, testSize) {
   // size caalculations, so we are just testing that the size estimate is
   // reasonable. The theortical smallest possible memory footprint is the
   // summ of the footprint of the entrys & the hash
-  EXPECT_LE(numEntries * entrySize + Hash::RAW_SIZE, tree.getSizeBytes());
+  EXPECT_LE(numEntries * entrySize + ObjectId::RAW_SIZE, tree.getSizeBytes());
 }

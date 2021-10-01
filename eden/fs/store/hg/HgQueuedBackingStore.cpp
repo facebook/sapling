@@ -254,7 +254,7 @@ std::string HgQueuedBackingStore::renderRootId(const RootId& rootId) {
 }
 
 folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTree(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& context) {
   HgProxyHash proxyHash;
   try {
@@ -279,7 +279,7 @@ folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTree(
 }
 
 folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTreeImpl(
-    const Hash& id,
+    const ObjectId& id,
     const HgProxyHash& proxyHash,
     ObjectFetchContext& context) {
   auto getTreeFuture = folly::makeFutureWith([&] {
@@ -312,7 +312,7 @@ folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTreeImpl(
 }
 
 folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlob(
-    const Hash& id,
+    const ObjectId& id,
     ObjectFetchContext& context) {
   HgProxyHash proxyHash;
   try {
@@ -337,7 +337,7 @@ folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlob(
 }
 
 folly::SemiFuture<BackingStore::GetBlobRes> HgQueuedBackingStore::getBlobImpl(
-    const Hash& id,
+    const ObjectId& id,
     const HgProxyHash& proxyHash,
     ObjectFetchContext& context) {
   auto getBlobFuture = folly::makeFutureWith([&] {
@@ -379,7 +379,7 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getRootTree(
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
-    HashRange ids,
+    ObjectIdRange ids,
     ObjectFetchContext& context) {
   return HgProxyHash::getBatch(localStore_.get(), ids)
       // The caller guarantees that ids will live at least longer than this

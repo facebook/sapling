@@ -12,6 +12,7 @@
 namespace facebook {
 namespace eden {
 
+class ObjectId;
 class Hash20;
 using Hash = Hash20;
 
@@ -21,6 +22,8 @@ using Hash = Hash20;
  * The input should be an ASCII hex string.  It may be less than 40-bytes long,
  * in which case it will be sign-extended to 40 bytes.
  */
-Hash makeTestHash(folly::StringPiece value);
+ObjectId makeTestHash(folly::StringPiece value);
+
+Hash20 makeTestHash20(folly::StringPiece value);
 } // namespace eden
 } // namespace facebook

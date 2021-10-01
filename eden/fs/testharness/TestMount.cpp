@@ -179,7 +179,7 @@ void TestMount::initialize(
       EdenTimestamp{folly::to<struct timespec>(lastCheckoutTime)});
 }
 
-void TestMount::initialize(const RootId& commitHash, Hash rootTreeHash) {
+void TestMount::initialize(const RootId& commitHash, ObjectId rootTreeHash) {
   // Set the initial commit ID
   setInitialCommit(commitHash, rootTreeHash);
 
@@ -429,7 +429,9 @@ void TestMount::setInitialCommit(const RootId& commitHash) {
   config_->setParentCommit(commitHash);
 }
 
-void TestMount::setInitialCommit(const RootId& commitHash, Hash rootTreeHash) {
+void TestMount::setInitialCommit(
+    const RootId& commitHash,
+    ObjectId rootTreeHash) {
   // Record the commit hash to root tree hash mapping in the BackingStore
   auto* storedCommit = backingStore_->putCommit(commitHash, rootTreeHash);
   storedCommit->setReady();

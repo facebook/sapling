@@ -64,7 +64,7 @@ void LocalStore::compactStorage() {
   }
 }
 
-StoreResult LocalStore::get(KeySpace keySpace, const Hash& id) const {
+StoreResult LocalStore::get(KeySpace keySpace, const ObjectId& id) const {
   return get(keySpace, id.getBytes());
 }
 
@@ -96,7 +96,8 @@ folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
 // LocalStore so a vanilla LocalStore has no knowledge of deserializeGitTree()
 // or deserializeGitBlob().
 
-folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(const Hash& id) const {
+folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(
+    const ObjectId& id) const {
   return getFuture(KeySpace::TreeFamily, id.getBytes())
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
@@ -106,7 +107,8 @@ folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(const Hash& id) const {
       });
 }
 
-folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(const Hash& id) const {
+folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(
+    const ObjectId& id) const {
   if (!enableBlobCaching) {
     return std::unique_ptr<Blob>(nullptr);
   }
@@ -122,7 +124,7 @@ folly::Future<std::unique_ptr<Blob>> LocalStore::getBlob(const Hash& id) const {
 }
 
 folly::Future<optional<BlobMetadata>> LocalStore::getBlobMetadata(
-    const Hash& id) const {
+    const ObjectId& id) const {
   return getFuture(KeySpace::BlobMetaDataFamily, id.getBytes())
       .thenValue([id](StoreResult&& data) -> optional<BlobMetadata> {
         if (!data.isValid()) {
@@ -141,7 +143,7 @@ folly::IOBuf LocalStore::serializeTree(const Tree& tree) {
   return serializer.finalize();
 }
 
-bool LocalStore::hasKey(KeySpace keySpace, const Hash& id) const {
+bool LocalStore::hasKey(KeySpace keySpace, const ObjectId& id) const {
   return hasKey(keySpace, id.getBytes());
 }
 
@@ -159,7 +161,7 @@ void LocalStore::WriteBatch::putTree(const Tree& tree) {
   put(KeySpace::TreeFamily, tree.getHash().getBytes(), treeData);
 }
 
-void LocalStore::putBlob(const Hash& id, const Blob* blob) {
+void LocalStore::putBlob(const ObjectId& id, const Blob* blob) {
   if (!enableBlobCaching) {
     XLOG(DBG8) << "Skipping caching " << id
                << " because blob cache is disabled via config";
@@ -175,7 +177,7 @@ void LocalStore::putBlob(const Hash& id, const Blob* blob) {
   }
 }
 
-BlobMetadata LocalStore::putBlobMetadata(const Hash& id, const Blob* blob) {
+BlobMetadata LocalStore::putBlobMetadata(const ObjectId& id, const Blob* blob) {
   BlobMetadata metadata{Hash::sha1(blob->getContents()), blob->getSize()};
   auto hashBytes = id.getBytes();
   SerializedBlobMetadata metadataBytes(metadata);
@@ -211,7 +213,7 @@ void LocalStore::putTreeMetadata(
 }
 
 void LocalStore::putNormalizedTreeMetadata(
-    const Hash& hash,
+    const ObjectId& hash,
     const TreeMetadata& treeMetadata) {
   auto writeBatch = beginWrite();
   // store metadata for each blob in the local store under their blob ids
@@ -237,7 +239,7 @@ void LocalStore::putNormalizedTreeMetadata(
 
 void LocalStore::put(
     KeySpace keySpace,
-    const Hash& id,
+    const ObjectId& id,
     folly::ByteRange value) {
   XCHECK(!keySpace->isDeprecated())
       << "Write to deprecated keyspace " << keySpace->name;
@@ -246,14 +248,14 @@ void LocalStore::put(
 
 void LocalStore::WriteBatch::put(
     KeySpace keySpace,
-    const Hash& id,
+    const ObjectId& id,
     folly::ByteRange value) {
   XCHECK(!keySpace->isDeprecated())
       << "Write to deprecated keyspace " << keySpace->name;
   put(keySpace, id.getBytes(), value);
 }
 
-void LocalStore::WriteBatch::putBlob(const Hash& id, const Blob* blob) {
+void LocalStore::WriteBatch::putBlob(const ObjectId& id, const Blob* blob) {
   const IOBuf& contents = blob->getContents();
   auto hashSlice = id.getBytes();
 
