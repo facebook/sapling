@@ -204,6 +204,13 @@ if sys.platform.startswith("linux"):
         }
     )
 
+try:
+    from eden.integration.facebook.lib.skip import add_fb_specific_skips
+
+    add_fb_specific_skips(TEST_DISABLED)
+except ImportError:
+    pass
+
 
 def skip_if_disabled(test_case: unittest.TestCase) -> None:
     if _is_disabled(test_case):
