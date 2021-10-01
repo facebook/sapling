@@ -72,6 +72,15 @@ pub mod types {
         pub errorType: crate::types::EdenErrorType,
     }
 
+    impl ::fbthrift::ExceptionInfo for EdenError {
+        fn exn_value(&self) -> String {
+            format!("{:?}", self)
+        }
+
+        #[inline]
+        fn exn_is_declared(&self) -> bool { true }
+    }
+
     impl ::std::error::Error for EdenError {}
 
     impl ::std::fmt::Display for EdenError {
@@ -84,6 +93,15 @@ pub mod types {
     pub struct NoValueForKeyError {
         #[serde(default)]
         pub key: ::std::string::String,
+    }
+
+    impl ::fbthrift::ExceptionInfo for NoValueForKeyError {
+        fn exn_value(&self) -> String {
+            format!("{:?}", self)
+        }
+
+        #[inline]
+        fn exn_is_declared(&self) -> bool { true }
     }
 
     impl ::std::error::Error for NoValueForKeyError {}
@@ -5944,6 +5962,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for ListMountsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    ListMountsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    ListMountsExn::ApplicationException(aexn) => aexn.exn_name(),
+                    ListMountsExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    ListMountsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    ListMountsExn::ApplicationException(aexn) => aexn.exn_value(),
+                    ListMountsExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    ListMountsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    ListMountsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    ListMountsExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for ListMountsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    ListMountsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    ListMountsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    ListMountsExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for ListMountsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -5953,6 +6007,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let ListMountsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("ListMounts");
                 match self {
                     ListMountsExn::Success(inner) => {
@@ -5973,11 +6030,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    ListMountsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    ListMountsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6056,6 +6109,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for MountExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    MountExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    MountExn::ApplicationException(aexn) => aexn.exn_name(),
+                    MountExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    MountExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    MountExn::ApplicationException(aexn) => aexn.exn_value(),
+                    MountExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    MountExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    MountExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    MountExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for MountExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    MountExn::Success(_) => ::fbthrift::ResultType::Return,
+                    MountExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    MountExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for MountExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -6065,6 +6154,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let MountExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("Mount");
                 match self {
                     MountExn::Success(inner) => {
@@ -6085,11 +6177,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    MountExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    MountExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6162,6 +6250,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for UnmountExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    UnmountExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    UnmountExn::ApplicationException(aexn) => aexn.exn_name(),
+                    UnmountExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    UnmountExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    UnmountExn::ApplicationException(aexn) => aexn.exn_value(),
+                    UnmountExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    UnmountExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    UnmountExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    UnmountExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for UnmountExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    UnmountExn::Success(_) => ::fbthrift::ResultType::Return,
+                    UnmountExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    UnmountExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for UnmountExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -6171,6 +6295,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let UnmountExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("Unmount");
                 match self {
                     UnmountExn::Success(inner) => {
@@ -6191,11 +6318,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    UnmountExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    UnmountExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6268,6 +6391,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for CheckOutRevisionExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    CheckOutRevisionExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    CheckOutRevisionExn::ApplicationException(aexn) => aexn.exn_name(),
+                    CheckOutRevisionExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    CheckOutRevisionExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    CheckOutRevisionExn::ApplicationException(aexn) => aexn.exn_value(),
+                    CheckOutRevisionExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    CheckOutRevisionExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    CheckOutRevisionExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    CheckOutRevisionExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for CheckOutRevisionExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    CheckOutRevisionExn::Success(_) => ::fbthrift::ResultType::Return,
+                    CheckOutRevisionExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    CheckOutRevisionExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for CheckOutRevisionExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -6277,6 +6436,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let CheckOutRevisionExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("CheckOutRevision");
                 match self {
                     CheckOutRevisionExn::Success(inner) => {
@@ -6297,11 +6459,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    CheckOutRevisionExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    CheckOutRevisionExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6380,6 +6538,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for ResetParentCommitsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    ResetParentCommitsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    ResetParentCommitsExn::ApplicationException(aexn) => aexn.exn_name(),
+                    ResetParentCommitsExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    ResetParentCommitsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    ResetParentCommitsExn::ApplicationException(aexn) => aexn.exn_value(),
+                    ResetParentCommitsExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    ResetParentCommitsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    ResetParentCommitsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    ResetParentCommitsExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for ResetParentCommitsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    ResetParentCommitsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    ResetParentCommitsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    ResetParentCommitsExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for ResetParentCommitsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -6389,6 +6583,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let ResetParentCommitsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("ResetParentCommits");
                 match self {
                     ResetParentCommitsExn::Success(inner) => {
@@ -6409,11 +6606,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    ResetParentCommitsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    ResetParentCommitsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6486,6 +6679,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetSHA1Exn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetSHA1Exn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetSHA1Exn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetSHA1Exn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetSHA1Exn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetSHA1Exn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetSHA1Exn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetSHA1Exn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetSHA1Exn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetSHA1Exn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetSHA1Exn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetSHA1Exn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetSHA1Exn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetSHA1Exn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetSHA1Exn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -6495,6 +6724,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetSHA1Exn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetSHA1");
                 match self {
                     GetSHA1Exn::Success(inner) => {
@@ -6515,11 +6747,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetSHA1Exn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetSHA1Exn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6598,6 +6826,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetBindMountsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetBindMountsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetBindMountsExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetBindMountsExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetBindMountsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetBindMountsExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetBindMountsExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetBindMountsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetBindMountsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetBindMountsExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetBindMountsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetBindMountsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetBindMountsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetBindMountsExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetBindMountsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -6607,6 +6871,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetBindMountsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetBindMounts");
                 match self {
                     GetBindMountsExn::Success(inner) => {
@@ -6627,11 +6894,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetBindMountsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetBindMountsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6710,6 +6973,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for AddBindMountExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    AddBindMountExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    AddBindMountExn::ApplicationException(aexn) => aexn.exn_name(),
+                    AddBindMountExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    AddBindMountExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    AddBindMountExn::ApplicationException(aexn) => aexn.exn_value(),
+                    AddBindMountExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    AddBindMountExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    AddBindMountExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    AddBindMountExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for AddBindMountExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    AddBindMountExn::Success(_) => ::fbthrift::ResultType::Return,
+                    AddBindMountExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    AddBindMountExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for AddBindMountExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -6719,6 +7018,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let AddBindMountExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("AddBindMount");
                 match self {
                     AddBindMountExn::Success(inner) => {
@@ -6739,11 +7041,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    AddBindMountExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    AddBindMountExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6816,6 +7114,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for RemoveBindMountExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    RemoveBindMountExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    RemoveBindMountExn::ApplicationException(aexn) => aexn.exn_name(),
+                    RemoveBindMountExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    RemoveBindMountExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    RemoveBindMountExn::ApplicationException(aexn) => aexn.exn_value(),
+                    RemoveBindMountExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    RemoveBindMountExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    RemoveBindMountExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    RemoveBindMountExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for RemoveBindMountExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    RemoveBindMountExn::Success(_) => ::fbthrift::ResultType::Return,
+                    RemoveBindMountExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    RemoveBindMountExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for RemoveBindMountExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -6825,6 +7159,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let RemoveBindMountExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("RemoveBindMount");
                 match self {
                     RemoveBindMountExn::Success(inner) => {
@@ -6845,11 +7182,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    RemoveBindMountExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    RemoveBindMountExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6922,6 +7255,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetCurrentJournalPositionExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetCurrentJournalPositionExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetCurrentJournalPositionExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetCurrentJournalPositionExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetCurrentJournalPositionExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetCurrentJournalPositionExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetCurrentJournalPositionExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetCurrentJournalPositionExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetCurrentJournalPositionExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetCurrentJournalPositionExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetCurrentJournalPositionExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetCurrentJournalPositionExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetCurrentJournalPositionExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetCurrentJournalPositionExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetCurrentJournalPositionExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -6931,6 +7300,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetCurrentJournalPositionExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetCurrentJournalPosition");
                 match self {
                     GetCurrentJournalPositionExn::Success(inner) => {
@@ -6951,11 +7323,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetCurrentJournalPositionExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetCurrentJournalPositionExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7034,6 +7402,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetFilesChangedSinceExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetFilesChangedSinceExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetFilesChangedSinceExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetFilesChangedSinceExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetFilesChangedSinceExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetFilesChangedSinceExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetFilesChangedSinceExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetFilesChangedSinceExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetFilesChangedSinceExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetFilesChangedSinceExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetFilesChangedSinceExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetFilesChangedSinceExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetFilesChangedSinceExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetFilesChangedSinceExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetFilesChangedSinceExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -7043,6 +7447,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetFilesChangedSinceExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetFilesChangedSince");
                 match self {
                     GetFilesChangedSinceExn::Success(inner) => {
@@ -7063,11 +7470,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetFilesChangedSinceExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetFilesChangedSinceExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7146,6 +7549,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for SetJournalMemoryLimitExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    SetJournalMemoryLimitExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    SetJournalMemoryLimitExn::ApplicationException(aexn) => aexn.exn_name(),
+                    SetJournalMemoryLimitExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    SetJournalMemoryLimitExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    SetJournalMemoryLimitExn::ApplicationException(aexn) => aexn.exn_value(),
+                    SetJournalMemoryLimitExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    SetJournalMemoryLimitExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    SetJournalMemoryLimitExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    SetJournalMemoryLimitExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for SetJournalMemoryLimitExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    SetJournalMemoryLimitExn::Success(_) => ::fbthrift::ResultType::Return,
+                    SetJournalMemoryLimitExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    SetJournalMemoryLimitExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for SetJournalMemoryLimitExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -7155,6 +7594,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let SetJournalMemoryLimitExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("SetJournalMemoryLimit");
                 match self {
                     SetJournalMemoryLimitExn::Success(inner) => {
@@ -7175,11 +7617,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    SetJournalMemoryLimitExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    SetJournalMemoryLimitExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7252,6 +7690,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetJournalMemoryLimitExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetJournalMemoryLimitExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetJournalMemoryLimitExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetJournalMemoryLimitExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetJournalMemoryLimitExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetJournalMemoryLimitExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetJournalMemoryLimitExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetJournalMemoryLimitExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetJournalMemoryLimitExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetJournalMemoryLimitExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetJournalMemoryLimitExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetJournalMemoryLimitExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetJournalMemoryLimitExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetJournalMemoryLimitExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetJournalMemoryLimitExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -7261,6 +7735,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetJournalMemoryLimitExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetJournalMemoryLimit");
                 match self {
                     GetJournalMemoryLimitExn::Success(inner) => {
@@ -7281,11 +7758,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetJournalMemoryLimitExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetJournalMemoryLimitExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7364,6 +7837,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for FlushJournalExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    FlushJournalExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    FlushJournalExn::ApplicationException(aexn) => aexn.exn_name(),
+                    FlushJournalExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    FlushJournalExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    FlushJournalExn::ApplicationException(aexn) => aexn.exn_value(),
+                    FlushJournalExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    FlushJournalExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    FlushJournalExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    FlushJournalExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for FlushJournalExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    FlushJournalExn::Success(_) => ::fbthrift::ResultType::Return,
+                    FlushJournalExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    FlushJournalExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for FlushJournalExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -7373,6 +7882,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let FlushJournalExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("FlushJournal");
                 match self {
                     FlushJournalExn::Success(inner) => {
@@ -7393,11 +7905,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    FlushJournalExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    FlushJournalExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7470,6 +7978,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugGetRawJournalExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugGetRawJournalExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugGetRawJournalExn::ApplicationException(aexn) => aexn.exn_name(),
+                    DebugGetRawJournalExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugGetRawJournalExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugGetRawJournalExn::ApplicationException(aexn) => aexn.exn_value(),
+                    DebugGetRawJournalExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugGetRawJournalExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugGetRawJournalExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    DebugGetRawJournalExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugGetRawJournalExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugGetRawJournalExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugGetRawJournalExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    DebugGetRawJournalExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugGetRawJournalExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -7479,6 +8023,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugGetRawJournalExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugGetRawJournal");
                 match self {
                     DebugGetRawJournalExn::Success(inner) => {
@@ -7499,11 +8046,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugGetRawJournalExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugGetRawJournalExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7582,6 +8125,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetEntryInformationExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetEntryInformationExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetEntryInformationExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetEntryInformationExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetEntryInformationExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetEntryInformationExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetEntryInformationExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetEntryInformationExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetEntryInformationExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetEntryInformationExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetEntryInformationExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetEntryInformationExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetEntryInformationExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetEntryInformationExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetEntryInformationExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -7591,6 +8170,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetEntryInformationExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetEntryInformation");
                 match self {
                     GetEntryInformationExn::Success(inner) => {
@@ -7611,11 +8193,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetEntryInformationExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetEntryInformationExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7694,6 +8272,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetFileInformationExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetFileInformationExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetFileInformationExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetFileInformationExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetFileInformationExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetFileInformationExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetFileInformationExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetFileInformationExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetFileInformationExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetFileInformationExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetFileInformationExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetFileInformationExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetFileInformationExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetFileInformationExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetFileInformationExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -7703,6 +8317,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetFileInformationExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetFileInformation");
                 match self {
                     GetFileInformationExn::Success(inner) => {
@@ -7723,11 +8340,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetFileInformationExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetFileInformationExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7806,6 +8419,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GlobExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GlobExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GlobExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GlobExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GlobExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GlobExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GlobExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GlobExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GlobExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GlobExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GlobExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GlobExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GlobExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GlobExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GlobExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -7815,6 +8464,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GlobExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("Glob");
                 match self {
                     GlobExn::Success(inner) => {
@@ -7835,11 +8487,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GlobExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GlobExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7918,6 +8566,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GlobFilesExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GlobFilesExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GlobFilesExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GlobFilesExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GlobFilesExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GlobFilesExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GlobFilesExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GlobFilesExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GlobFilesExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GlobFilesExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GlobFilesExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GlobFilesExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GlobFilesExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GlobFilesExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GlobFilesExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -7927,6 +8611,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GlobFilesExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GlobFiles");
                 match self {
                     GlobFilesExn::Success(inner) => {
@@ -7947,11 +8634,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GlobFilesExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GlobFilesExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8030,6 +8713,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for PredictiveGlobFilesExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    PredictiveGlobFilesExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    PredictiveGlobFilesExn::ApplicationException(aexn) => aexn.exn_name(),
+                    PredictiveGlobFilesExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    PredictiveGlobFilesExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    PredictiveGlobFilesExn::ApplicationException(aexn) => aexn.exn_value(),
+                    PredictiveGlobFilesExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    PredictiveGlobFilesExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    PredictiveGlobFilesExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    PredictiveGlobFilesExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for PredictiveGlobFilesExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    PredictiveGlobFilesExn::Success(_) => ::fbthrift::ResultType::Return,
+                    PredictiveGlobFilesExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    PredictiveGlobFilesExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for PredictiveGlobFilesExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -8039,6 +8758,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let PredictiveGlobFilesExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("PredictiveGlobFiles");
                 match self {
                     PredictiveGlobFilesExn::Success(inner) => {
@@ -8059,11 +8781,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    PredictiveGlobFilesExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    PredictiveGlobFilesExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8135,6 +8853,38 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for ChownExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    ChownExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    ChownExn::ApplicationException(aexn) => aexn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    ChownExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    ChownExn::ApplicationException(aexn) => aexn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    ChownExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    ChownExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for ChownExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    ChownExn::Success(_) => ::fbthrift::ResultType::Return,
+                    ChownExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for ChownExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -8144,6 +8894,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let ChownExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("Chown");
                 match self {
                     ChownExn::Success(inner) => {
@@ -8155,11 +8908,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    ChownExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    ChownExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8227,6 +8976,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetScmStatusV2Exn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetScmStatusV2Exn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetScmStatusV2Exn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetScmStatusV2Exn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetScmStatusV2Exn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetScmStatusV2Exn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetScmStatusV2Exn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetScmStatusV2Exn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetScmStatusV2Exn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetScmStatusV2Exn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetScmStatusV2Exn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetScmStatusV2Exn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetScmStatusV2Exn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetScmStatusV2Exn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetScmStatusV2Exn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -8236,6 +9021,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetScmStatusV2Exn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetScmStatusV2");
                 match self {
                     GetScmStatusV2Exn::Success(inner) => {
@@ -8256,11 +9044,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetScmStatusV2Exn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetScmStatusV2Exn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8339,6 +9123,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetScmStatusExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetScmStatusExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetScmStatusExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetScmStatusExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetScmStatusExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetScmStatusExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetScmStatusExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetScmStatusExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetScmStatusExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetScmStatusExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetScmStatusExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetScmStatusExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetScmStatusExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetScmStatusExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetScmStatusExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -8348,6 +9168,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetScmStatusExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetScmStatus");
                 match self {
                     GetScmStatusExn::Success(inner) => {
@@ -8368,11 +9191,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetScmStatusExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetScmStatusExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8451,6 +9270,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetScmStatusBetweenRevisionsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetScmStatusBetweenRevisionsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetScmStatusBetweenRevisionsExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetScmStatusBetweenRevisionsExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetScmStatusBetweenRevisionsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetScmStatusBetweenRevisionsExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetScmStatusBetweenRevisionsExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetScmStatusBetweenRevisionsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetScmStatusBetweenRevisionsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetScmStatusBetweenRevisionsExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetScmStatusBetweenRevisionsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetScmStatusBetweenRevisionsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetScmStatusBetweenRevisionsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetScmStatusBetweenRevisionsExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetScmStatusBetweenRevisionsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -8460,6 +9315,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetScmStatusBetweenRevisionsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetScmStatusBetweenRevisions");
                 match self {
                     GetScmStatusBetweenRevisionsExn::Success(inner) => {
@@ -8480,11 +9338,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetScmStatusBetweenRevisionsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetScmStatusBetweenRevisionsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8563,6 +9417,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetDaemonInfoExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetDaemonInfoExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetDaemonInfoExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetDaemonInfoExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetDaemonInfoExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetDaemonInfoExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetDaemonInfoExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetDaemonInfoExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetDaemonInfoExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetDaemonInfoExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetDaemonInfoExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetDaemonInfoExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetDaemonInfoExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetDaemonInfoExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetDaemonInfoExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -8572,6 +9462,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetDaemonInfoExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetDaemonInfo");
                 match self {
                     GetDaemonInfoExn::Success(inner) => {
@@ -8592,11 +9485,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetDaemonInfoExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetDaemonInfoExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8675,6 +9564,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for CheckPrivHelperExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    CheckPrivHelperExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    CheckPrivHelperExn::ApplicationException(aexn) => aexn.exn_name(),
+                    CheckPrivHelperExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    CheckPrivHelperExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    CheckPrivHelperExn::ApplicationException(aexn) => aexn.exn_value(),
+                    CheckPrivHelperExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    CheckPrivHelperExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    CheckPrivHelperExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    CheckPrivHelperExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for CheckPrivHelperExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    CheckPrivHelperExn::Success(_) => ::fbthrift::ResultType::Return,
+                    CheckPrivHelperExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    CheckPrivHelperExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for CheckPrivHelperExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -8684,6 +9609,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let CheckPrivHelperExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("CheckPrivHelper");
                 match self {
                     CheckPrivHelperExn::Success(inner) => {
@@ -8704,11 +9632,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    CheckPrivHelperExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    CheckPrivHelperExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8787,6 +9711,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetPidExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetPidExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetPidExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetPidExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetPidExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetPidExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetPidExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetPidExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetPidExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetPidExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetPidExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetPidExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetPidExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetPidExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetPidExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -8796,6 +9756,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetPidExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetPid");
                 match self {
                     GetPidExn::Success(inner) => {
@@ -8816,11 +9779,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetPidExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetPidExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8899,6 +9858,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for InitiateShutdownExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    InitiateShutdownExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    InitiateShutdownExn::ApplicationException(aexn) => aexn.exn_name(),
+                    InitiateShutdownExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    InitiateShutdownExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    InitiateShutdownExn::ApplicationException(aexn) => aexn.exn_value(),
+                    InitiateShutdownExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    InitiateShutdownExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    InitiateShutdownExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    InitiateShutdownExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for InitiateShutdownExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    InitiateShutdownExn::Success(_) => ::fbthrift::ResultType::Return,
+                    InitiateShutdownExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    InitiateShutdownExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for InitiateShutdownExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -8908,6 +9903,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let InitiateShutdownExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("InitiateShutdown");
                 match self {
                     InitiateShutdownExn::Success(inner) => {
@@ -8928,11 +9926,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    InitiateShutdownExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    InitiateShutdownExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9005,6 +9999,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetConfigExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetConfigExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetConfigExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetConfigExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetConfigExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetConfigExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetConfigExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetConfigExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetConfigExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetConfigExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetConfigExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetConfigExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetConfigExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetConfigExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetConfigExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9014,6 +10044,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetConfigExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetConfig");
                 match self {
                     GetConfigExn::Success(inner) => {
@@ -9034,11 +10067,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetConfigExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetConfigExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9117,6 +10146,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for ReloadConfigExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    ReloadConfigExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    ReloadConfigExn::ApplicationException(aexn) => aexn.exn_name(),
+                    ReloadConfigExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    ReloadConfigExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    ReloadConfigExn::ApplicationException(aexn) => aexn.exn_value(),
+                    ReloadConfigExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    ReloadConfigExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    ReloadConfigExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    ReloadConfigExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for ReloadConfigExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    ReloadConfigExn::Success(_) => ::fbthrift::ResultType::Return,
+                    ReloadConfigExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    ReloadConfigExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for ReloadConfigExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9126,6 +10191,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let ReloadConfigExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("ReloadConfig");
                 match self {
                     ReloadConfigExn::Success(inner) => {
@@ -9146,11 +10214,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    ReloadConfigExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    ReloadConfigExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9223,6 +10287,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugGetScmTreeExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugGetScmTreeExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugGetScmTreeExn::ApplicationException(aexn) => aexn.exn_name(),
+                    DebugGetScmTreeExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugGetScmTreeExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugGetScmTreeExn::ApplicationException(aexn) => aexn.exn_value(),
+                    DebugGetScmTreeExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugGetScmTreeExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugGetScmTreeExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    DebugGetScmTreeExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugGetScmTreeExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugGetScmTreeExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugGetScmTreeExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    DebugGetScmTreeExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugGetScmTreeExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9232,6 +10332,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugGetScmTreeExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugGetScmTree");
                 match self {
                     DebugGetScmTreeExn::Success(inner) => {
@@ -9252,11 +10355,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugGetScmTreeExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugGetScmTreeExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9335,6 +10434,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugGetScmBlobExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugGetScmBlobExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugGetScmBlobExn::ApplicationException(aexn) => aexn.exn_name(),
+                    DebugGetScmBlobExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugGetScmBlobExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugGetScmBlobExn::ApplicationException(aexn) => aexn.exn_value(),
+                    DebugGetScmBlobExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugGetScmBlobExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugGetScmBlobExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    DebugGetScmBlobExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugGetScmBlobExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugGetScmBlobExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugGetScmBlobExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    DebugGetScmBlobExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugGetScmBlobExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9344,6 +10479,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugGetScmBlobExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugGetScmBlob");
                 match self {
                     DebugGetScmBlobExn::Success(inner) => {
@@ -9364,11 +10502,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugGetScmBlobExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugGetScmBlobExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9447,6 +10581,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugGetScmBlobMetadataExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugGetScmBlobMetadataExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugGetScmBlobMetadataExn::ApplicationException(aexn) => aexn.exn_name(),
+                    DebugGetScmBlobMetadataExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugGetScmBlobMetadataExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugGetScmBlobMetadataExn::ApplicationException(aexn) => aexn.exn_value(),
+                    DebugGetScmBlobMetadataExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugGetScmBlobMetadataExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugGetScmBlobMetadataExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    DebugGetScmBlobMetadataExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugGetScmBlobMetadataExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugGetScmBlobMetadataExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugGetScmBlobMetadataExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    DebugGetScmBlobMetadataExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugGetScmBlobMetadataExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9456,6 +10626,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugGetScmBlobMetadataExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugGetScmBlobMetadata");
                 match self {
                     DebugGetScmBlobMetadataExn::Success(inner) => {
@@ -9476,11 +10649,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugGetScmBlobMetadataExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugGetScmBlobMetadataExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9559,6 +10728,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugInodeStatusExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugInodeStatusExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugInodeStatusExn::ApplicationException(aexn) => aexn.exn_name(),
+                    DebugInodeStatusExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugInodeStatusExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugInodeStatusExn::ApplicationException(aexn) => aexn.exn_value(),
+                    DebugInodeStatusExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugInodeStatusExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugInodeStatusExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    DebugInodeStatusExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugInodeStatusExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugInodeStatusExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugInodeStatusExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    DebugInodeStatusExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugInodeStatusExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9568,6 +10773,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugInodeStatusExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugInodeStatus");
                 match self {
                     DebugInodeStatusExn::Success(inner) => {
@@ -9588,11 +10796,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugInodeStatusExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugInodeStatusExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9664,6 +10868,38 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugOutstandingFuseCallsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugOutstandingFuseCallsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugOutstandingFuseCallsExn::ApplicationException(aexn) => aexn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugOutstandingFuseCallsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugOutstandingFuseCallsExn::ApplicationException(aexn) => aexn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugOutstandingFuseCallsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugOutstandingFuseCallsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugOutstandingFuseCallsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugOutstandingFuseCallsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugOutstandingFuseCallsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugOutstandingFuseCallsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9673,6 +10909,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugOutstandingFuseCallsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugOutstandingFuseCalls");
                 match self {
                     DebugOutstandingFuseCallsExn::Success(inner) => {
@@ -9684,11 +10923,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugOutstandingFuseCallsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugOutstandingFuseCallsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9755,6 +10990,38 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugOutstandingNfsCallsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugOutstandingNfsCallsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugOutstandingNfsCallsExn::ApplicationException(aexn) => aexn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugOutstandingNfsCallsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugOutstandingNfsCallsExn::ApplicationException(aexn) => aexn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugOutstandingNfsCallsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugOutstandingNfsCallsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugOutstandingNfsCallsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugOutstandingNfsCallsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugOutstandingNfsCallsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugOutstandingNfsCallsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9764,6 +11031,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugOutstandingNfsCallsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugOutstandingNfsCalls");
                 match self {
                     DebugOutstandingNfsCallsExn::Success(inner) => {
@@ -9775,11 +11045,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugOutstandingNfsCallsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugOutstandingNfsCallsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9846,6 +11112,38 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugStartRecordingActivityExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugStartRecordingActivityExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugStartRecordingActivityExn::ApplicationException(aexn) => aexn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugStartRecordingActivityExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugStartRecordingActivityExn::ApplicationException(aexn) => aexn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugStartRecordingActivityExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugStartRecordingActivityExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugStartRecordingActivityExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugStartRecordingActivityExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugStartRecordingActivityExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugStartRecordingActivityExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9855,6 +11153,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugStartRecordingActivityExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugStartRecordingActivity");
                 match self {
                     DebugStartRecordingActivityExn::Success(inner) => {
@@ -9866,11 +11167,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugStartRecordingActivityExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugStartRecordingActivityExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -9937,6 +11234,38 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugStopRecordingActivityExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugStopRecordingActivityExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugStopRecordingActivityExn::ApplicationException(aexn) => aexn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugStopRecordingActivityExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugStopRecordingActivityExn::ApplicationException(aexn) => aexn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugStopRecordingActivityExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugStopRecordingActivityExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugStopRecordingActivityExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugStopRecordingActivityExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugStopRecordingActivityExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugStopRecordingActivityExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -9946,6 +11275,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugStopRecordingActivityExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugStopRecordingActivity");
                 match self {
                     DebugStopRecordingActivityExn::Success(inner) => {
@@ -9957,11 +11289,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugStopRecordingActivityExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugStopRecordingActivityExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10028,6 +11356,38 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugListActivityRecordingsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugListActivityRecordingsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugListActivityRecordingsExn::ApplicationException(aexn) => aexn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugListActivityRecordingsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugListActivityRecordingsExn::ApplicationException(aexn) => aexn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugListActivityRecordingsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugListActivityRecordingsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugListActivityRecordingsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugListActivityRecordingsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugListActivityRecordingsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugListActivityRecordingsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -10037,6 +11397,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugListActivityRecordingsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugListActivityRecordings");
                 match self {
                     DebugListActivityRecordingsExn::Success(inner) => {
@@ -10048,11 +11411,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugListActivityRecordingsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugListActivityRecordingsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10126,6 +11485,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugGetInodePathExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugGetInodePathExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugGetInodePathExn::ApplicationException(aexn) => aexn.exn_name(),
+                    DebugGetInodePathExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugGetInodePathExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugGetInodePathExn::ApplicationException(aexn) => aexn.exn_value(),
+                    DebugGetInodePathExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugGetInodePathExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugGetInodePathExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    DebugGetInodePathExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugGetInodePathExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugGetInodePathExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugGetInodePathExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    DebugGetInodePathExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugGetInodePathExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -10135,6 +11530,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugGetInodePathExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugGetInodePath");
                 match self {
                     DebugGetInodePathExn::Success(inner) => {
@@ -10155,11 +11553,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugGetInodePathExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugGetInodePathExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10238,6 +11632,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for ClearFetchCountsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    ClearFetchCountsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    ClearFetchCountsExn::ApplicationException(aexn) => aexn.exn_name(),
+                    ClearFetchCountsExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    ClearFetchCountsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    ClearFetchCountsExn::ApplicationException(aexn) => aexn.exn_value(),
+                    ClearFetchCountsExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    ClearFetchCountsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    ClearFetchCountsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    ClearFetchCountsExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for ClearFetchCountsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    ClearFetchCountsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    ClearFetchCountsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    ClearFetchCountsExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for ClearFetchCountsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -10247,6 +11677,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let ClearFetchCountsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("ClearFetchCounts");
                 match self {
                     ClearFetchCountsExn::Success(inner) => {
@@ -10267,11 +11700,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    ClearFetchCountsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    ClearFetchCountsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10344,6 +11773,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for ClearFetchCountsByMountExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    ClearFetchCountsByMountExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    ClearFetchCountsByMountExn::ApplicationException(aexn) => aexn.exn_name(),
+                    ClearFetchCountsByMountExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    ClearFetchCountsByMountExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    ClearFetchCountsByMountExn::ApplicationException(aexn) => aexn.exn_value(),
+                    ClearFetchCountsByMountExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    ClearFetchCountsByMountExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    ClearFetchCountsByMountExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    ClearFetchCountsByMountExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for ClearFetchCountsByMountExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    ClearFetchCountsByMountExn::Success(_) => ::fbthrift::ResultType::Return,
+                    ClearFetchCountsByMountExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    ClearFetchCountsByMountExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for ClearFetchCountsByMountExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -10353,6 +11818,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let ClearFetchCountsByMountExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("ClearFetchCountsByMount");
                 match self {
                     ClearFetchCountsByMountExn::Success(inner) => {
@@ -10373,11 +11841,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    ClearFetchCountsByMountExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    ClearFetchCountsByMountExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10450,6 +11914,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetAccessCountsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetAccessCountsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetAccessCountsExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetAccessCountsExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetAccessCountsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetAccessCountsExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetAccessCountsExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetAccessCountsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetAccessCountsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetAccessCountsExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetAccessCountsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetAccessCountsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetAccessCountsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetAccessCountsExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetAccessCountsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -10459,6 +11959,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetAccessCountsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetAccessCounts");
                 match self {
                     GetAccessCountsExn::Success(inner) => {
@@ -10479,11 +11982,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetAccessCountsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetAccessCountsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10562,6 +12061,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for StartRecordingBackingStoreFetchExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    StartRecordingBackingStoreFetchExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    StartRecordingBackingStoreFetchExn::ApplicationException(aexn) => aexn.exn_name(),
+                    StartRecordingBackingStoreFetchExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    StartRecordingBackingStoreFetchExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    StartRecordingBackingStoreFetchExn::ApplicationException(aexn) => aexn.exn_value(),
+                    StartRecordingBackingStoreFetchExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    StartRecordingBackingStoreFetchExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    StartRecordingBackingStoreFetchExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    StartRecordingBackingStoreFetchExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for StartRecordingBackingStoreFetchExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    StartRecordingBackingStoreFetchExn::Success(_) => ::fbthrift::ResultType::Return,
+                    StartRecordingBackingStoreFetchExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    StartRecordingBackingStoreFetchExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for StartRecordingBackingStoreFetchExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -10571,6 +12106,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let StartRecordingBackingStoreFetchExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("StartRecordingBackingStoreFetch");
                 match self {
                     StartRecordingBackingStoreFetchExn::Success(inner) => {
@@ -10591,11 +12129,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    StartRecordingBackingStoreFetchExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    StartRecordingBackingStoreFetchExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10668,6 +12202,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for StopRecordingBackingStoreFetchExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    StopRecordingBackingStoreFetchExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    StopRecordingBackingStoreFetchExn::ApplicationException(aexn) => aexn.exn_name(),
+                    StopRecordingBackingStoreFetchExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    StopRecordingBackingStoreFetchExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    StopRecordingBackingStoreFetchExn::ApplicationException(aexn) => aexn.exn_value(),
+                    StopRecordingBackingStoreFetchExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    StopRecordingBackingStoreFetchExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    StopRecordingBackingStoreFetchExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    StopRecordingBackingStoreFetchExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for StopRecordingBackingStoreFetchExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    StopRecordingBackingStoreFetchExn::Success(_) => ::fbthrift::ResultType::Return,
+                    StopRecordingBackingStoreFetchExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    StopRecordingBackingStoreFetchExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for StopRecordingBackingStoreFetchExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -10677,6 +12247,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let StopRecordingBackingStoreFetchExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("StopRecordingBackingStoreFetch");
                 match self {
                     StopRecordingBackingStoreFetchExn::Success(inner) => {
@@ -10697,11 +12270,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    StopRecordingBackingStoreFetchExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    StopRecordingBackingStoreFetchExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10780,6 +12349,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for ClearAndCompactLocalStoreExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    ClearAndCompactLocalStoreExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    ClearAndCompactLocalStoreExn::ApplicationException(aexn) => aexn.exn_name(),
+                    ClearAndCompactLocalStoreExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    ClearAndCompactLocalStoreExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    ClearAndCompactLocalStoreExn::ApplicationException(aexn) => aexn.exn_value(),
+                    ClearAndCompactLocalStoreExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    ClearAndCompactLocalStoreExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    ClearAndCompactLocalStoreExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    ClearAndCompactLocalStoreExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for ClearAndCompactLocalStoreExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    ClearAndCompactLocalStoreExn::Success(_) => ::fbthrift::ResultType::Return,
+                    ClearAndCompactLocalStoreExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    ClearAndCompactLocalStoreExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for ClearAndCompactLocalStoreExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -10789,6 +12394,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let ClearAndCompactLocalStoreExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("ClearAndCompactLocalStore");
                 match self {
                     ClearAndCompactLocalStoreExn::Success(inner) => {
@@ -10809,11 +12417,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    ClearAndCompactLocalStoreExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    ClearAndCompactLocalStoreExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10886,6 +12490,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugClearLocalStoreCachesExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugClearLocalStoreCachesExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugClearLocalStoreCachesExn::ApplicationException(aexn) => aexn.exn_name(),
+                    DebugClearLocalStoreCachesExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugClearLocalStoreCachesExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugClearLocalStoreCachesExn::ApplicationException(aexn) => aexn.exn_value(),
+                    DebugClearLocalStoreCachesExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugClearLocalStoreCachesExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugClearLocalStoreCachesExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    DebugClearLocalStoreCachesExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugClearLocalStoreCachesExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugClearLocalStoreCachesExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugClearLocalStoreCachesExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    DebugClearLocalStoreCachesExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugClearLocalStoreCachesExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -10895,6 +12535,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugClearLocalStoreCachesExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugClearLocalStoreCaches");
                 match self {
                     DebugClearLocalStoreCachesExn::Success(inner) => {
@@ -10915,11 +12558,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugClearLocalStoreCachesExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugClearLocalStoreCachesExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -10992,6 +12631,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DebugCompactLocalStorageExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DebugCompactLocalStorageExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DebugCompactLocalStorageExn::ApplicationException(aexn) => aexn.exn_name(),
+                    DebugCompactLocalStorageExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DebugCompactLocalStorageExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DebugCompactLocalStorageExn::ApplicationException(aexn) => aexn.exn_value(),
+                    DebugCompactLocalStorageExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DebugCompactLocalStorageExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DebugCompactLocalStorageExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    DebugCompactLocalStorageExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DebugCompactLocalStorageExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DebugCompactLocalStorageExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DebugCompactLocalStorageExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    DebugCompactLocalStorageExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DebugCompactLocalStorageExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11001,6 +12676,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DebugCompactLocalStorageExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DebugCompactLocalStorage");
                 match self {
                     DebugCompactLocalStorageExn::Success(inner) => {
@@ -11021,11 +12699,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DebugCompactLocalStorageExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DebugCompactLocalStorageExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -11098,6 +12772,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for UnloadInodeForPathExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    UnloadInodeForPathExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    UnloadInodeForPathExn::ApplicationException(aexn) => aexn.exn_name(),
+                    UnloadInodeForPathExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    UnloadInodeForPathExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    UnloadInodeForPathExn::ApplicationException(aexn) => aexn.exn_value(),
+                    UnloadInodeForPathExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    UnloadInodeForPathExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    UnloadInodeForPathExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    UnloadInodeForPathExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for UnloadInodeForPathExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    UnloadInodeForPathExn::Success(_) => ::fbthrift::ResultType::Return,
+                    UnloadInodeForPathExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    UnloadInodeForPathExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for UnloadInodeForPathExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11107,6 +12817,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let UnloadInodeForPathExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("UnloadInodeForPath");
                 match self {
                     UnloadInodeForPathExn::Success(inner) => {
@@ -11127,11 +12840,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    UnloadInodeForPathExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    UnloadInodeForPathExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -11210,6 +12919,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for FlushStatsNowExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    FlushStatsNowExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    FlushStatsNowExn::ApplicationException(aexn) => aexn.exn_name(),
+                    FlushStatsNowExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    FlushStatsNowExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    FlushStatsNowExn::ApplicationException(aexn) => aexn.exn_value(),
+                    FlushStatsNowExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    FlushStatsNowExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    FlushStatsNowExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    FlushStatsNowExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for FlushStatsNowExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    FlushStatsNowExn::Success(_) => ::fbthrift::ResultType::Return,
+                    FlushStatsNowExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    FlushStatsNowExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for FlushStatsNowExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11219,6 +12964,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let FlushStatsNowExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("FlushStatsNow");
                 match self {
                     FlushStatsNowExn::Success(inner) => {
@@ -11239,11 +12987,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    FlushStatsNowExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    FlushStatsNowExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -11316,6 +13060,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for InvalidateKernelInodeCacheExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    InvalidateKernelInodeCacheExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    InvalidateKernelInodeCacheExn::ApplicationException(aexn) => aexn.exn_name(),
+                    InvalidateKernelInodeCacheExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    InvalidateKernelInodeCacheExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    InvalidateKernelInodeCacheExn::ApplicationException(aexn) => aexn.exn_value(),
+                    InvalidateKernelInodeCacheExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    InvalidateKernelInodeCacheExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    InvalidateKernelInodeCacheExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    InvalidateKernelInodeCacheExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for InvalidateKernelInodeCacheExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    InvalidateKernelInodeCacheExn::Success(_) => ::fbthrift::ResultType::Return,
+                    InvalidateKernelInodeCacheExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    InvalidateKernelInodeCacheExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for InvalidateKernelInodeCacheExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11325,6 +13105,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let InvalidateKernelInodeCacheExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("InvalidateKernelInodeCache");
                 match self {
                     InvalidateKernelInodeCacheExn::Success(inner) => {
@@ -11345,11 +13128,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    InvalidateKernelInodeCacheExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    InvalidateKernelInodeCacheExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -11422,6 +13201,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetStatInfoExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetStatInfoExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetStatInfoExn::ApplicationException(aexn) => aexn.exn_name(),
+                    GetStatInfoExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetStatInfoExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetStatInfoExn::ApplicationException(aexn) => aexn.exn_value(),
+                    GetStatInfoExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetStatInfoExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetStatInfoExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    GetStatInfoExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetStatInfoExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetStatInfoExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetStatInfoExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    GetStatInfoExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetStatInfoExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11431,6 +13246,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetStatInfoExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetStatInfo");
                 match self {
                     GetStatInfoExn::Success(inner) => {
@@ -11451,11 +13269,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetStatInfoExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetStatInfoExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -11527,6 +13341,38 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for EnableTracingExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    EnableTracingExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    EnableTracingExn::ApplicationException(aexn) => aexn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    EnableTracingExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    EnableTracingExn::ApplicationException(aexn) => aexn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    EnableTracingExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    EnableTracingExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for EnableTracingExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    EnableTracingExn::Success(_) => ::fbthrift::ResultType::Return,
+                    EnableTracingExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for EnableTracingExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11536,6 +13382,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let EnableTracingExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("EnableTracing");
                 match self {
                     EnableTracingExn::Success(inner) => {
@@ -11547,11 +13396,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    EnableTracingExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    EnableTracingExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -11612,6 +13457,38 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for DisableTracingExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    DisableTracingExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    DisableTracingExn::ApplicationException(aexn) => aexn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    DisableTracingExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    DisableTracingExn::ApplicationException(aexn) => aexn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    DisableTracingExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    DisableTracingExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for DisableTracingExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    DisableTracingExn::Success(_) => ::fbthrift::ResultType::Return,
+                    DisableTracingExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for DisableTracingExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11621,6 +13498,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let DisableTracingExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("DisableTracing");
                 match self {
                     DisableTracingExn::Success(inner) => {
@@ -11632,11 +13512,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    DisableTracingExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    DisableTracingExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -11697,6 +13573,38 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for GetTracePointsExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    GetTracePointsExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    GetTracePointsExn::ApplicationException(aexn) => aexn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    GetTracePointsExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    GetTracePointsExn::ApplicationException(aexn) => aexn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    GetTracePointsExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    GetTracePointsExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for GetTracePointsExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    GetTracePointsExn::Success(_) => ::fbthrift::ResultType::Return,
+                    GetTracePointsExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for GetTracePointsExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11706,6 +13614,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let GetTracePointsExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("GetTracePoints");
                 match self {
                     GetTracePointsExn::Success(inner) => {
@@ -11717,11 +13628,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    GetTracePointsExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    GetTracePointsExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -11795,6 +13702,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for InjectFaultExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    InjectFaultExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    InjectFaultExn::ApplicationException(aexn) => aexn.exn_name(),
+                    InjectFaultExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    InjectFaultExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    InjectFaultExn::ApplicationException(aexn) => aexn.exn_value(),
+                    InjectFaultExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    InjectFaultExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    InjectFaultExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    InjectFaultExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for InjectFaultExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    InjectFaultExn::Success(_) => ::fbthrift::ResultType::Return,
+                    InjectFaultExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    InjectFaultExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for InjectFaultExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11804,6 +13747,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let InjectFaultExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("InjectFault");
                 match self {
                     InjectFaultExn::Success(inner) => {
@@ -11824,11 +13770,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    InjectFaultExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    InjectFaultExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -11901,6 +13843,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for RemoveFaultExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    RemoveFaultExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    RemoveFaultExn::ApplicationException(aexn) => aexn.exn_name(),
+                    RemoveFaultExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    RemoveFaultExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    RemoveFaultExn::ApplicationException(aexn) => aexn.exn_value(),
+                    RemoveFaultExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    RemoveFaultExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    RemoveFaultExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    RemoveFaultExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for RemoveFaultExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    RemoveFaultExn::Success(_) => ::fbthrift::ResultType::Return,
+                    RemoveFaultExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    RemoveFaultExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for RemoveFaultExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -11910,6 +13888,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let RemoveFaultExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("RemoveFault");
                 match self {
                     RemoveFaultExn::Success(inner) => {
@@ -11930,11 +13911,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    RemoveFaultExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    RemoveFaultExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -12013,6 +13990,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for UnblockFaultExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    UnblockFaultExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    UnblockFaultExn::ApplicationException(aexn) => aexn.exn_name(),
+                    UnblockFaultExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    UnblockFaultExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    UnblockFaultExn::ApplicationException(aexn) => aexn.exn_value(),
+                    UnblockFaultExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    UnblockFaultExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    UnblockFaultExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    UnblockFaultExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for UnblockFaultExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    UnblockFaultExn::Success(_) => ::fbthrift::ResultType::Return,
+                    UnblockFaultExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    UnblockFaultExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for UnblockFaultExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -12022,6 +14035,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let UnblockFaultExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("UnblockFault");
                 match self {
                     UnblockFaultExn::Success(inner) => {
@@ -12042,11 +14058,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    UnblockFaultExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    UnblockFaultExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -12125,6 +14137,42 @@ pub mod services {
             }
         }
 
+        impl ::fbthrift::ExceptionInfo for SetPathObjectIdExn {
+            fn exn_name(&self) -> &'static str {
+                match self {
+                    SetPathObjectIdExn::Success(_) => panic!("ExceptionInfo::exn_name called on Success"),
+                    SetPathObjectIdExn::ApplicationException(aexn) => aexn.exn_name(),
+                    SetPathObjectIdExn::ex(exn) => exn.exn_name(),
+                }
+            }
+
+            fn exn_value(&self) -> String {
+                match self {
+                    SetPathObjectIdExn::Success(_) => panic!("ExceptionInfo::exn_value called on Success"),
+                    SetPathObjectIdExn::ApplicationException(aexn) => aexn.exn_value(),
+                    SetPathObjectIdExn::ex(exn) => exn.exn_value(),
+                }
+            }
+
+            fn exn_is_declared(&self) -> bool {
+                match self {
+                    SetPathObjectIdExn::Success(_) => panic!("ExceptionInfo::exn_is_declared called on Success"),
+                    SetPathObjectIdExn::ApplicationException(aexn) => aexn.exn_is_declared(),
+                    SetPathObjectIdExn::ex(exn) => exn.exn_is_declared(),
+                }
+            }
+        }
+
+        impl ::fbthrift::ResultInfo for SetPathObjectIdExn {
+            fn result_type(&self) -> ::fbthrift::ResultType {
+                match self {
+                    SetPathObjectIdExn::Success(_) => ::fbthrift::ResultType::Return,
+                    SetPathObjectIdExn::ApplicationException(_aexn) => ::fbthrift::ResultType::Exception,
+                    SetPathObjectIdExn::ex(_exn) => fbthrift::ResultType::Error,
+                }
+            }
+        }
+
         impl ::fbthrift::GetTType for SetPathObjectIdExn {
             const TTYPE: ::fbthrift::TType = ::fbthrift::TType::Struct;
         }
@@ -12134,6 +14182,9 @@ pub mod services {
             P: ::fbthrift::ProtocolWriter,
         {
             fn write(&self, p: &mut P) {
+                if let SetPathObjectIdExn::ApplicationException(aexn) = self {
+                    return aexn.write(p);
+                }
                 p.write_struct_begin("SetPathObjectId");
                 match self {
                     SetPathObjectIdExn::Success(inner) => {
@@ -12154,11 +14205,7 @@ pub mod services {
                         inner.write(p);
                         p.write_field_end();
                     }
-                    SetPathObjectIdExn::ApplicationException(_) => panic!(
-                        "Bad union Alt field {} id {}",
-                        "ApplicationException",
-                        -2147483648i32,
-                    ),
+                    SetPathObjectIdExn::ApplicationException(_aexn) => unreachable!(),
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -12223,15 +14270,15 @@ pub mod services {
 /// Client implementation for each service in `eden`.
 pub mod client {
 
-    pub struct EdenServiceImpl<P, T> {
-        parent: fb303_core::client::BaseServiceImpl<P, T>,
+    pub struct EdenServiceImpl<P, T, S> {
+        parent: fb303_core::client::BaseServiceImpl<P, T, S>,
     }
 
-    impl<P, T> EdenServiceImpl<P, T> {
+    impl<P, T, S> EdenServiceImpl<P, T, S> {
         pub fn new(
             transport: T,
         ) -> Self {
-            let parent = fb303_core::client::BaseServiceImpl::<P, T>::new(transport);
+            let parent = fb303_core::client::BaseServiceImpl::<P, T, S>::new(transport);
             Self { parent }
         }
 
@@ -12240,13 +14287,14 @@ pub mod client {
         }
     }
 
-    impl<P, T> ::std::convert::AsRef<dyn crate::dependencies::fb303_core::client::BaseService + 'static> for EdenServiceImpl<P, T>
+    impl<P, T, S> ::std::convert::AsRef<dyn crate::dependencies::fb303_core::client::BaseService + 'static> for EdenServiceImpl<P, T, S>
     where
         P: ::fbthrift::Protocol,
         T: ::fbthrift::Transport,
         P::Frame: ::fbthrift::Framing<DecBuf = ::fbthrift::FramingDecoded<T>>,
         ::fbthrift::ProtocolEncoded<P>: ::fbthrift::BufMutExt<Final = ::fbthrift::FramingEncodedFinal<T>>,
         P::Deserializer: ::std::marker::Send,
+        S: ::fbthrift::help::Spawner,
     {
         fn as_ref(&self) -> &(dyn crate::dependencies::fb303_core::client::BaseService + 'static)
         {
@@ -12564,129 +14612,1195 @@ pub mod client {
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::SetPathObjectIdResult, crate::errors::eden_service::SetPathObjectIdError>> + ::std::marker::Send + 'static>>;
     }
 
-    impl<P, T> EdenService for EdenServiceImpl<P, T>
+    struct Args_EdenService_listMounts<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_listMounts<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.listMounts"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_mount<'a> {
+        info: &'a crate::types::MountArgument,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_mount<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.mount"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("info", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.info, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_unmount<'a> {
+        mountPoint: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_unmount<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.unmount"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_checkOutRevision<'a> {
+        mountPoint: &'a crate::types::PathString,
+        snapshotHash: &'a crate::types::ThriftRootId,
+        checkoutMode: &'a crate::types::CheckoutMode,
+        params: &'a crate::types::CheckOutRevisionParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_checkOutRevision<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.checkOutRevision"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("snapshotHash", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.snapshotHash, p);
+            p.write_field_end();
+            p.write_field_begin("checkoutMode", ::fbthrift::TType::I32, 3i16);
+            ::fbthrift::Serialize::write(&self.checkoutMode, p);
+            p.write_field_end();
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 4i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_resetParentCommits<'a> {
+        mountPoint: &'a crate::types::PathString,
+        parents: &'a crate::types::WorkingDirectoryParents,
+        params: &'a crate::types::ResetParentCommitsParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_resetParentCommits<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.resetParentCommits"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("parents", ::fbthrift::TType::Struct, 2i16);
+            ::fbthrift::Serialize::write(&self.parents, p);
+            p.write_field_end();
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 3i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getSHA1<'a> {
+        mountPoint: &'a crate::types::PathString,
+        paths: &'a [crate::types::PathString],
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getSHA1<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getSHA1"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("paths", ::fbthrift::TType::List, 2i16);
+            ::fbthrift::Serialize::write(&self.paths, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getBindMounts<'a> {
+        mountPoint: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getBindMounts<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getBindMounts"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_addBindMount<'a> {
+        mountPoint: &'a crate::types::PathString,
+        repoPath: &'a crate::types::PathString,
+        targetPath: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_addBindMount<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.addBindMount"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("repoPath", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.repoPath, p);
+            p.write_field_end();
+            p.write_field_begin("targetPath", ::fbthrift::TType::String, 3i16);
+            ::fbthrift::Serialize::write(&self.targetPath, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_removeBindMount<'a> {
+        mountPoint: &'a crate::types::PathString,
+        repoPath: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_removeBindMount<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.removeBindMount"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("repoPath", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.repoPath, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getCurrentJournalPosition<'a> {
+        mountPoint: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getCurrentJournalPosition<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getCurrentJournalPosition"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getFilesChangedSince<'a> {
+        mountPoint: &'a crate::types::PathString,
+        fromPosition: &'a crate::types::JournalPosition,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getFilesChangedSince<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getFilesChangedSince"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("fromPosition", ::fbthrift::TType::Struct, 2i16);
+            ::fbthrift::Serialize::write(&self.fromPosition, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_setJournalMemoryLimit<'a> {
+        mountPoint: &'a crate::types::PathString,
+        limit: ::std::primitive::i64,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_setJournalMemoryLimit<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.setJournalMemoryLimit"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("limit", ::fbthrift::TType::I64, 2i16);
+            ::fbthrift::Serialize::write(&self.limit, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getJournalMemoryLimit<'a> {
+        mountPoint: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getJournalMemoryLimit<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getJournalMemoryLimit"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_flushJournal<'a> {
+        mountPoint: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_flushJournal<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.flushJournal"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugGetRawJournal<'a> {
+        params: &'a crate::types::DebugGetRawJournalParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugGetRawJournal<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugGetRawJournal"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getEntryInformation<'a> {
+        mountPoint: &'a crate::types::PathString,
+        paths: &'a [crate::types::PathString],
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getEntryInformation<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getEntryInformation"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("paths", ::fbthrift::TType::List, 2i16);
+            ::fbthrift::Serialize::write(&self.paths, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getFileInformation<'a> {
+        mountPoint: &'a crate::types::PathString,
+        paths: &'a [crate::types::PathString],
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getFileInformation<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getFileInformation"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("paths", ::fbthrift::TType::List, 2i16);
+            ::fbthrift::Serialize::write(&self.paths, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_glob<'a> {
+        mountPoint: &'a crate::types::PathString,
+        globs: &'a [::std::string::String],
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_glob<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.glob"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("globs", ::fbthrift::TType::List, 2i16);
+            ::fbthrift::Serialize::write(&self.globs, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_globFiles<'a> {
+        params: &'a crate::types::GlobParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_globFiles<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.globFiles"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_predictiveGlobFiles<'a> {
+        params: &'a crate::types::GlobParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_predictiveGlobFiles<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.predictiveGlobFiles"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_chown<'a> {
+        mountPoint: &'a crate::types::PathString,
+        uid: ::std::primitive::i32,
+        gid: ::std::primitive::i32,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_chown<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.chown"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("uid", ::fbthrift::TType::I32, 2i16);
+            ::fbthrift::Serialize::write(&self.uid, p);
+            p.write_field_end();
+            p.write_field_begin("gid", ::fbthrift::TType::I32, 3i16);
+            ::fbthrift::Serialize::write(&self.gid, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getScmStatusV2<'a> {
+        params: &'a crate::types::GetScmStatusParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getScmStatusV2<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getScmStatusV2"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getScmStatus<'a> {
+        mountPoint: &'a crate::types::PathString,
+        listIgnored: ::std::primitive::bool,
+        commit: &'a crate::types::ThriftRootId,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getScmStatus<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getScmStatus"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("listIgnored", ::fbthrift::TType::Bool, 2i16);
+            ::fbthrift::Serialize::write(&self.listIgnored, p);
+            p.write_field_end();
+            p.write_field_begin("commit", ::fbthrift::TType::String, 3i16);
+            ::fbthrift::Serialize::write(&self.commit, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getScmStatusBetweenRevisions<'a> {
+        mountPoint: &'a crate::types::PathString,
+        oldHash: &'a crate::types::ThriftRootId,
+        newHash: &'a crate::types::ThriftRootId,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getScmStatusBetweenRevisions<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getScmStatusBetweenRevisions"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("oldHash", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.oldHash, p);
+            p.write_field_end();
+            p.write_field_begin("newHash", ::fbthrift::TType::String, 3i16);
+            ::fbthrift::Serialize::write(&self.newHash, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getDaemonInfo<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getDaemonInfo<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getDaemonInfo"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_checkPrivHelper<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_checkPrivHelper<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.checkPrivHelper"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getPid<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getPid<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getPid"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_initiateShutdown<'a> {
+        reason: &'a ::std::primitive::str,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_initiateShutdown<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.initiateShutdown"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("reason", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.reason, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getConfig<'a> {
+        params: &'a crate::types::GetConfigParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getConfig<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getConfig"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_reloadConfig<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_reloadConfig<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.reloadConfig"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugGetScmTree<'a> {
+        mountPoint: &'a crate::types::PathString,
+        id: &'a crate::types::BinaryHash,
+        localStoreOnly: ::std::primitive::bool,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugGetScmTree<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugGetScmTree"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("id", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.id, p);
+            p.write_field_end();
+            p.write_field_begin("localStoreOnly", ::fbthrift::TType::Bool, 3i16);
+            ::fbthrift::Serialize::write(&self.localStoreOnly, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugGetScmBlob<'a> {
+        mountPoint: &'a crate::types::PathString,
+        id: &'a crate::types::BinaryHash,
+        localStoreOnly: ::std::primitive::bool,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugGetScmBlob<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugGetScmBlob"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("id", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.id, p);
+            p.write_field_end();
+            p.write_field_begin("localStoreOnly", ::fbthrift::TType::Bool, 3i16);
+            ::fbthrift::Serialize::write(&self.localStoreOnly, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugGetScmBlobMetadata<'a> {
+        mountPoint: &'a crate::types::PathString,
+        id: &'a crate::types::BinaryHash,
+        localStoreOnly: ::std::primitive::bool,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugGetScmBlobMetadata<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugGetScmBlobMetadata"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("id", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.id, p);
+            p.write_field_end();
+            p.write_field_begin("localStoreOnly", ::fbthrift::TType::Bool, 3i16);
+            ::fbthrift::Serialize::write(&self.localStoreOnly, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugInodeStatus<'a> {
+        mountPoint: &'a crate::types::PathString,
+        path: &'a crate::types::PathString,
+        flags: ::std::primitive::i64,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugInodeStatus<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugInodeStatus"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("path", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.path, p);
+            p.write_field_end();
+            p.write_field_begin("flags", ::fbthrift::TType::I64, 3i16);
+            ::fbthrift::Serialize::write(&self.flags, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugOutstandingFuseCalls<'a> {
+        mountPoint: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugOutstandingFuseCalls<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugOutstandingFuseCalls"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugOutstandingNfsCalls<'a> {
+        mountPoint: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugOutstandingNfsCalls<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugOutstandingNfsCalls"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugStartRecordingActivity<'a> {
+        mountPoint: &'a crate::types::PathString,
+        outputDir: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugStartRecordingActivity<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugStartRecordingActivity"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("outputDir", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.outputDir, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugStopRecordingActivity<'a> {
+        mountPoint: &'a crate::types::PathString,
+        unique: ::std::primitive::i64,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugStopRecordingActivity<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugStopRecordingActivity"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("unique", ::fbthrift::TType::I64, 2i16);
+            ::fbthrift::Serialize::write(&self.unique, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugListActivityRecordings<'a> {
+        mountPoint: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugListActivityRecordings<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugListActivityRecordings"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugGetInodePath<'a> {
+        mountPoint: &'a crate::types::PathString,
+        inodeNumber: ::std::primitive::i64,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugGetInodePath<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugGetInodePath"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("inodeNumber", ::fbthrift::TType::I64, 2i16);
+            ::fbthrift::Serialize::write(&self.inodeNumber, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_clearFetchCounts<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_clearFetchCounts<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.clearFetchCounts"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_clearFetchCountsByMount<'a> {
+        mountPath: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_clearFetchCountsByMount<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.clearFetchCountsByMount"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPath", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPath, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getAccessCounts<'a> {
+        duration: ::std::primitive::i64,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getAccessCounts<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getAccessCounts"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("duration", ::fbthrift::TType::I64, 1i16);
+            ::fbthrift::Serialize::write(&self.duration, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_startRecordingBackingStoreFetch<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_startRecordingBackingStoreFetch<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.startRecordingBackingStoreFetch"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_stopRecordingBackingStoreFetch<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_stopRecordingBackingStoreFetch<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.stopRecordingBackingStoreFetch"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_clearAndCompactLocalStore<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_clearAndCompactLocalStore<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.clearAndCompactLocalStore"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugClearLocalStoreCaches<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugClearLocalStoreCaches<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugClearLocalStoreCaches"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_debugCompactLocalStorage<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_debugCompactLocalStorage<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.debugCompactLocalStorage"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_unloadInodeForPath<'a> {
+        mountPoint: &'a crate::types::PathString,
+        path: &'a crate::types::PathString,
+        age: &'a crate::types::TimeSpec,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_unloadInodeForPath<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.unloadInodeForPath"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("path", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.path, p);
+            p.write_field_end();
+            p.write_field_begin("age", ::fbthrift::TType::Struct, 3i16);
+            ::fbthrift::Serialize::write(&self.age, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_flushStatsNow<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_flushStatsNow<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.flushStatsNow"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_invalidateKernelInodeCache<'a> {
+        mountPoint: &'a crate::types::PathString,
+        path: &'a crate::types::PathString,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_invalidateKernelInodeCache<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.invalidateKernelInodeCache"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("mountPoint", ::fbthrift::TType::String, 1i16);
+            ::fbthrift::Serialize::write(&self.mountPoint, p);
+            p.write_field_end();
+            p.write_field_begin("path", ::fbthrift::TType::String, 2i16);
+            ::fbthrift::Serialize::write(&self.path, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getStatInfo<'a> {
+        params: &'a crate::types::GetStatInfoParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getStatInfo<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getStatInfo"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_enableTracing<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_enableTracing<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.enableTracing"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_disableTracing<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_disableTracing<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.disableTracing"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_getTracePoints<'a> {
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_getTracePoints<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.getTracePoints"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_injectFault<'a> {
+        fault: &'a crate::types::FaultDefinition,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_injectFault<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.injectFault"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("fault", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.fault, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_removeFault<'a> {
+        fault: &'a crate::types::RemoveFaultArg,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_removeFault<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.removeFault"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("fault", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.fault, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_unblockFault<'a> {
+        info: &'a crate::types::UnblockFaultArg,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_unblockFault<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.unblockFault"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("info", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.info, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    struct Args_EdenService_setPathObjectId<'a> {
+        params: &'a crate::types::SetPathObjectIdParams,
+        _phantom: ::std::marker::PhantomData<&'a ()>,
+    }
+
+    impl<'a, P: ::fbthrift::ProtocolWriter> ::fbthrift::Serialize<P> for self::Args_EdenService_setPathObjectId<'a> {
+        #[inline]
+        #[::tracing::instrument(skip_all, level = "trace", name = "serialize_args", fields(method = "EdenService.setPathObjectId"))]
+        fn write(&self, p: &mut P) {
+            p.write_struct_begin("args");
+            p.write_field_begin("params", ::fbthrift::TType::Struct, 1i16);
+            ::fbthrift::Serialize::write(&self.params, p);
+            p.write_field_end();
+            p.write_field_stop();
+            p.write_struct_end();
+        }
+    }
+
+    impl<P, T, S> EdenService for EdenServiceImpl<P, T, S>
     where
         P: ::fbthrift::Protocol,
         T: ::fbthrift::Transport,
         P::Frame: ::fbthrift::Framing<DecBuf = ::fbthrift::FramingDecoded<T>>,
         ::fbthrift::ProtocolEncoded<P>: ::fbthrift::BufMutExt<Final = ::fbthrift::FramingEncodedFinal<T>>,
         P::Deserializer: ::std::marker::Send,
+        S: ::fbthrift::help::Spawner,
     {
         #[::tracing::instrument(name = "EdenService.listMounts", skip_all)]
         fn listMounts(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.listMounts";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "listMounts",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.listMounts"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::ListMountsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::ListMountsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::ListMountsExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ListMountsError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::ListMountsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ListMountsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::ListMountsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::ListMountsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.listMounts"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_listMounts {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("listMounts", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.listMounts"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::ListMountsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::ListMountsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.mount", skip_all)]
         fn mount(
@@ -12694,119 +15808,44 @@ pub mod client {
             arg_info: &crate::types::MountArgument,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::MountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.mount";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "mount",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_info", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_info, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.mount"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::MountExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::MountExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::MountExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::MountError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::MountExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::MountError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::MountError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::MountError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.mount"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_mount {
+                info: arg_info,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("mount", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.mount"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::MountExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::MountError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.unmount", skip_all)]
         fn unmount(
@@ -12814,119 +15853,44 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::UnmountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.unmount";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "unmount",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.unmount"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::UnmountExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::UnmountExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::UnmountExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::UnmountError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::UnmountExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::UnmountError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::UnmountError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::UnmountError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.unmount"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_unmount {
+                mountPoint: arg_mountPoint,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("unmount", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.unmount"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::UnmountExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::UnmountError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.checkOutRevision", skip_all)]
         fn checkOutRevision(
@@ -12937,128 +15901,47 @@ pub mod client {
             arg_params: &crate::types::CheckOutRevisionParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::CheckoutConflict>, crate::errors::eden_service::CheckOutRevisionError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.checkOutRevision";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "checkOutRevision",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_snapshotHash", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_snapshotHash, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_checkoutMode", ::fbthrift::TType::I32, 3i16);
-                        ::fbthrift::Serialize::write(&arg_checkoutMode, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_params", ::fbthrift::TType::Struct, 4i16);
-                        ::fbthrift::Serialize::write(&arg_params, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.checkOutRevision"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::CheckOutRevisionExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::CheckOutRevisionExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::CheckOutRevisionExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::CheckOutRevisionError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::CheckOutRevisionExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::CheckOutRevisionError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::CheckOutRevisionError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::CheckOutRevisionError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.checkOutRevision"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_checkOutRevision {
+                mountPoint: arg_mountPoint,
+                snapshotHash: arg_snapshotHash,
+                checkoutMode: arg_checkoutMode,
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("checkOutRevision", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.checkOutRevision"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::CheckOutRevisionExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::CheckOutRevisionError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.resetParentCommits", skip_all)]
         fn resetParentCommits(
@@ -13068,125 +15951,46 @@ pub mod client {
             arg_params: &crate::types::ResetParentCommitsParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ResetParentCommitsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.resetParentCommits";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "resetParentCommits",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_parents", ::fbthrift::TType::Struct, 2i16);
-                        ::fbthrift::Serialize::write(&arg_parents, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_params", ::fbthrift::TType::Struct, 3i16);
-                        ::fbthrift::Serialize::write(&arg_params, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.resetParentCommits"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::ResetParentCommitsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::ResetParentCommitsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::ResetParentCommitsExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ResetParentCommitsError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::ResetParentCommitsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ResetParentCommitsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::ResetParentCommitsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::ResetParentCommitsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.resetParentCommits"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_resetParentCommits {
+                mountPoint: arg_mountPoint,
+                parents: arg_parents,
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("resetParentCommits", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.resetParentCommits"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::ResetParentCommitsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::ResetParentCommitsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getSHA1", skip_all)]
         fn getSHA1(
@@ -13195,122 +15999,45 @@ pub mod client {
             arg_paths: &[crate::types::PathString],
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getSHA1";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getSHA1",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_paths", ::fbthrift::TType::List, 2i16);
-                        ::fbthrift::Serialize::write(&arg_paths, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getSHA1"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetSHA1Exn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetSHA1Exn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetSHA1Exn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetSHA1Error::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetSHA1Exn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetSHA1Error::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetSHA1Error::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetSHA1Error::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getSHA1"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getSHA1 {
+                mountPoint: arg_mountPoint,
+                paths: arg_paths,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getSHA1", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getSHA1"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetSHA1Exn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetSHA1Error::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getBindMounts", skip_all)]
         fn getBindMounts(
@@ -13318,119 +16045,44 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::PathString>, crate::errors::eden_service::GetBindMountsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getBindMounts";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getBindMounts",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getBindMounts"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetBindMountsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetBindMountsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetBindMountsExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetBindMountsError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetBindMountsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetBindMountsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetBindMountsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetBindMountsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getBindMounts"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getBindMounts {
+                mountPoint: arg_mountPoint,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getBindMounts", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getBindMounts"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetBindMountsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetBindMountsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.addBindMount", skip_all)]
         fn addBindMount(
@@ -13440,125 +16092,46 @@ pub mod client {
             arg_targetPath: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::AddBindMountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.addBindMount";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "addBindMount",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_repoPath", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_repoPath, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_targetPath", ::fbthrift::TType::String, 3i16);
-                        ::fbthrift::Serialize::write(&arg_targetPath, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.addBindMount"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::AddBindMountExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::AddBindMountExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::AddBindMountExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::AddBindMountError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::AddBindMountExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::AddBindMountError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::AddBindMountError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::AddBindMountError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.addBindMount"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_addBindMount {
+                mountPoint: arg_mountPoint,
+                repoPath: arg_repoPath,
+                targetPath: arg_targetPath,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("addBindMount", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.addBindMount"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::AddBindMountExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::AddBindMountError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.removeBindMount", skip_all)]
         fn removeBindMount(
@@ -13567,122 +16140,45 @@ pub mod client {
             arg_repoPath: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::RemoveBindMountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.removeBindMount";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "removeBindMount",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_repoPath", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_repoPath, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.removeBindMount"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::RemoveBindMountExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::RemoveBindMountExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::RemoveBindMountExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::RemoveBindMountError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::RemoveBindMountExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::RemoveBindMountError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::RemoveBindMountError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::RemoveBindMountError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.removeBindMount"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_removeBindMount {
+                mountPoint: arg_mountPoint,
+                repoPath: arg_repoPath,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("removeBindMount", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.removeBindMount"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::RemoveBindMountExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::RemoveBindMountError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getCurrentJournalPosition", skip_all)]
         fn getCurrentJournalPosition(
@@ -13690,119 +16186,44 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::JournalPosition, crate::errors::eden_service::GetCurrentJournalPositionError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getCurrentJournalPosition";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getCurrentJournalPosition",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getCurrentJournalPosition"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetCurrentJournalPositionExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetCurrentJournalPositionExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetCurrentJournalPositionExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetCurrentJournalPositionError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetCurrentJournalPositionExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetCurrentJournalPositionError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetCurrentJournalPositionError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetCurrentJournalPositionError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getCurrentJournalPosition"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getCurrentJournalPosition {
+                mountPoint: arg_mountPoint,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getCurrentJournalPosition", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getCurrentJournalPosition"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetCurrentJournalPositionExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetCurrentJournalPositionError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getFilesChangedSince", skip_all)]
         fn getFilesChangedSince(
@@ -13811,122 +16232,45 @@ pub mod client {
             arg_fromPosition: &crate::types::JournalPosition,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::FileDelta, crate::errors::eden_service::GetFilesChangedSinceError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getFilesChangedSince";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getFilesChangedSince",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_fromPosition", ::fbthrift::TType::Struct, 2i16);
-                        ::fbthrift::Serialize::write(&arg_fromPosition, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getFilesChangedSince"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetFilesChangedSinceExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetFilesChangedSinceExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetFilesChangedSinceExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetFilesChangedSinceError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetFilesChangedSinceExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetFilesChangedSinceError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetFilesChangedSinceError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetFilesChangedSinceError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getFilesChangedSince"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getFilesChangedSince {
+                mountPoint: arg_mountPoint,
+                fromPosition: arg_fromPosition,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getFilesChangedSince", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getFilesChangedSince"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetFilesChangedSinceExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetFilesChangedSinceError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.setJournalMemoryLimit", skip_all)]
         fn setJournalMemoryLimit(
@@ -13935,122 +16279,45 @@ pub mod client {
             arg_limit: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::SetJournalMemoryLimitError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.setJournalMemoryLimit";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "setJournalMemoryLimit",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_limit", ::fbthrift::TType::I64, 2i16);
-                        ::fbthrift::Serialize::write(&arg_limit, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.setJournalMemoryLimit"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::SetJournalMemoryLimitExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::SetJournalMemoryLimitExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::SetJournalMemoryLimitExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::SetJournalMemoryLimitError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::SetJournalMemoryLimitExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::SetJournalMemoryLimitError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::SetJournalMemoryLimitError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::SetJournalMemoryLimitError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.setJournalMemoryLimit"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_setJournalMemoryLimit {
+                mountPoint: arg_mountPoint,
+                limit: arg_limit,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("setJournalMemoryLimit", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.setJournalMemoryLimit"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::SetJournalMemoryLimitExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::SetJournalMemoryLimitError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getJournalMemoryLimit", skip_all)]
         fn getJournalMemoryLimit(
@@ -14058,119 +16325,44 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::GetJournalMemoryLimitError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getJournalMemoryLimit";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getJournalMemoryLimit",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getJournalMemoryLimit"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetJournalMemoryLimitExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetJournalMemoryLimitExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetJournalMemoryLimitExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetJournalMemoryLimitError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetJournalMemoryLimitExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetJournalMemoryLimitError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetJournalMemoryLimitError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetJournalMemoryLimitError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getJournalMemoryLimit"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getJournalMemoryLimit {
+                mountPoint: arg_mountPoint,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getJournalMemoryLimit", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getJournalMemoryLimit"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetJournalMemoryLimitExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetJournalMemoryLimitError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.flushJournal", skip_all)]
         fn flushJournal(
@@ -14178,119 +16370,44 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::FlushJournalError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.flushJournal";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "flushJournal",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.flushJournal"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::FlushJournalExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::FlushJournalExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::FlushJournalExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::FlushJournalError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::FlushJournalExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::FlushJournalError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::FlushJournalError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::FlushJournalError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.flushJournal"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_flushJournal {
+                mountPoint: arg_mountPoint,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("flushJournal", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.flushJournal"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::FlushJournalExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::FlushJournalError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugGetRawJournal", skip_all)]
         fn debugGetRawJournal(
@@ -14298,119 +16415,44 @@ pub mod client {
             arg_params: &crate::types::DebugGetRawJournalParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::DebugGetRawJournalResponse, crate::errors::eden_service::DebugGetRawJournalError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugGetRawJournal";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugGetRawJournal",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_params", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_params, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugGetRawJournal"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugGetRawJournalExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugGetRawJournalExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugGetRawJournalExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetRawJournalError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::DebugGetRawJournalExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetRawJournalError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugGetRawJournalError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugGetRawJournalError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugGetRawJournal"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugGetRawJournal {
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugGetRawJournal", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugGetRawJournal"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugGetRawJournalExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetRawJournalError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getEntryInformation", skip_all)]
         fn getEntryInformation(
@@ -14419,122 +16461,45 @@ pub mod client {
             arg_paths: &[crate::types::PathString],
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, crate::errors::eden_service::GetEntryInformationError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getEntryInformation";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getEntryInformation",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_paths", ::fbthrift::TType::List, 2i16);
-                        ::fbthrift::Serialize::write(&arg_paths, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getEntryInformation"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetEntryInformationExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetEntryInformationExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetEntryInformationExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetEntryInformationError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetEntryInformationExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetEntryInformationError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetEntryInformationError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetEntryInformationError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getEntryInformation"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getEntryInformation {
+                mountPoint: arg_mountPoint,
+                paths: arg_paths,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getEntryInformation", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getEntryInformation"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetEntryInformationExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetEntryInformationError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getFileInformation", skip_all)]
         fn getFileInformation(
@@ -14543,122 +16508,45 @@ pub mod client {
             arg_paths: &[crate::types::PathString],
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getFileInformation";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getFileInformation",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_paths", ::fbthrift::TType::List, 2i16);
-                        ::fbthrift::Serialize::write(&arg_paths, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getFileInformation"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetFileInformationExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetFileInformationExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetFileInformationExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetFileInformationError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetFileInformationExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetFileInformationError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetFileInformationError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetFileInformationError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getFileInformation"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getFileInformation {
+                mountPoint: arg_mountPoint,
+                paths: arg_paths,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getFileInformation", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getFileInformation"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetFileInformationExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetFileInformationError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.glob", skip_all)]
         fn glob(
@@ -14667,122 +16555,45 @@ pub mod client {
             arg_globs: &[::std::string::String],
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::PathString>, crate::errors::eden_service::GlobError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.glob";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "glob",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_globs", ::fbthrift::TType::List, 2i16);
-                        ::fbthrift::Serialize::write(&arg_globs, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.glob"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GlobExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GlobExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GlobExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GlobError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GlobExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GlobError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GlobError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GlobError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.glob"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_glob {
+                mountPoint: arg_mountPoint,
+                globs: arg_globs,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("glob", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.glob"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GlobExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GlobError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.globFiles", skip_all)]
         fn globFiles(
@@ -14790,119 +16601,44 @@ pub mod client {
             arg_params: &crate::types::GlobParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::Glob, crate::errors::eden_service::GlobFilesError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.globFiles";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "globFiles",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_params", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_params, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.globFiles"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GlobFilesExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GlobFilesExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GlobFilesExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GlobFilesError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GlobFilesExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GlobFilesError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GlobFilesError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GlobFilesError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.globFiles"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_globFiles {
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("globFiles", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.globFiles"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GlobFilesExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GlobFilesError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.predictiveGlobFiles", skip_all)]
         fn predictiveGlobFiles(
@@ -14910,119 +16646,44 @@ pub mod client {
             arg_params: &crate::types::GlobParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::Glob, crate::errors::eden_service::PredictiveGlobFilesError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.predictiveGlobFiles";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "predictiveGlobFiles",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_params", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_params, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.predictiveGlobFiles"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::PredictiveGlobFilesExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::PredictiveGlobFilesExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::PredictiveGlobFilesExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::PredictiveGlobFilesError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::PredictiveGlobFilesExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::PredictiveGlobFilesError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::PredictiveGlobFilesError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::PredictiveGlobFilesError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.predictiveGlobFiles"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_predictiveGlobFiles {
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("predictiveGlobFiles", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.predictiveGlobFiles"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::PredictiveGlobFilesExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::PredictiveGlobFilesError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.chown", skip_all)]
         fn chown(
@@ -15032,121 +16693,46 @@ pub mod client {
             arg_gid: ::std::primitive::i32,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ChownError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.chown";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "chown",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_uid", ::fbthrift::TType::I32, 2i16);
-                        ::fbthrift::Serialize::write(&arg_uid, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_gid", ::fbthrift::TType::I32, 3i16);
-                        ::fbthrift::Serialize::write(&arg_gid, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.chown"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::ChownExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::ChownExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::ChownExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ChownError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::ChownError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::ChownError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.chown"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_chown {
+                mountPoint: arg_mountPoint,
+                uid: arg_uid,
+                gid: arg_gid,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("chown", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.chown"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::ChownExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::ChownError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getScmStatusV2", skip_all)]
         fn getScmStatusV2(
@@ -15154,119 +16740,44 @@ pub mod client {
             arg_params: &crate::types::GetScmStatusParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetScmStatusResult, crate::errors::eden_service::GetScmStatusV2Error>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getScmStatusV2";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getScmStatusV2",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_params", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_params, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getScmStatusV2"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetScmStatusV2Exn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetScmStatusV2Exn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetScmStatusV2Exn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusV2Error::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetScmStatusV2Exn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusV2Error::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusV2Error::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusV2Error::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getScmStatusV2"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getScmStatusV2 {
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getScmStatusV2", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getScmStatusV2"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetScmStatusV2Exn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusV2Error::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getScmStatus", skip_all)]
         fn getScmStatus(
@@ -15276,125 +16787,46 @@ pub mod client {
             arg_commit: &crate::types::ThriftRootId,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getScmStatus";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getScmStatus",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_listIgnored", ::fbthrift::TType::Bool, 2i16);
-                        ::fbthrift::Serialize::write(&arg_listIgnored, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_commit", ::fbthrift::TType::String, 3i16);
-                        ::fbthrift::Serialize::write(&arg_commit, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getScmStatus"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetScmStatusExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetScmStatusExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetScmStatusExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetScmStatusExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getScmStatus"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getScmStatus {
+                mountPoint: arg_mountPoint,
+                listIgnored: arg_listIgnored,
+                commit: arg_commit,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getScmStatus", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getScmStatus"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetScmStatusExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getScmStatusBetweenRevisions", skip_all)]
         fn getScmStatusBetweenRevisions(
@@ -15404,473 +16836,175 @@ pub mod client {
             arg_newHash: &crate::types::ThriftRootId,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusBetweenRevisionsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getScmStatusBetweenRevisions";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getScmStatusBetweenRevisions",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_oldHash", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_oldHash, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_newHash", ::fbthrift::TType::String, 3i16);
-                        ::fbthrift::Serialize::write(&arg_newHash, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getScmStatusBetweenRevisions"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetScmStatusBetweenRevisionsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getScmStatusBetweenRevisions"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getScmStatusBetweenRevisions {
+                mountPoint: arg_mountPoint,
+                oldHash: arg_oldHash,
+                newHash: arg_newHash,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getScmStatusBetweenRevisions", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getScmStatusBetweenRevisions"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetScmStatusBetweenRevisionsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getDaemonInfo", skip_all)]
         fn getDaemonInfo(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getDaemonInfo";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getDaemonInfo",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getDaemonInfo"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetDaemonInfoExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetDaemonInfoExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetDaemonInfoExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetDaemonInfoError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetDaemonInfoExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetDaemonInfoError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetDaemonInfoError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetDaemonInfoError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getDaemonInfo"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getDaemonInfo {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getDaemonInfo", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getDaemonInfo"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetDaemonInfoExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetDaemonInfoError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.checkPrivHelper", skip_all)]
         fn checkPrivHelper(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::PrivHelperInfo, crate::errors::eden_service::CheckPrivHelperError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.checkPrivHelper";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "checkPrivHelper",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.checkPrivHelper"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::CheckPrivHelperExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::CheckPrivHelperExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::CheckPrivHelperExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::CheckPrivHelperError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::CheckPrivHelperExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::CheckPrivHelperError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::CheckPrivHelperError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::CheckPrivHelperError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.checkPrivHelper"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_checkPrivHelper {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("checkPrivHelper", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.checkPrivHelper"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::CheckPrivHelperExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::CheckPrivHelperError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getPid", skip_all)]
         fn getPid(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::GetPidError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getPid";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getPid",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getPid"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetPidExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetPidExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetPidExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetPidError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetPidExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetPidError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetPidError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetPidError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getPid"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getPid {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getPid", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getPid"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetPidExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetPidError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.initiateShutdown", skip_all)]
         fn initiateShutdown(
@@ -15878,119 +17012,44 @@ pub mod client {
             arg_reason: &::std::primitive::str,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::InitiateShutdownError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.initiateShutdown";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "initiateShutdown",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_reason", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_reason, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.initiateShutdown"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::InitiateShutdownExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::InitiateShutdownExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::InitiateShutdownExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::InitiateShutdownError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::InitiateShutdownExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::InitiateShutdownError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::InitiateShutdownError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::InitiateShutdownError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.initiateShutdown"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_initiateShutdown {
+                reason: arg_reason,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("initiateShutdown", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.initiateShutdown"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::InitiateShutdownExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::InitiateShutdownError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getConfig", skip_all)]
         fn getConfig(
@@ -15998,235 +17057,87 @@ pub mod client {
             arg_params: &crate::types::GetConfigParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<eden_config::types::EdenConfigData, crate::errors::eden_service::GetConfigError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getConfig";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getConfig",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_params", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_params, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getConfig"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetConfigExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetConfigExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetConfigExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetConfigError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetConfigExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetConfigError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetConfigError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetConfigError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getConfig"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getConfig {
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getConfig", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getConfig"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetConfigExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetConfigError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.reloadConfig", skip_all)]
         fn reloadConfig(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ReloadConfigError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.reloadConfig";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "reloadConfig",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.reloadConfig"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::ReloadConfigExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::ReloadConfigExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::ReloadConfigExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ReloadConfigError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::ReloadConfigExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ReloadConfigError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::ReloadConfigError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::ReloadConfigError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.reloadConfig"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_reloadConfig {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("reloadConfig", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.reloadConfig"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::ReloadConfigExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::ReloadConfigError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugGetScmTree", skip_all)]
         fn debugGetScmTree(
@@ -16236,125 +17147,46 @@ pub mod client {
             arg_localStoreOnly: ::std::primitive::bool,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::ScmTreeEntry>, crate::errors::eden_service::DebugGetScmTreeError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugGetScmTree";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugGetScmTree",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_id", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_id, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_localStoreOnly", ::fbthrift::TType::Bool, 3i16);
-                        ::fbthrift::Serialize::write(&arg_localStoreOnly, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugGetScmTree"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugGetScmTreeExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugGetScmTreeExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugGetScmTreeExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmTreeError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::DebugGetScmTreeExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmTreeError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmTreeError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmTreeError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugGetScmTree"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugGetScmTree {
+                mountPoint: arg_mountPoint,
+                id: arg_id,
+                localStoreOnly: arg_localStoreOnly,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugGetScmTree", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugGetScmTree"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugGetScmTreeExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmTreeError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugGetScmBlob", skip_all)]
         fn debugGetScmBlob(
@@ -16364,125 +17196,46 @@ pub mod client {
             arg_localStoreOnly: ::std::primitive::bool,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<::std::primitive::u8>, crate::errors::eden_service::DebugGetScmBlobError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugGetScmBlob";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugGetScmBlob",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_id", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_id, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_localStoreOnly", ::fbthrift::TType::Bool, 3i16);
-                        ::fbthrift::Serialize::write(&arg_localStoreOnly, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugGetScmBlob"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugGetScmBlobExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugGetScmBlobExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugGetScmBlobExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::DebugGetScmBlobExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugGetScmBlob"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugGetScmBlob {
+                mountPoint: arg_mountPoint,
+                id: arg_id,
+                localStoreOnly: arg_localStoreOnly,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugGetScmBlob", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugGetScmBlob"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugGetScmBlobExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugGetScmBlobMetadata", skip_all)]
         fn debugGetScmBlobMetadata(
@@ -16492,125 +17245,46 @@ pub mod client {
             arg_localStoreOnly: ::std::primitive::bool,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ScmBlobMetadata, crate::errors::eden_service::DebugGetScmBlobMetadataError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugGetScmBlobMetadata";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugGetScmBlobMetadata",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_id", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_id, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_localStoreOnly", ::fbthrift::TType::Bool, 3i16);
-                        ::fbthrift::Serialize::write(&arg_localStoreOnly, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugGetScmBlobMetadata"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugGetScmBlobMetadataExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugGetScmBlobMetadataExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugGetScmBlobMetadataExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::DebugGetScmBlobMetadataExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugGetScmBlobMetadata"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugGetScmBlobMetadata {
+                mountPoint: arg_mountPoint,
+                id: arg_id,
+                localStoreOnly: arg_localStoreOnly,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugGetScmBlobMetadata", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugGetScmBlobMetadata"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugGetScmBlobMetadataExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugInodeStatus", skip_all)]
         fn debugInodeStatus(
@@ -16620,125 +17294,46 @@ pub mod client {
             arg_flags: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugInodeStatus";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugInodeStatus",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_path", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_path, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_flags", ::fbthrift::TType::I64, 3i16);
-                        ::fbthrift::Serialize::write(&arg_flags, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugInodeStatus"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugInodeStatusExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugInodeStatusExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugInodeStatusExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugInodeStatusError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::DebugInodeStatusExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugInodeStatusError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugInodeStatusError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugInodeStatusError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugInodeStatus"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugInodeStatus {
+                mountPoint: arg_mountPoint,
+                path: arg_path,
+                flags: arg_flags,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugInodeStatus", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugInodeStatus"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugInodeStatusExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugInodeStatusError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugOutstandingFuseCalls", skip_all)]
         fn debugOutstandingFuseCalls(
@@ -16746,115 +17341,44 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::FuseCall>, crate::errors::eden_service::DebugOutstandingFuseCallsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugOutstandingFuseCalls";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugOutstandingFuseCalls",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugOutstandingFuseCalls"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugOutstandingFuseCallsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugOutstandingFuseCallsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugOutstandingFuseCallsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingFuseCallsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingFuseCallsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingFuseCallsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugOutstandingFuseCalls"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugOutstandingFuseCalls {
+                mountPoint: arg_mountPoint,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugOutstandingFuseCalls", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugOutstandingFuseCalls"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugOutstandingFuseCallsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingFuseCallsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugOutstandingNfsCalls", skip_all)]
         fn debugOutstandingNfsCalls(
@@ -16862,115 +17386,44 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::NfsCall>, crate::errors::eden_service::DebugOutstandingNfsCallsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugOutstandingNfsCalls";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugOutstandingNfsCalls",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugOutstandingNfsCalls"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugOutstandingNfsCallsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugOutstandingNfsCallsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugOutstandingNfsCallsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingNfsCallsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingNfsCallsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingNfsCallsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugOutstandingNfsCalls"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugOutstandingNfsCalls {
+                mountPoint: arg_mountPoint,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugOutstandingNfsCalls", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugOutstandingNfsCalls"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugOutstandingNfsCallsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingNfsCallsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugStartRecordingActivity", skip_all)]
         fn debugStartRecordingActivity(
@@ -16979,118 +17432,45 @@ pub mod client {
             arg_outputDir: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ActivityRecorderResult, crate::errors::eden_service::DebugStartRecordingActivityError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugStartRecordingActivity";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugStartRecordingActivity",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_outputDir", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_outputDir, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugStartRecordingActivity"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugStartRecordingActivityExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugStartRecordingActivityExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugStartRecordingActivityExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugStartRecordingActivityError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugStartRecordingActivityError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugStartRecordingActivityError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugStartRecordingActivity"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugStartRecordingActivity {
+                mountPoint: arg_mountPoint,
+                outputDir: arg_outputDir,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugStartRecordingActivity", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugStartRecordingActivity"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugStartRecordingActivityExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugStartRecordingActivityError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugStopRecordingActivity", skip_all)]
         fn debugStopRecordingActivity(
@@ -17099,118 +17479,45 @@ pub mod client {
             arg_unique: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ActivityRecorderResult, crate::errors::eden_service::DebugStopRecordingActivityError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugStopRecordingActivity";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugStopRecordingActivity",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_unique", ::fbthrift::TType::I64, 2i16);
-                        ::fbthrift::Serialize::write(&arg_unique, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugStopRecordingActivity"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugStopRecordingActivityExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugStopRecordingActivityExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugStopRecordingActivityExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugStopRecordingActivityError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugStopRecordingActivityError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugStopRecordingActivityError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugStopRecordingActivity"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugStopRecordingActivity {
+                mountPoint: arg_mountPoint,
+                unique: arg_unique,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugStopRecordingActivity", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugStopRecordingActivity"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugStopRecordingActivityExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugStopRecordingActivityError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugListActivityRecordings", skip_all)]
         fn debugListActivityRecordings(
@@ -17218,115 +17525,44 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::ListActivityRecordingsResult, crate::errors::eden_service::DebugListActivityRecordingsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugListActivityRecordings";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugListActivityRecordings",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugListActivityRecordings"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugListActivityRecordingsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugListActivityRecordingsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugListActivityRecordingsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugListActivityRecordingsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugListActivityRecordingsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugListActivityRecordingsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugListActivityRecordings"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugListActivityRecordings {
+                mountPoint: arg_mountPoint,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugListActivityRecordings", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugListActivityRecordings"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugListActivityRecordingsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugListActivityRecordingsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugGetInodePath", skip_all)]
         fn debugGetInodePath(
@@ -17335,238 +17571,88 @@ pub mod client {
             arg_inodeNumber: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::InodePathDebugInfo, crate::errors::eden_service::DebugGetInodePathError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugGetInodePath";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugGetInodePath",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_inodeNumber", ::fbthrift::TType::I64, 2i16);
-                        ::fbthrift::Serialize::write(&arg_inodeNumber, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugGetInodePath"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugGetInodePathExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugGetInodePathExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugGetInodePathExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetInodePathError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::DebugGetInodePathExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetInodePathError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugGetInodePathError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugGetInodePathError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugGetInodePath"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugGetInodePath {
+                mountPoint: arg_mountPoint,
+                inodeNumber: arg_inodeNumber,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugGetInodePath", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugGetInodePath"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugGetInodePathExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugGetInodePathError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.clearFetchCounts", skip_all)]
         fn clearFetchCounts(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.clearFetchCounts";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "clearFetchCounts",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.clearFetchCounts"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::ClearFetchCountsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::ClearFetchCountsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::ClearFetchCountsExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::ClearFetchCountsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.clearFetchCounts"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_clearFetchCounts {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("clearFetchCounts", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.clearFetchCounts"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::ClearFetchCountsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.clearFetchCountsByMount", skip_all)]
         fn clearFetchCountsByMount(
@@ -17574,119 +17660,44 @@ pub mod client {
             arg_mountPath: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsByMountError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.clearFetchCountsByMount";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "clearFetchCountsByMount",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPath", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPath, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.clearFetchCountsByMount"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::ClearFetchCountsByMountExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::ClearFetchCountsByMountExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::ClearFetchCountsByMountExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::ClearFetchCountsByMountExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.clearFetchCountsByMount"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_clearFetchCountsByMount {
+                mountPath: arg_mountPath,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("clearFetchCountsByMount", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.clearFetchCountsByMount"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::ClearFetchCountsByMountExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getAccessCounts", skip_all)]
         fn getAccessCounts(
@@ -17694,699 +17705,259 @@ pub mod client {
             arg_duration: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getAccessCounts";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getAccessCounts",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_duration", ::fbthrift::TType::I64, 1i16);
-                        ::fbthrift::Serialize::write(&arg_duration, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getAccessCounts"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetAccessCountsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetAccessCountsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetAccessCountsExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetAccessCountsError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetAccessCountsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetAccessCountsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetAccessCountsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetAccessCountsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getAccessCounts"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getAccessCounts {
+                duration: arg_duration,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getAccessCounts", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getAccessCounts"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetAccessCountsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetAccessCountsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.startRecordingBackingStoreFetch", skip_all)]
         fn startRecordingBackingStoreFetch(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.startRecordingBackingStoreFetch";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "startRecordingBackingStoreFetch",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.startRecordingBackingStoreFetch"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::StartRecordingBackingStoreFetchExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.startRecordingBackingStoreFetch"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_startRecordingBackingStoreFetch {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("startRecordingBackingStoreFetch", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.startRecordingBackingStoreFetch"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::StartRecordingBackingStoreFetchExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.stopRecordingBackingStoreFetch", skip_all)]
         fn stopRecordingBackingStoreFetch(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.stopRecordingBackingStoreFetch";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "stopRecordingBackingStoreFetch",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.stopRecordingBackingStoreFetch"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::StopRecordingBackingStoreFetchExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.stopRecordingBackingStoreFetch"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_stopRecordingBackingStoreFetch {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("stopRecordingBackingStoreFetch", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.stopRecordingBackingStoreFetch"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::StopRecordingBackingStoreFetchExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.clearAndCompactLocalStore", skip_all)]
         fn clearAndCompactLocalStore(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.clearAndCompactLocalStore";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "clearAndCompactLocalStore",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.clearAndCompactLocalStore"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::ClearAndCompactLocalStoreExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::ClearAndCompactLocalStoreExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::ClearAndCompactLocalStoreExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::ClearAndCompactLocalStoreExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.clearAndCompactLocalStore"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_clearAndCompactLocalStore {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("clearAndCompactLocalStore", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.clearAndCompactLocalStore"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::ClearAndCompactLocalStoreExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugClearLocalStoreCaches", skip_all)]
         fn debugClearLocalStoreCaches(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugClearLocalStoreCaches";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugClearLocalStoreCaches",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugClearLocalStoreCaches"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugClearLocalStoreCachesExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugClearLocalStoreCachesExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugClearLocalStoreCachesExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::DebugClearLocalStoreCachesExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugClearLocalStoreCaches"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugClearLocalStoreCaches {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugClearLocalStoreCaches", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugClearLocalStoreCaches"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugClearLocalStoreCachesExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.debugCompactLocalStorage", skip_all)]
         fn debugCompactLocalStorage(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.debugCompactLocalStorage";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "debugCompactLocalStorage",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.debugCompactLocalStorage"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DebugCompactLocalStorageExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DebugCompactLocalStorageExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DebugCompactLocalStorageExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugCompactLocalStorageError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::DebugCompactLocalStorageExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DebugCompactLocalStorageError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DebugCompactLocalStorageError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DebugCompactLocalStorageError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.debugCompactLocalStorage"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_debugCompactLocalStorage {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("debugCompactLocalStorage", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.debugCompactLocalStorage"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DebugCompactLocalStorageExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DebugCompactLocalStorageError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.unloadInodeForPath", skip_all)]
         fn unloadInodeForPath(
@@ -18396,241 +17967,89 @@ pub mod client {
             arg_age: &crate::types::TimeSpec,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::UnloadInodeForPathError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.unloadInodeForPath";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "unloadInodeForPath",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_path", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_path, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_age", ::fbthrift::TType::Struct, 3i16);
-                        ::fbthrift::Serialize::write(&arg_age, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.unloadInodeForPath"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::UnloadInodeForPathExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::UnloadInodeForPathExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::UnloadInodeForPathExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::UnloadInodeForPathError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::UnloadInodeForPathExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::UnloadInodeForPathError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::UnloadInodeForPathError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::UnloadInodeForPathError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.unloadInodeForPath"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_unloadInodeForPath {
+                mountPoint: arg_mountPoint,
+                path: arg_path,
+                age: arg_age,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("unloadInodeForPath", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.unloadInodeForPath"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::UnloadInodeForPathExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::UnloadInodeForPathError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.flushStatsNow", skip_all)]
         fn flushStatsNow(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::FlushStatsNowError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.flushStatsNow";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "flushStatsNow",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.flushStatsNow"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::FlushStatsNowExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::FlushStatsNowExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::FlushStatsNowExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::FlushStatsNowError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::FlushStatsNowExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::FlushStatsNowError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::FlushStatsNowError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::FlushStatsNowError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.flushStatsNow"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_flushStatsNow {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("flushStatsNow", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.flushStatsNow"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::FlushStatsNowExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::FlushStatsNowError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.invalidateKernelInodeCache", skip_all)]
         fn invalidateKernelInodeCache(
@@ -18639,122 +18058,45 @@ pub mod client {
             arg_path: &crate::types::PathString,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::InvalidateKernelInodeCacheError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.invalidateKernelInodeCache";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "invalidateKernelInodeCache",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_mountPoint", ::fbthrift::TType::String, 1i16);
-                        ::fbthrift::Serialize::write(&arg_mountPoint, p);
-                        p.write_field_end();
-                        p.write_field_begin("arg_path", ::fbthrift::TType::String, 2i16);
-                        ::fbthrift::Serialize::write(&arg_path, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.invalidateKernelInodeCache"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::InvalidateKernelInodeCacheExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::InvalidateKernelInodeCacheExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::InvalidateKernelInodeCacheExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::InvalidateKernelInodeCacheExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.invalidateKernelInodeCache"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_invalidateKernelInodeCache {
+                mountPoint: arg_mountPoint,
+                path: arg_path,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("invalidateKernelInodeCache", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.invalidateKernelInodeCache"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::InvalidateKernelInodeCacheExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getStatInfo", skip_all)]
         fn getStatInfo(
@@ -18762,455 +18104,173 @@ pub mod client {
             arg_params: &crate::types::GetStatInfoParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::InternalStats, crate::errors::eden_service::GetStatInfoError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getStatInfo";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getStatInfo",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_params", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_params, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getStatInfo"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetStatInfoExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetStatInfoExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetStatInfoExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetStatInfoError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::GetStatInfoExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetStatInfoError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetStatInfoError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetStatInfoError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getStatInfo"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getStatInfo {
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getStatInfo", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getStatInfo"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetStatInfoExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetStatInfoError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.enableTracing", skip_all)]
         fn enableTracing(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::EnableTracingError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.enableTracing";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "enableTracing",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.enableTracing"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::EnableTracingExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::EnableTracingExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::EnableTracingExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::EnableTracingError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::EnableTracingError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::EnableTracingError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.enableTracing"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_enableTracing {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("enableTracing", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.enableTracing"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::EnableTracingExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::EnableTracingError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.disableTracing", skip_all)]
         fn disableTracing(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DisableTracingError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.disableTracing";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "disableTracing",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.disableTracing"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::DisableTracingExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::DisableTracingExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::DisableTracingExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::DisableTracingError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::DisableTracingError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::DisableTracingError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.disableTracing"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_disableTracing {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("disableTracing", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.disableTracing"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::DisableTracingExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::DisableTracingError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.getTracePoints", skip_all)]
         fn getTracePoints(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.getTracePoints";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "getTracePoints",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.getTracePoints"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::GetTracePointsExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::GetTracePointsExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::GetTracePointsExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::GetTracePointsError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::GetTracePointsError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::GetTracePointsError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.getTracePoints"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_getTracePoints {
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("getTracePoints", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.getTracePoints"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::GetTracePointsExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::GetTracePointsError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.injectFault", skip_all)]
         fn injectFault(
@@ -19218,119 +18278,44 @@ pub mod client {
             arg_fault: &crate::types::FaultDefinition,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::InjectFaultError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.injectFault";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "injectFault",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_fault", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_fault, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.injectFault"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::InjectFaultExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::InjectFaultExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::InjectFaultExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::InjectFaultError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::InjectFaultExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::InjectFaultError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::InjectFaultError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::InjectFaultError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.injectFault"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_injectFault {
+                fault: arg_fault,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("injectFault", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.injectFault"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::InjectFaultExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::InjectFaultError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.removeFault", skip_all)]
         fn removeFault(
@@ -19338,119 +18323,44 @@ pub mod client {
             arg_fault: &crate::types::RemoveFaultArg,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::bool, crate::errors::eden_service::RemoveFaultError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.removeFault";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "removeFault",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_fault", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_fault, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.removeFault"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::RemoveFaultExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::RemoveFaultExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::RemoveFaultExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::RemoveFaultError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::RemoveFaultExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::RemoveFaultError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::RemoveFaultError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::RemoveFaultError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.removeFault"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_removeFault {
+                fault: arg_fault,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("removeFault", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.removeFault"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::RemoveFaultExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::RemoveFaultError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.unblockFault", skip_all)]
         fn unblockFault(
@@ -19458,119 +18368,44 @@ pub mod client {
             arg_info: &crate::types::UnblockFaultArg,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::UnblockFaultError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.unblockFault";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "unblockFault",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_info", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_info, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.unblockFault"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::UnblockFaultExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::UnblockFaultExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::UnblockFaultExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::UnblockFaultError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::UnblockFaultExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::UnblockFaultError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::UnblockFaultError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::UnblockFaultError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.unblockFault"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_unblockFault {
+                info: arg_info,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("unblockFault", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.unblockFault"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::UnblockFaultExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::UnblockFaultError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
 
         #[::tracing::instrument(name = "EdenService.setPathObjectId", skip_all)]
         fn setPathObjectId(
@@ -19578,119 +18413,44 @@ pub mod client {
             arg_params: &crate::types::SetPathObjectIdParams,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::SetPathObjectIdResult, crate::errors::eden_service::SetPathObjectIdError>> + ::std::marker::Send + 'static>> {
             use ::const_cstr::const_cstr;
-            use ::fbthrift::{ProtocolWriter as _};
-            use ::futures::future::{FutureExt as _, TryFutureExt as _};
             use ::tracing::Instrument as _;
+            use ::futures::FutureExt as _;
+
             const_cstr! {
                 SERVICE_NAME = "EdenService";
                 METHOD_NAME = "EdenService.setPathObjectId";
             }
-            let request = ::tracing::trace_span!("serialize_args").in_scope(|| {
-                ::fbthrift::serialize!(P, |p| ::fbthrift::protocol::write_message(
-                    p,
-                    "setPathObjectId",
-                    ::fbthrift::MessageType::Call,
-                    // Note: we send a 0 message sequence ID from clients because
-                    // this field should not be used by the server (except for some
-                    // language implementations).
-                    0,
-                    |p| {
-                        p.write_struct_begin("args");
-                        p.write_field_begin("arg_params", ::fbthrift::TType::Struct, 1i16);
-                        ::fbthrift::Serialize::write(&arg_params, p);
-                        p.write_field_end();
-                        p.write_field_stop();
-                        p.write_struct_end();
-                    },
-                ))
-            });
-            self.transport()
-                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request)
-                .instrument(::tracing::info_span!("call", function = "EdenService.setPathObjectId"))
-                .map_err(::std::convert::From::from)
-                .and_then(|reply| {
-                        let de = P::deserializer(reply);
-                        (move |mut p: P::Deserializer| {
-                            use ::fbthrift::{ProtocolReader as _};
-                            let (_, message_type, _) = match p.read_message_begin(|_| ()) {
-                                Ok(res) => res,
-                                Err(e) => {
-                                    ::tracing::error!(error = ?e);
-                                    return ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ::std::result::Result::Err(e.into())
-                                        )
-                                    )
-                                }
-                            };
-                            match message_type {
-                                ::fbthrift::MessageType::Reply => {
-                                    let exn: ::tokio_shim::task::JoinHandle<(Result<crate::services::eden_service::SetPathObjectIdExn, _>, _)> =
-                                        ::tokio_shim::task::spawn_blocking_fallback_inline(move || (::fbthrift::Deserialize::read(&mut p), p));
-                                    ::futures::future::Either::Right(exn.then(
-                                        |exn| {
-                                            let result = (move || {
-                                                let (exn, mut p) = match exn {
-                                                    Ok(res) => res,
-                                                    Err(e) => {
-                                                        // spawn_blocking threads can't be cancelled, so any
-                                                        // error is a panic. This shouldn't happen, but we propagate if it does
-                                                        ::std::panic::resume_unwind(e.into_panic())
-                                                    }
-                                                };
-                                                let exn = exn?;
-                                                let result = match exn {
-                                                    crate::services::eden_service::SetPathObjectIdExn::Success(x) => {
-                                                        ::tracing::info!("success");
-                                                        ::std::result::Result::Ok(x)
-                                                    },
-                                                    crate::services::eden_service::SetPathObjectIdExn::ex(err) => {
-                                                        ::tracing::error!(?err);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::SetPathObjectIdError::ex(err))
-                                                    }
-                                                    crate::services::eden_service::SetPathObjectIdExn::ApplicationException(ae) => {
-                                                        ::tracing::error!(application_exception = ?ae);
-                                                        ::std::result::Result::Err(crate::errors::eden_service::SetPathObjectIdError::ApplicationException(ae))
-                                                    }
-                                                };
-                                                p.read_message_end()?;
-                                                result
-                                            })();
-                                            ::futures::future::ready(result)
-                                        }
-                                    ))
-                                }
-                                ::fbthrift::MessageType::Exception => {
-                                    let ae: ::std::result::Result<::fbthrift::ApplicationException, _> = ::fbthrift::Deserialize::read(&mut p);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            ae.map_err(|e| e.into()).and_then(|ae| {
-                                                p.read_message_end().map_err(|e| e.into()).and_then(|_| {
-                                                    ::std::result::Result::Err(crate::errors::eden_service::SetPathObjectIdError::ApplicationException(ae))
-                                                })
-                                            })
-                                        )
-                                    )
-                                }
-                                ::fbthrift::MessageType::Call | ::fbthrift::MessageType::Oneway | ::fbthrift::MessageType::InvalidMessageType => {
-                                    let err = ::anyhow::anyhow!("Unexpected message type {:?}", message_type);
-                                    ::futures::future::Either::Left(
-                                        ::futures::future::ready(
-                                            p.read_message_end().map_err(|e| e.into()).and_then(
-                                            |_| {
-                                                ::std::result::Result::Err(crate::errors::eden_service::SetPathObjectIdError::ThriftError(err))
-                                            }
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        })(de)
-                    }
-                    .instrument(::tracing::trace_span!("deserialize_response", method = "EdenService.setPathObjectId"))
-                )
-                .boxed()
+            let args = self::Args_EdenService_setPathObjectId {
+                params: arg_params,
+                _phantom: ::std::marker::PhantomData,
+            };
+
+            // need to do call setup outside of async block because T: Transport isn't Send
+            let request_env = match ::fbthrift::help::serialize_request_envelope::<P, _>("setPathObjectId", &args) {
+                ::std::result::Result::Ok(res) => res,
+                ::std::result::Result::Err(err) => return ::futures::future::err(err.into()).boxed(),
+            };
+
+            let call = self.transport()
+                .call(SERVICE_NAME.as_cstr(), METHOD_NAME.as_cstr(), request_env)
+                .instrument(::tracing::trace_span!("call", function = "EdenService.setPathObjectId"));
+
+            async move {
+                let reply_env = call.await?;
+
+                let de = P::deserializer(reply_env);
+                let (res, _de): (::std::result::Result<crate::services::eden_service::SetPathObjectIdExn, _>, _) =
+                    ::fbthrift::help::async_deserialize_response_envelope::<P, _, S>(de).await?;
+
+                match res {
+                    ::std::result::Result::Ok(exn) => ::std::convert::From::from(exn),
+                    ::std::result::Result::Err(aexn) =>
+                        ::std::result::Result::Err(crate::errors::eden_service::SetPathObjectIdError::ApplicationException(aexn))
+                }
+            }
+            .boxed()
         }
+
     }
 
     impl<'a, T> EdenService for T
@@ -20228,7 +18988,7 @@ pub mod client {
     /// # };
     /// ```
     impl dyn EdenService {
-        pub fn new<P, T>(
+        pub fn new<P, T, S>(
             protocol: P,
             transport: T,
         ) -> ::std::sync::Arc<impl EdenService + ::std::marker::Send + 'static>
@@ -20236,9 +18996,10 @@ pub mod client {
             P: ::fbthrift::Protocol<Frame = T>,
             T: ::fbthrift::Transport,
             P::Deserializer: ::std::marker::Send,
+            S: ::fbthrift::help::Spawner,
         {
             let _ = protocol;
-            ::std::sync::Arc::new(EdenServiceImpl::<P, T>::new(transport))
+            ::std::sync::Arc::new(EdenServiceImpl::<P, T, S>::new(transport))
         }
     }
 
@@ -20250,13 +19011,14 @@ pub mod client {
     impl ::fbthrift::ClientFactory for make_EdenService {
         type Api = dyn EdenService + ::std::marker::Send + ::std::marker::Sync + 'static;
 
-        fn new<P, T>(protocol: P, transport: T) -> ::std::sync::Arc<Self::Api>
+        fn new<P, T, S>(protocol: P, transport: T) -> ::std::sync::Arc<Self::Api>
         where
             P: ::fbthrift::Protocol<Frame = T>,
             T: ::fbthrift::Transport + ::std::marker::Sync,
             P::Deserializer: ::std::marker::Send,
+            S: ::fbthrift::help::Spawner,
         {
-            <dyn EdenService>::new(protocol, transport)
+            <dyn EdenService>::new::<P, T, S>(protocol, transport)
         }
     }
 
@@ -20490,7 +19252,6 @@ pub mod mock {
         }
     }
 
-    #[::async_trait::async_trait]
     impl<'mock> super::client::EdenService for EdenService<'mock> {
         fn listMounts(
             &self,
@@ -23762,7 +22523,7 @@ pub mod errors {
             }
         }
 
-        /// Errors for listMounts.
+        /// Errors for listMounts (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum ListMountsError {
             #[error("EdenService::listMounts failed with {0:?}")]
@@ -23799,8 +22560,22 @@ pub mod errors {
                 ListMountsError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::ListMountsExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::MountInfo>, ListMountsError>
+        {
+            fn from(e: crate::services::eden_service::ListMountsExn) -> Self {
+                match e {
+                    crate::services::eden_service::ListMountsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::ListMountsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(ListMountsError::ApplicationException(aexn)),
+                    crate::services::eden_service::ListMountsExn::ex(exn) =>
+                        ::std::result::Result::Err(ListMountsError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for mount.
+        /// Errors for mount (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum MountError {
             #[error("EdenService::mount failed with {0:?}")]
@@ -23837,8 +22612,22 @@ pub mod errors {
                 MountError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::MountExn> for
+            ::std::result::Result<(), MountError>
+        {
+            fn from(e: crate::services::eden_service::MountExn) -> Self {
+                match e {
+                    crate::services::eden_service::MountExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::MountExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(MountError::ApplicationException(aexn)),
+                    crate::services::eden_service::MountExn::ex(exn) =>
+                        ::std::result::Result::Err(MountError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for unmount.
+        /// Errors for unmount (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum UnmountError {
             #[error("EdenService::unmount failed with {0:?}")]
@@ -23875,8 +22664,22 @@ pub mod errors {
                 UnmountError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::UnmountExn> for
+            ::std::result::Result<(), UnmountError>
+        {
+            fn from(e: crate::services::eden_service::UnmountExn) -> Self {
+                match e {
+                    crate::services::eden_service::UnmountExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::UnmountExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(UnmountError::ApplicationException(aexn)),
+                    crate::services::eden_service::UnmountExn::ex(exn) =>
+                        ::std::result::Result::Err(UnmountError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for checkOutRevision.
+        /// Errors for checkOutRevision (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum CheckOutRevisionError {
             #[error("EdenService::checkOutRevision failed with {0:?}")]
@@ -23913,8 +22716,22 @@ pub mod errors {
                 CheckOutRevisionError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::CheckOutRevisionExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::CheckoutConflict>, CheckOutRevisionError>
+        {
+            fn from(e: crate::services::eden_service::CheckOutRevisionExn) -> Self {
+                match e {
+                    crate::services::eden_service::CheckOutRevisionExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::CheckOutRevisionExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(CheckOutRevisionError::ApplicationException(aexn)),
+                    crate::services::eden_service::CheckOutRevisionExn::ex(exn) =>
+                        ::std::result::Result::Err(CheckOutRevisionError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for resetParentCommits.
+        /// Errors for resetParentCommits (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum ResetParentCommitsError {
             #[error("EdenService::resetParentCommits failed with {0:?}")]
@@ -23951,8 +22768,22 @@ pub mod errors {
                 ResetParentCommitsError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::ResetParentCommitsExn> for
+            ::std::result::Result<(), ResetParentCommitsError>
+        {
+            fn from(e: crate::services::eden_service::ResetParentCommitsExn) -> Self {
+                match e {
+                    crate::services::eden_service::ResetParentCommitsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::ResetParentCommitsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(ResetParentCommitsError::ApplicationException(aexn)),
+                    crate::services::eden_service::ResetParentCommitsExn::ex(exn) =>
+                        ::std::result::Result::Err(ResetParentCommitsError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getSHA1.
+        /// Errors for getSHA1 (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetSHA1Error {
             #[error("EdenService::getSHA1 failed with {0:?}")]
@@ -23989,8 +22820,22 @@ pub mod errors {
                 GetSHA1Error::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetSHA1Exn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::SHA1Result>, GetSHA1Error>
+        {
+            fn from(e: crate::services::eden_service::GetSHA1Exn) -> Self {
+                match e {
+                    crate::services::eden_service::GetSHA1Exn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetSHA1Exn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetSHA1Error::ApplicationException(aexn)),
+                    crate::services::eden_service::GetSHA1Exn::ex(exn) =>
+                        ::std::result::Result::Err(GetSHA1Error::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getBindMounts.
+        /// Errors for getBindMounts (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetBindMountsError {
             #[error("EdenService::getBindMounts failed with {0:?}")]
@@ -24027,8 +22872,22 @@ pub mod errors {
                 GetBindMountsError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetBindMountsExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::PathString>, GetBindMountsError>
+        {
+            fn from(e: crate::services::eden_service::GetBindMountsExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetBindMountsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetBindMountsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetBindMountsError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetBindMountsExn::ex(exn) =>
+                        ::std::result::Result::Err(GetBindMountsError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for addBindMount.
+        /// Errors for addBindMount (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum AddBindMountError {
             #[error("EdenService::addBindMount failed with {0:?}")]
@@ -24065,8 +22924,22 @@ pub mod errors {
                 AddBindMountError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::AddBindMountExn> for
+            ::std::result::Result<(), AddBindMountError>
+        {
+            fn from(e: crate::services::eden_service::AddBindMountExn) -> Self {
+                match e {
+                    crate::services::eden_service::AddBindMountExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::AddBindMountExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(AddBindMountError::ApplicationException(aexn)),
+                    crate::services::eden_service::AddBindMountExn::ex(exn) =>
+                        ::std::result::Result::Err(AddBindMountError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for removeBindMount.
+        /// Errors for removeBindMount (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum RemoveBindMountError {
             #[error("EdenService::removeBindMount failed with {0:?}")]
@@ -24103,8 +22976,22 @@ pub mod errors {
                 RemoveBindMountError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::RemoveBindMountExn> for
+            ::std::result::Result<(), RemoveBindMountError>
+        {
+            fn from(e: crate::services::eden_service::RemoveBindMountExn) -> Self {
+                match e {
+                    crate::services::eden_service::RemoveBindMountExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::RemoveBindMountExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(RemoveBindMountError::ApplicationException(aexn)),
+                    crate::services::eden_service::RemoveBindMountExn::ex(exn) =>
+                        ::std::result::Result::Err(RemoveBindMountError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getCurrentJournalPosition.
+        /// Errors for getCurrentJournalPosition (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetCurrentJournalPositionError {
             #[error("EdenService::getCurrentJournalPosition failed with {0:?}")]
@@ -24141,8 +23028,22 @@ pub mod errors {
                 GetCurrentJournalPositionError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetCurrentJournalPositionExn> for
+            ::std::result::Result<crate::types::JournalPosition, GetCurrentJournalPositionError>
+        {
+            fn from(e: crate::services::eden_service::GetCurrentJournalPositionExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetCurrentJournalPositionExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetCurrentJournalPositionExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetCurrentJournalPositionError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetCurrentJournalPositionExn::ex(exn) =>
+                        ::std::result::Result::Err(GetCurrentJournalPositionError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getFilesChangedSince.
+        /// Errors for getFilesChangedSince (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetFilesChangedSinceError {
             #[error("EdenService::getFilesChangedSince failed with {0:?}")]
@@ -24179,8 +23080,22 @@ pub mod errors {
                 GetFilesChangedSinceError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetFilesChangedSinceExn> for
+            ::std::result::Result<crate::types::FileDelta, GetFilesChangedSinceError>
+        {
+            fn from(e: crate::services::eden_service::GetFilesChangedSinceExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetFilesChangedSinceExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetFilesChangedSinceExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetFilesChangedSinceError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetFilesChangedSinceExn::ex(exn) =>
+                        ::std::result::Result::Err(GetFilesChangedSinceError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for setJournalMemoryLimit.
+        /// Errors for setJournalMemoryLimit (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum SetJournalMemoryLimitError {
             #[error("EdenService::setJournalMemoryLimit failed with {0:?}")]
@@ -24217,8 +23132,22 @@ pub mod errors {
                 SetJournalMemoryLimitError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::SetJournalMemoryLimitExn> for
+            ::std::result::Result<(), SetJournalMemoryLimitError>
+        {
+            fn from(e: crate::services::eden_service::SetJournalMemoryLimitExn) -> Self {
+                match e {
+                    crate::services::eden_service::SetJournalMemoryLimitExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::SetJournalMemoryLimitExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(SetJournalMemoryLimitError::ApplicationException(aexn)),
+                    crate::services::eden_service::SetJournalMemoryLimitExn::ex(exn) =>
+                        ::std::result::Result::Err(SetJournalMemoryLimitError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getJournalMemoryLimit.
+        /// Errors for getJournalMemoryLimit (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetJournalMemoryLimitError {
             #[error("EdenService::getJournalMemoryLimit failed with {0:?}")]
@@ -24255,8 +23184,22 @@ pub mod errors {
                 GetJournalMemoryLimitError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetJournalMemoryLimitExn> for
+            ::std::result::Result<::std::primitive::i64, GetJournalMemoryLimitError>
+        {
+            fn from(e: crate::services::eden_service::GetJournalMemoryLimitExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetJournalMemoryLimitExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetJournalMemoryLimitExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetJournalMemoryLimitError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetJournalMemoryLimitExn::ex(exn) =>
+                        ::std::result::Result::Err(GetJournalMemoryLimitError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for flushJournal.
+        /// Errors for flushJournal (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum FlushJournalError {
             #[error("EdenService::flushJournal failed with {0:?}")]
@@ -24293,8 +23236,22 @@ pub mod errors {
                 FlushJournalError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::FlushJournalExn> for
+            ::std::result::Result<(), FlushJournalError>
+        {
+            fn from(e: crate::services::eden_service::FlushJournalExn) -> Self {
+                match e {
+                    crate::services::eden_service::FlushJournalExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::FlushJournalExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(FlushJournalError::ApplicationException(aexn)),
+                    crate::services::eden_service::FlushJournalExn::ex(exn) =>
+                        ::std::result::Result::Err(FlushJournalError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for debugGetRawJournal.
+        /// Errors for debugGetRawJournal (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum DebugGetRawJournalError {
             #[error("EdenService::debugGetRawJournal failed with {0:?}")]
@@ -24331,8 +23288,22 @@ pub mod errors {
                 DebugGetRawJournalError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::DebugGetRawJournalExn> for
+            ::std::result::Result<crate::types::DebugGetRawJournalResponse, DebugGetRawJournalError>
+        {
+            fn from(e: crate::services::eden_service::DebugGetRawJournalExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugGetRawJournalExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugGetRawJournalExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugGetRawJournalError::ApplicationException(aexn)),
+                    crate::services::eden_service::DebugGetRawJournalExn::ex(exn) =>
+                        ::std::result::Result::Err(DebugGetRawJournalError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getEntryInformation.
+        /// Errors for getEntryInformation (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetEntryInformationError {
             #[error("EdenService::getEntryInformation failed with {0:?}")]
@@ -24369,8 +23340,22 @@ pub mod errors {
                 GetEntryInformationError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetEntryInformationExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::EntryInformationOrError>, GetEntryInformationError>
+        {
+            fn from(e: crate::services::eden_service::GetEntryInformationExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetEntryInformationExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetEntryInformationExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetEntryInformationError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetEntryInformationExn::ex(exn) =>
+                        ::std::result::Result::Err(GetEntryInformationError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getFileInformation.
+        /// Errors for getFileInformation (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetFileInformationError {
             #[error("EdenService::getFileInformation failed with {0:?}")]
@@ -24407,8 +23392,22 @@ pub mod errors {
                 GetFileInformationError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetFileInformationExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::FileInformationOrError>, GetFileInformationError>
+        {
+            fn from(e: crate::services::eden_service::GetFileInformationExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetFileInformationExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetFileInformationExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetFileInformationError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetFileInformationExn::ex(exn) =>
+                        ::std::result::Result::Err(GetFileInformationError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for glob.
+        /// Errors for glob (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GlobError {
             #[error("EdenService::glob failed with {0:?}")]
@@ -24445,8 +23444,22 @@ pub mod errors {
                 GlobError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GlobExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::PathString>, GlobError>
+        {
+            fn from(e: crate::services::eden_service::GlobExn) -> Self {
+                match e {
+                    crate::services::eden_service::GlobExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GlobExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GlobError::ApplicationException(aexn)),
+                    crate::services::eden_service::GlobExn::ex(exn) =>
+                        ::std::result::Result::Err(GlobError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for globFiles.
+        /// Errors for globFiles (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GlobFilesError {
             #[error("EdenService::globFiles failed with {0:?}")]
@@ -24483,8 +23496,22 @@ pub mod errors {
                 GlobFilesError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GlobFilesExn> for
+            ::std::result::Result<crate::types::Glob, GlobFilesError>
+        {
+            fn from(e: crate::services::eden_service::GlobFilesExn) -> Self {
+                match e {
+                    crate::services::eden_service::GlobFilesExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GlobFilesExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GlobFilesError::ApplicationException(aexn)),
+                    crate::services::eden_service::GlobFilesExn::ex(exn) =>
+                        ::std::result::Result::Err(GlobFilesError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for predictiveGlobFiles.
+        /// Errors for predictiveGlobFiles (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum PredictiveGlobFilesError {
             #[error("EdenService::predictiveGlobFiles failed with {0:?}")]
@@ -24521,10 +23548,37 @@ pub mod errors {
                 PredictiveGlobFilesError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::PredictiveGlobFilesExn> for
+            ::std::result::Result<crate::types::Glob, PredictiveGlobFilesError>
+        {
+            fn from(e: crate::services::eden_service::PredictiveGlobFilesExn) -> Self {
+                match e {
+                    crate::services::eden_service::PredictiveGlobFilesExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::PredictiveGlobFilesExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(PredictiveGlobFilesError::ApplicationException(aexn)),
+                    crate::services::eden_service::PredictiveGlobFilesExn::ex(exn) =>
+                        ::std::result::Result::Err(PredictiveGlobFilesError::ex(exn)),
+                }
+            }
+        }
 
         pub type ChownError = ::fbthrift::NonthrowingFunctionError;
 
-        /// Errors for getScmStatusV2.
+        impl ::std::convert::From<crate::services::eden_service::ChownExn> for
+            ::std::result::Result<(), ChownError>
+        {
+            fn from(e: crate::services::eden_service::ChownExn) -> Self {
+                match e {
+                    crate::services::eden_service::ChownExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::ChownExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(ChownError::ApplicationException(aexn)),
+                }
+            }
+        }
+
+        /// Errors for getScmStatusV2 (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetScmStatusV2Error {
             #[error("EdenService::getScmStatusV2 failed with {0:?}")]
@@ -24561,8 +23615,22 @@ pub mod errors {
                 GetScmStatusV2Error::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetScmStatusV2Exn> for
+            ::std::result::Result<crate::types::GetScmStatusResult, GetScmStatusV2Error>
+        {
+            fn from(e: crate::services::eden_service::GetScmStatusV2Exn) -> Self {
+                match e {
+                    crate::services::eden_service::GetScmStatusV2Exn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetScmStatusV2Exn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetScmStatusV2Error::ApplicationException(aexn)),
+                    crate::services::eden_service::GetScmStatusV2Exn::ex(exn) =>
+                        ::std::result::Result::Err(GetScmStatusV2Error::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getScmStatus.
+        /// Errors for getScmStatus (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetScmStatusError {
             #[error("EdenService::getScmStatus failed with {0:?}")]
@@ -24599,8 +23667,22 @@ pub mod errors {
                 GetScmStatusError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetScmStatusExn> for
+            ::std::result::Result<crate::types::ScmStatus, GetScmStatusError>
+        {
+            fn from(e: crate::services::eden_service::GetScmStatusExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetScmStatusExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetScmStatusExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetScmStatusError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetScmStatusExn::ex(exn) =>
+                        ::std::result::Result::Err(GetScmStatusError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getScmStatusBetweenRevisions.
+        /// Errors for getScmStatusBetweenRevisions (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetScmStatusBetweenRevisionsError {
             #[error("EdenService::getScmStatusBetweenRevisions failed with {0:?}")]
@@ -24637,8 +23719,22 @@ pub mod errors {
                 GetScmStatusBetweenRevisionsError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetScmStatusBetweenRevisionsExn> for
+            ::std::result::Result<crate::types::ScmStatus, GetScmStatusBetweenRevisionsError>
+        {
+            fn from(e: crate::services::eden_service::GetScmStatusBetweenRevisionsExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetScmStatusBetweenRevisionsError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::ex(exn) =>
+                        ::std::result::Result::Err(GetScmStatusBetweenRevisionsError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getDaemonInfo.
+        /// Errors for getDaemonInfo (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetDaemonInfoError {
             #[error("EdenService::getDaemonInfo failed with {0:?}")]
@@ -24675,8 +23771,22 @@ pub mod errors {
                 GetDaemonInfoError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetDaemonInfoExn> for
+            ::std::result::Result<crate::types::DaemonInfo, GetDaemonInfoError>
+        {
+            fn from(e: crate::services::eden_service::GetDaemonInfoExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetDaemonInfoExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetDaemonInfoExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetDaemonInfoError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetDaemonInfoExn::ex(exn) =>
+                        ::std::result::Result::Err(GetDaemonInfoError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for checkPrivHelper.
+        /// Errors for checkPrivHelper (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum CheckPrivHelperError {
             #[error("EdenService::checkPrivHelper failed with {0:?}")]
@@ -24713,8 +23823,22 @@ pub mod errors {
                 CheckPrivHelperError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::CheckPrivHelperExn> for
+            ::std::result::Result<crate::types::PrivHelperInfo, CheckPrivHelperError>
+        {
+            fn from(e: crate::services::eden_service::CheckPrivHelperExn) -> Self {
+                match e {
+                    crate::services::eden_service::CheckPrivHelperExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::CheckPrivHelperExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(CheckPrivHelperError::ApplicationException(aexn)),
+                    crate::services::eden_service::CheckPrivHelperExn::ex(exn) =>
+                        ::std::result::Result::Err(CheckPrivHelperError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getPid.
+        /// Errors for getPid (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetPidError {
             #[error("EdenService::getPid failed with {0:?}")]
@@ -24751,8 +23875,22 @@ pub mod errors {
                 GetPidError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetPidExn> for
+            ::std::result::Result<::std::primitive::i64, GetPidError>
+        {
+            fn from(e: crate::services::eden_service::GetPidExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetPidExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetPidExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetPidError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetPidExn::ex(exn) =>
+                        ::std::result::Result::Err(GetPidError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for initiateShutdown.
+        /// Errors for initiateShutdown (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum InitiateShutdownError {
             #[error("EdenService::initiateShutdown failed with {0:?}")]
@@ -24789,8 +23927,22 @@ pub mod errors {
                 InitiateShutdownError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::InitiateShutdownExn> for
+            ::std::result::Result<(), InitiateShutdownError>
+        {
+            fn from(e: crate::services::eden_service::InitiateShutdownExn) -> Self {
+                match e {
+                    crate::services::eden_service::InitiateShutdownExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::InitiateShutdownExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(InitiateShutdownError::ApplicationException(aexn)),
+                    crate::services::eden_service::InitiateShutdownExn::ex(exn) =>
+                        ::std::result::Result::Err(InitiateShutdownError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getConfig.
+        /// Errors for getConfig (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetConfigError {
             #[error("EdenService::getConfig failed with {0:?}")]
@@ -24827,8 +23979,22 @@ pub mod errors {
                 GetConfigError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetConfigExn> for
+            ::std::result::Result<eden_config::types::EdenConfigData, GetConfigError>
+        {
+            fn from(e: crate::services::eden_service::GetConfigExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetConfigExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetConfigExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetConfigError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetConfigExn::ex(exn) =>
+                        ::std::result::Result::Err(GetConfigError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for reloadConfig.
+        /// Errors for reloadConfig (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum ReloadConfigError {
             #[error("EdenService::reloadConfig failed with {0:?}")]
@@ -24865,8 +24031,22 @@ pub mod errors {
                 ReloadConfigError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::ReloadConfigExn> for
+            ::std::result::Result<(), ReloadConfigError>
+        {
+            fn from(e: crate::services::eden_service::ReloadConfigExn) -> Self {
+                match e {
+                    crate::services::eden_service::ReloadConfigExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::ReloadConfigExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(ReloadConfigError::ApplicationException(aexn)),
+                    crate::services::eden_service::ReloadConfigExn::ex(exn) =>
+                        ::std::result::Result::Err(ReloadConfigError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for debugGetScmTree.
+        /// Errors for debugGetScmTree (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum DebugGetScmTreeError {
             #[error("EdenService::debugGetScmTree failed with {0:?}")]
@@ -24903,8 +24083,22 @@ pub mod errors {
                 DebugGetScmTreeError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::DebugGetScmTreeExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::ScmTreeEntry>, DebugGetScmTreeError>
+        {
+            fn from(e: crate::services::eden_service::DebugGetScmTreeExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugGetScmTreeExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugGetScmTreeExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugGetScmTreeError::ApplicationException(aexn)),
+                    crate::services::eden_service::DebugGetScmTreeExn::ex(exn) =>
+                        ::std::result::Result::Err(DebugGetScmTreeError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for debugGetScmBlob.
+        /// Errors for debugGetScmBlob (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum DebugGetScmBlobError {
             #[error("EdenService::debugGetScmBlob failed with {0:?}")]
@@ -24941,8 +24135,22 @@ pub mod errors {
                 DebugGetScmBlobError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::DebugGetScmBlobExn> for
+            ::std::result::Result<::std::vec::Vec<::std::primitive::u8>, DebugGetScmBlobError>
+        {
+            fn from(e: crate::services::eden_service::DebugGetScmBlobExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugGetScmBlobExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugGetScmBlobExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugGetScmBlobError::ApplicationException(aexn)),
+                    crate::services::eden_service::DebugGetScmBlobExn::ex(exn) =>
+                        ::std::result::Result::Err(DebugGetScmBlobError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for debugGetScmBlobMetadata.
+        /// Errors for debugGetScmBlobMetadata (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum DebugGetScmBlobMetadataError {
             #[error("EdenService::debugGetScmBlobMetadata failed with {0:?}")]
@@ -24979,8 +24187,22 @@ pub mod errors {
                 DebugGetScmBlobMetadataError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::DebugGetScmBlobMetadataExn> for
+            ::std::result::Result<crate::types::ScmBlobMetadata, DebugGetScmBlobMetadataError>
+        {
+            fn from(e: crate::services::eden_service::DebugGetScmBlobMetadataExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugGetScmBlobMetadataExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugGetScmBlobMetadataExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugGetScmBlobMetadataError::ApplicationException(aexn)),
+                    crate::services::eden_service::DebugGetScmBlobMetadataExn::ex(exn) =>
+                        ::std::result::Result::Err(DebugGetScmBlobMetadataError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for debugInodeStatus.
+        /// Errors for debugInodeStatus (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum DebugInodeStatusError {
             #[error("EdenService::debugInodeStatus failed with {0:?}")]
@@ -25017,18 +24239,97 @@ pub mod errors {
                 DebugInodeStatusError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::DebugInodeStatusExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, DebugInodeStatusError>
+        {
+            fn from(e: crate::services::eden_service::DebugInodeStatusExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugInodeStatusExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugInodeStatusExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugInodeStatusError::ApplicationException(aexn)),
+                    crate::services::eden_service::DebugInodeStatusExn::ex(exn) =>
+                        ::std::result::Result::Err(DebugInodeStatusError::ex(exn)),
+                }
+            }
+        }
 
         pub type DebugOutstandingFuseCallsError = ::fbthrift::NonthrowingFunctionError;
 
+        impl ::std::convert::From<crate::services::eden_service::DebugOutstandingFuseCallsExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::FuseCall>, DebugOutstandingFuseCallsError>
+        {
+            fn from(e: crate::services::eden_service::DebugOutstandingFuseCallsExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugOutstandingFuseCallsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugOutstandingFuseCallsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugOutstandingFuseCallsError::ApplicationException(aexn)),
+                }
+            }
+        }
+
         pub type DebugOutstandingNfsCallsError = ::fbthrift::NonthrowingFunctionError;
+
+        impl ::std::convert::From<crate::services::eden_service::DebugOutstandingNfsCallsExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::NfsCall>, DebugOutstandingNfsCallsError>
+        {
+            fn from(e: crate::services::eden_service::DebugOutstandingNfsCallsExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugOutstandingNfsCallsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugOutstandingNfsCallsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugOutstandingNfsCallsError::ApplicationException(aexn)),
+                }
+            }
+        }
 
         pub type DebugStartRecordingActivityError = ::fbthrift::NonthrowingFunctionError;
 
+        impl ::std::convert::From<crate::services::eden_service::DebugStartRecordingActivityExn> for
+            ::std::result::Result<crate::types::ActivityRecorderResult, DebugStartRecordingActivityError>
+        {
+            fn from(e: crate::services::eden_service::DebugStartRecordingActivityExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugStartRecordingActivityExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugStartRecordingActivityExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugStartRecordingActivityError::ApplicationException(aexn)),
+                }
+            }
+        }
+
         pub type DebugStopRecordingActivityError = ::fbthrift::NonthrowingFunctionError;
+
+        impl ::std::convert::From<crate::services::eden_service::DebugStopRecordingActivityExn> for
+            ::std::result::Result<crate::types::ActivityRecorderResult, DebugStopRecordingActivityError>
+        {
+            fn from(e: crate::services::eden_service::DebugStopRecordingActivityExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugStopRecordingActivityExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugStopRecordingActivityExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugStopRecordingActivityError::ApplicationException(aexn)),
+                }
+            }
+        }
 
         pub type DebugListActivityRecordingsError = ::fbthrift::NonthrowingFunctionError;
 
-        /// Errors for debugGetInodePath.
+        impl ::std::convert::From<crate::services::eden_service::DebugListActivityRecordingsExn> for
+            ::std::result::Result<crate::types::ListActivityRecordingsResult, DebugListActivityRecordingsError>
+        {
+            fn from(e: crate::services::eden_service::DebugListActivityRecordingsExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugListActivityRecordingsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugListActivityRecordingsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugListActivityRecordingsError::ApplicationException(aexn)),
+                }
+            }
+        }
+
+        /// Errors for debugGetInodePath (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum DebugGetInodePathError {
             #[error("EdenService::debugGetInodePath failed with {0:?}")]
@@ -25065,8 +24366,22 @@ pub mod errors {
                 DebugGetInodePathError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::DebugGetInodePathExn> for
+            ::std::result::Result<crate::types::InodePathDebugInfo, DebugGetInodePathError>
+        {
+            fn from(e: crate::services::eden_service::DebugGetInodePathExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugGetInodePathExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugGetInodePathExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugGetInodePathError::ApplicationException(aexn)),
+                    crate::services::eden_service::DebugGetInodePathExn::ex(exn) =>
+                        ::std::result::Result::Err(DebugGetInodePathError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for clearFetchCounts.
+        /// Errors for clearFetchCounts (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum ClearFetchCountsError {
             #[error("EdenService::clearFetchCounts failed with {0:?}")]
@@ -25103,8 +24418,22 @@ pub mod errors {
                 ClearFetchCountsError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::ClearFetchCountsExn> for
+            ::std::result::Result<(), ClearFetchCountsError>
+        {
+            fn from(e: crate::services::eden_service::ClearFetchCountsExn) -> Self {
+                match e {
+                    crate::services::eden_service::ClearFetchCountsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::ClearFetchCountsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(ClearFetchCountsError::ApplicationException(aexn)),
+                    crate::services::eden_service::ClearFetchCountsExn::ex(exn) =>
+                        ::std::result::Result::Err(ClearFetchCountsError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for clearFetchCountsByMount.
+        /// Errors for clearFetchCountsByMount (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum ClearFetchCountsByMountError {
             #[error("EdenService::clearFetchCountsByMount failed with {0:?}")]
@@ -25141,8 +24470,22 @@ pub mod errors {
                 ClearFetchCountsByMountError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::ClearFetchCountsByMountExn> for
+            ::std::result::Result<(), ClearFetchCountsByMountError>
+        {
+            fn from(e: crate::services::eden_service::ClearFetchCountsByMountExn) -> Self {
+                match e {
+                    crate::services::eden_service::ClearFetchCountsByMountExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::ClearFetchCountsByMountExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(ClearFetchCountsByMountError::ApplicationException(aexn)),
+                    crate::services::eden_service::ClearFetchCountsByMountExn::ex(exn) =>
+                        ::std::result::Result::Err(ClearFetchCountsByMountError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getAccessCounts.
+        /// Errors for getAccessCounts (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetAccessCountsError {
             #[error("EdenService::getAccessCounts failed with {0:?}")]
@@ -25179,8 +24522,22 @@ pub mod errors {
                 GetAccessCountsError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetAccessCountsExn> for
+            ::std::result::Result<crate::types::GetAccessCountsResult, GetAccessCountsError>
+        {
+            fn from(e: crate::services::eden_service::GetAccessCountsExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetAccessCountsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetAccessCountsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetAccessCountsError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetAccessCountsExn::ex(exn) =>
+                        ::std::result::Result::Err(GetAccessCountsError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for startRecordingBackingStoreFetch.
+        /// Errors for startRecordingBackingStoreFetch (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum StartRecordingBackingStoreFetchError {
             #[error("EdenService::startRecordingBackingStoreFetch failed with {0:?}")]
@@ -25217,8 +24574,22 @@ pub mod errors {
                 StartRecordingBackingStoreFetchError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::StartRecordingBackingStoreFetchExn> for
+            ::std::result::Result<(), StartRecordingBackingStoreFetchError>
+        {
+            fn from(e: crate::services::eden_service::StartRecordingBackingStoreFetchExn) -> Self {
+                match e {
+                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(StartRecordingBackingStoreFetchError::ApplicationException(aexn)),
+                    crate::services::eden_service::StartRecordingBackingStoreFetchExn::ex(exn) =>
+                        ::std::result::Result::Err(StartRecordingBackingStoreFetchError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for stopRecordingBackingStoreFetch.
+        /// Errors for stopRecordingBackingStoreFetch (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum StopRecordingBackingStoreFetchError {
             #[error("EdenService::stopRecordingBackingStoreFetch failed with {0:?}")]
@@ -25255,8 +24626,22 @@ pub mod errors {
                 StopRecordingBackingStoreFetchError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::StopRecordingBackingStoreFetchExn> for
+            ::std::result::Result<crate::types::GetFetchedFilesResult, StopRecordingBackingStoreFetchError>
+        {
+            fn from(e: crate::services::eden_service::StopRecordingBackingStoreFetchExn) -> Self {
+                match e {
+                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(StopRecordingBackingStoreFetchError::ApplicationException(aexn)),
+                    crate::services::eden_service::StopRecordingBackingStoreFetchExn::ex(exn) =>
+                        ::std::result::Result::Err(StopRecordingBackingStoreFetchError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for clearAndCompactLocalStore.
+        /// Errors for clearAndCompactLocalStore (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum ClearAndCompactLocalStoreError {
             #[error("EdenService::clearAndCompactLocalStore failed with {0:?}")]
@@ -25293,8 +24678,22 @@ pub mod errors {
                 ClearAndCompactLocalStoreError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::ClearAndCompactLocalStoreExn> for
+            ::std::result::Result<(), ClearAndCompactLocalStoreError>
+        {
+            fn from(e: crate::services::eden_service::ClearAndCompactLocalStoreExn) -> Self {
+                match e {
+                    crate::services::eden_service::ClearAndCompactLocalStoreExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::ClearAndCompactLocalStoreExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(ClearAndCompactLocalStoreError::ApplicationException(aexn)),
+                    crate::services::eden_service::ClearAndCompactLocalStoreExn::ex(exn) =>
+                        ::std::result::Result::Err(ClearAndCompactLocalStoreError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for debugClearLocalStoreCaches.
+        /// Errors for debugClearLocalStoreCaches (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum DebugClearLocalStoreCachesError {
             #[error("EdenService::debugClearLocalStoreCaches failed with {0:?}")]
@@ -25331,8 +24730,22 @@ pub mod errors {
                 DebugClearLocalStoreCachesError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::DebugClearLocalStoreCachesExn> for
+            ::std::result::Result<(), DebugClearLocalStoreCachesError>
+        {
+            fn from(e: crate::services::eden_service::DebugClearLocalStoreCachesExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugClearLocalStoreCachesExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugClearLocalStoreCachesExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugClearLocalStoreCachesError::ApplicationException(aexn)),
+                    crate::services::eden_service::DebugClearLocalStoreCachesExn::ex(exn) =>
+                        ::std::result::Result::Err(DebugClearLocalStoreCachesError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for debugCompactLocalStorage.
+        /// Errors for debugCompactLocalStorage (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum DebugCompactLocalStorageError {
             #[error("EdenService::debugCompactLocalStorage failed with {0:?}")]
@@ -25369,8 +24782,22 @@ pub mod errors {
                 DebugCompactLocalStorageError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::DebugCompactLocalStorageExn> for
+            ::std::result::Result<(), DebugCompactLocalStorageError>
+        {
+            fn from(e: crate::services::eden_service::DebugCompactLocalStorageExn) -> Self {
+                match e {
+                    crate::services::eden_service::DebugCompactLocalStorageExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DebugCompactLocalStorageExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DebugCompactLocalStorageError::ApplicationException(aexn)),
+                    crate::services::eden_service::DebugCompactLocalStorageExn::ex(exn) =>
+                        ::std::result::Result::Err(DebugCompactLocalStorageError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for unloadInodeForPath.
+        /// Errors for unloadInodeForPath (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum UnloadInodeForPathError {
             #[error("EdenService::unloadInodeForPath failed with {0:?}")]
@@ -25407,8 +24834,22 @@ pub mod errors {
                 UnloadInodeForPathError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::UnloadInodeForPathExn> for
+            ::std::result::Result<::std::primitive::i64, UnloadInodeForPathError>
+        {
+            fn from(e: crate::services::eden_service::UnloadInodeForPathExn) -> Self {
+                match e {
+                    crate::services::eden_service::UnloadInodeForPathExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::UnloadInodeForPathExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(UnloadInodeForPathError::ApplicationException(aexn)),
+                    crate::services::eden_service::UnloadInodeForPathExn::ex(exn) =>
+                        ::std::result::Result::Err(UnloadInodeForPathError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for flushStatsNow.
+        /// Errors for flushStatsNow (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum FlushStatsNowError {
             #[error("EdenService::flushStatsNow failed with {0:?}")]
@@ -25445,8 +24886,22 @@ pub mod errors {
                 FlushStatsNowError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::FlushStatsNowExn> for
+            ::std::result::Result<(), FlushStatsNowError>
+        {
+            fn from(e: crate::services::eden_service::FlushStatsNowExn) -> Self {
+                match e {
+                    crate::services::eden_service::FlushStatsNowExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::FlushStatsNowExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(FlushStatsNowError::ApplicationException(aexn)),
+                    crate::services::eden_service::FlushStatsNowExn::ex(exn) =>
+                        ::std::result::Result::Err(FlushStatsNowError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for invalidateKernelInodeCache.
+        /// Errors for invalidateKernelInodeCache (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum InvalidateKernelInodeCacheError {
             #[error("EdenService::invalidateKernelInodeCache failed with {0:?}")]
@@ -25483,8 +24938,22 @@ pub mod errors {
                 InvalidateKernelInodeCacheError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::InvalidateKernelInodeCacheExn> for
+            ::std::result::Result<(), InvalidateKernelInodeCacheError>
+        {
+            fn from(e: crate::services::eden_service::InvalidateKernelInodeCacheExn) -> Self {
+                match e {
+                    crate::services::eden_service::InvalidateKernelInodeCacheExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::InvalidateKernelInodeCacheExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(InvalidateKernelInodeCacheError::ApplicationException(aexn)),
+                    crate::services::eden_service::InvalidateKernelInodeCacheExn::ex(exn) =>
+                        ::std::result::Result::Err(InvalidateKernelInodeCacheError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for getStatInfo.
+        /// Errors for getStatInfo (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum GetStatInfoError {
             #[error("EdenService::getStatInfo failed with {0:?}")]
@@ -25521,14 +24990,67 @@ pub mod errors {
                 GetStatInfoError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::GetStatInfoExn> for
+            ::std::result::Result<crate::types::InternalStats, GetStatInfoError>
+        {
+            fn from(e: crate::services::eden_service::GetStatInfoExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetStatInfoExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetStatInfoExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetStatInfoError::ApplicationException(aexn)),
+                    crate::services::eden_service::GetStatInfoExn::ex(exn) =>
+                        ::std::result::Result::Err(GetStatInfoError::ex(exn)),
+                }
+            }
+        }
 
         pub type EnableTracingError = ::fbthrift::NonthrowingFunctionError;
 
+        impl ::std::convert::From<crate::services::eden_service::EnableTracingExn> for
+            ::std::result::Result<(), EnableTracingError>
+        {
+            fn from(e: crate::services::eden_service::EnableTracingExn) -> Self {
+                match e {
+                    crate::services::eden_service::EnableTracingExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::EnableTracingExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(EnableTracingError::ApplicationException(aexn)),
+                }
+            }
+        }
+
         pub type DisableTracingError = ::fbthrift::NonthrowingFunctionError;
+
+        impl ::std::convert::From<crate::services::eden_service::DisableTracingExn> for
+            ::std::result::Result<(), DisableTracingError>
+        {
+            fn from(e: crate::services::eden_service::DisableTracingExn) -> Self {
+                match e {
+                    crate::services::eden_service::DisableTracingExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::DisableTracingExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(DisableTracingError::ApplicationException(aexn)),
+                }
+            }
+        }
 
         pub type GetTracePointsError = ::fbthrift::NonthrowingFunctionError;
 
-        /// Errors for injectFault.
+        impl ::std::convert::From<crate::services::eden_service::GetTracePointsExn> for
+            ::std::result::Result<::std::vec::Vec<crate::types::TracePoint>, GetTracePointsError>
+        {
+            fn from(e: crate::services::eden_service::GetTracePointsExn) -> Self {
+                match e {
+                    crate::services::eden_service::GetTracePointsExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::GetTracePointsExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(GetTracePointsError::ApplicationException(aexn)),
+                }
+            }
+        }
+
+        /// Errors for injectFault (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum InjectFaultError {
             #[error("EdenService::injectFault failed with {0:?}")]
@@ -25565,8 +25087,22 @@ pub mod errors {
                 InjectFaultError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::InjectFaultExn> for
+            ::std::result::Result<(), InjectFaultError>
+        {
+            fn from(e: crate::services::eden_service::InjectFaultExn) -> Self {
+                match e {
+                    crate::services::eden_service::InjectFaultExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::InjectFaultExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(InjectFaultError::ApplicationException(aexn)),
+                    crate::services::eden_service::InjectFaultExn::ex(exn) =>
+                        ::std::result::Result::Err(InjectFaultError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for removeFault.
+        /// Errors for removeFault (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum RemoveFaultError {
             #[error("EdenService::removeFault failed with {0:?}")]
@@ -25603,8 +25139,22 @@ pub mod errors {
                 RemoveFaultError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::RemoveFaultExn> for
+            ::std::result::Result<::std::primitive::bool, RemoveFaultError>
+        {
+            fn from(e: crate::services::eden_service::RemoveFaultExn) -> Self {
+                match e {
+                    crate::services::eden_service::RemoveFaultExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::RemoveFaultExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(RemoveFaultError::ApplicationException(aexn)),
+                    crate::services::eden_service::RemoveFaultExn::ex(exn) =>
+                        ::std::result::Result::Err(RemoveFaultError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for unblockFault.
+        /// Errors for unblockFault (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum UnblockFaultError {
             #[error("EdenService::unblockFault failed with {0:?}")]
@@ -25641,8 +25191,22 @@ pub mod errors {
                 UnblockFaultError::ApplicationException(ae)
             }
         }
+        impl ::std::convert::From<crate::services::eden_service::UnblockFaultExn> for
+            ::std::result::Result<::std::primitive::i64, UnblockFaultError>
+        {
+            fn from(e: crate::services::eden_service::UnblockFaultExn) -> Self {
+                match e {
+                    crate::services::eden_service::UnblockFaultExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::UnblockFaultExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(UnblockFaultError::ApplicationException(aexn)),
+                    crate::services::eden_service::UnblockFaultExn::ex(exn) =>
+                        ::std::result::Result::Err(UnblockFaultError::ex(exn)),
+                }
+            }
+        }
 
-        /// Errors for setPathObjectId.
+        /// Errors for setPathObjectId (client side).
         #[derive(Debug, ::thiserror::Error)]
         pub enum SetPathObjectIdError {
             #[error("EdenService::setPathObjectId failed with {0:?}")]
@@ -25677,6 +25241,20 @@ pub mod errors {
         impl ::std::convert::From<::fbthrift::ApplicationException> for SetPathObjectIdError {
             fn from(ae: ::fbthrift::ApplicationException) -> Self {
                 SetPathObjectIdError::ApplicationException(ae)
+            }
+        }
+        impl ::std::convert::From<crate::services::eden_service::SetPathObjectIdExn> for
+            ::std::result::Result<crate::types::SetPathObjectIdResult, SetPathObjectIdError>
+        {
+            fn from(e: crate::services::eden_service::SetPathObjectIdExn) -> Self {
+                match e {
+                    crate::services::eden_service::SetPathObjectIdExn::Success(res) =>
+                        ::std::result::Result::Ok(res),
+                    crate::services::eden_service::SetPathObjectIdExn::ApplicationException(aexn) =>
+                        ::std::result::Result::Err(SetPathObjectIdError::ApplicationException(aexn)),
+                    crate::services::eden_service::SetPathObjectIdExn::ex(exn) =>
+                        ::std::result::Result::Err(SetPathObjectIdError::ex(exn)),
+                }
             }
         }
 
