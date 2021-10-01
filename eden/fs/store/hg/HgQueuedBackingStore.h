@@ -84,7 +84,7 @@ struct HgImportTraceEvent : TraceEventBase {
   EventType eventType;
   ResourceType resourceType;
   // The HG manifest node ID.
-  Hash manifestNodeId;
+  Hash20 manifestNodeId;
   // Always null-terminated, and saves space in the trace event structure.
   std::unique_ptr<char[]> path;
 };
@@ -155,7 +155,7 @@ class HgQueuedBackingStore final : public BackingStore {
 
   folly::SemiFuture<folly::Unit> importManifestForRoot(
       const RootId& root,
-      const Hash& manifest) override;
+      const Hash20& manifest) override;
 
   void periodicManagementTask() override;
 

@@ -39,11 +39,11 @@ struct HgImportRequestQueueTest : ::testing::Test {
   }
 };
 
-Hash uniqueHash() {
-  std::array<uint8_t, Hash::RAW_SIZE> bytes = {0};
+Hash20 uniqueHash() {
+  std::array<uint8_t, Hash20::RAW_SIZE> bytes = {0};
   auto uid = generateUniqueID();
   std::memcpy(bytes.data(), &uid, sizeof(uid));
-  return Hash{bytes};
+  return Hash20{bytes};
 }
 
 std::pair<ObjectId, std::shared_ptr<HgImportRequest>> makeBlobImportRequest(

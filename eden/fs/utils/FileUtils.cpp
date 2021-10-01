@@ -211,7 +211,7 @@ folly::Try<void> writeFileAtomic(
   return folly::Try<void>{};
 }
 
-Hash getFileSha1(AbsolutePathPiece filePath) {
+Hash20 getFileSha1(AbsolutePathPiece filePath) {
   auto file = openHandle(filePath, OpenMode::READ).value();
 
   SHA_CTX ctx;
@@ -234,8 +234,8 @@ Hash getFileSha1(AbsolutePathPiece filePath) {
     SHA1_Update(&ctx, buf, bytesRead);
   }
 
-  static_assert(Hash::RAW_SIZE == SHA_DIGEST_LENGTH);
-  Hash sha1;
+  static_assert(Hash20::RAW_SIZE == SHA_DIGEST_LENGTH);
+  Hash20 sha1;
   SHA1_Final(sha1.mutableBytes().begin(), &ctx);
 
   return sha1;

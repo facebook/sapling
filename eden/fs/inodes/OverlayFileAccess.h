@@ -54,7 +54,7 @@ class OverlayFileAccess {
   void createFile(
       InodeNumber ino,
       const Blob& blob,
-      const std::optional<Hash>& sha1);
+      const std::optional<Hash20>& sha1);
 
   /**
    * Return the size of the overlay file at the given inode number. The result
@@ -69,7 +69,7 @@ class OverlayFileAccess {
   /**
    * Returns the SHA-1 hash of the file contents for the given inode number.
    */
-  Hash getSha1(FileInode& inode);
+  Hash20 getSha1(FileInode& inode);
 
   /**
    * Reads the entire file's contents into memory and returns it.
@@ -126,17 +126,20 @@ class OverlayFileAccess {
    */
 
   struct Entry {
-    Entry(OverlayFile f, std::optional<size_t> s, const std::optional<Hash>& h)
+    Entry(
+        OverlayFile f,
+        std::optional<size_t> s,
+        const std::optional<Hash20>& h)
         : file{std::move(f)}, info{folly::in_place, s, h} {}
 
     struct Info {
-      Info(std::optional<size_t> s, const std::optional<Hash>& h)
+      Info(std::optional<size_t> s, const std::optional<Hash20>& h)
           : size{s}, sha1{h} {}
 
       void invalidateMetadata();
 
       std::optional<size_t> size;
-      std::optional<Hash> sha1;
+      std::optional<Hash20> sha1;
       uint64_t version{0};
     };
 

@@ -125,7 +125,7 @@ TEST_F(CheckoutConfigTest, testVersion2ParentBinary) {
 
   auto parent = config->getParentCommit();
   EXPECT_EQ(
-      RootId{Hash{"99887766554433221100aabbccddeeffabcdef99"}.toByteString()},
+      RootId{Hash20{"99887766554433221100aabbccddeeffabcdef99"}.toByteString()},
       parent);
 }
 

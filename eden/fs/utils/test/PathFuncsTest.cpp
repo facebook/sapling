@@ -483,7 +483,7 @@ TEST(PathFuncs, InitializeFromIter) {
   EXPECT_EQ("stored/notstored", rel3.stringPiece());
 }
 
-TEST(PathFuncs, Hash) {
+TEST(PathFuncs, Hash20) {
   // Assert that we can find the hash_value function in the correct
   // namespace for boost::hash.
   boost::hash<PathComponentPiece> hasher;

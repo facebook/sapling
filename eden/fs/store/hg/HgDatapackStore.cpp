@@ -44,18 +44,18 @@ TreeEntry fromRawTreeEntry(
     RelativePathPiece path,
     LocalStore::WriteBatch* writeBatch) {
   std::optional<uint64_t> size;
-  std::optional<Hash> contentSha1;
+  std::optional<Hash20> contentSha1;
 
   if (entry.size != nullptr) {
     size = *entry.size;
   }
 
   if (entry.content_sha1 != nullptr) {
-    contentSha1 = Hash{*entry.content_sha1};
+    contentSha1 = Hash20{*entry.content_sha1};
   }
 
   auto name = PathComponent(folly::StringPiece{entry.name.asByteRange()});
-  auto hash = Hash{entry.hash};
+  auto hash = Hash20{entry.hash};
 
   auto fullPath = path + name;
   auto proxyHash = HgProxyHash::store(fullPath, hash, writeBatch);
@@ -192,7 +192,7 @@ void HgDatapackStore::getTreeBatch(
 
 std::unique_ptr<Tree> HgDatapackStore::getTree(
     const RelativePath& path,
-    const Hash& manifestId,
+    const Hash20& manifestId,
     const ObjectId& edenTreeId,
     LocalStore::WriteBatch* writeBatch) {
   // For root trees we will try getting the tree locally first.  This allows

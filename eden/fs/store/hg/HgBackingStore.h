@@ -103,7 +103,7 @@ class HgBackingStore {
    */
   folly::Future<folly::Unit> importTreeManifestForRoot(
       const RootId& rootId,
-      const Hash& manifestId,
+      const Hash20& manifestId,
       bool prefetchMetadata);
 
   /**
@@ -168,7 +168,7 @@ class HgBackingStore {
       bool prefetchMetadata);
 
   folly::Future<std::unique_ptr<Tree>> importTreeManifestImpl(
-      Hash manifestNode,
+      Hash20 manifestNode,
       bool prefetchMetadata);
 
   // Import the Tree from Hg and cache it in the LocalStore before returning it.
@@ -178,22 +178,22 @@ class HgBackingStore {
 
   void initializeDatapackImport(AbsolutePathPiece repository);
   folly::Future<std::unique_ptr<Tree>> importTreeImpl(
-      const Hash& manifestNode,
+      const Hash20& manifestNode,
       const ObjectId& edenTreeID,
       RelativePathPiece path,
       bool prefetchMetadata);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromHgCacheOrImporter(
-      Hash manifestNode,
+      Hash20 manifestNode,
       ObjectId edenTreeID,
       RelativePath path);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromImporter(
-      Hash manifestNode,
+      Hash20 manifestNode,
       ObjectId edenTreeID,
       RelativePath path,
       std::shared_ptr<LocalStore::WriteBatch> writeBatch);
   std::unique_ptr<Tree> processTree(
       std::unique_ptr<folly::IOBuf> content,
-      const Hash& manifestNode,
+      const Hash20& manifestNode,
       const ObjectId& edenTreeID,
       RelativePathPiece path,
       LocalStore::WriteBatch* writeBatch);

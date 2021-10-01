@@ -25,12 +25,12 @@ TEST(HgProxyHashTest, testCopyMove) {
     auto write = store->beginWrite();
     hash1 = HgProxyHash::store(
         RelativePathPiece{"foobar"},
-        Hash{folly::StringPiece{"1111111111111111111111111111111111111111"}},
+        Hash20{folly::StringPiece{"1111111111111111111111111111111111111111"}},
         write.get());
 
     hash2 = HgProxyHash::store(
         RelativePathPiece{"barfoo"},
-        Hash{folly::StringPiece{"DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"}},
+        Hash20{folly::StringPiece{"DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"}},
         write.get());
 
     write->flush();
@@ -56,12 +56,12 @@ TEST(HgProxyHashTest, testCopyMove) {
   EXPECT_EQ(moved.path(), RelativePathPiece{"foobar"});
   EXPECT_EQ(
       moved.revHash(),
-      Hash{folly::StringPiece{"1111111111111111111111111111111111111111"}});
+      Hash20{folly::StringPiece{"1111111111111111111111111111111111111111"}});
 
   EXPECT_EQ(orig1.path(), RelativePathPiece{""});
   EXPECT_EQ(
       orig1.revHash(),
-      Hash{folly::StringPiece{"0000000000000000000000000000000000000000"}});
+      Hash20{folly::StringPiece{"0000000000000000000000000000000000000000"}});
 }
 
 TEST(HgProxyHashTest, test_moved_from_and_empty_hash_compare_the_same) {

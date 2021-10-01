@@ -131,7 +131,6 @@ class Hash20 : boost::totally_ordered<Hash20> {
 };
 
 using HashRange = folly::Range<const Hash20*>;
-using Hash = Hash20;
 
 /** A hash object initialized to all zeroes */
 extern const Hash20 kZeroHash;
@@ -154,7 +153,7 @@ void toAppend(const Hash20& hash, std::string* result);
 namespace std {
 template <>
 struct hash<facebook::eden::Hash20> {
-  size_t operator()(const facebook::eden::Hash& hash) const noexcept {
+  size_t operator()(const facebook::eden::Hash20& hash) const noexcept {
     return hash.getHashCode();
   }
 };

@@ -178,7 +178,7 @@ void LocalStore::putBlob(const ObjectId& id, const Blob* blob) {
 }
 
 BlobMetadata LocalStore::putBlobMetadata(const ObjectId& id, const Blob* blob) {
-  BlobMetadata metadata{Hash::sha1(blob->getContents()), blob->getSize()};
+  BlobMetadata metadata{Hash20::sha1(blob->getContents()), blob->getSize()};
   auto hashBytes = id.getBytes();
   SerializedBlobMetadata metadataBytes(metadata);
 

@@ -28,7 +28,6 @@ namespace facebook::eden {
 
 class Blob;
 class Hash20;
-using Hash = Hash20;
 class HgManifestImporter;
 class StoreResult;
 class Tree;
@@ -66,7 +65,7 @@ class Importer {
    *
    * Returns a Hash identifying the manifest node for the revision.
    */
-  virtual Hash resolveManifestNode(folly::StringPiece revName) = 0;
+  virtual Hash20 resolveManifestNode(folly::StringPiece revName) = 0;
 
   /**
    * Import file information
@@ -78,7 +77,7 @@ class Importer {
    */
   virtual std::unique_ptr<Blob> importFileContents(
       RelativePathPiece path,
-      Hash blobHash) = 0;
+      Hash20 blobHash) = 0;
 
   virtual void prefetchFiles(const std::vector<HgProxyHash>& files) = 0;
 
@@ -90,7 +89,7 @@ class Importer {
    */
   virtual std::unique_ptr<folly::IOBuf> fetchTree(
       RelativePathPiece path,
-      Hash pathManifestNode) = 0;
+      Hash20 pathManifestNode) = 0;
 };
 
 /**
@@ -125,14 +124,14 @@ class HgImporter : public Importer {
 
   ProcessStatus debugStopHelperProcess();
 
-  Hash resolveManifestNode(folly::StringPiece revName) override;
+  Hash20 resolveManifestNode(folly::StringPiece revName) override;
   std::unique_ptr<Blob> importFileContents(
       RelativePathPiece path,
-      Hash blobHash) override;
+      Hash20 blobHash) override;
   void prefetchFiles(const std::vector<HgProxyHash>& files) override;
   std::unique_ptr<folly::IOBuf> fetchTree(
       RelativePathPiece path,
-      Hash pathManifestNode) override;
+      Hash20 pathManifestNode) override;
 
   const ImporterOptions& getOptions() const;
 
@@ -242,7 +241,7 @@ class HgImporter : public Importer {
    * Send a request to the helper process, asking it to send us the contents
    * of the given file at the specified file revision.
    */
-  TransactionID sendFileRequest(RelativePathPiece path, Hash fileRevHash);
+  TransactionID sendFileRequest(RelativePathPiece path, Hash20 fileRevHash);
   /**
    * Send a request to the helper process, asking it to send us the
    * manifest node (NOT the full manifest!) for the specified revision.
@@ -256,7 +255,7 @@ class HgImporter : public Importer {
   TransactionID sendFetchTreeRequest(
       CommandType cmd,
       RelativePathPiece path,
-      Hash pathManifestNode,
+      Hash20 pathManifestNode,
       folly::StringPiece context);
 
   // Note: intentional RelativePath rather than RelativePathPiece here because
@@ -305,15 +304,15 @@ class HgImporterManager : public Importer {
       std::shared_ptr<EdenStats>,
       std::optional<AbsolutePath> importHelperScript = std::nullopt);
 
-  Hash resolveManifestNode(folly::StringPiece revName) override;
+  Hash20 resolveManifestNode(folly::StringPiece revName) override;
 
   std::unique_ptr<Blob> importFileContents(
       RelativePathPiece path,
-      Hash blobHash) override;
+      Hash20 blobHash) override;
   void prefetchFiles(const std::vector<HgProxyHash>& files) override;
   std::unique_ptr<folly::IOBuf> fetchTree(
       RelativePathPiece path,
-      Hash pathManifestNode) override;
+      Hash20 pathManifestNode) override;
 
  private:
   template <typename Fn>

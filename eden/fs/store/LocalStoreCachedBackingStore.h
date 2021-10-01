@@ -60,7 +60,7 @@ class LocalStoreCachedBackingStore : public BackingStore {
 
   folly::SemiFuture<folly::Unit> importManifestForRoot(
       const RootId& rootId,
-      const Hash& manifest) override;
+      const Hash20& manifest) override;
 
   RootId parseRootId(folly::StringPiece rootId) override;
   std::string renderRootId(const RootId& rootId) override;

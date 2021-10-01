@@ -37,7 +37,7 @@ FOLLY_NODISCARD folly::Try<void> writeFileAtomic(
 
 #ifdef _WIN32
 /** Compute the sha1 of the file */
-Hash getFileSha1(AbsolutePathPiece filePath);
+Hash20 getFileSha1(AbsolutePathPiece filePath);
 #endif
 
 } // namespace eden

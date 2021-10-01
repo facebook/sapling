@@ -41,7 +41,7 @@ struct TestRepo {
   AbsolutePath testPath{testDir.path().string()};
   HgRepo repo{testPath + "repo"_pc};
   RootId commit1;
-  Hash manifest1;
+  Hash20 manifest1;
 
   TestRepo() {
     repo.hgInit();
@@ -69,7 +69,7 @@ class TestMetadataImporter : public MetadataImporter {
 
   folly::SemiFuture<std::unique_ptr<TreeMetadata>> getTreeMetadata(
       const ObjectId& /*edenId*/,
-      const Hash& /*manifestId*/) override {
+      const Hash20& /*manifestId*/) override {
     getTreeMetadataCalled = true;
     return folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
   }

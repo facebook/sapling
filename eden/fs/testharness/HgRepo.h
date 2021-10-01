@@ -19,7 +19,6 @@ namespace facebook {
 namespace eden {
 
 class Hash20;
-using Hash = Hash20;
 
 /**
  * A helper class for working with a mercurial repository in unit tests.
@@ -102,7 +101,7 @@ class HgRepo {
   void appendToHgrc(const std::vector<std::string>& lines);
 
   RootId commit(folly::StringPiece message);
-  Hash getManifestForCommit(const RootId& commit);
+  Hash20 getManifestForCommit(const RootId& commit);
 
   void mkdir(RelativePathPiece path, mode_t permissions = 0755);
   void mkdir(folly::StringPiece path, mode_t permissions = 0755) {

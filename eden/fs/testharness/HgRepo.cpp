@@ -151,12 +151,12 @@ RootId HgRepo::commit(StringPiece message) {
      "-m",
      message.str());
   auto output = hg("log", "-r.", "-T{node}\\n");
-  return RootId{Hash{folly::rtrimWhitespace(output)}.toString()};
+  return RootId{Hash20{folly::rtrimWhitespace(output)}.toString()};
 }
 
-Hash HgRepo::getManifestForCommit(const RootId& commit) {
+Hash20 HgRepo::getManifestForCommit(const RootId& commit) {
   auto output = hg("log", "-r", commit.value(), "-T{manifest}\\n");
-  return Hash{folly::rtrimWhitespace(output)};
+  return Hash20{folly::rtrimWhitespace(output)};
 }
 
 void HgRepo::mkdir(RelativePathPiece path, mode_t permissions) {

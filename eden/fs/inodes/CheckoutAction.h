@@ -115,7 +115,7 @@ class CheckoutAction {
       folly::Future<InodePtr> inodeFuture);
 
   void setOldTree(std::shared_ptr<const Tree> tree);
-  void setOldBlob(Hash blobSha1);
+  void setOldBlob(Hash20 blobSha1);
   void setNewTree(std::shared_ptr<const Tree> tree);
   void setNewBlob();
   void setInode(InodePtr inode);
@@ -180,7 +180,7 @@ class CheckoutAction {
    */
   InodePtr inode_;
   std::shared_ptr<const Tree> oldTree_;
-  std::optional<Hash> oldBlobSha1_;
+  std::optional<Hash20> oldBlobSha1_;
   std::shared_ptr<const Tree> newTree_;
   bool newBlobMarker_ = false;
 

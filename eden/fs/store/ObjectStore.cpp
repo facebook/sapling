@@ -315,7 +315,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
       });
 }
 
-Future<Hash> ObjectStore::getBlobSha1(
+Future<Hash20> ObjectStore::getBlobSha1(
     const ObjectId& id,
     ObjectFetchContext& context) const {
   return getBlobMetadata(id, context)

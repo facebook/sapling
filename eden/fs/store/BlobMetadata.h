@@ -18,10 +18,10 @@ namespace facebook::eden {
  */
 class BlobMetadata {
  public:
-  BlobMetadata(Hash contentsHash, uint64_t fileLength)
+  BlobMetadata(Hash20 contentsHash, uint64_t fileLength)
       : sha1(contentsHash), size(fileLength) {}
 
-  Hash sha1;
+  Hash20 sha1;
   uint64_t size;
 };
 

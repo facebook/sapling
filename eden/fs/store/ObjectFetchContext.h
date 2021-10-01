@@ -16,7 +16,6 @@ namespace facebook::eden {
 
 class ObjectId;
 class Hash20;
-using Hash = Hash20;
 
 /**
  * ObjectStore calls methods on this context when fetching objects.

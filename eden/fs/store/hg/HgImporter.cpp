@@ -256,7 +256,7 @@ void HgImporter::stopHelperProcess() {
 
 unique_ptr<Blob> HgImporter::importFileContents(
     RelativePathPiece path,
-    Hash blobHash) {
+    Hash20 blobHash) {
   XLOG(DBG5) << "requesting file contents of '" << path << "', "
              << blobHash.toString();
 
@@ -334,7 +334,7 @@ void HgImporter::prefetchFiles(const std::vector<HgProxyHash>& files) {
 
 std::unique_ptr<IOBuf> HgImporter::fetchTree(
     RelativePathPiece path,
-    Hash pathManifestNode) {
+    Hash20 pathManifestNode) {
   // Ask the hg_import_helper script to fetch data for this tree
   static constexpr auto getNumRequestsSinceLastLog =
       [](uint64_t& treeRequestsSinceLog) {
@@ -393,7 +393,7 @@ std::unique_ptr<IOBuf> HgImporter::fetchTree(
   return buf;
 }
 
-Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
+Hash20 HgImporter::resolveManifestNode(folly::StringPiece revName) {
   auto requestID = sendManifestNodeRequest(revName);
 
   auto header = readChunkHeader(requestID, "CMD_MANIFEST_NODE_FOR_COMMIT");
@@ -405,12 +405,12 @@ Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
         header.dataLength));
   }
 
-  Hash::Storage buffer;
+  Hash20::Storage buffer;
   readFromHelper(
       buffer.data(),
       folly::to_narrow(buffer.size()),
       "CMD_MANIFEST_NODE_FOR_COMMIT response body");
-  return Hash(buffer);
+  return Hash20(buffer);
 }
 
 HgImporter::ChunkHeader HgImporter::readChunkHeader(
@@ -507,7 +507,7 @@ HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
 
 HgImporter::TransactionID HgImporter::sendFileRequest(
     RelativePathPiece path,
-    Hash revHash) {
+    Hash20 revHash) {
   stats_->getHgImporterStatsForCurrentThread().catFile.addValue(1);
 
   auto txnID = nextRequestID_++;
@@ -516,14 +516,14 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
   header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
   StringPiece pathStr = path.stringPiece();
-  header.dataLength =
-      Endian::big<uint32_t>(folly::to_narrow(Hash::RAW_SIZE + pathStr.size()));
+  header.dataLength = Endian::big<uint32_t>(
+      folly::to_narrow(Hash20::RAW_SIZE + pathStr.size()));
 
   std::array<struct iovec, 3> iov;
   iov[0].iov_base = &header;
   iov[0].iov_len = sizeof(header);
   iov[1].iov_base = const_cast<uint8_t*>(revHash.getBytes().data());
-  iov[1].iov_len = Hash::RAW_SIZE;
+  iov[1].iov_len = Hash20::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
   writeToHelper(iov, "CMD_CAT_FILE");
@@ -545,7 +545,7 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
   size_t dataLength = sizeof(uint32_t);
   for (const auto& file : files) {
     dataLength += sizeof(uint32_t) + file.path().stringPiece().size() +
-        (Hash::RAW_SIZE * 2);
+        (Hash20::RAW_SIZE * 2);
   }
   if (dataLength > std::numeric_limits<uint32_t>::max()) {
     throw std::runtime_error(
@@ -590,7 +590,7 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
 HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
     CommandType cmd,
     RelativePathPiece path,
-    Hash pathManifestNode,
+    Hash20 pathManifestNode,
     StringPiece context) {
   stats_->getHgImporterStatsForCurrentThread().fetchTree.addValue(1);
 
@@ -600,14 +600,14 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
   header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
   StringPiece pathStr = path.stringPiece();
-  header.dataLength =
-      Endian::big<uint32_t>(folly::to_narrow(Hash::RAW_SIZE + pathStr.size()));
+  header.dataLength = Endian::big<uint32_t>(
+      folly::to_narrow(Hash20::RAW_SIZE + pathStr.size()));
 
   std::array<struct iovec, 3> iov;
   iov[0].iov_base = &header;
   iov[0].iov_len = sizeof(header);
   iov[1].iov_base = const_cast<uint8_t*>(pathManifestNode.getBytes().data());
-  iov[1].iov_len = Hash::RAW_SIZE;
+  iov[1].iov_len = Hash20::RAW_SIZE;
   iov[2].iov_base = const_cast<char*>(pathStr.data());
   iov[2].iov_len = pathStr.size();
   writeToHelper(iov, context);
@@ -702,7 +702,7 @@ auto HgImporterManager::retryOnError(Fn&& fn) {
   }
 }
 
-Hash HgImporterManager::resolveManifestNode(StringPiece revName) {
+Hash20 HgImporterManager::resolveManifestNode(StringPiece revName) {
   return retryOnError([&](HgImporter* importer) {
     return importer->resolveManifestNode(revName);
   });
@@ -710,7 +710,7 @@ Hash HgImporterManager::resolveManifestNode(StringPiece revName) {
 
 unique_ptr<Blob> HgImporterManager::importFileContents(
     RelativePathPiece path,
-    Hash blobHash) {
+    Hash20 blobHash) {
   return retryOnError([=](HgImporter* importer) {
     return importer->importFileContents(path, blobHash);
   });
@@ -723,7 +723,7 @@ void HgImporterManager::prefetchFiles(const std::vector<HgProxyHash>& files) {
 
 std::unique_ptr<IOBuf> HgImporterManager::fetchTree(
     RelativePathPiece path,
-    Hash pathManifestNode) {
+    Hash20 pathManifestNode) {
   return retryOnError([&](HgImporter* importer) {
     return importer->fetchTree(path, pathManifestNode);
   });

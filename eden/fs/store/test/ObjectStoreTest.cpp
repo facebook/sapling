@@ -200,8 +200,8 @@ TEST_F(ObjectStoreTest, getBlobSha1) {
   auto data = "A"_sp;
   ObjectId id = putReadyBlob(data);
 
-  Hash expectedSha1 = Hash::sha1(data);
-  Hash sha1 = objectStore->getBlobSha1(id, context).get();
+  Hash20 expectedSha1 = Hash20::sha1(data);
+  Hash20 sha1 = objectStore->getBlobSha1(id, context).get();
   EXPECT_EQ(expectedSha1.toString(), sha1.toString());
 }
 

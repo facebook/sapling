@@ -530,7 +530,7 @@ std::unordered_set<std::string> HgQueuedBackingStore::stopRecordingFetch() {
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::importManifestForRoot(
     const RootId& root,
-    const Hash& manifest) {
+    const Hash20& manifest) {
   // This method is used when the client informs us about a target manifest
   // that it is about to update to, for the scenario when a manifest has
   // just been created.  Since the manifest has just been created locally, and

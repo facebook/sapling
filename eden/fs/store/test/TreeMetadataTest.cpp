@@ -24,7 +24,7 @@ TEST_P(LocalStoreTest, testReadAndWriteTreeMetadata) {
   ObjectId childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
 
   StringPiece childContents("blah\n");
-  auto childSha1 = Hash::sha1(folly::ByteRange{childContents});
+  auto childSha1 = Hash20::sha1(folly::ByteRange{childContents});
   auto size = childContents.size();
 
   auto childBlobMetadata = BlobMetadata{childSha1, size};
@@ -64,7 +64,7 @@ TEST_P(LocalStoreTest, testDeserializeClippedTreeMetadata) {
   ObjectId childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
 
   StringPiece childContents("blah\n");
-  auto childSha1 = Hash::sha1(folly::ByteRange{childContents});
+  auto childSha1 = Hash20::sha1(folly::ByteRange{childContents});
   auto size = childContents.size();
 
   auto childBlobMetadata = BlobMetadata{childSha1, size};
@@ -74,7 +74,8 @@ TEST_P(LocalStoreTest, testDeserializeClippedTreeMetadata) {
   auto serializedMetadata = treeMetadata.serialize();
   serializedMetadata.coalesce();
   auto serializedBytes = folly::ByteRange(
-      serializedMetadata.data(), serializedMetadata.length() - Hash::RAW_SIZE);
+      serializedMetadata.data(),
+      serializedMetadata.length() - Hash20::RAW_SIZE);
 
   EXPECT_THROW(
       TreeMetadata::deserialize(StoreResult(serializedBytes.toString())),
@@ -86,7 +87,7 @@ TEST_P(LocalStoreTest, putTreeMetadata) {
   ObjectId childHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
 
   StringPiece childContents("blah\n");
-  auto childSha1 = Hash::sha1(folly::ByteRange{childContents});
+  auto childSha1 = Hash20::sha1(folly::ByteRange{childContents});
   auto size = childContents.size();
 
   auto childBlobMetadata = BlobMetadata{childSha1, size};

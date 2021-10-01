@@ -57,7 +57,7 @@ class HgDatapackStore {
 
   std::unique_ptr<Tree> getTree(
       const RelativePath& path,
-      const Hash& manifestId,
+      const Hash20& manifestId,
       const ObjectId& edenTreeId,
       LocalStore::WriteBatch* writeBatch);
 

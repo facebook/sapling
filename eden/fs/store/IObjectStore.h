@@ -27,7 +27,6 @@ class Blob;
 class BlobMetadata;
 class ObjectId;
 class Hash20;
-using Hash = Hash20;
 class Tree;
 class ObjectFetchContext;
 

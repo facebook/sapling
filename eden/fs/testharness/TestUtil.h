@@ -14,7 +14,6 @@ namespace eden {
 
 class ObjectId;
 class Hash20;
-using Hash = Hash20;
 
 /**
  * Helper function for creating Hash values to use in tests.

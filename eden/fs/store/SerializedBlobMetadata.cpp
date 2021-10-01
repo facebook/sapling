@@ -21,7 +21,7 @@ SerializedBlobMetadata::SerializedBlobMetadata(const BlobMetadata& metadata) {
 }
 
 SerializedBlobMetadata::SerializedBlobMetadata(
-    const Hash& contentsHash,
+    const Hash20& contentsHash,
     uint64_t blobSize) {
   serialize(contentsHash, blobSize);
 }
@@ -48,19 +48,19 @@ BlobMetadata SerializedBlobMetadata::unslice(folly::ByteRange bytes) {
   uint64_t blobSizeBE;
   memcpy(&blobSizeBE, bytes.data(), sizeof(uint64_t));
   bytes.advance(sizeof(uint64_t));
-  auto contentsHash = Hash{bytes};
+  auto contentsHash = Hash20{bytes};
   return BlobMetadata{contentsHash, folly::Endian::big(blobSizeBE)};
 }
 
 void SerializedBlobMetadata::serialize(
-    const Hash& contentsHash,
+    const Hash20& contentsHash,
     uint64_t blobSize) {
   uint64_t blobSizeBE = folly::Endian::big(blobSize);
   memcpy(data_.data(), &blobSizeBE, sizeof(uint64_t));
   memcpy(
       data_.data() + sizeof(uint64_t),
       contentsHash.getBytes().data(),
-      Hash::RAW_SIZE);
+      Hash20::RAW_SIZE);
 }
 
 } // namespace facebook::eden

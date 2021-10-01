@@ -65,7 +65,7 @@ void OverlayFileAccess::createEmptyFile(InodeNumber ino) {
 void OverlayFileAccess::createFile(
     InodeNumber ino,
     const Blob& blob,
-    const std::optional<Hash>& sha1) {
+    const std::optional<Hash20>& sha1) {
   auto file = overlay_->createOverlayFile(ino, blob.getContents());
   auto state = state_.wlock();
   XCHECK(!state->entries.exists(ino))
@@ -121,7 +121,7 @@ off_t OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
   return size;
 }
 
-Hash OverlayFileAccess::getSha1(FileInode& inode) {
+Hash20 OverlayFileAccess::getSha1(FileInode& inode) {
   auto entry = getEntryForInode(inode.getNodeId());
   uint64_t version;
   {
@@ -161,8 +161,8 @@ Hash OverlayFileAccess::getSha1(FileInode& inode) {
     off += len;
   }
 
-  static_assert(Hash::RAW_SIZE == SHA_DIGEST_LENGTH);
-  Hash sha1;
+  static_assert(Hash20::RAW_SIZE == SHA_DIGEST_LENGTH);
+  Hash20 sha1;
   SHA1_Final(sha1.mutableBytes().begin(), &ctx);
 
   // Update the cache if the version still matches.

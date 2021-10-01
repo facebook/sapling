@@ -544,10 +544,10 @@ std::optional<bool> FileInode::isSameAsFast(
 }
 
 folly::Future<bool> FileInode::isSameAsSlow(
-    const Hash& expectedBlobSha1,
+    const Hash20& expectedBlobSha1,
     ObjectFetchContext& fetchContext) {
   return getSha1(fetchContext)
-      .thenTry([expectedBlobSha1](folly::Try<Hash>&& try_) {
+      .thenTry([expectedBlobSha1](folly::Try<Hash20>&& try_) {
         if (try_.hasException()) {
           XLOG(DBG2) << "Assuming changed: " << try_.exception();
           return false;
@@ -566,13 +566,13 @@ folly::Future<bool> FileInode::isSameAs(
     return result.value();
   }
 
-  auto blobSha1 = Hash::sha1(blob.getContents());
+  auto blobSha1 = Hash20::sha1(blob.getContents());
   return isSameAsSlow(blobSha1, fetchContext);
 }
 
 folly::Future<bool> FileInode::isSameAs(
     const ObjectId& blobID,
-    const Hash& blobSha1,
+    const Hash20& blobSha1,
     TreeEntryType entryType,
     ObjectFetchContext& fetchContext) {
   auto result = isSameAsFast(blobID, entryType);
@@ -595,7 +595,7 @@ folly::Future<bool> FileInode::isSameAs(
   auto f1 = getSha1(fetchContext);
   auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID, fetchContext);
   return folly::collectUnsafe(f1, f2).thenTry(
-      [](folly::Try<std::tuple<Hash, Hash>>&& try_) {
+      [](folly::Try<std::tuple<Hash20, Hash20>>&& try_) {
         if (try_.hasException()) {
           XLOG(DBG2) << "Assuming changed: " << try_.exception();
           return false;
@@ -663,7 +663,8 @@ Future<string> FileInode::getxattr(
     return makeFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  return getSha1(context).thenValue([](Hash hash) { return hash.toString(); });
+  return getSha1(context).thenValue(
+      [](Hash20 hash) { return hash.toString(); });
 }
 #else
 
@@ -677,7 +678,7 @@ AbsolutePath FileInode::getMaterializedFilePath() {
 }
 #endif
 
-Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
+Future<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
   auto state = LockedState{this};
 
   logAccess(fetchContext);
@@ -1074,7 +1075,7 @@ void FileInode::materializeNow(
   // calling state.setMaterialized().
   auto blobSha1Future = getObjectStore()->getBlobSha1(
       state->nonMaterializedState->hash, *context);
-  std::optional<Hash> blobSha1;
+  std::optional<Hash20> blobSha1;
   if (blobSha1Future.isReady()) {
     blobSha1 = blobSha1Future.value();
   }

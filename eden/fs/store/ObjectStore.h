@@ -186,7 +186,7 @@ class ObjectStore : public IObjectStore,
   /**
    * Returns the SHA-1 hash of the contents of the blob with the given ID.
    */
-  folly::Future<Hash> getBlobSha1(
+  folly::Future<Hash20> getBlobSha1(
       const ObjectId& id,
       ObjectFetchContext& context) const;
 

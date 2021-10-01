@@ -32,7 +32,7 @@ class TreeOverlayStoreTest : public ::testing::Test {
   }
 
   overlay::OverlayEntry makeEntry(
-      std::optional<Hash> hash = std::nullopt,
+      std::optional<Hash20> hash = std::nullopt,
       dtype_t mode = dtype_t::Regular,
       std::optional<InodeNumber> inode = std::nullopt) {
     overlay::OverlayEntry entry;
@@ -85,7 +85,7 @@ TEST_F(TreeOverlayStoreTest, testSaveLoadTree) {
   dir.entries_ref()->emplace(std::make_pair(
       "hello",
       makeEntry(
-          Hash{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, dtype_t::Dir)));
+          Hash20{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, dtype_t::Dir)));
   dir.entries_ref()->emplace(std::make_pair("world", makeEntry()));
   dir.entries_ref()->emplace(std::make_pair("foo", makeEntry()));
   dir.entries_ref()->emplace(std::make_pair("bar", makeEntry()));

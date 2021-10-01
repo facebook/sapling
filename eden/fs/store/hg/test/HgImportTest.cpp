@@ -73,11 +73,11 @@ TEST_F(HgImportTest, importTest) {
   auto output = repo_.hg("manifest", "--debug");
   auto fileHash = output.substr(0, 40);
 
-  auto blob = importer.importFileContents(filePath, Hash{fileHash});
+  auto blob = importer.importFileContents(filePath, Hash20{fileHash});
   EXPECT_BLOB_EQ(blob, barData);
 
   // Test importing objects that do not exist
-  Hash noSuchHash = makeTestHash20("123");
+  Hash20 noSuchHash = makeTestHash20("123");
   EXPECT_THROW_RE(
       importer.importFileContents(filePath, noSuchHash),
       std::exception,
@@ -85,7 +85,7 @@ TEST_F(HgImportTest, importTest) {
 
   EXPECT_THROW_RE(
       importer.importFileContents(
-          RelativePathPiece{"hello"}, Hash{commit1.value()}),
+          RelativePathPiece{"hello"}, Hash20{commit1.value()}),
       std::exception,
       "no match found");
 }

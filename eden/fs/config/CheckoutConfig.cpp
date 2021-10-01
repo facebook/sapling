@@ -109,20 +109,20 @@ RootId CheckoutConfig::getParentCommit() const {
   auto sizeLeft = cursor.length();
   switch (version) {
     case kSnapshotFormatVersion1: {
-      if (sizeLeft != Hash::RAW_SIZE && sizeLeft != (Hash::RAW_SIZE * 2)) {
+      if (sizeLeft != Hash20::RAW_SIZE && sizeLeft != (Hash20::RAW_SIZE * 2)) {
         throw std::runtime_error(fmt::format(
             "unexpected length for eden SNAPSHOT file ({} bytes): {}",
             contents.size(),
             snapshotFile));
       }
 
-      Hash parent1;
-      cursor.pull(parent1.mutableBytes().data(), Hash::RAW_SIZE);
+      Hash20 parent1;
+      cursor.pull(parent1.mutableBytes().data(), Hash20::RAW_SIZE);
 
       if (!cursor.isAtEnd()) {
         // This is never used by EdenFS.
-        Hash secondParent;
-        cursor.pull(secondParent.mutableBytes().data(), Hash::RAW_SIZE);
+        Hash20 secondParent;
+        cursor.pull(secondParent.mutableBytes().data(), Hash20::RAW_SIZE);
       }
 
       // SNAPSHOT v1 stored hashes as binary, but RootId prefers them inflated

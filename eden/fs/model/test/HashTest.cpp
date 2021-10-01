@@ -27,22 +27,22 @@ string testHashHex = folly::to<string>(
     "1badb002",
     "8badf00d");
 
-Hash testHash(testHashHex);
+Hash20 testHash(testHashHex);
 } // namespace
 
-TEST(Hash, testDefaultConstructor) {
-  EXPECT_EQ("0000000000000000000000000000000000000000", Hash().toString());
+TEST(Hash20, testDefaultConstructor) {
+  EXPECT_EQ("0000000000000000000000000000000000000000", Hash20().toString());
 }
 
-TEST(Hash, emptySha1) {
-  EXPECT_EQ(kEmptySha1, Hash::sha1(IOBuf{}));
+TEST(Hash20, emptySha1) {
+  EXPECT_EQ(kEmptySha1, Hash20::sha1(IOBuf{}));
 }
 
-TEST(Hash, testByteArrayConstructor) {
+TEST(Hash20, testByteArrayConstructor) {
   EXPECT_EQ(testHashHex, testHash.toString());
 }
 
-TEST(Hash, testByteRangeConstructor) {
+TEST(Hash20, testByteRangeConstructor) {
   auto bytes = folly::make_array<uint8_t>(
       // faceb00c
       0xfa,
@@ -74,20 +74,20 @@ TEST(Hash, testByteRangeConstructor) {
       0xf0,
       0x0d);
   auto byteRange = folly::ByteRange(bytes.data(), bytes.size());
-  Hash hash(byteRange);
+  Hash20 hash(byteRange);
   EXPECT_EQ(hash, testHash);
   EXPECT_EQ(byteRange, hash.getBytes());
   EXPECT_EQ(hash.getBytes(), testHash.getBytes());
 }
 
-TEST(Hash, testCopyConstructor) {
-  Hash copyOfTestHash(testHash);
+TEST(Hash20, testCopyConstructor) {
+  Hash20 copyOfTestHash(testHash);
   EXPECT_EQ(testHash.toString(), copyOfTestHash.toString());
   EXPECT_TRUE(testHash == copyOfTestHash);
   EXPECT_FALSE(testHash != copyOfTestHash);
 }
 
-TEST(Hash, ensureHashCopiesBytesPassedToConstructor) {
+TEST(Hash20, ensureHashCopiesBytesPassedToConstructor) {
   std::array<uint8_t, 20> bytes = {
       // faceb00c
       0xfa,
@@ -119,9 +119,9 @@ TEST(Hash, ensureHashCopiesBytesPassedToConstructor) {
       0xf0,
       0x0d,
   };
-  Hash hash1(bytes);
+  Hash20 hash1(bytes);
   bytes[0] = 0xc0;
-  Hash hash2(bytes);
+  Hash20 hash2(bytes);
   EXPECT_EQ("faceb00cdeadbeefc00010ff1badb0028badf00d", hash1.toString());
   EXPECT_EQ("c0ceb00cdeadbeefc00010ff1badb0028badf00d", hash2.toString());
   EXPECT_TRUE(hash1 != hash2);
@@ -129,41 +129,43 @@ TEST(Hash, ensureHashCopiesBytesPassedToConstructor) {
   EXPECT_TRUE(hash1 > hash2);
 }
 
-TEST(Hash, constexprHexConstructor) {
+TEST(Hash20, constexprHexConstructor) {
   // It would be nice to static_assert that two Hashes are equal.
   // Unfortunately the std::array operator== comparison isn't constexpr until
   // C++20, so we don't do this for now.
   static_assert(
-      Hash("faceb00cdeadbeefc00010ff1badb0028badf00d").getBytes().data()[0] ==
+      Hash20("faceb00cdeadbeefc00010ff1badb0028badf00d").getBytes().data()[0] ==
       0xfa);
   static_assert(
-      Hash("faceb00cdeadbeefc00010ff1badb0028badf00d").getBytes().data()[1] ==
+      Hash20("faceb00cdeadbeefc00010ff1badb0028badf00d").getBytes().data()[1] ==
       0xce);
   static_assert(
-      Hash("faceb00cdeadbeefc00010ff1badb0028badf00d").getBytes().data()[15] ==
-      0x02);
+      Hash20("faceb00cdeadbeefc00010ff1badb0028badf00d")
+          .getBytes()
+          .data()[15] == 0x02);
 }
 
-TEST(Hash, constexprBytesConstructor) {
+TEST(Hash20, constexprBytesConstructor) {
   constexpr std::array<uint8_t, 20> data = {
       0xfa, 0xce, 0xb0, 0x0c, 0xde, 0xad, 0xbe, 0xef, 0xc0, 0x00,
       0x10, 0xff, 0x1b, 0xad, 0xb0, 0x02, 0x8b, 0xad, 0xf0, 0x0d,
   };
-  static_assert(Hash(data).getBytes().data()[0] == 0xfa);
-  static_assert(Hash(data).getBytes().data()[1] == 0xce);
-  static_assert(Hash(data).getBytes().data()[15] == 0x02);
+  static_assert(Hash20(data).getBytes().data()[0] == 0xfa);
+  static_assert(Hash20(data).getBytes().data()[1] == 0xce);
+  static_assert(Hash20(data).getBytes().data()[15] == 0x02);
 }
 
-TEST(Hash, ensureStringConstructorRejectsArgumentWithWrongLength) {
-  EXPECT_THROW(Hash("badfood"), std::invalid_argument);
+TEST(Hash20, ensureStringConstructorRejectsArgumentWithWrongLength) {
+  EXPECT_THROW(Hash20("badfood"), std::invalid_argument);
 }
 
-TEST(Hash, ensureStringConstructorRejectsArgumentBadCharacters) {
+TEST(Hash20, ensureStringConstructorRejectsArgumentBadCharacters) {
   EXPECT_THROW(
-      Hash("ZZZZb00cdeadbeefc00010ff1badb0028badf00d"), std::invalid_argument);
+      Hash20("ZZZZb00cdeadbeefc00010ff1badb0028badf00d"),
+      std::invalid_argument);
 }
 
-TEST(Hash, sha1IOBuf) {
+TEST(Hash20, sha1IOBuf) {
   // Test computing the SHA1 of data spread across an IOBuf chain
   auto buf1 = IOBuf::create(50);
   auto buf2 = IOBuf::create(50);
@@ -181,10 +183,10 @@ TEST(Hash, sha1IOBuf) {
   buf1->appendChain(std::move(buf2));
 
   EXPECT_EQ(
-      Hash("5d105d15efb8b07a624be530ef2b62dab3bc2f8b"), Hash::sha1(*buf1));
+      Hash20("5d105d15efb8b07a624be530ef2b62dab3bc2f8b"), Hash20::sha1(*buf1));
 }
 
-TEST(Hash, sha1ByteRange) {
+TEST(Hash20, sha1ByteRange) {
   // clang-format off
   auto data = folly::make_array<uint8_t>(
       0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -196,22 +198,22 @@ TEST(Hash, sha1ByteRange) {
       0x30, 0x31, 0x32, 0x33, 0x34);
   // clang-format on
   EXPECT_EQ(
-      Hash("2a9c28ef61eb536d3bbda64ad95a132554be3d6b"),
-      Hash::sha1(ByteRange(data.data(), data.size())));
+      Hash20("2a9c28ef61eb536d3bbda64ad95a132554be3d6b"),
+      Hash20::sha1(ByteRange(data.data(), data.size())));
 }
 
-TEST(Hash, assignment) {
-  Hash h1;
-  Hash h2("0123456789abcdeffedcba987654321076543210");
+TEST(Hash20, assignment) {
+  Hash20 h1;
+  Hash20 h2("0123456789abcdeffedcba987654321076543210");
   EXPECT_EQ("0000000000000000000000000000000000000000", h1.toString());
   h1 = h2;
   EXPECT_EQ("0123456789abcdeffedcba987654321076543210", h1.toString());
   EXPECT_EQ(h2, h1);
-  h2 = Hash();
+  h2 = Hash20();
   EXPECT_EQ("0000000000000000000000000000000000000000", h2.toString());
 }
 
-TEST(Hash, getHashCode) {
+TEST(Hash20, getHashCode) {
   // This isn't so much because we care about the exact value of the hash code,
   // but because we want to make sure that (at least on 64-bit machines), we are
   // using 64 bits of data to contribute to the hash code.

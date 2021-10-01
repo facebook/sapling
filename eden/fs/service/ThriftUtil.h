@@ -64,10 +64,10 @@ inline std::string thriftHash20(const std::optional<Hash20>& hash) {
  * hexadecimal string.
  */
 inline ObjectId hashFromThrift(folly::StringPiece commitID) {
-  if (commitID.size() == Hash::RAW_SIZE) {
+  if (commitID.size() == ObjectId::RAW_SIZE) {
     // This looks like 20 bytes of binary data.
     return ObjectId(folly::ByteRange(folly::StringPiece(commitID)));
-  } else if (commitID.size() == 2 * Hash::RAW_SIZE) {
+  } else if (commitID.size() == 2 * ObjectId::RAW_SIZE) {
     // This looks like 40 bytes of hexadecimal data.
     return ObjectId(commitID);
   } else {
@@ -88,10 +88,10 @@ inline ObjectId hashFromThrift(folly::StringPiece commitID) {
  * hexadecimal string.
  */
 inline Hash20 hash20FromThrift(folly::StringPiece commitID) {
-  if (commitID.size() == Hash::RAW_SIZE) {
+  if (commitID.size() == Hash20::RAW_SIZE) {
     // This looks like 20 bytes of binary data.
     return Hash20(folly::ByteRange(folly::StringPiece(commitID)));
-  } else if (commitID.size() == 2 * Hash::RAW_SIZE) {
+  } else if (commitID.size() == 2 * Hash20::RAW_SIZE) {
     // This looks like 40 bytes of hexadecimal data.
     return Hash20(commitID);
   } else {

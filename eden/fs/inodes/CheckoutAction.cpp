@@ -133,7 +133,7 @@ Future<InvalidationRequired> CheckoutAction::run(
         store
             ->getBlobSha1(
                 oldScmEntry_.value().getHash(), ctx->getFetchContext())
-            .thenValue([rc = LoadingRefcount(this)](Hash oldBlobSha1) {
+            .thenValue([rc = LoadingRefcount(this)](Hash20 oldBlobSha1) {
               rc->setOldBlob(std::move(oldBlobSha1));
             })
             .thenError(
@@ -188,7 +188,7 @@ void CheckoutAction::setOldTree(std::shared_ptr<const Tree> tree) {
   oldTree_ = std::move(tree);
 }
 
-void CheckoutAction::setOldBlob(Hash blobSha1) {
+void CheckoutAction::setOldBlob(Hash20 blobSha1) {
   XCHECK(!oldTree_);
   XCHECK(!oldBlobSha1_);
   oldBlobSha1_ = std::move(blobSha1);

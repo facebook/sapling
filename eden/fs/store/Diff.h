@@ -19,7 +19,6 @@ namespace facebook::eden {
 
 class ObjectId;
 class Hash20;
-using Hash = Hash20;
 class ObjectStore;
 class Tree;
 class DiffContext;

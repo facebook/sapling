@@ -252,7 +252,7 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
     auto f2 = context_->store->getBlobSha1(
         currentBlobHash_, context_->getFetchContext());
     return collectSafe(f1, f2).thenValue(
-        [this](const std::tuple<Hash, Hash>& info) {
+        [this](const std::tuple<Hash20, Hash20>& info) {
           const auto& [info1, info2] = info;
           if (info1 != info2) {
             XLOG(DBG5) << "modified file: " << getPath();

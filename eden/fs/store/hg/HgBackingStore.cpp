@@ -301,7 +301,7 @@ void HgBackingStore::getTreeBatch(
 }
 
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
-    const Hash& manifestNode,
+    const Hash20& manifestNode,
     const ObjectId& edenTreeID,
     RelativePathPiece path,
     bool prefetchMetadata) {
@@ -380,7 +380,7 @@ void HgBackingStore::processTreeMetadata(
 
 folly::Future<std::unique_ptr<Tree>>
 HgBackingStore::fetchTreeFromHgCacheOrImporter(
-    Hash manifestNode,
+    Hash20 manifestNode,
     ObjectId edenTreeID,
     RelativePath path) {
   auto writeBatch = localStore_->beginWrite();
@@ -402,7 +402,7 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
 }
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
-    Hash manifestNode,
+    Hash20 manifestNode,
     ObjectId edenTreeID,
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
@@ -438,10 +438,10 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
 }
 
 namespace {
-constexpr size_t kNodeHexLen = Hash::RAW_SIZE * 2;
+constexpr size_t kNodeHexLen = Hash20::RAW_SIZE * 2;
 
 struct ManifestEntry {
-  Hash node;
+  Hash20 node;
   PathComponent name;
   TreeEntryType type;
 
@@ -472,7 +472,7 @@ struct ManifestEntry {
           nameend - end));
     }
 
-    auto node = Hash(StringPiece{nameend + 1, kNodeHexLen});
+    auto node = Hash20(StringPiece{nameend + 1, kNodeHexLen});
 
     auto flagsPtr = nameend + kNodeHexLen + 1;
     TreeEntryType type;
@@ -548,7 +548,7 @@ class Manifest {
 
 std::unique_ptr<Tree> HgBackingStore::processTree(
     std::unique_ptr<IOBuf> content,
-    const Hash& manifestNode,
+    const Hash20& manifestNode,
     const ObjectId& edenTreeID,
     RelativePathPiece path,
     LocalStore::WriteBatch* writeBatch) {
@@ -572,7 +572,7 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
 
 folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
     const RootId& rootId,
-    const Hash& manifestId,
+    const Hash20& manifestId,
     bool prefetchMetadata) {
   auto commitId = hashFromRootId(rootId);
   return localStore_
@@ -619,7 +619,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
 }
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
-    Hash manifestNode,
+    Hash20 manifestNode,
     bool prefetchMetadata) {
   // Record that we are at the root for this node
   RelativePathPiece path{};

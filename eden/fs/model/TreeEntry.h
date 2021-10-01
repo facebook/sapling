@@ -53,7 +53,7 @@ class TreeEntry {
       PathComponent name,
       TreeEntryType type,
       std::optional<uint64_t> size,
-      std::optional<Hash> contentSha1)
+      std::optional<Hash20> contentSha1)
       : type_(type),
         hash_(hash),
         name_(std::move(name)),
@@ -111,7 +111,7 @@ class TreeEntry {
     return size_;
   }
 
-  const std::optional<Hash>& getContentSha1() const {
+  const std::optional<Hash20>& getContentSha1() const {
     return contentSha1_;
   }
 
@@ -126,7 +126,7 @@ class TreeEntry {
   ObjectId hash_;
   PathComponent name_;
   std::optional<uint64_t> size_;
-  std::optional<Hash> contentSha1_;
+  std::optional<Hash20> contentSha1_;
 };
 
 std::ostream& operator<<(std::ostream& os, TreeEntryType type);

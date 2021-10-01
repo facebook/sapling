@@ -24,7 +24,6 @@ class DiffContext;
 class GitIgnoreStack;
 class ObjectId;
 class Hash20;
-using Hash = Hash20;
 class ObjectStore;
 class TreeEntry;
 class TreeInode;

@@ -111,12 +111,11 @@ std::string toDelimWrapper(StringPiece arg1, const Args&... rest) {
   return result;
 }
 
-using facebook::eden::Hash;
 std::string logHash(StringPiece thriftArg) {
-  if (thriftArg.size() == Hash::RAW_SIZE) {
-    return Hash{folly::ByteRange{thriftArg}}.toString();
-  } else if (thriftArg.size() == Hash::RAW_SIZE * 2) {
-    return Hash{thriftArg}.toString();
+  if (thriftArg.size() == Hash20::RAW_SIZE) {
+    return Hash20{folly::ByteRange{thriftArg}}.toString();
+  } else if (thriftArg.size() == Hash20::RAW_SIZE * 2) {
+    return Hash20{thriftArg}.toString();
   } else {
     return folly::hexlify(thriftArg);
   }
@@ -520,7 +519,7 @@ void EdenServiceHandler::getSHA1(
     unique_ptr<vector<string>> paths) {
   TraceBlock block("getSHA1");
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
-  vector<Future<Hash>> futures;
+  vector<Future<Hash20>> futures;
   auto mountPath = AbsolutePathPiece{*mountPoint};
   for (const auto& path : *paths) {
     futures.emplace_back(
@@ -539,7 +538,7 @@ void EdenServiceHandler::getSHA1(
   }
 }
 
-Future<Hash> EdenServiceHandler::getSHA1ForPathDefensively(
+Future<Hash20> EdenServiceHandler::getSHA1ForPathDefensively(
     AbsolutePathPiece mountPoint,
     StringPiece path,
     ObjectFetchContext& fetchContext) noexcept {
@@ -547,12 +546,12 @@ Future<Hash> EdenServiceHandler::getSHA1ForPathDefensively(
       [&] { return getSHA1ForPath(mountPoint, path, fetchContext); });
 }
 
-Future<Hash> EdenServiceHandler::getSHA1ForPath(
+Future<Hash20> EdenServiceHandler::getSHA1ForPath(
     AbsolutePathPiece mountPoint,
     StringPiece path,
     ObjectFetchContext& fetchContext) {
   if (path.empty()) {
-    return makeFuture<Hash>(newEdenError(
+    return makeFuture<Hash20>(newEdenError(
         EINVAL,
         EdenErrorType::ARGUMENT_ERROR,
         "path cannot be the empty string"));
@@ -565,7 +564,7 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
         auto fileInode = inode.asFilePtr();
         if (fileInode->getType() != dtype_t::Regular) {
           // We intentionally want to refuse to compute the SHA1 of symlinks
-          return makeFuture<Hash>(
+          return makeFuture<Hash20>(
               InodeError(EINVAL, fileInode, "file is a symlink"));
         }
         return fileInode->getSha1(fetchContext);

@@ -22,7 +22,6 @@ namespace facebook {
 namespace eden {
 
 class Hash20;
-using Hash = Hash20;
 class EdenMount;
 class EdenServer;
 class TreeInode;
@@ -290,12 +289,12 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   std::optional<pid_t> getAndRegisterClientPid();
 
  private:
-  folly::Future<Hash> getSHA1ForPath(
+  folly::Future<Hash20> getSHA1ForPath(
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext);
 
-  folly::Future<Hash> getSHA1ForPathDefensively(
+  folly::Future<Hash20> getSHA1ForPathDefensively(
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext) noexcept;

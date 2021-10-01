@@ -177,7 +177,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   folly::Future<std::vector<std::string>> listxattr() override;
 #endif
 
-  folly::Future<Hash> getSha1(ObjectFetchContext& fetchContext);
+  folly::Future<Hash20> getSha1(ObjectFetchContext& fetchContext);
 
   /**
    * Check to see if the file has the same contents as the specified blob
@@ -192,7 +192,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       ObjectFetchContext& fetchContext);
   folly::Future<bool> isSameAs(
       const ObjectId& blobID,
-      const Hash& blobSha1,
+      const Hash20& blobSha1,
       TreeEntryType entryType,
       ObjectFetchContext& fetchContext);
   folly::Future<bool> isSameAs(
@@ -428,7 +428,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * Sha1.
    */
   folly::Future<bool> isSameAsSlow(
-      const Hash& expectedBlobSha1,
+      const Hash20& expectedBlobSha1,
       ObjectFetchContext& fetchContext);
 
   /**
