@@ -60,20 +60,10 @@ where
 mod tests {
     use super::*;
 
-    use quickcheck::quickcheck;
-
-    use types::HgId;
-
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+    use crate::wire::tests::auto_wire_tests;
     use crate::wire::WireHgId;
 
-    quickcheck! {
-        fn test_serialize_roundtrip_batch_request(v: WireBatch<WireHgId>) -> bool {
-            check_serialize_roundtrip(v)
-        }
+    type WireHgIdBatch = WireBatch<WireHgId>;
 
-        fn test_wire_roundtrip_batch_request(v: Batch<HgId>) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(WireHgIdBatch);
 }

@@ -1,0 +1,6 @@
+---
+source: bookmark.rs
+expression: "WireBookmarkRequest::arbitrary(&mut g)"
+
+---
+{"0":["8"]}

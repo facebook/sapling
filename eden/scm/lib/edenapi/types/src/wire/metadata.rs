@@ -465,27 +465,7 @@ impl Arbitrary for WireAnyFileContentId {
 mod tests {
     use super::*;
 
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+    use crate::wire::tests::auto_wire_tests;
 
-    use quickcheck::quickcheck;
-
-    quickcheck! {
-        // Wire serialize roundtrips
-        fn test_file_meta_roundtrip_serialize(v: WireFileMetadata) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_file_meta_req_roundtrip_serialize(v: WireFileMetadataRequest) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        // API-Wire roundtrips
-        fn test_file_meta_roundtrip_wire(v: FileMetadata) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_file_meta_req_roundtrip_wire(v: FileMetadataRequest) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(WireFileMetadata, WireFileMetadataRequest);
 }

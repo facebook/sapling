@@ -22,7 +22,6 @@ types = { path = "../../types" }
 insta_ext = { path = "../../insta_ext" }
 paste = "1.0"
 quickcheck_macros = "1.0"
-serde_cbor = "0.11"
 
 [features]
 default = ["for-tests"]

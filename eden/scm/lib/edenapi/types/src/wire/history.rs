@@ -154,36 +154,11 @@ impl Arbitrary for WireHistoryResponseChunk {
 mod tests {
     use super::*;
 
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+    use crate::wire::tests::auto_wire_tests;
 
-    use quickcheck::quickcheck;
-
-    quickcheck! {
-        // Wire serialize roundtrips
-        fn test_wire_history_request_roundtrip_serialize(v: WireHistoryRequest) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_wire_wire_history_entry_serialize(v: WireWireHistoryEntry) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_wire_history_response_chunk_roundtrip_serialize(v: WireHistoryResponseChunk) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        // API-Wire roundtrips
-
-        fn test_history_request_roundtrip_wire(v: HistoryRequest) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_wire_history_entry_roundtrip_wire(v: WireHistoryEntry) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_history_response_chunk_roundtrip_wire(v: HistoryResponseChunk) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(
+        WireHistoryRequest,
+        WireWireHistoryEntry,
+        WireHistoryResponseChunk,
+    );
 }

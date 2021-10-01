@@ -990,145 +990,19 @@ impl ToApi for WireFetchSnapshotResponse {
 mod tests {
     use super::*;
 
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+    use crate::wire::tests::auto_wire_tests;
 
-    use quickcheck::quickcheck;
-
-    #[test]
-    fn test_snapshot() {
-        insta_ext::assert_json!(WireSnapshotState {});
-        insta_ext::assert_json!(WireEphemeralPrepareResponse {
-            bubble_id: NonZeroU64::new(12)
-        });
-    }
-
-    quickcheck! {
-        fn test_roundtrip_serialize_location(v: WireCommitLocation) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_location(v: Location<HgId>) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_serialize_location_to_hash_request(
-            v: WireCommitLocationToHashRequest
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_location_to_hash_request(
-            v: CommitLocationToHashRequest
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_serialize_location_to_hash_response(
-            v: WireCommitLocationToHashResponse
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_location_to_hash_response(
-            v: CommitLocationToHashResponse
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_serialize_location_to_hash_request_batch(
-            v: WireCommitLocationToHashRequestBatch
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_location_to_hash_request_batch(
-            v: CommitLocationToHashRequestBatch
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_serialize_hash_to_location_request_batch(
-            v: WireCommitHashToLocationRequestBatch
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_hash_to_location_request_batch(
-            v: CommitHashToLocationRequestBatch
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_serialize_hash_to_location_response(
-            v: WireCommitHashToLocationResponse
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_hash_to_location_response(
-            v: CommitHashToLocationResponse
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_serialize_hash_lookup_request(
-            v: WireCommitHashLookupRequest
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_hash_lookup_request(
-            v: CommitHashLookupRequest
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_serialize_hash_lookup_response(
-            v: WireCommitHashLookupResponse
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_hash_lookup_response(
-            v: CommitHashLookupResponse
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_ephemeral_prepare_req(
-            v: WireEphemeralPrepareRequest
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_ephemeral_prepare_req(
-            v: EphemeralPrepareRequest
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_ephemeral_prepare_res(
-            v: WireEphemeralPrepareResponse
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_ephemeral_prepare_res(
-            v: EphemeralPrepareResponse
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_roundtrip_serialize_commit_graph_request(
-            v: WireCommitGraphRequest
-        ) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_commit_graph_request(
-            v: CommitGraphRequest
-        ) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(
+        WireCommitLocation,
+        WireCommitLocationToHashRequest,
+        WireCommitLocationToHashResponse,
+        WireCommitLocationToHashRequestBatch,
+        WireCommitHashToLocationRequestBatch,
+        WireCommitHashToLocationResponse,
+        WireCommitHashLookupRequest,
+        WireCommitHashLookupResponse,
+        WireEphemeralPrepareRequest,
+        WireEphemeralPrepareResponse,
+        WireCommitGraphRequest,
+    );
 }

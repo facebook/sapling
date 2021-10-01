@@ -59,6 +59,8 @@ pub mod file;
 pub mod history;
 pub mod metadata;
 pub mod pull;
+#[cfg(test)]
+pub(crate) mod tests;
 pub mod token;
 pub mod tree;
 
@@ -507,85 +509,18 @@ impl Arbitrary for WireDagId {
 }
 
 #[cfg(test)]
-pub mod tests {
+pub mod local_tests {
     use super::*;
 
-    use quickcheck::quickcheck;
+    use crate::wire::tests::auto_wire_tests;
 
-    pub fn check_serialize_roundtrip<
-        T: serde::Serialize + serde::de::DeserializeOwned + Clone + PartialEq,
-    >(
-        original: T,
-    ) -> bool {
-        let serial = serde_cbor::to_vec(&original).unwrap();
-        let roundtrip = serde_cbor::from_slice(&serial).unwrap();
-        original == roundtrip
-    }
-
-    pub fn check_wire_roundtrip<T>(original: T) -> bool
-    where
-        T: ToWire + Clone + PartialEq,
-        <T as ToWire>::Wire: ToApi<Api = T>,
-        <<T as ToWire>::Wire as ToApi>::Error: std::fmt::Debug,
-    {
-        let wire = original.clone().to_wire();
-        let roundtrip = wire.to_api().unwrap();
-        original == roundtrip
-    }
-
-    quickcheck! {
-        // Wire serialize roundtrips
-        fn test_hgid_roundtrip_serialize(v: WireHgId) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_key_roundtrip_serialize(v: WireKey) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_path_roundtrip_serialize(v: WireRepoPathBuf) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_parents_roundtrip_serialize(v: WireParents) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_meta_roundtrip_serialize(v: WireRevisionstoreMetadata) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_error_roundtrip_serialize(v: WireEdenApiServerError) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_dagid_roundtrip_serialize(v: WireDagId) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        // API-Wire roundtrips
-        fn test_hgid_roundtrip_wire(v: HgId) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_key_roundtrip_wire(v: Key) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_path_roundtrip_wire(v: RepoPathBuf) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_parents_roundtrip_wire(v: Parents) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_meta_roundtrip_wire(v: RevisionstoreMetadata) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_dagid_roundtrip_wire(v: DagId) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(
+        WireHgId,
+        WireKey,
+        WireRepoPathBuf,
+        WireParents,
+        WireRevisionstoreMetadata,
+        WireEdenApiServerError,
+        WireDagId,
+    );
 }

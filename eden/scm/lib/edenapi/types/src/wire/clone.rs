@@ -47,8 +47,10 @@ impl ToWire for CloneData<HgId> {
     type Wire = WireCloneData;
 
     fn to_wire(self) -> Self::Wire {
-        let idmap = self
-            .idmap
+        let mut idmap: Vec<_> = self.idmap.into_iter().collect();
+        // Let's sort the array to produce consistent format
+        idmap.sort();
+        let idmap = idmap
             .into_iter()
             .map(|(k, v)| WireIdMapEntry {
                 dag_id: k.to_wire(),
@@ -124,17 +126,7 @@ impl Arbitrary for WireCloneData {
 mod tests {
     use super::*;
 
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+    use crate::wire::tests::auto_wire_tests;
 
-    use quickcheck::quickcheck;
-
-    quickcheck! {
-        fn test_request_roundtrip_serialize(v: WireCloneData) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_request_roundtrip_wire(v: CloneData<HgId>) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(WireCloneData);
 }

@@ -98,17 +98,7 @@ impl quickcheck::Arbitrary for WireError {
 mod tests {
     use super::*;
 
-    use quickcheck::quickcheck;
+    use crate::wire::tests::auto_wire_tests;
 
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
-
-    quickcheck! {
-        fn test_serialize_roundtrip_error(v: WireError) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_wire_roundtrip_error(v: ServerError) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(WireError);
 }

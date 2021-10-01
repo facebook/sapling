@@ -415,40 +415,7 @@ impl Arbitrary for WireTreeRequest {
 mod tests {
     use super::*;
 
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+    use crate::wire::tests::auto_wire_tests;
 
-    use quickcheck::quickcheck;
-
-    quickcheck! {
-        // Wire serialize roundtrips
-        fn test_keys_query_roundtrip_serialize(v: WireTreeKeysQuery) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_query_roundtrip_serialize(v: WireTreeQuery) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_attrs_roundtrip_serialize(v: WireTreeAttributesRequest) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_request_roundtrip_serialize(v: WireTreeRequest) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_entry_roundtrip_serialize(v: WireTreeEntry) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        // API-Wire roundtrips
-
-        fn test_request_roundtrip_wire(v: TreeRequest) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_entry_roundtrip_wire(v: Result<TreeEntry, EdenApiServerError>) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(WireTreeAttributesRequest, WireTreeRequest, WireTreeEntry);
 }

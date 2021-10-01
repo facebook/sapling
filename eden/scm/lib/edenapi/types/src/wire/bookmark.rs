@@ -90,27 +90,7 @@ impl Arbitrary for WireBookmarkEntry {
 mod tests {
     use super::*;
 
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+    use crate::wire::tests::auto_wire_tests;
 
-    use quickcheck::quickcheck;
-
-    quickcheck! {
-
-        fn test_roundtrip_serialize_bookmark_request(v: WireBookmarkRequest) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_bookmark_request(v: BookmarkRequest) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-
-        fn test_roundtrip_serialize_bookmark_response(v: WireBookmarkEntry) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_roundtrip_wire_bookmark_response(v: BookmarkEntry) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(WireBookmarkRequest, WireBookmarkEntry);
 }

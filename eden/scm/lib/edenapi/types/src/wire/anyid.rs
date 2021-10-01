@@ -182,19 +182,7 @@ impl Arbitrary for WireLookupRequest {
 mod tests {
     use super::*;
 
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+    use crate::wire::tests::auto_wire_tests;
 
-    use quickcheck::quickcheck;
-
-    quickcheck! {
-        // Wire serialize roundtrips
-        fn test_lookup_roundtrip_serialize(v: WireLookupRequest) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        // API-Wire roundtrips
-        fn test_lookup_roundtrip_wire(v: LookupRequest) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(WireLookupRequest);
 }

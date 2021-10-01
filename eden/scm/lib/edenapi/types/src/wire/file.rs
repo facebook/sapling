@@ -406,33 +406,7 @@ impl Arbitrary for WireHgFilenodeData {
 mod tests {
     use super::*;
 
-    use crate::wire::tests::{check_serialize_roundtrip, check_wire_roundtrip};
+    use crate::wire::tests::auto_wire_tests;
 
-    use quickcheck::quickcheck;
-
-    quickcheck! {
-        fn test_request_roundtrip_serialize(v: WireFileRequest) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_request_roundtrip_wire(v: FileRequest) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_entry_roundtrip_serialize(v: WireFileEntry) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_entry_roundtrip_wire(v: FileEntry) -> bool {
-            check_wire_roundtrip(v)
-        }
-
-        fn test_upload_hg_filenode_request_roundtrip_serialize(v: WireUploadHgFilenodeRequest) -> bool {
-            check_serialize_roundtrip(v)
-        }
-
-        fn test_upload_hg_filenode_request_roundtrip_wire(v: UploadHgFilenodeRequest) -> bool {
-            check_wire_roundtrip(v)
-        }
-    }
+    auto_wire_tests!(WireFileRequest, WireFileEntry, WireUploadHgFilenodeRequest);
 }
