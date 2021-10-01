@@ -6,7 +6,7 @@
  */
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 use std::num::NonZeroU64;
 
@@ -986,6 +986,20 @@ impl ToApi for WireFetchSnapshotResponse {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireFetchSnapshotRequest {
+    fn arbitrary(g: &mut Gen) -> Self {
+        FetchSnapshotRequest::arbitrary(g).to_wire()
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireFetchSnapshotResponse {
+    fn arbitrary(g: &mut Gen) -> Self {
+        FetchSnapshotResponse::arbitrary(g).to_wire()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1004,5 +1018,7 @@ mod tests {
         WireEphemeralPrepareRequest,
         WireEphemeralPrepareResponse,
         WireCommitGraphRequest,
+        WireFetchSnapshotRequest,
+        WireFetchSnapshotResponse,
     );
 }

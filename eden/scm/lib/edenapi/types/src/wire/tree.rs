@@ -7,7 +7,7 @@
 
 use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
@@ -411,11 +411,23 @@ impl Arbitrary for WireTreeRequest {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireUploadTreeResponse {
+    fn arbitrary(g: &mut Gen) -> Self {
+        UploadTreeResponse::arbitrary(g).to_wire()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(WireTreeAttributesRequest, WireTreeRequest, WireTreeEntry);
+    auto_wire_tests!(
+        WireTreeAttributesRequest,
+        WireTreeRequest,
+        WireTreeEntry,
+        WireUploadTreeResponse
+    );
 }

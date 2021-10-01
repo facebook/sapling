@@ -9,7 +9,7 @@ use anyhow::Result;
 use bytes::Bytes;
 use dag_types::Location;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 use std::iter;
 use std::num::NonZeroU64;
@@ -391,6 +391,44 @@ impl Arbitrary for EphemeralPrepareResponse {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         EphemeralPrepareResponse {
             bubble_id: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for BonsaiFileChange {
+    fn arbitrary(g: &mut Gen) -> Self {
+        match u64::arbitrary(g) % 100 {
+            0..=49 => Self::Change {
+                upload_token: Arbitrary::arbitrary(g),
+                file_type: Arbitrary::arbitrary(g),
+            },
+            50..=79 => Self::Deletion,
+            80..=94 => Self::UntrackedChange {
+                upload_token: Arbitrary::arbitrary(g),
+                file_type: Arbitrary::arbitrary(g),
+            },
+            95..=99 => Self::UntrackedDeletion,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FetchSnapshotRequest {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            cs_id: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FetchSnapshotResponse {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            hg_parents: Arbitrary::arbitrary(g),
+            file_changes: Arbitrary::arbitrary(g),
         }
     }
 }

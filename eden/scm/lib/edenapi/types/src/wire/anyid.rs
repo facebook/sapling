@@ -184,5 +184,5 @@ mod tests {
 
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(WireLookupRequest);
+    auto_wire_tests!(WireAnyId, WireLookupRequest);
 }

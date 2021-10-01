@@ -10,7 +10,7 @@ use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 
 use types::{hgid::HgId, key::Key, parents::Parents};
 
@@ -276,4 +276,14 @@ pub struct UploadTreeRequest {
 pub struct UploadTreeResponse {
     pub index: usize,
     pub token: UploadToken,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadTreeResponse {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            index: Arbitrary::arbitrary(g),
+            token: Arbitrary::arbitrary(g),
+        }
+    }
 }

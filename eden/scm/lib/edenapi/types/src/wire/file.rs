@@ -7,7 +7,7 @@
 
 use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
@@ -402,11 +402,26 @@ impl Arbitrary for WireHgFilenodeData {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireUploadTokensResponse {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            index: Arbitrary::arbitrary(g),
+            token: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(WireFileRequest, WireFileEntry, WireUploadHgFilenodeRequest);
+    auto_wire_tests!(
+        WireFileRequest,
+        WireFileEntry,
+        WireUploadHgFilenodeRequest,
+        WireUploadTokensResponse
+    );
 }

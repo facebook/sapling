@@ -128,5 +128,5 @@ mod tests {
 
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(WireCloneData);
+    auto_wire_tests!(WireCloneData, WireFlatSegment);
 }

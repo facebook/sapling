@@ -10,7 +10,7 @@ use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 
 use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
@@ -313,6 +313,16 @@ impl Arbitrary for HgFilenodeData {
             parents: Arbitrary::arbitrary(g),
             file_content_upload_token: Arbitrary::arbitrary(g),
             metadata: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadTokensResponse {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            index: Arbitrary::arbitrary(g),
+            token: Arbitrary::arbitrary(g),
         }
     }
 }

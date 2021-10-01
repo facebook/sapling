@@ -467,5 +467,11 @@ mod tests {
 
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(WireFileMetadata, WireFileMetadataRequest);
+    auto_wire_tests!(
+        WireFileMetadata,
+        WireFileMetadataRequest,
+        WireDirectoryMetadata,
+        WireDirectoryMetadataRequest,
+        WireAnyFileContentId
+    );
 }

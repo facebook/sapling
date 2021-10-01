@@ -1,0 +1,6 @@
+---
+source: commit.rs
+expression: "WireFetchSnapshotResponse::arbitrary(&mut g)"
+
+---
+{"2":[["rlviom/oxkbvlm/vjafti",{"1":[{"1":{"1":{"2":[157,133,85,4,46,38,85,25,36,58,55,101,239,1,100,81,21,29,1,4]},"3":6325243916544195815}},"2"]}]]}
