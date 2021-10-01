@@ -76,6 +76,34 @@ ImmediateFuture<T>::thenTry(Func&& func) && {
 }
 
 template <typename T>
+T ImmediateFuture<T>::get() && {
+  return std::visit(
+      [](auto&& inner) -> T {
+        using Type = std::decay_t<decltype(inner)>;
+        if constexpr (std::is_same_v<Type, folly::Try<T>>) {
+          return std::move(inner).value();
+        } else {
+          return std::move(inner).get();
+        }
+      },
+      std::move(inner_));
+}
+
+template <typename T>
+folly::Try<T> ImmediateFuture<T>::getTry() && {
+  return std::visit(
+      [](auto&& inner) -> folly::Try<T> {
+        using Type = std::decay_t<decltype(inner)>;
+        if constexpr (std::is_same_v<Type, folly::Try<T>>) {
+          return std::move(inner);
+        } else {
+          return std::move(inner).getTry();
+        }
+      },
+      std::move(inner_));
+}
+
+template <typename T>
 T ImmediateFuture<T>::get(folly::HighResDuration timeout) && {
   return std::visit(
       [timeout](auto&& inner) -> T {
