@@ -15,7 +15,7 @@ use futures::{
     future::{self, TryFutureExt},
     stream,
 };
-use quickcheck::{Arbitrary, StdGen};
+use quickcheck::{Arbitrary, Gen};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -87,7 +87,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
     // right for a store() call to succeed (all the chunks need to be saved, then we need to write
     // 3 aliases, and then the content).
     let rt = tokio::runtime::Runtime::new()?;
-    let mut gen = StdGen::new(rand::thread_rng(), 128);
+    let mut gen = Gen::new(128);
 
     let memblob = Arc::new(memblob::Memblob::default());
     let blob = FailingBlobstore::new(memblob.clone(), 0.75, 0.75);
@@ -127,7 +127,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 async fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
-    let mut gen = StdGen::new(rand::thread_rng(), 128);
+    let mut gen = Gen::new(128);
 
     let memblob = Arc::new(memblob::Memblob::default());
     let ctx = CoreContext::test_mock(fb);

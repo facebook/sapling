@@ -431,8 +431,8 @@ mod test {
     }
 
     quickcheck! {
-        fn check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: usize) -> bool {
-            let size = size + 1; // Don't allow 0 as the size.
+        fn check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: u8) -> bool {
+            let size = (size as usize) + 1; // Don't allow 0 as the size.
             let rt = Runtime::new().unwrap();
             rt.block_on(do_check_chunk_stream(in_chunks, size))
         }

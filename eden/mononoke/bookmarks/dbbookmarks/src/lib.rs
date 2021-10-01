@@ -223,7 +223,7 @@ mod test {
                 Some(name) => BookmarkPagination::After(name),
                 None => BookmarkPagination::FromStart,
             };
-            let have = insert_then_query(
+            let mut have = insert_then_query(
                 fb,
                 &bookmarks,
                 freshness,
@@ -232,13 +232,15 @@ mod test {
                 &pagination,
                 limit,
             );
-            let want = mock_bookmarks_response(
+            let mut want = mock_bookmarks_response(
                 &bookmarks,
                 &prefix,
                 kinds.as_slice(),
                 &pagination,
                 limit,
             );
+            have.sort_by_key(|(_, csid)| *csid);
+            want.sort_by_key(|(_, csid)| *csid);
             have == want
         }
     }

@@ -203,10 +203,10 @@ mod test {
                     // Can't add a set operator if we have don't have at least one node
                     revset.push(RevsetEntry::SingleNode(None));
                 } else {
-                    let input_count = g.gen_range(0..revspecs_in_set) + 1;
+                    let input_count = (usize::arbitrary(g) % revspecs_in_set) + 1;
                     revset.push(
                         // Bias towards SingleNode if we only have 1 rev
-                        match g.gen_range(0..4) {
+                        match u32::arbitrary(g) % 4 {
                             0 => RevsetEntry::SingleNode(None),
                             1 => {
                                 if revspecs_in_set >= 2 {
@@ -233,7 +233,7 @@ mod test {
             assert!(revspecs_in_set > 0, "Did not produce enough revs");
 
             if revspecs_in_set > 1 {
-                revset.push(match g.gen_range(0..2) {
+                revset.push(match u32::arbitrary(g) % 2 {
                     0 => RevsetEntry::Intersect(revspecs_in_set),
                     1 => RevsetEntry::Union(revspecs_in_set),
                     _ => panic!("Range returned too wide a variation"),

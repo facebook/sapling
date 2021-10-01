@@ -38,7 +38,6 @@ futures-old = { package = "futures", version = "0.1.31" }
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 quickcheck = "1.0"
-quickcheck_derive = "0.3"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [patch.crates-io]

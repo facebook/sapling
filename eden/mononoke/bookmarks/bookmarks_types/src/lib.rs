@@ -35,7 +35,7 @@ impl Arbitrary for Freshness {
     fn arbitrary(g: &mut Gen) -> Self {
         use Freshness::*;
 
-        match u32::arbitrary(g) & 2 {
+        match u32::arbitrary(g) % 2 {
             0 => MostRecent,
             1 => MaybeStale,
             _ => unreachable!(),
