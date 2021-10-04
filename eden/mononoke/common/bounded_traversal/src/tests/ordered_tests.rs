@@ -14,8 +14,6 @@ use futures::future::{BoxFuture, FutureExt};
 use futures::stream::TryStreamExt;
 use pretty_assertions::assert_eq;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
-use rand::seq::SliceRandom;
-use rand::Rng;
 use tokio::task::yield_now;
 
 use super::utils::{StateLog, Tick};

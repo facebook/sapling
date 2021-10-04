@@ -21,7 +21,6 @@ maplit = "1.0"
 pretty_assertions = "0.6"
 quickcheck = "1.0"
 quickcheck_async = "0.1.1"
-rand = { version = "0.8", features = ["small_rng"] }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [patch.crates-io]
