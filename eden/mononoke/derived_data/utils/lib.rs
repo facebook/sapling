@@ -40,7 +40,7 @@ use futures::{
     Future, Stream, TryFutureExt, TryStreamExt,
 };
 use futures_stats::TimedTryFutureExt;
-use git_types::{TreeHandle, TreeMapping};
+use git_types::TreeHandle;
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derived_data::MappedHgChangesetId;
@@ -677,7 +677,6 @@ fn derived_data_utils_impl(
     name: &str,
     config: &DerivedDataTypesConfig,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
-    let blobstore = repo.get_blobstore().boxed();
     match name {
         RootUnodeManifestId::NAME => Ok(Arc::new(
             DerivedUtilsFromManager::<RootUnodeManifestId>::new(repo, config),
@@ -716,14 +715,9 @@ fn derived_data_utils_impl(
         RootSkeletonManifestId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
             RootSkeletonManifestId,
         >::new(repo, config))),
-        TreeHandle::NAME => {
-            let mapping = TreeMapping::new(blobstore, config);
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                fb,
-                mapping,
-                repo.clone(),
-            )))
-        }
+        TreeHandle::NAME => Ok(Arc::new(DerivedUtilsFromManager::<TreeHandle>::new(
+            repo, config,
+        ))),
         name => Err(format_err!("Unsupported derived data type: {}", name)),
     }
 }

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Error};
+use anyhow::{bail, Error, Result};
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
@@ -14,117 +14,70 @@ use futures::{
     stream::{FuturesUnordered, TryStreamExt},
 };
 use manifest::derive_manifest;
-use std::collections::HashMap;
 use std::convert::TryInto;
-use std::sync::Arc;
 
-use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Storable};
-use derived_data::{
-    BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedOld, DeriveError, DerivedDataTypesConfig,
-};
+use derived_data::impl_bonsai_derived_via_manager;
+use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use filestore::{self, FetchKey};
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
 
 use crate::errors::ErrorKind;
 use crate::{BlobHandle, Tree, TreeBuilder, TreeHandle};
 
-#[derive(Clone)]
-pub struct TreeMapping {
-    blobstore: Arc<dyn Blobstore>,
-}
-
-impl TreeMapping {
-    pub fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Self {
-        Self { blobstore }
-    }
-
-    fn root_key(&self, cs_id: ChangesetId) -> String {
-        format!("git.derived_root.{}", cs_id)
-    }
-
-    async fn fetch_root<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Option<(ChangesetId, TreeHandle)>, Error> {
-        let bytes = self.blobstore.get(ctx, &self.root_key(cs_id)).await?;
-        match bytes {
-            Some(bytes) => bytes.try_into().map(|handle| Some((cs_id, handle))),
-            None => Ok(None),
-        }
-    }
-}
-
-#[async_trait]
-impl BonsaiDerivedMapping for TreeMapping {
-    type Value = TreeHandle;
-
-    async fn get(
-        &self,
-        ctx: &CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        csids
-            .into_iter()
-            .map(|cs_id| self.fetch_root(ctx, cs_id))
-            .collect::<FuturesUnordered<_>>()
-            .try_filter_map(|maybe_handle| async move { Ok(maybe_handle) })
-            .try_collect()
-            .await
-    }
-
-    async fn put(
-        &self,
-        ctx: &CoreContext,
-        csid: ChangesetId,
-        root: &Self::Value,
-    ) -> Result<(), Error> {
-        self.blobstore
-            .put(ctx, self.root_key(csid), root.clone().into())
-            .await
-    }
-
-    fn options(&self) {}
+fn format_key(cs_id: ChangesetId) -> String {
+    format!("git.derived_root.{}", cs_id)
 }
 
 #[async_trait]
 impl BonsaiDerivable for TreeHandle {
     const NAME: &'static str = "git_trees";
 
-    type Options = ();
+    type Dependencies = dependencies![];
 
-    async fn derive_from_parents_impl(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn derive_single(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        _options: &Self::Options,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self> {
         if bonsai.is_snapshot() {
             bail!("Can't derive TreeHandle for snapshot")
         }
-        let blobstore = repo.get_blobstore();
+        let blobstore = derivation_ctx.blobstore().clone();
         let changes = get_file_changes(&blobstore, &ctx, bonsai).await?;
         derive_git_manifest(ctx, blobstore, parents, changes).await
     }
-}
 
-#[async_trait]
-impl BonsaiDerivedOld for TreeHandle {
-    type DefaultMapping = TreeMapping;
+    async fn store_mapping(
+        self,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<()> {
+        let key = format_key(changeset_id);
+        derivation_ctx.blobstore().put(ctx, key, self.into()).await
+    }
 
-    fn default_mapping(
-        _ctx: &CoreContext,
-        repo: &BlobRepo,
-    ) -> Result<Self::DefaultMapping, DeriveError> {
-        let config = derived_data::enabled_type_config(repo, Self::NAME)?;
-        Ok(TreeMapping::new(repo.blobstore().boxed(), config))
+    async fn fetch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self>> {
+        let key = format_key(changeset_id);
+        Ok(derivation_ctx
+            .blobstore()
+            .get(ctx, &key)
+            .await?
+            .map(TryInto::try_into)
+            .transpose()?)
     }
 }
 
+impl_bonsai_derived_via_manager!(TreeHandle);
+
 async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     blobstore: B,
     parents: Vec<TreeHandle>,
     changes: Vec<(MPath, Option<BlobHandle>)>,
@@ -210,6 +163,8 @@ pub async fn get_file_changes<B: Blobstore + Clone>(
 mod test {
     use super::*;
     use anyhow::format_err;
+    use blobrepo::BlobRepo;
+    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use filestore::Alias;
     use futures_util::stream::TryStreamExt;

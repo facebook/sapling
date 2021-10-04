@@ -21,5 +21,4 @@ mod tree;
 
 pub use crate::blob::BlobHandle;
 pub use crate::tree::{Tree, TreeBuilder, TreeHandle, TreeMember, Treeish};
-pub use derive_tree::TreeMapping;
 pub use object::ObjectKind;
