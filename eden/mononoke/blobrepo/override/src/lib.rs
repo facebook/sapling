@@ -87,10 +87,15 @@ impl DangerousOverride<ArcChangesets> for BlobRepoInner {
         let changesets = modify(self.changesets.clone());
         let changeset_fetcher =
             Arc::new(SimpleChangesetFetcher::new(changesets.clone(), self.repoid));
+        let repo_derived_data = Arc::new(
+            self.repo_derived_data
+                .with_replaced_changesets(changesets.clone()),
+        );
 
         Self {
             changesets,
             changeset_fetcher,
+            repo_derived_data,
             ..self.clone()
         }
     }
@@ -102,8 +107,13 @@ impl DangerousOverride<ArcFilenodes> for BlobRepoInner {
         F: FnOnce(ArcFilenodes) -> ArcFilenodes,
     {
         let filenodes = modify(self.filenodes.clone());
+        let repo_derived_data = Arc::new(
+            self.repo_derived_data
+                .with_replaced_filenodes(filenodes.clone()),
+        );
         Self {
             filenodes,
+            repo_derived_data,
             ..self.clone()
         }
     }
@@ -115,8 +125,13 @@ impl DangerousOverride<ArcBonsaiHgMapping> for BlobRepoInner {
         F: FnOnce(ArcBonsaiHgMapping) -> ArcBonsaiHgMapping,
     {
         let bonsai_hg_mapping = modify(self.bonsai_hg_mapping.clone());
+        let repo_derived_data = Arc::new(
+            self.repo_derived_data
+                .with_replaced_bonsai_hg_mapping(bonsai_hg_mapping.clone()),
+        );
         Self {
             bonsai_hg_mapping,
+            repo_derived_data,
             ..self.clone()
         }
     }

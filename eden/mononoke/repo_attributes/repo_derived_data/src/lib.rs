@@ -76,6 +76,35 @@ impl RepoDerivedData {
         }
     }
 
+    // For dangerous-override: allow replacement of changesets
+    pub fn with_replaced_changesets(&self, changesets: Arc<dyn Changesets>) -> Self {
+        Self {
+            config: self.config.clone(),
+            manager: self.manager.with_replaced_changesets(changesets),
+        }
+    }
+
+    // For dangerous-override: allow replacement of bonsai-hg-mapping
+    pub fn with_replaced_bonsai_hg_mapping(
+        &self,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    ) -> Self {
+        Self {
+            config: self.config.clone(),
+            manager: self
+                .manager
+                .with_replaced_bonsai_hg_mapping(bonsai_hg_mapping),
+        }
+    }
+
+    // For dangerous-override: allow replacement of filenodes
+    pub fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
+        Self {
+            config: self.config.clone(),
+            manager: self.manager.with_replaced_filenodes(filenodes),
+        }
+    }
+
     /// Current derived data configuration for this repo.
     pub fn config(&self) -> &DerivedDataConfig {
         &self.config

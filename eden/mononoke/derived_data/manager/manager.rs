@@ -93,6 +93,39 @@ impl DerivedDataManager {
         }
     }
 
+    // For dangerous-override: allow replacement of changesets
+    pub fn with_replaced_changesets(&self, changesets: Arc<dyn Changesets>) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                changesets,
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
+    // For dangerous-override: allow replacement of bonsai-hg-mapping
+    pub fn with_replaced_bonsai_hg_mapping(
+        &self,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    ) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                bonsai_hg_mapping,
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
+    // For dangerous-override: allow replacement of filenodes
+    pub fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                filenodes,
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
     pub fn repo_id(&self) -> RepositoryId {
         self.inner.repo_id
     }
