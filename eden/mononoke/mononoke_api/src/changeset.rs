@@ -476,6 +476,7 @@ impl ChangesetContext {
         let file_changes = self.file_changes().await?;
         // For now we only consider copies when comparing with parent.
         if include_copies_renames && self.parents().await?.contains(&other.id) {
+            let mut to_paths = HashSet::new();
             for (to_path, file_change) in file_changes.iter() {
                 match file_change {
                     FileChange::Change(tc) => {
@@ -485,6 +486,7 @@ impl ChangesetContext {
                                     .entry(from_path)
                                     .or_insert_with(Vec::new)
                                     .push(to_path);
+                                to_paths.insert(to_path);
                             }
                         }
                     }
@@ -494,11 +496,11 @@ impl ChangesetContext {
                 }
             }
 
+            let other_root_fsnode_id = other.root_fsnode_id().await?;
+
             // Prefetch fsnode entries for all "from paths" so that we don't need
             // to refetch them later
-            let from_path_to_mf_entry = other
-                .root_fsnode_id()
-                .await?
+            let from_path_to_mf_entry = other_root_fsnode_id
                 .fsnode_id()
                 .find_entries(
                     self.ctx().clone(),
@@ -508,8 +510,29 @@ impl ChangesetContext {
                 .try_filter_map(|(maybe_from_path, entry)| async move {
                     Ok(maybe_from_path.map(|from_path| (from_path, entry)))
                 })
-                .try_collect::<HashMap<_, _>>()
-                .await?;
+                .try_collect::<HashMap<_, _>>();
+
+            // At the same time, find out whether the destinations of copies
+            // already existed in the parent.
+            let to_path_exists_in_parent = other_root_fsnode_id
+                .fsnode_id()
+                .find_entries(
+                    self.ctx().clone(),
+                    self.repo().blob_repo().get_blobstore(),
+                    to_paths.into_iter().cloned(),
+                )
+                .try_filter_map(|(maybe_to_path, _entry)| async move { Ok(maybe_to_path) })
+                .try_collect::<HashSet<_>>();
+
+            let (from_path_to_mf_entry, to_path_exists_in_parent) =
+                try_join(from_path_to_mf_entry, to_path_exists_in_parent).await?;
+
+            // Filter out copies where the to_path already existed in the
+            // parent.  These don't show up as copies in the diff view.
+            copy_path_map.retain(|_, to_paths| {
+                to_paths.retain(|to_path| !to_path_exists_in_parent.contains(to_path));
+                !to_paths.is_empty()
+            });
 
             // Build the inverse copy map (from to_path to from_path),
             // which includes the manifest entry for the from_path.
