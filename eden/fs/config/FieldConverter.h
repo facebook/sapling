@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <cpptoml.h>
 #include <chrono>
 #include <map>
 #include <optional>
@@ -15,6 +14,7 @@
 #include <string>
 #include <type_traits>
 
+#include <cpptoml.h>
 #include <re2/re2.h>
 
 #include <folly/Expected.h>

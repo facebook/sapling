@@ -380,7 +380,8 @@ EdenServiceHandler::EdenServiceHandler(
   }
 #ifdef EDEN_HAVE_USAGE_SERVICE
   spServiceEndpoint_ = std::make_unique<EdenFSSmartPlatformServiceEndpoint>(
-      server_->getServerState()->getThreadPool());
+      server_->getServerState()->getThreadPool(),
+      server_->getServerState()->getEdenConfig());
 #endif
 }
 
