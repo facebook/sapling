@@ -378,7 +378,7 @@ mod tests {
             options == parsed_options
         }
 
-        fn test_roundtrip_index(nodes: Vec<(HgId, u64)>) -> bool {
+        fn test_roundtrip_index(nodes: Vec<(HgId, u32)>) -> bool {
             let mut values: HashMap<HgId, DeltaLocation> = HashMap::new();
 
             let mut nodes = nodes;
@@ -386,7 +386,7 @@ mod tests {
 
             let mut offset = 0;
             for &(hgid, size) in nodes.iter() {
-                let size = size + 1;
+                let size = (size as u64) + 1;
                 values.insert(
                     hgid.clone(),
                     DeltaLocation {
@@ -403,7 +403,7 @@ mod tests {
 
             let mut offset = 0;
             for &(hgid, size) in nodes.iter() {
-                let size = size + 1;
+                let size = (size as u64) + 1;
                 let entry = index.get_entry(&hgid).expect("get_entry").unwrap();
                 assert_eq!(entry.hgid(), &hgid);
                 assert_eq!(entry.delta_base_offset(), DeltaBaseOffset::FullText);

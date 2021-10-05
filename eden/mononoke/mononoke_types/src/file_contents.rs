@@ -255,7 +255,10 @@ impl ContentChunkPointer {
 
 impl Arbitrary for ContentChunkPointer {
     fn arbitrary(g: &mut Gen) -> Self {
-        Self::new(ContentChunkId::arbitrary(g), u64::arbitrary(g))
+        // We don't want a big size because the sum of multiple ContentChunkPointer
+        // should also fit into a i64
+        let size = u32::arbitrary(g) as u64;
+        Self::new(ContentChunkId::arbitrary(g), size)
     }
 }
 

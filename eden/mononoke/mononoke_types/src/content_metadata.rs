@@ -99,7 +99,8 @@ impl ContentMetadata {
 
 impl Arbitrary for ContentMetadata {
     fn arbitrary(g: &mut Gen) -> Self {
-        let total_size = u64::arbitrary(g);
+        // Large u64 values can't be represented in thrift
+        let total_size = u64::arbitrary(g) / 2;
 
         Self {
             total_size,
