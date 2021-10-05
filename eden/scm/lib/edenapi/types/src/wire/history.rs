@@ -16,6 +16,7 @@ use crate::{
     HistoryRequest, HistoryResponseChunk, WireHistoryEntry,
 };
 
+// TODO: attributes in this file aren't renamed to 0, 1, ...
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WireHistoryRequest {
     keys: Vec<WireKey>,

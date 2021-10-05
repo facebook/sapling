@@ -9,9 +9,10 @@ use std::num::NonZeroU64;
 
 use crate::{AnyFileContentId, UploadToken};
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 #[cfg(any(test, feature = "for-tests"))]
 use serde_derive::{Deserialize, Serialize};
+use type_macros::auto_wire;
 use types::HgId;
 
 blake2_hash!(BonsaiChangesetId);
@@ -31,15 +32,21 @@ impl Default for AnyId {
     }
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct LookupRequest {
+    #[id(1)]
     pub id: AnyId,
+    #[id(2)]
     pub bubble_id: Option<NonZeroU64>,
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[auto_wire]
+#[derive(Clone, Serialize, Deserialize, Default, Debug, Eq, PartialEq)]
 pub struct LookupResponse {
+    #[id(1)]
     pub index: usize,
+    #[id(2)]
     pub token: Option<UploadToken>,
 }
 
@@ -66,6 +73,16 @@ impl Arbitrary for LookupRequest {
         Self {
             id: Arbitrary::arbitrary(g),
             bubble_id: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for LookupResponse {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            index: Arbitrary::arbitrary(g),
+            token: Arbitrary::arbitrary(g),
         }
     }
 }

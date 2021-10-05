@@ -13,6 +13,15 @@ use syn::spanned::Spanned;
 use syn::*;
 
 /// Derive a default implementation for a wire type for this type
+// TODO: Future improvements
+// - Support enums
+//    - Need to add the unknown variant, implementations are slightly different
+// - Support fields that do not implement Default on Api obj
+//    - add "no_default" attribute to field. Wire impl will wrap it in Option,
+//      and fail when deserializing if it's not present
+// - Support generics in type
+//    - Might be possible to make it work with some adaptation, at least for
+//      simple "wrapper" types that just have one generic T.
 #[proc_macro_attribute]
 pub fn auto_wire(
     attr: proc_macro::TokenStream,

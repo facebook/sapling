@@ -15,6 +15,7 @@ use quickcheck::{Arbitrary, Gen};
 use types::{hgid::HgId, key::Key, parents::Parents};
 
 use crate::{DirectoryMetadata, EdenApiServerError, FileMetadata, InvalidHgId, UploadToken};
+use type_macros::auto_wire;
 
 #[derive(Debug, Error)]
 pub enum TreeError {
@@ -260,21 +261,30 @@ impl Arbitrary for TreeRequest {
     }
 }
 
+#[auto_wire]
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UploadTreeEntry {
+    #[id(0)]
     pub node_id: HgId,
+    #[id(1)]
     pub data: Vec<u8>,
+    #[id(2)]
     pub parents: Parents,
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadTreeRequest {
+    #[id(0)]
     pub entry: UploadTreeEntry,
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadTreeResponse {
+    #[id(0)]
     pub index: usize,
+    #[id(1)]
     pub token: UploadToken,
 }
 
@@ -284,6 +294,26 @@ impl Arbitrary for UploadTreeResponse {
         Self {
             index: Arbitrary::arbitrary(g),
             token: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadTreeEntry {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            node_id: Arbitrary::arbitrary(g),
+            data: Arbitrary::arbitrary(g),
+            parents: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadTreeRequest {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            entry: Arbitrary::arbitrary(g),
         }
     }
 }

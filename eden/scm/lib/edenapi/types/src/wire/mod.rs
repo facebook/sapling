@@ -98,6 +98,7 @@ pub use crate::wire::{
 
 use std::convert::Infallible;
 use std::fmt;
+use std::num::NonZeroU64;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
@@ -218,7 +219,7 @@ impl<W: ToApi> ToApi for Option<W> {
 // Only use it for very simple objects which serializations don't
 // incur extra costs
 macro_rules! transparent_wire {
-    ( $($name: ty),* ) => {
+    ( $($name: ty),* $(,)? ) => {
         $(
         impl ToWire for $name {
             type Wire = $name;
@@ -240,7 +241,42 @@ macro_rules! transparent_wire {
     }
 }
 
-transparent_wire!(bool, u8, i8, u16, i16, u32, i32, u64, i64, bytes::Bytes);
+transparent_wire!(
+    bool,
+    u8,
+    i8,
+    u16,
+    i16,
+    u32,
+    i32,
+    u64,
+    i64,
+    usize,
+    isize,
+    bytes::Bytes,
+    String,
+);
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct WrapNonZero<T>(T);
+
+impl ToWire for Option<NonZeroU64> {
+    type Wire = WrapNonZero<u64>;
+
+    fn to_wire(self) -> Self::Wire {
+        WrapNonZero(self.map_or(0, |x| x.get()))
+    }
+}
+
+impl ToApi for WrapNonZero<u64> {
+    type Api = Option<NonZeroU64>;
+    type Error = Infallible;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(NonZeroU64::new(self.0))
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WireEdenApiServerError {

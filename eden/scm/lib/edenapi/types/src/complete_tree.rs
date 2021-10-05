@@ -7,6 +7,7 @@
 
 use serde_derive::{Deserialize, Serialize};
 
+use type_macros::auto_wire;
 use types::{hgid::HgId, path::RepoPathBuf};
 
 /// Struct reprenting the arguments to a "gettreepack" operation, which
@@ -19,11 +20,16 @@ use types::{hgid::HgId, path::RepoPathBuf};
 /// containing the keys of the desired tree nodes.
 ///
 /// In all cases, trees will be returned in a `TreeResponse`.
+#[auto_wire]
 #[derive(Clone, Debug, Eq, Deserialize, Serialize, PartialEq)]
 pub struct CompleteTreeRequest {
+    #[id(0)]
     pub rootdir: RepoPathBuf,
+    #[id(1)]
     pub mfnodes: Vec<HgId>,
+    #[id(2)]
     pub basemfnodes: Vec<HgId>,
+    #[id(3)]
     pub depth: Option<usize>,
 }
 

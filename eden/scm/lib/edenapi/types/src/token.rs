@@ -9,12 +9,15 @@ use std::num::NonZeroU64;
 
 use crate::AnyId;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
+use quickcheck::{Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
+use type_macros::auto_wire;
 
+#[auto_wire]
 /// Token metadata for file content token type.
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct FileContentTokenMetadata {
+    #[id(1)]
     pub content_size: u64,
 }
 
@@ -31,22 +34,31 @@ impl From<FileContentTokenMetadata> for UploadTokenMetadata {
     }
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct UploadTokenData {
+    #[id(1)]
     pub id: AnyId,
+    #[id(3)]
     pub bubble_id: Option<NonZeroU64>,
+    #[id(2)]
     pub metadata: Option<UploadTokenMetadata>,
     // TODO: add other data (like expiration time).
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct UploadTokenSignature {
+    #[id(1)]
     pub signature: Vec<u8>,
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct UploadToken {
+    #[id(1)]
     pub data: UploadTokenData,
+    #[id(2)]
     pub signature: UploadTokenSignature,
 }
 
@@ -100,6 +112,22 @@ impl Arbitrary for UploadTokenData {
             id: Arbitrary::arbitrary(g),
             bubble_id: Arbitrary::arbitrary(g),
             metadata: None,
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadTokenMetadata {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self::FileContentTokenMetadata(Arbitrary::arbitrary(g))
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FileContentTokenMetadata {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            content_size: Arbitrary::arbitrary(g),
         }
     }
 }

@@ -5,18 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use std::num::NonZeroU64;
-
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 use serde_derive::{Deserialize, Serialize};
 
-use crate::anyid::{AnyId, BonsaiChangesetId, LookupRequest, LookupResponse};
-use crate::wire::{
-    is_default, ToApi, ToWire, WireAnyFileContentId, WireHgId, WireToApiConversionError,
-    WireUploadToken,
-};
+use crate::anyid::{AnyId, BonsaiChangesetId};
+use crate::wire::{ToApi, ToWire, WireAnyFileContentId, WireHgId, WireToApiConversionError};
+
+pub use crate::anyid::{WireLookupRequest, WireLookupResponse};
 
 wire_hash! {
     wire => WireBonsaiChangesetId,
@@ -87,70 +84,6 @@ impl ToApi for WireAnyId {
     }
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WireLookupRequest {
-    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    pub id: WireAnyId,
-
-    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    pub bubble_id: Option<NonZeroU64>,
-}
-
-impl ToWire for LookupRequest {
-    type Wire = WireLookupRequest;
-
-    fn to_wire(self) -> Self::Wire {
-        WireLookupRequest {
-            id: self.id.to_wire(),
-            bubble_id: self.bubble_id,
-        }
-    }
-}
-
-impl ToApi for WireLookupRequest {
-    type Api = LookupRequest;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(LookupRequest {
-            id: self.id.to_api()?,
-            bubble_id: self.bubble_id,
-        })
-    }
-}
-
-#[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WireLookupResponse {
-    #[serde(rename = "1")]
-    pub index: usize,
-
-    #[serde(rename = "2")]
-    pub token: Option<WireUploadToken>,
-}
-
-impl ToWire for LookupResponse {
-    type Wire = WireLookupResponse;
-
-    fn to_wire(self) -> Self::Wire {
-        WireLookupResponse {
-            index: self.index,
-            token: self.token.to_wire(),
-        }
-    }
-}
-
-impl ToApi for WireLookupResponse {
-    type Api = LookupResponse;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(LookupResponse {
-            index: self.index,
-            token: self.token.to_api()?,
-        })
-    }
-}
-
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireAnyId {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
@@ -168,21 +101,11 @@ impl Arbitrary for WireAnyId {
     }
 }
 
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireLookupRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            id: Arbitrary::arbitrary(g),
-            bubble_id: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(WireAnyId, WireLookupRequest);
+    auto_wire_tests!(WireAnyId, WireLookupRequest, WireLookupResponse);
 }

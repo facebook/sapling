@@ -211,9 +211,12 @@ impl Arbitrary for FileEntry {
     }
 }
 
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[auto_wire]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub struct FileAttributes {
+    #[id(0)]
     pub content: bool,
+    #[id(1)]
     pub aux_data: bool,
 }
 
@@ -227,9 +230,12 @@ impl Arbitrary for FileAttributes {
     }
 }
 
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[auto_wire]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub struct FileSpec {
+    #[id(0)]
     pub key: Key,
+    #[id(1)]
     pub attrs: FileAttributes,
 }
 
@@ -243,10 +249,13 @@ impl Arbitrary for FileSpec {
     }
 }
 
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[auto_wire]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub struct FileRequest {
     // TODO(meyer): Deprecate keys field
+    #[id(0)]
     pub keys: Vec<Key>,
+    #[id(1)]
     pub reqs: Vec<FileSpec>,
 }
 
@@ -283,22 +292,32 @@ impl Arbitrary for FileContent {
     }
 }
 
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[auto_wire]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub struct HgFilenodeData {
+    #[id(0)]
     pub node_id: HgId,
+    #[id(1)]
     pub parents: Parents,
+    #[id(2)]
     pub file_content_upload_token: UploadToken,
+    #[id(3)]
     pub metadata: Vec<u8>,
 }
 
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[auto_wire]
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub struct UploadHgFilenodeRequest {
+    #[id(0)]
     pub data: HgFilenodeData,
 }
 
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[auto_wire]
+#[derive(Clone, Default, Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct UploadTokensResponse {
+    #[id(1)]
     pub index: usize,
+    #[id(2)]
     pub token: UploadToken,
 }
 

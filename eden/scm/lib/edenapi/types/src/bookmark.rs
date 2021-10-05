@@ -8,11 +8,14 @@
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
+use type_macros::auto_wire;
 
 use types::hgid::HgId;
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct BookmarkRequest {
+    #[id(0)]
     pub bookmarks: Vec<String>,
 }
 
@@ -25,10 +28,13 @@ impl Arbitrary for BookmarkRequest {
     }
 }
 
+#[auto_wire]
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 #[derive(Serialize, Deserialize)]
 pub struct BookmarkEntry {
+    #[id(1)]
     pub bookmark: String,
+    #[id(2)]
     pub hgid: Option<HgId>,
 }
 

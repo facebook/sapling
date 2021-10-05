@@ -3,4 +3,4 @@ source: bookmark.rs
 expression: "WireBookmarkEntry::arbitrary(&mut g)"
 
 ---
-{"1":"","2":null}
+{"1":""}

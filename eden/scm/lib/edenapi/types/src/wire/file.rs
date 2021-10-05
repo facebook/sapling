@@ -7,18 +7,20 @@
 
 use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
-    file::{
-        FileAttributes, FileContent, FileEntry, FileRequest, FileSpec, HgFilenodeData,
-        UploadHgFilenodeRequest, UploadTokensResponse,
-    },
+    file::{FileContent, FileEntry},
     wire::{
-        is_default, ToApi, ToWire, WireHgId, WireKey, WireParents, WireRevisionstoreMetadata,
-        WireToApiConversionError, WireUploadToken,
+        is_default, ToApi, ToWire, WireKey, WireParents, WireRevisionstoreMetadata,
+        WireToApiConversionError,
     },
+};
+
+pub use crate::file::{
+    WireFileAttributes, WireFileAuxData, WireFileRequest, WireFileSpec, WireHgFilenodeData,
+    WireUploadHgFilenodeRequest, WireUploadTokensResponse,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -85,225 +87,6 @@ impl ToApi for WireFileEntry {
     }
 }
 
-pub use crate::file::WireFileAuxData;
-
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct WireFileAttributes {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub content: bool,
-
-    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    pub aux_data: bool,
-}
-
-impl ToWire for FileAttributes {
-    type Wire = WireFileAttributes;
-
-    fn to_wire(self) -> Self::Wire {
-        WireFileAttributes {
-            content: self.content,
-            aux_data: self.aux_data,
-        }
-    }
-}
-
-impl ToApi for WireFileAttributes {
-    type Api = FileAttributes;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(FileAttributes {
-            content: self.content,
-            aux_data: self.aux_data,
-        })
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireFileAttributes {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            content: Arbitrary::arbitrary(g),
-            aux_data: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct WireFileSpec {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub key: WireKey,
-
-    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    pub attrs: WireFileAttributes,
-}
-
-impl ToWire for FileSpec {
-    type Wire = WireFileSpec;
-
-    fn to_wire(self) -> Self::Wire {
-        WireFileSpec {
-            key: self.key.to_wire(),
-            attrs: self.attrs.to_wire(),
-        }
-    }
-}
-
-impl ToApi for WireFileSpec {
-    type Api = FileSpec;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(FileSpec {
-            key: self.key.to_api()?,
-            attrs: self.attrs.to_api()?,
-        })
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireFileSpec {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            key: Arbitrary::arbitrary(g),
-            attrs: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct WireFileRequest {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub keys: Vec<WireKey>,
-
-    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    pub reqs: Vec<WireFileSpec>,
-}
-
-impl ToWire for FileRequest {
-    type Wire = WireFileRequest;
-
-    fn to_wire(self) -> Self::Wire {
-        WireFileRequest {
-            keys: self.keys.to_wire(),
-            reqs: self.reqs.to_wire(),
-        }
-    }
-}
-
-impl ToApi for WireFileRequest {
-    type Api = FileRequest;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(FileRequest {
-            keys: self.keys.to_api()?,
-            reqs: self.reqs.to_api()?,
-        })
-    }
-}
-
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct WireHgFilenodeData {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub node_id: WireHgId,
-
-    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    pub parents: WireParents,
-
-    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    pub file_content_upload_token: WireUploadToken,
-
-    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
-    pub metadata: Vec<u8>,
-}
-
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct WireUploadHgFilenodeRequest {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub data: WireHgFilenodeData,
-}
-
-#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct WireUploadTokensResponse {
-    #[serde(rename = "1")]
-    pub index: usize,
-
-    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    pub token: WireUploadToken,
-}
-
-impl ToWire for HgFilenodeData {
-    type Wire = WireHgFilenodeData;
-
-    fn to_wire(self) -> Self::Wire {
-        WireHgFilenodeData {
-            node_id: self.node_id.to_wire(),
-            parents: self.parents.to_wire(),
-            file_content_upload_token: self.file_content_upload_token.to_wire(),
-            metadata: self.metadata.to_wire(),
-        }
-    }
-}
-
-impl ToApi for WireHgFilenodeData {
-    type Api = HgFilenodeData;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(HgFilenodeData {
-            node_id: self.node_id.to_api()?,
-            parents: self.parents.to_api()?,
-            file_content_upload_token: self.file_content_upload_token.to_api()?,
-            metadata: self.metadata.to_api()?,
-        })
-    }
-}
-
-impl ToWire for UploadTokensResponse {
-    type Wire = WireUploadTokensResponse;
-
-    fn to_wire(self) -> Self::Wire {
-        WireUploadTokensResponse {
-            index: self.index,
-            token: self.token.to_wire(),
-        }
-    }
-}
-
-impl ToApi for WireUploadTokensResponse {
-    type Api = UploadTokensResponse;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(UploadTokensResponse {
-            index: self.index,
-            token: self.token.to_api()?,
-        })
-    }
-}
-
-impl ToWire for UploadHgFilenodeRequest {
-    type Wire = WireUploadHgFilenodeRequest;
-
-    fn to_wire(self) -> Self::Wire {
-        WireUploadHgFilenodeRequest {
-            data: self.data.to_wire(),
-        }
-    }
-}
-
-impl ToApi for WireUploadHgFilenodeRequest {
-    type Api = UploadHgFilenodeRequest;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(UploadHgFilenodeRequest {
-            data: self.data.to_api()?,
-        })
-    }
-}
-
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireFileEntry {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
@@ -314,47 +97,6 @@ impl Arbitrary for WireFileEntry {
             parents: Arbitrary::arbitrary(g),
             metadata: Arbitrary::arbitrary(g),
             aux_data: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireFileRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            keys: Arbitrary::arbitrary(g),
-            reqs: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireUploadHgFilenodeRequest {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            data: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireHgFilenodeData {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            node_id: Arbitrary::arbitrary(g),
-            parents: Arbitrary::arbitrary(g),
-            file_content_upload_token: Arbitrary::arbitrary(g),
-            metadata: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireUploadTokensResponse {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Self {
-            index: Arbitrary::arbitrary(g),
-            token: Arbitrary::arbitrary(g),
         }
     }
 }

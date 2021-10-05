@@ -13,6 +13,7 @@ use quickcheck::{Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 use std::iter;
 use std::num::NonZeroU64;
+use type_macros::auto_wire;
 use types::{hgid::HgId, Parents, RepoPathBuf};
 
 use crate::{BonsaiChangesetId, FileType, ServerError, UploadToken};
@@ -31,24 +32,33 @@ use crate::{BonsaiChangesetId, FileType, ServerError, UploadToken};
 ///   count: 2,
 /// }
 /// => [b, a]
+#[auto_wire]
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
 pub struct CommitLocationToHashRequest {
+    #[id(1)]
     pub location: Location<HgId>,
+    #[id(2)]
     pub count: u64,
 }
 
+#[auto_wire]
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
 pub struct CommitLocationToHashResponse {
+    #[id(1)]
     pub location: Location<HgId>,
+    #[id(2)]
     pub count: u64,
+    #[id(3)]
     pub hgids: Vec<HgId>,
 }
 
+#[auto_wire]
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
 pub struct CommitLocationToHashRequestBatch {
+    #[id(1)]
     pub requests: Vec<CommitLocationToHashRequest>,
 }
 
@@ -107,17 +117,23 @@ pub struct CommitKnownResponse {
     pub known: Result<bool, ServerError>,
 }
 
+#[auto_wire]
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 #[derive(Serialize)]
 pub struct CommitGraphEntry {
+    #[id(1)]
     pub hgid: HgId,
+    #[id(2)]
     pub parents: Vec<HgId>,
 }
 
+#[auto_wire]
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
 pub struct CommitGraphRequest {
+    #[id(1)]
     pub common: Vec<HgId>,
+    #[id(2)]
     pub heads: Vec<HgId>,
 }
 
@@ -246,53 +262,145 @@ impl Arbitrary for CommitHashLookupResponse {
     }
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct Extra {
+    #[id(1)]
     pub key: Vec<u8>,
+    #[id(2)]
     pub value: Vec<u8>,
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct HgChangesetContent {
+    #[id(1)]
     pub parents: Parents,
+    #[id(2)]
     pub manifestid: HgId,
+    #[id(3)]
     pub user: Vec<u8>,
+    #[id(4)]
     pub time: i64,
+    #[id(5)]
     pub tz: i32,
+    #[id(6)]
     pub extras: Vec<Extra>,
+    #[id(7)]
     pub files: Vec<RepoPathBuf>,
+    #[id(8)]
     pub message: Vec<u8>,
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadHgChangeset {
+    #[id(1)]
     pub node_id: HgId,
+    #[id(2)]
     pub changeset_content: HgChangesetContent,
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct HgMutationEntryContent {
+    #[id(1)]
     pub successor: HgId,
+    #[id(2)]
     pub predecessors: Vec<HgId>,
+    #[id(3)]
     pub split: Vec<HgId>,
+    #[id(4)]
     pub op: String,
+    #[id(5)]
     pub user: Vec<u8>,
+    #[id(6)]
     pub time: i64,
+    #[id(7)]
     pub tz: i32,
+    #[id(8)]
     pub extras: Vec<Extra>,
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadHgChangesetsRequest {
     /// list of changesets to upload, changesets must be sorted topologically (use dag.sort)
+    #[id(1)]
     pub changesets: Vec<UploadHgChangeset>,
     /// list of mutation entries for the uploading changesets
+    #[id(2)]
     pub mutations: Vec<HgMutationEntryContent>,
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for HgMutationEntryContent {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            successor: Arbitrary::arbitrary(g),
+            predecessors: Arbitrary::arbitrary(g),
+            split: Arbitrary::arbitrary(g),
+            op: Arbitrary::arbitrary(g),
+            user: Arbitrary::arbitrary(g),
+            time: Arbitrary::arbitrary(g),
+            tz: Arbitrary::arbitrary(g),
+            extras: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadHgChangesetsRequest {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            changesets: Arbitrary::arbitrary(g),
+            mutations: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadHgChangeset {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            node_id: Arbitrary::arbitrary(g),
+            changeset_content: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for HgChangesetContent {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            parents: Arbitrary::arbitrary(g),
+            manifestid: Arbitrary::arbitrary(g),
+            user: Arbitrary::arbitrary(g),
+            time: Arbitrary::arbitrary(g),
+            tz: Arbitrary::arbitrary(g),
+            extras: Arbitrary::arbitrary(g),
+            files: Arbitrary::arbitrary(g),
+            message: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for Extra {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            key: Arbitrary::arbitrary(g),
+            value: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct BonsaiExtra {
+    #[id(1)]
     pub key: String,
+    #[id(2)]
     pub value: Vec<u8>,
 }
 
@@ -323,10 +431,37 @@ pub struct BonsaiChangesetContent {
     pub is_snapshot: bool,
 }
 
+#[auto_wire]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadBonsaiChangesetRequest {
     /// changeset to upload
+    #[id(1)]
     pub changeset: BonsaiChangesetContent,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for BonsaiChangesetContent {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            hg_parents: Arbitrary::arbitrary(g),
+            author: Arbitrary::arbitrary(g),
+            time: Arbitrary::arbitrary(g),
+            tz: Arbitrary::arbitrary(g),
+            extra: Arbitrary::arbitrary(g),
+            file_changes: Arbitrary::arbitrary(g),
+            message: Arbitrary::arbitrary(g),
+            is_snapshot: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for UploadBonsaiChangesetRequest {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            changeset: Arbitrary::arbitrary(g),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -355,14 +490,19 @@ pub struct SnapshotRawData {
     pub author: String,
 }
 
+#[auto_wire]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct FetchSnapshotRequest {
+    #[id(1)]
     pub cs_id: BonsaiChangesetId,
 }
 
+#[auto_wire]
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct FetchSnapshotResponse {
+    #[id(1)]
     pub hg_parents: Parents,
+    #[id(2)]
     pub file_changes: Vec<(RepoPathBuf, BonsaiFileChange)>,
 }
 
@@ -371,6 +511,7 @@ pub struct UploadSnapshotResponse {
     pub changeset_token: UploadToken,
 }
 
+#[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct EphemeralPrepareRequest {}
 
@@ -391,6 +532,16 @@ impl Arbitrary for EphemeralPrepareResponse {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         EphemeralPrepareResponse {
             bubble_id: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for BonsaiExtra {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            key: Arbitrary::arbitrary(g),
+            value: Arbitrary::arbitrary(g),
         }
     }
 }
