@@ -25,7 +25,7 @@ use derived_data::{
     derive_impl, BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedMappingContainer,
     DerivedDataTypesConfig, RegenerateMapping,
 };
-use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
+use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::{
     BatchDeriveOptions, BatchDeriveStats, BonsaiDerivable as NewBonsaiDerivable,
     DerivedDataManager, Rederivation,
@@ -216,6 +216,7 @@ where
     Derivable: BonsaiDerivable,
     Mapping: BonsaiDerivedMapping<Value = Derivable> + 'static,
 {
+    #[allow(dead_code)]
     fn new(fb: FacebookInit, mapping: Mapping, repo: BlobRepo) -> Self {
         let orig_mapping = Arc::new(RegenerateMapping::new(mapping));
         let mapping = BonsaiDerivedMappingContainer::new(
@@ -672,7 +673,7 @@ pub fn derived_data_utils_for_backfill(
 }
 
 fn derived_data_utils_impl(
-    fb: FacebookInit,
+    _fb: FacebookInit,
     repo: &BlobRepo,
     name: &str,
     config: &DerivedDataTypesConfig,
@@ -704,14 +705,9 @@ fn derived_data_utils_impl(
         RootDeletedManifestId::NAME => Ok(Arc::new(
             DerivedUtilsFromManager::<RootDeletedManifestId>::new(repo, config),
         )),
-        FilenodesOnlyPublic::NAME => {
-            let mapping = FilenodesOnlyPublicMapping::new(repo, config)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(
-                fb,
-                mapping,
-                repo.clone(),
-            )))
-        }
+        FilenodesOnlyPublic::NAME => Ok(Arc::new(
+            DerivedUtilsFromManager::<FilenodesOnlyPublic>::new(repo, config),
+        )),
         RootSkeletonManifestId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
             RootSkeletonManifestId,
         >::new(repo, config))),

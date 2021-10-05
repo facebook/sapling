@@ -15,7 +15,6 @@ use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fastlog::{unode_entry_to_fastlog_batch_key, RootFastlog};

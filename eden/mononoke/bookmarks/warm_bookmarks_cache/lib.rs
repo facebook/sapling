@@ -23,7 +23,6 @@ use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::{CoreContext, SessionClass};
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fastlog::RootFastlog;

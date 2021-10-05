@@ -20,7 +20,6 @@ use bonsai_hg_mapping::BonsaiOrHgChangesetIds;
 use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP};
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;

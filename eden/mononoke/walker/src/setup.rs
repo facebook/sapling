@@ -32,7 +32,6 @@ use cmdlib::args::{
     self, ArgType, CachelibSettings, MononokeClapApp, MononokeMatches, RepoRequirement,
     ResolvedRepo,
 };
-use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use fbinit::FacebookInit;

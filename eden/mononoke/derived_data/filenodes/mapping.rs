@@ -5,24 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::{bail, format_err, Error, Result};
 use async_trait::async_trait;
-use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
-use blobstore::{Blobstore, Loadable};
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingArc};
+use blobstore::Loadable;
 use context::CoreContext;
-use derived_data::{
-    BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedMappingContainer, BonsaiDerivedOld,
-    DeriveError, DerivedDataTypesConfig,
-};
-use filenodes::{FilenodeInfo, FilenodeResult, Filenodes, FilenodesArc, PreparedFilenode};
-use futures::{stream, StreamExt, TryFutureExt, TryStreamExt};
+use derived_data::impl_bonsai_derived_via_manager;
+use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
+use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
+use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{HgChangesetId, HgFileNodeId, NULL_HASH};
-use mononoke_types::{BonsaiChangeset, ChangesetId, RepoPath, RepositoryId};
-use repo_blobstore::RepoBlobstoreRef;
-use repo_identity::RepoIdentityRef;
-use std::sync::Arc;
+use mononoke_types::{BonsaiChangeset, ChangesetId, RepoPath};
 use std::{collections::HashMap, convert::TryFrom};
 
 use crate::derive::{derive_filenodes, derive_filenodes_in_batch};
@@ -62,7 +54,7 @@ impl From<PreparedRootFilenode> for PreparedFilenode {
 impl TryFrom<PreparedFilenode> for PreparedRootFilenode {
     type Error = Error;
 
-    fn try_from(filenode: PreparedFilenode) -> Result<Self, Self::Error> {
+    fn try_from(filenode: PreparedFilenode) -> Result<Self> {
         let PreparedFilenode { path, info } = filenode;
 
         let FilenodeInfo {
@@ -103,36 +95,25 @@ pub enum FilenodesOnlyPublic {
 impl BonsaiDerivable for FilenodesOnlyPublic {
     const NAME: &'static str = "filenodes";
 
-    type Options = ();
+    type Dependencies = dependencies![MappedHgChangesetId];
 
-    async fn derive_from_parents_impl(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn derive_single(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
-        _options: &Self::Options,
-    ) -> Result<Self, Error> {
-        derive_filenodes(&ctx, &repo, bonsai).await
+    ) -> Result<Self> {
+        derive_filenodes(ctx, derivation_ctx, bonsai).await
     }
 
-    async fn batch_derive_impl(
+    async fn derive_batch(
         ctx: &CoreContext,
-        repo: &BlobRepo,
-        csids: Vec<ChangesetId>,
-        mapping: &BonsaiDerivedMappingContainer<Self>,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
         _gap_size: Option<usize>,
-    ) -> Result<HashMap<ChangesetId, Self>, Error> {
-        let filenodes = repo.get_filenodes();
-        let blobstore = repo.blobstore();
-        let bonsais = stream::iter(
-            csids
-                .into_iter()
-                .map(|bcs_id| async move { bcs_id.load(ctx, blobstore).await }),
-        )
-        .buffered(100)
-        .try_collect::<Vec<_>>()
-        .await?;
-        let prepared = derive_filenodes_in_batch(ctx, repo, bonsais).await?;
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        let filenodes = derivation_ctx.filenodes();
+        let prepared = derive_filenodes_in_batch(ctx, derivation_ctx, bonsais).await?;
         let mut res = HashMap::with_capacity(prepared.len());
         for (cs_id, public_filenode, non_roots) in prepared.into_iter() {
             let filenode = match public_filenode {
@@ -150,166 +131,118 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
                 FilenodesOnlyPublic::Disabled => FilenodesOnlyPublic::Disabled,
             };
             res.insert(cs_id, filenode.clone());
-            if let FilenodesOnlyPublic::Disabled = filenode {
-                continue;
-            }
-            mapping.put(ctx, cs_id, &filenode).await?;
         }
         Ok(res)
     }
-}
 
-#[derive(Clone)]
-pub struct FilenodesOnlyPublicMapping {
-    repo_id: RepositoryId,
-    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-    filenodes: Arc<dyn Filenodes>,
-    blobstore: Arc<dyn Blobstore>,
-}
-
-impl FilenodesOnlyPublicMapping {
-    pub fn new(
-        repo: &(impl RepoIdentityRef + BonsaiHgMappingArc + FilenodesArc + RepoBlobstoreRef),
-        _config: &DerivedDataTypesConfig,
-    ) -> Result<Self, DeriveError> {
-        Ok(Self {
-            repo_id: repo.repo_identity().id(),
-            bonsai_hg_mapping: repo.bonsai_hg_mapping_arc(),
-            filenodes: repo.filenodes_arc(),
-            blobstore: repo.repo_blobstore().boxed(),
-        })
-    }
-}
-
-#[async_trait]
-impl BonsaiDerivedOld for FilenodesOnlyPublic {
-    type DefaultMapping = FilenodesOnlyPublicMapping;
-
-    fn default_mapping(
-        _ctx: &CoreContext,
-        repo: &BlobRepo,
-    ) -> Result<Self::DefaultMapping, DeriveError> {
-        let config = derived_data::enabled_type_config(repo, Self::NAME)?;
-        FilenodesOnlyPublicMapping::new(repo, config)
-    }
-}
-
-#[async_trait]
-impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
-    type Value = FilenodesOnlyPublic;
-
-    async fn get(
-        &self,
+    async fn store_mapping(
+        self,
         ctx: &CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        stream::iter(csids.into_iter())
-            .map({
-                move |cs_id| async move {
-                    let filenode_res = self.fetch_root_filenode(ctx, cs_id).await?;
-                    let maybe_root_filenode = match filenode_res {
-                        FilenodeResult::Present(maybe_root_filenode) => maybe_root_filenode,
-                        FilenodeResult::Disabled => {
-                            return Ok(Some((cs_id, FilenodesOnlyPublic::Disabled)));
-                        }
-                    };
-
-                    Ok(maybe_root_filenode.map(move |filenode| {
-                        (
-                            cs_id,
-                            FilenodesOnlyPublic::Present {
-                                root_filenode: Some(filenode),
-                            },
-                        )
-                    }))
-                }
-            })
-            .buffer_unordered(100)
-            .try_filter_map(|x| async { Ok(x) })
-            .try_collect()
-            .await
-    }
-
-    async fn put(
-        &self,
-        ctx: &CoreContext,
-        _csid: ChangesetId,
-        id: &Self::Value,
-    ) -> Result<(), Error> {
-        let root_filenode = match id {
-            FilenodesOnlyPublic::Present { root_filenode } => root_filenode.as_ref(),
-            FilenodesOnlyPublic::Disabled => None,
+        derivation_ctx: &DerivationContext,
+        _changeset_id: ChangesetId,
+    ) -> Result<()> {
+        let root_filenode = match self {
+            FilenodesOnlyPublic::Present { root_filenode } => match root_filenode {
+                Some(root_filenode) => root_filenode,
+                None => return Ok(()),
+            },
+            FilenodesOnlyPublic::Disabled => return Ok(()),
         };
 
-        match root_filenode {
-            Some(root_filenode) => {
-                self.filenodes
-                    .add_filenodes(ctx, vec![root_filenode.clone().into()])
-                    .map_ok(|res| match res {
-                        // If filenodes are disabled then just return success
-                        // but use explicit match here in case we add more variants
-                        // to FilenodeResult enum
-                        FilenodeResult::Present(()) | FilenodeResult::Disabled => {}
-                    })
-                    .await
+        match derivation_ctx
+            .filenodes()
+            .add_filenodes(ctx, vec![root_filenode.into()])
+            .await?
+        {
+            FilenodeResult::Present(()) => Ok(()),
+            FilenodeResult::Disabled => {
+                // Filenodes got disabled just after we finished deriving them
+                // but before we stored the mapping.  Ideally we would return
+                // FilenodesMaybePublic::Disabled to the caller, but in this
+                // very small window there is no way to do that. Instead we
+                // must fail the request.
+                bail!("filenodes were disabled after being successfully derived")
             }
-            None => Ok(()),
         }
     }
 
-    fn options(&self) {}
+    async fn fetch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        changeset_id: ChangesetId,
+    ) -> Result<Option<Self>> {
+        if tunables::tunables().get_filenodes_disabled() {
+            return Ok(Some(FilenodesOnlyPublic::Disabled));
+        }
+        let filenode_res = fetch_root_filenode(ctx, derivation_ctx, changeset_id).await?;
+        let maybe_root_filenode = match filenode_res {
+            FilenodeResult::Present(maybe_root_filenode) => maybe_root_filenode,
+            FilenodeResult::Disabled => {
+                return Ok(Some(FilenodesOnlyPublic::Disabled));
+            }
+        };
+
+        Ok(
+            maybe_root_filenode.map(move |filenode| FilenodesOnlyPublic::Present {
+                root_filenode: Some(filenode),
+            }),
+        )
+    }
 }
 
-impl FilenodesOnlyPublicMapping {
-    async fn fetch_root_filenode(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<FilenodeResult<Option<PreparedRootFilenode>>, Error> {
-        // If hg changeset is not generated, then root filenode can't possible be generated
-        // Check it and return None if hg changeset is not generated
-        let maybe_hg_cs_id = self
-            .bonsai_hg_mapping
-            .get_hg_from_bonsai(ctx, self.repo_id, cs_id)
+async fn fetch_root_filenode(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    cs_id: ChangesetId,
+) -> Result<FilenodeResult<Option<PreparedRootFilenode>>> {
+    // If hg changeset is not generated, then root filenode can't possible be generated
+    // Check it and return None if hg changeset is not generated
+    let maybe_hg_cs_id = derivation_ctx
+        .bonsai_hg_mapping()
+        .get_hg_from_bonsai(ctx, derivation_ctx.repo_id(), cs_id)
+        .await?;
+    let hg_cs_id = if let Some(hg_cs_id) = maybe_hg_cs_id {
+        hg_cs_id
+    } else {
+        return Ok(FilenodeResult::Present(None));
+    };
+
+    let mf_id = hg_cs_id
+        .load(ctx, &derivation_ctx.blobstore())
+        .await?
+        .manifestid();
+
+    // Special case null manifest id if we run into it
+    let mf_id = mf_id.into_nodehash();
+    if mf_id == NULL_HASH {
+        Ok(FilenodeResult::Present(Some(PreparedRootFilenode {
+            filenode: HgFileNodeId::new(NULL_HASH),
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: HgChangesetId::new(NULL_HASH),
+        })))
+    } else {
+        let filenode_res = derivation_ctx
+            .filenodes()
+            .get_filenode(ctx, &RepoPath::RootPath, HgFileNodeId::new(mf_id))
             .await?;
-        let hg_cs_id = if let Some(hg_cs_id) = maybe_hg_cs_id {
-            hg_cs_id
-        } else {
-            return Ok(FilenodeResult::Present(None));
-        };
 
-        let mf_id = hg_cs_id.load(ctx, &self.blobstore).await?.manifestid();
-
-        // Special case null manifest id if we run into it
-        let mf_id = mf_id.into_nodehash();
-        if mf_id == NULL_HASH {
-            Ok(FilenodeResult::Present(Some(PreparedRootFilenode {
-                filenode: HgFileNodeId::new(NULL_HASH),
-                p1: None,
-                p2: None,
-                copyfrom: None,
-                linknode: HgChangesetId::new(NULL_HASH),
-            })))
-        } else {
-            let filenode_res = self
-                .filenodes
-                .get_filenode(ctx, &RepoPath::RootPath, HgFileNodeId::new(mf_id))
-                .await?;
-
-            match filenode_res {
-                FilenodeResult::Present(maybe_info) => {
-                    let info = maybe_info
-                        .map(|info| {
-                            PreparedRootFilenode::try_from(PreparedFilenode {
-                                path: RepoPath::RootPath,
-                                info,
-                            })
+        match filenode_res {
+            FilenodeResult::Present(maybe_info) => {
+                let info = maybe_info
+                    .map(|info| {
+                        PreparedRootFilenode::try_from(PreparedFilenode {
+                            path: RepoPath::RootPath,
+                            info,
                         })
-                        .transpose()?;
-                    Ok(FilenodeResult::Present(info))
-                }
-                FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+                    })
+                    .transpose()?;
+                Ok(FilenodeResult::Present(info))
             }
+            FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
         }
     }
 }
+
+impl_bonsai_derived_via_manager!(FilenodesOnlyPublic);

@@ -6,49 +6,59 @@
  */
 
 use crate::mapping::{FilenodesOnlyPublic, PreparedRootFilenode};
-use anyhow::{format_err, Error};
-use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
+use anyhow::{format_err, Result};
 use blobstore::Loadable;
 use context::CoreContext;
+use derived_data_manager::DerivationContext;
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{
     future::try_join_all, pin_mut, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
-use futures_util::try_join;
 use itertools::{Either, Itertools};
 use manifest::{find_intersection_of_diffs_and_parents, Entry};
+use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{
     blobs::File, fetch_manifest_envelope, HgChangesetId, HgFileEnvelope, HgFileNodeId,
-    HgManifestEnvelope, HgManifestId,
+    HgManifestEnvelope,
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepoPath};
 
 pub async fn derive_filenodes(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    derivation_ctx: &DerivationContext,
     bcs: BonsaiChangeset,
-) -> Result<FilenodesOnlyPublic, Error> {
-    let (_, public_filenode, non_roots) = prepare_filenodes_for_cs(ctx, repo, bcs).await?;
+) -> Result<FilenodesOnlyPublic> {
+    if tunables::tunables().get_filenodes_disabled() {
+        return Ok(FilenodesOnlyPublic::Disabled);
+    }
+    let (_, public_filenode, non_roots) =
+        prepare_filenodes_for_cs(ctx, derivation_ctx, bcs).await?;
     if !non_roots.is_empty() {
-        if let FilenodeResult::Disabled = repo.get_filenodes().add_filenodes(ctx, non_roots).await?
+        if let FilenodeResult::Disabled = derivation_ctx
+            .filenodes()
+            .add_filenodes(ctx, non_roots)
+            .await?
         {
             return Ok(FilenodesOnlyPublic::Disabled);
         }
+    }
+    // In case it got updated while deriving
+    if tunables::tunables().get_filenodes_disabled() {
+        return Ok(FilenodesOnlyPublic::Disabled);
     }
     Ok(public_filenode)
 }
 
 pub async fn derive_filenodes_in_batch(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    derivation_ctx: &DerivationContext,
     batch: Vec<BonsaiChangeset>,
-) -> Result<Vec<(ChangesetId, FilenodesOnlyPublic, Vec<PreparedFilenode>)>, Error> {
+) -> Result<Vec<(ChangesetId, FilenodesOnlyPublic, Vec<PreparedFilenode>)>> {
     stream::iter(
         batch
             .clone()
             .into_iter()
-            .map(|bcs| async move { prepare_filenodes_for_cs(ctx, repo, bcs).await }),
+            .map(|bcs| async move { prepare_filenodes_for_cs(ctx, derivation_ctx, bcs).await }),
     )
     .buffered(100)
     .try_collect()
@@ -57,10 +67,10 @@ pub async fn derive_filenodes_in_batch(
 
 pub async fn prepare_filenodes_for_cs(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    derivation_ctx: &DerivationContext,
     bcs: BonsaiChangeset,
-) -> Result<(ChangesetId, FilenodesOnlyPublic, Vec<PreparedFilenode>), Error> {
-    let filenodes = generate_all_filenodes(ctx, repo, &bcs).await?;
+) -> Result<(ChangesetId, FilenodesOnlyPublic, Vec<PreparedFilenode>)> {
+    let filenodes = generate_all_filenodes(ctx, derivation_ctx, &bcs).await?;
     if filenodes.is_empty() {
         // This commit didn't create any new filenodes, and it's root manifest is the
         // same as one of the parents (that can happen if this commit is empty).
@@ -98,21 +108,30 @@ pub async fn prepare_filenodes_for_cs(
 
 pub async fn generate_all_filenodes(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    derivation_ctx: &DerivationContext,
     bcs: &BonsaiChangeset,
-) -> Result<Vec<PreparedFilenode>, Error> {
-    let blobstore = repo.blobstore();
-    let root_mf = fetch_root_manifest_id(&ctx, bcs.get_changeset_id(), &repo);
+) -> Result<Vec<PreparedFilenode>> {
+    let blobstore = derivation_ctx.blobstore();
+    let hg_id = derivation_ctx
+        .derive_dependency::<MappedHgChangesetId>(ctx, bcs.get_changeset_id())
+        .await?
+        .0;
+    let root_mf = hg_id.load(ctx, &blobstore).await?.manifestid();
     // Bonsai might have > 2 parents, while mercurial supports at most 2.
     // That's fine for us - we just won't generate filenodes for paths that came from
     // stepparents. That means that linknode for these filenodes will point to a stepparent
     let parents = try_join_all(
-        bcs.parents()
-            .map(|p| fetch_root_manifest_id(&ctx, p, &repo)),
-    );
-    let linknode = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs.get_changeset_id());
+        derivation_ctx
+            .fetch_parents::<MappedHgChangesetId>(ctx, &bcs)
+            .await?
+            .into_iter()
+            .map(
+                |id| async move { Result::<_>::Ok(id.0.load(ctx, &blobstore).await?.manifestid()) },
+            ),
+    )
+    .await?;
+    let linknode = hg_id;
 
-    let (root_mf, parents, linknode) = try_join!(root_mf, parents, linknode)?;
     (async_stream::stream! {
         let s = find_intersection_of_diffs_and_parents(
             ctx.clone(),
@@ -214,7 +233,7 @@ fn create_file_filenode(
     path: Option<MPath>,
     envelope: HgFileEnvelope,
     linknode: HgChangesetId,
-) -> Result<PreparedFilenode, Error> {
+) -> Result<PreparedFilenode> {
     let path = match path {
         Some(path) => RepoPath::FilePath(path),
         None => {
@@ -238,27 +257,15 @@ fn create_file_filenode(
     })
 }
 
-async fn fetch_root_manifest_id(
-    ctx: &CoreContext,
-    cs_id: ChangesetId,
-    repo: &BlobRepo,
-) -> Result<HgManifestId, Error> {
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .await?;
-    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
-    Ok(hg_cs.manifestid())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use anyhow::{anyhow, Context, Result};
     use async_trait::async_trait;
+    use blobrepo::BlobRepo;
+    use blobrepo_hg::BlobRepoHg;
     use cloned::cloned;
-    use derived_data::{
-        BonsaiDerivable, BonsaiDerivedMapping, BonsaiDerivedMappingContainer, BonsaiDerivedOld,
-    };
+    use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use filenodes::{FilenodeRangeResult, Filenodes};
     use fixtures::linear;
@@ -266,6 +273,7 @@ mod tests {
     use manifest::ManifestOps;
     use maplit::hashmap;
     use mononoke_types::FileType;
+    use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use slog::info;
     use std::{
@@ -282,9 +290,14 @@ mod tests {
         repo: &BlobRepo,
         cs_id: ChangesetId,
         expected_paths: Vec<RepoPath>,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let bonsai = cs_id.load(ctx, repo.blobstore()).await?;
-        let filenodes = generate_all_filenodes(&ctx, &repo, &bonsai).await?;
+        let filenodes = generate_all_filenodes(
+            &ctx,
+            &repo.repo_derived_data().manager().derivation_context(None),
+            &bonsai,
+        )
+        .await?;
 
         assert_eq!(filenodes.len(), expected_paths.len());
         for path in expected_paths {
@@ -306,7 +319,7 @@ mod tests {
         Ok(())
     }
 
-    async fn test_generate_filenodes_simple(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_generate_filenodes_simple(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BlobRepo = test_repo_factory::build_empty()?;
         let filename = "path";
@@ -328,12 +341,12 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn generate_filenodes_simple(fb: FacebookInit) -> Result<(), Error> {
+    fn generate_filenodes_simple(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_generate_filenodes_simple(fb))
     }
 
-    async fn test_generate_filenodes_merge(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_generate_filenodes_merge(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BlobRepo = test_repo_factory::build_empty()?;
         let first_p1 = CreateCommitContext::new_root(&ctx, &repo)
@@ -357,12 +370,12 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn generate_filenodes_merge(fb: FacebookInit) -> Result<(), Error> {
+    fn generate_filenodes_merge(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_generate_filenodes_merge(fb))
     }
 
-    async fn test_generate_type_change(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_generate_type_change(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BlobRepo = test_repo_factory::build_empty()?;
         let parent = CreateCommitContext::new_root(&ctx, &repo)
@@ -382,12 +395,12 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn generate_filenodes_type_change(fb: FacebookInit) -> Result<(), Error> {
+    fn generate_filenodes_type_change(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_generate_type_change(fb))
     }
 
-    async fn test_many_parents(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_many_parents(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BlobRepo = test_repo_factory::build_empty()?;
         let p1 = CreateCommitContext::new_root(&ctx, &repo)
@@ -423,12 +436,12 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn many_parents(fb: FacebookInit) -> Result<(), Error> {
+    fn many_parents(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_many_parents(fb))
     }
 
-    async fn test_derive_empty_commits(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_derive_empty_commits(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BlobRepo = test_repo_factory::build_empty()?;
         let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
@@ -438,11 +451,15 @@ mod tests {
             .commit()
             .await?;
 
-        FilenodesOnlyPublic::derive(&ctx, &repo, child_empty).await?;
+        let manager = repo.repo_derived_data().manager();
+
+        manager
+            .derive::<FilenodesOnlyPublic>(&ctx, child_empty, None)
+            .await?;
 
         // Make sure they are in the mapping
-        let maps = FilenodesOnlyPublic::default_mapping(&ctx, &repo)?
-            .get(&ctx, vec![parent_empty, child_empty])
+        let maps = manager
+            .fetch_derived_batch::<FilenodesOnlyPublic>(&ctx, vec![parent_empty, child_empty], None)
             .await?;
 
         assert_eq!(maps.len(), 2);
@@ -450,12 +467,12 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn derive_empty_commits(fb: FacebookInit) -> Result<(), Error> {
+    fn derive_empty_commits(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_derive_empty_commits(fb))
     }
 
-    async fn test_derive_only_empty_commits(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_derive_only_empty_commits(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BlobRepo = test_repo_factory::build_empty()?;
 
@@ -464,49 +481,61 @@ mod tests {
             .commit()
             .await?;
 
-        let mapping = FilenodesOnlyPublic::default_mapping(&ctx, &repo)?;
-        FilenodesOnlyPublic::derive(&ctx, &repo, child_empty).await?;
+        let manager = repo.repo_derived_data().manager();
+        manager
+            .derive::<FilenodesOnlyPublic>(&ctx, child_empty, None)
+            .await?;
 
         // Make sure they are in the mapping
-        let maps = mapping.get(&ctx, vec![child_empty, parent_empty]).await?;
+        let maps = manager
+            .fetch_derived_batch::<FilenodesOnlyPublic>(&ctx, vec![child_empty, parent_empty], None)
+            .await?;
         assert_eq!(maps.len(), 2);
         Ok(())
     }
 
     #[fbinit::test]
-    fn derive_only_empty_commits(fb: FacebookInit) -> Result<(), Error> {
+    fn derive_only_empty_commits(fb: FacebookInit) -> Result<()> {
         let runtime = tokio::runtime::Runtime::new()?;
         runtime.block_on(test_derive_only_empty_commits(fb))
     }
 
     #[fbinit::test]
-    fn derive_disabled_filenodes(fb: FacebookInit) -> Result<(), Error> {
+    fn derive_disabled_filenodes(fb: FacebookInit) -> Result<()> {
         let tunables = MononokeTunables::default();
         tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
 
         with_tunables(tunables, || {
-            let runtime = tokio::runtime::Runtime::new()?;
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_time()
+                .build()?;
             runtime.block_on(test_derive_disabled_filenodes(fb))
         })
     }
 
-    async fn test_derive_disabled_filenodes(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_derive_disabled_filenodes(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
-        let derived = FilenodesOnlyPublic::derive(&ctx, &repo, cs).await?;
+        let derived = repo
+            .repo_derived_data()
+            .derive::<FilenodesOnlyPublic>(&ctx, cs)
+            .await?;
         assert_eq!(derived, FilenodesOnlyPublic::Disabled);
 
-        let mapping = FilenodesOnlyPublic::default_mapping(&ctx, &repo)?;
-        let res = mapping.get(&ctx, vec![cs]).await?;
-
-        assert_eq!(res.get(&cs).unwrap(), &FilenodesOnlyPublic::Disabled);
+        assert_eq!(
+            repo.repo_derived_data()
+                .fetch_derived::<FilenodesOnlyPublic>(&ctx, cs)
+                .await?
+                .unwrap(),
+            FilenodesOnlyPublic::Disabled
+        );
 
         Ok(())
     }
 
     #[fbinit::test]
-    async fn verify_batch_and_sequential_derive(fb: FacebookInit) -> Result<(), Error> {
+    async fn verify_batch_and_sequential_derive(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo1 = linear::getrepo(fb).await;
         let repo2 = linear::getrepo(fb).await;
@@ -518,19 +547,26 @@ mod tests {
                 .await?;
         cs_ids.reverse();
 
-        let mapping = BonsaiDerivedMappingContainer::new(
-            ctx.fb,
-            repo1.name(),
-            repo1.get_derived_data_config().scuba_table.as_deref(),
-            Arc::new(FilenodesOnlyPublic::default_mapping(&ctx, &repo1)?),
-        );
-        let batch =
-            FilenodesOnlyPublic::batch_derive(&ctx, &repo1, cs_ids.clone(), &mapping, None).await?;
+        let manager1 = repo1.repo_derived_data().manager();
+        manager1
+            .backfill_batch::<FilenodesOnlyPublic>(
+                &ctx,
+                cs_ids.clone(),
+                BatchDeriveOptions::Parallel { gap_size: None },
+                None,
+            )
+            .await?;
+        let batch = manager1
+            .fetch_derived_batch::<FilenodesOnlyPublic>(&ctx, cs_ids.clone(), None)
+            .await?;
 
         let sequential = {
             let mut res = HashMap::new();
             for cs in cs_ids.clone() {
-                let root_filenode = FilenodesOnlyPublic::derive(&ctx, &repo2, cs).await?;
+                let root_filenode = repo2
+                    .repo_derived_data()
+                    .derive::<FilenodesOnlyPublic>(&ctx, cs)
+                    .await?;
                 res.insert(cs, root_filenode);
             }
             res
@@ -544,7 +580,7 @@ mod tests {
     }
 
     #[fbinit::test]
-    async fn derive_parents_before_children(fb: FacebookInit) -> Result<(), Error> {
+    async fn derive_parents_before_children(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let filenodes_cs_id = Arc::new(Mutex::new(None));
         let mut factory = TestRepoFactory::new()?;
@@ -574,13 +610,17 @@ mod tests {
                 .await?;
         cs_ids.reverse();
 
-        let mapping = BonsaiDerivedMappingContainer::new(
-            ctx.fb,
-            repo.name(),
-            repo.get_derived_data_config().scuba_table.as_deref(),
-            Arc::new(FilenodesOnlyPublic::default_mapping(&ctx, &repo)?),
-        );
-        match FilenodesOnlyPublic::batch_derive(&ctx, &repo, cs_ids.clone(), &mapping, None).await {
+        let manager = repo.repo_derived_data().manager();
+
+        match manager
+            .backfill_batch::<FilenodesOnlyPublic>(
+                &ctx,
+                cs_ids.clone(),
+                BatchDeriveOptions::Parallel { gap_size: None },
+                None,
+            )
+            .await
+        {
             Ok(_) => {}
             Err(_) => {}
         };
@@ -588,8 +628,10 @@ mod tests {
         // FilenodesWrapper prevents writing of root filenode for a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157 (8th commit in repo)
         // so all children (9, 10, 11) should not have root_filenodes written
         for cs_id in cs_ids.into_iter().skip(8) {
-            let filenodes = mapping.get(&ctx, vec![cs_id]).await?;
-            assert_eq!(filenodes.len(), 0);
+            let filenode = manager
+                .fetch_derived::<FilenodesOnlyPublic>(&ctx, cs_id, None)
+                .await?;
+            assert_eq!(filenode, None);
         }
         Ok(())
     }
@@ -653,12 +695,16 @@ mod tests {
         repo: &BlobRepo,
         backup_repo: &BlobRepo,
         cs: ChangesetId,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let prod_filenodes = repo.get_filenodes();
         let backup_filenodes = backup_repo.get_filenodes();
-        let manifest = fetch_root_manifest_id(ctx, cs, repo)
+        let manifest = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), cs)
+            .await?
+            .load(ctx, repo.blobstore())
             .await
-            .with_context(|| format!("while fetching manifest from prod for cs {:?}", cs))?;
+            .with_context(|| format!("while fetching manifest from prod for cs {:?}", cs))?
+            .manifestid();
         manifest
             .list_all_entries(ctx.clone(), repo.get_blobstore())
             .map_ok(|(path, entry)| {

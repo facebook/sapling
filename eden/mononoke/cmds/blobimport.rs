@@ -18,8 +18,8 @@ use cmdlib::{
     helpers::block_execute,
 };
 use context::{CoreContext, SessionContainer};
-use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
+use derived_data_manager::BonsaiDerivable;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;

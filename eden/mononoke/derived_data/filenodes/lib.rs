@@ -11,4 +11,4 @@ mod derive;
 mod mapping;
 
 pub use derive::generate_all_filenodes;
-pub use mapping::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping, PreparedRootFilenode};
+pub use mapping::{FilenodesOnlyPublic, PreparedRootFilenode};

@@ -20,6 +20,7 @@ use derived_data_filenodes::generate_all_filenodes;
 use fbinit::FacebookInit;
 use futures::future::{join_all, FutureExt};
 use mercurial_types::{HgChangesetId, HgNodeHash};
+use repo_derived_data::RepoDerivedDataRef;
 use slog::info;
 use std::fs::File;
 use std::str::FromStr;
@@ -52,7 +53,12 @@ async fn regenerate_single_manifest(
     let cs_id = maybe_cs_id.ok_or(format_err!("changeset not found {}", hg_cs))?;
     let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
 
-    let toinsert = generate_all_filenodes(&ctx, &repo, &bonsai).await?;
+    let toinsert = generate_all_filenodes(
+        &ctx,
+        &repo.repo_derived_data().manager().derivation_context(None),
+        &bonsai,
+    )
+    .await?;
 
     repo.get_filenodes()
         .add_or_replace_filenodes(&ctx, toinsert)
