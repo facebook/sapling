@@ -12,12 +12,12 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::{
     file::{
-        FileAttributes, FileAuxData, FileContent, FileEntry, FileRequest, FileSpec, HgFilenodeData,
+        FileAttributes, FileContent, FileEntry, FileRequest, FileSpec, HgFilenodeData,
         UploadHgFilenodeRequest, UploadTokensResponse,
     },
     wire::{
-        is_default, ToApi, ToWire, WireContentId, WireHgId, WireKey, WireParents,
-        WireRevisionstoreMetadata, WireSha1, WireSha256, WireToApiConversionError, WireUploadToken,
+        is_default, ToApi, ToWire, WireHgId, WireKey, WireParents, WireRevisionstoreMetadata,
+        WireToApiConversionError, WireUploadToken,
     },
 };
 
@@ -85,48 +85,7 @@ impl ToApi for WireFileEntry {
     }
 }
 
-/// File "aux data", requires an additional mononoke blobstore lookup. See mononoke_types::ContentMetadata.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
-pub struct WireFileAuxData {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub total_size: u64,
-
-    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    pub content_id: WireContentId,
-
-    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    pub sha1: WireSha1,
-
-    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
-    pub sha256: WireSha256,
-}
-
-impl ToWire for FileAuxData {
-    type Wire = WireFileAuxData;
-
-    fn to_wire(self) -> Self::Wire {
-        WireFileAuxData {
-            total_size: self.total_size,
-            content_id: self.content_id.to_wire(),
-            sha1: self.sha1.to_wire(),
-            sha256: self.sha256.to_wire(),
-        }
-    }
-}
-
-impl ToApi for WireFileAuxData {
-    type Api = FileAuxData;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(FileAuxData {
-            total_size: self.total_size,
-            content_id: self.content_id.to_api()?,
-            sha1: self.sha1.to_api()?,
-            sha256: self.sha256.to_api()?,
-        })
-    }
-}
+pub use crate::file::WireFileAuxData;
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct WireFileAttributes {
@@ -355,18 +314,6 @@ impl Arbitrary for WireFileEntry {
             parents: Arbitrary::arbitrary(g),
             metadata: Arbitrary::arbitrary(g),
             aux_data: Arbitrary::arbitrary(g),
-        }
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireFileAuxData {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self {
-            total_size: Arbitrary::arbitrary(g),
-            content_id: Arbitrary::arbitrary(g),
-            sha1: Arbitrary::arbitrary(g),
-            sha256: Arbitrary::arbitrary(g),
         }
     }
 }

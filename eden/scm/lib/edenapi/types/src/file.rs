@@ -8,6 +8,7 @@
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
+use type_macros::auto_wire;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::{Arbitrary, Gen};
@@ -54,11 +55,16 @@ impl FileError {
 }
 
 /// File "aux data", requires an additional mononoke blobstore lookup. See mononoke_types::ContentMetadata.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[auto_wire]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct FileAuxData {
+    #[id(0)]
     pub total_size: u64,
+    #[id(1)]
     pub content_id: ContentId,
+    #[id(2)]
     pub sha1: Sha1,
+    #[id(3)]
     pub sha256: Sha256,
 }
 
@@ -134,7 +140,7 @@ impl FileContent {
 /// Structure representing source control file content on the wire.
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct FileEntry {
     pub key: Key,
     pub parents: Parents,
