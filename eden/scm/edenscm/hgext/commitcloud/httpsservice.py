@@ -65,15 +65,22 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         self.token = token if token != ccutil.FAKE_TOKEN else None
         self.debugrequests = ui.config("commitcloud", "debugrequests")
         self.url = ui.config("commitcloud", "url")
+        self._sockettimeout = DEFAULT_TIMEOUT
+        self._unix_socket_proxy = (
+            ui.config("auth_proxy", "unix_socket_path")
+            if ui.config("auth_proxy", "commitcloud_use_uds")
+            else None
+        )
+
         if not self.url:
             raise ccerror.ConfigurationError(
                 self.ui, _("'commitcloud.url' is required")
             )
 
-        self._setuphttpsconnection()
+        self._setupconnection()
 
-    def _setuphttpsconnection(self):
-        # setting up HTTS connection
+    def _setupconnection(self):
+        # setting up HTTP(S) connection
 
         # enable client side compression
         # data in the response is also requested compressed
@@ -83,14 +90,20 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "Accept-Encoding": "none, gzip",
             "Content-Encoding": "gzip",
         }
+
         if self.token:
             self.headers["Authorization"] = "OAuth %s" % self.token
 
         u = util.url(self.url, parsequery=False, parsefragment=False)
+
         if u.scheme != "https" or not u.host or u.passwd is not None:
             raise ccerror.ConfigurationError(
                 self.ui, _("'commitcloud.url' is invalid or unsupported")
             )
+
+        if self._unix_socket_proxy:
+            self.headers["x-x2pagentd-ws-over-h1"] = 1
+            u.scheme = "http"
 
         remotehost = u.host
         remoteport = int(u.port) if u.port else 443
@@ -99,7 +112,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
         # if the token is not set, use the same TLS auth to connect to the Commit Cloud service
         # as it is used to connect to the default path
-        if not self.token:
+        if not self.token and not self._unix_socket_proxy:
             path = ccutil.getremotepath(self.ui)
             authdata = httpconnection.readauthforuri(self.ui, path, u.user)
             if authdata:
@@ -118,18 +131,30 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                     ),
                 )
 
-        self.connection = httpclient.HTTPConnection(
-            remotehost,
-            remoteport,
-            timeout=DEFAULT_TIMEOUT,
-            use_ssl=True,
-            ssl_wrap_socket=sslcontext.wrap_socket,
-        )
+        # Use UNIX SOCKECT connection to x2pagentd if available
+        if self._unix_socket_proxy:
+            self.connection = httpclient.HTTPConnection(
+                remotehost,
+                unix_socket_path=self._unix_socket_proxy,
+                timeout=self._sockettimeout,
+            )
+            self.ui.debug(
+                "will be connecting to %s using x2pagentd\n" % (remotehost),
+                component="commitcloud",
+            )
+        else:
+            self.connection = httpclient.HTTPConnection(
+                remotehost,
+                remoteport,
+                timeout=DEFAULT_TIMEOUT,
+                use_ssl=True,
+                ssl_wrap_socket=sslcontext.wrap_socket,
+            )
 
-        self.ui.debug(
-            "will be connecting to %s:%d\n" % (remotehost, remoteport),
-            component="commitcloud",
-        )
+            self.ui.debug(
+                "will be connecting to %s:%d\n" % (remotehost, remoteport),
+                component="commitcloud",
+            )
 
     def requiresauthentication(self):
         return True
