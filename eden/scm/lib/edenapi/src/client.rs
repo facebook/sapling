@@ -435,11 +435,7 @@ impl EdenApi for Client {
     async fn health(&self) -> Result<ResponseMeta, EdenApiError> {
         let url = self.build_url(paths::HEALTH_CHECK, None)?;
 
-        let msg = format!("Sending health check request: {}", &url);
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Sending health check request: {}", &url);
 
         let req = self.configure_request(Request::get(url))?;
         let res = raise_for_status(req.send_async().await?).await?;
@@ -452,11 +448,7 @@ impl EdenApi for Client {
         repo: String,
         keys: Vec<Key>,
     ) -> Result<Response<FileEntry>, EdenApiError> {
-        let msg = format!("Requesting content for {} file(s)", keys.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting content for {} file(s)", keys.len());
 
         if keys.is_empty() {
             return Ok(Response::empty());
@@ -479,11 +471,7 @@ impl EdenApi for Client {
         repo: String,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileEntry>, EdenApiError> {
-        let msg = format!("Requesting attributes for {} file(s)", reqs.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting attributes for {} file(s)", reqs.len());
 
         if reqs.is_empty() {
             return Ok(Response::empty());
@@ -507,11 +495,7 @@ impl EdenApi for Client {
         keys: Vec<Key>,
         length: Option<u32>,
     ) -> Result<Response<HistoryEntry>, EdenApiError> {
-        let msg = format!("Requesting history for {} file(s)", keys.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting history for {} file(s)", keys.len());
 
         if keys.is_empty() {
             return Ok(Response::empty());
@@ -541,11 +525,7 @@ impl EdenApi for Client {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        let msg = format!("Requesting {} tree(s)", keys.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting {} tree(s)", keys.len());
 
         if keys.is_empty() {
             return Ok(Response::empty());
@@ -572,15 +552,11 @@ impl EdenApi for Client {
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        let msg = format!(
+        tracing::info!(
             "Requesting {} complete tree(s) for directory '{}'",
             mfnodes.len(),
             &rootdir
         );
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
 
         let url = self.build_url(paths::COMPLETE_TREES, Some(&repo))?;
         let tree_req = CompleteTreeRequest {
@@ -605,11 +581,7 @@ impl EdenApi for Client {
         repo: String,
         hgids: Vec<HgId>,
     ) -> Result<Response<CommitRevlogData>, EdenApiError> {
-        let msg = format!("Requesting revlog data for {} commit(s)", hgids.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting revlog data for {} commit(s)", hgids.len());
 
         let url = self.build_url(paths::COMMIT_REVLOG_DATA, Some(&repo))?;
         let commit_revlog_data_req = CommitRevlogDataRequest { hgids };
@@ -629,11 +601,7 @@ impl EdenApi for Client {
         repo: String,
         prefixes: Vec<String>,
     ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
-        let msg = format!("Requesting full hashes for {} prefix(es)", prefixes.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting full hashes for {} prefix(es)", prefixes.len());
         let url = self.build_url(paths::COMMIT_HASH_LOOKUP, Some(&repo))?;
         let prefixes: Vec<CommitHashLookupRequest> = prefixes
             .into_iter()
@@ -659,11 +627,7 @@ impl EdenApi for Client {
         repo: String,
         bookmarks: Vec<String>,
     ) -> Result<Response<BookmarkEntry>, EdenApiError> {
-        let msg = format!("Requesting '{}' bookmarks", bookmarks.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting '{}' bookmarks", bookmarks.len());
         let url = self.build_url(paths::BOOKMARKS, Some(&repo))?;
         let bookmark_req = BookmarkRequest { bookmarks };
         self.log_request(&bookmark_req, "bookmarks");
@@ -676,12 +640,7 @@ impl EdenApi for Client {
     }
 
     async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
-        let msg = format!("Requesting clone data for the '{}' repository", repo);
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
-
+        tracing::info!("Requesting clone data for the '{}' repository", repo);
         self.clone_data_retry(repo).await
     }
 
@@ -691,14 +650,10 @@ impl EdenApi for Client {
         old_master: HgId,
         new_master: HgId,
     ) -> Result<CloneData<HgId>, EdenApiError> {
-        let msg = format!(
+        tracing::info!(
             "Requesting pull fast forward data for the '{}' repository",
             repo
         );
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
 
         let req = PullFastForwardRequest {
             old_master,
@@ -708,14 +663,10 @@ impl EdenApi for Client {
     }
 
     async fn full_idmap_clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
-        let msg = format!(
+        tracing::info!(
             "Requesting full idmap clone data for the '{}' repository",
             repo
         );
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
 
         let url = self.build_url(paths::FULL_IDMAP_CLONE_DATA, Some(&repo))?;
         let req = self.configure_request(Request::post(url))?;
@@ -753,15 +704,10 @@ impl EdenApi for Client {
         repo: String,
         requests: Vec<CommitLocationToHashRequest>,
     ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError> {
-        let msg = format!(
+        tracing::info!(
             "Requesting commit location to hash (batch size = {})",
             requests.len()
         );
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
-
         if requests.is_empty() {
             return Ok(Response::empty());
         }
@@ -788,14 +734,10 @@ impl EdenApi for Client {
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
     ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError> {
-        let msg = format!(
+        tracing::info!(
             "Requesting commit hash to location (batch size = {})",
             hgids.len()
         );
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
 
         if hgids.is_empty() {
             return Ok(Response::empty());
@@ -932,11 +874,7 @@ impl EdenApi for Client {
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
     ) -> Result<Response<LookupResponse>, EdenApiError> {
-        let msg = format!("Requesting lookup for {} item(s)", items.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting lookup for {} item(s)", items.len());
 
         if items.is_empty() {
             return Ok(Response::empty());
@@ -1049,11 +987,7 @@ impl EdenApi for Client {
         repo: String,
         items: Vec<HgFilenodeData>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        let msg = format!("Requesting hg filenodes upload for {} item(s)", items.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting hg filenodes upload for {} item(s)", items.len());
 
         if items.is_empty() {
             return Ok(Response::empty());
@@ -1083,11 +1017,7 @@ impl EdenApi for Client {
         repo: String,
         items: Vec<UploadTreeEntry>,
     ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
-        let msg = format!("Requesting trees upload for {} item(s)", items.len());
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting trees upload for {} item(s)", items.len());
 
         if items.is_empty() {
             return Ok(Response::empty());
@@ -1119,14 +1049,10 @@ impl EdenApi for Client {
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        let msg = format!(
+        tracing::info!(
             "Requesting changesets upload for {} item(s)",
             changesets.len(),
         );
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
 
         if changesets.is_empty() {
             return Ok(Response::empty());
@@ -1153,11 +1079,7 @@ impl EdenApi for Client {
         changeset: BonsaiChangesetContent,
         bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        let msg = "Requesting changeset upload";
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Requesting changeset upload");
 
         let mut url = self.build_url(paths::UPLOAD_BONSAI_CHANGESET, Some(&repo))?;
         if let Some(bubble_id) = bubble_id {
@@ -1178,11 +1100,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
-        let msg = "Preparing ephemeral bubble";
-        tracing::info!("{}", &msg);
-        if self.config().debug {
-            eprintln!("{}", &msg);
-        }
+        tracing::info!("Preparing ephemeral bubble");
         let url = self.build_url(paths::EPHEMERAL_PREPARE, Some(&repo))?;
         let req = EphemeralPrepareRequest {}.to_wire();
         let request = self
@@ -1205,9 +1123,6 @@ impl EdenApi for Client {
         request: FetchSnapshotRequest,
     ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
         tracing::info!("Fetching snapshot {}", request.cs_id,);
-        if self.config().debug {
-            eprintln!("Fetching snapshot {}", request.cs_id);
-        }
         let url = self.build_url(paths::FETCH_SNAPSHOT, Some(&repo))?;
         let req = request.to_wire();
         let request = self
@@ -1219,11 +1134,7 @@ impl EdenApi for Client {
     }
 
     async fn download_file(&self, repo: String, token: UploadToken) -> Result<Bytes, EdenApiError> {
-        let download_file = "Downloading file";
-        tracing::info!("{}", download_file);
-        if self.config().debug {
-            eprintln!("{}", download_file);
-        }
+        tracing::info!("Downloading file");
         let url = self.build_url(paths::DOWNLOAD_FILE, Some(&repo))?;
         let metadata = token.data.metadata.clone();
         let req = token.to_wire();
