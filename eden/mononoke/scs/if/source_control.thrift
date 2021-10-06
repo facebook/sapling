@@ -1499,12 +1499,9 @@ service SourceControlService extends fb303.FacebookService {
   /// Returns an error if there is ambiguity in any mapping but this is not
   /// expected to ever happen.
   ///
-  /// Method may also theoretically return inaccurate results because of the
-  /// way commit sync mapping currently works. "Inaccurate" means it may
-  /// go in the wrong direction and return a commit that was a successor
-  /// of the given one. This should be fixed soon. In the meantime you can
-  /// consider using full history from the response if you are fine with a set
-  /// of origin "candidates" rather than the exact one which may be incorrect.
+  /// The method may return incorrect results for older commits because we
+  /// can't backfill the necessary data. "Incorrect" means it will still be
+  /// some version of the provided commit but not its true origin.
   ///
   /// NOTE: returns commit specifiers with bonsai hashes. Use commit_lookup
   /// on specifiers to obtain hashes in needed schemes.

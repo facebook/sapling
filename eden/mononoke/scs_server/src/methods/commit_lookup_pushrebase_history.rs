@@ -14,6 +14,7 @@ use metaconfig_types::CommitSyncConfig;
 use mononoke_api::{Mononoke, RepoContext};
 use mononoke_types::ChangesetId;
 use source_control as thrift;
+use synced_commit_mapping::SyncedCommitSourceRepo;
 
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -148,10 +149,13 @@ impl RepoChangesetsPushrebaseHistory {
         config: CommitSyncConfig,
     ) -> Result<bool, errors::ServiceError> {
         let mut synced_changesets = vec![];
-        let target_repo_ids = if config.large_repo_id == repo.repoid() {
-            config.small_repos.keys().copied().collect()
+        let (target_repo_ids, expected_sync_origin) = if config.large_repo_id == repo.repoid() {
+            (
+                config.small_repos.keys().copied().collect(),
+                SyncedCommitSourceRepo::Small,
+            )
         } else {
-            vec![config.large_repo_id]
+            (vec![config.large_repo_id], SyncedCommitSourceRepo::Large)
         };
 
         for target_repo_id in target_repo_ids.into_iter() {
@@ -162,11 +166,23 @@ impl RepoChangesetsPushrebaseHistory {
                 .await
                 .map_err(errors::internal_error)?;
             if let Some(target_repo_name) = self.mononoke.repo_name_from_id(target_repo_id) {
-                synced_changesets.extend(
-                    entries
-                        .into_iter()
-                        .map(|(cs, _, _)| RepoChangeset(target_repo_name.clone(), cs)),
-                );
+                synced_changesets.extend(entries.into_iter().filter_map(
+                    |(cs, _, maybe_source_repo)| {
+                        let traverse = match maybe_source_repo {
+                            // source_repo information can be absent e.g. for old commits but
+                            // let's still traverse the mapping because in most cases we will
+                            // get the correct result.
+                            None => true,
+                            Some(source_repo) if source_repo == expected_sync_origin => true,
+                            _ => false,
+                        };
+                        if traverse {
+                            Some(RepoChangeset(target_repo_name.clone(), cs))
+                        } else {
+                            None
+                        }
+                    },
+                ));
             }
         }
 
