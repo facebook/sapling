@@ -1321,20 +1321,22 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
 
   // Globs will be evaluated against the specified commits or the current commit
   // if none are specified. The results will be collected here.
-  std::vector<folly::Future<std::vector<GlobNode::GlobResult>>> globResults{};
+  std::vector<folly::Future<folly::Unit>> globFutures{};
+  auto globResults = std::make_shared<
+      folly::Synchronized<std::vector<GlobNode::GlobResult>>>();
 
   auto searchRoot = relpathFromUserPath(searchRootUser);
 
   if (!rootHashes.empty()) {
     // Note that we MUST reserve here, otherwise while emplacing we might
     // invalidate the earlier commitHash refrences
-    globResults.reserve(rootHashes.size());
+    globFutures.reserve(rootHashes.size());
     originRootIds->reserve(rootHashes.size());
     for (auto& rootHash : rootHashes) {
       const RootId& originRootId = originRootIds->emplace_back(
           edenMount->getObjectStore()->parseRootId(rootHash));
 
-      globResults.emplace_back(
+      globFutures.emplace_back(
           edenMount->getObjectStore()
               ->getRootTree(originRootId, fetchContext)
               .thenValue([edenMount,
@@ -1348,37 +1350,42 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
                     std::move(rootTree),
                     searchRoot);
               })
-              .thenValue([edenMount,
-                          globRoot,
-                          &fetchContext,
-                          fileBlobsToPrefetch,
-                          &originRootId](std::shared_ptr<const Tree>&& tree) {
-                return globRoot->evaluate(
-                    edenMount->getObjectStore(),
-                    fetchContext,
-                    RelativePathPiece(),
-                    std::move(tree),
-                    fileBlobsToPrefetch,
-                    originRootId);
-              }));
+              .thenValue(
+                  [edenMount,
+                   globRoot,
+                   &fetchContext,
+                   fileBlobsToPrefetch,
+                   globResults,
+                   &originRootId](std::shared_ptr<const Tree>&& tree) mutable {
+                    return globRoot->evaluate(
+                        edenMount->getObjectStore(),
+                        fetchContext,
+                        RelativePathPiece(),
+                        std::move(tree),
+                        std::move(fileBlobsToPrefetch),
+                        std::move(globResults),
+                        originRootId);
+                  }));
     }
   } else {
     const RootId& originRootId =
         originRootIds->emplace_back(edenMount->getParentCommit());
-    globResults.emplace_back(
+    globFutures.emplace_back(
         edenMount->getInode(searchRoot, fetchContext)
             .thenValue([&fetchContext,
                         globRoot,
                         edenMount,
                         fileBlobsToPrefetch,
-                        &originRootId](InodePtr inode) {
+                        globResults,
+                        &originRootId](InodePtr inode) mutable {
               return globRoot
                   ->evaluate(
                       edenMount->getObjectStore(),
                       fetchContext,
                       RelativePathPiece(),
                       inode.asTreePtr(),
-                      fileBlobsToPrefetch,
+                      std::move(fileBlobsToPrefetch),
+                      std::move(globResults),
                       originRootId)
                   .semi();
             })
@@ -1388,39 +1395,22 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
 
   auto prefetchFuture = wrapFuture(
       std::move(helper),
-      folly::collectAll(std::move(globResults))
+      folly::collectAll(std::move(globFutures))
           .via(server_->getServerState()->getThreadPool().get())
           .thenValue([fileBlobsToPrefetch,
+                      globResults = std::move(globResults),
                       suppressFileList = globOptions.suppressFileList](
-                         std::vector<folly::Try<
-                             std::vector<GlobNode::GlobResult>>>&& rawResults) {
-            // deduplicate and combine all the globResults.
-            std::vector<GlobNode::GlobResult> combinedResults{};
+                         std::vector<folly::Try<folly::Unit>>&& tries) {
+            std::vector<GlobNode::GlobResult> sortedResults;
             if (!suppressFileList) {
-              size_t totalResults{};
-              for (auto& maybeResults : rawResults) {
-                if (maybeResults.hasException()) {
-                  return folly::makeFuture<std::vector<GlobNode::GlobResult>>(
-                      maybeResults.exception());
-                }
-                auto& results = maybeResults.value();
-                std::sort(results.begin(), results.end());
-                auto resultsNewEnd =
-                    std::unique(results.begin(), results.end());
-                results.erase(resultsNewEnd, results.end());
-                totalResults += results.size();
+              std::swap(sortedResults, *globResults->wlock());
+              for (auto& try_ : tries) {
+                try_.throwUnlessValue();
               }
-              combinedResults.reserve(totalResults);
-              // note no need to check for errors here as we would have
-              // returned if any of these were errors. Note that we also
-              // do not need to de-duplicate between the vectors of
-              // GlobResults because no two should share an originHash.
-              for (auto& results : rawResults) {
-                combinedResults.insert(
-                    combinedResults.end(),
-                    std::make_move_iterator(results.value().begin()),
-                    std::make_move_iterator(results.value().end()));
-              }
+              std::sort(sortedResults.begin(), sortedResults.end());
+              auto resultsNewEnd =
+                  std::unique(sortedResults.begin(), sortedResults.end());
+              sortedResults.erase(resultsNewEnd, sortedResults.end());
             }
 
             // fileBlobsToPrefetch is deduplicated as an optimization.
@@ -1438,8 +1428,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
                   fileBlobsToPrefetchNewEnd, fileBlobsToPrefetchLocked->end());
             }
 
-            return folly::makeFuture<std::vector<GlobNode::GlobResult>>(
-                std::move(combinedResults));
+            return sortedResults;
           })
           .thenValue([edenMount,
                       wantDtype = globOptions.wantDtype,

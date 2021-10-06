@@ -79,6 +79,9 @@ class GlobNode {
         : name(std::move(name)), dtype(dtype), originHash(&originHash) {}
   };
 
+  using ResultList =
+      std::shared_ptr<folly::Synchronized<std::vector<GlobResult>>>;
+
   // Compile and add a new glob pattern to the tree.
   // Compilation splits the pattern into nodes, with one node for each
   // directory separator separated path component.
@@ -96,21 +99,23 @@ class GlobNode {
   // prefetched via the ObjectStore layer.  This will not change the
   // materialization or overlay state for children that already have
   // inodes assigned.
-  folly::Future<std::vector<GlobResult>> evaluate(
+  folly::Future<folly::Unit> evaluate(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       TreeInodePtr root,
       PrefetchList fileBlobsToPrefetch,
+      ResultList globResult,
       const RootId& originRootId);
 
   // This is the Tree version of the method above
-  folly::Future<std::vector<GlobResult>> evaluate(
+  folly::Future<folly::Unit> evaluate(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       std::shared_ptr<const Tree> tree,
       PrefetchList fileBlobsToPrefetch,
+      ResultList globResult,
       const RootId& originRootId);
 
   /**
@@ -145,22 +150,24 @@ class GlobNode {
   // The difference is because a pattern like "**/foo" must be recursively
   // matched against all the children of the inode.
   template <typename ROOT>
-  folly::Future<std::vector<GlobResult>> evaluateRecursiveComponentImpl(
+  folly::Future<folly::Unit> evaluateRecursiveComponentImpl(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       RelativePathPiece startOfRecursive,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch,
+      ResultList globResult,
       const RootId& originRootId);
 
   template <typename ROOT>
-  folly::Future<std::vector<GlobResult>> evaluateImpl(
+  folly::Future<folly::Unit> evaluateImpl(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       ROOT&& root,
       PrefetchList fileBlobsToPrefetch,
+      ResultList globResult,
       const RootId& originRootId);
 
   void debugDump(int currentDepth) const;

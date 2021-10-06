@@ -40,13 +40,23 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
     const RootId& commitHash) {
   auto rootInode = mount.getTreeInode(RelativePathPiece());
   auto objectStore = mount.getEdenMount()->getObjectStore();
-  return globRoot.evaluate(
-      objectStore,
-      ObjectFetchContext::getNullContext(),
-      RelativePathPiece(),
-      rootInode,
-      prefetchHashes,
-      commitHash);
+  auto globResults = std::make_shared<
+      folly::Synchronized<std::vector<GlobNode::GlobResult>>>();
+  return globRoot
+      .evaluate(
+          objectStore,
+          ObjectFetchContext::getNullContext(),
+          RelativePathPiece(),
+          rootInode,
+          prefetchHashes,
+          globResults,
+          commitHash)
+      .thenValue([globResults](auto&&) {
+        std::vector<GlobResult> result;
+        std::swap(result, *globResults->wlock());
+        return result;
+      });
+  ;
 }
 
 const RootId kZeroRootId{};
