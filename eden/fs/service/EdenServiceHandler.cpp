@@ -1395,8 +1395,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
 
   auto prefetchFuture = wrapFuture(
       std::move(helper),
-      folly::collectAll(std::move(globFutures))
-          .via(server_->getServerState()->getThreadPool().get())
+      folly::collectAllUnsafe(std::move(globFutures))
           .thenValue([fileBlobsToPrefetch,
                       globResults = std::move(globResults),
                       suppressFileList = globOptions.suppressFileList](
