@@ -14,34 +14,33 @@ path = "lib.rs"
 anyhow = "1.0"
 async-stream = "0.3"
 async-trait = "0.1.51"
-blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = ".." }
+derived_data_manager = { version = "0.1.0", path = "../manager" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures-util = "0.3.7"
 itertools = "0.10.1"
 manifest = { version = "0.1.0", path = "../../manifest" }
+mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
-repo_blobstore = { version = "0.1.0", path = "../../blobrepo/repo_blobstore" }
-repo_identity = { version = "0.1.0", path = "../../repo_attributes/repo_identity" }
+tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 revset = { version = "0.1.0", path = "../../revset" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
-tunables = { version = "0.1.0", path = "../../tunables" }
 
 [patch.crates-io]
 curl-sys = { git = "https://github.com/mzr/curl-rust", rev = "97694cf73ea9309d9e8ed067ec0c05367841d405" }

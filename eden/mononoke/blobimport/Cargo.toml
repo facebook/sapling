@@ -20,8 +20,8 @@ bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapp
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
-derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
+derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
