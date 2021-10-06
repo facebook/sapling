@@ -587,15 +587,20 @@ impl DerivedDataManager {
         // Write all mapping values, and flush the blobstore to ensure they
         // are persisted.
         let (stats, _) = async {
-            stream::iter(derived.into_iter())
+            let csids = stream::iter(derived.into_iter())
                 .map(|(csid, derived)| async move {
-                    derived.store_mapping(ctx, derivation_ctx, csid).await
+                    derived.store_mapping(ctx, derivation_ctx, csid).await?;
+                    Ok::<_, Error>(csid)
                 })
                 .buffer_unordered(100)
-                .try_for_each(|_| async { Ok(()) })
+                .try_collect::<Vec<_>>()
                 .await?;
 
-            derivation_ctx.flush(ctx).await
+            derivation_ctx.flush(ctx).await?;
+            for csid in csids {
+                derivation_ctx.mark_derived::<Derivable>(csid);
+            }
+            Ok::<_, Error>(())
         }
         .try_timed()
         .await?;
