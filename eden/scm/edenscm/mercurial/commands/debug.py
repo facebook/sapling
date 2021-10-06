@@ -3701,8 +3701,12 @@ def debugresetheads(ui, repo):
         for fullname, node in namenodes.items()
         if fullname in essentialnames
     }
-    if not newnamenodes:
-        raise error.Abort(_("no head left"))
+    if not newnamenodes and namenodes:
+        raise error.Abort(
+            _("no remote names will be left"),
+            hint=_("is remotenames.selectivepulldefault (%s) set correctly?")
+            % " ".join(sorted(essentialnames)),
+        )
     metalog["remotenames"] = bookmarks.encoderemotenames(newnamenodes)
 
     # Remove all draft heads

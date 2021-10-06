@@ -122,6 +122,14 @@ Notice that only the "master" head is left:
   │
   o  Z  public
   
+
+Resethead aborts on wrong configuration:
+
+  $ hg debugresetheads --config remotenames.selectivepulldefault=foo,bar
+  abort: no remote names will be left
+  (is remotenames.selectivepulldefault (remote/bar remote/foo) set correctly?)
+  [255]
+
 Resethead command removes local bookmarks too:
 
   $ hg bookmark -r 'desc(A)' book-A
