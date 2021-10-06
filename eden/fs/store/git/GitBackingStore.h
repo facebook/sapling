@@ -18,8 +18,6 @@ struct git_repository;
 
 namespace facebook::eden {
 
-class LocalStore;
-
 /**
  * A BackingStore implementation that loads data out of a git repository.
  */
@@ -32,7 +30,7 @@ class GitBackingStore final : public BackingStore {
    * GitBackingStore object).  It is guaranteed to be valid for the lifetime of
    * the GitBackingStore object.
    */
-  GitBackingStore(AbsolutePathPiece repository, LocalStore* localStore);
+  explicit GitBackingStore(AbsolutePathPiece repository);
   ~GitBackingStore() override;
 
   /**
@@ -74,7 +72,6 @@ class GitBackingStore final : public BackingStore {
   static git_oid hash2Oid(const ObjectId& hash);
   static ObjectId oid2Hash(const git_oid* oid);
 
-  LocalStore* localStore_{nullptr};
   git_repository* repo_{nullptr};
 };
 

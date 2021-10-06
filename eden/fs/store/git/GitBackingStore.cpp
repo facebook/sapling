@@ -18,7 +18,6 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/service/ThriftUtil.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "folly/String.h"
@@ -52,10 +51,7 @@ void freeBlobIOBufData(void* /*blobData*/, void* blobObject) {
 
 namespace facebook::eden {
 
-GitBackingStore::GitBackingStore(
-    AbsolutePathPiece repository,
-    LocalStore* localStore)
-    : localStore_{localStore} {
+GitBackingStore::GitBackingStore(AbsolutePathPiece repository) {
   // Make sure libgit2 is initialized.
   // (git_libgit2_init() is safe to call multiple times if multiple
   // GitBackingStore objects are created.  git_libgit2_shutdown() should be
@@ -109,14 +105,7 @@ SemiFuture<unique_ptr<Tree>> GitBackingStore::getRootTree(
   ObjectId treeID = oid2Hash(git_commit_tree_id(commit));
 
   // Now get the specified tree.
-  return localStore_->getTree(treeID).thenValue(
-      [this, treeID](unique_ptr<Tree> tree) {
-        if (tree) {
-          return tree;
-        } else {
-          return getTreeImpl(treeID);
-        }
-      });
+  return getTreeImpl(treeID);
 }
 
 SemiFuture<BackingStore::GetTreeRes> GitBackingStore::getTree(

@@ -42,9 +42,13 @@ class BackingStore : public RootIdCodec {
   BackingStore() {}
   virtual ~BackingStore() {}
 
+  /**
+   * Return the root Tree corresponding to the passed in RootId.
+   */
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getRootTree(
       const RootId& rootId,
       ObjectFetchContext& context) = 0;
+
   /**
    * The API should accept object id instead of rootId. But Object is currently
    * a fixed 20 bytes, so temporariorly use rootId instead.

@@ -158,22 +158,8 @@ class HgBackingStore {
   HgBackingStore(HgBackingStore const&) = delete;
   HgBackingStore& operator=(HgBackingStore const&) = delete;
 
-  folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(
-      ObjectId commitID,
-      bool prefetchMetadata);
-
-  folly::SemiFuture<std::unique_ptr<Tree>> getTreeForRootTreeImpl(
-      const ObjectId& commitID,
-      const ObjectId& rootTreeHash,
-      bool prefetchMetadata);
-
   folly::Future<std::unique_ptr<Tree>> importTreeManifestImpl(
       Hash20 manifestNode,
-      bool prefetchMetadata);
-
-  // Import the Tree from Hg and cache it in the LocalStore before returning it.
-  folly::SemiFuture<std::unique_ptr<Tree>> importTreeForCommit(
-      ObjectId commitID,
       bool prefetchMetadata);
 
   void initializeDatapackImport(AbsolutePathPiece repository);

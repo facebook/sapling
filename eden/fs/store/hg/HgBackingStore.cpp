@@ -230,14 +230,24 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
           [this, commitId, prefetchMetadata](
               StoreResult result) -> folly::SemiFuture<unique_ptr<Tree>> {
             if (!result.isValid()) {
-              return importTreeForCommit(commitId, prefetchMetadata);
+              return importTreeManifest(commitId, prefetchMetadata)
+                  .thenValue([this, commitId](std::unique_ptr<Tree> rootTree) {
+                    XLOG(DBG1)
+                        << "imported mercurial commit " << commitId.toString()
+                        << " as tree " << rootTree->getHash().toString();
+
+                    localStore_->put(
+                        KeySpace::HgCommitToTreeFamily,
+                        commitId,
+                        rootTree->getHash().getBytes());
+                    return rootTree;
+                  });
             }
 
-            auto rootTreeHash = ObjectId{result.bytes()};
-            XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
-                       << " for mercurial commit " << commitId.toString();
-            return getTreeForRootTreeImpl(
-                commitId, rootTreeHash, prefetchMetadata);
+            auto rootTreeHash = HgProxyHash::load(
+                localStore_.get(), ObjectId{result.bytes()}, "getRootTree");
+            return importTreeManifestImpl(
+                rootTreeHash.revHash(), prefetchMetadata);
           });
 }
 
@@ -687,43 +697,6 @@ SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
                return getThreadLocalImporter().prefetchFiles(proxyHashes);
              })
       .via(serverThreadPool_);
-}
-
-folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
-    const ObjectId& commitID,
-    const ObjectId& rootTreeHash,
-    bool prefetchMetadata) {
-  return localStore_->getTree(rootTreeHash)
-      .thenValue([this, rootTreeHash, commitID, prefetchMetadata](
-                     std::unique_ptr<Tree> tree) {
-        if (tree) {
-          return folly::makeSemiFuture(std::move(tree));
-        }
-
-        // No corresponding tree for this commit ID! Must
-        // re-import. This could happen if RocksDB is corrupted
-        // in some way or deleting entries races with
-        // population.
-        XLOG(WARN) << "No corresponding tree " << rootTreeHash << " for commit "
-                   << commitID << "; will import again";
-        return importTreeForCommit(commitID, prefetchMetadata);
-      });
-}
-
-folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
-    ObjectId commitID,
-    bool prefetchMetadata) {
-  return importTreeManifest(commitID, prefetchMetadata)
-      .thenValue([this, commitID](std::unique_ptr<Tree> rootTree) {
-        XLOG(DBG1) << "imported mercurial commit " << commitID.toString()
-                   << " as tree " << rootTree->getHash().toString();
-
-        localStore_->put(
-            KeySpace::HgCommitToTreeFamily,
-            commitID,
-            rootTree->getHash().getBytes());
-        return rootTree;
-      });
 }
 
 folly::StringPiece HgBackingStore::stringOfHgImportObject(

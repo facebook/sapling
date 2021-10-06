@@ -1826,9 +1826,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
 #ifdef EDEN_HAVE_GIT
     const auto repoPath = realpath(name);
     return make_shared<LocalStoreCachedBackingStore>(
-        make_shared<GitBackingStore>(repoPath, localStore_.get()),
-        localStore_,
-        getSharedStats());
+        make_shared<GitBackingStore>(repoPath), localStore_, getSharedStats());
 #else // EDEN_HAVE_GIT
     throw std::domain_error(
         "support for Git was not enabled in this EdenFS build");
