@@ -200,7 +200,9 @@ folly::Future<TreeInodePtr> createDirInode(
                       }
                     }
 
-                    return treeInode->getOrLoadChildTree(basename, context);
+                    return treeInode->getOrLoadChildTree(basename, context)
+                        .semi()
+                        .via(&folly::QueuedImmediateExecutor::instance());
                   });
             }
 

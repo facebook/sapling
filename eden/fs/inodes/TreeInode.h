@@ -130,10 +130,10 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    *
    * The Inode object will be loaded if it is not already loaded.
    */
-  folly::Future<InodePtr> getOrLoadChild(
+  ImmediateFuture<InodePtr> getOrLoadChild(
       PathComponentPiece name,
       ObjectFetchContext& context);
-  folly::Future<TreeInodePtr> getOrLoadChildTree(
+  ImmediateFuture<TreeInodePtr> getOrLoadChildTree(
       PathComponentPiece name,
       ObjectFetchContext& context);
 

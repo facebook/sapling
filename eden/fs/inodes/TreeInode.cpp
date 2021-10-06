@@ -204,7 +204,7 @@ ImmediateFuture<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
   return st;
 }
 
-Future<InodePtr> TreeInode::getOrLoadChild(
+ImmediateFuture<InodePtr> TreeInode::getOrLoadChild(
     PathComponentPiece name,
     ObjectFetchContext& context) {
   TraceBlock block("getOrLoadChild");
@@ -217,39 +217,36 @@ Future<InodePtr> TreeInode::getOrLoadChild(
     // because getInode() will call TreeInode::getOrLoadChild()
     // recursively, and it is cleaner to break this logic out
     // separately.
-    return getMount()
-        ->getInode(".eden/this-dir"_relpath, context)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+    return getMount()->getInode(".eden/this-dir"_relpath, context);
   }
 #endif // !_WIN32
 
-  return tryRlockCheckBeforeUpdate<Future<InodePtr>>(
+  return tryRlockCheckBeforeUpdate<ImmediateFuture<InodePtr>>(
              contents_,
-             [&](const auto& contents) -> folly::Optional<Future<InodePtr>> {
+             [&](const auto& contents)
+                 -> std::optional<ImmediateFuture<InodePtr>> {
                // Check if the child is already loaded and return it if so
                auto iter = contents.entries.find(name);
                if (iter == contents.entries.end()) {
                  XLOG(DBG7) << "attempted to load non-existent entry \"" << name
                             << "\" in " << getLogPath();
-                 return folly::make_optional(makeFuture<InodePtr>(
-                     InodeError(ENOENT, inodePtrFromThis(), name)));
+                 return std::make_optional(
+                     ImmediateFuture<InodePtr>{folly::Try<InodePtr>{
+                         InodeError(ENOENT, inodePtrFromThis(), name)}});
                }
 
                // Check to see if the entry is already loaded
                const auto& entry = iter->second;
                if (entry.getInode()) {
-                 return makeFuture<InodePtr>(entry.getInodePtr());
+                 return ImmediateFuture<InodePtr>{entry.getInodePtr()};
                }
-               return folly::none;
+               return std::nullopt;
              },
              [&](auto& contents) {
                auto inodeLoadFuture =
                    Future<unique_ptr<InodeBase>>::makeEmpty();
-               auto returnFuture = Future<InodePtr>::makeEmpty();
                InodePtr childInodePtr;
                InodeMap::PromiseVector promises;
-               InodeNumber childNumber;
 
                // The entry is not loaded yet.  Ask the InodeMap about the
                // entry. The InodeMap will tell us if this inode is already in
@@ -260,8 +257,8 @@ Future<InodePtr> TreeInode::getOrLoadChild(
                name = inodeName.piece();
                auto& entry = iter->second;
                folly::Promise<InodePtr> promise;
-               returnFuture = promise.getFuture();
-               childNumber = entry.getInodeNumber();
+               auto returnFuture = promise.getSemiFuture();
+               auto childNumber = entry.getInodeNumber();
                bool startLoad = getInodeMap()->shouldLoadChild(
                    this, name, childNumber, std::move(promise));
                if (startLoad) {
@@ -292,20 +289,21 @@ Future<InodePtr> TreeInode::getOrLoadChild(
                  }
                }
 
-               return returnFuture;
+               return ImmediateFuture<InodePtr>{std::move(returnFuture)};
              })
       .ensure([b = std::move(block)]() mutable { b.close(); });
 }
 
-Future<TreeInodePtr> TreeInode::getOrLoadChildTree(
+ImmediateFuture<TreeInodePtr> TreeInode::getOrLoadChildTree(
     PathComponentPiece name,
     ObjectFetchContext& context) {
   return getOrLoadChild(name, context).thenValue([](InodePtr child) {
     auto treeInode = child.asTreePtrOrNull();
     if (!treeInode) {
-      return makeFuture<TreeInodePtr>(InodeError(ENOTDIR, child));
+      return ImmediateFuture<TreeInodePtr>{
+          folly::Try<TreeInodePtr>{InodeError(ENOTDIR, child)}};
     }
-    return makeFuture(treeInode);
+    return ImmediateFuture<TreeInodePtr>{std::move(treeInode)};
   });
 }
 
@@ -330,11 +328,9 @@ class LookupProcessor {
   ImmediateFuture<InodePtr> next(TreeInodePtr tree) {
     auto name = *iter_++;
     if (iter_ == iterRange_.end()) {
-      return ImmediateFuture<InodePtr>{
-          tree->getOrLoadChild(name, context_).semi()};
+      return tree->getOrLoadChild(name, context_);
     } else {
-      return ImmediateFuture<TreeInodePtr>{
-          tree->getOrLoadChildTree(name, context_).semi()}
+      return tree->getOrLoadChildTree(name, context_)
           .thenValue(
               [this](TreeInodePtr tree) { return next(std::move(tree)); });
     }
@@ -1125,6 +1121,8 @@ folly::Future<folly::Unit> TreeInode::unlink(
     InvalidationRequired invalidate,
     ObjectFetchContext& context) {
   return getOrLoadChild(name, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate,
@@ -1139,6 +1137,8 @@ folly::Future<folly::Unit> TreeInode::rmdir(
     InvalidationRequired invalidate,
     ObjectFetchContext& context) {
   return getOrLoadChild(name, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate,
@@ -1227,6 +1227,8 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // side.
   auto childFuture = getOrLoadChild(name, context);
   return std::move(childFuture)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{std::move(name)},
                   invalidate,
@@ -1565,17 +1567,26 @@ Future<Unit> TreeInode::rename(
   };
 
   if (needSrc && needDest) {
-    auto srcFuture = getOrLoadChild(name, context);
-    auto destFuture = destParent->getOrLoadChild(destName, context);
+    auto srcFuture = getOrLoadChild(name, context)
+                         .semi()
+                         .via(&folly::QueuedImmediateExecutor::instance());
+    auto destFuture = destParent->getOrLoadChild(destName, context)
+                          .semi()
+                          .via(&folly::QueuedImmediateExecutor::instance());
     // folly::collect is safe here because onLoadFinish has captured strong
     // references.
     return folly::collectUnsafe(srcFuture, destFuture)
         .thenValue(onLoadFinished);
   } else if (needSrc) {
-    return getOrLoadChild(name, context).thenValue(onLoadFinished);
+    return getOrLoadChild(name, context)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance())
+        .thenValue(onLoadFinished);
   } else {
     XCHECK(needDest);
     return destParent->getOrLoadChild(destName, context)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance())
         .thenValue(onLoadFinished);
   }
 }

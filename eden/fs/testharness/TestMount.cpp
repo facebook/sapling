@@ -675,6 +675,8 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
   for (const auto& name : childNames) {
     auto childFuture =
         treeInode->getOrLoadChild(name, ObjectFetchContext::getNullContext())
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance())
             .thenValue([](InodePtr child) {
               TreeInodePtr childTree = child.asTreePtrOrNull();
               if (childTree) {

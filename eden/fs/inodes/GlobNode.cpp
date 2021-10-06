@@ -70,7 +70,9 @@ struct TreeInodePtrRoot {
   Future<TreeInodePtr> getOrLoadChildTree(
       PathComponentPiece name,
       ObjectFetchContext& context) {
-    return root->getOrLoadChildTree(name, context);
+    return root->getOrLoadChildTree(name, context)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
   /** Returns true if we should call getOrLoadChildTree() for the given
    * ENTRY.  We only do this if the child is already materialized */

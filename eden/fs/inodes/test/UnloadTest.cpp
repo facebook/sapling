@@ -100,7 +100,9 @@ TYPED_TEST(UnloadTest, inodesCanBeUnloadedDuringLoad) {
   // The future should only be fulfilled when after we make the tree ready
   auto rootInode = testMount.getEdenMount()->getRootInode();
   auto srcFuture =
-      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(srcFuture.isReady());
 
   rootInode->unloadChildrenNow();
@@ -111,7 +113,9 @@ TYPED_TEST(UnloadTest, inodesCanBeUnloadedDuringLoad) {
   EXPECT_NE(kRootNodeId, srcTree->getNodeId());
 
   auto subFuture =
-      srcTree->getOrLoadChild("sub"_pc, ObjectFetchContext::getNullContext());
+      srcTree->getOrLoadChild("sub"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   srcTree.reset();
   EXPECT_FALSE(subFuture.isReady());
 

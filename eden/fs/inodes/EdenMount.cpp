@@ -327,6 +327,8 @@ Future<Unit> ensureDotEdenSymlink(
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("ensureDotEdenSymlink");
   return directory->getOrLoadChild(symlinkName, *context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenTryInline([=](Try<InodePtr>&& result) -> Future<Action> {
         if (!result.hasValue()) {
           // If we failed to look up the file this generally means it
@@ -407,6 +409,8 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("setupDotEden");
   return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName}, *context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenTryInline([=](Try<TreeInodePtr>&& lookupResult) {
         TreeInodePtr dotEdenInode;
         if (lookupResult.hasValue()) {
@@ -1819,9 +1823,13 @@ Future<TreeInodePtr> ensureDirectoryExistsHelper(
     contents.unlock();
 
     if (rest.empty()) {
-      return parent->getOrLoadChildTree(childName, context);
+      return parent->getOrLoadChildTree(childName, context)
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
     }
     return parent->getOrLoadChildTree(childName, context)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance())
         .thenValue([rest = RelativePath{rest}, &context](TreeInodePtr child) {
           auto [nextChildName, nextRest] = splitFirst(rest);
           return ensureDirectoryExistsHelper(

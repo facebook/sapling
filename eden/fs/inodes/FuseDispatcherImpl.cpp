@@ -97,7 +97,7 @@ ImmediateFuture<fuse_entry_out> FuseDispatcherImpl::lookup(
   return inodeMap_->lookupTreeInode(parent)
       .thenValue([name = PathComponent(namepiece),
                   &context](const TreeInodePtr& tree) {
-        return tree->getOrLoadChild(name, context).semi();
+        return tree->getOrLoadChild(name, context);
       })
       .thenValue([&context](const InodePtr& inode) {
         return makeImmediateFutureWith([&]() { return inode->stat(context); })

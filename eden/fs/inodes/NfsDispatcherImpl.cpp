@@ -60,7 +60,7 @@ ImmediateFuture<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
     ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(dir)
       .thenValue([name = std::move(name), &context](const TreeInodePtr& inode) {
-        return inode->getOrLoadChild(name, context).semi();
+        return inode->getOrLoadChild(name, context);
       })
       .thenValue([&context](InodePtr&& inode) {
         auto statFut = inode->stat(context);

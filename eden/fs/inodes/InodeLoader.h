@@ -89,12 +89,14 @@ class InodeLoader {
           continue;
         }
 
-        folly::makeFutureWith(
+        makeImmediateFutureWith(
             [&] { return tree->getOrLoadChild(childName, fetchContext); })
             .thenTry([loader = std::move(childLoader),
                       &fetchContext](folly::Try<InodePtr>&& inode) {
               loader->loaded(inode, fetchContext);
-            });
+            })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
       }
     }
   }

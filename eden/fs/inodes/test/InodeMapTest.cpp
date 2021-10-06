@@ -101,12 +101,16 @@ TEST(InodeMap, asyncLookup) {
   // The future should only be fulfilled when after we make the tree ready
   auto rootInode = testMount.getEdenMount()->getRootInode();
   auto srcFuture =
-      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(srcFuture.isReady());
 
   // Start a second lookup before the first is ready
   auto srcFuture2 =
-      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(srcFuture2.isReady());
 
   // Now make the tree ready
@@ -129,12 +133,16 @@ TEST(InodeMap, asyncError) {
   // The future should only be fulfilled when after we make the tree ready
   auto rootInode = testMount.getEdenMount()->getRootInode();
   auto srcFuture =
-      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(srcFuture.isReady());
 
   // Start a second lookup before the first is ready
   auto srcFuture2 =
-      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(srcFuture2.isReady());
 
   // Now fail the tree lookup
