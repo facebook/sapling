@@ -87,6 +87,8 @@ class Tree;
 class TreePrefetchLease;
 class UnboundedQueueExecutor;
 struct FileMetadata;
+template <typename T>
+class ImmediateFuture;
 
 class RenameLock;
 class SharedRenameLock;
@@ -460,7 +462,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * besides the path being invalid (for instance, an error loading data from
    * the ObjectStore).
    */
-  folly::Future<InodePtr> getInode(
+  ImmediateFuture<InodePtr> getInode(
       RelativePathPiece path,
       ObjectFetchContext& context) const;
 

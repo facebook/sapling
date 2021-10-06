@@ -47,6 +47,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/Future.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/NfsSocket.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
@@ -907,13 +908,10 @@ InodeNumber EdenMount::getDotEdenInodeNumber() const {
 
 #endif // !_WIN32
 
-Future<InodePtr> EdenMount::getInode(
+ImmediateFuture<InodePtr> EdenMount::getInode(
     RelativePathPiece path,
     ObjectFetchContext& context) const {
-  return inodeMap_->getRootInode()
-      ->getChildRecursive(path, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return inodeMap_->getRootInode()->getChildRecursive(path, context);
 }
 
 folly::Future<std::string> EdenMount::loadFileContentsFromPath(
@@ -921,6 +919,8 @@ folly::Future<std::string> EdenMount::loadFileContentsFromPath(
     RelativePathPiece path,
     CacheHint cacheHint) const {
   return getInode(path, fetchContext)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([this, &fetchContext, cacheHint](InodePtr fileInodePtr) {
         return loadFileContents(fetchContext, fileInodePtr, cacheHint);
       });
@@ -1007,8 +1007,11 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         // be executed before LHS, thus moving value of joinedExpected (in
         // RHS) before using it in LHS
         auto f = getInode(
-            joinedExpected.value(),
-            fetchContext); // get inode for symlink target
+                     joinedExpected.value(),
+                     fetchContext)
+                     .semi()
+                     .via(&folly::QueuedImmediateExecutor::
+                              instance()); // get inode for symlink target
         return std::move(f).thenValue([this,
                                        &fetchContext,
                                        joinedPath =

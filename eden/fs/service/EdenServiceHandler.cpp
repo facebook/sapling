@@ -561,6 +561,8 @@ Future<Hash20> EdenServiceHandler::getSHA1ForPath(
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
   return edenMount->getInode(relativePath, fetchContext)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([&fetchContext](const InodePtr& inode) {
         auto fileInode = inode.asFilePtr();
         if (fileInode->getType() != dtype_t::Regular) {
@@ -1363,20 +1365,25 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
   } else {
     const RootId& originRootId =
         originRootIds->emplace_back(edenMount->getParentCommit());
-    globResults.emplace_back(edenMount->getInode(searchRoot, fetchContext)
-                                 .thenValue([&fetchContext,
-                                             globRoot,
-                                             edenMount,
-                                             fileBlobsToPrefetch,
-                                             &originRootId](InodePtr inode) {
-                                   return globRoot->evaluate(
-                                       edenMount->getObjectStore(),
-                                       fetchContext,
-                                       RelativePathPiece(),
-                                       inode.asTreePtr(),
-                                       fileBlobsToPrefetch,
-                                       originRootId);
-                                 }));
+    globResults.emplace_back(
+        edenMount->getInode(searchRoot, fetchContext)
+            .thenValue([&fetchContext,
+                        globRoot,
+                        edenMount,
+                        fileBlobsToPrefetch,
+                        &originRootId](InodePtr inode) {
+              return globRoot
+                  ->evaluate(
+                      edenMount->getObjectStore(),
+                      fetchContext,
+                      RelativePathPiece(),
+                      inode.asTreePtr(),
+                      fileBlobsToPrefetch,
+                      originRootId)
+                  .semi();
+            })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance()));
   }
 
   auto prefetchFuture = wrapFuture(

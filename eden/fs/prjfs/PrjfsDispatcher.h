@@ -35,7 +35,7 @@ struct InodeMetadata {
 
 struct LookupResult {
   InodeMetadata meta;
-  std::function<void()> incFsRefcount;
+  folly::Function<void()> incFsRefcount;
 };
 
 class PrjfsDispatcher {

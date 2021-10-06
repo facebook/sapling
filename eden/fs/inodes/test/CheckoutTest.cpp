@@ -916,8 +916,11 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   commit2->setReady();
 
   // Begin loading "dir/sub".
-  auto inodeFuture = testMount.getEdenMount()->getInode(
-      "dir/sub"_relpath, ObjectFetchContext::getNullContext());
+  auto inodeFuture =
+      testMount.getEdenMount()
+          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Checkout to a revision where the contents of "dir/sub" have changed.

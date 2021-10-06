@@ -217,7 +217,10 @@ Future<InodePtr> TreeInode::getOrLoadChild(
     // because getInode() will call TreeInode::getOrLoadChild()
     // recursively, and it is cleaner to break this logic out
     // separately.
-    return getMount()->getInode(".eden/this-dir"_relpath, context);
+    return getMount()
+        ->getInode(".eden/this-dir"_relpath, context)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 #endif // !_WIN32
 

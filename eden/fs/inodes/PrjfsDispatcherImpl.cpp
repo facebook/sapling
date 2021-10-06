@@ -58,10 +58,13 @@ PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
 folly::Future<std::vector<FileMetadata>> PrjfsDispatcherImpl::opendir(
     RelativePath path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context).thenValue([](const InodePtr inode) {
-    auto treePtr = inode.asTreePtr();
-    return treePtr->readdir();
-  });
+  return mount_->getInode(path, context)
+      .thenValue([](const InodePtr inode) {
+        auto treePtr = inode.asTreePtr();
+        return treePtr->readdir();
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
@@ -70,9 +73,9 @@ folly::Future<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
   return mount_->getInode(path, context)
       .thenValue(
           [&context](const InodePtr inode) mutable
-          -> folly::Future<std::optional<LookupResult>> {
-            return inode->stat(context)
-                .thenValue([inode = std::move(inode)](struct stat&& stat) {
+          -> ImmediateFuture<std::optional<LookupResult>> {
+            return inode->stat(context).thenValue(
+                [inode = std::move(inode)](struct stat&& stat) {
                   size_t size = stat.st_size;
                   // Ensure that the OS has a record of the canonical
                   // file name, and not just whatever case was used to
@@ -82,12 +85,12 @@ folly::Future<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                   auto incFsRefcount = [inode = std::move(inode)] {
                     inode->incFsRefcount();
                   };
-                  return LookupResult{
-                      std::move(inodeMetadata), std::move(incFsRefcount)};
-                })
-                .semi()
-                .via(&folly::QueuedImmediateExecutor::instance());
+                  return std::optional{LookupResult{
+                      std::move(inodeMetadata), std::move(incFsRefcount)}};
+                });
           })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenError(
           folly::tag_t<std::system_error>{},
           [path = std::move(path), this](const std::system_error& ex)
@@ -111,6 +114,8 @@ folly::Future<bool> PrjfsDispatcherImpl::access(
     RelativePath path,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([](const InodePtr) { return true; })
       .thenError(
           folly::tag_t<std::system_error>{},
@@ -129,6 +134,8 @@ folly::Future<std::string> PrjfsDispatcherImpl::read(
     RelativePath path,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([&context](const InodePtr inode) {
         auto fileInode = inode.asFilePtr();
         return fileInode->readAll(context);
@@ -150,9 +157,10 @@ folly::Future<TreeInodePtr> createDirInode(
     RelativePath path,
     ObjectFetchContext& context) {
   auto treeInodeFut =
-      mount.getInode(path, context).thenValue([](const InodePtr inode) {
-        return inode.asTreePtr();
-      });
+      mount.getInode(path, context)
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance())
+          .thenValue([](const InodePtr inode) { return inode.asTreePtr(); });
   return std::move(treeInodeFut)
       .thenError(
           folly::tag_t<std::system_error>{},
@@ -244,7 +252,9 @@ folly::Future<folly::Unit> removeInode(
     RelativePath path,
     InodeType inodeType,
     ObjectFetchContext& context) {
-  auto inodeFut = mount.getInode(path.dirname(), context);
+  auto inodeFut = mount.getInode(path.dirname(), context)
+                      .semi()
+                      .via(&folly::QueuedImmediateExecutor::instance());
   return std::move(inodeFut).thenValue(
       [path = std::move(path), inodeType, &context](const InodePtr inode) {
         auto treeInodePtr = inode.asTreePtr();
@@ -275,11 +285,14 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::dirCreated(
 folly::Future<folly::Unit> PrjfsDispatcherImpl::fileModified(
     RelativePath path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context).thenValue([](const InodePtr inode) {
-    auto fileInode = inode.asFilePtr();
-    fileInode->materialize();
-    return folly::unit;
-  });
+  return mount_->getInode(path, context)
+      .thenValue([](const InodePtr inode) {
+        auto fileInode = inode.asFilePtr();
+        fileInode->materialize();
+        return folly::unit;
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(

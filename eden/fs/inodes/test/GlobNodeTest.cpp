@@ -312,6 +312,7 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
   ASSERT_FALSE(
       mount.getEdenMount()
           ->getInode("dir/subdir"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
           .isReady())
       << "Loading dir/subdir should hang indefinitely";
 
@@ -334,6 +335,7 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
         mount.getEdenMount()
             ->getInode(
                 "dir/subdir"_relpath, ObjectFetchContext::getNullContext())
+            .semi()
             .isReady())
         << "dir/subdir should still be unloaded after evaluating glob";
     EXPECT_EQ(

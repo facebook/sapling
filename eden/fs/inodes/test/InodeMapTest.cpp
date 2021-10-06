@@ -154,14 +154,20 @@ TEST(InodeMap, recursiveLookup) {
 
   // Call EdenMount::getInode() on the root
   auto rootFuture =
-      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext());
+      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode(
-      "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext());
+  auto fileFuture =
+      edenMount
+          ->getInode(
+              "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
@@ -186,14 +192,20 @@ TEST(InodeMap, recursiveLookupError) {
 
   // Call EdenMount::getInode() on the root
   auto rootFuture =
-      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext());
+      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode(
-      "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext());
+  auto fileFuture =
+      edenMount
+          ->getInode(
+              "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a");
@@ -221,14 +233,20 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
 
   // Call EdenMount::getInode() on the root
   auto rootFuture =
-      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext());
+      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode(
-      "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext());
+  auto fileFuture =
+      edenMount
+          ->getInode(
+              "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
@@ -239,7 +257,9 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   EXPECT_FALSE(fileFuture.isReady());
 
   auto bFuture =
-      edenMount->getInode("a/b"_relpath, ObjectFetchContext::getNullContext());
+      edenMount->getInode("a/b"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   ASSERT_TRUE(bFuture.isReady());
   auto bInode = std::move(bFuture).get().asTreePtr();
 
@@ -273,14 +293,20 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
 
   // Call EdenMount::getInode() on the root
   auto rootFuture =
-      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext());
+      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode(
-      "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext());
+  auto fileFuture =
+      edenMount
+          ->getInode(
+              "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a");
@@ -289,7 +315,9 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   EXPECT_FALSE(fileFuture.isReady());
 
   auto bFuture =
-      edenMount->getInode("a/b"_relpath, ObjectFetchContext::getNullContext());
+      edenMount->getInode("a/b"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   ASSERT_TRUE(bFuture.isReady());
   auto bInode = std::move(bFuture).get().asTreePtr();
 

@@ -562,8 +562,11 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
   builder_.setReady("a/b");
 
   // Start a lookup on a/b/c before we start the rename
-  auto inodeFuture = mount_->getEdenMount()->getInode(
-      "a/b/c"_relpath, ObjectFetchContext::getNullContext());
+  auto inodeFuture =
+      mount_->getEdenMount()
+          ->getInode("a/b/c"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Perform a rename on a/b/c before that inode is ready.
@@ -618,8 +621,11 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
   EXPECT_FALSE(renameFuture.isReady());
 
   // Also start a lookup on a/b/c after starting the rename
-  auto inodeFuture = mount_->getEdenMount()->getInode(
-      "a/b/c"_relpath, ObjectFetchContext::getNullContext());
+  auto inodeFuture =
+      mount_->getEdenMount()
+          ->getInode("a/b/c"_relpath, ObjectFetchContext::getNullContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Now make a/b/c ready
