@@ -5,15 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobstore::Blobstore;
-use blobstore::{BlobstoreBytes, BlobstoreGetData};
+use blobstore::BlobstoreBytes;
 use bookmarks::{BookmarkName, BookmarksRef};
 use bytes::Bytes;
 use cacheblob::LeaseOps;
@@ -29,118 +27,14 @@ use futures::future::BoxFuture;
 use futures_stats::{TimedFutureExt, TimedTryFutureExt};
 use lock_ext::LockExt;
 use maplit::hashmap;
-use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepositoryId};
+use mononoke_types::{ChangesetId, MPath, RepositoryId};
 use repo_blobstore::RepoBlobstoreRef;
 use repo_derived_data::{RepoDerivedDataArc, RepoDerivedDataRef};
-use test_repo_factory::TestRepoFactory;
 use tests_utils::CreateCommitContext;
 use tunables::{override_tunables, MononokeTunables};
 
-use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext, DerivationError};
-
-#[derive(Clone, Debug)]
-struct DerivedGeneration {
-    generation: u64,
-}
-
-impl From<DerivedGeneration> for BlobstoreBytes {
-    fn from(derived: DerivedGeneration) -> BlobstoreBytes {
-        let generation = derived.generation.to_string();
-        let data = Bytes::copy_from_slice(generation.as_bytes());
-        BlobstoreBytes::from_bytes(data)
-    }
-}
-
-impl TryFrom<BlobstoreBytes> for DerivedGeneration {
-    type Error = Error;
-
-    fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
-        let generation = std::str::from_utf8(blob_bytes.as_bytes())?.parse::<u64>()?;
-        Ok(DerivedGeneration { generation })
-    }
-}
-
-impl TryFrom<BlobstoreGetData> for DerivedGeneration {
-    type Error = Error;
-
-    fn try_from(data: BlobstoreGetData) -> Result<Self> {
-        data.into_bytes().try_into()
-    }
-}
-
-#[async_trait]
-impl BonsaiDerivable for DerivedGeneration {
-    const NAME: &'static str = "test_generation";
-
-    type Dependencies = dependencies![];
-
-    async fn derive_single(
-        _ctx: &CoreContext,
-        _derivation_ctx: &DerivationContext,
-        bonsai: BonsaiChangeset,
-        parents: Vec<Self>,
-    ) -> Result<Self> {
-        if let Some(delay_str) = bonsai
-            .extra()
-            .collect::<HashMap<_, _>>()
-            .get("test-derive-delay")
-        {
-            let delay = std::str::from_utf8(delay_str)?.parse::<f64>()?;
-            tokio::time::sleep(Duration::from_secs_f64(delay)).await;
-        }
-        let mut generation = 1;
-        for parent in parents {
-            if parent.generation >= generation {
-                generation = parent.generation + 1;
-            }
-        }
-        let derived = DerivedGeneration { generation };
-        Ok(derived)
-    }
-
-    async fn store_mapping(
-        self,
-        ctx: &CoreContext,
-        derivation_ctx: &DerivationContext,
-        changeset_id: ChangesetId,
-    ) -> Result<()> {
-        derivation_ctx
-            .blobstore()
-            .put(
-                ctx,
-                format!(
-                    "repo{}.test_generation.{}",
-                    derivation_ctx.repo_id(),
-                    changeset_id,
-                ),
-                self.into(),
-            )
-            .await?;
-        Ok(())
-    }
-
-    async fn fetch(
-        ctx: &CoreContext,
-        derivation_ctx: &DerivationContext,
-        changeset_id: ChangesetId,
-    ) -> Result<Option<Self>> {
-        match derivation_ctx
-            .blobstore()
-            .get(
-                ctx,
-                &format!(
-                    "repo{}.test_generation.{}",
-                    derivation_ctx.repo_id(),
-                    changeset_id
-                ),
-            )
-            .await?
-        {
-            Some(blob) => Ok(Some(blob.try_into()?)),
-            None => Ok(None),
-        }
-    }
-}
+use derived_data_manager::{BonsaiDerivable, DerivationError};
+use derived_data_test_derived_generation::{make_test_repo_factory, DerivedGeneration};
 
 async fn derive_for_master(
     ctx: &CoreContext,
@@ -166,18 +60,6 @@ async fn derive_for_master(
     assert_eq!(expected, derived.generation);
 
     Ok(())
-}
-
-fn make_test_repo_factory() -> TestRepoFactory {
-    let mut factory = TestRepoFactory::new().unwrap();
-    factory.with_config_override(|repo_config| {
-        repo_config
-            .derived_data_config
-            .enabled
-            .types
-            .insert(DerivedGeneration::NAME.to_string());
-    });
-    factory
 }
 
 #[fbinit::test]
