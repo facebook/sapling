@@ -33,16 +33,7 @@ To be run if some test require full sync state before the test
   >   cd ..
   > }
 
-  $ hg init server
-  $ cd server
-  $ cat >> .hg/hgrc << EOF
-  > [infinitepush]
-  > server = yes
-  > indextype = disk
-  > storetype = disk
-  > reponame = testrepo
-  > EOF
-
+  $ newserver server
   $ mkcommit "base"
   $ hg bookmark publicbookmark1
   $ cd ..

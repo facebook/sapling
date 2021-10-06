@@ -11,9 +11,8 @@
 
   $ setconfig remotefilelog.reponame=server
 
-  $ hg init server
-  $ cd server
-  $ setconfig infinitepush.server=yes infinitepush.indextype=disk infinitepush.storetype=disk infinitepush.reponame=testrepo
+  $ newserver server
+  $ cd ..
 
 Make the clone of the server
   $ hg clone ssh://user@dummy/server client -q
@@ -50,8 +49,8 @@ Check that the checkout locations are synced after the commit is made
   workspace: user/test/default
   hostname: * (glob)
   commit: bb757c825e81d15d6959648d8f055c8e5958310f
-  shared_path: $TESTTMP/server/client/.hg
-  checkout_path: $TESTTMP/server/client/.hg
+  shared_path: $TESTTMP/client/.hg
+  checkout_path: $TESTTMP/client/.hg
   unixname: test
 
 Make changes and amend
@@ -64,8 +63,8 @@ Check that the checkout locations are synced after the amend is made
   workspace: user/test/default
   hostname: * (glob)
   commit: b7ad20e4fc527a09952053de497603c0a8eafd0d
-  shared_path: $TESTTMP/server/client/.hg
-  checkout_path: $TESTTMP/server/client/.hg
+  shared_path: $TESTTMP/client/.hg
+  checkout_path: $TESTTMP/client/.hg
   unixname: test
 
 Checkout the old commit and see if the location is synced
@@ -76,6 +75,6 @@ Checkout the old commit and see if the location is synced
   workspace: user/test/default
   hostname: * (glob)
   commit: bb757c825e81d15d6959648d8f055c8e5958310f
-  shared_path: $TESTTMP/server/client/.hg
-  checkout_path: $TESTTMP/server/client/.hg
+  shared_path: $TESTTMP/client/.hg
+  checkout_path: $TESTTMP/client/.hg
   unixname: test

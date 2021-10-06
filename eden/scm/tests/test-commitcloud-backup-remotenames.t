@@ -6,9 +6,7 @@
   $ setupcommon
 
 Setup server
-  $ hg init repo
-  $ cd repo
-  $ setupserver
+  $ newserver repo
   $ cd ..
 
 Create client

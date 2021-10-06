@@ -16,9 +16,7 @@
   > }
 
 Setup server
-  $ hg init repo
-  $ cd repo
-  $ setupserver
+  $ newserver repo
   $ cd ..
 
 To avoid test flakiness with times, do all operations relative to 2016-01-07T12:00:00Z
