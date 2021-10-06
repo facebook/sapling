@@ -27,7 +27,6 @@ use changesets::ArcChangesets;
 use changesets_impl::SqlChangesetsBuilder;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::BonsaiDerivable as OldBonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable;
 use ephemeral_blobstore::{ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore};

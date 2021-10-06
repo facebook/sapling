@@ -23,7 +23,6 @@ changesets = { version = "0.1.0", path = "../../changesets" }
 changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
 dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
 deleted_files_manifest = { version = "0.1.0", path = "../../derived_data/deleted_files_manifest" }
-derived_data = { version = "0.1.0", path = "../../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../../derived_data/filenodes" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
 ephemeral_blobstore = { version = "0.1.0", path = "../../blobstore/ephemeral_blobstore" }

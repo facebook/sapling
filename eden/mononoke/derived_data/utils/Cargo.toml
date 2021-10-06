@@ -15,12 +15,8 @@ anyhow = "1.0"
 async-trait = "0.1.51"
 blame = { version = "0.1.0", path = "../blame" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
-blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
-cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
 changeset_info = { version = "0.1.0", path = "../changeset_info" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
