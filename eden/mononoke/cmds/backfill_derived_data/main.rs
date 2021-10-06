@@ -412,8 +412,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let reponame = args::get_repo_name(matches.config_store(), &matches)?;
     let mut scuba_sample_builder = matches.scuba_sample_builder();
     scuba_sample_builder.add("reponame", reponame);
-    let ctx =
+    let mut ctx =
         SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba_sample_builder);
+    ctx.session_mut()
+        .override_session_class(context::SessionClass::Background);
 
     helpers::block_execute(
         run_subcmd(fb, ctx, &logger, &matches),
