@@ -219,7 +219,7 @@ impl Arbitrary for FileType {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use FileType::*;
 
-        let variant = u32::arbitrary(g) % 3;
+        let variant = g.choose(&[0, 1, 2]).unwrap();
         match variant {
             0 => Regular,
             1 => Executable,
@@ -234,7 +234,7 @@ impl Arbitrary for AnyFileContentId {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use AnyFileContentId::*;
 
-        let variant = u32::arbitrary(g) % 3;
+        let variant = g.choose(&[0, 1, 2]).unwrap();
         match variant {
             0 => ContentId(Arbitrary::arbitrary(g)),
             1 => Sha1(Arbitrary::arbitrary(g)),

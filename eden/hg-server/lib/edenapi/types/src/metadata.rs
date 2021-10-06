@@ -221,7 +221,7 @@ impl Arbitrary for FileType {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use FileType::*;
 
-        let variant = u32::arbitrary(g) % 3;
+        let variant = g.choose(&[0, 1, 2]).unwrap();
         match variant {
             0 => Regular,
             1 => Executable,

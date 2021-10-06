@@ -9,7 +9,6 @@ anyhow = "1.0"
 bytes = { version = "1.0", features = ["serde"] }
 dag-types = { path = "../../dag/dag-types", features = ["for-tests"] }
 quickcheck = "1.0"
-rand = { version = "0.8", features = ["small_rng"] }
 revisionstore_types = { path = "../../revisionstore/types" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_bytes = "0.11"

@@ -296,7 +296,7 @@ impl Arbitrary for BonsaiChangeset {
         let num_changes = usize::arbitrary(g) % size;
         let file_changes: BTreeMap<_, _> = (0..num_changes)
             .map(|_| {
-                let fc_opt = if u32::arbitrary(g) % 3 < 1 {
+                let fc_opt = if *g.choose(&[0, 1, 2]).unwrap() < 1 {
                     FileChange::arbitrary_from_parents(g, &parents)
                 } else {
                     FileChange::Deletion

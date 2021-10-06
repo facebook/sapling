@@ -35,10 +35,9 @@ impl Arbitrary for Freshness {
     fn arbitrary(g: &mut Gen) -> Self {
         use Freshness::*;
 
-        match u32::arbitrary(g) % 2 {
-            0 => MostRecent,
-            1 => MaybeStale,
-            _ => unreachable!(),
+        match bool::arbitrary(g) {
+            true => MostRecent,
+            false => MaybeStale,
         }
     }
 }
@@ -284,12 +283,8 @@ impl Arbitrary for BookmarkKind {
     fn arbitrary(g: &mut Gen) -> Self {
         use BookmarkKind::*;
 
-        match u32::arbitrary(g) % 3 {
-            0 => Scratch,
-            1 => Publishing,
-            2 => PullDefaultPublishing,
-            _ => unreachable!(),
-        }
+        *g.choose(&[Scratch, Publishing, PullDefaultPublishing])
+            .unwrap()
     }
 }
 

@@ -161,11 +161,6 @@ impl Arbitrary for EdenApiServerError {
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for EdenApiServerErrorKind {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        #[allow(clippy::modulo_one)]
-        let variant = u32::arbitrary(g) % 1;
-        match variant {
-            0 => EdenApiServerErrorKind::OpaqueError(Arbitrary::arbitrary(g)),
-            _ => unreachable!(),
-        }
+        EdenApiServerErrorKind::OpaqueError(Arbitrary::arbitrary(g))
     }
 }

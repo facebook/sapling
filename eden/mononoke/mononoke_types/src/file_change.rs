@@ -255,7 +255,7 @@ impl FileChange {
     /// Generate a random FileChange which picks copy-from parents from the list of parents
     /// provided.
     pub(crate) fn arbitrary_from_parents(g: &mut Gen, parents: &[ChangesetId]) -> Self {
-        let copy_from = if u32::arbitrary(g) % 5 < 1 {
+        let copy_from = if *g.choose(&[0, 1, 2, 3, 4]).unwrap() < 1 {
             g.choose(parents)
                 .map(|parent| (MPath::arbitrary(g), *parent))
         } else {
@@ -272,7 +272,7 @@ impl FileChange {
 
 impl Arbitrary for FileChange {
     fn arbitrary(g: &mut Gen) -> Self {
-        let copy_from = if u32::arbitrary(g) % 5 < 1 {
+        let copy_from = if *g.choose(&[0, 1, 2, 3, 4]).unwrap() < 1 {
             Some((MPath::arbitrary(g), ChangesetId::arbitrary(g)))
         } else {
             None
@@ -400,7 +400,7 @@ impl fmt::Display for FileType {
 
 impl Arbitrary for FileType {
     fn arbitrary(g: &mut Gen) -> Self {
-        match u32::arbitrary(g) % 10 {
+        match u64::arbitrary(g) % 10 {
             0 => FileType::Executable,
             1 => FileType::Symlink,
             _ => FileType::Regular,

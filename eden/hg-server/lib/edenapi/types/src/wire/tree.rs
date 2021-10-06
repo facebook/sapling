@@ -296,11 +296,9 @@ impl Arbitrary for WireTreeKeysQuery {
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireTreeQuery {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        let variant = u32::arbitrary(g) % 2;
-        match variant {
-            0 => WireTreeQuery::Other,
-            1 => WireTreeQuery::ByKeys(Arbitrary::arbitrary(g)),
-            _ => unreachable!(),
+        match bool::arbitrary(g) {
+            true => WireTreeQuery::Other,
+            false => WireTreeQuery::ByKeys(Arbitrary::arbitrary(g)),
         }
     }
 }

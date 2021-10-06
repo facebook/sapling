@@ -147,7 +147,7 @@ impl Arbitrary for WireFileType {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use WireFileType::*;
 
-        let variant = u32::arbitrary(g) % 4;
+        let variant = g.choose(&[0, 1, 2, 3]).unwrap();
         match variant {
             0 => Regular,
             1 => Executable,
@@ -163,7 +163,7 @@ impl Arbitrary for WireAnyFileContentId {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use WireAnyFileContentId::*;
 
-        let variant = u32::arbitrary(g) % 3;
+        let variant = g.choose(&[0, 1, 2]).unwrap();
         match variant {
             0 => WireContentId(Arbitrary::arbitrary(g)),
             1 => WireSha1(Arbitrary::arbitrary(g)),

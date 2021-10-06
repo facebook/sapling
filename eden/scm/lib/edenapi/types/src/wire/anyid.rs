@@ -89,7 +89,7 @@ impl Arbitrary for WireAnyId {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use WireAnyId::*;
 
-        let variant = u32::arbitrary(g) % 5;
+        let variant = g.choose(&[0, 1, 2, 3, 4]).unwrap();
         match variant {
             0 => WireAnyFileContentId(Arbitrary::arbitrary(g)),
             1 => WireHgFilenodeId(Arbitrary::arbitrary(g)),

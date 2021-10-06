@@ -206,7 +206,7 @@ mod test {
                     let input_count = (usize::arbitrary(g) % revspecs_in_set) + 1;
                     revset.push(
                         // Bias towards SingleNode if we only have 1 rev
-                        match u32::arbitrary(g) % 4 {
+                        match g.choose(&[0, 1, 2, 3]).unwrap() {
                             0 => RevsetEntry::SingleNode(None),
                             1 => {
                                 if revspecs_in_set >= 2 {
@@ -233,10 +233,9 @@ mod test {
             assert!(revspecs_in_set > 0, "Did not produce enough revs");
 
             if revspecs_in_set > 1 {
-                revset.push(match u32::arbitrary(g) % 2 {
-                    0 => RevsetEntry::Intersect(revspecs_in_set),
-                    1 => RevsetEntry::Union(revspecs_in_set),
-                    _ => panic!("Range returned too wide a variation"),
+                revset.push(match bool::arbitrary(g) {
+                    true => RevsetEntry::Intersect(revspecs_in_set),
+                    false => RevsetEntry::Union(revspecs_in_set),
                 });
             }
 

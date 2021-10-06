@@ -957,7 +957,7 @@ impl Arbitrary for MPath {
 impl Arbitrary for RepoPath {
     #[inline]
     fn arbitrary(g: &mut Gen) -> Self {
-        match u32::arbitrary(g) % 3 {
+        match g.choose(&[0, 1, 2]).unwrap() {
             0 => RepoPath::RootPath,
             1 => RepoPath::DirectoryPath(MPath::arbitrary(g)),
             2 => RepoPath::FilePath(MPath::arbitrary(g)),

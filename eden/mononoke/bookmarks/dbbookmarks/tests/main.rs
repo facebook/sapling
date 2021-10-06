@@ -1461,7 +1461,7 @@ enum BookmarkOp {
 
 impl Arbitrary for BookmarkOp {
     fn arbitrary(g: &mut Gen) -> Self {
-        match u32::arbitrary(g) % 3 {
+        match g.choose(&[0, 1, 2]).unwrap() {
             0 => Self::Set(Arbitrary::arbitrary(g)),
             1 => Self::ForceSet(Arbitrary::arbitrary(g)),
             2 => Self::Delete,
@@ -1483,7 +1483,7 @@ enum TestOp {
 
 impl Arbitrary for TestOp {
     fn arbitrary(g: &mut Gen) -> Self {
-        match u32::arbitrary(g) % 3 {
+        match g.choose(&[0, 1, 2]).unwrap() {
             0 => Self::Bookmark(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
             1 => Self::Noop,
             2 => Self::Refresh,

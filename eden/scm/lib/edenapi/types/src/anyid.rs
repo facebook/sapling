@@ -55,7 +55,7 @@ impl Arbitrary for AnyId {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         use AnyId::*;
 
-        let variant = u32::arbitrary(g) % 5;
+        let variant = g.choose(&[0, 1, 2, 3, 4]).unwrap();
         match variant {
             0 => AnyFileContentId(Arbitrary::arbitrary(g)),
             1 => HgFilenodeId(Arbitrary::arbitrary(g)),

@@ -178,11 +178,9 @@ impl Arbitrary for TreeEntry {
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for TreeChildEntry {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        let variant = u32::arbitrary(g) % 2;
-        match variant {
-            0 => TreeChildEntry::File(Arbitrary::arbitrary(g)),
-            1 => TreeChildEntry::Directory(Arbitrary::arbitrary(g)),
-            _ => unreachable!(),
+        match bool::arbitrary(g) {
+            true => TreeChildEntry::File(Arbitrary::arbitrary(g)),
+            false => TreeChildEntry::Directory(Arbitrary::arbitrary(g)),
         }
     }
 }

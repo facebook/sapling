@@ -30,7 +30,6 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 percent-encoding = "2.1"
 phases = { version = "0.1.0", path = "../../phases" }
 quickcheck = "1.0"
-rand = { version = "0.8", features = ["small_rng"] }
 revisionstore_types = { version = "0.1.0", path = "../../../scm/lib/revisionstore/types" }
 slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.29"

@@ -59,7 +59,7 @@ impl FileEntries {
         let filename = match kind {
             Kind::Tree => {
                 // 10% chance for it to be the root
-                if u32::arbitrary(g) % 10 == 0 {
+                if u64::arbitrary(g) % 10 == 0 {
                     RepoPath::root()
                 } else {
                     RepoPath::DirectoryPath(MPath::arbitrary(g))
@@ -106,7 +106,7 @@ impl HistoryEntry {
         let copy_from = match kind {
             Kind::File => {
                 // 20% chance of generating copy-from info
-                if u32::arbitrary(g) % 5 == 0 {
+                if *g.choose(&[0, 1, 2, 3, 4]).unwrap() == 0 {
                     Some(RepoPath::FilePath(MPath::arbitrary(g)))
                 } else {
                     None
@@ -136,7 +136,7 @@ impl Arbitrary for HistoryEntry {
 impl Arbitrary for DataEntry {
     fn arbitrary(g: &mut Gen) -> Self {
         // 20% chance of a fulltext revision
-        let (delta_base, delta) = if u32::arbitrary(g) % 5 == 0 {
+        let (delta_base, delta) = if *g.choose(&[0, 1, 2, 3, 4]).unwrap() == 0 {
             (NULL_HASH, Delta::new_fulltext(Vec::arbitrary(g)))
         } else {
             let mut delta_base = NULL_HASH;

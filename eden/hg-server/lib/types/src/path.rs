@@ -662,7 +662,7 @@ impl quickcheck::Arbitrary for PathComponentBuf {
             let size = usize::arbitrary(g) % 7 + 1;
             let mut s = String::with_capacity(size);
             for _ in 0..size {
-                let x = (u32::arbitrary(g) % 25) as u8;
+                let x = (u64::arbitrary(g) % 25) as u8;
                 let x = (b'a' + x) as char;
                 s.push(x);
             }

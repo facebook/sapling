@@ -511,11 +511,9 @@ impl Arbitrary for WireKey {
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireEdenApiServerError {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        let variant = u32::arbitrary(g) % 2;
-        match variant {
-            0 => WireEdenApiServerError::Unknown,
-            1 => WireEdenApiServerError::OpaqueError(Arbitrary::arbitrary(g)),
-            _ => unreachable!(),
+        match bool::arbitrary(g) {
+            true => WireEdenApiServerError::Unknown,
+            false => WireEdenApiServerError::OpaqueError(Arbitrary::arbitrary(g)),
         }
     }
 }
