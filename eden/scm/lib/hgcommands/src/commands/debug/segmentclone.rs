@@ -10,6 +10,7 @@ use super::Result;
 use super::IO;
 use anyhow::Context;
 use async_runtime::block_on;
+use async_runtime::block_unless_interrupted;
 use clidispatch::errors;
 use cliparser::define_flags;
 use dag::namedag::IndexedLogNameDagPath;
@@ -18,7 +19,6 @@ use dag::ops::DagPersistent;
 use dag::ops::Open;
 use dag::CloneData;
 use dag::VertexName;
-use edenapi::EdenApiBlocking;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use std::collections::HashMap;
@@ -46,9 +46,12 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
 
     let edenapi_client = edenapi::Builder::from_config(&config)?.build()?;
 
-    let clone_data = edenapi_client
-        .clone_data_blocking(reponame.clone())
-        .context("error cloning segmented changelog")?;
+    let clone_data = match block_unless_interrupted(edenapi_client.clone_data(reponame.clone())) {
+        Err(e) => Err(anyhow::Error::from(e)),
+        Ok(Err(e)) => Err(anyhow::Error::from(e)),
+        Ok(Ok(v)) => Ok(v),
+    }
+    .context("error cloning segmented changelog")?;
 
     let namedag_path = IndexedLogNameDagPath(destination.join(".hg/store/segments/v1"));
     let mut namedag = namedag_path
