@@ -102,7 +102,7 @@ class GlobNode {
       TreeInodePtr root,
       PrefetchList* fileBlobsToPrefetch,
       ResultList& globResult,
-      const RootId& originRootId);
+      const RootId& originRootId) const;
 
   /**
    * Evaluate the compiled glob against the provided Tree.
@@ -116,7 +116,7 @@ class GlobNode {
       std::shared_ptr<const Tree> tree,
       PrefetchList* fileBlobsToPrefetch,
       ResultList& globResult,
-      const RootId& originRootId);
+      const RootId& originRootId) const;
 
   /**
    * Print a human-readable description of this GlobNode to stderr.
@@ -158,7 +158,7 @@ class GlobNode {
       ROOT&& root,
       PrefetchList* fileBlobsToPrefetch,
       ResultList& globResult,
-      const RootId& originRootId);
+      const RootId& originRootId) const;
 
   template <typename ROOT>
   folly::Future<folly::Unit> evaluateImpl(
@@ -168,7 +168,7 @@ class GlobNode {
       ROOT&& root,
       PrefetchList* fileBlobsToPrefetch,
       ResultList& globResult,
-      const RootId& originRootId);
+      const RootId& originRootId) const;
 
   void debugDump(int currentDepth) const;
 

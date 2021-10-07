@@ -309,7 +309,7 @@ Future<folly::Unit> GlobNode::evaluateImpl(
     ROOT&& root,
     GlobNode::PrefetchList* fileBlobsToPrefetch,
     GlobNode::ResultList& globResult,
-    const RootId& originRootId) {
+    const RootId& originRootId) const {
   vector<std::pair<PathComponentPiece, GlobNode*>> recurse;
   vector<Future<folly::Unit>> futures;
 
@@ -440,7 +440,7 @@ folly::Future<folly::Unit> GlobNode::evaluate(
     TreeInodePtr root,
     GlobNode::PrefetchList* fileBlobsToPrefetch,
     GlobNode::ResultList& globResult,
-    const RootId& originRootId) {
+    const RootId& originRootId) const {
   return evaluateImpl(
       store,
       context,
@@ -458,7 +458,7 @@ folly::Future<folly::Unit> GlobNode::evaluate(
     std::shared_ptr<const Tree> tree,
     GlobNode::PrefetchList* fileBlobsToPrefetch,
     GlobNode::ResultList& globResult,
-    const RootId& originRootId) {
+    const RootId& originRootId) const {
   return evaluateImpl(
       store,
       context,
@@ -516,7 +516,7 @@ Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
     ROOT&& root,
     GlobNode::PrefetchList* fileBlobsToPrefetch,
     GlobNode::ResultList& globResult,
-    const RootId& originRootId) {
+    const RootId& originRootId) const {
   vector<RelativePath> subDirNames;
   vector<Future<folly::Unit>> futures;
   {
