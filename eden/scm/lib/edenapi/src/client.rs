@@ -295,6 +295,19 @@ impl Client {
         self.fetch::<T>(requests)?.flatten().await
     }
 
+    /// Similar to `fetch_vec`. But with retries.
+    async fn fetch_vec_with_retry<T>(
+        &self,
+        requests: Vec<Request>,
+    ) -> Result<Vec<<T as ToApi>::Api>, EdenApiError>
+    where
+        T: ToApi + Send + DeserializeOwned + 'static,
+        <T as ToApi>::Api: Send + 'static,
+    {
+        self.with_retry(|this| this.fetch_vec::<T>(requests.clone()).boxed())
+            .await
+    }
+
     /// Log the request to the configured log directory as JSON.
     fn log_request<R: ToJson + Debug>(&self, req: &R, label: &str) {
         tracing::trace!("Sending request: {:?}", req);
@@ -700,7 +713,7 @@ impl EdenApi for Client {
             },
         )?;
 
-        self.fetch_vec::<WireCommitLocationToHashResponse>(formatted)
+        self.fetch_vec_with_retry::<WireCommitLocationToHashResponse>(formatted)
             .await
     }
 
@@ -732,7 +745,7 @@ impl EdenApi for Client {
                 batch.to_wire()
             })?;
 
-        self.fetch_vec::<WireCommitHashToLocationResponse>(formatted)
+        self.fetch_vec_with_retry::<WireCommitHashToLocationResponse>(formatted)
             .await
     }
 
