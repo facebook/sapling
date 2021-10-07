@@ -147,8 +147,7 @@ impl RequestInfo {
 
 /// A subset of the `Request` builder. Preserved in curl types.
 /// Expose the request in curl handler callback context.
-#[cfg_attr(test, derive(Clone))]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RequestContext {
     pub(crate) info: RequestInfo,
     pub(crate) body: Option<Vec<u8>>,
@@ -161,8 +160,7 @@ pub struct RequestId(usize);
 
 /// A builder struct for HTTP requests, designed to be
 /// a more egonomic API for setting up a curl handle.
-#[cfg_attr(test, derive(Clone))]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Request {
     ctx: RequestContext,
     headers: Vec<(String, String)>,
