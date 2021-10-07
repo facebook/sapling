@@ -126,6 +126,7 @@ pub struct HttpClientBuilder {
     convert_cert: bool,
     encoding: Option<Encoding>,
     min_transfer_speed: Option<MinTransferSpeed>,
+    max_retry_per_request: usize,
 }
 
 impl HttpClientBuilder {
@@ -218,6 +219,8 @@ impl HttpClientBuilder {
                     grace_period: Duration::from_secs(low_speed_grace_period),
                 },
             );
+        let max_retry_per_request =
+            get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(10);
 
         Ok(HttpClientBuilder {
             repo_name: Some(repo_name),
@@ -240,6 +243,7 @@ impl HttpClientBuilder {
             convert_cert,
             encoding,
             min_transfer_speed,
+            max_retry_per_request,
         })
     }
 
@@ -424,6 +428,7 @@ pub(crate) struct Config {
     pub(crate) convert_cert: bool,
     pub(crate) encoding: Option<Encoding>,
     pub(crate) min_transfer_speed: Option<MinTransferSpeed>,
+    pub(crate) max_retry_per_request: usize,
 }
 
 impl TryFrom<HttpClientBuilder> for Config {
@@ -451,6 +456,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             convert_cert,
             encoding,
             min_transfer_speed,
+            max_retry_per_request,
         } = builder;
 
         // Check for missing required fields.
@@ -490,6 +496,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             convert_cert,
             encoding,
             min_transfer_speed,
+            max_retry_per_request,
         })
     }
 }

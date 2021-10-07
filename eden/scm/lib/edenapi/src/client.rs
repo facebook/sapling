@@ -379,6 +379,15 @@ impl Client {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
         })?
     }
+
+
+    async fn with_retry<'t, T>(
+        &'t self,
+        func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T, EdenApiError>>,
+    ) -> Result<T, EdenApiError> {
+        let retry_count = self.inner.config.max_retry_per_request;
+        with_retry(retry_count, || func(self)).await
+    }
 }
 
 #[async_trait]
@@ -592,7 +601,8 @@ impl EdenApi for Client {
 
     async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
         tracing::info!("Requesting clone data for the '{}' repository", repo);
-        with_retry(10, || self.clone_data_attempt(&repo).boxed()).await
+        self.with_retry(|this| this.clone_data_attempt(&repo).boxed())
+            .await
     }
 
     async fn pull_fast_forward_master(
@@ -606,12 +616,12 @@ impl EdenApi for Client {
             repo
         );
 
-        with_retry(10, || {
+        self.with_retry(|this| {
             let req = PullFastForwardRequest {
                 old_master,
                 new_master,
             };
-            self.fast_forward_pull_attempt(&repo, req).boxed()
+            this.fast_forward_pull_attempt(&repo, req).boxed()
         })
         .await
     }
