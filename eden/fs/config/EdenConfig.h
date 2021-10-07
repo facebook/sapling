@@ -21,6 +21,7 @@
 #include "eden/fs/config/ConfigSetting.h"
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/config/MountProtocol.h"
+#include "eden/fs/eden-config.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 

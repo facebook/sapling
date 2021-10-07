@@ -23,6 +23,7 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/config/FileChangeMonitor.h"
+#include "eden/fs/eden-config.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
 
