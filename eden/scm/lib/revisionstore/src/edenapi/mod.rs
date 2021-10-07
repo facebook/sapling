@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use edenapi::{BlockingResponse, EdenApi, EdenApiBlocking, EdenApiError, Response};
+use edenapi::{BlockingResponse, EdenApi, EdenApiError, Response};
 use edenapi_types::{EdenApiServerError, FileEntry, FileSpec, TreeAttributes, TreeEntry};
 use progress::{NullProgressFactory, ProgressFactory};
 use types::Key;
@@ -126,14 +126,14 @@ impl EdenApiFileStore {
         &self,
         keys: Vec<Key>,
     ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
-        self.client.files_blocking(self.repo.clone(), keys)
+        BlockingResponse::from_async(self.client.files(self.repo.clone(), keys))
     }
 
     pub fn files_attrs_blocking(
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
-        self.client.files_attrs_blocking(self.repo.clone(), reqs)
+        BlockingResponse::from_async(self.client.files_attrs(self.repo.clone(), reqs))
     }
 }
 
@@ -143,8 +143,7 @@ impl EdenApiTreeStore {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<BlockingResponse<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        self.client
-            .trees_blocking(self.repo.clone(), keys, attributes)
+        BlockingResponse::from_async(self.client.trees(self.repo.clone(), keys, attributes))
     }
 }
 

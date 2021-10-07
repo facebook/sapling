@@ -23,7 +23,7 @@ pub struct BlockingResponse<T> {
 }
 
 impl<T> BlockingResponse<T> {
-    pub(crate) fn from_async<F>(fetch: F) -> Result<Self, EdenApiError>
+    pub fn from_async<F>(fetch: F) -> Result<Self, EdenApiError>
     where
         F: Future<Output = Result<Response<T>, EdenApiError>>,
     {
