@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Context};
 use async_trait::async_trait;
+use futures::future::BoxFuture;
 use futures::prelude::*;
 use itertools::Itertools;
 use minibytes::Bytes;
@@ -354,29 +355,6 @@ impl Client {
         }])?)
     }
 
-    async fn clone_data_retry(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
-        const CLONE_ATTEMPTS_MAX: usize = 10;
-        let mut attempt = 0usize;
-        loop {
-            let result = self.clone_data_attempt(&repo).await;
-            if attempt >= CLONE_ATTEMPTS_MAX {
-                return result;
-            }
-            match result {
-                Err(EdenApiError::HttpError { status, message }) => {
-                    tracing::warn!("Retrying http status {} {}", status, message);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-                Err(EdenApiError::Http(err)) => {
-                    tracing::warn!("Retrying http error {:?}", err);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-                other => return other,
-            }
-            attempt += 1;
-        }
-    }
-
     async fn clone_data_attempt(&self, repo: &str) -> Result<CloneData<HgId>, EdenApiError> {
         let url = self.build_url(paths::CLONE_DATA, Some(repo))?;
         let req = self.configure_request(Request::post(url))?;
@@ -384,33 +362,6 @@ impl Client {
         fetch.entries.next().await.ok_or_else(|| {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
         })?
-    }
-
-    async fn fast_forward_pull_retry(
-        &self,
-        repo: String,
-        req: PullFastForwardRequest,
-    ) -> Result<CloneData<HgId>, EdenApiError> {
-        const PULL_ATTEMPTS_MAX: usize = 10;
-        let mut attempt = 0usize;
-        loop {
-            let result = self.fast_forward_pull_attempt(&repo, req.clone()).await;
-            if attempt >= PULL_ATTEMPTS_MAX {
-                return result;
-            }
-            match result {
-                Err(EdenApiError::HttpError { status, message }) => {
-                    tracing::warn!("Retrying http status {} {}", status, message);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-                Err(EdenApiError::Http(err)) => {
-                    tracing::warn!("Retrying http error {:?}", err);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-                other => return other,
-            }
-            attempt += 1;
-        }
     }
 
     async fn fast_forward_pull_attempt(
@@ -641,7 +592,7 @@ impl EdenApi for Client {
 
     async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
         tracing::info!("Requesting clone data for the '{}' repository", repo);
-        self.clone_data_retry(repo).await
+        with_retry(10, || self.clone_data_attempt(&repo).boxed()).await
     }
 
     async fn pull_fast_forward_master(
@@ -655,11 +606,14 @@ impl EdenApi for Client {
             repo
         );
 
-        let req = PullFastForwardRequest {
-            old_master,
-            new_master,
-        };
-        self.fast_forward_pull_retry(repo, req).await
+        with_retry(10, || {
+            let req = PullFastForwardRequest {
+                old_master,
+                new_master,
+            };
+            self.fast_forward_pull_attempt(&repo, req).boxed()
+        })
+        .await
     }
 
     async fn full_idmap_clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
@@ -1196,6 +1150,31 @@ async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiEr
     }
 
     Err(EdenApiError::HttpError { status, message })
+}
+
+async fn with_retry<'t, T>(
+    max_retry_count: usize,
+    func: impl Fn() -> BoxFuture<'t, Result<T, EdenApiError>>,
+) -> Result<T, EdenApiError> {
+    let mut attempt = 0usize;
+    loop {
+        let result = func().await;
+        if attempt >= max_retry_count {
+            return result;
+        }
+        match result {
+            Err(EdenApiError::HttpError { status, message }) => {
+                tracing::warn!("Retrying http status {} {}", status, message);
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+            Err(EdenApiError::Http(err)) => {
+                tracing::warn!("Retrying http error {:?}", err);
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+            other => return other,
+        }
+        attempt += 1;
+    }
 }
 
 #[cfg(test)]
