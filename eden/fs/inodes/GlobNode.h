@@ -35,8 +35,7 @@ class GlobNode {
   // globs that will be parsed into the overall glob tree.
   explicit GlobNode(bool includeDotfiles) : includeDotfiles_(includeDotfiles) {}
 
-  using PrefetchList =
-      std::shared_ptr<folly::Synchronized<std::vector<ObjectId>>>;
+  using PrefetchList = folly::Synchronized<std::vector<ObjectId>>;
 
   GlobNode(folly::StringPiece pattern, bool includeDotfiles, bool hasSpecials);
 
@@ -79,43 +78,44 @@ class GlobNode {
         : name(std::move(name)), dtype(dtype), originHash(&originHash) {}
   };
 
-  using ResultList =
-      std::shared_ptr<folly::Synchronized<std::vector<GlobResult>>>;
+  using ResultList = folly::Synchronized<std::vector<GlobResult>>;
 
   // Compile and add a new glob pattern to the tree.
   // Compilation splits the pattern into nodes, with one node for each
   // directory separator separated path component.
   void parse(folly::StringPiece pattern);
 
-  // This is a recursive function to evaluate the compiled glob against
-  // the provided input path and inode.
-  // It returns the set of matching file names.
-  // Note_0: the caller is responsible for ensuring that this
-  // GlobNode exists until the returned Future is resolved.
-  // Note_1: The caller is also responsible for ensuring the originHash's
-  // lifetime exceeds that of all the returned GlobResults. These GlobResults
-  // will hold pointers to this originHash.
-  // If prefetchFiles is true, each matching file will have its content
-  // prefetched via the ObjectStore layer.  This will not change the
-  // materialization or overlay state for children that already have
-  // inodes assigned.
+  /**
+   * Evaluate the compiled glob against the provided TreeInode and path.
+   *
+   * The results are appended to the globResult list which the caller is
+   * responsible for ensuring that its lifetime will exceed the lifetime of the
+   * returned Future.
+   *
+   * When fileBlobsToPrefetch is non-null, the Hash of the globbed files will
+   * be appended to it.
+   */
   folly::Future<folly::Unit> evaluate(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       TreeInodePtr root,
-      PrefetchList fileBlobsToPrefetch,
-      ResultList globResult,
+      PrefetchList* fileBlobsToPrefetch,
+      ResultList& globResult,
       const RootId& originRootId);
 
-  // This is the Tree version of the method above
+  /**
+   * Evaluate the compiled glob against the provided Tree.
+   *
+   * See the documention for the overload above.
+   */
   folly::Future<folly::Unit> evaluate(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       std::shared_ptr<const Tree> tree,
-      PrefetchList fileBlobsToPrefetch,
-      ResultList globResult,
+      PrefetchList* fileBlobsToPrefetch,
+      ResultList& globResult,
       const RootId& originRootId);
 
   /**
@@ -156,8 +156,8 @@ class GlobNode {
       RelativePathPiece rootPath,
       RelativePathPiece startOfRecursive,
       ROOT&& root,
-      PrefetchList fileBlobsToPrefetch,
-      ResultList globResult,
+      PrefetchList* fileBlobsToPrefetch,
+      ResultList& globResult,
       const RootId& originRootId);
 
   template <typename ROOT>
@@ -166,8 +166,8 @@ class GlobNode {
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       ROOT&& root,
-      PrefetchList fileBlobsToPrefetch,
-      ResultList globResult,
+      PrefetchList* fileBlobsToPrefetch,
+      ResultList& globResult,
       const RootId& originRootId);
 
   void debugDump(int currentDepth) const;

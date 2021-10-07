@@ -36,7 +36,7 @@ constexpr folly::Duration kSmallTimeout =
 folly::Future<std::vector<GlobResult>> evaluateGlob(
     TestMount& mount,
     GlobNode& globRoot,
-    GlobNode::PrefetchList prefetchHashes,
+    std::shared_ptr<GlobNode::PrefetchList> prefetchHashes,
     const RootId& commitHash) {
   auto rootInode = mount.getTreeInode(RelativePathPiece());
   auto objectStore = mount.getEdenMount()->getObjectStore();
@@ -48,8 +48,8 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
           ObjectFetchContext::getNullContext(),
           RelativePathPiece(),
           rootInode,
-          prefetchHashes,
-          globResults,
+          prefetchHashes.get(),
+          *globResults,
           commitHash)
       .thenValue([globResults](auto&&) {
         std::vector<GlobResult> result;
@@ -99,8 +99,7 @@ class GlobNodeTest : public ::testing::TestWithParam<
     globRoot.debugDump();
 
     if (shouldPrefetch()) {
-      prefetchHashes_ =
-          std::make_shared<GlobNode::PrefetchList::element_type>();
+      prefetchHashes_ = std::make_shared<GlobNode::PrefetchList>();
     }
 
     auto future = evaluateGlob(mount_, globRoot, prefetchHashes_, commitHash);
@@ -133,7 +132,7 @@ class GlobNodeTest : public ::testing::TestWithParam<
 
   TestMount mount_;
   FakeTreeBuilder builder_;
-  GlobNode::PrefetchList prefetchHashes_;
+  std::shared_ptr<GlobNode::PrefetchList> prefetchHashes_;
 };
 
 TEST_P(GlobNodeTest, starTxt) {

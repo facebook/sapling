@@ -1309,7 +1309,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
   }
 
   auto fileBlobsToPrefetch = globOptions.prefetchFiles
-      ? std::make_shared<folly::Synchronized<std::vector<ObjectId>>>()
+      ? std::make_shared<GlobNode::PrefetchList>()
       : nullptr;
 
   auto& fetchContext = helper->getFetchContext();
@@ -1322,8 +1322,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
   // Globs will be evaluated against the specified commits or the current commit
   // if none are specified. The results will be collected here.
   std::vector<folly::Future<folly::Unit>> globFutures{};
-  auto globResults = std::make_shared<
-      folly::Synchronized<std::vector<GlobNode::GlobResult>>>();
+  auto globResults = std::make_shared<GlobNode::ResultList>();
 
   auto searchRoot = relpathFromUserPath(searchRootUser);
 
@@ -1339,11 +1338,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
       globFutures.emplace_back(
           edenMount->getObjectStore()
               ->getRootTree(originRootId, fetchContext)
-              .thenValue([edenMount,
-                          globRoot,
-                          &fetchContext,
-                          fileBlobsToPrefetch,
-                          searchRoot](std::shared_ptr<const Tree>&& rootTree) {
+              .thenValue([edenMount, globRoot, &fetchContext, searchRoot](
+                             std::shared_ptr<const Tree>&& rootTree) {
                 return resolveTree(
                     *edenMount->getObjectStore(),
                     fetchContext,
@@ -1362,8 +1358,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
                         fetchContext,
                         RelativePathPiece(),
                         std::move(tree),
-                        std::move(fileBlobsToPrefetch),
-                        std::move(globResults),
+                        fileBlobsToPrefetch.get(),
+                        *globResults,
                         originRootId);
                   }));
     }
@@ -1384,8 +1380,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
                       fetchContext,
                       RelativePathPiece(),
                       inode.asTreePtr(),
-                      std::move(fileBlobsToPrefetch),
-                      std::move(globResults),
+                      fileBlobsToPrefetch.get(),
+                      *globResults,
                       originRootId)
                   .semi();
             })
