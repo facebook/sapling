@@ -148,7 +148,7 @@ impl GitImportLfs {
         let inner = GitImportLfsInner {
             lfs_server,
             allow_not_found: true,
-            max_attempts: 10,
+            max_attempts: 30,
             time_ms_between_attempts: 10000,
             conn_limit_sem: conn_limit.map(|x| Arc::new(Semaphore::new(x))),
             client,
