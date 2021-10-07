@@ -12,7 +12,7 @@ use anyhow::Error;
 use libc::size_t;
 
 use edenapi::EdenApi;
-use edenapi::{Builder, EdenApiBlocking};
+use edenapi::{BlockingResponse, Builder};
 use edenapi_types::{EdenApiServerError, TreeEntry};
 use types::Key as ApiKey;
 
@@ -58,9 +58,10 @@ fn edenapi_trees_blocking(
         .iter()
         .map(|k| k.try_into())
         .collect::<Result<Vec<ApiKey>, _>>()?;
-    Ok(client
-        .trees_blocking(repo, keys, Some(attrs.into()))
-        .map(|f| f.entries)?)
+    Ok(
+        BlockingResponse::from_async(client.trees(repo, keys, Some(attrs.into())))
+            .map(|f| f.entries)?,
+    )
 }
 
 #[no_mangle]
