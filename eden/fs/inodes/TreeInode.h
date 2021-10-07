@@ -547,7 +547,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * retry the remove again (hence the attemptNum parameter).
    */
   template <typename InodePtrType>
-  FOLLY_NODISCARD folly::Future<folly::Unit> removeImpl(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> removeImpl(
       PathComponent name,
       InodePtr child,
       InvalidationRequired invalidate,

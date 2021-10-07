@@ -1121,15 +1121,15 @@ folly::Future<folly::Unit> TreeInode::unlink(
     InvalidationRequired invalidate,
     ObjectFetchContext& context) {
   return getOrLoadChild(name, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate,
                   &context](const InodePtr& child) mutable {
         return self->removeImpl<FileInodePtr>(
             std::move(childName), child, invalidate, 1, context);
-      });
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<folly::Unit> TreeInode::rmdir(
@@ -1137,19 +1137,19 @@ folly::Future<folly::Unit> TreeInode::rmdir(
     InvalidationRequired invalidate,
     ObjectFetchContext& context) {
   return getOrLoadChild(name, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate,
                   &context](const InodePtr& child) mutable {
         return self->removeImpl<TreeInodePtr>(
             std::move(childName), child, invalidate, 1, context);
-      });
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 template <typename InodePtrType>
-folly::Future<folly::Unit> TreeInode::removeImpl(
+ImmediateFuture<folly::Unit> TreeInode::removeImpl(
     PathComponent name,
     InodePtr childBasePtr,
     InvalidationRequired invalidate,
@@ -1158,14 +1158,15 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // Make sure the child is of the desired type
   auto child = childBasePtr.asSubclassPtrOrNull<InodePtrType>();
   if (!child) {
-    return makeFuture<Unit>(
-        InodeError(InodePtrType::InodeType::WRONG_TYPE_ERRNO, childBasePtr));
+    return ImmediateFuture<Unit>{folly::Try<Unit>{
+        InodeError{InodePtrType::InodeType::WRONG_TYPE_ERRNO, childBasePtr}}};
   }
 
   // Verify that we can remove the child before we materialize ourself
   int checkResult = checkPreRemove(child);
   if (checkResult != 0) {
-    return makeFuture<Unit>(InodeError(checkResult, child));
+    return ImmediateFuture<Unit>{
+        folly::Try<Unit>{InodeError{checkResult, child}}};
   }
 
   // Acquire the rename lock since we need to update our child's location
@@ -1179,7 +1180,8 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
     // It appears we have already been unlinked.  It's possible someone other
     // thread has already renamed child to another location and unlinked us.
     // Just fail with ENOENT in this case.
-    return makeFuture<Unit>(InodeError(ENOENT, inodePtrFromThis()));
+    return ImmediateFuture<Unit>{
+        folly::Try<Unit>{InodeError{ENOENT, inodePtrFromThis()}}};
   }
   auto targetName = myPath.value() + name;
 
@@ -1202,7 +1204,8 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // EBADF means that the child in question has been replaced since we looked
   // it up earlier, and the child inode now at this location is not loaded.
   if (errnoValue != EBADF) {
-    return makeFuture<Unit>(InodeError(errnoValue, inodePtrFromThis(), name));
+    return ImmediateFuture<Unit>{
+        folly::Try<Unit>{InodeError{errnoValue, inodePtrFromThis(), name}}};
   }
 
   // Give up after 3 retries
@@ -1227,8 +1230,6 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // side.
   auto childFuture = getOrLoadChild(name, context);
   return std::move(childFuture)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{std::move(name)},
                   invalidate,
