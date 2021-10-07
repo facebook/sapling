@@ -182,7 +182,7 @@ py_class!(pub class client |py| {
     }
 
     /// commitlocationtohash(repo: str, requests: [(bytes, u64, u64), progress = None) ->
-    ///   [(location: (descendant: bytes, distance: u64), count: u64, hgids: [bytes])], stats
+    ///   [(location: (descendant: bytes, distance: u64), count: u64, hgids: [bytes])]
     ///
     /// Fetch the hash(es) of a location in the commit graph.
     /// A request is a tuple (descendant, distance, count) where descendant is a known hgid,
@@ -192,12 +192,12 @@ py_class!(pub class client |py| {
         &self,
         repo: String,
         requests: Vec<(PyBytes, u64, u64)>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<CommitLocationToHashResponse>>>, PyFuture)> {
+    ) -> PyResult<Serde<Vec<CommitLocationToHashResponse>>> {
         self.inner(py).clone().commit_location_to_hash_py(py, repo, requests)
     }
 
     /// commithashtolocation(repo: str, master_heads: [bytes], hghds: [bytes], progress = None) ->
-    ///   [(hgid: bytes, location: (descendant: bytes, distance: u64))], stats
+    ///   [(hgid: bytes, location: (descendant: bytes, distance: u64))]
     ///
     /// Fetch the location in the commit graph of a given hash.
     /// WARNING. Only hashes of ancestors of master are supported.
@@ -209,7 +209,7 @@ py_class!(pub class client |py| {
         repo: String,
         master_heads: Vec<PyBytes>,
         hgids: Vec<PyBytes>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<CommitHashToLocationResponse>>>, PyFuture)> {
+    ) -> PyResult<Serde<Vec<CommitHashToLocationResponse>>> {
         self.inner(py).clone().commit_hash_to_location_py(py, repo, master_heads, hgids)
     }
 

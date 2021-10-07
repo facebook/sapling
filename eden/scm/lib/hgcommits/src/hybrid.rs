@@ -96,7 +96,7 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
         names: Vec<Vertex>,
     ) -> dag::Result<Vec<(AncestorPath, Vec<Vertex>)>> {
         let mut pairs = Vec::with_capacity(names.len());
-        let mut response = {
+        let response_vec = {
             if heads.is_empty() {
                 // Not an error case. Just do not resolve anything.
                 return Ok(Vec::new());
@@ -132,8 +132,7 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
                 .await
                 .map_err(to_dag_error)?
         };
-        while let Some(response) = response.entries.next().await {
-            let response = response.map_err(to_dag_error)?;
+        for response in response_vec {
             if let Some(location) = response.result.map_err(to_dag_error)? {
                 let path = AncestorPath {
                     x: Vertex::copy_from(location.descendant.as_ref()),
@@ -162,7 +161,7 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
             }
         }
         let mut pairs = Vec::with_capacity(paths.len());
-        let mut response = {
+        let response_vec = {
             let mut requests = Vec::with_capacity(paths.len());
             for path in paths {
                 let descendant = Id20::from_slice(path.x.as_ref()).map_err(to_dag_error)?;
@@ -180,8 +179,7 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
                 .await
                 .map_err(to_dag_error)?
         };
-        while let Some(response) = response.entries.next().await {
-            let response = response.map_err(to_dag_error)?;
+        for response in response_vec {
             let path = AncestorPath {
                 x: Vertex::copy_from(response.location.descendant.as_ref()),
                 n: response.location.distance,

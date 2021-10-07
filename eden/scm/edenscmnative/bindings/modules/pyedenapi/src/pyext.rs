@@ -291,10 +291,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         requests: Vec<(PyBytes, u64, u64)>,
-    ) -> PyResult<(
-        TStream<anyhow::Result<Serde<CommitLocationToHashResponse>>>,
-        PyFuture,
-    )> {
+    ) -> PyResult<Serde<Vec<CommitLocationToHashResponse>>> {
         let requests = requests
             .into_iter()
             .map(|(hgid_bytes, distance, count)| {
@@ -302,19 +299,14 @@ pub trait EdenApiPyExt: EdenApi {
                 CommitLocationToHashRequest { location, count }
             })
             .collect();
-        let (responses, stats) = py
+        let responses = py
             .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let response = self.commit_location_to_hash(repo, requests).await?;
-                    Ok::<_, EdenApiError>((response.entries, response.stats))
-                })
+                block_unless_interrupted(self.commit_location_to_hash(repo, requests))
             })
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
-        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
-        Ok((responses_py.into(), stats_py))
+        Ok(Serde(responses))
     }
 
     fn commit_hash_to_location_py(
@@ -323,27 +315,17 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         master_heads: Vec<PyBytes>,
         hgids: Vec<PyBytes>,
-    ) -> PyResult<(
-        TStream<anyhow::Result<Serde<CommitHashToLocationResponse>>>,
-        PyFuture,
-    )> {
+    ) -> PyResult<Serde<Vec<CommitHashToLocationResponse>>> {
         let master_heads = to_hgids(py, master_heads);
         let hgids = to_hgids(py, hgids);
-        let (responses, stats) = py
+        let responses = py
             .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let response = self
-                        .commit_hash_to_location(repo, master_heads, hgids)
-                        .await?;
-                    Ok::<_, EdenApiError>((response.entries, response.stats))
-                })
+                block_unless_interrupted(self.commit_hash_to_location(repo, master_heads, hgids))
             })
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
-        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
-        Ok((responses_py.into(), stats_py))
+        Ok(Serde(responses))
     }
 
     fn commit_known_py(

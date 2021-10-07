@@ -283,6 +283,17 @@ impl Client {
         Ok(Response { entries, stats })
     }
 
+    /// Similar to `fetch`. But returns a `Vec` directly.
+    async fn fetch_vec<T>(
+        &self,
+        requests: Vec<Request>,
+    ) -> Result<Vec<<T as ToApi>::Api>, EdenApiError>
+    where
+        T: ToApi + Send + DeserializeOwned + 'static,
+        <T as ToApi>::Api: Send + 'static,
+    {
+        self.fetch::<T>(requests)?.flatten().await
+    }
 
     /// Log the request to the configured log directory as JSON.
     fn log_request<R: ToJson + Debug>(&self, req: &R, label: &str) {
@@ -667,13 +678,13 @@ impl EdenApi for Client {
         &self,
         repo: String,
         requests: Vec<CommitLocationToHashRequest>,
-    ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitLocationToHashResponse>, EdenApiError> {
         tracing::info!(
             "Requesting commit location to hash (batch size = {})",
             requests.len()
         );
         if requests.is_empty() {
-            return Ok(Response::empty());
+            return Ok(Vec::new());
         }
 
         let url = self.build_url(paths::COMMIT_LOCATION_TO_HASH, Some(&repo))?;
@@ -689,7 +700,8 @@ impl EdenApi for Client {
             },
         )?;
 
-        Ok(self.fetch::<WireCommitLocationToHashResponse>(formatted)?)
+        self.fetch_vec::<WireCommitLocationToHashResponse>(formatted)
+            .await
     }
 
     async fn commit_hash_to_location(
@@ -697,14 +709,14 @@ impl EdenApi for Client {
         repo: String,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
-    ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitHashToLocationResponse>, EdenApiError> {
         tracing::info!(
             "Requesting commit hash to location (batch size = {})",
             hgids.len()
         );
 
         if hgids.is_empty() {
-            return Ok(Response::empty());
+            return Ok(Vec::new());
         }
 
         let url = self.build_url(paths::COMMIT_HASH_TO_LOCATION, Some(&repo))?;
@@ -720,7 +732,8 @@ impl EdenApi for Client {
                 batch.to_wire()
             })?;
 
-        Ok(self.fetch::<WireCommitHashToLocationResponse>(formatted)?)
+        self.fetch_vec::<WireCommitHashToLocationResponse>(formatted)
+            .await
     }
 
     async fn commit_known(

@@ -398,7 +398,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         _requests: Vec<CommitLocationToHashRequest>,
-    ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitLocationToHashResponse>, EdenApiError> {
         unimplemented!()
     }
 
@@ -407,7 +407,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         _master_heads: Vec<HgId>,
         _hgids: Vec<HgId>,
-    ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitHashToLocationResponse>, EdenApiError> {
         unimplemented!()
     }
 

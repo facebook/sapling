@@ -274,7 +274,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         requests: Vec<CommitLocationToHashRequest>,
-    ) -> edenapi::Result<Response<CommitLocationToHashResponse>> {
+    ) -> edenapi::Result<Vec<CommitLocationToHashResponse>> {
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let paths: Vec<AncestorPath> = requests
                 .into_iter()
@@ -293,7 +293,7 @@ impl EdenApi for EagerRepo {
         check_convert_to_hgid(path_names.iter().flat_map(|i| i.1.iter()))?;
         check_convert_to_hgid(path_names.iter().map(|i| &i.0.x))?;
 
-        let values: Vec<edenapi::Result<CommitLocationToHashResponse>> = path_names
+        let values: edenapi::Result<Vec<CommitLocationToHashResponse>> = path_names
             .into_iter()
             .map(|(p, ns)| {
                 let count = ns.len();
@@ -312,7 +312,7 @@ impl EdenApi for EagerRepo {
             })
             .collect();
 
-        Ok(convert_to_response(values))
+        values
     }
 
     async fn commit_hash_to_location(
@@ -320,7 +320,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
-    ) -> edenapi::Result<Response<CommitHashToLocationResponse>> {
+    ) -> edenapi::Result<Vec<CommitHashToLocationResponse>> {
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
             let heads: Vec<Vertex> = master_heads
                 .into_iter()
@@ -339,7 +339,7 @@ impl EdenApi for EagerRepo {
         check_convert_to_hgid(path_names.iter().flat_map(|i| i.1.iter()))?;
         check_convert_to_hgid(path_names.iter().map(|i| &i.0.x))?;
 
-        let values: Vec<edenapi::Result<CommitHashToLocationResponse>> = path_names
+        let values: edenapi::Result<Vec<CommitHashToLocationResponse>> = path_names
             .into_iter()
             .flat_map(|(p, ns)| {
                 ns.into_iter()
@@ -361,7 +361,7 @@ impl EdenApi for EagerRepo {
         // For hgids outside the master group, just ignore them.
         // It's okay to return them with result "None" too.
 
-        Ok(convert_to_response(values))
+        values
     }
 
     async fn commit_known(

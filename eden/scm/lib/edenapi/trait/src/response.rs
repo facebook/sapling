@@ -47,6 +47,11 @@ impl<T: Send + 'static> Response<T> {
             stats: future::ok(Stats::default()).boxed(),
         }
     }
+
+    /// Flatten the response into a `Vec`.
+    pub async fn flatten(self) -> Result<Vec<T>, EdenApiError> {
+        self.entries.try_collect().await
+    }
 }
 
 /// Metadata extracted from the headers of an individual HTTP response.

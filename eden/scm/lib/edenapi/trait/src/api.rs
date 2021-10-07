@@ -85,14 +85,14 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         requests: Vec<CommitLocationToHashRequest>,
-    ) -> Result<Response<CommitLocationToHashResponse>, EdenApiError>;
+    ) -> Result<Vec<CommitLocationToHashResponse>, EdenApiError>;
 
     async fn commit_hash_to_location(
         &self,
         repo: String,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
-    ) -> Result<Response<CommitHashToLocationResponse>, EdenApiError>;
+    ) -> Result<Vec<CommitHashToLocationResponse>, EdenApiError>;
 
     /// Return a subset of commits that are known by the server.
     /// This is similar to the "known" command in HG wireproto.
