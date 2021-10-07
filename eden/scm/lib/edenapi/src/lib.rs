@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-mod blocking;
 mod builder;
 mod client;
 mod response;
@@ -14,7 +13,6 @@ pub use edenapi_trait::api;
 pub use edenapi_trait::errors;
 
 pub use crate::api::EdenApi;
-pub use crate::blocking::EdenApiBlocking;
 pub use crate::builder::Builder;
 pub use crate::builder::HttpClientBuilder;
 pub use crate::client::Client;

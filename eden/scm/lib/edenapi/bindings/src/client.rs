@@ -11,8 +11,9 @@ use std::{convert::TryInto, path::PathBuf};
 use anyhow::Error;
 use libc::size_t;
 
+use edenapi::BlockingResponse;
+use edenapi::Builder;
 use edenapi::EdenApi;
-use edenapi::{BlockingResponse, Builder};
 use edenapi_types::{EdenApiServerError, TreeEntry};
 use types::Key as ApiKey;
 
