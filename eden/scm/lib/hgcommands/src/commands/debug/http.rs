@@ -9,11 +9,11 @@ use super::NoOpts;
 use super::Repo;
 use super::Result;
 use super::IO;
-use edenapi::EdenApiBlocking;
+use async_runtime::block_unless_interrupted as block_on;
 
 pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     let client = edenapi::Builder::from_config(repo.config())?.build()?;
-    let meta = client.health_blocking()?;
+    let meta = block_on(client.health())?;
     io.write(format!("{:#?}\n", &meta))?;
     Ok(0)
 }
