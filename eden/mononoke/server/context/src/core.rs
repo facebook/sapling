@@ -8,8 +8,8 @@
 use fbinit::FacebookInit;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{o, Drain, Level, Logger};
-use slog_glog_fmt::default_drain;
+use slog::Logger;
+use slog_glog_fmt::logger_that_can_work_in_tests;
 use sshrelay::Metadata;
 use std::sync::Arc;
 
@@ -54,8 +54,7 @@ impl CoreContext {
     }
 
     pub fn test_mock_session(session: SessionContainer) -> Self {
-        let drain = default_drain().filter_level(Level::Debug).ignore_res();
-        let logger = Logger::root(drain, o![]);
+        let logger = logger_that_can_work_in_tests().unwrap();
         session.new_context(logger, MononokeScubaSampleBuilder::with_discard())
     }
 
