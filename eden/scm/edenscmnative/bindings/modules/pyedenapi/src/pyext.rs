@@ -19,7 +19,7 @@ use cpython_ext::convert::Serde;
 use cpython_ext::PyCell;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::{Location, VertexName};
-use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Response, Stats};
+use edenapi::{BlockingResponse, EdenApi, EdenApiError, Response, Stats};
 use edenapi_ext::{calc_contentid, download_files, upload_snapshot};
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitGraphEntry, CommitHashLookupResponse,
@@ -52,7 +52,9 @@ use crate::util::{
 /// `rustfmt` can still parse the code.
 pub trait EdenApiPyExt: EdenApi {
     fn health_py(&self, py: Python) -> PyResult<PyDict> {
-        let meta = self.health_blocking().map_pyerr(py)?;
+        let meta = block_unless_interrupted(self.health())
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
         meta_to_dict(py, &meta)
     }
 
@@ -248,7 +250,8 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         bookmarks: Vec<String>,
     ) -> PyResult<(PyDict, stats)> {
-        let response = self.bookmarks_blocking(repo, bookmarks).map_pyerr(py)?;
+        let response =
+            BlockingResponse::from_async(self.bookmarks(repo, bookmarks)).map_pyerr(py)?;
 
         let bookmarks = PyDict::new(py);
         for entry in response.entries.into_iter() {
