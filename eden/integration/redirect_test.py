@@ -46,7 +46,9 @@ via-profile = "bind"
 
     def test_list_no_legacy_bind_mounts(self) -> None:
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
-        profile_path = scratch_path(self.mount, "edenfs/redirections/via-profile")
+        profile_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+        )
         self.assertEqual(
             json.loads(output),
             [
@@ -102,7 +104,9 @@ via-profile = "bind"
 
     def test_list(self) -> None:
         repo_path = os.path.join("a", "new-one")
-        profile_path = scratch_path(self.mount, "edenfs/redirections/via-profile")
+        profile_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+        )
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
             json.loads(output),
@@ -126,7 +130,9 @@ via-profile = "bind"
         list_output = self.eden.run_cmd(
             "redirect", "list", "--json", "--mount", self.mount
         )
-        target_path = scratch_path(self.mount, "edenfs/redirections/a/new-one")
+        target_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "a", "new-one")
+        )
         self.assertEqual(
             json.loads(list_output),
             [
@@ -241,7 +247,9 @@ via-profile = "bind"
         )
 
     def test_fixup_mounts_things(self) -> None:
-        profile_path = scratch_path(self.mount, "edenfs/redirections/via-profile")
+        profile_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+        )
 
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
@@ -272,7 +280,9 @@ via-profile = "bind"
         )
 
     def test_unmount_unmounts_things(self) -> None:
-        profile_path = scratch_path(self.mount, "edenfs/redirections/via-profile")
+        profile_path = scratch_path(
+            self.mount, os.path.join("edenfs", "redirections", "via-profile")
+        )
 
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
