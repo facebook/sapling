@@ -37,7 +37,7 @@ impl ClientInfo {
     pub fn new(config: &ConfigSet) -> Result<Self> {
         let fb = get_fb_client_info();
 
-        let u64token = config.get_opt::<u64>("ratelim", "u64token")?;
+        let u64token = config.get_opt::<u64>("clientinfo", "u64token")?;
         let hostname = get_hostname().ok();
 
         Ok(ClientInfo {
