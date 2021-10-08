@@ -61,6 +61,7 @@ pub fn load_repo_configs(
         common,
         repos,
         storage,
+        repo_definitions: _,
     } = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
 
     let commit_sync = parse_commit_sync_config(commit_sync)?;

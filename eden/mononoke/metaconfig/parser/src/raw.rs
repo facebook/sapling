@@ -11,7 +11,8 @@ use std::path::Path;
 use anyhow::{anyhow, Result};
 use cached_config::ConfigStore;
 use repos::{
-    RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawStorageConfig,
+    RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinitions,
+    RawStorageConfig,
 };
 
 use crate::errors::ConfigurationError;
@@ -61,6 +62,8 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
         config_path.join("common").join("storage.toml").as_path(),
         true,
     )?;
+    let repo_definitions =
+        read_toml_path::<RawRepoDefinitions>(config_path.join("repo_definitions").as_path(), true)?;
 
     let mut repos = HashMap::new();
     let repos_dir = config_path.join("repos");
@@ -94,6 +97,7 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
         common,
         repos,
         storage,
+        repo_definitions,
     })
 }
 
