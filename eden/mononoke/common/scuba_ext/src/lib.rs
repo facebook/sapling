@@ -134,6 +134,11 @@ impl MononokeScubaSampleBuilder {
             self.inner.add("unix_username", unix_name);
         }
 
+        self.inner
+            .add_opt("sandcastle_alias", metadata.sandcastle_alias());
+        self.inner
+            .add_opt("sandcastle_nonce", metadata.sandcastle_nonce());
+
         self
     }
 

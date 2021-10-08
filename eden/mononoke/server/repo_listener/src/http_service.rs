@@ -6,6 +6,8 @@
  */
 
 use anyhow::{anyhow, Context, Error, Result};
+#[cfg(fbcode_build)]
+use clientinfo::{ClientInfo, CLIENT_INFO_HEADER};
 use futures::future::{BoxFuture, FutureExt};
 use gotham_ext::socket_data::TlsSocketData;
 use http::{HeaderMap, HeaderValue, Method, Request, Response, Uri};
@@ -483,6 +485,15 @@ async fn try_convert_headers_to_metadata(
 
         if let Some(src_region) = src_region {
             metadata.add_revproxy_region(src_region);
+        }
+
+        let client_info: Option<ClientInfo> = headers
+            .get(CLIENT_INFO_HEADER)
+            .and_then(|h| h.to_str().ok())
+            .and_then(|ci| serde_json::from_str(&ci).ok());
+
+        if let Some(client_info) = client_info {
+            metadata.add_client_info(client_info);
         }
 
         Ok(Some(metadata))

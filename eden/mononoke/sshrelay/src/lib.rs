@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
+use clientinfo::ClientInfo;
 use futures::sync::mpsc;
 use futures_ext::BoxStream;
 use maplit::hashmap;
@@ -77,6 +78,7 @@ pub struct Metadata {
     client_hostname: Option<String>,
     revproxy_region: Option<String>,
     raw_encoded_cats: Option<String>,
+    client_info: Option<ClientInfo>,
 }
 
 impl Metadata {
@@ -112,6 +114,7 @@ impl Metadata {
             client_hostname,
             revproxy_region: None,
             raw_encoded_cats: None,
+            client_info: None,
         }
     }
 
@@ -141,6 +144,11 @@ impl Metadata {
 
     pub fn add_revproxy_region(&mut self, revproxy_region: String) -> &mut Self {
         self.revproxy_region = Some(revproxy_region);
+        self
+    }
+
+    pub fn add_client_info(&mut self, client_info: ClientInfo) -> &mut Self {
+        self.client_info = Some(client_info);
         self
     }
 
@@ -198,6 +206,18 @@ impl Metadata {
         }
 
         None
+    }
+
+    pub fn sandcastle_alias(&self) -> Option<&str> {
+        self.client_info
+            .as_ref()
+            .and_then(|ci| ci.fb.sandcastle_alias())
+    }
+
+    pub fn sandcastle_nonce(&self) -> Option<&str> {
+        self.client_info
+            .as_ref()
+            .and_then(|ci| ci.fb.sandcastle_nonce())
     }
 }
 
