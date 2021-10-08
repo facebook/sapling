@@ -25,6 +25,19 @@ where
     Some(val)
 }
 
+pub fn read_header_value_ignore_err<K, T>(state: &State, header: K) -> Option<T>
+where
+    K: AsHeaderName,
+    T: FromStr,
+    <T as FromStr>::Err: std::error::Error + Send + Sync + 'static,
+{
+    let headers = HeaderMap::try_borrow_from(&state)?;
+    let val = headers.get(header)?;
+    let val = std::str::from_utf8(val.as_bytes()).ok()?;
+
+    T::from_str(val).ok()
+}
+
 pub fn is_identity_subset<'a>(
     subset_idents: impl IntoIterator<Item = &'a MononokeIdentitySet>,
     client_idents: Option<&MononokeIdentitySet>,

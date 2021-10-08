@@ -5,13 +5,27 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use gotham::state::State;
 
+use clientinfo::{ClientInfo, CLIENT_INFO_HEADER};
 use gotham_ext::middleware::{PostResponseInfo, ScubaHandler};
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::middleware::RequestContext;
-use crate::util::read_header_value;
+use crate::util::read_header_value_ignore_err;
+
+struct ClientInfoHeader(ClientInfo);
+
+impl FromStr for ClientInfoHeader {
+    type Err = serde_json::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let client_info = serde_json::from_str(s)?;
+        Ok(Self(client_info))
+    }
+}
 
 #[derive(Copy, Clone, Debug)]
 pub enum LfsScubaKey {
@@ -42,6 +56,9 @@ pub enum LfsScubaKey {
     ClientAttempt,
     ClientAttemptsLeft,
     ClientThrottleAttemptsLeft,
+    /// Fields of ClientInfo
+    SandcastleNonce,
+    SandcastleAlias,
 }
 
 impl AsRef<str> for LfsScubaKey {
@@ -65,6 +82,8 @@ impl AsRef<str> for LfsScubaKey {
             ClientAttempt => "client_attempt",
             ClientAttemptsLeft => "client_attempts_left",
             ClientThrottleAttemptsLeft => "client_throttle_attempts_left",
+            SandcastleNonce => "sandcastle_nonce",
+            SandcastleAlias => "sandcastle_alias",
         }
     }
 }
@@ -81,27 +100,28 @@ pub struct LfsScubaHandler {
     client_attempt: Option<u64>,
     client_attempts_left: Option<u64>,
     client_throttle_attempts_left: Option<u64>,
+    client_info: Option<ClientInfo>,
 }
 
 impl ScubaHandler for LfsScubaHandler {
     fn from_state(state: &State) -> Self {
-        let client_attempt = read_header_value(state, "X-Attempt")
-            .map(|r| r.ok())
-            .flatten();
+        let client_attempt = read_header_value_ignore_err(state, "X-Attempt");
 
-        let client_attempts_left = read_header_value(state, "X-Attempts-Left")
-            .map(|r| r.ok())
-            .flatten();
+        let client_attempts_left = read_header_value_ignore_err(state, "X-Attempts-Left");
 
-        let client_throttle_attempts_left = read_header_value(state, "X-Throttle-Attempts-Left")
-            .map(|r| r.ok())
-            .flatten();
+        let client_throttle_attempts_left =
+            read_header_value_ignore_err(state, "X-Throttle-Attempts-Left");
+
+        let client_info: Option<ClientInfo> =
+            read_header_value_ignore_err(state, CLIENT_INFO_HEADER)
+                .map(|ci: ClientInfoHeader| ci.0);
 
         Self {
             ctx: state.try_borrow::<RequestContext>().cloned(),
             client_attempt,
             client_attempts_left,
             client_throttle_attempts_left,
+            client_info,
         }
     }
 
@@ -129,6 +149,18 @@ impl ScubaHandler for LfsScubaHandler {
             scuba.add(LfsScubaKey::ErrorCount, info.error_count());
 
             ctx.ctx.perf_counters().insert_perf_counters(scuba);
+        }
+
+        if let Some(client_info) = self.client_info {
+            scuba.add_opt(
+                LfsScubaKey::SandcastleNonce,
+                client_info.fb.sandcastle_nonce(),
+            );
+
+            scuba.add_opt(
+                LfsScubaKey::SandcastleAlias,
+                client_info.fb.sandcastle_alias(),
+            );
         }
     }
 }

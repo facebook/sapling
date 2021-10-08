@@ -8,24 +8,22 @@
 use anyhow::{anyhow, Result};
 use configparser::config::ConfigSet;
 use hostname::get_hostname;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+pub const CLIENT_INFO_HEADER: &str = "X-Client-Info";
 
 #[cfg(fbcode_build)]
 mod facebook;
+#[cfg(not(fbcode_build))]
+mod oss;
 
 #[cfg(fbcode_build)]
 use facebook::{get_fb_client_info, FbClientInfo};
 
 #[cfg(not(fbcode_build))]
-#[derive(Serialize, Debug)]
-pub struct FbClientInfo {}
+use oss::{get_fb_client_info, FbClientInfo};
 
-#[cfg(not(fbcode_build))]
-fn get_fb_client_info() -> FbClientInfo {
-    FbClientInfo {}
-}
-
-#[derive(Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct ClientInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub u64token: Option<u64>,
