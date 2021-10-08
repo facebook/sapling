@@ -439,7 +439,13 @@ class Top:
         def mainloop(stdscr):
             window = Window(stdscr, self.refresh_rate)
 
-            self.curses.curs_set(0)
+            try:
+                # This hides the cursor, which is generally a better UX,
+                # but some terminals do not support this. It's fine to continue
+                # without this.
+                self.curses.curs_set(0)
+            except Exception:
+                pass
 
             self.curses.use_default_colors()
             self.curses.init_pair(COLOR_SELECTED, self.curses.COLOR_GREEN, -1)
