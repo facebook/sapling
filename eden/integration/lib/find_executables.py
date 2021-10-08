@@ -79,9 +79,12 @@ class FindExeClass(object):
     def get_edenfsctl_env(self) -> Tuple[str, Dict[str, str]]:
         """Get path to edenfsctl and environmental variable required to run it."""
         env = os.environ.copy()
-        # On Windows, par files (which edenfsctl.real is) aren't directly
-        # executable and we need to call them with python.
-        env["EDENFSCTL_REAL"] = f"{sys.executable} {self._EDENFSCTL_REAL}"
+        edenfsctlreal = f"{self._EDENFSCTL_REAL}"
+        if sys.platform == "win32":
+            # On Windows, par files (which edenfsctl.real is) aren't directly
+            # executable and we need to call them with python.
+            edenfsctlreal = f"{sys.platform} {edenfsctlreal}"
+        env["EDENFSCTL_REAL"] = edenfsctlreal
         return self._EDENFSCTL, env
 
     @cached_property
