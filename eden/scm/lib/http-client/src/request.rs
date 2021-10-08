@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use maplit::hashmap;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::fs::File;
@@ -163,7 +165,7 @@ pub struct RequestId(usize);
 #[derive(Clone, Debug)]
 pub struct Request {
     ctx: RequestContext,
-    headers: Vec<(String, String)>,
+    headers: HashMap<String, String>,
     cert: Option<PathBuf>,
     key: Option<PathBuf>,
     cainfo: Option<PathBuf>,
@@ -240,7 +242,9 @@ impl Request {
             ctx,
             // Always set Expect so we can disable curl automatically expecting "100-continue".
             // That would require two response reads, which breaks the http_client model.
-            headers: vec![("Expect".to_string(), "".to_string())],
+            headers: hashmap! {
+                "Expect".to_string() => "".to_string(),
+            },
             cert: None,
             key: None,
             cainfo: None,
@@ -393,8 +397,13 @@ impl Request {
 
     /// Set a request header.
     pub fn set_header(&mut self, name: impl ToString, value: impl ToString) -> &mut Self {
-        self.headers.push((name.to_string(), value.to_string()));
+        self.headers
+            .insert(name.to_string().to_lowercase(), value.to_string());
         self
+    }
+
+    pub fn get_header_mut<'a>(&'a mut self, name: impl ToString) -> Option<&'a mut String> {
+        self.headers.get_mut(&name.to_string().to_lowercase())
     }
 
     /// Specify a client certificate for TLS mutual authentiation.
@@ -629,10 +638,23 @@ impl Request {
             .trigger_new_request(&mut self);
 
         let body_size = self.ctx.body.as_ref().map(|body| body.len() as u64);
-        let url = self.ctx.url().clone();
+        let mut url = self.ctx.url().clone();
+        if self.auth_proxy_socket_path.is_some() {
+            url.set_scheme("http")
+                .expect("Failed setting url scheme to http");
+            self.set_header("x-x2pagentd-ws-over-h1", "1")
+                .set_verify_tls_cert(false)
+                .set_verify_tls_host(false)
+                .set_convert_cert(false);
+
+            if let Some(user_agent) = self.get_header_mut("user-agent") {
+                user_agent.push_str("+x2pagentd");
+            }
+        }
         let handler = create_handler(self.ctx);
 
         let mut easy = Easy2::new(handler);
+
         easy.url(url.as_str())?;
         easy.verbose(self.verbose)?;
         easy.unix_socket_path(self.auth_proxy_socket_path)?;
@@ -684,12 +706,12 @@ impl Request {
             // as a regular header (without setting CURLOPT_ACCEPT_ENCODING) and decode the response
             // manually. This allows us to ensure support for formats we care about (e.g., zstd).
             self.headers
-                .push((header::ACCEPT_ENCODING.as_str().into(), encoding));
+                .insert(header::ACCEPT_ENCODING.as_str().into(), encoding);
         }
 
         // Add headers.
         let mut headers = List::new();
-        for (name, value) in self.headers {
+        for (name, value) in self.headers.iter() {
             let header = format!("{}: {}", name, value);
             headers.append(&header)?;
         }

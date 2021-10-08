@@ -44,16 +44,6 @@ Create a new client repository. Enable LFS there.
   > remotenames =
   > EOF
 
-Check if we can do LFS operations through HTTP proxy
-  $ PROXY_PORT=$(get_free_socket)
-  $ lfs_port=$(echo $lfs_uri | grep -Eo ":[0-9]+\/?" | grep -Eo "[0-9]+")
-  $ ncat -lkv localhost $PROXY_PORT -c "tee -a ${TESTTMP}/ncat_proxy.log | ncat localhost ${lfs_port} | tee -a ${TESTTMP}/ncat_proxy.log" 2>/dev/null &
-  $ ncat_pid=$!
-  $ cat >> .hg/hgrc <<EOF
-  > [auth_proxy]
-  > http_proxy=http://localhost:$PROXY_PORT
-  > EOF
-
 Update in the client repo
   $ hgmn pull -q
   devel-warn: applied empty changegroup at* (glob)
@@ -190,9 +180,3 @@ Create a new client repository, using getpack (with its own cachepath)
   A lfs-largefile-renamed
     lfs-largefile-for-rename
   R lfs-largefile-for-rename
-
-  $ cat "${TESTTMP}/ncat_proxy.log" | grep -o "^HTTP/1.1 200 OK"
-  HTTP/1.1 200 OK
-  HTTP/1.1 200 OK
-  $ kill $ncat_pid
-

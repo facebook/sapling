@@ -53,6 +53,7 @@ pub struct HgHttpConfig {
     pub disable_tls_verification: bool,
     pub convert_cert: bool,
     pub client_info: Option<String>,
+    pub unix_socket_path: Option<String>,
 }
 
 /// Set a global configuration that will be applied to all HTTP requests in
@@ -67,6 +68,7 @@ pub fn set_global_config(config: HgHttpConfig) {
             .set_verify_tls_host(!config.disable_tls_verification)
             .set_client_info(&config.client_info)
             .set_verbose(config.verbose)
+            .set_auth_proxy_socket_path(config.unix_socket_path.clone())
             .set_convert_cert(config.convert_cert);
     });
 }

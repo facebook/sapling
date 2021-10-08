@@ -14,6 +14,7 @@ use clidispatch::io::IO;
 use clidispatch::{dispatch, errors};
 use clientinfo::ClientInfo;
 use configparser::config::ConfigSet;
+use configparser::configmodel::ConfigExt;
 use fail::FailScenario;
 use hg_http::HgHttpConfig;
 use once_cell::sync::Lazy;
@@ -620,6 +621,9 @@ fn setup_http(config: &ConfigSet, global_opts: &HgGlobalOpts) {
             .get_or("http", "convert-cert", || cfg!(windows))
             .unwrap_or(cfg!(windows)),
         client_info: ClientInfo::new(config).and_then(|i| i.into_json()).ok(),
+        unix_socket_path: config
+            .get_nonempty_opt("auth_proxy", "unix_socket_path")
+            .expect("Can't get auth_proxy.unix_socket_path config"),
     };
     hg_http::set_global_config(http_config);
 }
