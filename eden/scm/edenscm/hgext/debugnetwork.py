@@ -123,21 +123,34 @@ def checkspeedhttp(ui, url, opts):
     ui.status(_("Testing connection speed to the server\n"), component="debugnetwork")
     download = ui.configbytes("debugnetwork", "speed-test-download-size", 10000000)
     upload = ui.configbytes("debugnetwork", "speed-test-upload-size", 1000000)
+    unixsocketpath = ui.config("auth_proxy", "unix_socket_path")
 
-    sslvalidator = lambda x: None if opts.get("insecure") else sslutil.validatesocket
+    if unixsocketpath and not pycompat.iswindows:
+        ui.status(_("Traffic will go through the x2pagentd."), component="debugnetwork")
+        conn = httpclient.HTTPConnection(
+            url.host,
+            use_ssl=False,
+            ui=ui,
+            unix_socket_path=unixsocketpath,
+        )
+    else:
 
-    _authdata, auth = httpconnection.readauthforuri(ui, str(url), url.user)
+        sslvalidator = (
+            lambda x: None if opts.get("insecure") else sslutil.validatesocket
+        )
 
-    conn = httpclient.HTTPConnection(
-        url.host,
-        int(url.port),
-        use_ssl=True,
-        ssl_wrap_socket=sslutil.wrapsocket,
-        ssl_validator=sslvalidator,
-        ui=ui,
-        certfile=auth.get("cert"),
-        keyfile=auth.get("key"),
-    )
+        _authdata, auth = httpconnection.readauthforuri(ui, str(url), url.user)
+
+        conn = httpclient.HTTPConnection(
+            url.host,
+            int(url.port),
+            use_ssl=True,
+            ssl_wrap_socket=sslutil.wrapsocket,
+            ssl_validator=sslvalidator,
+            ui=ui,
+            certfile=auth.get("cert"),
+            keyfile=auth.get("key"),
+        )
 
     def downloadtest(_description, bytecount):
         headers = {HEADER_NETSPEEDTEST_NBYTES: bytecount}
