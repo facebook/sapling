@@ -86,9 +86,7 @@ impl Metadata {
         identities: MononokeIdentitySet,
         priority: Priority,
         client_debug: bool,
-        client_ip: Option<IpAddr>,
-        revproxy_region: Option<String>,
-        raw_encoded_cats: Option<String>,
+        client_ip: IpAddr,
     ) -> Self {
         let session_id: SessionId = match session_id {
             Some(id) => SessionId::from_string(id.to_owned()),
@@ -98,25 +96,22 @@ impl Metadata {
         // Hostname of the client is for non-critical use only, make sure we don't block clients
         // in case DNS is down by setting a timeout. In case DNS resolving is down, we maximumly
         // delay the request for one second.
-        let client_hostname = match client_ip {
-            Some(client_ip) => timeout(Duration::from_secs(1), Metadata::reverse_lookup(client_ip))
-                .await
-                .map_err(Error::from)
-                .flatten()
-                .ok(),
-            None => None,
-        };
+        let client_hostname = timeout(Duration::from_secs(1), Metadata::reverse_lookup(client_ip))
+            .await
+            .map_err(Error::from)
+            .flatten()
+            .ok();
 
         Self {
-            raw_encoded_cats,
             session_id,
             is_trusted_client,
             identities,
             priority,
             client_debug,
-            client_ip,
+            client_ip: Some(client_ip),
             client_hostname,
-            revproxy_region,
+            revproxy_region: None,
+            raw_encoded_cats: None,
         }
     }
 
@@ -137,6 +132,16 @@ impl Metadata {
             .next()
             .map(|name| name.to_string().trim_end_matches('.').to_string())
             .ok_or_else(|| anyhow!("failed to do reverse lookup"))
+    }
+
+    pub fn add_raw_encoded_cats(&mut self, raw_encoded_cats: String) -> &mut Self {
+        self.raw_encoded_cats = Some(raw_encoded_cats);
+        self
+    }
+
+    pub fn add_revproxy_region(&mut self, revproxy_region: String) -> &mut Self {
+        self.revproxy_region = Some(revproxy_region);
+        self
     }
 
     pub fn session_id(&self) -> &SessionId {

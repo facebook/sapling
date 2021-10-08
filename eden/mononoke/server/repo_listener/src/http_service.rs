@@ -457,35 +457,35 @@ async fn try_convert_headers_to_metadata(
             .parse::<IpAddr>()
             .context("Invalid IP Address")?;
 
-        let src_region = headers
-            .get(HEADER_REVPROXY_REGION)
-            .map(|r| r.to_str().ok().map(|r| r.to_string()))
-            .flatten();
-
-        let cats = if let Some(cats) = headers.get(HEADER_FORWARDED_CATS) {
-            Some(cats.to_str().context("Invalid encoded cats")?.to_string())
-        } else {
-            None
-        };
-
         // In the case of HTTP proxied/trusted requests we only have the
         // guarantee that we can trust the forwarded credentials. Beyond
         // this point we can't trust anything else, ACL checks have not
         // been performed, so set 'is_trusted' to 'false' here to enforce
         // further checks.
-        Ok(Some(
-            Metadata::new(
-                Some(&generate_session_id().to_string()),
-                false,
-                identities,
-                Priority::Default,
-                headers.contains_key(HEADER_CLIENT_DEBUG),
-                Some(ip_addr),
-                src_region,
-                cats,
-            )
-            .await,
-        ))
+        let mut metadata = Metadata::new(
+            Some(&generate_session_id().to_string()),
+            false,
+            identities,
+            Priority::Default,
+            headers.contains_key(HEADER_CLIENT_DEBUG),
+            ip_addr,
+        )
+        .await;
+
+        if let Some(cats) = headers.get(HEADER_FORWARDED_CATS) {
+            metadata
+                .add_raw_encoded_cats(cats.to_str().context("Invalid encoded cats")?.to_string());
+        }
+
+        let src_region = headers
+            .get(HEADER_REVPROXY_REGION)
+            .and_then(|r| r.to_str().ok().map(|r| r.to_string()));
+
+        if let Some(src_region) = src_region {
+            metadata.add_revproxy_region(src_region);
+        }
+
+        Ok(Some(metadata))
     } else {
         Ok(None)
     }

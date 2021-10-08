@@ -344,9 +344,7 @@ where
             (*conn.identities).clone(),
             Priority::Default,
             client_debug,
-            Some(conn.pending.addr.ip()),
-            None,
-            None,
+            conn.pending.addr.ip(),
         )
         .await
     };
@@ -611,9 +609,7 @@ async fn try_convert_preamble_to_metadata(preamble: &Preamble, addr: IpAddr) -> 
             .get("client_debug")
             .map(|debug| debug.parse::<bool>().unwrap_or_default())
             .unwrap_or_default(),
-        Some(client_ip),
-        None,
-        None,
+        client_ip,
     )
     .await)
 }
