@@ -10,5 +10,5 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 edenfs-commands = { version = "0.1.0", path = "../edenfs-commands" }
-structopt = "0.3.21"
+structopt = "0.3.23"
 tracing-subscriber = { version = "0.2.22", features = ["parking_lot"] }
