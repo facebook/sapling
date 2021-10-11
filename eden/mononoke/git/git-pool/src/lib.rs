@@ -44,19 +44,25 @@ impl GitPool {
         T: Send + Sync + 'static,
         E: Into<Error> + Send + Sync + 'static,
     {
-        let permit = self.sem.clone().acquire_owned().await?;
+        let sem = self.sem.clone();
         let pool = self.pool.clone();
-        let ret = tokio_shim::task::spawn_blocking(move || {
-            let result_repo = pool.get()?;
-            let repo = match &*result_repo {
-                Ok(repo) => repo,
-                Err(err) => {
-                    return Err(anyhow!("error while opening repo: {}", err));
-                }
-            };
-            let ret = f(&repo).map_err(|e| e.into())?;
-            drop(result_repo);
-            drop(permit);
+        // Note - this tokio::spawn() is an attempt to fix deadlock D31541432.
+        let ret = tokio::spawn(async move {
+            let permit = sem.acquire_owned().await?;
+            let ret = tokio_shim::task::spawn_blocking(move || {
+                let result_repo = pool.get()?;
+                let repo = match &*result_repo {
+                    Ok(repo) => repo,
+                    Err(err) => {
+                        return Err(anyhow!("error while opening repo: {}", err));
+                    }
+                };
+                let ret = f(repo).map_err(|e| e.into())?;
+                drop(result_repo);
+                drop(permit);
+                Result::<_, Error>::Ok(ret)
+            })
+            .await??;
             Result::<_, Error>::Ok(ret)
         })
         .await??;
