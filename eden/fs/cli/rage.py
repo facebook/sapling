@@ -97,6 +97,8 @@ def print_diagnostic_info(
 
     print_eden_config(instance, out)
 
+    print_prefetch_profiles_list(instance, out)
+
     print_env_variables(out)
 
 
@@ -340,3 +342,19 @@ def print_eden_config(instance: EdenInstance, out: IO[bytes]) -> None:
         instance.print_full_config(out)
     except Exception as e:
         out.write(f"Error printing EdenFS config: {e}\n".encode())
+
+
+def print_prefetch_profiles_list(instance: EdenInstance, out: IO[bytes]) -> None:
+    try:
+        section_title("Prefetch Profiles list:", out)
+        checkouts = instance.get_checkouts()
+        for checkout in checkouts:
+            profiles = sorted(checkout.get_config().active_prefetch_profiles)
+            if profiles:
+                out.write(f"{checkout.path}:\n".encode())
+                for name in profiles:
+                    out.write(f"  - {name}\n".encode())
+            else:
+                out.write(f"{checkout.path}: []\n".encode())
+    except Exception as e:
+        out.write(f"Error printing Prefetch Profiles list: {e}\n".encode())
