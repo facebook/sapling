@@ -445,8 +445,7 @@ struct PushrebaseOutcome {
 
 /// Method parameters structures
 
-struct ListReposParams {
-}
+struct ListReposParams {}
 
 struct RepoResolveBookmarkParams {
   /// The bookmark name to look up.
@@ -546,8 +545,7 @@ struct RepoCreateCommitParamsFileChanged {
   3: optional RepoCreateCommitParamsFileCopyInfo copy_info;
 }
 
-struct RepoCreateCommitParamsFileDeleted {
-}
+struct RepoCreateCommitParamsFileDeleted {}
 
 union RepoCreateCommitParamsChange {
   /// The file was created or changed.
@@ -680,8 +678,7 @@ struct CommitLookupParams {
   1: set<CommitIdentityScheme> identity_schemes;
 }
 
-struct CommitLookupPushrebaseHistoryParams {
-}
+struct CommitLookupPushrebaseHistoryParams {}
 
 struct CommitInfoParams {
   /// Commit identity schemes to return.
@@ -804,11 +801,9 @@ struct CommitListDescendantBookmarksParams {
   5: set<CommitIdentityScheme> identity_schemes;
 }
 
-struct CommitPathExistsParams {
-}
+struct CommitPathExistsParams {}
 
-struct CommitPathInfoParams {
-}
+struct CommitPathInfoParams {}
 
 const i64 TREE_LIST_MAX_LIMIT = 10000;
 
@@ -851,8 +846,7 @@ struct CommitPathHistoryParams {
   9: optional CommitId exclude_changeset_and_ancestors;
 }
 
-struct TreeExistsParams {
-}
+struct TreeExistsParams {}
 
 struct TreeListParams {
   /// Start listing at this offset in the tree.
@@ -862,11 +856,9 @@ struct TreeListParams {
   2: i64 limit;
 }
 
-struct FileExistsParams {
-}
+struct FileExistsParams {}
 
-struct FileInfoParams {
-}
+struct FileInfoParams {}
 
 const i64 FILE_CONTENT_CHUNK_SIZE_LIMIT = 0x1000000; /// 16MiB
 
@@ -885,8 +877,7 @@ struct FileContentChunkParams {
   2: i64 size;
 }
 
-struct FileContentStreamParams {
-}
+struct FileContentStreamParams {}
 
 struct FileDiffParams {
   /// The ID of the other file, obtained from a previous response.
@@ -1116,14 +1107,11 @@ struct RepoCreateCommitResponse {
   1: map<CommitIdentityScheme, CommitId> ids;
 }
 
-struct RepoCreateBookmarkResponse {
-}
+struct RepoCreateBookmarkResponse {}
 
-struct RepoMoveBookmarkResponse {
-}
+struct RepoMoveBookmarkResponse {}
 
-struct RepoDeleteBookmarkResponse {
-}
+struct RepoDeleteBookmarkResponse {}
 
 struct RepoLandStackResponse {
   1: PushrebaseOutcome pushrebase_outcome;
@@ -1274,8 +1262,7 @@ struct RepoListHgManifestResponse {
   1: list<HgManifestEntry> entries;
 }
 
-struct MegarepoAddConfigResponse {
-}
+struct MegarepoAddConfigResponse {}
 
 struct MegarepoAddTargetResponse {
   /// A new position of the target bookmark
