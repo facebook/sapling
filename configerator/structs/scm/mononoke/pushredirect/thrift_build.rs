@@ -7,6 +7,9 @@ use thrift_compiler::Config;
 
 #[rustfmt::skip]
 fn main() {
+    // Rerun if this gets rewritten.
+    println!("cargo:rerun-if-changed=thrift_build.rs");
+
     let out_dir = env::var_os("OUT_DIR").expect("OUT_DIR env not provided");
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
