@@ -157,11 +157,14 @@ py_class!(pub class client |py| {
         self.inner(py).clone().commit_revlog_data_py(py, repo, nodes)
     }
 
+    /// bookmarks(repo, [name]) -> {name: node|None}
+    ///
+    /// Resolve remote bookmarks.
     def bookmarks(
         &self,
         repo: String,
         bookmarks: Vec<String>
-    ) -> PyResult<(PyDict, stats)> {
+    ) -> PyResult<PyDict> {
         self.inner(py).clone().bookmarks_py(py, repo, bookmarks)
     }
 

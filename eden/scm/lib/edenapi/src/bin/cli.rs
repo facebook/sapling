@@ -126,7 +126,7 @@ async fn cmd_bookmarks(args: Args) -> Result<()> {
         log::info!("Requesting values for {} bookmarks", req.bookmarks.len(),);
 
         let response = client.bookmarks(repo.clone(), req.bookmarks).await?;
-        handle_response(response).await?;
+        handle_vec(response).await?;
     }
 
     Ok(())
@@ -230,6 +230,19 @@ async fn handle_response<T: ToWire>(res: Response<T>) -> Result<()> {
     Ok(())
 }
 
+async fn handle_vec<T: ToWire>(res: Vec<T>) -> Result<()> {
+    let buf = serialize_and_concat_vec(res).await?;
+
+    if atty::is(atty::Stream::Stdout) {
+        log::warn!("Not writing output because stdout is a TTY");
+    } else {
+        log::info!("Writing output to stdout");
+        io::stdout().write_all(&buf).await?;
+    }
+
+    Ok(())
+}
+
 // TODO(meyer): Remove when all types have wire type
 async fn handle_response_raw<T: Serialize>(res: Response<T>) -> Result<()> {
     let buf = serialize_and_concat_raw(res.entries).await?;
@@ -259,6 +272,14 @@ async fn serialize_and_concat<T: ToWire>(entries: Entries<T>) -> Result<Vec<u8>>
         .and_then(|entry| async move { Ok(serde_cbor::to_vec(&entry.to_wire())?) })
         .try_concat()
         .await
+}
+
+async fn serialize_and_concat_vec<T: ToWire>(entries: Vec<T>) -> Result<Vec<u8>> {
+    let serialized = entries
+        .into_iter()
+        .map(|entry| serde_cbor::to_vec(&entry.to_wire()))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(serialized.concat())
 }
 
 // TODO: Remove when all types have wire type

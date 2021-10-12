@@ -19,7 +19,7 @@ use cpython_ext::convert::Serde;
 use cpython_ext::PyCell;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::{Location, VertexName};
-use edenapi::{BlockingResponse, EdenApi, EdenApiError, Response, Stats};
+use edenapi::{EdenApi, EdenApiError, Response, Stats};
 use edenapi_ext::{calc_contentid, download_files, upload_snapshot};
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitGraphEntry, CommitHashLookupResponse,
@@ -249,16 +249,17 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         bookmarks: Vec<String>,
-    ) -> PyResult<(PyDict, stats)> {
-        let response =
-            BlockingResponse::from_async(self.bookmarks(repo, bookmarks)).map_pyerr(py)?;
+    ) -> PyResult<PyDict> {
+        let response = py
+            .allow_threads(|| block_unless_interrupted(self.bookmarks(repo, bookmarks)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
 
         let bookmarks = PyDict::new(py);
-        for entry in response.entries.into_iter() {
+        for entry in response {
             bookmarks.set_item(py, entry.bookmark, entry.hgid.map(|id| id.to_hex()))?;
         }
-        let stats = stats::new(py, response.stats)?;
-        Ok((bookmarks, stats))
+        Ok(bookmarks)
     }
 
     fn hash_lookup_py(

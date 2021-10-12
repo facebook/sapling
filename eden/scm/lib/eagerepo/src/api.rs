@@ -425,7 +425,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         bookmarks: Vec<String>,
-    ) -> edenapi::Result<Response<BookmarkEntry>> {
+    ) -> edenapi::Result<Vec<BookmarkEntry>> {
         debug!("bookmarks {}", debug_string_list(&bookmarks),);
         let mut values = Vec::new();
         let map = self.get_bookmarks_map().map_err(map_crate_err)?;
@@ -435,9 +435,9 @@ impl EdenApi for EagerRepo {
                 bookmark: name,
                 hgid: opt_id,
             };
-            values.push(Ok(entry));
+            values.push(entry);
         }
-        Ok(convert_to_response(values))
+        Ok(values)
     }
 
     async fn lookup_batch(

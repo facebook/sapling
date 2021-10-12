@@ -177,7 +177,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         bookmarks: Vec<String>,
-    ) -> Result<Response<BookmarkEntry>, EdenApiError> {
+    ) -> Result<Vec<BookmarkEntry>, EdenApiError> {
         let _ = (repo, bookmarks);
         Err(EdenApiError::NotSupported)
     }

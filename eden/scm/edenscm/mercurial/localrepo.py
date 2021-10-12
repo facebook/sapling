@@ -951,7 +951,7 @@ class localrepository(object):
                     self.ui.configbool("pull", "httpbookmarks")
                     and self.nullableedenapi is not None
                 ):
-                    (fetchedbookmarks, _stats) = self.edenapi.bookmarks(
+                    fetchedbookmarks = self.edenapi.bookmarks(
                         self.name, list(bookmarknames)
                     )
                     tracing.debug(

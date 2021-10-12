@@ -329,7 +329,7 @@ def _findcommonheadsnew(
     commonsample = set()
 
     if httpenabled():
-        (fetchedbookmarks, _stats) = local.edenapi.bookmarks(local.name, list(selected))
+        fetchedbookmarks = local.edenapi.bookmarks(local.name, list(selected))
         remoteheads = {bm: n for (bm, n) in fetchedbookmarks.items() if n is not None}
         commonsample = httpcommitlookup(local, sample)
     else:

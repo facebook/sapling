@@ -622,7 +622,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         bookmarks: Vec<String>,
-    ) -> Result<Response<BookmarkEntry>, EdenApiError> {
+    ) -> Result<Vec<BookmarkEntry>, EdenApiError> {
         tracing::info!("Requesting '{}' bookmarks", bookmarks.len());
         let url = self.build_url(paths::BOOKMARKS, Some(&repo))?;
         let bookmark_req = BookmarkRequest { bookmarks };
@@ -632,7 +632,8 @@ impl EdenApi for Client {
             .cbor(&bookmark_req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        Ok(self.fetch::<WireBookmarkEntry>(vec![req])?)
+        self.fetch_vec_with_retry::<WireBookmarkEntry>(vec![req])
+            .await
     }
 
     async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {

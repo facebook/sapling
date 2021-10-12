@@ -181,7 +181,7 @@ class eagerpeer(repository.peer):
             if not isinstance(patterns, list):
                 patterns = sorted(patterns)
             # XXX: glob patterns are ignored.
-            books, _stats = self.edenapi.bookmarks(self._reponame, patterns)
+            books = self.edenapi.bookmarks(self._reponame, patterns)
             for k, v in books.items():
                 # ex. {'a': '3131313131313131313131313131313131313131', 'b': None}
                 if v is not None:
