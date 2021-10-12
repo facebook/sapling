@@ -22,7 +22,7 @@ pub fn to_path(py: Python, name: &PyPath) -> PyResult<RepoPathBuf> {
         .map(|path| path.to_owned())
 }
 
-pub fn to_hgid(py: Python, hgid: &PyBytes) -> HgId {
+fn to_hgid(py: Python, hgid: &PyBytes) -> HgId {
     let mut bytes = [0u8; 20];
     bytes.copy_from_slice(&hgid.data(py)[0..20]);
     HgId::from(&bytes)
@@ -54,10 +54,6 @@ pub fn to_tree_attrs(py: Python, attrs: &PyDict) -> PyResult<TreeAttributes> {
         .unwrap_or(attributes.child_metadata);
 
     Ok(attributes)
-}
-
-pub fn to_hgids(py: Python, hgids: impl IntoIterator<Item = PyBytes>) -> Vec<HgId> {
-    hgids.into_iter().map(|hgid| to_hgid(py, &hgid)).collect()
 }
 
 pub fn to_key(py: Python, path: &PyPath, hgid: &PyBytes) -> PyResult<Key> {

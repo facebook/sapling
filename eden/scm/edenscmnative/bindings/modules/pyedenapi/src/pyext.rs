@@ -36,13 +36,14 @@ use revisionstore::{
     datastore::separate_metadata, HgIdMutableDeltaStore, HgIdMutableHistoryStore, StoreKey,
     StoreResult,
 };
+use types::HgId;
 use types::RepoPathBuf;
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
-    as_deltastore, as_historystore, meta_to_dict, to_contentid, to_hgid, to_hgids, to_keys,
-    to_keys_with_parents, to_path, to_tree_attrs, to_trees_upload_items,
+    as_deltastore, as_historystore, meta_to_dict, to_contentid, to_keys, to_keys_with_parents,
+    to_path, to_tree_attrs, to_trees_upload_items,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -189,14 +190,12 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         repo: String,
         rootdir: PyPathBuf,
-        mfnodes: Vec<PyBytes>,
-        basemfnodes: Vec<PyBytes>,
+        mfnodes: Vec<HgId>,
+        basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<stats> {
         let rootdir = to_path(py, &rootdir)?;
-        let mfnodes = to_hgids(py, mfnodes);
-        let basemfnodes = to_hgids(py, basemfnodes);
         let store = as_deltastore(py, store)?;
 
         let stats = py
@@ -223,10 +222,8 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        nodes: Vec<PyBytes>,
+        nodes: Vec<HgId>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitRevlogData>>>, PyFuture)> {
-        let nodes = to_hgids(py, nodes);
-
         let (commits, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
@@ -281,12 +278,12 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        requests: Vec<(PyBytes, u64, u64)>,
+        requests: Vec<(HgId, u64, u64)>,
     ) -> PyResult<Serde<Vec<CommitLocationToHashResponse>>> {
         let requests = requests
             .into_iter()
-            .map(|(hgid_bytes, distance, count)| {
-                let location = Location::new(to_hgid(py, &hgid_bytes), distance);
+            .map(|(hgid, distance, count)| {
+                let location = Location::new(hgid, distance);
                 CommitLocationToHashRequest { location, count }
             })
             .collect();
@@ -304,11 +301,9 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        master_heads: Vec<PyBytes>,
-        hgids: Vec<PyBytes>,
+        master_heads: Vec<HgId>,
+        hgids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<CommitHashToLocationResponse>>> {
-        let master_heads = to_hgids(py, master_heads);
-        let hgids = to_hgids(py, hgids);
         let responses = py
             .allow_threads(|| {
                 block_unless_interrupted(self.commit_hash_to_location(repo, master_heads, hgids))
@@ -323,9 +318,8 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        hgids: Vec<PyBytes>,
+        hgids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<CommitKnownResponse>>> {
-        let hgids = to_hgids(py, hgids);
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.commit_known(repo, hgids)))
             .map_pyerr(py)?
@@ -337,11 +331,9 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        heads: Vec<PyBytes>,
-        common: Vec<PyBytes>,
+        heads: Vec<HgId>,
+        common: Vec<HgId>,
     ) -> PyResult<Serde<Vec<CommitGraphEntry>>> {
-        let heads = to_hgids(py, heads);
-        let common = to_hgids(py, common);
         let responses = py
             .allow_threads(|| block_unless_interrupted(self.commit_graph(repo, heads, common)))
             .map_pyerr(py)?
@@ -372,11 +364,9 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        old_master: PyBytes,
-        new_master: PyBytes,
+        old_master: HgId,
+        new_master: HgId,
     ) -> PyResult<PyCell> {
-        let old_master = to_hgid(py, &old_master);
-        let new_master = to_hgid(py, &new_master);
         let data = {
             py.allow_threads(|| {
                 block_unless_interrupted(async move {
@@ -418,15 +408,12 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        nodes: Vec<PyBytes>,
+        nodes: Vec<HgId>,
     ) -> PyResult<Serde<Vec<LookupResponse>>> {
         self.lookup_py(
             py,
             repo,
-            nodes
-                .into_iter()
-                .map(|node| AnyId::HgChangesetId(to_hgid(py, &node)))
-                .collect(),
+            nodes.into_iter().map(AnyId::HgChangesetId).collect(),
         )
     }
 
@@ -434,50 +421,34 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        ids: Vec<PyBytes>,
+        ids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<LookupResponse>>> {
-        self.lookup_py(
-            py,
-            repo,
-            ids.into_iter()
-                .map(|id| AnyId::HgFilenodeId(to_hgid(py, &id)))
-                .collect(),
-        )
+        self.lookup_py(py, repo, ids.into_iter().map(AnyId::HgFilenodeId).collect())
     }
 
     fn lookup_trees(
         self: Arc<Self>,
         py: Python,
         repo: String,
-        ids: Vec<PyBytes>,
+        ids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<LookupResponse>>> {
-        self.lookup_py(
-            py,
-            repo,
-            ids.into_iter()
-                .map(|id| AnyId::HgTreeId(to_hgid(py, &id)))
-                .collect(),
-        )
+        self.lookup_py(py, repo, ids.into_iter().map(AnyId::HgTreeId).collect())
     }
 
     fn lookup_filenodes_and_trees(
         self: Arc<Self>,
         py: Python,
         repo: String,
-        filenodes_ids: Vec<PyBytes>,
-        trees_ids: Vec<PyBytes>,
+        filenodes_ids: Vec<HgId>,
+        trees_ids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<LookupResponse>>> {
         self.lookup_py(
             py,
             repo,
             filenodes_ids
                 .into_iter()
-                .map(|id| AnyId::HgFilenodeId(to_hgid(py, &id)))
-                .chain(
-                    trees_ids
-                        .into_iter()
-                        .map(|id| AnyId::HgTreeId(to_hgid(py, &id))),
-                )
+                .map(AnyId::HgFilenodeId)
+                .chain(trees_ids.into_iter().map(AnyId::HgTreeId))
                 .collect(),
         )
     }
@@ -730,8 +701,8 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         changesets: Vec<(
-            PyBytes,                   /* hgid (node_id) */
-            Serde<HgChangesetContent>, /* changeset content */
+            HgId,               /* hgid (node_id) */
+            HgChangesetContent, /* changeset content */
         )>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
     ) -> PyResult<(
@@ -741,8 +712,8 @@ pub trait EdenApiPyExt: EdenApi {
         let changesets = changesets
             .into_iter()
             .map(|(node_id, content)| UploadHgChangeset {
-                node_id: to_hgid(py, &node_id),
-                changeset_content: content.0,
+                node_id,
+                changeset_content: content,
             })
             .collect();
         let mutations = mutations.into_iter().map(|m| m.0).collect();

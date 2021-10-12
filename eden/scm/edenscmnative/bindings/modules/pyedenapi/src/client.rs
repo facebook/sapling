@@ -30,6 +30,7 @@ use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
 use pyrevisionstore::{edenapifilestore, edenapitreestore};
 use revisionstore::{EdenApiFileStore, EdenApiTreeStore};
+use types::HgId;
 use types::RepoPathBuf;
 
 use crate::pyext::EdenApiPyExt;
@@ -128,8 +129,8 @@ py_class!(pub class client |py| {
         store: PyObject,
         repo: String,
         rootdir: PyPathBuf,
-        mfnodes: Vec<PyBytes>,
-        basemfnodes: Vec<PyBytes>,
+        mfnodes: Serde<Vec<HgId>>,
+        basemfnodes: Serde<Vec<HgId>>,
         depth: Option<usize> = None
     )  -> PyResult<stats> {
         let progress = self.progress(py).clone();
@@ -138,8 +139,8 @@ py_class!(pub class client |py| {
             store,
             repo,
             rootdir,
-            mfnodes,
-            basemfnodes,
+            mfnodes.0,
+            basemfnodes.0,
             depth,
             progress,
         )
@@ -152,9 +153,9 @@ py_class!(pub class client |py| {
     def commitdata(
         &self,
         repo: String,
-        nodes: Vec<PyBytes>
+        nodes: Serde<Vec<HgId>>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitRevlogData>>>, PyFuture)> {
-        self.inner(py).clone().commit_revlog_data_py(py, repo, nodes)
+        self.inner(py).clone().commit_revlog_data_py(py, repo, nodes.0)
     }
 
     /// bookmarks(repo, [name]) -> {name: node|None}
@@ -212,9 +213,9 @@ py_class!(pub class client |py| {
     def commitlocationtohash(
         &self,
         repo: String,
-        requests: Vec<(PyBytes, u64, u64)>,
+        requests: Serde<Vec<(HgId, u64, u64)>>,
     ) -> PyResult<Serde<Vec<CommitLocationToHashResponse>>> {
-        self.inner(py).clone().commit_location_to_hash_py(py, repo, requests)
+        self.inner(py).clone().commit_location_to_hash_py(py, repo, requests.0)
     }
 
     /// commithashtolocation(repo: str, master_heads: [bytes], hghds: [bytes], progress = None) ->
@@ -228,24 +229,24 @@ py_class!(pub class client |py| {
     def commithashtolocation(
         &self,
         repo: String,
-        master_heads: Vec<PyBytes>,
-        hgids: Vec<PyBytes>,
+        master_heads: Serde<Vec<HgId>>,
+        hgids: Serde<Vec<HgId>>,
     ) -> PyResult<Serde<Vec<CommitHashToLocationResponse>>> {
-        self.inner(py).clone().commit_hash_to_location_py(py, repo, master_heads, hgids)
+        self.inner(py).clone().commit_hash_to_location_py(py, repo, master_heads.0, hgids.0)
     }
 
     /// commitknown(repo: str, nodes: [bytes]) -> [{'hgid': bytes, 'known': Result[bool]}]
-    def commitknown(&self, repo: String, hgids: Vec<PyBytes>)
+    def commitknown(&self, repo: String, hgids: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<CommitKnownResponse>>>
     {
-        self.inner(py).clone().commit_known_py(py, repo, hgids)
+        self.inner(py).clone().commit_known_py(py, repo, hgids.0)
     }
 
     /// commitgraph(repo: str, heads: [bytes], common: [bytes]) -> [{'hgid': bytes, 'parents': [bytes]}]
-    def commitgraph(&self, repo: String, heads: Vec<PyBytes>, common: Vec<PyBytes>)
+    def commitgraph(&self, repo: String, heads: Serde<Vec<HgId>>, common: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<CommitGraphEntry>>>
     {
-        self.inner(py).clone().commit_graph_py(py, repo, heads, common)
+        self.inner(py).clone().commit_graph_py(py, repo, heads.0, common.0)
     }
 
     /// clonedata(repo: str) -> bytes
@@ -255,10 +256,10 @@ py_class!(pub class client |py| {
     }
 
     /// pullfastforwardmaster(repo: str, old_master: Bytes, new_master: Bytes) -> PyCell
-    def pullfastforwardmaster(&self, repo: String, old_master: PyBytes, new_master: PyBytes)
+    def pullfastforwardmaster(&self, repo: String, old_master: Serde<HgId>, new_master: Serde<HgId>)
         -> PyResult<PyCell>
     {
-        self.inner(py).clone().pull_fast_forward_master_py(py, repo, old_master, new_master)
+        self.inner(py).clone().pull_fast_forward_master_py(py, repo, old_master.0, new_master.0)
     }
 
 
@@ -270,32 +271,32 @@ py_class!(pub class client |py| {
     }
 
     /// lookup_commits(repo: str, nodes: [bytes])
-    def lookup_commits(&self, repo: String, nodes: Vec<PyBytes>)
+    def lookup_commits(&self, repo: String, nodes: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<LookupResponse>>>
     {
-        self.inner(py).clone().lookup_commits(py, repo, nodes)
+        self.inner(py).clone().lookup_commits(py, repo, nodes.0)
     }
 
     /// lookup_filenodes(repo: str, filenodes: [bytes])
-    def lookup_filenodes(&self, repo: String, hgids: Vec<PyBytes>)
+    def lookup_filenodes(&self, repo: String, hgids: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<LookupResponse>>>
     {
-        self.inner(py).clone().lookup_filenodes(py, repo, hgids)
+        self.inner(py).clone().lookup_filenodes(py, repo, hgids.0)
     }
 
     /// lookup_trees(repo: str, trees: [bytes])
-    def lookup_trees(&self, repo: String, hgids: Vec<PyBytes>)
+    def lookup_trees(&self, repo: String, hgids: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<LookupResponse>>>
     {
-        self.inner(py).clone().lookup_trees(py, repo, hgids)
+        self.inner(py).clone().lookup_trees(py, repo, hgids.0)
     }
 
 
     /// lookup_filenodes_and_trees(repo: str, filenodes: [bytes], trees: [bytes])
-    def lookup_filenodes_and_trees(&self, repo: String, filenodes: Vec<PyBytes>, trees: Vec<PyBytes>)
+    def lookup_filenodes_and_trees(&self, repo: String, filenodes: Serde<Vec<HgId>>, trees: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<LookupResponse>>>
     {
-        self.inner(py).clone().lookup_filenodes_and_trees(py, repo, filenodes, trees)
+        self.inner(py).clone().lookup_filenodes_and_trees(py, repo, filenodes.0, trees.0)
     }
 
     /// Upload file contents only
@@ -345,13 +346,13 @@ py_class!(pub class client |py| {
     def uploadchangesets(
         &self,
         repo: String,
-        changesets: Vec<(
-            PyBytes,                   /* hgid (node_id) */
-            Serde<HgChangesetContent>  /* changeset content */
-        )>,
+        changesets: Serde<Vec<(
+            HgId,               /* hgid (node_id) */
+            HgChangesetContent  /* changeset content */
+        )>>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
-        self.inner(py).clone().uploadchangesets_py(py, repo, changesets, mutations)
+        self.inner(py).clone().uploadchangesets_py(py, repo, changesets.0, mutations)
     }
 
     def uploadsnapshot(
