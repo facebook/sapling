@@ -100,7 +100,7 @@ impl SqlConstruct for SqlStreamingChunksFetcher {
     const LABEL: &'static str = "streaming-chunks";
 
     const CREATION_QUERY: &'static str = "
-        CREATE TABLE `streaming_changelog_chunks` (
+        CREATE TABLE IF NOT EXISTS `streaming_changelog_chunks` (
         `repo_id` int(11) NOT NULL,
         `tag` varbinary(100) NOT NULL DEFAULT '',
         `chunk_num` int(11) NOT NULL,

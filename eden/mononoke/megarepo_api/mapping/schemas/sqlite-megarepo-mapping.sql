@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `megarepo_changeset_mapping` (
+CREATE TABLE IF NOT EXISTS `megarepo_changeset_mapping` (
   `mapping_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `source_name` varchar(255) NOT NULL,
   `target_repo_id` INTEGER NOT NULL,

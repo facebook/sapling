@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE bonsai_hg_mapping (
+CREATE TABLE IF NOT EXISTS bonsai_hg_mapping (
   repo_id INTEGER NOT NULL,
   hg_cs_id BINARY(20) NOT NULL,
   bcs_id BINARY(32) NOT NULL,

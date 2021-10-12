@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE changesets (
+CREATE TABLE IF NOT EXISTS changesets (
   -- Sqlite doesn't support autoincrement UNSIGNED BIGINT
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   repo_id INTEGER NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE changesets (
   UNIQUE (repo_id, cs_id)
 );
 
-CREATE TABLE csparents (
+CREATE TABLE IF NOT EXISTS csparents (
   cs_id BIGINT NOT NULL,
   parent_id BIGINT NOT NULL,
   seq INTEGER NOT NULL,

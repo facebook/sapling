@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `repo_lock` (
+CREATE TABLE IF NOT EXISTS `repo_lock` (
   `repo` VARCHAR(255) PRIMARY KEY,
   `state` INTEGER NOT NULL,
   `reason` VARCHAR(255)

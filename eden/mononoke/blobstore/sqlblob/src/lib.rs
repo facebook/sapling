@@ -284,9 +284,7 @@ impl Sqlblob {
                     &pathbuf.join(format!("shard_{}.sqlite", shard_id)),
                     readonly_storage,
                 )?;
-                // When opening an sqlite database we might already have the proper tables in it, so ignore
-                // errors from table creation
-                let _ = con.execute_batch(Self::CREATION_QUERY);
+                con.execute_batch(Self::CREATION_QUERY)?;
                 Ok(con)
             },
             config_store,

@@ -31,8 +31,11 @@ setup repo
 create master bookmark
   $ hg bookmark master_bookmark -r tip
 
-blobimport, check blobstore puts are blocked
+blobimport normally, so sql is populated
   $ cd ..
-  $ rm -rf repo
+  $ blobimport repo-hg/.hg repo
+
+blobimport, check blobstore puts are blocked
+  $ rm -rf "$TESTTMP/blobstore/blobs/"*content*
   $ blobimport repo-hg/.hg repo --with-readonly-storage=true | grep 'root cause:'
   * root cause: ReadOnlyPut("*") (glob)

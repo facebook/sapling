@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `pushrebaserecording` (
+CREATE TABLE IF NOT EXISTS `pushrebaserecording` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `repo_id` INTEGER NOT NULL,
   `ontorev` VARBINARY(40) NOT NULL,

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE mutable_counters (
+CREATE TABLE IF NOT EXISTS mutable_counters (
   repo_id INT UNSIGNED NOT NULL,
   name VARCHAR(128) NOT NULL,
   value BIGINT NOT NULL,

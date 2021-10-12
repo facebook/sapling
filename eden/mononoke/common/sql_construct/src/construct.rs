@@ -42,7 +42,7 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
     fn with_sqlite_path<P: AsRef<Path>>(path: P, readonly: bool) -> Result<Self> {
         let path = path.as_ref();
         let conn = open_sqlite_path(path, false)?;
-        let _ = conn.execute_batch(Self::CREATION_QUERY);
+        conn.execute_batch(Self::CREATION_QUERY)?;
         let write_connection = Connection::with_sqlite(conn);
         let read_connection = Connection::with_sqlite(open_existing_sqlite_path(path, true)?);
         let connections = SqlConnections {

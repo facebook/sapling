@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `reversefillerqueue` (
+CREATE TABLE IF NOT EXISTS `reversefillerqueue` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT,
   `bundle` varbinary(255) NOT NULL,
   `reponame` varbinary(255) NOT NULL,

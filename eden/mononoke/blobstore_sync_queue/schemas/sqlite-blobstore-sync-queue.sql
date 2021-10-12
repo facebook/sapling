@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `blobstore_sync_queue` (
+CREATE TABLE IF NOT EXISTS `blobstore_sync_queue` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `blobstore_key` varchar NOT NULL,
   `blobstore_id` INTEGER NOT NULL,

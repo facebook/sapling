@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE walker_checkpoints (
+CREATE TABLE IF NOT EXISTS walker_checkpoints (
   repo_id INTEGER NOT NULL,
   checkpoint_name VARCHAR(255) NOT NULL,
   lower_bound BIGINT NOT NULL,

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `data` (
+CREATE TABLE IF NOT EXISTS `data` (
   `id` VARCHAR(255) NOT NULL,
   `creation_time` BIGINT NOT NULL,
   `chunk_id` VARCHAR(255) NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE `data` (
   PRIMARY KEY (`id`)
 );
 
-CREATE TABLE `chunk` (
+CREATE TABLE IF NOT EXISTS `chunk` (
   `id` VARCHAR(255) NOT NULL,
   `creation_time` TIMESTAMP DEFAULT CURRENT NOT NULL,
   `chunk_num` INT UNSIGNED NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE `chunk` (
   PRIMARY KEY (`id`, `chunk_num`)
 );
 
-CREATE TABLE `chunk_generation` (
+CREATE TABLE IF NOT EXISTS `chunk_generation` (
     `id` VARCHAR(255) NOT NULL,
     `last_seen_generation` BIGINT UNSIGNED NOT NULL,
     PRIMARY KEY (`id`)

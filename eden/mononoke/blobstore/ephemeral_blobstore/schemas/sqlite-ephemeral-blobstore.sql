@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `ephemeral_bubbles` (
+CREATE TABLE IF NOT EXISTS `ephemeral_bubbles` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `created_at` BIGINT NOT NULL,
   `expires_at` BIGINT NOT NULL,
@@ -13,10 +13,10 @@ CREATE TABLE `ephemeral_bubbles` (
   `owner_identity` VARCHAR(255)
 );
 
-CREATE INDEX `ephemeral_bubbles_expires`
+CREATE INDEX IF NOT EXISTS `ephemeral_bubbles_expires`
   ON `ephemeral_bubbles` (`expires_at`, `id`);
 
-CREATE TABLE `ephemeral_bubble_changeset_mapping` (
+CREATE TABLE IF NOT EXISTS `ephemeral_bubble_changeset_mapping` (
     `repo_id` INT NOT NULL,
     `cs_id` BINARY(32) NOT NULL,
     `bubble_id` BIGINT UNSIGNED NOT NULL,

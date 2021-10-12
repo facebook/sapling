@@ -242,7 +242,7 @@ function mononoke_hg_sync_with_failure_handler {
 
 function create_repo_lock_sqlite3_db {
   cat >> "$TESTTMP"/repo_lock.sql <<SQL
-  CREATE TABLE repo_lock (
+  CREATE TABLE IF NOT EXISTS repo_lock (
     repo VARCHAR(255) PRIMARY KEY,
     state INTEGER NOT NULL,
     reason VARCHAR(255)
@@ -260,7 +260,7 @@ function init_repo_lock_sqlite3_db {
 
 function create_mutable_counters_sqlite3_db {
   cat >> "$TESTTMP"/mutable_counters.sql <<SQL
-  CREATE TABLE mutable_counters (
+  CREATE TABLE IF NOT EXISTS mutable_counters (
     repo_id INT UNSIGNED NOT NULL,
     name VARCHAR(512) NOT NULL,
     value BIGINT NOT NULL,
@@ -277,7 +277,7 @@ function init_mutable_counters_sqlite3_db {
 
 function create_books_sqlite3_db {
   cat >> "$TESTTMP"/bookmarks.sql <<SQL
-  CREATE TABLE bookmarks_update_log (
+  CREATE TABLE IF NOT EXISTS bookmarks_update_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   repo_id INT UNSIGNED NOT NULL,
   name VARCHAR(512) NOT NULL,
@@ -466,7 +466,7 @@ function setup_common_config {
 
 function create_pushrebaserecording_sqlite3_db {
   cat >> "$TESTTMP"/pushrebaserecording.sql <<SQL
-  CREATE TABLE pushrebaserecording (
+  CREATE TABLE IF NOT EXISTS pushrebaserecording (
      id bigint(20) NOT NULL,
      repo_id int(10) NOT NULL,
      ontorev binary(40) NOT NULL,

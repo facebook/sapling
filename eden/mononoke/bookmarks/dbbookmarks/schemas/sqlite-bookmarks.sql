@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE bookmarks (
+CREATE TABLE IF NOT EXISTS bookmarks (
   repo_id INT UNSIGNED NOT NULL,
   name VARCHAR(512) NOT NULL,
   changeset_id VARBINARY(32) NOT NULL,
@@ -16,9 +16,9 @@ CREATE TABLE bookmarks (
   UNIQUE(repo_id, log_id)
 );
 
-CREATE INDEX repo_id_hg_kind ON bookmarks (repo_id, hg_kind);
+CREATE INDEX IF NOT EXISTS repo_id_hg_kind ON bookmarks (repo_id, hg_kind);
 
-CREATE TABLE bookmarks_update_log (
+CREATE TABLE IF NOT EXISTS bookmarks_update_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   repo_id INT UNSIGNED NOT NULL,
   name VARCHAR(512) NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE bookmarks_update_log (
   timestamp BIGINT NOT NULL
 );
 
-CREATE TABLE bundle_replay_data (
+CREATE TABLE IF NOT EXISTS bundle_replay_data (
   bookmark_update_log_id INTEGER PRIMARY KEY NOT NULL,
   bundle_handle VARCHAR(256) NOT NULL,
   commit_hashes_json MEDIUMTEXT NOT NULL

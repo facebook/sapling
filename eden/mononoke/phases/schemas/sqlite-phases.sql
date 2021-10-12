@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE phases (
+CREATE TABLE IF NOT EXISTS phases (
   repo_id INTEGER(11) NOT NULL,
   cs_id VARBINARY(32) NOT NULL,
   --There is no enum type in SQLite

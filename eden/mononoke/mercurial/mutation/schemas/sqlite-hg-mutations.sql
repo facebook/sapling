@@ -5,14 +5,14 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `hg_mutation_changesets` (
+CREATE TABLE IF NOT EXISTS `hg_mutation_changesets` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `repo_id` INTEGER UNSIGNED NOT NULL,
   `changeset_id` BINARY(20) NOT NULL,
   UNIQUE (`repo_id`, `changeset_id`)
 );
 
-CREATE TABLE `hg_mutation_info` (
+CREATE TABLE IF NOT EXISTS `hg_mutation_info` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `repo_id` INTEGER UNSIGNED NOT NULL,
   `successor` BINARY(20) NOT NULL,
@@ -27,10 +27,10 @@ CREATE TABLE `hg_mutation_info` (
   UNIQUE (`repo_id`, `successor`)
 );
 
-CREATE INDEX `hg_mutation_info_repo_id_primordial`
+CREATE INDEX IF NOT EXISTS `hg_mutation_info_repo_id_primordial`
   ON `hg_mutation_info` (`repo_id`, `primordial`);
 
-CREATE TABLE `hg_mutation_preds` (
+CREATE TABLE IF NOT EXISTS `hg_mutation_preds` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `repo_id` INTEGER UNSIGNED NOT NULL,
   `successor` BINARY(20) NOT NULL,
@@ -40,13 +40,13 @@ CREATE TABLE `hg_mutation_preds` (
   UNIQUE (`repo_id`, `successor`, `seq`)
 );
 
-CREATE INDEX `hg_mutation_preds_repo_id_predecessor`
+CREATE INDEX IF NOT EXISTS `hg_mutation_preds_repo_id_predecessor`
   ON `hg_mutation_preds` (`repo_id`, `predecessor`);
 
-CREATE INDEX `hg_mutation_preds_repo_id_primordial`
+CREATE INDEX IF NOT EXISTS `hg_mutation_preds_repo_id_primordial`
   ON `hg_mutation_preds` (`repo_id`, `primordial`);
 
-CREATE TABLE `hg_mutation_splits` (
+CREATE TABLE IF NOT EXISTS `hg_mutation_splits` (
   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   `repo_id` INTEGER UNSIGNED NOT NULL,
   `successor` BINARY(20) NOT NULL,
@@ -55,5 +55,5 @@ CREATE TABLE `hg_mutation_splits` (
   UNIQUE (`repo_id`, `successor`, `seq`)
 );
 
-CREATE INDEX `hg_mutation_splits_repo_id_split_successor`
+CREATE INDEX IF NOT EXISTS `hg_mutation_splits_repo_id_split_successor`
   ON `hg_mutation_splits` (`repo_id`, `split_successor`);

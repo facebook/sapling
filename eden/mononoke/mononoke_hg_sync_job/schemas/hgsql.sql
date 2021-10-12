@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE `revision_references` (
+CREATE TABLE IF NOT EXISTS `revision_references` (
   `repo` VARBINARY(64) NOT NULL,
   `namespace` VARBINARY(32) NOT NULL,
   `name` VARBINARY(256) NULL,

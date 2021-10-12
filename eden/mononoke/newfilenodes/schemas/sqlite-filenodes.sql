@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-CREATE TABLE filenodes (
+CREATE TABLE IF NOT EXISTS filenodes (
   repo_id INT UNSIGNED NOT NULL,
   path_hash VARBINARY(32) NOT NULL,
   is_tree BIT NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE filenodes (
   PRIMARY KEY (repo_id, path_hash, is_tree, filenode)
 );
 
-CREATE TABLE fixedcopyinfo (
+CREATE TABLE IF NOT EXISTS fixedcopyinfo (
   repo_id INT UNSIGNED NOT NULL,
   topath_hash VARBINARY(32) NOT NULL,
   tonode BINARY(20) NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE fixedcopyinfo (
   PRIMARY KEY (repo_id, topath_hash, tonode, is_tree)
 );
 
-CREATE TABLE paths (
+CREATE TABLE IF NOT EXISTS paths (
   repo_id INT UNSIGNED NOT NULL,
   path_hash VARBINARY(32) NOT NULL,
   path VARBINARY(4096) NOT NULL,
