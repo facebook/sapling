@@ -47,6 +47,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
     m.add(py, "nodemap", pynodemap::init_module(py, &name)?)?;
     m.add(py, "io", pyio::init_module(py, &name)?)?;
     m.add(py, "pathmatcher", pypathmatcher::init_module(py, &name)?)?;
+    m.add(py, "pprint", pypprint::init_module(py, &name)?)?;
     m.add(py, "process", pyprocess::init_module(py, &name)?)?;
     m.add(py, "progress", pyprogress::init_module(py, &name)?)?;
     m.add(py, "regex", pyregex::init_module(py, &name)?)?;

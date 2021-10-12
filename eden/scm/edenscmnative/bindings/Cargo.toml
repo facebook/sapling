@@ -45,6 +45,7 @@ pymutationstore = { path = "modules/pymutationstore" }
 pynodemap = { path = "modules/pynodemap" }
 pyio = { path = "modules/pyio" }
 pypathmatcher = { path = "modules/pypathmatcher" }
+pypprint = { path = "modules/pypprint" }
 pyprocess = { path = "modules/pyprocess" }
 pyprogress = { path = "modules/pyprogress" }
 pyregex = { path = "modules/pyregex" }
