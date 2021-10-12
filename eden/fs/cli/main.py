@@ -1366,7 +1366,17 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
             print(f"Removing {mount}...")
             if active:
                 try:
-                    stop_aux_processes_for_path(mount)
+                    # We don't bother complaining about removing redirections on
+                    # Windows since redirections are symlinks on windows,
+                    # anyways so the removal of the repo will remove them.
+                    # This would usually happen because the daemon is not
+                    # running, so this is usually just extra spam for users.
+                    stop_aux_processes_for_path(
+                        mount,
+                        complain_about_failing_to_unmount_redirs=(
+                            sys.platform != "win32"
+                        ),
+                    )
                 except Exception as ex:
                     print_stderr(f"error stoping aux processes {mount}: {ex}")
                     exit_code = 1
@@ -1376,6 +1386,12 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     # so should this theoretically should not happen.
                 try:
                     instance.unmount(mount)
+                except EdenNotRunningError:
+                    # Its fine if we could not tell the daemon to unmount
+                    # because the daemon is not running. There is just no
+                    # daemon we need to tell. Let's just perform the rest of
+                    # the clean up and this will remove the mount as expected.
+                    pass
                 except Exception as ex:
                     print_stderr(f"error unmounting {mount}: {ex}")
                     exit_code = 1
@@ -1575,20 +1591,27 @@ class StartCmd(Subcmd):
             raise Exception("execve should never return")
 
 
-def unmount_redirections_for_path(repo_path: str) -> None:
+def unmount_redirections_for_path(
+    repo_path: str, complain_about_failing_to_unmount_redirs: bool
+) -> None:
     parser = create_parser()
     args = parser.parse_args(["redirect", "unmount", "--mount", repo_path])
     try:
         args.func(args)
     except Exception as exc:
-        print(f"ignoring error while unmounting bind mounts: {exc}", file=sys.stderr)
+        if complain_about_failing_to_unmount_redirs:
+            print(
+                f"ignoring error while unmounting bind mounts: {exc}", file=sys.stderr
+            )
 
 
-def stop_aux_processes_for_path(repo_path: str) -> None:
+def stop_aux_processes_for_path(
+    repo_path: str, complain_about_failing_to_unmount_redirs: bool = True
+) -> None:
     """Tear down processes that will hold onto file handles and prevent shutdown
     for a given mount point/repo"""
     buck.stop_buckd_for_repo(repo_path)
-    unmount_redirections_for_path(repo_path)
+    unmount_redirections_for_path(repo_path, complain_about_failing_to_unmount_redirs)
 
 
 def stop_aux_processes(client: EdenClient) -> None:
