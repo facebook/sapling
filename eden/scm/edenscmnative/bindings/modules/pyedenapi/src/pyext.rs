@@ -359,22 +359,15 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         heads: Vec<PyBytes>,
         common: Vec<PyBytes>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<CommitGraphEntry>>>, PyFuture)> {
+    ) -> PyResult<Serde<Vec<CommitGraphEntry>>> {
         let heads = to_hgids(py, heads);
         let common = to_hgids(py, common);
-        let (responses, stats) = py
-            .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let response = self.commit_graph(repo, heads, common).await?;
-                    Ok::<_, EdenApiError>((response.entries, response.stats))
-                })
-            })
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.commit_graph(repo, heads, common)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
-        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
-        Ok((responses_py.into(), stats_py))
+        Ok(Serde(responses))
     }
 
     /// Get the "CloneData" serialized using mincode.

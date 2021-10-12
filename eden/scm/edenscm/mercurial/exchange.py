@@ -1796,10 +1796,10 @@ def _pullcommitgraph(pullop):
     assert heads is not None
 
     commits = repo.changelog.inner
-    stream, _stats = repo.edenapi.commitgraph(repo.name, heads, pullop.common)
+    items = repo.edenapi.commitgraph(repo.name, heads, pullop.common)
     traceenabled = tracing.isenabled(tracing.LEVEL_DEBUG, target="pull::httpgraph")
     graphnodes = []
-    for item in stream:
+    for item in items:
         node = item["hgid"]
         parents = item["parents"]
         if traceenabled:

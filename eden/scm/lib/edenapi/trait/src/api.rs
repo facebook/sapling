@@ -158,7 +158,7 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Response<CommitGraphEntry>, EdenApiError> {
+    ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
         let _ = (repo, heads, common);
         Err(EdenApiError::NotSupported)
     }

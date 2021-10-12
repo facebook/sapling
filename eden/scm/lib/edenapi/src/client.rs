@@ -850,7 +850,7 @@ impl EdenApi for Client {
         repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Response<CommitGraphEntry>, EdenApiError> {
+    ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
         tracing::info!(
             "Requesting commit graph with {} heads and {} common",
             heads.len(),
@@ -866,7 +866,8 @@ impl EdenApi for Client {
             .cbor(&wire_graph_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        self.fetch::<WireCommitGraphEntry>(vec![req])
+        self.fetch_vec_with_retry::<WireCommitGraphEntry>(vec![req])
+            .await
     }
 
     async fn lookup_batch(

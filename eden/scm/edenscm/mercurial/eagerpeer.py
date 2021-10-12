@@ -87,9 +87,9 @@ class eagerpeer(repository.peer):
         """heads: [node], common: [node]
         Returns a list of [(node, parents)], parents is a list of node.
         """
-        stream, _stats = self.edenapi.commitgraph(self._reponame, heads, common)
+        items = self.edenapi.commitgraph(self._reponame, heads, common)
         shouldtrace = tracing.isenabled(tracing.LEVEL_TRACE)
-        for item in stream:
+        for item in items:
             node = item["hgid"]
             parents = item["parents"]
             if shouldtrace:

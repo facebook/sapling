@@ -236,7 +236,7 @@ py_class!(pub class client |py| {
 
     /// commitgraph(repo: str, heads: [bytes], common: [bytes]) -> [{'hgid': bytes, 'parents': [bytes]}]
     def commitgraph(&self, repo: String, heads: Vec<PyBytes>, common: Vec<PyBytes>)
-        -> PyResult<(TStream<anyhow::Result<Serde<CommitGraphEntry>>>, PyFuture)>
+        -> PyResult<Serde<Vec<CommitGraphEntry>>>
     {
         self.inner(py).clone().commit_graph_py(py, repo, heads, common)
     }

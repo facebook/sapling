@@ -391,7 +391,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
-    ) -> Result<Response<CommitGraphEntry>, EdenApiError> {
+    ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
         debug!(
             "commit_graph {} {}",
             debug_hgid_list(&heads),
@@ -417,8 +417,8 @@ impl EdenApi for EagerRepo {
             })
             .map_err(map_dag_err)
             .boxed();
-        let values: Vec<edenapi::Result<CommitGraphEntry>> = stream.collect().await;
-        Ok(convert_to_response(values))
+        let values: edenapi::Result<Vec<CommitGraphEntry>> = stream.try_collect().await;
+        values
     }
 
     async fn bookmarks(
