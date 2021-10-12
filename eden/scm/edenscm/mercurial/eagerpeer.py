@@ -154,7 +154,7 @@ class eagerpeer(repository.peer):
 
     def known(self, nodes):
         assert isinstance(nodes, list)
-        stream, _stats = self.edenapi.commitknown(self._reponame, nodes)
+        stream = self.edenapi.commitknown(self._reponame, nodes)
         knownnodes = set()
         # ex. [{'hgid': '11111111111111111111', 'known': {'Ok': False}}]
         for res in stream:

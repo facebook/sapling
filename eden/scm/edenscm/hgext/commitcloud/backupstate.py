@@ -76,9 +76,7 @@ class BackupState(object):
         if self.usehttp:
             try:
                 unknown = [nodemod.bin(node) for node in unknown]
-                stream, _stats = repo.edenapi.commitknown(
-                    ccutil.getreponame(repo), unknown
-                )
+                stream = repo.edenapi.commitknown(ccutil.getreponame(repo), unknown)
                 nodes = {
                     item["hgid"] for item in stream if item["known"].get("Ok") is True
                 }

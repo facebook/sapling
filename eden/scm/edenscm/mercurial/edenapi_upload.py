@@ -32,7 +32,7 @@ def _filtercommits(repo, nodes):
     """Returns list of missing commits"""
     try:
         with repo.ui.timesection("http.edenapi.upload_filter_commits"):
-            stream, _stats = repo.edenapi.commitknown(getreponame(repo), nodes)
+            stream = repo.edenapi.commitknown(getreponame(repo), nodes)
             return [
                 item["hgid"] for item in stream if item["known"].get("Ok") is not True
             ]
@@ -44,7 +44,7 @@ def _filteruploaded(repo, blobs, trees):
     """Returns list of missing blobs and trees"""
     try:
         with repo.ui.timesection("http.edenapi.upload_lookup"):
-            stream, _stats = repo.edenapi.lookup_filenodes_and_trees(
+            stream = repo.edenapi.lookup_filenodes_and_trees(
                 getreponame(repo),
                 [blob[1] for blob in blobs],
                 [tree[0] for tree in trees],

@@ -372,7 +372,7 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         hgids: Vec<HgId>,
-    ) -> edenapi::Result<Response<CommitKnownResponse>> {
+    ) -> edenapi::Result<Vec<CommitKnownResponse>> {
         debug!("commit_known {}", debug_hgid_list(&hgids));
         let mut values = Vec::new();
         for id in hgids {
@@ -381,9 +381,9 @@ impl EdenApi for EagerRepo {
                 hgid: id,
                 known: Ok(known),
             };
-            values.push(Ok(response));
+            values.push(response);
         }
-        Ok(convert_to_response(values))
+        Ok(values)
     }
 
     async fn commit_graph(
@@ -445,7 +445,7 @@ impl EdenApi for EagerRepo {
         _repo: String,
         _items: Vec<AnyId>,
         _bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<LookupResponse>, EdenApiError> {
+    ) -> Result<Vec<LookupResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support lookup_batch endpoint".to_string(),
         ))

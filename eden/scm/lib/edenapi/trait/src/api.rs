@@ -140,7 +140,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         hgids: Vec<HgId>,
-    ) -> Result<Response<CommitKnownResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitKnownResponse>, EdenApiError> {
         let _ = (repo, hgids);
         Err(EdenApiError::NotSupported)
     }
@@ -189,7 +189,7 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<LookupResponse>, EdenApiError> {
+    ) -> Result<Vec<LookupResponse>, EdenApiError> {
         let _ = (repo, items, bubble_id);
         Err(EdenApiError::NotSupported)
     }

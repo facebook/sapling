@@ -766,8 +766,8 @@ impl EdenApi for Client {
         &self,
         repo: String,
         hgids: Vec<HgId>,
-    ) -> Result<Response<CommitKnownResponse>, EdenApiError> {
-        let response = self
+    ) -> Result<Vec<CommitKnownResponse>, EdenApiError> {
+        let entries = self
             .lookup_batch(
                 repo,
                 hgids
@@ -779,72 +779,56 @@ impl EdenApi for Client {
             )
             .await?;
 
-        let (mut entries, stats) = (response.entries, response.stats);
-
         let mut knowns: Vec<Option<bool>> = vec![None; hgids.len()];
 
-        // Convert `lookup_batch` to vec<Option<bool> with token validation (check `HgChangesetId` in the token is correct for the index).
+        // Convert `lookup_batch` to Vec<Option<bool>> with token validation (check `HgChangesetId` in the token is correct for the index).
         // `Some(true)`: The server verified that `hgid` is known.
         // `Some(false)`: The server does not known `hgid`.
         // `None`: The server failed to check `hgid` due to some error.
         //         The existing API doesn't provide information for what id was the error,
         //         so log the original error and convert it to a generic "the server cannot check `HgChangesetId`"
 
-        while let Some(entry) = entries.next().await {
-            match entry {
-                Ok(entry) => {
-                    if entry.index >= hgids.len() {
+        for entry in entries {
+            if entry.index >= hgids.len() {
+                return Err(EdenApiError::Other(format_err!(
+                    "`lookup_batch` returned an invalid index"
+                )));
+            }
+            match entry.token {
+                Some(token) => {
+                    if let AnyId::HgChangesetId(token_id) = token.data.id {
+                        if token_id != hgids[entry.index] {
+                            return Err(EdenApiError::Other(format_err!(
+                                "`lookup_batch` returned an invalid token or an invalid index"
+                            )));
+                        }
+                        knowns[entry.index] = Some(true)
+                    } else {
                         return Err(EdenApiError::Other(format_err!(
-                            "`lookup_batch` returned an invalid index"
+                            "`lookup_batch` returned an invalid token"
                         )));
                     }
-                    match entry.token {
-                        Some(token) => {
-                            if let AnyId::HgChangesetId(token_id) = token.data.id {
-                                if token_id != hgids[entry.index] {
-                                    return Err(EdenApiError::Other(format_err!(
-                                        "`lookup_batch` returned an invalid token or an invalid index"
-                                    )));
-                                }
-                                knowns[entry.index] = Some(true)
-                            } else {
-                                return Err(EdenApiError::Other(format_err!(
-                                    "`lookup_batch` returned an invalid token"
-                                )));
-                            }
-                        }
-                        None => knowns[entry.index] = Some(false),
-                    }
                 }
-                Err(err) => {
-                    tracing::warn!("`lookup_batch` error: {:?}", &err);
-                }
+                None => knowns[entry.index] = Some(false),
             }
         }
 
-        Ok(Response {
-            stats,
-            entries: Box::pin(futures::stream::iter(
-                knowns
-                    .into_iter()
-                    .enumerate()
-                    .map(|(index, res)| match res {
-                        Some(value) => CommitKnownResponse {
-                            hgid: hgids[index],
-                            known: Ok(value),
-                        },
-                        None => CommitKnownResponse {
-                            hgid: hgids[index],
-                            known: Err(ServerError::generic(
-                                "the server cannot check `HgChangesetId`",
-                            )),
-                        },
-                    })
-                    .collect::<Vec<CommitKnownResponse>>()
-                    .into_iter()
-                    .map(Ok),
-            )),
-        })
+        Ok(hgids
+            .into_iter()
+            .zip(knowns)
+            .map(|(hgid, res)| match res {
+                Some(value) => CommitKnownResponse {
+                    hgid,
+                    known: Ok(value),
+                },
+                None => CommitKnownResponse {
+                    hgid,
+                    known: Err(ServerError::generic(
+                        "the server cannot check `HgChangesetId`",
+                    )),
+                },
+            })
+            .collect::<Vec<CommitKnownResponse>>())
     }
 
     async fn commit_graph(
@@ -877,11 +861,11 @@ impl EdenApi for Client {
         repo: String,
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<LookupResponse>, EdenApiError> {
+    ) -> Result<Vec<LookupResponse>, EdenApiError> {
         tracing::info!("Requesting lookup for {} item(s)", items.len());
 
         if items.is_empty() {
-            return Ok(Response::empty());
+            return Ok(Vec::new());
         }
 
         let url = self.build_url(paths::LOOKUP, Some(&repo))?;
@@ -900,7 +884,8 @@ impl EdenApi for Client {
             },
         )?;
 
-        Ok(self.fetch::<WireLookupResponse>(requests)?)
+        self.fetch_vec_with_retry::<WireLookupResponse>(requests)
+            .await
     }
 
     async fn process_files_upload(
@@ -922,16 +907,11 @@ impl EdenApi for Client {
             .map(|(id, _data)| AnyId::AnyFileContentId(id.clone()))
             .collect();
 
-        let mut entries = self
-            .lookup_batch(repo.clone(), anyids, bubble_id)
-            .await?
-            .entries;
-        while let Some(entry) = entries.next().await {
-            if let Ok(entry) = entry {
-                if let Some(token) = entry.token {
-                    uploaded_indices.insert(entry.index);
-                    uploaded_tokens.push(token)
-                }
+        let entries = self.lookup_batch(repo.clone(), anyids, bubble_id).await?;
+        for entry in entries {
+            if let Some(token) = entry.token {
+                uploaded_indices.insert(entry.index);
+                uploaded_tokens.push(token)
             }
         }
 

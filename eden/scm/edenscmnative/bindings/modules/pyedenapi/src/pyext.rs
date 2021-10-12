@@ -324,24 +324,13 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         hgids: Vec<PyBytes>,
-    ) -> PyResult<(
-        TStream<anyhow::Result<Serde<CommitKnownResponse>>>,
-        PyFuture,
-    )> {
+    ) -> PyResult<Serde<Vec<CommitKnownResponse>>> {
         let hgids = to_hgids(py, hgids);
-        let (responses, stats) = py
-            .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let response = self.commit_known(repo, hgids).await?;
-                    Ok::<_, EdenApiError>((response.entries, response.stats))
-                })
-            })
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.commit_known(repo, hgids)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
-
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
-        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
-        Ok((responses_py.into(), stats_py))
+        Ok(Serde(responses))
     }
 
     fn commit_graph_py(
@@ -413,7 +402,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         ids: Vec<PyBytes>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+    ) -> PyResult<Serde<Vec<LookupResponse>>> {
         self.lookup_py(
             py,
             repo,
@@ -430,7 +419,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         nodes: Vec<PyBytes>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+    ) -> PyResult<Serde<Vec<LookupResponse>>> {
         self.lookup_py(
             py,
             repo,
@@ -446,7 +435,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         ids: Vec<PyBytes>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+    ) -> PyResult<Serde<Vec<LookupResponse>>> {
         self.lookup_py(
             py,
             repo,
@@ -461,7 +450,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         ids: Vec<PyBytes>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+    ) -> PyResult<Serde<Vec<LookupResponse>>> {
         self.lookup_py(
             py,
             repo,
@@ -477,7 +466,7 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         filenodes_ids: Vec<PyBytes>,
         trees_ids: Vec<PyBytes>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
+    ) -> PyResult<Serde<Vec<LookupResponse>>> {
         self.lookup_py(
             py,
             repo,
@@ -498,20 +487,12 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         ids: Vec<AnyId>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<LookupResponse>>>, PyFuture)> {
-        let (responses, stats) = py
-            .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let response = self.lookup_batch(repo, ids, None).await?;
-                    Ok::<_, EdenApiError>((response.entries, response.stats))
-                })
-            })
+    ) -> PyResult<Serde<Vec<LookupResponse>>> {
+        let responses = py
+            .allow_threads(|| block_unless_interrupted(self.lookup_batch(repo, ids, None)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
-
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
-        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
-        Ok((responses_py.into(), stats_py))
+        Ok(Serde(responses))
     }
 
     fn uploadfileblobs_py(

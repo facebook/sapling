@@ -286,7 +286,7 @@ def _findcommonheadsnew(
         return sorted(sample)
 
     def httpcommitlookup(repo, sample):
-        (knownresponse, _stats) = local.edenapi.commitknown(local.name, sample)
+        knownresponse = local.edenapi.commitknown(local.name, sample)
         commonsample = set()
         for res in knownresponse:
             tracing.debug(
