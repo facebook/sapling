@@ -34,6 +34,8 @@ pub enum EdenApiError {
     ServerError(#[from] EdenApiServerError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
+    #[error("Not supported by the server")]
+    NotSupported,
 }
 
 #[derive(Debug, Error)]

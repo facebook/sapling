@@ -5,24 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, num::NonZeroU64, path::Path, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Response, ResponseMeta, Stats};
 use edenapi_types::{
-    AnyFileContentId, AnyId, BonsaiChangesetContent, BookmarkEntry, CloneData,
-    CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, EphemeralPrepareResponse,
-    FetchSnapshotRequest, FetchSnapshotResponse, FileAttributes, FileContent, FileEntry, FileSpec,
-    HgFilenodeData, HgMutationEntryContent, HistoryEntry, LookupResponse, TreeAttributes,
-    TreeEntry, UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry,
-    UploadTreeResponse,
+    EdenApiServerError, FileAttributes, FileContent, FileEntry, FileSpec, HistoryEntry,
+    TreeAttributes, TreeEntry,
 };
 use futures::prelude::*;
 use minibytes::Bytes;
-use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
+use types::{Key, NodeInfo, Parents};
 
 use crate::{
     datastore::{
@@ -356,167 +351,6 @@ impl EdenApi for FakeEdenApi {
         _attrs: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         Self::get_trees(&self.trees, keys)
-    }
-
-    async fn complete_trees(
-        &self,
-        _repo: String,
-        _rootdir: RepoPathBuf,
-        _mfnodes: Vec<HgId>,
-        _basemfnodes: Vec<HgId>,
-        _depth: Option<usize>,
-    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn commit_revlog_data(
-        &self,
-        _repo: String,
-        _hgids: Vec<HgId>,
-    ) -> Result<Response<CommitRevlogData>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn clone_data(&self, _repo: String) -> Result<CloneData<HgId>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn pull_fast_forward_master(
-        &self,
-        _repo: String,
-        _old_master: HgId,
-        _new_master: HgId,
-    ) -> Result<CloneData<HgId>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn full_idmap_clone_data(&self, _repo: String) -> Result<CloneData<HgId>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn commit_location_to_hash(
-        &self,
-        _repo: String,
-        _requests: Vec<CommitLocationToHashRequest>,
-    ) -> Result<Vec<CommitLocationToHashResponse>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn commit_hash_to_location(
-        &self,
-        _repo: String,
-        _master_heads: Vec<HgId>,
-        _hgids: Vec<HgId>,
-    ) -> Result<Vec<CommitHashToLocationResponse>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn bookmarks(
-        &self,
-        _repo: String,
-        _bookmarks: Vec<String>,
-    ) -> Result<Response<BookmarkEntry>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn commit_known(
-        &self,
-        _repo: String,
-        _hgids: Vec<HgId>,
-    ) -> Result<Response<edenapi_types::CommitKnownResponse>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn commit_graph(
-        &self,
-        _repo: String,
-        _heads: Vec<HgId>,
-        _common: Vec<HgId>,
-    ) -> Result<Response<edenapi_types::CommitGraphEntry>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn lookup_batch(
-        &self,
-        _repo: String,
-        _items: Vec<AnyId>,
-        _bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<LookupResponse>, EdenApiError> {
-        unimplemented!();
-    }
-
-    async fn process_files_upload(
-        &self,
-        _repo: String,
-        _data: Vec<(AnyFileContentId, Bytes)>,
-        _bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<UploadToken>, EdenApiError> {
-        unimplemented!();
-    }
-
-    async fn upload_filenodes_batch(
-        &self,
-        _repo: String,
-        _items: Vec<HgFilenodeData>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        unimplemented!();
-    }
-
-    async fn upload_trees_batch(
-        &self,
-        _repo: String,
-        _items: Vec<UploadTreeEntry>,
-    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
-        unimplemented!();
-    }
-
-    async fn upload_changesets(
-        &self,
-        _repo: String,
-        _changesets: Vec<UploadHgChangeset>,
-        _mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        unimplemented!();
-    }
-
-    async fn upload_bonsai_changeset(
-        &self,
-        _repo: String,
-        _changeset: BonsaiChangesetContent,
-        _bubble_id: Option<std::num::NonZeroU64>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        unimplemented!();
-    }
-
-    async fn ephemeral_prepare(
-        &self,
-        _repo: String,
-    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn fetch_snapshot(
-        &self,
-        _repo: String,
-        _request: FetchSnapshotRequest,
-    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn hash_prefixes_lookup(
-        &self,
-        _repo: String,
-        _prefixes: Vec<String>,
-    ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
-        unimplemented!()
-    }
-
-    async fn download_file(
-        &self,
-        _repo: String,
-        _token: UploadToken,
-    ) -> Result<Bytes, EdenApiError> {
-        unimplemented!()
     }
 }
 
