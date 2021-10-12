@@ -77,9 +77,6 @@ class LinuxCgroup:
         return self.sys_fs_cgroup_path / "cgroup.procs"
 
     def __repr__(self) -> str:
-        # pyre-fixme[16]: `LinuxCgroup` has no attribute `__name`. `__name` looks
-        #  like a private attribute, which is not accessible from outside its parent
-        #  class.
         return f"LinuxCgroup({repr(self.__name)})"
 
     @staticmethod

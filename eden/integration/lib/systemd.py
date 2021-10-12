@@ -288,17 +288,11 @@ class SystemdService:
         return self.__systemd._systemctl
 
     def __str__(self) -> str:
-        # pyre-fixme[16]: `SystemdService` has no attribute `__systemd`. `__systemd`
-        #  looks like a private attribute, which is not accessible from outside its
-        #  parent class.
         return f"{self.unit_name} (XDG_RUNTIME_DIR={self.__systemd.xdg_runtime_dir})"
 
     def __repr__(self) -> str:
         return (
             f"SystemdService(unit_name={repr(self.unit_name)}, "
-            # pyre-fixme[16]: `SystemdService` has no attribute `__systemd`.
-            #  `__systemd` looks like a private attribute, which is not accessible from
-            #  outside its parent class.
             f"systemd={repr(self.__systemd)})"
         )
 
@@ -502,10 +496,6 @@ class _TransientUnmanagedSystemdUserServiceManager:
         process = subprocess.Popen(
             [
                 "timeout",
-                # pyre-fixme[16]: `_TransientUnmanagedSystemdUserServiceManager` has
-                #  no attribute `__lifetime_duration`. `__lifetime_duration` looks like
-                #  a private attribute, which is not accessible from outside its parent
-                #  class.
                 f"{self.__lifetime_duration}s",
                 FindExe.SYSTEMD,
                 "--user",
