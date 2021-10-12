@@ -595,7 +595,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         prefixes: Vec<String>,
-    ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
         tracing::info!("Requesting full hashes for {} prefix(es)", prefixes.len());
         let url = self.build_url(paths::COMMIT_HASH_LOOKUP, Some(&repo))?;
         let prefixes: Vec<CommitHashLookupRequest> = prefixes
@@ -613,7 +613,8 @@ impl EdenApi for Client {
                 req.to_wire()
             },
         )?;
-        Ok(self.fetch::<WireCommitHashLookupResponse>(requests)?)
+        self.fetch_vec_with_retry::<WireCommitHashLookupResponse>(requests)
+            .await
     }
 
 

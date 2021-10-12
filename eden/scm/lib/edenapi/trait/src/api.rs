@@ -168,7 +168,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         prefixes: Vec<String>,
-    ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
+    ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
         let _ = (repo, prefixes);
         Err(EdenApiError::NotSupported)
     }

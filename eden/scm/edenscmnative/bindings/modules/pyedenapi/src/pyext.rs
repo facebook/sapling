@@ -266,24 +266,14 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         hash_prefixes: Vec<String>,
-    ) -> PyResult<(
-        TStream<anyhow::Result<Serde<CommitHashLookupResponse>>>,
-        PyFuture,
-    )> {
-        let (responses, stats) = py
+    ) -> PyResult<Serde<Vec<CommitHashLookupResponse>>> {
+        let items = py
             .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let response = self.hash_prefixes_lookup(repo, hash_prefixes).await?;
-                    let responses = response.entries;
-                    let stats = response.stats;
-                    Ok::<_, EdenApiError>((responses, stats))
-                })
+                block_unless_interrupted(self.hash_prefixes_lookup(repo, hash_prefixes))
             })
             .map_pyerr(py)?
             .map_pyerr(py)?;
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
-        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
-        Ok((responses_py.into(), stats_py))
+        Ok(Serde(items))
     }
 
     fn commit_location_to_hash_py(

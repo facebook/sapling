@@ -13,6 +13,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 http = "0.2"
 metalog = { path = "../metalog" }
 minibytes = { path = "../minibytes" }
+nonblocking = { path = "../nonblocking" }
 thiserror = "1.0.29"
 tracing = "0.1.27"
 zstore = { path = "../zstore" }

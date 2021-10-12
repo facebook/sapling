@@ -54,13 +54,13 @@ use edenapi::EdenApiError;
 use edenapi::Response;
 use edenapi::ResponseMeta;
 use edenapi_trait as edenapi;
-use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
 use minibytes::Bytes;
+use nonblocking::non_blocking_result;
 use std::collections::HashSet;
 use std::num::NonZeroU64;
 use std::sync::Arc;
@@ -525,16 +525,17 @@ impl EdenApi for EagerRepo {
         &self,
         _repo: String,
         prefixes: Vec<String>,
-    ) -> Result<Response<CommitHashLookupResponse>, EdenApiError> {
-        let hashes = stream::iter(prefixes.into_iter())
-            .map(move |prefix| async move {
-                let req = make_hash_lookup_request(prefix.clone())?;
-                let resp = self
-                    .dag()
-                    .vertexes_by_hex_prefix(prefix.as_bytes(), 100)
-                    .await;
-                resp.map_err(|e| EdenApiError::Other(e.into()))
-                    .map(|vertexes| {
+    ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
+        prefixes
+            .into_iter()
+            .map(
+                move |prefix| -> Result<CommitHashLookupResponse, EdenApiError> {
+                    let req = make_hash_lookup_request(prefix.clone())?;
+                    let resp = non_blocking_result(
+                        self.dag().vertexes_by_hex_prefix(prefix.as_bytes(), 100),
+                    )
+                    .map_err(|e| EdenApiError::Other(e.into()));
+                    resp.and_then(|vertexes| {
                         Ok(CommitHashLookupResponse {
                             request: req,
                             hgids: vertexes
@@ -543,12 +544,9 @@ impl EdenApi for EagerRepo {
                                 .collect::<Result<Vec<_>, _>>()?,
                         })
                     })
-            })
-            .buffered(100)
-            .try_collect::<Vec<Result<CommitHashLookupResponse, _>>>()
-            .await
-            .map_err(|e| EdenApiError::Other(e.into()))?;
-        Ok(convert_to_response(hashes))
+                },
+            )
+            .collect()
     }
 
     async fn download_file(

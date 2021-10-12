@@ -165,11 +165,15 @@ py_class!(pub class client |py| {
         self.inner(py).clone().bookmarks_py(py, repo, bookmarks)
     }
 
+    /// (repo, hexprefix) -> [{'request': {'InclusiveRange': (start_node, end_node)},
+    ///                        'hgids': [node]}]
+    ///
+    /// Lookup commit hashes by hex prefixes.
     def hashlookup(
         &self,
         repo: String,
         hash_prefixes: Vec<String>
-    ) -> PyResult<(TStream<anyhow::Result<Serde<CommitHashLookupResponse>>>, PyFuture)> {
+    ) -> PyResult<Serde<Vec<CommitHashLookupResponse>>> {
         self.inner(py).clone().hash_lookup_py(py, repo, hash_prefixes)
     }
 

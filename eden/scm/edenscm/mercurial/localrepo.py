@@ -875,7 +875,7 @@ class localrepository(object):
         return low
 
     def _http_prefix_lookup(self, prefixes):
-        (responses, _stats) = self.edenapi.hashlookup(self.name, prefixes)
+        responses = self.edenapi.hashlookup(self.name, prefixes)
         for resp in responses:
             hgids = resp["hgids"]
             hashrange = resp["request"]["InclusiveRange"]
