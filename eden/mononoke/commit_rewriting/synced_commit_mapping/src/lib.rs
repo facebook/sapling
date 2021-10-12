@@ -7,13 +7,12 @@
 
 #![deny(warnings)]
 
-use std::sync::Arc;
-
 use sql::{Connection, Transaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 
 use anyhow::Error;
+use auto_impl::auto_impl;
 use cloned::cloned;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
@@ -164,6 +163,7 @@ pub enum WorkingCopyEquivalence {
     WorkingCopy(ChangesetId, Option<CommitSyncConfigVersion>),
 }
 
+#[auto_impl(Arc)]
 pub trait SyncedCommitMapping: Send + Sync {
     /// Given the full large, small mapping, store it in the DB.
     /// Future resolves to true if the mapping was saved, false otherwise
@@ -214,55 +214,6 @@ pub trait SyncedCommitMapping: Send + Sync {
         source_bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
     ) -> BoxFuture<Option<WorkingCopyEquivalence>, Error>;
-}
-
-impl SyncedCommitMapping for Arc<dyn SyncedCommitMapping> {
-    fn add(&self, ctx: CoreContext, entry: SyncedCommitMappingEntry) -> BoxFuture<bool, Error> {
-        (**self).add(ctx, entry)
-    }
-
-    fn add_bulk(
-        &self,
-        ctx: CoreContext,
-        entries: Vec<SyncedCommitMappingEntry>,
-    ) -> BoxFuture<u64, Error> {
-        (**self).add_bulk(ctx, entries)
-    }
-
-    fn get(
-        &self,
-        ctx: CoreContext,
-        source_repo_id: RepositoryId,
-        bcs_id: ChangesetId,
-        target_repo_id: RepositoryId,
-    ) -> BoxFuture<
-        Vec<(
-            ChangesetId,
-            Option<CommitSyncConfigVersion>,
-            Option<SyncedCommitSourceRepo>,
-        )>,
-        Error,
-    > {
-        (**self).get(ctx, source_repo_id, bcs_id, target_repo_id)
-    }
-
-    fn insert_equivalent_working_copy(
-        &self,
-        ctx: CoreContext,
-        entry: EquivalentWorkingCopyEntry,
-    ) -> BoxFuture<bool, Error> {
-        (**self).insert_equivalent_working_copy(ctx, entry)
-    }
-
-    fn get_equivalent_working_copy(
-        &self,
-        ctx: CoreContext,
-        source_repo_id: RepositoryId,
-        source_bcs_id: ChangesetId,
-        target_repo_id: RepositoryId,
-    ) -> BoxFuture<Option<WorkingCopyEquivalence>, Error> {
-        (**self).get_equivalent_working_copy(ctx, source_repo_id, source_bcs_id, target_repo_id)
-    }
 }
 
 #[derive(Clone)]
