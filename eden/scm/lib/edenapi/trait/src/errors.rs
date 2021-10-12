@@ -16,6 +16,8 @@ use http_client::HttpClientError;
 pub enum EdenApiError {
     #[error("Failed to serialize request: {0}")]
     RequestSerializationFailed(#[source] serde_cbor::Error),
+    #[error("Failed to parse response: {0}")]
+    ParseResponse(String),
     #[error(transparent)]
     BadConfig(#[from] ConfigError),
     #[error(transparent)]

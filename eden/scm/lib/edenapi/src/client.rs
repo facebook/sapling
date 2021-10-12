@@ -428,8 +428,14 @@ impl EdenApi for Client {
     }
 
     async fn capabilities(&self, repo: String) -> Result<Vec<String>, EdenApiError> {
-        let _ = repo;
-        todo!();
+        tracing::info!("Requesting capabilities for repo {}", &repo);
+        let url = self.build_url("capabilities", Some(&repo))?;
+        let req = self.configure_request(Request::get(url))?;
+        let res = raise_for_status(req.send_async().await?).await?;
+        let body: Vec<u8> = res.into_body().decoded().try_concat().await?;
+        let caps = serde_json::from_slice(&body)
+            .map_err(|e| EdenApiError::ParseResponse(e.to_string()))?;
+        Ok(caps)
     }
 
     async fn files(
