@@ -83,7 +83,7 @@ class FindExeClass(object):
         if sys.platform == "win32":
             # On Windows, par files (which edenfsctl.real is) aren't directly
             # executable and we need to call them with python.
-            edenfsctlreal = f"{sys.platform} {edenfsctlreal}"
+            edenfsctlreal = f"{sys.executable} {edenfsctlreal}"
         env["EDENFSCTL_REAL"] = edenfsctlreal
         return self._EDENFSCTL, env
 
