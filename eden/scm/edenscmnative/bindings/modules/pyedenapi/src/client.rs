@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use cpython::*;
 
+use async_runtime::block_unless_interrupted;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
@@ -66,6 +67,19 @@ py_class!(pub class client |py| {
 
     def health(&self) -> PyResult<PyDict> {
         self.inner(py).clone().health_py(py)
+    }
+
+    def capabilities(&self, repo: String) -> PyResult<Vec<String>> {
+        let client = self.inner(py).clone();
+        let caps = py
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    client.capabilities(repo).await
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+        Ok(caps)
     }
 
     def files(
