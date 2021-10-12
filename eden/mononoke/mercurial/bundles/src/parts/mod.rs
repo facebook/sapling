@@ -137,42 +137,6 @@ where
     Ok(builder)
 }
 
-pub fn pushrebase_changegroup_part<CS, FS>(
-    changelogentries: CS,
-    filenodeentries: FS,
-    onto_bookmark: impl AsRef<str>,
-) -> Result<PartEncodeBuilder>
-where
-    CS: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
-    FS: Stream<Item = (MPath, Vec<FilenodeEntry>), Error = Error> + Send + 'static,
-{
-    let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xRebase)?;
-    builder.add_mparam(
-        "onto",
-        BytesNew::copy_from_slice(onto_bookmark.as_ref().as_bytes()),
-    )?;
-
-    let version = CgVersion::Cg2Version;
-    builder.add_aparam(
-        "cgversion",
-        BytesNew::copy_from_slice(version.to_str().as_bytes()),
-    )?;
-
-    let changelogentries = convert_changeset_stream(changelogentries, version)
-        .chain(once(Ok(Part::SectionEnd(Section::Changeset))))
-        // One more SectionEnd entry is necessary because hg client excepts filelog section
-        // even if it's empty. Add a fake SectionEnd part (the choice of
-        // Manifest is just for convenience).
-        .chain(once(Ok(Part::SectionEnd(Section::Manifest))))
-        .chain(convert_file_stream(filenodeentries, version))
-        .chain(once(Ok(Part::End)));
-
-    let cgdata = CgPacker::new(changelogentries);
-    builder.set_data_generated(cgdata);
-
-    Ok(builder)
-}
-
 fn convert_changeset_stream<S>(
     changelogentries: S,
     version: CgVersion,
