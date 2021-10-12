@@ -95,6 +95,23 @@ fn test_serde_enums() {
     }
 }
 
+#[test]
+fn test_serde_deserialize_string_as_bytes() {
+    #[derive(Serialize)]
+    struct S(String);
+
+    #[derive(Deserialize)]
+    struct B(ByteBuf);
+
+    let gil = Python::acquire_gil();
+    let py = gil.python();
+    let s = S("abc-文字".to_string());
+    let obj = crate::ser::to_object(py, &s).unwrap();
+
+    let b: B = crate::de::from_object(py, obj.clone_ref(py)).unwrap();
+    assert_eq!(b.0.as_ref(), s.0.as_bytes());
+}
+
 fn example_hashmap() -> HashMap<u64, String> {
     let mut m = HashMap::new();
     for i in 1..10 {

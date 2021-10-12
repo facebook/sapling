@@ -178,8 +178,13 @@ impl<'de, 'a, 'gil> de::Deserializer<'de> for &'a mut Deserializer<'gil> {
     }
 
     fn deserialize_bytes<V: Visitor<'de>>(self, v: V) -> Result<V::Value> {
-        let pybytes: PyBytes = self.extract()?;
-        v.visit_bytes(pybytes.data(self.py))
+        if self.obj.get_type(self.py) == PyString::type_object(self.py) {
+            let s: String = self.extract()?;
+            v.visit_bytes(s.as_bytes())
+        } else {
+            let pybytes: PyBytes = self.extract()?;
+            v.visit_bytes(pybytes.data(self.py))
+        }
     }
 
     fn deserialize_byte_buf<V: Visitor<'de>>(self, v: V) -> Result<V::Value> {
