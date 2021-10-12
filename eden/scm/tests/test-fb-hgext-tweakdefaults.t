@@ -461,18 +461,18 @@ Test rebase with showupdate=True and a lot of source revisions
   rebasing f8b24e0bba16 "O"
   rebasing febec53a8012 "P"
   rebasing b768a41fb64f "Q"
-  08ebfeb61bac -> 677e16fc90a1 "I"
   112478962961 -> d1a90b33c3e4 "B"
-  575c4b5ec114 -> 662a28166552 "H"
-  699bc4b6fa22 -> 1c202a43a316 "M"
-  6fa3874a3b67 -> 1f222ffda182 "G"
-  7fb047a69f22 -> 84c88622d1aa "E"
-  83780307a7e8 -> 3ad2160089ee "K"
-  8908a377a434 -> ac569f2619af "F"
-  a0a5005cec67 -> 47e966978ada "J"
+  dc0947a82db8 -> 748dc89fb512 "C"
   b18e25de2cf5 -> bb5b4c942ce7 "D"
+  7fb047a69f22 -> 84c88622d1aa "E"
+  8908a377a434 -> ac569f2619af "F"
+  6fa3874a3b67 -> 1f222ffda182 "G"
+  575c4b5ec114 -> 662a28166552 "H"
+  08ebfeb61bac -> 677e16fc90a1 "I"
+  a0a5005cec67 -> 47e966978ada "J"
+  83780307a7e8 -> 3ad2160089ee "K"
   ...
-  febec53a8012 -> 55884f5f9fd3 "P"
+  b768a41fb64f -> 49a4c1a656cc "Q"
 
 Test rebase with showupdate=True and a long commit message
 

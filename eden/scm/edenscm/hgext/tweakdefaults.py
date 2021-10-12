@@ -561,7 +561,7 @@ def cleanupnodeswrapper(orig, repo, mapping, operation, *args, **kwargs):
     ):
         maxoutput = 10
         try:
-            oldnodes = sorted(mapping.keys())
+            oldnodes = list(mapping.keys())
         except AttributeError:
             # "mapping" is not always a dictionary.
             pass
