@@ -151,7 +151,7 @@ Trigger file and tree downloading:
 Clone (using edenapi clonedata, bypassing peer interface):
 
   $ cd $TESTTMP
-  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x --config clone.force-edenapi-clonedata=1 cloned1
+  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x cloned1
   fetching lazy changelog
   DEBUG eagerepo::api: clone_data
   populating main commit graph
@@ -164,6 +164,7 @@ Clone:
 
   $ cd $TESTTMP
   $ hg clone -U --shallow test:e1 cloned
+  fetching lazy changelog
   DEBUG eagerepo::api: clone_data
   populating main commit graph
   tip commit: 23d30dc6b70380b2d939023947578ae0e0198999

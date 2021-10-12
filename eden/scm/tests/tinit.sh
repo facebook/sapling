@@ -222,7 +222,6 @@ configure() {
         ;;
       modernclient)
         touch $TESTTMP/.eagerepo
-        setconfig clone.force-edenapi-clonedata=True
         setconfig remotefilelog.http=True
         setconfig treemanifest.http=True
         configure modern

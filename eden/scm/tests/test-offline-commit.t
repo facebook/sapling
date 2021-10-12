@@ -24,7 +24,7 @@ Prepare Repo:
 
 Clone the lazy repo:
 
-  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x --config clone.force-edenapi-clonedata=1 cloned1 -q
+  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x cloned1 -q
   $ cd cloned1
 
 Commit and edit on top of B:
