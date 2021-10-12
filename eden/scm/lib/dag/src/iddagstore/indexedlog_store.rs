@@ -411,7 +411,7 @@ impl IndexedLogStore {
     /// Format:
     ///
     /// ```plain,ignore
-    /// MAGIC_CLEAR_NON_MASTER + LEVEL (0u8) + PREVIOUS_HEAD (u64) + SEGMENT
+    /// MAGIC_REWRITE_LAST_FLAT + LEVEL (0u8) + PREVIOUS_HEAD (u64) + SEGMENT
     /// ```
     ///
     /// The `LEVEL + PREVIOUS_HEAD` part is used to remove the segment from the
@@ -474,8 +474,17 @@ impl IndexedLogStore {
                 }
 
                 if data.starts_with(Self::MAGIC_REWRITE_LAST_FLAT) {
-                    // No need to create new indexes. The existing parent -> child
-                    // indexes for the old segment is applicable for the new segment.
+                    // XXX: Ideally we can change the old parent index to point to the new entry.
+                    // However, indexedlog does not provide APIs to edit the values of an index
+                    // yet.
+                    //
+                    // This means that the `high` field of segments found by this index can be
+                    // wrong.  Practically, all users of the parent index (`to_first_ancestor_nth`
+                    // and `children_id`) do not use `high`. So we just leave the old wrong index
+                    // there for now.
+                    //
+                    // Note: If this were to be fixed, remember to change the index name to force a
+                    // rebuild of the index.
                     return Vec::new();
                 }
 
@@ -618,6 +627,8 @@ mod tests {
             "[]"
         );
         // 3 -> 6 parent index only returns the new segment.
+        // XXX: This should be 6-20 instead of 6-10. But it does not
+        // affect correctness for now.
         assert_eq!(
             dbg_iter(iddag2.iter_flat_segments_with_parent(Id(3))?),
             "[6-10[3]]"

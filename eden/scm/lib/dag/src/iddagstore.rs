@@ -80,12 +80,18 @@ pub trait IdDagStore: Send + Sync + 'static {
 
     /// Iterate through `(parent_id, segment)` for master flat segments
     /// that have a parent in the given span.
+    ///
+    /// Warning: The returned segments might have incorrect `high`s.
+    /// See `indexedlog_store.rs` for details.
     fn iter_master_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
     ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>>;
 
     /// Iterate through flat segments that have the given parent.
+    ///
+    /// Warning: The returned segments might have incorrect `high`s.
+    /// See `indexedlog_store.rs` for details.
     fn iter_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,

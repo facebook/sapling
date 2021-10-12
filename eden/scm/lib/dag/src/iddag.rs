@@ -953,6 +953,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             let parent_span = span.low.max(id)..=span.high;
             for entry in self.iter_master_flat_segments_with_parent_span(parent_span.into())? {
                 let (parent_id, child_seg) = entry?;
+                // Warning: Do not use child_seg.high, it is wrong.
                 trace(&|| format!("  {:?} has child seg ({:?})", parent_id, &child_seg));
                 let child_low = child_seg.span()?.low;
                 if !ancestors.contains(child_low) {
@@ -1038,6 +1039,7 @@ pub trait IdDagAlgorithm: IdDagStore {
     fn children_id(&self, id: Id) -> Result<IdSet> {
         let mut result = BTreeSet::new();
         for seg in self.iter_flat_segments_with_parent(id)? {
+            // Warning: Do not use seg.high, it is wrong.
             let seg = seg?;
             result.insert(seg.span()?.low);
         }
