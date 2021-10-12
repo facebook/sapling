@@ -427,6 +427,11 @@ impl EdenApi for Client {
         Ok(ResponseMeta::from(&res))
     }
 
+    async fn capabilities(&self, repo: String) -> Result<Vec<String>, EdenApiError> {
+        let _ = repo;
+        todo!();
+    }
+
     async fn files(
         &self,
         repo: String,

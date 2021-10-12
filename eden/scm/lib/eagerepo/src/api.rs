@@ -73,6 +73,10 @@ impl EdenApi for EagerRepo {
         Ok(default_response_meta())
     }
 
+    async fn capabilities(&self, _repo: String) -> Result<Vec<String>, EdenApiError> {
+        Ok(vec!["segmented-changelog".to_string()])
+    }
+
     async fn files(&self, _repo: String, keys: Vec<Key>) -> edenapi::Result<Response<FileEntry>> {
         debug!("files {}", debug_key_list(&keys));
         let mut values = Vec::with_capacity(keys.len());

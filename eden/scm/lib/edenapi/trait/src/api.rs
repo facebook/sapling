@@ -31,6 +31,11 @@ pub trait EdenApi: Send + Sync + 'static {
         Err(EdenApiError::NotSupported)
     }
 
+    async fn capabilities(&self, repo: String) -> Result<Vec<String>, EdenApiError> {
+        let _ = repo;
+        Err(EdenApiError::NotSupported)
+    }
+
     async fn files(
         &self,
         repo: String,
