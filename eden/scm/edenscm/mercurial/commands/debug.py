@@ -41,6 +41,7 @@ from .. import (
     dagparser,
     detectissues,
     drawdag,
+    edenapi,
     edenfs,
     encoding,
     error,
@@ -108,6 +109,88 @@ def debugancestor(ui, repo, *args):
         raise error.Abort(_("either two or three arguments required"))
     a = r.ancestor(lookup(rev1), lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
+
+
+def _flattenresponse(response, sort=False):
+    """convert response from pyedenapi to Python basic type for pprint.
+
+    If sort is True, also sort the top-level list for test stabilization.
+    """
+    # Convert common non-basic types to basic types.
+    # Resolve async (stream, stats) into list(stream).
+    if (
+        isinstance(response, tuple)
+        and len(response) == 2
+        and util.safehasattr(response[1], "wait")
+    ):
+        response = list(response[0])
+    # Resolve async stream into list(stream).
+    elif (
+        not isinstance(response, list)
+        and util.safehasattr(response, "__iter__")
+        and util.safehasattr(response, "typename")
+    ):
+        response = list(response)
+    # Resolve PyCell (opaque data) to PyObject.
+    elif util.safehasattr(response, "export"):
+        response = response.export()
+
+    # Additional sort to stabilize test output.
+    if isinstance(response, list) and sort:
+        response = sorted(response, key=lambda x: repr(x))
+    return response
+
+
+@command(
+    "debugapi",
+    [
+        ("", "reponame", "", _("repository name")),
+        ("e", "endpoint", "", _("name of the endpoint")),
+        ("i", "input", [], _("input in Python literal format")),
+        ("f", "input-file", [], _("input file in Python literal format")),
+        ("", "sort", False, _("sort list to stabilize output")),
+    ],
+    _(""),
+    optionalrepo=True,
+)
+def debugapi(ui, repo=None, **opts):
+    """send an EdenAPI request and print its output
+
+    The endpoint name is the method name defined on the edenapi object.
+
+    `-f` or `-i` can occur multiple times for endpoints taking multiple
+    parameters. The format of `-f` or `-i` matches the function signature
+    defined on the edenapi object.
+    """
+    import ast
+
+    reponame = (
+        opts.get("reponame")
+        or (repo and repo.name)
+        or ui.config("remotefilelog", "reponame")
+    )
+    endpoint = opts.get("endpoint") or "health"
+
+    inputs = opts.get("input") or []
+    for path in opts.get("input_file") or []:
+        with open(path) as f:
+            inputs.append(f.read())
+
+    # [str] -> [obj]
+    params = [ast.literal_eval(s) for s in inputs]
+
+    client = repo and repo.edenapi or edenapi.getclient(ui)
+    func = getattr(client, endpoint)
+
+    # health endpoint does not require reponame
+    if reponame and endpoint not in {"health"}:
+        response = func(reponame, *params)
+    else:
+        response = func(*params)
+
+    response = _flattenresponse(response, sort=opts.get("sort"))
+    formatted = bindings.pprint.pformat(response)
+    ui.write(_("%s\n") % formatted)
 
 
 @command("debugapplystreamclonebundle", [], "FILE")

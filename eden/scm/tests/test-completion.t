@@ -90,6 +90,7 @@ Show debug commands if there are no other candidates
   $ hg debugcomplete debug
   debug-args
   debugancestor
+  debugapi
   debugapplystreamclonebundle
   debugbenchmarkrevsets
   debugbindag
@@ -406,6 +407,7 @@ Show all commands + options
   copy: after, force, include, exclude, dry-run
   debug-args: 
   debugancestor: 
+  debugapi: reponame, endpoint, input, input-file, sort
   debugapplystreamclonebundle: 
   debugbenchmarkrevsets: rev-x, rev-y, expr, default, multi-backend
   debugbindag: rev, output

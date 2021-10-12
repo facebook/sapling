@@ -912,6 +912,7 @@ Test list of internal help commands
    debug-args    print arguments received
    debugancestor
                  find the ancestor revision of two revisions in a given index
+   debugapi      send an EdenAPI request and print its output
    debugapplystreamclonebundle
                  apply a stream clone bundle file
    debugbenchmarkrevsets
