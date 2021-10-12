@@ -13,7 +13,7 @@ use std::env;
 use std::fs::{self, read_to_string};
 use std::hash::Hash;
 use std::io;
-use std::io::{Error as IOError, ErrorKind};
+use std::io::{Error as IOError, ErrorKind, Write};
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -22,7 +22,7 @@ use std::time::{Duration, SystemTime};
 use anyhow::{anyhow, bail, Result};
 use filetime::{set_file_mtime, FileTime};
 use minibytes::Text;
-use tempfile::tempfile_in;
+use tempfile::NamedTempFile;
 use util::{path::expand_path, run_background};
 
 use crate::config::{ConfigSet, Options, SupersetVerification};
@@ -564,15 +564,18 @@ pub fn generate_dynamicconfig(
     // Resolve sharedpath
     let config_dir = get_config_dir(Some(repo_path))?;
 
-    // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
-    // the config.
-    if tempfile_in(&config_dir).is_err() {
-        return Err(IOError::new(
-            ErrorKind::PermissionDenied,
-            format!("no write access to {:?}", config_dir),
-        )
-        .into());
-    }
+
+    let mut tmp = match NamedTempFile::new_in(&config_dir) {
+        Err(_) => {
+            // Exit early since we won't be able to write the config.
+            return Err(IOError::new(
+                ErrorKind::PermissionDenied,
+                format!("no write access to {:?}", config_dir),
+            )
+            .into());
+        }
+        Ok(f) => f,
+    };
 
     let hgrc_path = config_dir.join("hgrc.dynamic");
 
@@ -604,7 +607,10 @@ pub fn generate_dynamicconfig(
     if hgrc_path.exists() && read_to_string(&hgrc_path).unwrap_or_default() == config_str {
         set_file_mtime(hgrc_path, FileTime::now())?;
     } else {
-        fs::write(hgrc_path, config_str)?;
+        // Atomically rename file to avoid race conditions.
+        tmp.write_all(config_str.as_bytes())?;
+        tmp.as_file().sync_all()?;
+        tmp.persist(hgrc_path)?;
     }
 
     Ok(())
