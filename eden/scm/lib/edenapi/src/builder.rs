@@ -368,8 +368,7 @@ impl HttpClientBuilder {
 
     /// If specified, the client will write a JSON version of every request
     /// it sends to the specified directory. This is primarily useful for
-    /// debugging. The JSON requests can be sent with the `edenapi_cli`, or
-    /// converted to CBOR with the `make_req` tool and sent with `curl`.
+    /// debugging.
     pub fn log_dir(mut self, dir: impl AsRef<Path>) -> Self {
         self.log_dir = Some(dir.as_ref().into());
         self
