@@ -43,7 +43,7 @@ pub struct FetchState {
     errors: FetchErrors,
 
     /// LFS pointers we've discovered corresponding to a request Key.
-    lfs_pointers: HashMap<Key, LfsPointersEntry>,
+    lfs_pointers: HashMap<Key, (LfsPointersEntry, bool)>,
 
     /// A table tracking if discovered LFS pointers were found in the local-only or cache / shared store.
     pointer_origin: Arc<RwLock<HashMap<Sha256, StoreType>>>,
@@ -137,7 +137,7 @@ impl FetchState {
     /// Returns the Key as a StoreKey, as a StoreKey::Content with Sha256 from the LFS Pointer, if available, otherwise as a StoreKey::HgId.
     /// Every StoreKey returned from this function is guaranteed to have an associated Key, so unwrapping is fine.
     fn storekey(&self, key: Key) -> StoreKey {
-        if let Some(ptr) = self.lfs_pointers.get(&key) {
+        if let Some((ptr, _)) = self.lfs_pointers.get(&key) {
             StoreKey::Content(ContentHash::Sha256(ptr.sha256()), Some(key))
         } else {
             StoreKey::HgId(key)
@@ -146,13 +146,13 @@ impl FetchState {
 
     #[instrument(level = "debug", skip(self))]
     fn mark_complete(&mut self, key: &Key) {
-        if let Some(ptr) = self.lfs_pointers.remove(key) {
+        if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
             self.pointer_origin.write().remove(&ptr.sha256());
         }
     }
 
     #[instrument(level = "debug", skip(self, ptr))]
-    fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, typ: StoreType) {
+    fn found_pointer(&mut self, key: Key, ptr: LfsPointersEntry, typ: StoreType, write: bool) {
         let sha256 = ptr.sha256();
         // Overwrite StoreType::Local with StoreType::Shared, but not vice versa
         match typ {
@@ -163,7 +163,7 @@ impl FetchState {
                 self.pointer_origin.write().entry(sha256).or_insert(typ);
             }
         }
-        self.lfs_pointers.insert(key, ptr);
+        self.lfs_pointers.insert(key, (ptr, write));
     }
 
     #[instrument(level = "debug", skip(self, sf))]
@@ -181,7 +181,7 @@ impl FetchState {
         if entry.metadata().is_lfs() {
             if self.extstored_policy == ExtStoredPolicy::Use {
                 match entry.try_into() {
-                    Ok(ptr) => self.found_pointer(key, ptr, typ),
+                    Ok(ptr) => self.found_pointer(key, ptr, typ, true),
                     Err(err) => self.errors.keyed_error(key, err),
                 }
             }
@@ -253,7 +253,7 @@ impl FetchState {
             LfsStoreEntry::PointerAndBlob(ptr, blob) => {
                 self.found_attributes(key, LazyFile::Lfs(blob, ptr).into(), Some(typ))
             }
-            LfsStoreEntry::PointerOnly(ptr) => self.found_pointer(key, ptr, typ),
+            LfsStoreEntry::PointerOnly(ptr) => self.found_pointer(key, ptr, typ, false),
         }
     }
 
@@ -290,7 +290,7 @@ impl FetchState {
         let key = entry.key.clone();
         if entry.metadata.is_lfs() {
             match entry.try_into() {
-                Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared),
+                Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared, true),
                 Err(err) => self.errors.keyed_error(key, err),
             }
         } else {
@@ -335,7 +335,7 @@ impl FetchState {
         if let Some(content) = entry.content() {
             if content.metadata().is_lfs() {
                 match entry.try_into() {
-                    Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared),
+                    Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared, true),
                     Err(err) => self.errors.keyed_error(key, err),
                 }
             } else {
@@ -401,10 +401,20 @@ impl FetchState {
         local: Option<Arc<LfsStore>>,
         cache: Option<Arc<LfsStore>>,
     ) -> Result<()> {
+        let errors = &mut self.errors;
         let pending: HashSet<_> = self
             .lfs_pointers
             .iter()
-            .map(|(_k, v)| (v.sha256(), v.size() as usize))
+            .map(|(key, (ptr, write))| {
+                if *write {
+                    if let Some(lfs_cache) = cache.as_ref() {
+                        if let Err(err) = lfs_cache.add_pointer(ptr.clone()) {
+                            errors.keyed_error(key.clone(), err);
+                        }
+                    }
+                }
+                (ptr.sha256(), ptr.size() as usize)
+            })
             .collect();
         if pending.is_empty() {
             return Ok(());
@@ -571,7 +581,7 @@ impl FetchState {
                 // TODO(meyer): Extract out a "FetchPending" object like FetchErrors, or otherwise make it possible
                 // to share a "mark complete" implementation while holding a mutable reference to self.found.
                 self.common.pending.remove(key);
-                if let Some(ptr) = self.lfs_pointers.remove(key) {
+                if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
                     self.pointer_origin.write().remove(&ptr.sha256());
                 }
             }
