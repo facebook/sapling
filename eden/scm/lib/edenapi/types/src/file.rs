@@ -212,7 +212,7 @@ impl Arbitrary for FileEntry {
 }
 
 #[auto_wire]
-#[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize)]
+#[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FileAttributes {
     #[id(0)]
     pub content: bool,
@@ -231,7 +231,7 @@ impl Arbitrary for FileAttributes {
 }
 
 #[auto_wire]
-#[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize)]
+#[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FileSpec {
     #[id(0)]
     pub key: Key,
@@ -250,7 +250,7 @@ impl Arbitrary for FileSpec {
 }
 
 #[auto_wire]
-#[derive(Clone, Default, Debug, Eq, PartialEq)]
+#[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
 pub struct FileRequest {
     // TODO(meyer): Deprecate keys field
     #[id(0)]
