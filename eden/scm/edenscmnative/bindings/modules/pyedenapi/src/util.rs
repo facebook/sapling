@@ -12,8 +12,8 @@ use cpython::*;
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
 use edenapi::ResponseMeta;
 use edenapi_types::{ContentId, TreeAttributes, UploadTreeEntry};
-use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
-use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
+use pyrevisionstore::mutabledeltastore;
+use revisionstore::HgIdMutableDeltaStore;
 use types::{HgId, Key, Parents, RepoPathBuf};
 
 pub fn to_path(py: Python, name: &PyPath) -> PyResult<RepoPathBuf> {
@@ -123,10 +123,6 @@ pub fn to_trees_upload_items<'a>(
 
 pub fn as_deltastore(py: Python, store: PyObject) -> PyResult<Arc<dyn HgIdMutableDeltaStore>> {
     Ok(store.extract::<mutabledeltastore>(py)?.extract_inner(py))
-}
-
-pub fn as_historystore(py: Python, store: PyObject) -> PyResult<Arc<dyn HgIdMutableHistoryStore>> {
-    Ok(store.extract::<mutablehistorystore>(py)?.extract_inner(py))
 }
 
 pub fn meta_to_dict(py: Python, meta: &ResponseMeta) -> PyResult<PyDict> {

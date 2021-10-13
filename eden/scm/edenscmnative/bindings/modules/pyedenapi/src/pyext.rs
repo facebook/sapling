@@ -21,29 +21,27 @@ use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::{Location, VertexName};
 use edenapi::{EdenApi, EdenApiError, Response, Stats};
 use edenapi_ext::{calc_contentid, download_files, upload_snapshot};
+use edenapi_types::HistoryEntry;
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitGraphEntry, CommitHashLookupResponse,
     CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
     CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FetchSnapshotRequest,
     FetchSnapshotResponse, FileEntry, HgChangesetContent, HgFilenodeData, HgMutationEntryContent,
-    HistoryEntry, LookupResponse, SnapshotRawData, TreeEntry, UploadHgChangeset,
-    UploadSnapshotResponse, UploadToken, UploadTokensResponse, UploadTreeResponse,
+    LookupResponse, SnapshotRawData, TreeEntry, UploadHgChangeset, UploadSnapshotResponse,
+    UploadToken, UploadTokensResponse, UploadTreeResponse,
 };
 use futures::stream;
 use progress::{ProgressBar, ProgressFactory, Unit};
 use pyrevisionstore::as_legacystore;
-use revisionstore::{
-    datastore::separate_metadata, HgIdMutableDeltaStore, HgIdMutableHistoryStore, StoreKey,
-    StoreResult,
-};
+use revisionstore::{datastore::separate_metadata, HgIdMutableDeltaStore, StoreKey, StoreResult};
 use types::HgId;
 use types::RepoPathBuf;
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
-    as_deltastore, as_historystore, meta_to_dict, to_contentid, to_keys, to_keys_with_parents,
-    to_path, to_tree_attrs, to_trees_upload_items,
+    as_deltastore, meta_to_dict, to_contentid, to_keys, to_keys_with_parents, to_path,
+    to_tree_attrs, to_trees_upload_items,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -62,60 +60,32 @@ pub trait EdenApiPyExt: EdenApi {
     fn files_py(
         self: Arc<Self>,
         py: Python,
-        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        progress: Arc<dyn ProgressFactory>,
-    ) -> PyResult<stats> {
+    ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
         let keys = to_keys(py, &keys)?;
-        let store = as_deltastore(py, store)?;
-
-        let stats = py
-            .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let prog = progress.bar(
-                        "Downloading files over HTTP",
-                        Some(keys.len() as u64),
-                        Unit::Named("files"),
-                    )?;
-                    let response = self.files(repo, keys).await?;
-                    write_files(response, store, prog.as_ref()).await
-                })
-            })
+        let entries = py
+            .allow_threads(|| block_unless_interrupted(self.files(repo, keys)))
             .map_pyerr(py)?
-            .map_pyerr(py)?;
-
-        stats::new(py, stats)
+            .map_pyerr(py)?
+            .entries;
+        Ok(entries.map_ok(Serde).map_err(Into::into).into())
     }
 
     fn history_py(
         self: Arc<Self>,
         py: Python,
-        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
         length: Option<u32>,
-        progress: Arc<dyn ProgressFactory>,
-    ) -> PyResult<stats> {
+    ) -> PyResult<TStream<anyhow::Result<Serde<HistoryEntry>>>> {
         let keys = to_keys(py, &keys)?;
-        let store = as_historystore(py, store)?;
-
-        let stats = py
-            .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let prog = progress.bar(
-                        "Downloading file history over HTTP",
-                        Some(keys.len() as u64),
-                        Unit::Named("entries"),
-                    )?;
-                    let response = self.history(repo, keys, length).await?;
-                    write_history(response, store, prog.as_ref()).await
-                })
-            })
+        let entries = py
+            .allow_threads(|| block_unless_interrupted(self.history(repo, keys, length)))
             .map_pyerr(py)?
-            .map_pyerr(py)?;
-
-        stats::new(py, stats)
+            .map_pyerr(py)?
+            .entries;
+        Ok(entries.map_ok(Serde).map_err(Into::into).into())
     }
 
     fn storetrees_py(
@@ -750,18 +720,6 @@ pub trait EdenApiPyExt: EdenApi {
 
 impl<T: EdenApi + ?Sized> EdenApiPyExt for T {}
 
-async fn write_files(
-    mut response: Response<FileEntry>,
-    store: Arc<dyn HgIdMutableDeltaStore>,
-    prog: &dyn ProgressBar,
-) -> Result<Stats, EdenApiError> {
-    while let Some(entry) = response.entries.try_next().await? {
-        store.add_file(&entry)?;
-        prog.increment(1)?;
-    }
-    response.stats.await
-}
-
 async fn write_trees(
     mut response: Response<Result<TreeEntry, EdenApiServerError>>,
     store: Arc<dyn HgIdMutableDeltaStore>,
@@ -769,18 +727,6 @@ async fn write_trees(
 ) -> Result<Stats, EdenApiError> {
     while let Some(Ok(entry)) = response.entries.try_next().await? {
         store.add_tree(&entry)?;
-        prog.increment(1)?;
-    }
-    response.stats.await
-}
-
-async fn write_history(
-    mut response: Response<HistoryEntry>,
-    store: Arc<dyn HgIdMutableHistoryStore>,
-    prog: &dyn ProgressBar,
-) -> Result<Stats, EdenApiError> {
-    while let Some(entry) = response.entries.try_next().await? {
-        store.add_entry(&entry)?;
         prog.increment(1)?;
     }
     response.stats.await

@@ -18,6 +18,8 @@ use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
+use edenapi_types::FileEntry;
+use edenapi_types::HistoryEntry;
 use edenapi_types::TreeEntry;
 use edenapi_types::{
     CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashResponse,
@@ -85,23 +87,19 @@ py_class!(pub class client |py| {
 
     def files(
         &self,
-        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>
-    ) -> PyResult<stats> {
-        let progress = self.progress(py).clone();
-        self.inner(py).clone().files_py(py, store, repo, keys, progress)
+    ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
+        self.inner(py).clone().files_py(py, repo, keys)
     }
 
     def history(
         &self,
-        store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
         length: Option<u32> = None
-    ) -> PyResult<stats> {
-        let progress = self.progress(py).clone();
-        self.inner(py).clone().history_py(py, store, repo, keys, length, progress)
+    ) -> PyResult<TStream<anyhow::Result<Serde<HistoryEntry>>>> {
+        self.inner(py).clone().history_py(py, repo, keys, length)
     }
 
     def storetrees(
