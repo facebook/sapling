@@ -5,132 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    fmt::{self, Debug, Display},
-    io::{self, Read, Write},
-    str::FromStr,
-};
+use std::io::{self, Read, Write};
 
-use anyhow::{bail, Result};
-use serde_derive::{Deserialize, Serialize};
+use crate::hash::AbstractHashType;
+use crate::hash::HashTypeInfo;
 
 /// A Sha256 hash.
-#[derive(
-    Clone,
-    Copy,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-    Serialize,
-    Deserialize,
-    Default
-)]
-pub struct Sha256([u8; Sha256::len()]);
+pub type Sha256 = AbstractHashType<Sha256TypeInfo, 32>;
+
+pub struct Sha256TypeInfo;
+
+impl HashTypeInfo for Sha256TypeInfo {
+    const HASH_TYPE_NAME: &'static str = "Sha256";
+}
 
 impl Sha256 {
-    pub const fn len() -> usize {
-        32
-    }
-
-    pub const fn hex_len() -> usize {
-        Sha256::len() * 2
-    }
-
-    pub fn to_hex(&self) -> String {
-        to_hex(self.0.as_ref())
-    }
-
-    pub fn from_hex(hex: &[u8]) -> Result<Self> {
-        if hex.len() != Self::hex_len() {
-            let msg = format!("{:?} is not a hex string of {} chars", hex, Self::hex_len());
-            bail!(msg);
-        }
-        let mut bytes = [0u8; Self::len()];
-        for (i, byte) in hex.iter().enumerate() {
-            let value = match byte {
-                b'0'..=b'9' => byte - b'0',
-                b'a'..=b'f' => byte - b'a' + 10,
-                b'A'..=b'F' => byte - b'A' + 10,
-                _ => {
-                    let msg = format!("{:?} is not a hex character", *byte as char);
-                    bail!(msg);
-                }
-            };
-            if i & 1 == 0 {
-                bytes[i / 2] |= value << 4;
-            } else {
-                bytes[i / 2] |= value;
-            }
-        }
-        Ok(Self::from_byte_array(bytes))
-    }
-
-    pub fn from_byte_array(bytes: [u8; Self::len()]) -> Self {
-        Self(bytes)
-    }
-
-    pub fn from_slice(bytes: &[u8]) -> Result<Self> {
-        if bytes.len() != Sha256::len() {
-            bail!("invalid sha256 length {:?}", bytes.len());
-        }
-
-        let mut fixed_bytes = [0u8; Sha256::len()];
-        fixed_bytes.copy_from_slice(bytes);
-        Ok(Sha256(fixed_bytes))
-    }
-
-    pub fn into_inner(self) -> [u8; Sha256::len()] {
-        self.0
-    }
-}
-
-impl Display for Sha256 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.to_hex(), fmt)
-    }
-}
-
-impl Debug for Sha256 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "Sha256({:?})", &self.to_hex())
+    pub fn into_inner(self) -> [u8; Self::len()] {
+        self.into_byte_array()
     }
 }
 
 impl<'a> From<&'a [u8; Sha256::len()]> for Sha256 {
     fn from(bytes: &[u8; Sha256::len()]) -> Sha256 {
-        Sha256(bytes.clone())
-    }
-}
-
-impl From<[u8; Sha256::len()]> for Sha256 {
-    fn from(bytes: [u8; Sha256::len()]) -> Sha256 {
-        Sha256(bytes)
-    }
-}
-
-impl AsRef<[u8]> for Sha256 {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl FromStr for Sha256 {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        if s.len() != Sha256::hex_len() {
-            bail!("invalid sha256 length {:?}", s.len())
-        }
-
-        let mut ret = Sha256([0u8; Sha256::len()]);
-
-        for idx in 0..ret.0.len() {
-            ret.0[idx] = u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16)?;
-        }
-
-        Ok(ret)
+        Sha256::from_byte_array(bytes.clone())
     }
 }
 
@@ -141,7 +38,7 @@ pub trait WriteSha256Ext {
 
 impl<W: Write + ?Sized> WriteSha256Ext for W {
     fn write_sha256(&mut self, value: &Sha256) -> io::Result<()> {
-        self.write_all(&value.0)
+        self.write_all(value.as_ref())
     }
 }
 
@@ -152,40 +49,23 @@ pub trait ReadSha256Ext {
 
 impl<R: Read + ?Sized> ReadSha256Ext for R {
     fn read_sha256(&mut self) -> io::Result<Sha256> {
-        let mut sha256 = Sha256([0u8; Sha256::len()]);
-        self.read_exact(&mut sha256.0)?;
+        let mut bytes = [0u8; Sha256::len()];
+        self.read_exact(&mut bytes)?;
+        let sha256 = Sha256::from_byte_array(bytes);
         Ok(sha256)
     }
 }
 
-const HEX_CHARS: &[u8] = b"0123456789abcdef";
-
-pub fn to_hex(slice: &[u8]) -> String {
-    let mut v = Vec::with_capacity(slice.len() * 2);
-    for &byte in slice {
-        v.push(HEX_CHARS[(byte >> 4) as usize]);
-        v.push(HEX_CHARS[(byte & 0xf) as usize]);
-    }
-
-    unsafe { String::from_utf8_unchecked(v) }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl quickcheck::Arbitrary for Sha256 {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        let mut bytes = [0u8; Sha256::len()];
-        for b in bytes.iter_mut() {
-            *b = u8::arbitrary(g);
-        }
-        Sha256::from(&bytes)
-    }
-}
+// Some users dependent on it.
+pub use crate::hash::to_hex;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use quickcheck::quickcheck;
+    use serde::Deserialize;
+    use serde::Serialize;
 
     #[test]
     fn test_incorrect_length() {
@@ -196,11 +76,11 @@ mod tests {
     fn test_from_hex() {
         assert_eq!(
             Sha256::from_hex(b"abcd").unwrap_err().to_string(),
-            "[97, 98, 99, 100] is not a hex string of 64 chars"
+            "[97, 98, 99, 100] is not a 64-byte hex string"
         );
         assert_eq!(
             Sha256::from_hex(&[b'z'; 64]).unwrap_err().to_string(),
-            "\'z\' is not a hex character"
+            "[122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122] is not a 64-byte hex string"
         );
         let hex = "434b1eeccd0fef2bad68f3c4f5dcbb2feb90b9465628a544cae3730ddf36310f";
         assert_eq!(Sha256::from_hex(hex.as_bytes()).unwrap().to_hex(), hex);
@@ -222,7 +102,7 @@ mod tests {
         #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
         struct Hex(#[serde(with = "crate::serde_with::sha256::hex")] Sha256);
 
-        let id: Sha256 = Sha256([0xcc; Sha256::len()]);
+        let id: Sha256 = Sha256::from_byte_array([0xcc; Sha256::len()]);
         let orig = Orig(id);
         let bytes = Bytes(id);
         let hex = Hex(id);
