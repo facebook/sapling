@@ -64,20 +64,8 @@ jobs:
       run: |
         rm -rf /tmp/build/build/eden_scm/*
         df -h
-    - name: Build eden_scm_lib_edenapi_tools
-      run: >-
-        python3 build/fbcode_builder/getdeps.py build
-        --allow-system-packages
-        --scratch-path /tmp/build
-        --no-tests
-        --src-dir=.
-        eden_scm_lib_edenapi_tools
     - name: Check space before cleanup
       run: df -h
-    - name: Clean up eden_scm_lib_edenapi_tools build
-      run: |
-        rm -rf /tmp/build/build/eden_scm_lib_edenapi_tools/*
-        df -h
     - name: Build mononoke dependencies
       run: >-
         python3 build/fbcode_builder/getdeps.py build
@@ -118,8 +106,6 @@ jobs:
         <(python3 build/fbcode_builder/getdeps.py list-deps mononoke)
         <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm)
         <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm)
-        <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm_lib_edenapi_tools)
-        <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm_lib_edenapi_tools)
         <(echo mononoke_integration)
         | uniq -u
         )

@@ -54,14 +54,6 @@ jobs:
         --no-tests
         --src-dir=.
         eden_scm
-    - name: Build eden_scm_lib_edenapi_tools
-      run: >-
-        python3 build/fbcode_builder/getdeps.py build
-        --allow-system-packages
-        --scratch-path /tmp/build
-        --no-tests
-        --src-dir=.
-        eden_scm_lib_edenapi_tools
     - name: Build mononoke dependencies
       run: >-
         python3 build/fbcode_builder/getdeps.py build
@@ -95,8 +87,6 @@ jobs:
         <(python3 build/fbcode_builder/getdeps.py list-deps mononoke)
         <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm)
         <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm)
-        <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm_lib_edenapi_tools)
-        <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm_lib_edenapi_tools)
         <(echo mononoke_integration)
         | uniq -u
         )
