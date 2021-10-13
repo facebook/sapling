@@ -83,7 +83,8 @@ impl DerivedDataManager {
     }
 
     /// Perform derivation for a single changeset.
-    async fn perform_single_derivation<Derivable>(
+    /// Will fail in case data for parents changeset wasn't derived
+    pub async fn perform_single_derivation<Derivable>(
         &self,
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
