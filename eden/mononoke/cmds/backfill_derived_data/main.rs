@@ -42,6 +42,7 @@ use futures::{
 use futures_stats::{TimedFutureExt, TimedTryFutureExt};
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime};
+use repo_factory::RepoFactoryBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::{info, Logger};
@@ -118,12 +119,15 @@ const UNREDACTED_TYPES: &[&str] = &[
     BlameRoot::NAME,
 ];
 
-async fn open_repo_maybe_unredacted(
+async fn open_repo_maybe_unredacted<RepoType>(
     fb: FacebookInit,
     logger: &Logger,
     matches: &MononokeMatches<'_>,
     data_types: &[impl AsRef<str>],
-) -> Result<InnerRepo> {
+) -> Result<RepoType>
+where
+    RepoType: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
     let mut unredacted = false;
     for data_type in data_types {
         unredacted |= UNREDACTED_TYPES.contains(&data_type.as_ref());
@@ -502,7 +506,7 @@ async fn run_subcmd<'a>(
                 .map(|limit| limit.parse::<usize>())
                 .transpose()?;
 
-            let repo =
+            let repo: InnerRepo =
                 open_repo_maybe_unredacted(fb, &logger, &matches, &[&derived_data_type]).await?;
 
             info!(
@@ -613,9 +617,8 @@ async fn run_subcmd<'a>(
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE);
             let (repo, types): (_, Vec<String>) = match (all, derived_data_types) {
                 (true, None) => {
-                    let repo: InnerRepo = args::open_repo_unredacted(fb, logger, matches).await?;
+                    let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
                     let types = repo
-                        .blob_repo
                         .get_derived_data_config()
                         .enabled
                         .types
@@ -629,7 +632,7 @@ async fn run_subcmd<'a>(
                         .into_iter()
                         .map(|s| s.to_string())
                         .collect::<Vec<_>>();
-                    let repo =
+                    let repo: BlobRepo =
                         open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_types)
                             .await?;
                     (repo, derived_data_types)
@@ -649,8 +652,7 @@ async fn run_subcmd<'a>(
                     ));
                 }
             };
-            let csid =
-                helpers::csid_resolve(&ctx, repo.blob_repo.clone(), hash_or_bookmark).await?;
+            let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_single(&ctx, &repo, csid, types).await
         }
         (SUBCOMMAND_BENCHMARK, Some(sub_m)) => {
@@ -1358,13 +1360,11 @@ async fn tail_one_iteration(
 
 async fn subcommand_single(
     ctx: &CoreContext,
-    repo: &InnerRepo,
+    repo: &BlobRepo,
     csid: ChangesetId,
     derived_data_types: Vec<String>,
 ) -> Result<()> {
-    let repo = repo
-        .blob_repo
-        .dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
+    let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
     let mut derived_utils = vec![];
     for ty in derived_data_types {
         let utils = derived_data_utils(ctx.fb, &repo, ty)?;
@@ -1448,7 +1448,7 @@ mod tests {
         let master = resolve_cs_id(&ctx, &repo.blob_repo, "master").await?;
         subcommand_single(
             &ctx,
-            &repo,
+            &repo.blob_repo,
             master,
             vec![RootUnodeManifestId::NAME.to_string()],
         )
@@ -1457,7 +1457,7 @@ mod tests {
         let writes_count = counting_blobstore.writes_count();
         subcommand_single(
             &ctx,
-            &repo,
+            &repo.blob_repo,
             master,
             vec![RootUnodeManifestId::NAME.to_string()],
         )
