@@ -16,6 +16,7 @@ use cpython_ext::convert::Serde;
 use cpython_ext::PyCell;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
+use edenapi_types::AnyFileContentId;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::EphemeralPrepareResponse;
@@ -31,11 +32,13 @@ use edenapi_types::{
     UploadTokensResponse, UploadTreeResponse,
 };
 use futures::TryStreamExt;
+use minibytes::Bytes;
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
 use pyrevisionstore::{edenapifilestore, edenapitreestore};
 use revisionstore::{EdenApiFileStore, EdenApiTreeStore};
+use std::num::NonZeroU64;
 use types::HgId;
 use types::RepoPathBuf;
 
@@ -381,6 +384,24 @@ py_class!(pub class client |py| {
         let inner = self.inner(py).clone();
         let entries = py
             .allow_threads(|| block_unless_interrupted(inner.ephemeral_prepare(repo)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+            .entries;
+        Ok(entries.map_ok(Serde).map_err(Into::into).into())
+    }
+
+    /// uploadfilecontents(repo: str, data: [(AnyFileContentId, Bytes)], bubbleid: int | None)
+    /// -> Iterable[UploadToken]
+    def uploadfilecontents(
+        &self,
+        repo: String,
+        data: Serde<Vec<(AnyFileContentId, Bytes)>>,
+        bubbleid: Option<u64> = None
+    ) -> PyResult<TStream<anyhow::Result<Serde<UploadToken>>>> {
+        let bubble_id = bubbleid.and_then(NonZeroU64::new);
+        let inner = self.inner(py).clone();
+        let entries = py
+            .allow_threads(|| block_unless_interrupted(inner.process_files_upload(repo, data.0, bubble_id)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;
