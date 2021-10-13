@@ -31,43 +31,10 @@ Start up EdenAPI server.
   $ mononoke
   $ wait_for_mononoke
 
-Create and send file data request.
-  $ edenapi_make_req commit-revlog-data > req.cbor <<EOF
-  > {
-  >   "hgids": [
-  >     "$COMMIT_1",
-  >     "$COMMIT_2"
-  >   ]
-  > }
-  > EOF
-  Reading from stdin
-  Generated request: CommitRevlogDataRequest {
-      hgids: [
-          HgId("e83645968c8f2954b97a3c79ce5a6b90a464c54d"),
-          HgId("c7dcf24fab3a8ab956273fa40d5cc44bc26ec655"),
-      ],
-  }
+Check response.
+  $ hgedenapi debugapi -e commitdata -i "['$COMMIT_1','$COMMIT_2']"
+  [{"hgid": bin("e83645968c8f2954b97a3c79ce5a6b90a464c54d"),
+    "revlog_data": b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\09b8fa746094652af6be3a05047424c31a48c5fac\ntest\n0 0\ntest.txt\n\nadd test.txt"},
+   {"hgid": bin("c7dcf24fab3a8ab956273fa40d5cc44bc26ec655"),
+    "revlog_data": b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\xe86E\x96\x8c\x8f)T\xb9z<y\xceZk\x90\xa4d\xc5M815f6cad2ce1ccbf87151e2d7223c92899d9026c\ntest\n0 0\ncopy.txt\n\ncopy test.txt to test2.txt"}]
 
-  $ sslcurl -s "$EDENAPI_URI/repo/commit/revlog_data" --data-binary @req.cbor > res.cbor
-
-Check files in response.
-  $ edenapi_read_res commit-revlog-data ls res.cbor
-  Reading from file: "res.cbor"
-  e83645968c8f2954b97a3c79ce5a6b90a464c54d
-  c7dcf24fab3a8ab956273fa40d5cc44bc26ec655
-
-Verify that filenode hashes match contents.
-  $ edenapi_read_res commit-revlog-data check res.cbor
-  Reading from file: "res.cbor"
-  e83645968c8f2954b97a3c79ce5a6b90a464c54d matches
-  c7dcf24fab3a8ab956273fa40d5cc44bc26ec655 matches
-
-Examine file data.
-  $ edenapi_read_res commit-revlog-data show --hgid e83645968c8f2954b97a3c79ce5a6b90a464c54d res.cbor
-  Reading from file: "res.cbor"
-  \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x009b8fa746094652af6be3a05047424c31a48c5fac (esc)
-  test
-  0 0
-  test.txt
-  
-  add test.txt (no-eol)
