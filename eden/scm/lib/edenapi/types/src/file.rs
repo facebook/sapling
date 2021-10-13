@@ -56,7 +56,7 @@ impl FileError {
 
 /// File "aux data", requires an additional mononoke blobstore lookup. See mononoke_types::ContentMetadata.
 #[auto_wire]
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct FileAuxData {
     #[id(0)]
     pub total_size: u64,
@@ -140,7 +140,7 @@ impl FileContent {
 /// Structure representing source control file content on the wire.
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct FileEntry {
     pub key: Key,
     pub parents: Parents,
@@ -212,7 +212,7 @@ impl Arbitrary for FileEntry {
 }
 
 #[auto_wire]
-#[derive(Clone, Default, Debug, Eq, PartialEq)]
+#[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize)]
 pub struct FileAttributes {
     #[id(0)]
     pub content: bool,
@@ -231,7 +231,7 @@ impl Arbitrary for FileAttributes {
 }
 
 #[auto_wire]
-#[derive(Clone, Default, Debug, Eq, PartialEq)]
+#[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize)]
 pub struct FileSpec {
     #[id(0)]
     pub key: Key,
