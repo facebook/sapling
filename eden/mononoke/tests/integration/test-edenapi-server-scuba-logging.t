@@ -17,39 +17,15 @@ Send a request
 
   $ ID1="1111111111111111111111111111111111111111"
   $ ID2="2222222222222222222222222222222222222222"
-  $ edenapi_make_req file > req.cbor <<EOF
-  > {
-  >   "keys": [
-  >     ["", "$ID1"],
-  >     ["", "$ID2"]
-  >   ]
-  > }
+  $ cat > req <<EOF
+  > [
+  >  ("", "$ID1"),
+  >  ("", "$ID2"),
+  > ]
   > EOF
-  Reading from stdin
-  Generated request: WireFileRequest {
-      keys: [
-          WireKey {
-              path: WireRepoPathBuf(
-                  "",
-              ),
-              hgid: WireHgId("1111111111111111111111111111111111111111"),
-          },
-          WireKey {
-              path: WireRepoPathBuf(
-                  "",
-              ),
-              hgid: WireHgId("2222222222222222222222222222222222222222"),
-          },
-      ],
-      reqs: [],
-  }
 
-  $ sslcurl -s "$EDENAPI_URI/repo/files" -d@req.cbor > res.cbor
-
-Read the response, it should be empty
-
-  $ edenapi_read_res file ls res.cbor
-  Reading from file: "res.cbor"
+  $ hgedenapi debugapi -e files -f req
+  []
 
 Check the logging
 
