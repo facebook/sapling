@@ -249,9 +249,8 @@ py_class!(pub class client |py| {
         self.inner(py).clone().commit_graph_py(py, repo, heads.0, common.0)
     }
 
-    /// clonedata(repo: str) -> bytes
-    /// mincode-serialized CloneData.
-    def clonedata(&self, repo: String) -> PyResult<PyBytes> {
+    /// clonedata(repo: str) -> PyCell
+    def clonedata(&self, repo: String) -> PyResult<PyCell> {
         self.inner(py).clone().clone_data_py(py, repo)
     }
 

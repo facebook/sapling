@@ -83,7 +83,10 @@ Test APIs:
     "known": {"Ok": True}}]
 
   $ hg debugapi -e clonedata
-  b"\x01\0\x01\0\x01\x01\x14\x11$x\x96)a\x14q$\xed\xd45I\xae\xdd\x1a3^D\xbf"
+  {"idmap": {1: bin("112478962961147124edd43549aedd1a335e44bf")},
+   "flat_segments": {"segments": [{"low": 0,
+                                   "high": 1,
+                                   "parents": []}]}}
 
   $ hg debugapi -e pullfastforwardmaster -i "b'$A'" -i "b'$B'"
   {"idmap": {0: bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),

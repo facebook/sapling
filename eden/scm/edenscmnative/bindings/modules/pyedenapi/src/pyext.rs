@@ -343,20 +343,18 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     /// Get the "CloneData" serialized using mincode.
-    fn clone_data_py(self: Arc<Self>, py: Python, repo: String) -> PyResult<PyBytes> {
-        let bytes = py
+    fn clone_data_py(self: Arc<Self>, py: Python, repo: String) -> PyResult<PyCell> {
+        let data = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    match self.clone_data(repo).await {
-                        Err(e) => Err(e),
-                        Ok(data) => Ok(mincode::serialize(&data)),
-                    }
+                    self.clone_data(repo).await.map(|data| {
+                        data.convert_vertex(|hgid| VertexName(hgid.as_ref().to_vec().into()))
+                    })
                 })
             })
             .map_pyerr(py)?
-            .map_pyerr(py)?
             .map_pyerr(py)?;
-        Ok(PyBytes::new(py, &bytes))
+        PyCell::new(py, data)
     }
 
     /// Get pll data for master pull fast path

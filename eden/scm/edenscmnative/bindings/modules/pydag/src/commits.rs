@@ -122,17 +122,17 @@ py_class!(pub class commits |py| {
     }
 
     /// Import clone data (serialized in mincode) and flush.
-    def importclonedata(&self, data: PyBytes) -> PyResult<PyNone> {
-        let data: CloneData<Vertex> = mincode::deserialize(data.data(py)).map_pyerr(py)?;
+    def importclonedata(&self, data: PyCell) -> PyResult<PyNone> {
+        let data: Box<CloneData<Vertex>> = data.take(py).ok_or_else(|| format_err!("Data is not CloneData")).map_pyerr(py)?;
         let mut inner = self.inner(py).borrow_mut();
-        block_on(inner.import_clone_data(data)).map_pyerr(py)?;
+        block_on(inner.import_clone_data(*data)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
     /// Import pull data(inside PyCell) and flush.
     /// Returns (commit_count, segment_count) on success.
     def importpulldata(&self, data: PyCell) -> PyResult<(u64, usize)> {
-        let data: Box<CloneData<Vertex>> = data.take(py).ok_or(format_err!("Data is not CloneData")).map_pyerr(py)?;
+        let data: Box<CloneData<Vertex>> = data.take(py).ok_or_else(|| format_err!("Data is not CloneData")).map_pyerr(py)?;
         let commits = data.flat_segments.vertex_count();
         let segments = data.flat_segments.segment_count();
         let mut inner = self.inner(py).borrow_mut();
