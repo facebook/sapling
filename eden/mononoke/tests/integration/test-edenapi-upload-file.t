@@ -30,26 +30,57 @@ Start up EdenAPI server.
   $ mononoke
   $ wait_for_mononoke
 
-Create and send file data request.
-  $ echo abc > file1
-  $ sslcurl -X PUT -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/upload/file/sha1/$(sha1sum file1 | cut -d' ' -f1)?content_size=$(wc -c file1 | cut -d' ' -f1)" --data-binary @file1 > res1.cbor
-  $ echo "{}" | edenapi_make_req ephemeral-prepare > req.cbor
-  Reading from stdin
-  Generated request: WireEphemeralPrepareRequest
-  $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/ephemeral/prepare" --data-binary @req.cbor > res2.cbor
-  $ edenapi_read_res ephemeral-prepare res2.cbor
-  Reading from file: "res2.cbor"
-  Bubble id: 1
-  $ echo def > file2
-  $ sslcurl -X PUT -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/upload/file/sha1/$(sha1sum file2 | cut -d' ' -f1)?bubble_id=1&content_size=$(wc -c file1 | cut -d' ' -f1)" --data-binary @file2 > res3.cbor
+Check responses.
 
-Check files in response.
-  $ edenapi_read_res upload-token res1.cbor
-  Reading from file: "res1.cbor"
-  Token 0: id AnyFileContentId(Sha1(Sha1("03cfd743661f07975fa2f1220c5194cbaff48451")))
-  $ edenapi_read_res upload-token res3.cbor
-  Reading from file: "res3.cbor"
-  Token 0: id AnyFileContentId(Sha1(Sha1("7b18d017f89f61cf17d47f92749ea6930a3f1deb")))
+  $ hgedenapi debugapi -e uploadfilecontents -i '[({"Sha1":"03cfd743661f07975fa2f1220c5194cbaff48451"}, b"abc\n")]'
+  [{"data": {"id": {"AnyFileContentId": {"Sha1": bin("03cfd743661f07975fa2f1220c5194cbaff48451")}},
+             "metadata": {"FileContentTokenMetadata": {"content_size": 4}},
+             "bubble_id": None},
+    "signature": {"signature": [102,
+                                97,
+                                107,
+                                101,
+                                116,
+                                111,
+                                107,
+                                101,
+                                110,
+                                115,
+                                105,
+                                103,
+                                110,
+                                97,
+                                116,
+                                117,
+                                114,
+                                101]}}]
+
+  $ hgedenapi debugapi -e ephemeralprepare
+  [{"bubble_id": 1}]
+
+  $ hgedenapi debugapi -e uploadfilecontents -i '[({"Sha1":"7b18d017f89f61cf17d47f92749ea6930a3f1deb"}, b"def\n")]' -i 1
+  [{"data": {"id": {"AnyFileContentId": {"Sha1": bin("7b18d017f89f61cf17d47f92749ea6930a3f1deb")}},
+             "metadata": {"FileContentTokenMetadata": {"content_size": 4}},
+             "bubble_id": 1},
+    "signature": {"signature": [102,
+                                97,
+                                107,
+                                101,
+                                116,
+                                111,
+                                107,
+                                101,
+                                110,
+                                115,
+                                105,
+                                103,
+                                110,
+                                97,
+                                116,
+                                117,
+                                114,
+                                101]}}]
+
 
 Check file in blobstores
   $ mononoke_admin filestore verify sha1 03cfd743661f07975fa2f1220c5194cbaff48451
