@@ -170,6 +170,25 @@ impl FetchState {
         }
     }
 
+    fn evict_to_cache(
+        key: Key,
+        file: LazyFile,
+        indexedlog_cache: &IndexedLogHgIdDataStore,
+        memcache: Option<Arc<MemcacheStore>>,
+    ) -> Result<LazyFile> {
+        let cache_entry = file.indexedlog_cache_entry(key.clone())?.ok_or_else(|| {
+                anyhow!("expected LazyFile::EdenApi or LazyFile::Memcache, other LazyFile variants should not be written to cache")
+            })?;
+        if let Some(memcache) = memcache.as_ref() {
+            memcache.add_mcdata(cache_entry.clone().try_into()?);
+        }
+        indexedlog_cache.put_entry(cache_entry)?;
+        let mmap_entry = indexedlog_cache
+            .get_entry(key)?
+            .ok_or_else(|| anyhow!("failed to read entry back from indexedlog after writing"))?;
+        Ok(LazyFile::IndexedLog(mmap_entry))
+    }
+
     #[instrument(level = "debug", skip(self, entry))]
     fn found_indexedlog(&mut self, key: Key, entry: Entry, typ: StoreType) {
         if entry.metadata().is_lfs() {
@@ -349,18 +368,12 @@ impl FetchState {
                 }
                 lfsptr = Some(ptr);
             } else if let Some(indexedlog_cache) = indexedlog_cache.as_ref() {
-                let entry = LazyFile::EdenApi(entry);
-                let cache_entry = entry.indexedlog_cache_entry(key.clone())?.ok_or_else(|| {
-                        anyhow!("found non-EdenApi LazyFile despite constructing LazyFile::EdenApi on previous line")
-                    })?;
-                if let Some(memcache) = memcache.as_ref() {
-                    memcache.add_mcdata(cache_entry.clone().try_into()?);
-                }
-                indexedlog_cache.put_entry(cache_entry)?;
-                let mmap_entry = indexedlog_cache.get_entry(key)?.ok_or_else(|| {
-                    anyhow!("failed to read entry back from indexedlog after writing")
-                })?;
-                file.content = Some(LazyFile::IndexedLog(mmap_entry));
+                file.content = Some(Self::evict_to_cache(
+                    key,
+                    LazyFile::EdenApi(entry),
+                    indexedlog_cache,
+                    memcache,
+                )?);
             } else {
                 file.content = Some(LazyFile::EdenApi(entry));
             }
