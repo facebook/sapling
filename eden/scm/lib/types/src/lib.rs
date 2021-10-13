@@ -8,6 +8,7 @@
 //! Common types used by sibling crates
 
 pub mod errors;
+pub mod hash;
 pub mod hgid;
 pub mod key;
 pub mod mutation;
