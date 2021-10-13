@@ -44,7 +44,6 @@ enum Args {
     CommitHashLookup(CommitHashLookupArgs),
     CommitGraph(CommitGraphArgs),
     Clone(CloneArgs),
-    FullIdmapClone(CloneArgs),
     Bookmark(BookmarkArgs),
     EphemeralPrepare(EphemeralPrepareArgs),
     UploadToken(UploadTokenArgs),
@@ -262,7 +261,6 @@ fn main() -> Result<()> {
         Args::CommitHashLookup(args) => cmd_commit_hash_lookup(args),
         Args::CommitGraph(args) => cmd_commit_graph(args),
         Args::Clone(args) => cmd_clone(args),
-        Args::FullIdmapClone(args) => cmd_full_idmap_clone(args),
         Args::Bookmark(args) => cmd_bookmark(args),
         Args::EphemeralPrepare(args) => ephemeral_prepare(args),
         Args::UploadToken(args) => upload_token(args),
@@ -577,54 +575,6 @@ fn cmd_clone(args: CloneArgs) -> Result<()> {
         .map(|(k, v)| format!("  {}: {}\n", k, v.to_hex()))
         .collect::<Vec<_>>();
     idmap_entries.sort();
-    println!("idmap: {{\n{}}}", idmap_entries.join(""));
-    Ok(())
-}
-
-fn cmd_full_idmap_clone(args: CloneArgs) -> Result<()> {
-    let mut buffer = Vec::new();
-    match args.input {
-        None => {
-            eprintln!("Reading from stdin");
-            stdin().read_to_end(&mut buffer)?;
-        }
-        Some(path) => {
-            eprintln!("Reading from file: {:?}", &path);
-            let mut file = File::open(&path)?;
-            file.read_to_end(&mut buffer)?;
-        }
-    };
-    let mut deserializer = Deserializer::from_slice(&buffer);
-    let wire_clone_data = WireCloneData::deserialize(&mut deserializer)?;
-    let clone_data = wire_clone_data.to_api()?;
-    println!("flat_segments: [");
-    for fs in clone_data.flat_segments.segments {
-        println!(
-            "  {}, {}, [{}]",
-            fs.low,
-            fs.high,
-            fs.parents
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
-    }
-    println!("]");
-    let mut idmap_entries = deserializer
-        .into_iter::<WireIdMapEntry>()
-        .collect::<Result<Vec<_>, _>>()?;
-    idmap_entries.sort_by(|x, y| x.dag_id.cmp(&y.dag_id));
-    let idmap_entries = idmap_entries
-        .into_iter()
-        .map(|e| {
-            Ok(format!(
-                "  {}: {}\n",
-                e.dag_id.to_api()?,
-                e.hg_id.to_api()?.to_hex()
-            ))
-        })
-        .collect::<Result<Vec<_>>>()?;
     println!("idmap: {{\n{}}}", idmap_entries.join(""));
     Ok(())
 }

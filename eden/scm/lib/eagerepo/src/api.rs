@@ -268,12 +268,6 @@ impl EdenApi for EagerRepo {
         convert_clone_data(clone_data)
     }
 
-    async fn full_idmap_clone_data(&self, _repo: String) -> edenapi::Result<dag::CloneData<HgId>> {
-        Err(not_implemented_error(
-            "EagerRepo does not support full_idmap_clone_data endpoint".to_string(),
-        ))
-    }
-
     async fn commit_location_to_hash(
         &self,
         _repo: String,

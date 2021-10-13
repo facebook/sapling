@@ -6,7 +6,7 @@
  */
 
 use bytes::Bytes as RawBytes;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::fmt::Debug;
 use std::fs::{create_dir_all, File};
@@ -14,15 +14,15 @@ use std::iter::FromIterator;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
-use anyhow::{format_err, Context};
+use anyhow::format_err;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use itertools::Itertools;
 use minibytes::Bytes;
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_cbor::Deserializer;
+use serde::{de::DeserializeOwned, Serialize};
+
 use url::Url;
 
 use auth::check_certs;
@@ -35,8 +35,8 @@ use edenapi_types::{
         WireBookmarkEntry, WireCloneData, WireCommitGraphEntry, WireCommitHashLookupResponse,
         WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
         WireEphemeralPrepareResponse, WireFetchSnapshotResponse, WireFileEntry,
-        WireHistoryResponseChunk, WireIdMapEntry, WireLookupResponse, WireToApiConversionError,
-        WireTreeEntry, WireUploadToken, WireUploadTokensResponse, WireUploadTreeResponse,
+        WireHistoryResponseChunk, WireLookupResponse, WireTreeEntry, WireUploadToken,
+        WireUploadTokensResponse, WireUploadTreeResponse,
     },
     AnyFileContentId, AnyId, Batch, BonsaiChangesetContent, BookmarkEntry, BookmarkRequest,
     CloneData, CommitGraphRequest, CommitHashLookupRequest, CommitHashLookupResponse,
@@ -51,7 +51,7 @@ use edenapi_types::{
     UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
 };
 use hg_http::http_client;
-use http_client::{AsyncResponse, HttpClient, HttpClientError, Request};
+use http_client::{AsyncResponse, HttpClient, Request};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::EdenApi;
@@ -86,7 +86,6 @@ mod paths {
     pub const COMMIT_REVLOG_DATA: &str = "commit/revlog_data";
     pub const CLONE_DATA: &str = "clone";
     pub const PULL_FAST_FORWARD: &str = "pull_fast_forward_master";
-    pub const FULL_IDMAP_CLONE_DATA: &str = "full_idmap_clone";
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
     pub const COMMIT_HASH_LOOKUP: &str = "commit/hash_lookup";
@@ -661,43 +660,6 @@ impl EdenApi for Client {
             this.fast_forward_pull_attempt(&repo, req).boxed()
         })
         .await
-    }
-
-    async fn full_idmap_clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
-        tracing::info!(
-            "Requesting full idmap clone data for the '{}' repository",
-            repo
-        );
-
-        let url = self.build_url(paths::FULL_IDMAP_CLONE_DATA, Some(&repo))?;
-        let req = self.configure_request(Request::post(url))?;
-        let async_response = req
-            .send_async()
-            .await
-            .context("error receiving async response")?;
-        let response_bytes = async_response
-            .into_body()
-            .decoded()
-            .try_concat()
-            .await
-            .context("error receiving bytes from server")?;
-
-        let mut deserializer = Deserializer::from_slice(&response_bytes);
-        let wire_clone_data =
-            WireCloneData::deserialize(&mut deserializer).map_err(HttpClientError::from)?;
-
-        let mut clone_data = wire_clone_data.to_api()?;
-
-        let idmap = deserializer
-            .into_iter::<WireIdMapEntry>()
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(HttpClientError::from)?
-            .into_iter()
-            .map(|e| Ok((e.dag_id.to_api()?, e.hg_id.to_api()?)))
-            .collect::<Result<HashMap<_, _>, WireToApiConversionError>>()?;
-
-        clone_data.idmap = idmap;
-        Ok(clone_data)
     }
 
     async fn commit_location_to_hash(

@@ -110,11 +110,6 @@ pub trait EdenApi: Send + Sync + 'static {
         Err(EdenApiError::NotSupported)
     }
 
-    async fn full_idmap_clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
-        let _ = repo;
-        Err(EdenApiError::NotSupported)
-    }
-
     async fn commit_location_to_hash(
         &self,
         repo: String,
