@@ -380,33 +380,27 @@ function wait_for_json_record_count {
 
 # Wait until a Mononoke server is available for this repo.
 function wait_for_mononoke {
-  # MONONOKE_START_TIMEOUT is set in seconds
-  # Number of attempts is timeout multiplied by 10, since we
-  # sleep every 0.1 seconds.
-  local attempts timeout
+  local start timeout
+  start=$(date +%s)
   timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
-  attempts="$((timeout * 10))"
 
-  SSLCURL="sslcurl -f https://localhost:$MONONOKE_SOCKET"
-
-  for _ in $(seq 1 $attempts); do
-    $SSLCURL -s > /dev/null 2>&1 && break
+  while [[ $(($(date +%s) - start)) -lt $timeout ]]; do
+    if sslcurl -q "https://localhost:$MONONOKE_SOCKET/health_check" > /dev/null 2>&1; then
+      return 0
+    fi
     sleep 0.1
   done
 
-  if ! $SSLCURL -s > /dev/null 2>&1 ; then
-    echo "Mononoke did not start" >&2
+  echo "Mononoke did not start in $timeout seconds" >&2
+  echo ""
+  echo "Results of curl invocation"
+  sslcurl -v "https://localhost:$MONONOKE_SOCKET/health_check"
 
-    echo ""
-    echo "Results of curl invocation"
-    $SSLCURL -v
+  echo ""
+  echo "Log of Mononoke server"
+  cat "$TESTTMP/mononoke.out"
 
-    echo ""
-    echo "Log of Mononoke server"
-    cat "$TESTTMP/mononoke.out"
-
-    exit 1
-  fi
+  exit 1
 }
 
 function flush_mononoke_bookmarks {
