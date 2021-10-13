@@ -8,7 +8,6 @@
 
 Set up local hgrc and Mononoke config.
   $ setup_common_config
-  $ setup_configerator_configs
   $ cd $TESTTMP
 
 
@@ -38,8 +37,8 @@ import testing repo to mononoke
 
 
 Start up EdenAPI server.
-  $ setup_mononoke_config
-  $ start_edenapi_server
+  $ mononoke
+  $ wait_for_mononoke
 
 Create and send file data request.
   $ edenapi_make_req bookmark > req.cbor <<EOF

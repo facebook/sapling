@@ -8,7 +8,6 @@
 
 Set up local hgrc and Mononoke config.
   $ setup_common_config
-  $ setup_configerator_configs
   $ cd $TESTTMP
 
 Initialize test repo.
@@ -29,8 +28,8 @@ Blobimport test repo.
   $ blobimport repo-hg/.hg repo
 
 Start up EdenAPI server.
-  $ setup_mononoke_config
-  $ start_edenapi_server
+  $ mononoke
+  $ wait_for_mononoke
 
 Create and send tree request.
   $ edenapi_make_req tree > req.cbor <<EOF

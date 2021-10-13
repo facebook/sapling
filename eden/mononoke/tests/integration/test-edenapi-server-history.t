@@ -35,8 +35,8 @@ Blobimport test repo.
   $ blobimport repo-hg/.hg repo
 
 Start up EdenAPI server.
-  $ setup_mononoke_config
-  $ start_edenapi_server
+  $ mononoke
+  $ wait_for_mononoke
 
 Create and send file data request.
   $ edenapi_make_req history > req.cbor <<EOF

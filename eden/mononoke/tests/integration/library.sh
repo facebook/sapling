@@ -103,8 +103,9 @@ function ssldebuglfssend {
 }
 
 function mononoke {
-  export MONONOKE_SOCKET
+  export MONONOKE_SOCKET EDENAPI_URI
   MONONOKE_SOCKET=$(get_free_socket)
+  EDENAPI_URI=https://localhost:$MONONOKE_SOCKET/edenapi
 
   SCRIBE_LOGS_DIR="$TESTTMP/scribe_logs"
   if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
@@ -1204,66 +1205,6 @@ function scsc {
   GLOG_minloglevel=5 "$SCS_CLIENT" --host "localhost:$SCS_PORT" "$@"
 }
 
-function start_edenapi_server {
-  local tls_args
-
-  tls_args=(--tls-ca "$TEST_CERTDIR/root-ca.crt"
-    --tls-private-key "$TEST_CERTDIR/localhost.key"
-    --tls-certificate "$TEST_CERTDIR/localhost.crt"
-    --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds"
-    --trusted-proxy-identity USER:myusername0)
-
-  _start_edenapi_server_impl "https" "${tls_args[@]}" "$@"
-}
-
-function start_edenapi_server_no_tls {
-  _start_edenapi_server_impl "http" "$@"
-}
-
-function _start_edenapi_server_impl {
-  scheme="$1"
-  shift
-
-  local port log attempts timeout
-  port=$(get_free_socket)
-  log="$TESTTMP/edenapi_server.out"
-
-  # Start the EdenAPI server, using test TLS credentials.
-  # This means that tests must use TLS to connect to the
-  # server. The `sslcurl` function should help with this.
-  GLOG_minloglevel=5 "$EDENAPI_SERVER" "$@" \
-    --debug \
-    --listen-host "$LOCALIP" \
-    --listen-port "$port" \
-    --mononoke-config-path "$TESTTMP/mononoke-config" \
-    "${COMMON_ARGS[@]}" >> "$log" 2>&1 &
-
-  # Record the PID of the spawned process so the test framework
-  # can kill it later during cleanup.
-  echo "$!" >> "$DAEMON_PIDS"
-
-  # Export the URI that tests will use to connect to the server.
-  export EDENAPI_PORT="${port}"
-  export EDENAPI_PREFIX="localhost:${port}"
-  export EDENAPI_URI="${scheme}://localhost:${port}"
-
-  # Wait for the server to start listening for HTTP requests.
-  timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
-  attempts="$((timeout * 10))"
-  for _ in $(seq 1 $attempts); do
-    if sslcurl -q "$EDENAPI_URI/health_check" > /dev/null 2>&1; then
-      truncate -s 0 "$log"
-      return 0
-    fi
-    sleep 0.1
-  done
-
-  echo "EdenAPI server failed to start" >&2
-  cat "$log" >&2
-  exit 1
-}
-
-
 function edenapi_make_req {
   "$EDENAPI_MAKE_REQ" "$@"
 }
@@ -1371,7 +1312,7 @@ function hgmn {
 }
 
 function hgedenapi {
-  hgmn --config "edenapi.url=${EDENAPI_URI}" --config "auth.edenapi.prefix=${EDENAPI_PREFIX}" --config "edenapi.enable=true" --config "remotefilelog.http=true" --config "remotefilelog.reponame=$REPONAME" "$@"
+  hgmn --config "edenapi.url=${EDENAPI_URI}" --config "auth.edenapi.prefix=localhost" --config "edenapi.enable=true" --config "remotefilelog.http=true" --config "remotefilelog.reponame=$REPONAME" --config "auth.edenapi.cert=$TEST_CERTDIR/localhost.crt" --config "auth.edenapi.key=$TEST_CERTDIR/localhost.key" --config "auth.edenapi.cacerts=$TEST_CERTDIR/root-ca.crt" "$@"
 }
 
 function hgmn_local {

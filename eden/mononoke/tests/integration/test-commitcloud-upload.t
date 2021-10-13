@@ -74,13 +74,9 @@ blobimport
   $ blobimport repo/.hg repo
 
 start mononoke
-
   $ mononoke
   $ wait_for_mononoke
 
-start edenapi
-  $ setup_configerator_configs
-  $ start_edenapi_server_no_tls
 
   $ cd client1
   $ hgedenapi up master_bookmark -q
@@ -133,8 +129,8 @@ This test also checks file content deduplication. We upload 1 file content and 1
 
   $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
- 
- 
+
+
 Make another commit in the first client and upload it
 The files of the second commit are identical to the files of the first commit, so we don't expect any new content uploads
   $ hgedenapi prev -q

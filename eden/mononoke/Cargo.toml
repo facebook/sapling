@@ -279,7 +279,6 @@ members = [
   "derived_data/test_utils",
   "derived_data/unodes",
   "derived_data/utils",
-  "edenapi_server",
   "edenapi_service",
   "fastreplay",
   "filenodes",

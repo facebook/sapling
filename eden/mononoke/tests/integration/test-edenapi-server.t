@@ -8,12 +8,8 @@
 
 Start up EdenAPI server.
   $ setup_mononoke_config
-  $ setup_configerator_configs
-  $ start_edenapi_server
-
-Hit health check endpoint.
-  $ sslcurl -s "$EDENAPI_URI/health_check"
-  I_AM_ALIVE (no-eol)
+  $ mononoke
+  $ wait_for_mononoke
 
 List repos.
   $ sslcurl -s "$EDENAPI_URI/repos"

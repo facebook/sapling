@@ -112,8 +112,8 @@ Run many Segmented Changelog Tailer processes.
 
   $ sleep 3
 
-  $ setup_configerator_configs
-  $ start_edenapi_server_no_tls
+  $ mononoke
+  $ wait_for_mononoke
 
   $ cd ..
   $ hgedenapi debugsegmentclone repo segmentrepo  --traceback
@@ -182,4 +182,3 @@ Run many Segmented Changelog Tailer processes.
   $ hgedenapi log -r "ancestors('remote/master')" -T "{node}: {p1node}, {p2node}\n" | sort > "${TESTTMP}/parents.out"
 
   $ diff "${TESTTMP}/parents.in" "${TESTTMP}/parents.out"
-
