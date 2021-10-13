@@ -121,7 +121,7 @@ def prepare_manifest_deps(install_dir, mononoke_repo_root):
     manifest_deps_path = join(script_dir(), "manifest_deps")
 
     exec(
-        "global OSS_DEPS; global MONONOKE_BINS; global EDENSCM_BINS; global EDENSCMLIBEDENAPITOOLS_BINS; "
+        "global OSS_DEPS; global MONONOKE_BINS; global EDENSCM_BINS; "
         + open(manifest_deps_path, "r").read()
     )
 
@@ -135,8 +135,6 @@ def prepare_manifest_deps(install_dir, mononoke_repo_root):
         MANIFEST_DEPS[k] = join(install_dir, "mononoke/bin", v)
     for k, v in EDENSCM_BINS.items():  # noqa: F821
         MANIFEST_DEPS[k] = join(install_dir, "eden_scm/bin", v)
-    for k, v in EDENSCMLIBEDENAPITOOLS_BINS.items():  # noqa: F821
-        MANIFEST_DEPS[k] = join(install_dir, "eden_scm_lib_edenapi_tools/bin", v)
 
     os.makedirs(build_dir, exist_ok=True)
     with open(join(build_dir, "manifest.json"), "w") as f:

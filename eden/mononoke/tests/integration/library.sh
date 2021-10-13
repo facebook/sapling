@@ -1205,14 +1205,6 @@ function scsc {
   GLOG_minloglevel=5 "$SCS_CLIENT" --host "localhost:$SCS_PORT" "$@"
 }
 
-function edenapi_make_req {
-  "$EDENAPI_MAKE_REQ" "$@"
-}
-
-function edenapi_read_res {
-  "$EDENAPI_READ_RES" "$@"
-}
-
 function lfs_server {
   local port uri log opts args proto poll lfs_server_pid
   port="$(get_free_socket)"
