@@ -2719,8 +2719,8 @@ sh % 'hg log -R latesttag -r tip^ -T \'{get(extras, "unknown") % "a"}\\n\'' == r
 
 # Test new-style inline templating of non-list/dict type:
 
-sh % "hg log -R latesttag -r tip -T '{manifest}\\n'" == 'ed2d5d416a513f3f19ab4cd41c793dcd8272a497'
-sh % "hg log -R latesttag -r tip -T 'string length: {manifest|count}\\n'" == 'string length: 40'
+sh % "hg log -R latesttag -r tip -T '{manifest}\\n'" == "ed2d5d416a513f3f19ab4cd41c793dcd8272a497"
+sh % "hg log -R latesttag -r tip -T 'string length: {manifest|count}\\n'" == "string length: 40"
 sh % "hg log -R latesttag -r tip -T '{manifest % \"{rev}:{node}\"}\\n'" == "5:ed2d5d416a513f3f19ab4cd41c793dcd8272a497"
 
 sh % 'hg log -R latesttag -r tip -T \'{get(extras, "branch") % "{key}: {value}\\n"}\'' == "branch: default"
@@ -2733,7 +2733,7 @@ sh % 'hg log -R latesttag -l1 -T \'{max(revset("0:5")) % "{rev}:{node|short}\\n"
 
 # Test manifest/get() can be join()-ed as before, though it's silly:
 
-sh % "hg log -R latesttag -r tip -T '{join(manifest, \"\")}\\n'" == 'ed2d5d416a513f3f19ab4cd41c793dcd8272a497'
+sh % "hg log -R latesttag -r tip -T '{join(manifest, \"\")}\\n'" == "ed2d5d416a513f3f19ab4cd41c793dcd8272a497"
 sh % 'hg log -R latesttag -r tip -T \'{join(get(extras, "branch"), "")}\\n\'' == "default"
 
 # Test min/max of integers
