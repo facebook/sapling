@@ -1,7 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
-
   $ . "$TESTDIR/library.sh"
 
   $ hginit master

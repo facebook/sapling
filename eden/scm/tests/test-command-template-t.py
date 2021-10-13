@@ -20,9 +20,6 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 is_py3 = sys.version_info[0] >= 3
 
-sh % "setconfig 'experimental.allowfilepeer=True'"
-sh % "setconfig 'extensions.treemanifest=!'"
-
 sh % "setconfig 'ui.allowemptycommit=1'"
 
 sh % "hg init a"
@@ -1591,24 +1588,24 @@ eq(
     files--debug: c
     files--debug: b
     files--debug: a
-    manifest: 102f85d65468
-    manifest: e3aa144e25d9
-    manifest: 4dc3def4f9b4
-    manifest: 4dc3def4f9b4
-    manifest: cb5a1327723b
-    manifest: cb5a1327723b
-    manifest: 6e0e82995c35
-    manifest: 4e8d705b1e53
-    manifest: a0c8bcbbb45c
-    manifest--verbose: 102f85d65468
-    manifest--verbose: e3aa144e25d9
-    manifest--verbose: 4dc3def4f9b4
-    manifest--verbose: 4dc3def4f9b4
-    manifest--verbose: cb5a1327723b
-    manifest--verbose: cb5a1327723b
-    manifest--verbose: 6e0e82995c35
-    manifest--verbose: 4e8d705b1e53
-    manifest--verbose: a0c8bcbbb45c
+    manifest: 102f85d6546830d0894e5420cdddaa12fe270c02
+    manifest: e3aa144e25d914ea34006bd7b3c266b7eb283c61
+    manifest: 4dc3def4f9b4c6e8de820f6ee74737f91e96a216
+    manifest: 4dc3def4f9b4c6e8de820f6ee74737f91e96a216
+    manifest: cb5a1327723bada42f117e4c55a303246eaf9ccc
+    manifest: cb5a1327723bada42f117e4c55a303246eaf9ccc
+    manifest: 6e0e82995c35d0d57a52aca8da4e56139e06b4b1
+    manifest: 4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
+    manifest: a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+    manifest--verbose: 102f85d6546830d0894e5420cdddaa12fe270c02
+    manifest--verbose: e3aa144e25d914ea34006bd7b3c266b7eb283c61
+    manifest--verbose: 4dc3def4f9b4c6e8de820f6ee74737f91e96a216
+    manifest--verbose: 4dc3def4f9b4c6e8de820f6ee74737f91e96a216
+    manifest--verbose: cb5a1327723bada42f117e4c55a303246eaf9ccc
+    manifest--verbose: cb5a1327723bada42f117e4c55a303246eaf9ccc
+    manifest--verbose: 6e0e82995c35d0d57a52aca8da4e56139e06b4b1
+    manifest--verbose: 4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
+    manifest--verbose: a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
     manifest--debug: 102f85d6546830d0894e5420cdddaa12fe270c02
     manifest--debug: e3aa144e25d914ea34006bd7b3c266b7eb283c61
     manifest--debug: 4dc3def4f9b4c6e8de820f6ee74737f91e96a216
@@ -2722,8 +2719,8 @@ sh % 'hg log -R latesttag -r tip^ -T \'{get(extras, "unknown") % "a"}\\n\'' == r
 
 # Test new-style inline templating of non-list/dict type:
 
-sh % "hg log -R latesttag -r tip -T '{manifest}\\n'" == "ed2d5d416a51"
-sh % "hg log -R latesttag -r tip -T 'string length: {manifest|count}\\n'" == "string length: 12"
+sh % "hg log -R latesttag -r tip -T '{manifest}\\n'" == 'ed2d5d416a513f3f19ab4cd41c793dcd8272a497'
+sh % "hg log -R latesttag -r tip -T 'string length: {manifest|count}\\n'" == 'string length: 40'
 sh % "hg log -R latesttag -r tip -T '{manifest % \"{rev}:{node}\"}\\n'" == "5:ed2d5d416a513f3f19ab4cd41c793dcd8272a497"
 
 sh % 'hg log -R latesttag -r tip -T \'{get(extras, "branch") % "{key}: {value}\\n"}\'' == "branch: default"
@@ -2736,7 +2733,7 @@ sh % 'hg log -R latesttag -l1 -T \'{max(revset("0:5")) % "{rev}:{node|short}\\n"
 
 # Test manifest/get() can be join()-ed as before, though it's silly:
 
-sh % "hg log -R latesttag -r tip -T '{join(manifest, \"\")}\\n'" == "ed2d5d416a51"
+sh % "hg log -R latesttag -r tip -T '{join(manifest, \"\")}\\n'" == 'ed2d5d416a513f3f19ab4cd41c793dcd8272a497'
 sh % 'hg log -R latesttag -r tip -T \'{join(get(extras, "branch"), "")}\\n\'' == "default"
 
 # Test min/max of integers
@@ -3808,7 +3805,7 @@ sh % pycompat.decodeutf8(
 
 # Templater supports aliases of symbol and func() styles:
 
-sh % "hg clone -q a aliases"
+sh % "cp -R a aliases"
 sh % "cd aliases"
 (
     sh % "cat"

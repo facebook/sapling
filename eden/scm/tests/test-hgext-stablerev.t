@@ -1,7 +1,6 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
-  $ newrepo
+  $ configure modernclient
+  $ newclientrepo
   $ enable stablerev
   $ hg debugdrawdag <<'EOS'
   > D
@@ -76,7 +75,7 @@ Check that stables template keyword works:
 
 Make another repo with "E" (9bc730a19041):
   $ cd ..
-  $ newrepo
+  $ newclientrepo
   $ drawdag <<'EOS'
   > E
   > |
@@ -88,6 +87,7 @@ Make another repo with "E" (9bc730a19041):
   > |
   > A
   > EOS
+  $ hg push -q -r 9bc730a19041 --to book --create
   $ cd ../repo1
 
 What if the stable commit isn't present locally?
@@ -98,25 +98,20 @@ What if the stable commit isn't present locally?
   [255]
 
 The revset can be configured to automatically pull in this case:
-  $ setconfig paths.default=../repo2
+  $ setconfig paths.default=test:repo2_server
   $ setconfig stablerev.pullonmissing=True
+  $ setconfig remotenames.selectivepulldefault=book
   $ hg log -r stable
   stable commit (9bc730a19041) not in repo; pulling to get it...
-  pulling from $TESTTMP/repo2
+  pulling from test:repo2_server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
   [9bc730a19041]: E
 
 But it might not exist even after pulling:
   $ printf "#!/bin/bash\n\necho 'abcdef123'" > stable.sh
   $ hg log -r stable
   stable commit (abcdef123) not in repo; pulling to get it...
-  pulling from $TESTTMP/repo2
-  searching for changes
-  no changes found
+  pulling from test:repo2_server
   abort: stable commit (abcdef123) not in the repo
   (try hg pull first)
   [255]
@@ -132,9 +127,7 @@ But they can be made optional or required:
   $ setconfig stablerev.targetarg=optional
   $ hg log -r "getstablerev(foo)"
   stable commit (abcdef123) not in repo; pulling to get it...
-  pulling from $TESTTMP/repo2
-  searching for changes
-  no changes found
+  pulling from test:repo2_server
   abort: stable commit (abcdef123) not in the repo
   (try hg pull first)
   [255]

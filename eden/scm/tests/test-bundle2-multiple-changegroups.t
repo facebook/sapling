@@ -1,5 +1,5 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
+  $ configure modernclient
 
 Create an extension to test bundle2 with multiple changegroups
 
@@ -45,28 +45,29 @@ Create an extension to test bundle2 with multiple changegroups
 
 Start with a simple repository with a single commit
 
-  $ hg init repo
-  $ cd repo
-  $ cat > .hg/hgrc << EOF
+  $ newclientrepo repo
+  $ cat >> .hg/hgrc << EOF
   > [extensions]
   > bundle2=$TESTTMP/bundle2.py
   > EOF
 
   $ echo A > A
   $ hg commit -A -m A -q
+  $ hg push -q -r . --to head1 --create
   $ cd ..
 
 Clone
 
-  $ hg clone -q repo clone
+  $ newclientrepo clone test:repo_server head1
 
 Add two linear commits
 
-  $ cd repo
+  $ cd ../repo
   $ echo B > B
   $ hg commit -A -m B -q
   $ echo C > C
   $ hg commit -A -m C -q
+  $ hg push -q -r . --to head1
 
   $ cd ../clone
   $ cat >> .hg/hgrc <<EOF
@@ -78,51 +79,40 @@ Add two linear commits
 Pull the new commits in the clone
 
   $ hg pull
-  pulling from $TESTTMP/repo
+  pulling from test:repo_server
   searching for changes
-  remote: changegroup1
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_NODE_LAST=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_PENDING=$TESTTMP/clone HG_PENDING_METALOG={"$TESTTMP/clone/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  remote: changegroup2
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_NODE_LAST=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_PENDING=$TESTTMP/clone HG_PENDING_METALOG={"$TESTTMP/clone/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  pullop.cgresult is 1
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_NODE_LAST=27547f69f25460a52fff66ad004e58da7ad3fb56 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_NODE_LAST=f838bfaca5c7226600ebcfd84f3c3c13a28d3757 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   $ hg update
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
-  @  f838bfaca5c7 draft test  C
+  @  f838bfaca5c7 public test  C
   │
-  o  27547f69f254 draft test  B
+  o  27547f69f254 public test  B
   │
-  o  4a2df7238c3b draft test  A
+  o  4a2df7238c3b public test  A
   
 Add more changesets with multiple heads to the original repository
 
   $ cd ../repo
   $ echo D > D
   $ hg commit -A -m D -q
+  $ hg push -q -r . --to head1
   $ hg up -r 'desc(B)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo E > E
   $ hg commit -A -m E -q
   $ echo F > F
   $ hg commit -A -m F -q
+  $ hg push -q -r . --to head2 --create
   $ hg up -r 'desc(B)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo G > G
   $ hg commit -A -m G -q
+  $ hg push -q -r . --to head3 --create
   $ hg up -r 'desc(D)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo H > H
   $ hg commit -A -m H -q
+  $ hg push -q -r . --to head4 --create
   $ hg log -G
   @  5cd59d311f65 draft test  H
   │
@@ -144,40 +134,25 @@ New heads are reported during transfer and properly accounted for in
 pullop.cgresult
 
   $ cd ../clone
-  $ hg pull
-  pulling from $TESTTMP/repo
+  $ hg pull -B head1 -B head2 -B head3 -B head4
+  pulling from test:repo_server
   searching for changes
-  remote: changegroup1
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 2 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_NODE_LAST=8a5212ebc8527f9fb821601504794e3eb11a1ed3 HG_PENDING=$TESTTMP/clone HG_PENDING_METALOG={"$TESTTMP/clone/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  remote: changegroup2
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 3 changes to 3 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_NODE_LAST=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_PENDING=$TESTTMP/clone HG_PENDING_METALOG={"$TESTTMP/clone/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  pullop.cgresult is 1
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e HG_NODE_LAST=8a5212ebc8527f9fb821601504794e3eb11a1ed3 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_NODE_LAST=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   $ hg log -G
-  o  5cd59d311f65 draft test  H
+  o  5cd59d311f65 public test  H
   │
-  │ o  1d14c3ce6ac0 draft test  G
+  o  b3325c91a4d9 public test  D
+  │
+  │ o  1d14c3ce6ac0 public test  G
   │ │
-  │ │ o  7f219660301f draft test  F
+  │ │ o  7f219660301f public test  F
   │ │ │
-  │ │ o  8a5212ebc852 draft test  E
+  │ │ o  8a5212ebc852 public test  E
   │ ├─╯
-  o │  b3325c91a4d9 draft test  D
-  │ │
-  @ │  f838bfaca5c7 draft test  C
+  @ │  f838bfaca5c7 public test  C
   ├─╯
-  o  27547f69f254 draft test  B
+  o  27547f69f254 public test  B
   │
-  o  4a2df7238c3b draft test  A
+  o  4a2df7238c3b public test  A
   
 Removing a head from the original repository by merging it
 
@@ -186,6 +161,7 @@ Removing a head from the original repository by merging it
   $ hg commit -m Merge
   $ echo I > I
   $ hg commit -A -m H -q
+  $ hg push -q -r . --to head4
   $ hg log -G
   @  9d18e5bd9ab0 draft test  H
   │
@@ -211,42 +187,27 @@ Removed heads are reported during transfer and properly accounted for in
 pullop.cgresult
 
   $ cd ../clone
-  $ hg pull
-  pulling from $TESTTMP/repo
+  $ hg pull -B head4
+  pulling from test:repo_server
   searching for changes
-  remote: changegroup1
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_NODE_LAST=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_PENDING=$TESTTMP/clone HG_PENDING_METALOG={"$TESTTMP/clone/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  remote: changegroup2
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  pretxnchangegroup hook: HG_HOOKNAME=pretxnchangegroup HG_HOOKTYPE=pretxnchangegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_PENDING=$TESTTMP/clone HG_PENDING_METALOG={"$TESTTMP/clone/.hg/store/metalog": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} HG_SHAREDPENDING=$TESTTMP/clone HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  pullop.cgresult is 1
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_NODE_LAST=71bd7b46de72e69a32455bf88d04757d542e6cf4 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   $ hg log -G
-  o  9d18e5bd9ab0 draft test  H
+  o  9d18e5bd9ab0 public test  H
   │
-  o    71bd7b46de72 draft test  Merge
+  o    71bd7b46de72 public test  Merge
   ├─╮
-  │ o  5cd59d311f65 draft test  H
+  │ o  5cd59d311f65 public test  H
   │ │
-  o │  1d14c3ce6ac0 draft test  G
+  │ o  b3325c91a4d9 public test  D
   │ │
-  │ │ o  7f219660301f draft test  F
+  o │  1d14c3ce6ac0 public test  G
+  │ │
+  │ │ o  7f219660301f public test  F
   │ │ │
-  │ │ o  8a5212ebc852 draft test  E
+  │ │ o  8a5212ebc852 public test  E
   ├───╯
-  │ o  b3325c91a4d9 draft test  D
-  │ │
-  │ @  f838bfaca5c7 draft test  C
+  │ @  f838bfaca5c7 public test  C
   ├─╯
-  o  27547f69f254 draft test  B
+  o  27547f69f254 public test  B
   │
-  o  4a2df7238c3b draft test  A
+  o  4a2df7238c3b public test  A
   

@@ -1,13 +1,13 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
-  $ disable treemanifest
-  $ newrepo repo
+  $ configure modernclient
+  $ newclientrepo repo
   $ echo a > a
   $ hg ci -Am0
   adding a
+  $ hg push -q -r . --to book --create
 
-  $ hg -q clone . foo
+  $ newclientrepo foo test:repo_server book
+  $ cd ../repo
 
   $ touch .hg/store/journal
 
@@ -19,23 +19,3 @@
 
   $ hg recover
   rolling back interrupted transaction
-
-Check that zero-size journals are correctly aborted:
-
-#if unix-permissions no-root
-  $ hg bundle -qa repo.hg
-  $ chmod -w foo/.hg/store/00changelog.i
-
-XXX: This can be a better error message.
-
-  $ hg -R foo unbundle repo.hg
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 1 files
-  abort: Permission denied (os error 13)
-  [255]
-
-  $ if test -f foo/.hg/store/journal; then echo 'journal exists :-('; fi
-#endif
-
