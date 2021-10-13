@@ -73,6 +73,7 @@ def restore(ui, repo, csid, clean=False):
         )
 
         files2download = []
+        files2hgadd = []
 
         for (path, fc) in snapshot["file_changes"]:
             matcher = scmutil.matchfiles(repo, [path])
@@ -91,6 +92,9 @@ def restore(ui, repo, csid, clean=False):
                 if fctx.exists():
                     # File exists, was modified
                     fctx.remove()
+                else:
+                    # File was created and added
+                    files2hgadd.append(path)
                 files2download.append((path, fc["Change"]["upload_token"]))
             elif "UntrackedChange" in fc:
                 if fctx.exists():
@@ -102,7 +106,5 @@ def restore(ui, repo, csid, clean=False):
 
         repo.edenapi.downloadfiles(getreponame(repo), repo.root, files2download)
 
-        for (path, fc) in snapshot["file_changes"]:
-            if "Change" in fc:
-                # Doesn't hurt to add again if it was already tracked
-                cmdutil.add(ui, repo, scmutil.matchfiles(repo, [path]), "", True)
+        for path in files2hgadd:
+            cmdutil.add(ui, repo, scmutil.matchfiles(repo, [path]), "", True)
