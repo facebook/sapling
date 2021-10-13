@@ -61,52 +61,16 @@ Start up EdenAPI server.
   $ mononoke
   $ wait_for_mononoke
 
-Create and send file data request.
-  $ edenapi_make_req commit-graph > req.cbor <<EOF
-  > {
-  >   "common": [
-  >     "$B",
-  >     "$C"
-  >   ],
-  >   "heads": [
-  >     "$H"
-  >   ]
-  > }
-  > EOF
-  Reading from stdin
-  Generated request: WireCommitGraphRequest {
-      common: [
-          WireHgId("112478962961147124edd43549aedd1a335e44bf"),
-          WireHgId("26805aba1e600a82e93661149f2313866a221a7b"),
-      ],
-      heads: [
-          WireHgId("06383dd46c9bcbca9300252b4b6cddad88f8af21"),
-      ],
-  }
-
-  $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/commit/graph" --data-binary @req.cbor > res.cbor
-
-Check files in response.
-  $ edenapi_read_res commit-graph res.cbor
-  Reading from file: "res.cbor"
-  hg id: 06383dd46c9bcbca9300252b4b6cddad88f8af21
-  parents: [
-    1b794c59b583e47686701d0142848e90a3a94a7d
-  ]
-  hg id: 1b794c59b583e47686701d0142848e90a3a94a7d
-  parents: [
-    bb56d4161ee371c720dbc8b504810c62a22fe314
-  ]
-  hg id: 49cb92066bfd0763fff729c354345650b7428554
-  parents: [
-    112478962961147124edd43549aedd1a335e44bf
-  ]
-  hg id: bb56d4161ee371c720dbc8b504810c62a22fe314
-  parents: [
-    49cb92066bfd0763fff729c354345650b7428554
-    f585351a92f85104bff7c284233c338b10eb1df7
-  ]
-  hg id: f585351a92f85104bff7c284233c338b10eb1df7
-  parents: [
-    26805aba1e600a82e93661149f2313866a221a7b
-  ]
+Check response.
+  $ hgedenapi debugapi -e commitgraph -i "['$H']" -i "['$B','$C']" --sort
+  [{"hgid": bin("49cb92066bfd0763fff729c354345650b7428554"),
+    "parents": [bin("112478962961147124edd43549aedd1a335e44bf")]},
+   {"hgid": bin("06383dd46c9bcbca9300252b4b6cddad88f8af21"),
+    "parents": [bin("1b794c59b583e47686701d0142848e90a3a94a7d")]},
+   {"hgid": bin("1b794c59b583e47686701d0142848e90a3a94a7d"),
+    "parents": [bin("bb56d4161ee371c720dbc8b504810c62a22fe314")]},
+   {"hgid": bin("bb56d4161ee371c720dbc8b504810c62a22fe314"),
+    "parents": [bin("49cb92066bfd0763fff729c354345650b7428554"),
+                bin("f585351a92f85104bff7c284233c338b10eb1df7")]},
+   {"hgid": bin("f585351a92f85104bff7c284233c338b10eb1df7"),
+    "parents": [bin("26805aba1e600a82e93661149f2313866a221a7b")]}]
