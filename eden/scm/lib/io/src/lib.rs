@@ -197,8 +197,8 @@ impl IOProgress {
 }
 
 impl IO {
-    pub fn with_input<R>(&self, f: impl FnOnce(&dyn Read) -> R) -> R {
-        f(self.inner.lock().input.as_ref())
+    pub fn with_input<R>(&self, f: impl FnOnce(&mut dyn Read) -> R) -> R {
+        f(self.inner.lock().input.as_mut())
     }
 
     pub fn with_output<R>(&self, f: impl FnOnce(&dyn Write) -> R) -> R {
