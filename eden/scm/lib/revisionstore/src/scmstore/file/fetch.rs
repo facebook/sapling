@@ -10,11 +10,12 @@ use std::convert::TryInto;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
+use futures::StreamExt;
 use parking_lot::RwLock;
 use tracing::{field, instrument};
 
+use async_runtime::{block_on, spawn_blocking, stream_to_iter};
 use edenapi_types::{FileEntry, FileSpec};
-
 use types::{Key, Sha256};
 
 use crate::{
@@ -54,11 +55,6 @@ pub struct FetchState {
     /// File content found in memcache, may be cached locally (currently only content may be found in memcache)
     found_in_memcache: HashSet<Key>,
 
-    /// Attributes found in EdenApi, may be cached locally (currently only content may be found in EdenApi)
-    found_in_edenapi: HashSet<Key>,
-
-    found_remote_aux: HashSet<Key>,
-
     /// Attributes computed from other attributes, may be cached locally (currently only aux_data may be computed)
     computed_aux_data: HashMap<Key, StoreType>,
 
@@ -89,8 +85,6 @@ impl FetchState {
             pointer_origin: Arc::new(RwLock::new(HashMap::new())),
 
             found_in_memcache: HashSet::new(),
-            found_in_edenapi: HashSet::new(),
-            found_remote_aux: HashSet::new(),
             computed_aux_data: HashMap::new(),
 
             fetch_logger: file_store.fetch_logger.clone(),
@@ -324,29 +318,65 @@ impl FetchState {
         }
     }
 
-    #[instrument(level = "debug", skip(self, entry))]
-    fn found_edenapi(&mut self, entry: FileEntry) {
+    #[instrument(
+        level = "debug",
+        skip(entry, indexedlog_cache, lfs_cache, aux_cache, memcache)
+    )]
+    fn found_edenapi(
+        entry: FileEntry,
+        indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+        lfs_cache: Option<Arc<LfsStore>>,
+        aux_cache: Option<Arc<AuxStore>>,
+        memcache: Option<Arc<MemcacheStore>>,
+    ) -> Result<(StoreFile, Option<LfsPointersEntry>)> {
         let key = entry.key.clone();
+        let mut file = StoreFile::default();
+        let mut lfsptr = None;
+
         if let Some(aux_data) = entry.aux_data() {
-            self.found_remote_aux.insert(key.clone());
             let aux_data: FileAuxData = aux_data.clone().into();
-            self.found_attributes(key.clone(), aux_data.into(), None);
+            if let Some(aux_cache) = aux_cache.as_ref() {
+                aux_cache.put(key.hgid, &aux_data.into())?;
+            }
+            file.aux_data = Some(aux_data);
         }
+
         if let Some(content) = entry.content() {
             if content.metadata().is_lfs() {
-                match entry.try_into() {
-                    Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared, true),
-                    Err(err) => self.errors.keyed_error(key, err),
+                let ptr: LfsPointersEntry = entry.try_into()?;
+                if let Some(lfs_cache) = lfs_cache.as_ref() {
+                    lfs_cache.add_pointer(ptr.clone())?;
                 }
+                lfsptr = Some(ptr);
+            } else if let Some(indexedlog_cache) = indexedlog_cache.as_ref() {
+                let entry = LazyFile::EdenApi(entry);
+                let cache_entry = entry.indexedlog_cache_entry(key.clone())?.ok_or_else(|| {
+                        anyhow!("found non-EdenApi LazyFile despite constructing LazyFile::EdenApi on previous line")
+                    })?;
+                if let Some(memcache) = memcache.as_ref() {
+                    memcache.add_mcdata(cache_entry.clone().try_into()?);
+                }
+                indexedlog_cache.put_entry(cache_entry)?;
+                let mmap_entry = indexedlog_cache.get_entry(key)?.ok_or_else(|| {
+                    anyhow!("failed to read entry back from indexedlog after writing")
+                })?;
+                file.content = Some(LazyFile::IndexedLog(mmap_entry));
             } else {
-                self.found_in_edenapi.insert(key.clone());
-                // TODO(meyer): Refactor LazyFile to hold a FileContent instead of FileEntry
-                self.found_attributes(key, LazyFile::EdenApi(entry).into(), None);
+                file.content = Some(LazyFile::EdenApi(entry));
             }
         }
+
+        Ok((file, lfsptr))
     }
 
-    fn fetch_edenapi_inner(&mut self, store: &EdenApiFileStore) -> Result<()> {
+    fn fetch_edenapi_inner(
+        &mut self,
+        store: &EdenApiFileStore,
+        indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+        lfs_cache: Option<Arc<LfsStore>>,
+        aux_cache: Option<Arc<AuxStore>>,
+        memcache: Option<Arc<MemcacheStore>>,
+    ) -> Result<()> {
         let fetchable = FileAttributes::CONTENT | FileAttributes::AUX;
         let span = tracing::info_span!(
             "fetch_edenapi",
@@ -379,18 +409,69 @@ impl FetchState {
                 }
             })
             .collect();
+        let (entries, stats) = {
+            block_on(async move {
+                let response = store.files_attrs(pending_attrs).await?;
+                let entries = {
+                    response.entries.then(move |res_entry| {
+                        let lfs_cache = lfs_cache.clone();
+                        let indexedlog_cache = indexedlog_cache.clone();
+                        let aux_cache = aux_cache.clone();
+                        let memcache = memcache.clone();
+                        spawn_blocking(move || {
+                            res_entry.map(move |entry| {
+                                (
+                                    entry.key.clone(),
+                                    Self::found_edenapi(
+                                        entry,
+                                        indexedlog_cache,
+                                        lfs_cache,
+                                        aux_cache,
+                                        memcache,
+                                    ),
+                                )
+                            })
+                        })
+                    })
+                };
+                // Explicitly force the result type here, since otherwise it can't infer the error
+                // type.
+                let result: Result<_> = Ok((entries, response.stats.await?));
+                result
+            })?
+        };
 
-        let response = store.files_attrs_blocking(pending_attrs)?;
-        for entry in response.entries.into_iter() {
-            self.found_edenapi(entry);
+        // Record found entries
+        for res in stream_to_iter(entries) {
+            // TODO(meyer): This outer EdenApi error with no key sucks
+            let (key, res) = res??;
+            match res {
+                Ok((file, maybe_lfsptr)) => {
+                    if let Some(lfsptr) = maybe_lfsptr {
+                        self.found_pointer(key.clone(), lfsptr, StoreType::Shared, false);
+                    }
+                    self.found_attributes(key, file, Some(StoreType::Shared));
+                }
+                Err(err) => self.errors.keyed_error(key, err),
+            }
         }
-        util::record_edenapi_stats(&span, &response.stats);
+
+        util::record_edenapi_stats(&span, &stats);
 
         Ok(())
     }
 
-    pub(crate) fn fetch_edenapi(&mut self, store: &EdenApiFileStore) {
-        if let Err(err) = self.fetch_edenapi_inner(store) {
+    pub(crate) fn fetch_edenapi(
+        &mut self,
+        store: &EdenApiFileStore,
+        indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
+        lfs_cache: Option<Arc<LfsStore>>,
+        aux_cache: Option<Arc<AuxStore>>,
+        memcache: Option<Arc<MemcacheStore>>,
+    ) {
+        if let Err(err) =
+            self.fetch_edenapi_inner(store, indexedlog_cache, lfs_cache, aux_cache, memcache)
+        {
             self.errors.other_error(err);
         }
     }
@@ -605,25 +686,6 @@ impl FetchState {
         aux_local: Option<&AuxStore>,
     ) {
         {
-            let span = tracing::trace_span!("edenapi");
-            let _guard = span.enter();
-            for key in self.found_in_edenapi.drain() {
-                if let Some(lazy_file) = self.common.found[&key].content.as_ref() {
-                    if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
-                        if let Some(memcache) = memcache {
-                            if let Ok(mcdata) = cache_entry.clone().try_into() {
-                                memcache.add_mcdata(mcdata)
-                            }
-                        }
-                        if let Some(ref indexedlog_cache) = indexedlog_cache {
-                            let _ = indexedlog_cache.put_entry(cache_entry);
-                        }
-                    }
-                }
-            }
-        }
-
-        {
             let span = tracing::trace_span!("memcache");
             let _guard = span.enter();
             for key in self.found_in_memcache.drain() {
@@ -633,18 +695,6 @@ impl FetchState {
                             let _ = indexedlog_cache.put_entry(cache_entry);
                         }
                     }
-                }
-            }
-        }
-
-        {
-            let span = tracing::trace_span!("remote_aux");
-            let _guard = span.enter();
-            for key in self.found_remote_aux.drain() {
-                let entry: AuxDataEntry = self.common.found[&key].aux_data.unwrap().into();
-
-                if let Some(ref aux_cache) = aux_cache {
-                    let _ = aux_cache.put(key.hgid, &entry);
                 }
             }
         }

@@ -171,7 +171,17 @@ impl FileStore {
         }
 
         if let Some(ref edenapi) = self.edenapi {
-            state.fetch_edenapi(edenapi);
+            state.fetch_edenapi(
+                edenapi,
+                self.indexedlog_cache.clone(),
+                self.lfs_cache.clone(),
+                self.aux_cache.clone(),
+                if self.cache_to_memcache && self.use_memcache() {
+                    self.memcache.clone()
+                } else {
+                    None
+                },
+            );
         }
 
         if let Some(ref lfs_remote) = self.lfs_remote {
