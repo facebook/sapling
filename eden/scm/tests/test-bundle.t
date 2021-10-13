@@ -1,12 +1,11 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
+  $ configure modernclient
 
   $ setconfig format.usegeneraldelta=yes
 
 Setting up test
 
-  $ hg init test
-  $ cd test
+  $ newclientrepo test
   $ echo 0 > afile
   $ hg add afile
   $ hg commit -m "0.0"
@@ -16,6 +15,7 @@ Setting up test
   $ hg commit -m "0.2"
   $ echo 3 >> afile
   $ hg commit -m "0.3"
+  $ hg push -q -r . --to head1 --create
   $ hg update -C 'desc(0.0)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 1 >> afile
@@ -28,14 +28,15 @@ Setting up test
   $ hg commit -m "1.3"
   $ hg mv afile adifferentfile
   $ hg commit -m "1.3m"
+  $ hg push -q -r . --to head2 --create
   $ hg update -C 'desc(0.3)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg mv afile anotherfile
   $ hg commit -m "0.3m"
-  $ hg verify
-  warning: verify does not actually check anything in this repo
+  $ hg push -q -r . --to head3 --create
   $ cd ..
-  $ hg init empty
+  $ newclientrepo empty
+  $ cd ..
 
 Bundle --all
 
@@ -44,7 +45,7 @@ Bundle --all
 
 Bundle test to full.hg
 
-  $ hg -R test bundle full.hg empty
+  $ hg -R test bundle full.hg test:empty_server
   searching for changes
   9 changesets found
 
@@ -54,21 +55,20 @@ Unbundle full.hg in test
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 4 files
+  added 0 changesets with 7 changes to 4 files
 
 Verify empty
 
   $ hg -R empty heads
   [1]
-  $ hg -R empty verify
-  warning: verify does not actually check anything in this repo
 
 Pull full.hg into test (using --cwd)
 
-  $ hg --cwd test pull ../full.hg
-  pulling from ../full.hg
-  searching for changes
-  no changes found
+  $ hg --cwd test unbundle ../full.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 7 changes to 4 files
 
 Verify that there are no leaked temporary files after pull (issue2797)
 
@@ -77,9 +77,7 @@ Verify that there are no leaked temporary files after pull (issue2797)
 
 Pull full.hg into empty (using --cwd)
 
-  $ hg --cwd empty pull ../full.hg
-  pulling from ../full.hg
-  requesting all changes
+  $ hg --cwd empty unbundle ../full.hg
   adding changesets
   adding manifests
   adding file changes
@@ -91,27 +89,27 @@ Rollback empty
 
 Pull full.hg into empty again (using --cwd)
 
-  $ hg --cwd empty pull ../full.hg
-  pulling from ../full.hg
-  requesting all changes
+  $ hg --cwd empty unbundle ../full.hg
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 0 changes to 4 files
+  added 9 changesets with 7 changes to 4 files
 
 Pull full.hg into test (using -R)
 
-  $ hg -R test pull full.hg
-  pulling from full.hg
-  searching for changes
-  no changes found
+  $ hg -R test unbundle full.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 7 changes to 4 files
 
 Pull full.hg into empty (using -R)
 
-  $ hg -R empty pull full.hg
-  pulling from full.hg
-  searching for changes
-  no changes found
+  $ hg -R empty unbundle full.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 7 changes to 4 files
 
 Rollback empty
 
@@ -119,76 +117,14 @@ Rollback empty
 
 Pull full.hg into empty again (using -R)
 
-  $ hg -R empty pull full.hg
-  pulling from full.hg
-  requesting all changes
+  $ hg -R empty unbundle full.hg
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 0 changes to 4 files
+  added 9 changesets with 7 changes to 4 files
 
-Log -R full.hg in fresh empty
-
-  $ rm -r empty
-  $ hg init empty
-  $ cd empty
-  $ hg -R ../full.hg log
-  commit:      aa35859c02ea
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.3m
-  
-  commit:      a6a34bfa0076
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.3m
-  
-  commit:      7373c1169842
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.3
-  
-  commit:      1bb50a9436a7
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.2
-  
-  commit:      095197eb4973
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.1
-  
-  commit:      eebf5a27f8ca
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.3
-  
-  commit:      e38ba6f5b7e0
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.2
-  
-  commit:      34c2bf6b0626
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.1
-  
-  commit:      f9ee2f85a263
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.0
-  
-Make sure bundlerepo doesn't leak tempfiles (issue2491)
-
-  $ ls .hg
-  00changelog.i
-  blackbox
-  hgrc.dynamic
-  reponame
-  requires
-  store
-  treestate
-
+  $ rm -r empty empty_server
+  $ newclientrepo empty
 Pull ../full.hg into empty (with hook)
 
   $ cat >> .hg/hgrc <<EOF
@@ -196,315 +132,32 @@ Pull ../full.hg into empty (with hook)
   > changegroup = sh -c "printenv.py changegroup"
   > EOF
 
-doesn't work (yet ?)
-
-hg -R ../full.hg verify
-
-  $ hg pull bundle://../full.hg
-  pulling from bundle:../full.hg
-  requesting all changes
+  $ hg unbundle ../full.hg
   adding changesets
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=bundle*../full.hg (glob)
+  changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=unbundle HG_TXNID=TXN:$ID$ HG_URL=bundle:../full.hg
 
 Rollback empty
 
   $ hg debugstrip 'desc(0.0)' --no-backup
   $ cd ..
 
-Log -R bundle:empty+full.hg (broken with Rust code path)
-
-  $ hg -R bundle:empty+full.hg log --template="{node} "; echo ""
-  abort: repository bundle:empty+full.hg not found!
-  
-
 Pull full.hg into empty again (using -R; with hook)
 
-  $ hg -R empty pull full.hg
-  pulling from full.hg
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 9 changesets with 0 changes to 4 files
-  changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=bundle:empty+full.hg
-
-Cannot produce streaming clone bundles with "hg bundle"
-
-  $ hg -R test bundle -t packed1 packed.hg
-  abort: packed bundles cannot be produced by "hg bundle"
-  (use 'hg debugcreatestreamclonebundle')
-  [255]
-
-packed1 is produced properly
-
-  $ hg -R test debugcreatestreamclonebundle packed.hg
-  writing * bytes for 6 files (glob)
-  bundle requirements: generaldelta, lz4revlog, revlogv1
-
-  $ hg debugbundle --spec packed.hg
-  none-packed1;requirements%3Dgeneraldelta%2Clz4revlog%2Crevlogv1
-
-generaldelta requirement is not listed in stream clone bundles unless used
-
-  $ hg --config format.usegeneraldelta=false init testnongd
-  $ cd testnongd
-  $ touch foo
-  $ hg -q commit -A -m initial
-  $ cd ..
-  $ hg -R testnongd debugcreatestreamclonebundle packednongd.hg
-  writing 191 bytes for 3 files
-  bundle requirements: lz4revlog, revlogv1
-
-  $ hg debugbundle --spec packednongd.hg
-  none-packed1;requirements%3Dlz4revlog%2Crevlogv1
-
-Unpacking packed1 bundles with "hg unbundle" isn't allowed
-
-  $ hg init packed
-  $ hg -R packed unbundle packed.hg
-  abort: packed bundles cannot be applied with "hg unbundle"
-  (use "hg debugapplystreamclonebundle")
-  [255]
-
-packed1 can be consumed from debug command
-
-(this also confirms that streamclone-ed changes are visible via
-@filecache properties to in-process procedures before closing
-transaction)
-
-  $ cat > $TESTTMP/showtip.py <<EOF
-  > from __future__ import absolute_import
-  > 
-  > def showtip(ui, repo, hooktype, **kwargs):
-  >     ui.warn('%s: %s\n' % (hooktype, repo['tip'].hex()[:12]))
-  > 
-  > def reposetup(ui, repo):
-  >     # this confirms (and ensures) that (empty) 00changelog.i
-  >     # before streamclone is already cached as repo.changelog
-  >     ui.setconfig('hooks', 'pretxnopen.showtip', showtip)
-  > 
-  >     # this confirms that streamclone-ed changes are visible to
-  >     # in-process procedures before closing transaction
-  >     ui.setconfig('hooks', 'pretxnclose.showtip', showtip)
-  > 
-  >     # this confirms that streamclone-ed changes are still visible
-  >     # after closing transaction
-  >     ui.setconfig('hooks', 'txnclose.showtip', showtip)
-  > EOF
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > showtip = $TESTTMP/showtip.py
-  > EOF
-
-  $ hg -R packed debugapplystreamclonebundle packed.hg
-  6 files to transfer, * of data (glob)
-  pretxnopen: 000000000000
-  pretxnclose: aa35859c02ea
-  transferred * KB in 0.0 seconds (* MB/sec) (glob)
-  txnclose: aa35859c02ea
-
-(for safety, confirm visibility of streamclone-ed changes by another
-process, too)
-
-  $ hg -R packed tip -T "{node|short}\n"
-  aa35859c02ea
-
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > showtip = !
-  > EOF
-
-Does not work on non-empty repo
-
-  $ hg -R packed debugapplystreamclonebundle packed.hg
-  abort: cannot apply stream clone bundle on non-empty repo
-  [255]
-
-Create partial clones
-
-  $ rm -r empty
-  $ hg init empty
-  $ hg clone -r 3 test partial
-  adding changesets
-  adding manifests
-  adding file changes
-  added 4 changesets with 4 changes to 1 files
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg clone partial partial2
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd partial
-
-Log -R full.hg in partial
-
-  $ hg -R ../full.hg log -T phases
-  commit:      aa35859c02ea
-  phase:       draft
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.3m
-  
-  commit:      a6a34bfa0076
-  phase:       draft
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.3m
-  
-  commit:      7373c1169842
-  phase:       draft
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.3
-  
-  commit:      1bb50a9436a7
-  phase:       draft
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.2
-  
-  commit:      095197eb4973
-  phase:       draft
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.1
-  
-  commit:      eebf5a27f8ca
-  phase:       draft
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.3
-  
-  commit:      e38ba6f5b7e0
-  phase:       draft
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.2
-  
-  commit:      34c2bf6b0626
-  phase:       draft
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.1
-  
-  commit:      f9ee2f85a263
-  phase:       draft
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.0
-  
-
-Incoming full.hg in partial
-
-  $ hg incoming bundle://../full.hg
-  comparing with bundle:../full.hg
-  searching for changes
-  commit:      095197eb4973
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.1
-  
-  commit:      1bb50a9436a7
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.2
-  
-  commit:      7373c1169842
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.3
-  
-  commit:      a6a34bfa0076
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.3m
-  
-  commit:      aa35859c02ea
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.3m
-  
-
-Outgoing -R full.hg vs partial2 in partial
-
-  $ hg -R ../full.hg outgoing ../partial2
-  comparing with ../partial2
-  searching for changes
-  commit:      095197eb4973
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.1
-  
-  commit:      1bb50a9436a7
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.2
-  
-  commit:      7373c1169842
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.3
-  
-  commit:      a6a34bfa0076
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.3m
-  
-  commit:      aa35859c02ea
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.3m
-  
-
-Outgoing -R does-not-exist.hg vs partial2 in partial
-
-  $ hg -R ../does-not-exist.hg outgoing ../partial2
-  abort: *../does-not-exist.hg* (glob)
-  [255]
-  $ cd ..
-
-hide outer repo
-  $ hg init
-
-Direct clone from bundle (all-history)
-
-  $ hg clone full.hg full-clone
-  requesting all changes
+  $ hg -R empty unbundle full.hg
   adding changesets
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R full-clone heads
-  commit:      aa35859c02ea
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.3m
-  
-  commit:      a6a34bfa0076
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1.3m
-  
-  $ rm -r full-clone
-
-When cloning from a non-copiable repository into '', do not
-recurse infinitely (issue2528)
-
-  $ hg clone full.hg ''
-  abort: empty destination path is not valid
-  [255]
-
-test for https://bz.mercurial-scm.org/216
+  changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=unbundle HG_TXNID=TXN:$ID$ HG_URL=bundle:full.hg
 
 Unbundle incremental bundles into fresh empty in one go
 
-  $ rm -r empty
-  $ hg init empty
+  $ rm -r empty empty_server
+  $ newclientrepo empty
+  $ cd ..
   $ hg -R test bundle --base null -r 'desc(0.0)' ../0.hg
   1 changesets found
   $ hg -R test bundle --base 'desc(0.0)'    -r 'desc(0.1)' ../1.hg
@@ -523,122 +176,40 @@ Unbundle incremental bundles into fresh empty in one go
 View full contents of the bundle
   $ hg -R test bundle --base null -r eebf5a27f8ca9b92ade529321141c1561cc4a9c2  ../partial.hg
   4 changesets found
-  $ cd test
-  $ hg -R ../../partial.hg log -r "bundle()"
-  commit:      f9ee2f85a263
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.0
-  
-  commit:      34c2bf6b0626
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.1
-  
-  commit:      e38ba6f5b7e0
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.2
-  
-  commit:      eebf5a27f8ca
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     0.3
-  
-  $ cd ..
 
 test for 540d1059c802
 
 test for 540d1059c802
 
-  $ hg init orig
-  $ cd orig
+  $ newclientrepo orig
   $ echo foo > foo
   $ hg add foo
   $ hg ci -m 'add foo'
+  $ hg push -q -r . --to book --create
 
-  $ hg clone . ../copy
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ newclientrepo copy test:orig_server book
 
-  $ cd ../copy
   $ echo >> foo
   $ hg ci -m 'change foo'
-  $ hg bundle ../bundle.hg ../orig
+  $ hg bundle ../bundle.hg test:orig_server
   searching for changes
   1 changesets found
 
-  $ cd ../orig
-  $ hg incoming ../bundle.hg
-  comparing with ../bundle.hg
-  searching for changes
-  commit:      ed1b79f46b9a
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     change foo
-  
-  $ cd ..
-
-test bundle with # in the filename (issue2154):
-
-  $ cp bundle.hg 'test#bundle.hg'
-  $ cd orig
-  $ hg incoming '../test#bundle.hg'
-  comparing with ../test
-  abort: unknown revision 'bundle.hg'!
-  [255]
-
-note that percent encoding is not handled:
-
-  $ hg incoming ../test%23bundle.hg
-  abort: repository ../test%23bundle.hg not found!
-  [255]
   $ cd ..
 
 test for https://bz.mercurial-scm.org/1144
 
 test that verify bundle does not traceback
 
-partial history bundle, fails w/ unknown parent
-
-  $ hg -R bundle.hg verify
-  abort: 00changelog.i@bbd179dfa0a7: unknown parent!
-  [255]
-
-full history bundle, refuses to verify non-local repo
-
-  $ hg -R all.hg verify
-  warning: verify does not actually check anything in this repo
-
-but, regular verify must continue to work
-
-  $ hg -R orig verify
-  warning: verify does not actually check anything in this repo
-
-diff against bundle
-
-  $ hg init b
-  $ cd b
-  $ hg -R ../all.hg diff -r tip
-  diff -r aa35859c02ea anotherfile
-  --- a/anotherfile	Thu Jan 01 00:00:00 1970 +0000
-  +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  @@ -1,4 +0,0 @@
-  -0
-  -1
-  -2
-  -3
-  $ cd ..
-
 bundle single branch
 
-  $ hg init branchy
-  $ cd branchy
+  $ newclientrepo branchy
   $ echo a >a
   $ echo x >x
   $ hg ci -Ama
   adding a
   adding x
+  $ hg push -q -r . --to head0 --create
   $ echo c >c
   $ echo xx >x
   $ hg ci -Amc
@@ -646,6 +217,7 @@ bundle single branch
   $ echo c1 >c1
   $ hg ci -Amc1
   adding c1
+  $ hg push -q -r . --to head2 --create
   $ hg up 'desc(a)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >b
@@ -655,19 +227,10 @@ bundle single branch
   $ echo xx >x
   $ hg ci -Amb1
   adding b1
-  $ hg clone -q -r2 . part
-
-== bundling via incoming
-
-  $ hg in -R part --bundle incoming.hg --template "{node}\n" .
-  comparing with .
-  searching for changes
-  1a38c1b849e8b70c756d2d80b0b9a3ac0b7ea11a
-  057f4db07f61970e1c11e83be79e9d08adc4dc31
 
 == bundling
 
-  $ hg bundle bundle.hg part --debug --config progress.debug=true
+  $ hg bundle bundle.hg test:branchy_server --debug --config progress.debug=true
   query 1; heads
   searching for changes
   local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
@@ -690,12 +253,6 @@ bundle single branch
   progress: bundling (end)
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
 
-== Test for issue3441
-
-  $ hg clone -q -r0 . part2
-  $ hg -q -R part2 pull bundle.hg
-  $ hg -R part2 verify
-  warning: verify does not actually check anything in this repo
 
 == Test bundling no commits
 
@@ -709,8 +266,7 @@ When user merges to the revision existing only in the bundle,
 it should show warning that second parent of the working
 directory does not exist
 
-  $ hg init update2bundled
-  $ cd update2bundled
+  $ newclientrepo update2bundled
   $ cat <<EOF >> .hg/hgrc
   > [extensions]
   > strip =
@@ -755,18 +311,4 @@ directory does not exist
   $ hg bundle --base 'desc(1)' -r 'desc(3)' ../update2bundled.hg
   1 changesets found
   $ hg debugstrip -r 'desc(3)'
-  $ hg merge -R ../update2bundled.hg -r 'desc(3)'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
 
-When user updates to the revision existing only in the bundle,
-it should show warning
-
-  $ hg update -R ../update2bundled.hg --clean -r 'desc(3)'
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-
-When user updates to the revision existing in the local repository
-the warning shouldn't be emitted
-
-  $ hg update -R ../update2bundled.hg -r 'desc(0)'
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
