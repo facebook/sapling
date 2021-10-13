@@ -22,7 +22,10 @@ def snapshot(ui, repo, **opts):
 
 
 subcmd = snapshot.subcommand(
-    categories=[("Manage snapshots", ["createremote", "restore"])]
+    categories=[
+        ("Manage snapshots", ["createremote", "restore"]),
+        ("Query snapshots", ["info"]),
+    ]
 )
 
 
@@ -45,9 +48,11 @@ def createremotecmd(*args, **kwargs):
     _("ID"),
 )
 def restorecmd(*args, **kwargs):
+    """download a previously created snapshot and update working copy to its state"""
     restore.restore(*args, **kwargs)
 
 
 @subcmd("info", [], _("ID"))
 def infocmd(*args, **kwargs):
+    """gather information about the snapshot"""
     info.info(*args, **kwargs)
