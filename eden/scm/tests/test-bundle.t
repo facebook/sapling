@@ -1,7 +1,6 @@
 #chg-compatible
   $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
   $ setconfig format.usegeneraldelta=yes
 
 Setting up test
@@ -242,17 +241,8 @@ Cannot produce streaming clone bundles with "hg bundle"
 packed1 is produced properly
 
   $ hg -R test debugcreatestreamclonebundle packed.hg
-  writing * bytes for 7 files (glob)
+  writing * bytes for 6 files (glob)
   bundle requirements: generaldelta, lz4revlog, revlogv1
-
-#if common-zlib
-  $ f -B 64 --size --sha1 --hexdump packed.hg
-  packed.hg: size=2799, sha1=870ec1de2df4b7f71501812b244fd53fc5eb25f1
-  0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 07 00 00 |HGS1UN..........|
-  0010: 00 00 00 00 0a 31 00 20 67 65 6e 65 72 61 6c 64 |.....1. generald|
-  0020: 65 6c 74 61 2c 6c 7a 34 72 65 76 6c 6f 67 2c 72 |elta,lz4revlog,r|
-  0030: 65 76 6c 6f 67 76 31 00 30 30 6d 61 6e 69 66 65 |evlogv1.00manife|
-#endif
 
   $ hg debugbundle --spec packed.hg
   none-packed1;requirements%3Dgeneraldelta%2Clz4revlog%2Crevlogv1
@@ -265,15 +255,8 @@ generaldelta requirement is not listed in stream clone bundles unless used
   $ hg -q commit -A -m initial
   $ cd ..
   $ hg -R testnongd debugcreatestreamclonebundle packednongd.hg
-  writing 301 bytes for 4 files
+  writing 191 bytes for 3 files
   bundle requirements: lz4revlog, revlogv1
-
-  $ f -B 64 --size --sha1 --hexdump packednongd.hg
-  packednongd.hg: size=409, sha1=344c366796aba47616a3e9a56836e8789bb2af26
-  0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 04 00 00 |HGS1UN..........|
-  0010: 00 00 00 00 01 2d 00 13 6c 7a 34 72 65 76 6c 6f |.....-..lz4revlo|
-  0020: 67 2c 72 65 76 6c 6f 67 76 31 00 30 30 6d 61 6e |g,revlogv1.00man|
-  0030: 69 66 65 73 74 2e 69 00 31 31 30 0a 00 01 00 01 |ifest.i.110.....|
 
   $ hg debugbundle --spec packednongd.hg
   none-packed1;requirements%3Dlz4revlog%2Crevlogv1
@@ -317,10 +300,10 @@ transaction)
   > EOF
 
   $ hg -R packed debugapplystreamclonebundle packed.hg
-  7 files to transfer, * of data (glob)
+  6 files to transfer, * of data (glob)
   pretxnopen: 000000000000
   pretxnclose: aa35859c02ea
-  transferred 2.55 KB in 0.0 seconds (2.49 MB/sec)
+  transferred * KB in 0.0 seconds (* MB/sec) (glob)
   txnclose: aa35859c02ea
 
 (for safety, confirm visibility of streamclone-ed changes by another
@@ -693,18 +676,19 @@ bundle single branch
   list of changesets:
   1a38c1b849e8b70c756d2d80b0b9a3ac0b7ea11a
   057f4db07f61970e1c11e83be79e9d08adc4dc31
-  bundle2-output-bundle: "HG20", (1 params) 1 parts total
+  bundle2-output-bundle: "HG20", (1 params) 2 parts total
   bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
   progress: bundling: 1/2 changesets (50.00%)
   progress: bundling: 2/2 changesets (100.00%)
   progress: bundling (end)
-  progress: bundling: 1/2 manifests (50.00%)
-  progress: bundling: 2/2 manifests (100.00%)
-  progress: bundling (end)
+  progress: manifests: 1/2 (50.00%)
+  progress: manifests: 2/2 (100.00%)
+  progress: manifests (end)
   progress: bundling: b 1/3 files (33.33%)
   progress: bundling: b1 2/3 files (66.67%)
   progress: bundling: x 3/3 files (100.00%)
   progress: bundling (end)
+  bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
 
 == Test for issue3441
 
