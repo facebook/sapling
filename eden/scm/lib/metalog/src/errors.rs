@@ -36,4 +36,5 @@ impl ForeignError for std::str::Utf8Error {}
 impl ForeignError for std::num::ParseIntError {}
 impl ForeignError for zstore::Error {}
 impl ForeignError for git2::Error {}
+impl ForeignError for types::hash::LengthMismatchError {}
 impl ForeignError for String {}

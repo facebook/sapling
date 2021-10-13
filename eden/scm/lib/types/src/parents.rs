@@ -43,11 +43,11 @@ impl Parents {
     /// This function will panic if an invalid combination of Nodes is given --
     /// namely, if p1 is null but p2 is not null.
     pub fn new(p1: HgId, p2: HgId) -> Self {
-        match (p1, p2) {
-            (NULL_ID, NULL_ID) => Parents::None,
-            (p1, NULL_ID) => Parents::One(p1),
-            (NULL_ID, _) => panic!("invalid parents: non-null p2 with null p1"),
-            (p1, p2) => Parents::Two(p1, p2),
+        match (p1.is_null(), p2.is_null()) {
+            (true, true) => Parents::None,
+            (false, true) => Parents::One(p1),
+            (true, _) => panic!("invalid parents: non-null p2 with null p1"),
+            (false, false) => Parents::Two(p1, p2),
         }
     }
 

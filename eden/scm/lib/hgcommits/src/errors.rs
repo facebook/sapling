@@ -56,6 +56,12 @@ impl From<metalog::Error> for CommitError {
     }
 }
 
+impl From<types::hash::LengthMismatchError> for CommitError {
+    fn from(err: types::hash::LengthMismatchError) -> Self {
+        anyhow::Error::from(err).into()
+    }
+}
+
 pub fn test_only(name: &str) -> CommitError {
     dag::Error::Programming(format!("{} should only be used in tests", name)).into()
 }

@@ -521,7 +521,10 @@ impl EdenApi for EagerRepo {
                             request: req,
                             hgids: vertexes
                                 .into_iter()
-                                .map(|vertex| HgId::from_hex(vertex.to_hex().as_bytes()))
+                                .map(|vertex| {
+                                    HgId::from_hex(vertex.to_hex().as_bytes())
+                                        .map_err(anyhow::Error::from)
+                                })
                                 .collect::<Result<Vec<_>, _>>()?,
                         })
                     })

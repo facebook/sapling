@@ -69,7 +69,9 @@ impl NodeSet {
     }
 
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = Result<Node>> + 'a {
-        self.log.iter().map(|slice| Node::from_slice(slice?))
+        self.log
+            .iter()
+            .map(|slice| Node::from_slice(slice?).map_err(Into::into))
     }
 }
 

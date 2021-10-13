@@ -5,18 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    fmt::{self, Debug, Display},
-    io::{self, Read, Write},
-    str::FromStr,
-};
+use std::io::{self, Read, Write};
 
-use anyhow::Result;
-use serde::{de::Deserializer, Deserialize, Serialize, Serializer};
-use thiserror::Error;
+use crate::hash::AbstractHashType;
+use crate::hash::HashTypeInfo;
 
 use crate::parents::Parents;
-use crate::sha::to_hex;
 use sha1::{Digest, Sha1};
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -24,10 +18,6 @@ use rand::RngCore;
 
 #[cfg(any(test, feature = "for-tests"))]
 use std::collections::HashSet;
-
-#[derive(Debug, Error)]
-#[error("HgId Error: {0:?}")]
-struct HgIdError(String);
 
 /// A 20-byte identifier, often a hash. Nodes are used to uniquely identify
 /// commits, file versions, and many other things.
@@ -66,30 +56,20 @@ struct HgIdError(String);
 ///
 /// [1]: Depends on actual data of `HgId`.
 /// [2]: JSON only supports utf-8 data.
-#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct HgId([u8; HgId::len()]);
+pub type HgId = AbstractHashType<HgIdTypeInfo, 20>;
 
-impl<'de> Deserialize<'de> for HgId {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        crate::serde_with::hgid::bytes::deserialize(deserializer)
-    }
-}
+pub struct HgIdTypeInfo;
 
-impl Serialize for HgId {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        crate::serde_with::hgid::bytes::serialize(self, serializer)
-    }
+impl HashTypeInfo for HgIdTypeInfo {
+    const HASH_TYPE_NAME: &'static str = "HgId";
 }
 
 /// The nullid (0x00) is used throughout Mercurial to represent "None".
 /// (For example, a commit will have a nullid p2, if it has no second parent).
-pub const NULL_ID: HgId = HgId([0; HgId::len()]);
+pub const NULL_ID: HgId = HgId::from_byte_array([0; HgId::len()]);
 
 /// The hard-coded 'working copy parent' Mercurial id.
-pub const WDIR_ID: HgId = HgId([0xff; HgId::len()]);
+pub const WDIR_ID: HgId = HgId::from_byte_array([0xff; HgId::len()]);
 
 impl HgId {
     pub fn null_id() -> &'static Self {
@@ -108,24 +88,6 @@ impl HgId {
         self == &WDIR_ID
     }
 
-    pub const fn len() -> usize {
-        20
-    }
-
-    pub const fn hex_len() -> usize {
-        40
-    }
-
-    pub fn from_slice(bytes: &[u8]) -> Result<Self> {
-        if bytes.len() != HgId::len() {
-            return Err(HgIdError(format!("invalid hgid length {:?}", bytes.len())).into());
-        }
-
-        let mut fixed_bytes = [0u8; HgId::len()];
-        fixed_bytes.copy_from_slice(bytes);
-        Ok(HgId(fixed_bytes))
-    }
-
     pub fn from_content(data: &[u8], parents: Parents) -> Self {
         // Parents must be hashed in sorted order.
         let (p1, p2) = match parents.into_nodes() {
@@ -140,43 +102,6 @@ impl HgId {
         let hash: [u8; 20] = hasher.result().into();
 
         HgId::from_byte_array(hash)
-    }
-
-    pub fn from_byte_array(bytes: [u8; HgId::len()]) -> Self {
-        HgId(bytes)
-    }
-
-    pub fn into_byte_array(self) -> [u8; HgId::len()] {
-        self.0
-    }
-
-    pub fn to_hex(&self) -> String {
-        to_hex(self.0.as_ref())
-    }
-
-    pub fn from_hex(hex: &[u8]) -> Result<Self> {
-        if hex.len() != Self::hex_len() {
-            let msg = format!("{:?} is not a hex string of {} chars", hex, Self::hex_len());
-            return Err(HgIdError(msg).into());
-        }
-        let mut bytes = [0u8; Self::len()];
-        for (i, byte) in hex.iter().enumerate() {
-            let value = match byte {
-                b'0'..=b'9' => byte - b'0',
-                b'a'..=b'f' => byte - b'a' + 10,
-                b'A'..=b'F' => byte - b'A' + 10,
-                _ => {
-                    let msg = format!("{:?} is not a hex character", *byte as char);
-                    return Err(HgIdError(msg).into());
-                }
-            };
-            if i & 1 == 0 {
-                bytes[i / 2] |= value << 4;
-            } else {
-                bytes[i / 2] |= value;
-            }
-        }
-        Ok(Self::from_byte_array(bytes))
     }
 
     #[cfg(any(test, feature = "for-tests"))]
@@ -206,67 +131,9 @@ impl HgId {
     }
 }
 
-impl From<[u8; HgId::len()]> for HgId {
-    fn from(bytes: [u8; HgId::len()]) -> Self {
-        Self::from_byte_array(bytes)
-    }
-}
-
-impl From<HgId> for [u8; HgId::len()] {
-    fn from(id: HgId) -> Self {
-        id.into_byte_array()
-    }
-}
-
-impl Display for HgId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(&self.to_hex(), fmt)
-    }
-}
-
-impl Debug for HgId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "HgId({:?})", &self.to_hex())
-    }
-}
-
-impl Default for HgId {
-    fn default() -> HgId {
-        NULL_ID
-    }
-}
-
 impl<'a> From<&'a [u8; HgId::len()]> for HgId {
     fn from(bytes: &[u8; HgId::len()]) -> HgId {
-        HgId(bytes.clone())
-    }
-}
-
-impl AsRef<[u8]> for HgId {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl FromStr for HgId {
-    type Err = anyhow::Error;
-
-    // Taken from Mononoke
-    fn from_str(s: &str) -> Result<Self> {
-        if s.len() != HgId::hex_len() {
-            return Err(HgIdError(format!("invalid string length {:?}", s.len())).into());
-        }
-
-        let mut ret = HgId([0u8; HgId::len()]);
-
-        for idx in 0..ret.0.len() {
-            ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
-                Ok(v) => v,
-                Err(_) => return Err(HgIdError("bad digit".to_string()).into()),
-            }
-        }
-
-        Ok(ret)
+        HgId::from_byte_array(bytes.clone())
     }
 }
 
@@ -289,7 +156,7 @@ pub trait WriteHgIdExt {
 
 impl<W: Write + ?Sized> WriteHgIdExt for W {
     fn write_hgid(&mut self, value: &HgId) -> io::Result<()> {
-        self.write_all(&value.0)
+        self.write_all(value.as_ref())
     }
 }
 
@@ -313,20 +180,9 @@ pub trait ReadHgIdExt {
 
 impl<R: Read + ?Sized> ReadHgIdExt for R {
     fn read_hgid(&mut self) -> io::Result<HgId> {
-        let mut hgid = HgId([0u8; HgId::len()]);
-        self.read_exact(&mut hgid.0)?;
-        Ok(hgid)
-    }
-}
-
-#[cfg(any(test, feature = "for-tests"))]
-impl quickcheck::Arbitrary for HgId {
-    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        let mut bytes = [0u8; HgId::len()];
-        for b in bytes.iter_mut() {
-            *b = u8::arbitrary(g);
-        }
-        HgId::from(&bytes)
+        let mut bytes = [0; HgId::len()];
+        self.read_exact(&mut bytes)?;
+        Ok(HgId::from_byte_array(bytes))
     }
 }
 
@@ -334,26 +190,28 @@ impl quickcheck::Arbitrary for HgId {
 pub mod mocks {
     use super::HgId;
 
-    pub const ONES: HgId = HgId([0x11; HgId::len()]);
-    pub const TWOS: HgId = HgId([0x22; HgId::len()]);
-    pub const THREES: HgId = HgId([0x33; HgId::len()]);
-    pub const FOURS: HgId = HgId([0x44; HgId::len()]);
-    pub const FIVES: HgId = HgId([0x55; HgId::len()]);
-    pub const SIXES: HgId = HgId([0x66; HgId::len()]);
-    pub const SEVENS: HgId = HgId([0x77; HgId::len()]);
-    pub const EIGHTS: HgId = HgId([0x88; HgId::len()]);
-    pub const NINES: HgId = HgId([0x99; HgId::len()]);
-    pub const AS: HgId = HgId([0xAA; HgId::len()]);
-    pub const BS: HgId = HgId([0xAB; HgId::len()]);
-    pub const CS: HgId = HgId([0xCC; HgId::len()]);
-    pub const DS: HgId = HgId([0xDD; HgId::len()]);
-    pub const ES: HgId = HgId([0xEE; HgId::len()]);
-    pub const FS: HgId = HgId([0xFF; HgId::len()]);
+    pub const ONES: HgId = HgId::from_byte_array([0x11; HgId::len()]);
+    pub const TWOS: HgId = HgId::from_byte_array([0x22; HgId::len()]);
+    pub const THREES: HgId = HgId::from_byte_array([0x33; HgId::len()]);
+    pub const FOURS: HgId = HgId::from_byte_array([0x44; HgId::len()]);
+    pub const FIVES: HgId = HgId::from_byte_array([0x55; HgId::len()]);
+    pub const SIXES: HgId = HgId::from_byte_array([0x66; HgId::len()]);
+    pub const SEVENS: HgId = HgId::from_byte_array([0x77; HgId::len()]);
+    pub const EIGHTS: HgId = HgId::from_byte_array([0x88; HgId::len()]);
+    pub const NINES: HgId = HgId::from_byte_array([0x99; HgId::len()]);
+    pub const AS: HgId = HgId::from_byte_array([0xAA; HgId::len()]);
+    pub const BS: HgId = HgId::from_byte_array([0xAB; HgId::len()]);
+    pub const CS: HgId = HgId::from_byte_array([0xCC; HgId::len()]);
+    pub const DS: HgId = HgId::from_byte_array([0xDD; HgId::len()]);
+    pub const ES: HgId = HgId::from_byte_array([0xEE; HgId::len()]);
+    pub const FS: HgId = HgId::from_byte_array([0xFF; HgId::len()]);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde::Deserialize;
+    use serde::Serialize;
 
     use quickcheck::quickcheck;
 

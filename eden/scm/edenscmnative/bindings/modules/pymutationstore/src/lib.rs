@@ -99,6 +99,7 @@ py_class!(class mutationentry |py| {
         extra: Option<Vec<(PyBytes, PyBytes)>>
     ) -> PyResult<mutationentry> {
         let succ = Node::from_slice(succ.data(py))
+            .map_err(Error::from)
             .map_err(InvalidNode::Successor)
             .map_pyerr(py)?;
         let preds = {
@@ -106,6 +107,7 @@ py_class!(class mutationentry |py| {
             if let Some(preds) = preds {
                 for p in preds {
                     nodes.push(Node::from_slice(p.data(py))
+                        .map_err(Error::from)
                         .map_err(InvalidNode::Predecessor)
                         .map_pyerr(py)?);
                 }
@@ -117,6 +119,7 @@ py_class!(class mutationentry |py| {
             if let Some(split) = split {
                 for s in split {
                     nodes.push(Node::from_slice(s.data(py))
+                        .map_err(Error::from)
                         .map_err(InvalidNode::Split)
                         .map_pyerr(py)?);
                 }
