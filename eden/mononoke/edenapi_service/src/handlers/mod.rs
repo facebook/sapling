@@ -42,7 +42,6 @@ mod bookmarks;
 mod capabilities;
 mod clone;
 mod commit;
-mod complete_trees;
 mod files;
 mod handler;
 mod history;
@@ -66,7 +65,6 @@ pub enum EdenApiMethod {
     UploadHgChangesets,
     UploadBonsaiChangeset,
     Trees,
-    CompleteTrees,
     History,
     CommitLocationToHash,
     CommitHashToLocation,
@@ -87,7 +85,6 @@ impl fmt::Display for EdenApiMethod {
             Self::Capabilities => "capabilities",
             Self::Files => "files",
             Self::Trees => "trees",
-            Self::CompleteTrees => "complete_trees",
             Self::History => "history",
             Self::CommitLocationToHash => "commit_location_to_hash",
             Self::CommitHashToLocation => "commit_hash_to_location",
@@ -221,7 +218,6 @@ async fn handler_wrapper<Handler: EdenApiHandler>(
         match Handler::handler(repo, path, query_string, request).await {
             Ok(responses) => Ok(encode_response_stream(responses, content_encoding)),
             Err(HandlerError::E500(err)) => Err(HttpError::e500(err)),
-            Err(HandlerError::E400(err)) => Err(HttpError::e400(err)),
         }
     }
     .await;
@@ -282,7 +278,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<files::FilesHandler>(route);
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
         Handlers::setup::<bookmarks::BookmarksHandler>(route);
-        Handlers::setup::<complete_trees::CompleteTreesHandler>(route);
         Handlers::setup::<history::HistoryHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
         Handlers::setup::<trees::UploadTreesHandler>(route);

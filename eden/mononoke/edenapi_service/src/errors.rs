@@ -58,8 +58,6 @@ pub enum ErrorKind {
     HistoryFetchFailed(Key),
     #[error("Failed to fetch HgId for bookmark: {0:?}")]
     BookmarkResolutionFailed(String),
-    #[error("Complete tree request failed")]
-    CompleteTreeRequestFailed,
     #[error("Dag location to hash request failed")]
     CommitLocationToHashRequestFailed,
     #[error("Commit data request failed")]

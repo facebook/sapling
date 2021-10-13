@@ -23,7 +23,6 @@ define_stats! {
     capabilities_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     files_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     trees_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
-    complete_trees_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     history_duration_ms: histogram(100, 0, 5000, Average, Sum, Count; P 50; P 75; P 95; P 99),
     commit_location_to_hash_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
     commit_hash_to_location_duration_ms: histogram(10, 0, 500, Average, Sum, Count; P 50; P 75; P 95; P 99),
@@ -68,7 +67,6 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 Capabilities => STATS::capabilities_duration_ms.add_value(dur_ms),
                 Files => STATS::files_duration_ms.add_value(dur_ms),
                 Trees => STATS::trees_duration_ms.add_value(dur_ms),
-                CompleteTrees => STATS::complete_trees_duration_ms.add_value(dur_ms),
                 History => STATS::history_duration_ms.add_value(dur_ms),
                 CommitLocationToHash => {
                     STATS::commit_location_to_hash_duration_ms.add_value(dur_ms)

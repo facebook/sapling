@@ -34,7 +34,6 @@ impl PathExtractorWithRepo for BasicPathExtractor {
 
 pub enum HandlerError {
     E500(anyhow::Error),
-    E400(anyhow::Error),
 }
 
 // Default errors to 500
