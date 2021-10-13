@@ -42,17 +42,17 @@ use edenapi_types::{
     CloneData, CommitGraphRequest, CommitHashLookupRequest, CommitHashLookupResponse,
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
-    CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, EphemeralPrepareRequest,
-    EphemeralPrepareResponse, FetchSnapshotRequest, FetchSnapshotResponse, FileEntry, FileRequest,
-    FileSpec, HgFilenodeData, HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest,
-    LookupResponse, ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
+    CommitRevlogDataRequest, EdenApiServerError, EphemeralPrepareRequest, EphemeralPrepareResponse,
+    FetchSnapshotRequest, FetchSnapshotResponse, FileEntry, FileRequest, FileSpec, HgFilenodeData,
+    HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest, LookupResponse,
+    ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
     UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
     UploadHgFilenodeRequest, UploadToken, UploadTokenMetadata, UploadTokensResponse,
     UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, Request};
-use types::{HgId, Key, RepoPathBuf};
+use types::{HgId, Key};
 
 use crate::api::EdenApi;
 use crate::builder::Config;
@@ -82,7 +82,6 @@ mod paths {
     pub const FILES: &str = "files";
     pub const HISTORY: &str = "history";
     pub const TREES: &str = "trees";
-    pub const COMPLETE_TREES: &str = "trees/complete";
     pub const COMMIT_REVLOG_DATA: &str = "commit/revlog_data";
     pub const CLONE_DATA: &str = "clone";
     pub const PULL_FAST_FORWARD: &str = "pull_fast_forward_master";
@@ -536,38 +535,6 @@ impl EdenApi for Client {
         })?;
 
         Ok(self.fetch::<WireTreeEntry>(requests)?)
-    }
-
-    async fn complete_trees(
-        &self,
-        repo: String,
-        rootdir: RepoPathBuf,
-        mfnodes: Vec<HgId>,
-        basemfnodes: Vec<HgId>,
-        depth: Option<usize>,
-    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        tracing::info!(
-            "Requesting {} complete tree(s) for directory '{}'",
-            mfnodes.len(),
-            &rootdir
-        );
-
-        let url = self.build_url(paths::COMPLETE_TREES, Some(&repo))?;
-        let tree_req = CompleteTreeRequest {
-            rootdir,
-            mfnodes,
-            basemfnodes,
-            depth,
-        };
-        self.log_request(&tree_req, "complete_trees");
-        let wire_tree_req = tree_req.to_wire();
-
-        let req = self
-            .configure_request(Request::post(url))?
-            .cbor(&wire_tree_req)
-            .map_err(EdenApiError::RequestSerializationFailed)?;
-
-        Ok(self.fetch::<WireTreeEntry>(vec![req])?)
     }
 
     async fn commit_revlog_data(

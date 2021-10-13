@@ -184,40 +184,6 @@ pub trait EdenApiPyExt: EdenApi {
         Ok((trees_py.into(), stats_py))
     }
 
-    fn complete_trees_py(
-        self: Arc<Self>,
-        py: Python,
-        store: PyObject,
-        repo: String,
-        rootdir: PyPathBuf,
-        mfnodes: Vec<HgId>,
-        basemfnodes: Vec<HgId>,
-        depth: Option<usize>,
-        progress: Arc<dyn ProgressFactory>,
-    ) -> PyResult<stats> {
-        let rootdir = to_path(py, &rootdir)?;
-        let store = as_deltastore(py, store)?;
-
-        let stats = py
-            .allow_threads(|| {
-                block_unless_interrupted(async move {
-                    let prog = progress.bar(
-                        "Downloading complete trees over HTTP",
-                        None,
-                        Unit::Named("trees"),
-                    )?;
-                    let response = self
-                        .complete_trees(repo, rootdir, mfnodes, basemfnodes, depth)
-                        .await?;
-                    write_trees(response, store, prog.as_ref()).await
-                })
-            })
-            .map_pyerr(py)?
-            .map_pyerr(py)?;
-
-        stats::new(py, stats)
-    }
-
     fn commit_revlog_data_py(
         self: Arc<Self>,
         py: Python,

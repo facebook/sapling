@@ -213,19 +213,6 @@ impl EdenApi for EagerRepo {
         Ok(convert_to_response(values))
     }
 
-    async fn complete_trees(
-        &self,
-        _repo: String,
-        _rootdir: RepoPathBuf,
-        _mfnodes: Vec<HgId>,
-        _basemfnodes: Vec<HgId>,
-        _depth: Option<usize>,
-    ) -> edenapi::Result<Response<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
-        Err(not_implemented_error(
-            "EagerRepo does not support complete_trees endpoint".to_string(),
-        ))
-    }
-
     async fn commit_revlog_data(
         &self,
         _repo: String,

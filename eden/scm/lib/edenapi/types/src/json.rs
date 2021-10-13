@@ -35,7 +35,6 @@ use crate::commit::{
     CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
     EphemeralPrepareRequest,
 };
-use crate::complete_tree::CompleteTreeRequest;
 use crate::file::{FileAttributes, FileRequest, FileSpec};
 use crate::history::HistoryRequest;
 use crate::metadata::{DirectoryMetadataRequest, FileMetadataRequest};
@@ -306,59 +305,6 @@ pub fn parse_history_req(value: &Value) -> Result<HistoryRequest> {
     Ok(HistoryRequest { keys, length })
 }
 
-/// Parse a `CompleteTreeRequest` from JSON.
-///
-/// The request is represented as a JSON object containing the fields
-/// needed for a "gettreepack"-style complete tree request. Note that
-/// it is generally preferred to request trees using a `DataRequest`
-/// for the desired tree nodes, as this is a lot less expensive than
-/// fetching complete trees.
-///
-/// Example request:
-///
-/// ```json
-/// {
-///     "rootdir": "path/to/root/dir",
-///     "mfnodes": [
-///         "8722607999fc5ce35e9af56e6da2c823923291dd",
-///         "b7d7ffb1a37c86f00558ff132e57c56bca29dc04"
-///     ],
-///     "basemfnodes": [
-///         "26d6acbabf823b844917f04cfbe6747c80983119",
-///         "111caaed68164b939f6e2f58680b462ebc3174c7"
-///     ],
-///     "depth": 1
-/// }
-/// ```
-///
-pub fn parse_complete_tree_req(value: &Value) -> Result<CompleteTreeRequest> {
-    let obj = value.as_object().context("input must be a JSON object")?;
-
-    let rootdir = obj.get("rootdir").context("missing field: rootdir")?;
-    let rootdir = rootdir.as_str().context("rootdir field must be a string")?;
-    let rootdir = RepoPathBuf::from_string(rootdir.to_string())?;
-
-    let mfnodes = obj.get("mfnodes").context("missing field: mfnodes")?;
-    let mfnodes = parse_hashes(mfnodes)?;
-
-    let basemfnodes = obj
-        .get("basemfnodes")
-        .context("missing field: basemfnodes")?;
-    let basemfnodes = parse_hashes(basemfnodes)?;
-
-    let depth = obj
-        .get("depth")
-        .and_then(|d| d.as_u64())
-        .map(|d| d as usize);
-
-    Ok(CompleteTreeRequest {
-        rootdir,
-        mfnodes,
-        basemfnodes,
-        depth,
-    })
-}
-
 /// Parse a `BookmarkRequest` from JSON.
 ///
 /// Example request:
@@ -607,12 +553,6 @@ impl FromJson for HistoryRequest {
     }
 }
 
-impl FromJson for CompleteTreeRequest {
-    fn from_json(json: &Value) -> Result<Self> {
-        parse_complete_tree_req(json)
-    }
-}
-
 impl FromJson for CommitLocationToHashRequestBatch {
     fn from_json(json: &Value) -> Result<Self> {
         parse_commit_location_to_hash_req(json)
@@ -744,17 +684,6 @@ impl ToJson for HistoryRequest {
     }
 }
 
-impl ToJson for CompleteTreeRequest {
-    fn to_json(&self) -> Value {
-        json!({
-            "rootdir": self.rootdir,
-            "mfnodes": self.mfnodes.to_json(),
-            "basemfnodes": self.basemfnodes.to_json(),
-            "depth": self.depth,
-        })
-    }
-}
-
 impl ToJson for FileMetadataRequest {
     fn to_json(&self) -> Value {
         json!({
@@ -881,7 +810,6 @@ mod tests {
         FileRequest,
         HistoryRequest,
         TreeRequest,
-        CompleteTreeRequest,
         CommitLocationToHashRequestBatch,
         CommitHashToLocationRequestBatch,
         CommitRevlogDataRequest,

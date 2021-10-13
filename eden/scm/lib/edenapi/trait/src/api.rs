@@ -20,7 +20,7 @@ use edenapi_types::{
     UploadHgChangeset, UploadToken, UploadTokensResponse, UploadTreeEntry, UploadTreeResponse,
 };
 use minibytes::Bytes;
-use types::{HgId, Key, RepoPathBuf};
+use types::{HgId, Key};
 
 use crate::errors::EdenApiError;
 use crate::response::{Response, ResponseMeta};
@@ -71,18 +71,6 @@ pub trait EdenApi: Send + Sync + 'static {
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         let _ = (repo, keys, attributes);
-        Err(EdenApiError::NotSupported)
-    }
-
-    async fn complete_trees(
-        &self,
-        repo: String,
-        rootdir: RepoPathBuf,
-        mfnodes: Vec<HgId>,
-        basemfnodes: Vec<HgId>,
-        depth: Option<usize>,
-    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        let _ = (repo, rootdir, mfnodes, basemfnodes, depth);
         Err(EdenApiError::NotSupported)
     }
 

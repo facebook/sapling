@@ -124,29 +124,6 @@ py_class!(pub class client |py| {
         self.inner(py).clone().trees_py(py, repo, keys, attributes)
     }
 
-    def complete_trees(
-        &self,
-        store: PyObject,
-        repo: String,
-        rootdir: PyPathBuf,
-        mfnodes: Serde<Vec<HgId>>,
-        basemfnodes: Serde<Vec<HgId>>,
-        depth: Option<usize> = None
-    )  -> PyResult<stats> {
-        let progress = self.progress(py).clone();
-        self.inner(py).clone().complete_trees_py(
-            py,
-            store,
-            repo,
-            rootdir,
-            mfnodes.0,
-            basemfnodes.0,
-            depth,
-            progress,
-        )
-    }
-
-
     /// commitdata(repo: str, nodes: [bytes], progress=None) -> [(node: bytes, data: bytes)], stats
     ///
     /// Fetch commit data in raw HG format (sorted([p1, p2]) + text).

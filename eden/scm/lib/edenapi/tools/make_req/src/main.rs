@@ -25,8 +25,7 @@ use structopt::StructOpt;
 use edenapi_types::{
     json::FromJson, wire::ToWire, Batch, BookmarkRequest, CommitGraphRequest,
     CommitHashLookupRequest, CommitHashToLocationRequestBatch, CommitLocationToHashRequestBatch,
-    CommitRevlogDataRequest, CompleteTreeRequest, EphemeralPrepareRequest, FileRequest,
-    HistoryRequest, TreeRequest,
+    CommitRevlogDataRequest, EphemeralPrepareRequest, FileRequest, HistoryRequest, TreeRequest,
 };
 
 #[derive(Debug, StructOpt)]
@@ -35,7 +34,6 @@ enum Command {
     File(Args),
     Tree(Args),
     History(Args),
-    CompleteTree(Args),
     CommitRevlogData(Args),
     CommitLocationToHash(Args),
     CommitHashToLocation(Args),
@@ -58,7 +56,6 @@ fn main() -> Result<()> {
         Command::File(args) => make_req::<FileRequest>(args),
         Command::Tree(args) => make_req::<TreeRequest>(args),
         Command::History(args) => make_req::<HistoryRequest>(args),
-        Command::CompleteTree(args) => make_req::<CompleteTreeRequest>(args),
         Command::CommitRevlogData(args) => make_req_wire::<CommitRevlogDataRequest>(args),
         Command::CommitLocationToHash(args) => make_req::<CommitLocationToHashRequestBatch>(args),
         Command::CommitHashToLocation(args) => make_req::<CommitHashToLocationRequestBatch>(args),
@@ -81,7 +78,7 @@ where
     write_output(args.output, &bytes)
 }
 
-// TODO: Remove after all requests standarize to match FileRequest, TreeRequest, CompleteTreeRequest
+// TODO: Remove after all requests standarize to match FileRequest, TreeRequest
 fn make_req_wire<R: FromJson + Serialize + Debug>(args: Args) -> Result<()> {
     let json = read_input(args.input)?;
     let req = R::from_json(&json)?;

@@ -53,7 +53,6 @@ pub mod batch;
 pub mod bookmark;
 pub mod clone;
 pub mod commit;
-pub mod complete_tree;
 pub mod errors;
 pub mod file;
 pub mod history;
@@ -81,7 +80,6 @@ pub use crate::wire::{
         WireHgMutationEntryContent, WireUploadBonsaiChangesetRequest, WireUploadHgChangeset,
         WireUploadHgChangesetsRequest,
     },
-    complete_tree::WireCompleteTreeRequest,
     errors::{WireError, WireResult},
     file::{WireFileEntry, WireFileRequest, WireUploadHgFilenodeRequest, WireUploadTokensResponse},
     history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},

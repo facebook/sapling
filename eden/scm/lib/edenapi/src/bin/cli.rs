@@ -22,8 +22,8 @@ use tokio::io::AsyncWriteExt;
 use configparser::config::{ConfigSet, Options};
 use edenapi::{Builder, EdenApi, Entries, Response};
 use edenapi_types::{
-    json::FromJson, wire::ToWire, BookmarkRequest, CommitRevlogDataRequest, CompleteTreeRequest,
-    FileRequest, HistoryRequest, TreeRequest,
+    json::FromJson, wire::ToWire, BookmarkRequest, CommitRevlogDataRequest, FileRequest,
+    HistoryRequest, TreeRequest,
 };
 
 const DEFAULT_CONFIG_FILE: &str = ".hgrc.edenapi";
@@ -39,8 +39,6 @@ enum Command {
     History(Args),
     #[structopt(about = "Request individual tree nodes")]
     Trees(Args),
-    #[structopt(about = "Request complete trees")]
-    CompleteTrees(Args),
     #[structopt(about = "Request commit revlog data")]
     CommitRevlogData(Args),
     #[structopt(about = "Request Bookmarks")]
@@ -85,7 +83,6 @@ async fn main() -> Result<()> {
         Command::Files(args) => cmd_files(args).await,
         Command::History(args) => cmd_history(args).await,
         Command::Trees(args) => cmd_trees(args).await,
-        Command::CompleteTrees(args) => cmd_complete_trees(args).await,
         Command::CommitRevlogData(args) => cmd_commit_revlog_data(args).await,
         Command::Bookmarks(args) => cmd_bookmarks(args).await,
     }
@@ -161,34 +158,6 @@ async fn cmd_trees(args: Args) -> Result<()> {
         log::trace!("{:?}", &req);
 
         let res = client.trees(repo.clone(), req.keys, None).await?;
-        handle_response(res).await?;
-    }
-
-    Ok(())
-}
-
-async fn cmd_complete_trees(args: Args) -> Result<()> {
-    let Setup {
-        repo,
-        client,
-        requests,
-    } = <Setup<CompleteTreeRequest>>::from_args(args)?;
-
-    for req in requests {
-        log::info!(
-            "Requesting complete trees under {} root(s)",
-            req.mfnodes.len(),
-        );
-
-        let res = client
-            .complete_trees(
-                repo.clone(),
-                req.rootdir,
-                req.mfnodes,
-                req.basemfnodes,
-                req.depth,
-            )
-            .await?;
         handle_response(res).await?;
     }
 

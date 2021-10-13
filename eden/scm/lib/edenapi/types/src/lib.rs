@@ -30,7 +30,6 @@ pub mod anyid;
 pub mod batch;
 pub mod bookmark;
 pub mod commit;
-pub mod complete_tree;
 pub mod errors;
 pub mod file;
 pub mod history;
@@ -55,7 +54,6 @@ pub use crate::commit::{
     SnapshotRawFiles, UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
     UploadSnapshotResponse,
 };
-pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::errors::ServerError;
 pub use crate::file::{
     FileAttributes, FileAuxData, FileContent, FileEntry, FileError, FileRequest, FileSpec,
