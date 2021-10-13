@@ -40,7 +40,7 @@ mod tests;
 pub use segmented_changelog_types::{
     dag, ArcSegmentedChangelog, CloneData, DagId, DagIdSet, FirstAncestorConstraint, FlatSegment,
     Group, InProcessIdDag, Location, MismatchedHeadsError, PreparedFlatSegments,
-    SegmentedChangelog, StreamCloneData,
+    SegmentedChangelog,
 };
 
 pub use crate::builder::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
@@ -86,15 +86,6 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
         _old_master: ChangesetId,
         _new_master: ChangesetId,
     ) -> Result<CloneData<ChangesetId>> {
-        Err(format_err!(
-            "Segmented Changelog is not enabled for this repo",
-        ))
-    }
-
-    async fn full_idmap_clone_data(
-        &self,
-        _ctx: &CoreContext,
-    ) -> Result<StreamCloneData<ChangesetId>> {
         Err(format_err!(
             "Segmented Changelog is not enabled for this repo",
         ))
@@ -160,14 +151,6 @@ macro_rules! segmented_changelog_delegate {
             ) -> Result<CloneData<ChangesetId>> {
                 let delegate = $delegate;
                 delegate.pull_fast_forward_master($ctx, old_master, new_master).await
-            }
-
-            async fn full_idmap_clone_data(
-                &$self,
-                $ctx: &CoreContext,
-            ) -> Result<StreamCloneData<ChangesetId>> {
-                let delegate = $delegate;
-                delegate.full_idmap_clone_data($ctx).await
             }
 
             async fn many_changeset_ids_to_locations(

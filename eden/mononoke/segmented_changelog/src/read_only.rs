@@ -12,15 +12,14 @@ use anyhow::{bail, format_err, Context, Result};
 use async_trait::async_trait;
 use futures::prelude::*;
 
-use cloned::cloned;
 use stats::prelude::*;
 
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
+use crate::SegmentedChangelog;
 use crate::{CloneData, DagId, DagIdSet, FirstAncestorConstraint, Group, InProcessIdDag, Location};
-use crate::{SegmentedChangelog, StreamCloneData};
 
 const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;
 
@@ -196,44 +195,6 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             idmap,
         };
         Ok(pull_data)
-    }
-
-    async fn full_idmap_clone_data(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<StreamCloneData<ChangesetId>> {
-        const CHUNK_SIZE: usize = 1000;
-        const BUFFERED_BATCHES: usize = 5;
-        let group = Group::MASTER;
-        let next_id = {
-            let group = Group::MASTER;
-            let level = 0;
-            self.iddag
-                .next_free_id(level, group)
-                .context("error computing next free id for dag")?
-        };
-        let flat_segments = self
-            .iddag
-            .flat_segments(group)
-            .context("error during flat segment retrieval")?;
-        let idmap_stream = stream::iter((group.min_id().0..next_id.0).into_iter().map(DagId))
-            .chunks(CHUNK_SIZE)
-            .map({
-                cloned!(ctx, self.idmap);
-                move |chunk| {
-                    cloned!(ctx, idmap);
-                    async move { idmap.find_many_changeset_ids(&ctx, chunk).await }
-                }
-            })
-            .buffered(BUFFERED_BATCHES)
-            .map_ok(|map_chunk| stream::iter(map_chunk.into_iter().map(Ok)))
-            .try_flatten()
-            .boxed();
-        let stream_clone_data = StreamCloneData {
-            flat_segments,
-            idmap_stream,
-        };
-        Ok(stream_clone_data)
     }
 
     /// Test if `ancestor` is an ancestor of `descendant`.

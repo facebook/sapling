@@ -15,7 +15,6 @@ use anyhow::{format_err, Result};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::CoreContext;
-use futures::stream::BoxStream;
 use mononoke_types::{ChangesetId, RepositoryId};
 use thiserror::Error;
 
@@ -204,14 +203,6 @@ pub trait SegmentedChangelog: Send + Sync {
         new_master: ChangesetId,
     ) -> Result<CloneData<ChangesetId>>;
 
-    /// An intermediate step in the quest for Segmented Changelog clones requires the server to
-    /// send over the full idmap. For every commit (in master) we send the id that it corresponds
-    /// to in the iddag.
-    async fn full_idmap_clone_data(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<StreamCloneData<ChangesetId>>;
-
     /// Whether segmented changelog is disabled.
     ///
     /// A quick way to test if the backend supports segmented changelog or not
@@ -228,11 +219,6 @@ pub trait SegmentedChangelog: Send + Sync {
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> Result<Option<bool>>;
-}
-
-pub struct StreamCloneData<T> {
-    pub flat_segments: PreparedFlatSegments,
-    pub idmap_stream: BoxStream<'static, Result<(DagId, T)>>,
 }
 
 #[derive(Debug, Error)]

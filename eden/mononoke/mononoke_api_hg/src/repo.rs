@@ -38,7 +38,7 @@ use repo_client::{
     gettreepack_entries,
 };
 
-use segmented_changelog::{CloneData, DagId, Location, StreamCloneData};
+use segmented_changelog::{CloneData, Location};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tunables::tunables;
@@ -754,33 +754,6 @@ impl HgRepoContext {
         Ok(hg_clone_data)
     }
 
-    pub async fn segmented_changelog_full_idmap_clone_data(
-        &self,
-    ) -> Result<StreamCloneData<HgChangesetId>, MononokeError> {
-        const CHUNK_SIZE: usize = 1000;
-        const BUFFERED_BATCHES: usize = 5;
-        let m_clone_data = self
-            .repo()
-            .segmented_changelog_full_idmap_clone_data()
-            .await?;
-        let hg_idmap_stream = m_clone_data
-            .idmap_stream
-            .chunks(CHUNK_SIZE)
-            .map({
-                let blobrepo = self.blob_repo().clone();
-                let ctx = self.ctx().clone();
-                move |chunk| hg_convert_idmap_chunk(ctx.clone(), blobrepo.clone(), chunk)
-            })
-            .buffered(BUFFERED_BATCHES)
-            .try_flatten()
-            .boxed();
-        let hg_clone_data = StreamCloneData {
-            flat_segments: m_clone_data.flat_segments,
-            idmap_stream: hg_idmap_stream,
-        };
-        Ok(hg_clone_data)
-    }
-
     /// resolve a bookmark name to an Hg Changeset
     pub async fn resolve_bookmark(
         &self,
@@ -877,31 +850,6 @@ impl HgRepoContext {
         }
         Ok(hg_parent_mapping)
     }
-}
-
-async fn hg_convert_idmap_chunk(
-    ctx: CoreContext,
-    blobrepo: BlobRepo,
-    chunk: Vec<Result<(DagId, ChangesetId), anyhow::Error>>,
-) -> Result<impl Stream<Item = Result<(DagId, HgChangesetId), anyhow::Error>>, anyhow::Error> {
-    let chunk: Vec<(DagId, ChangesetId)> = chunk
-        .into_iter()
-        .collect::<Result<Vec<_>, anyhow::Error>>()?;
-    let csids = chunk.iter().map(|(_, csid)| *csid).collect::<Vec<_>>();
-    let mapping = blobrepo
-        .get_hg_bonsai_mapping(ctx, csids)
-        .await
-        .context("error fetching hg bonsai mapping")?
-        .into_iter()
-        .map(|(hgid, csid)| (csid, hgid))
-        .collect::<HashMap<_, _>>();
-    let converted = chunk.into_iter().map(move |(v, csid)| {
-        let hgid = mapping
-            .get(&csid)
-            .ok_or_else(|| format_err!("failed to find bonsai '{}' mapping to hg", csid))?;
-        Ok((v, *hgid))
-    });
-    Ok(stream::iter(converted))
 }
 
 #[cfg(test)]

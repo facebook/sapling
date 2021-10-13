@@ -22,9 +22,7 @@ use tokio::sync::Notify;
 use tunables::tunables;
 
 use crate::manager::SegmentedChangelogManager;
-use crate::{
-    segmented_changelog_delegate, CloneData, Location, SegmentedChangelog, StreamCloneData,
-};
+use crate::{segmented_changelog_delegate, CloneData, Location, SegmentedChangelog};
 use reloader::{Loader, Reloader};
 
 struct SegmentedChangelogLoader {

@@ -56,9 +56,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
-use segmented_changelog::{
-    CloneData, DisabledSegmentedChangelog, Location, SegmentedChangelog, StreamCloneData,
-};
+use segmented_changelog::{CloneData, DisabledSegmentedChangelog, Location, SegmentedChangelog};
 use skiplist::SkiplistIndex;
 use slog::{debug, error, o};
 use sql_construct::facebook::FbSqlConstruct;
@@ -1520,17 +1518,6 @@ impl RepoContext {
             .await
             .map_err(MononokeError::from)?;
         Ok(pull_data)
-    }
-
-    pub async fn segmented_changelog_full_idmap_clone_data(
-        &self,
-    ) -> Result<StreamCloneData<ChangesetId>, MononokeError> {
-        let segmented_changelog = self.repo.segmented_changelog();
-        let clone_data = segmented_changelog
-            .full_idmap_clone_data(&self.ctx)
-            .await
-            .map_err(MononokeError::from)?;
-        Ok(clone_data)
     }
 }
 

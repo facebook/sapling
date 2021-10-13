@@ -32,7 +32,7 @@ use crate::read_only::ReadOnlySegmentedChangelog;
 use crate::update::{prepare_incremental_iddag_update, update_iddag};
 use crate::{
     segmented_changelog_delegate, CloneData, Group, InProcessIdDag, Location, MismatchedHeadsError,
-    SegmentedChangelog, StreamCloneData,
+    SegmentedChangelog,
 };
 
 define_stats! {
@@ -410,15 +410,6 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         read_dag
             .pull_fast_forward_master(ctx, old_master, new_master)
             .await
-    }
-
-    async fn full_idmap_clone_data(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<StreamCloneData<ChangesetId>> {
-        let iddag = self.iddag.read().await;
-        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
-        read_dag.full_idmap_clone_data(ctx).await
     }
 
     async fn disabled(&self, _ctx: &CoreContext) -> Result<bool> {

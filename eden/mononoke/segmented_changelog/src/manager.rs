@@ -24,9 +24,7 @@ use crate::idmap::IdMapFactory;
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{
-    segmented_changelog_delegate, CloneData, Location, SegmentedChangelog, StreamCloneData,
-};
+use crate::{segmented_changelog_delegate, CloneData, Location, SegmentedChangelog};
 
 pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,

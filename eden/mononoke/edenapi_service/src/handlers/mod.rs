@@ -73,7 +73,6 @@ pub enum EdenApiMethod {
     CommitRevlogData,
     CommitHashLookup,
     Clone,
-    FullIdMapClone,
     Bookmarks,
     PullFastForwardMaster,
     EphemeralPrepare,
@@ -96,7 +95,6 @@ impl fmt::Display for EdenApiMethod {
             Self::CommitHashLookup => "commit_hash_lookup",
             Self::CommitGraph => "commit_graph",
             Self::Clone => "clone",
-            Self::FullIdMapClone => "full_idmap_clone",
             Self::Bookmarks => "bookmarks",
             Self::Lookup => "lookup",
             Self::UploadFile => "upload_file",
@@ -188,7 +186,6 @@ define_handler!(capabilities_handler, capabilities::capabilities_handler);
 define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
 define_handler!(clone_handler, clone::clone_data);
-define_handler!(full_idmap_clone_handler, clone::full_idmap_clone_data);
 define_handler!(upload_file_handler, files::upload_file);
 define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
 
@@ -316,10 +313,6 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/pull_fast_forward_master")
             .with_path_extractor::<pull::PullFastForwardParams>()
             .to(pull_fast_forward_master);
-        route
-            .post("/:repo/full_idmap_clone")
-            .with_path_extractor::<clone::CloneParams>()
-            .to(full_idmap_clone_handler);
         route
             .put("/:repo/upload/file/:idtype/:id")
             .with_path_extractor::<files::UploadFileParams>()
