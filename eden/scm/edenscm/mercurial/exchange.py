@@ -571,7 +571,7 @@ def _findblobs(pushop):
                 fctx = ctx[path]
                 assert fctx.filenode() == newnode
                 p1, p2 = fctx.filelog().parents(newnode)
-                yield "blob", newnode, (p1, p2), fctx.data()
+                yield "blob", newnode, (p1, p2), fctx.rawdata()
 
         # changed trees
         difftrees = subdirdiff(mfstore, "", mfnode, basemfnodes, treedepth)
