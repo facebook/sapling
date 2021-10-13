@@ -20,6 +20,7 @@ pub use blobstore::StoreLoadable;
 
 mod bonsai;
 mod derive;
+mod derive_batch;
 mod implicit_deletes;
 mod ops;
 mod ordered_ops;

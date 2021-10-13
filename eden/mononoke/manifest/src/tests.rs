@@ -6,8 +6,10 @@
  */
 
 pub(crate) use crate::{
-    bonsai::BonsaiEntry, derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest,
-    ManifestOps, PathOrPrefix, PathTree, TreeInfo,
+    bonsai::BonsaiEntry,
+    derive_batch::{derive_manifests_for_simple_stack_of_commits, ManifestChanges},
+    derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps, PathOrPrefix,
+    PathTree, TreeInfo,
 };
 use anyhow::{Error, Result};
 use async_trait::async_trait;
@@ -21,7 +23,8 @@ use futures::future::{self, FutureExt};
 use futures::stream::TryStreamExt;
 use maplit::btreemap;
 use memblob::Memblob;
-use mononoke_types::{BlobstoreBytes, FileType, MPath, MPathElement};
+use mononoke_types::{BlobstoreBytes, ChangesetId, FileType, MPath, MPathElement};
+use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
 use pretty_assertions::assert_eq;
 use serde_derive::{Deserialize, Serialize};
 use std::{
@@ -185,6 +188,69 @@ async fn derive_test_manifest(
         },
     )
     .await
+}
+
+async fn derive_test_stack_of_manifests(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
+    parent: Option<TestManifestIdU64>,
+    changes_str_per_cs_id: BTreeMap<ChangesetId, BTreeMap<&str, Option<&str>>>,
+) -> Result<BTreeMap<ChangesetId, TestManifestIdU64>> {
+    let mut stack_of_commits = vec![];
+    let mut all_mf_changes = vec![];
+    for (cs_id, changes_str) in changes_str_per_cs_id {
+        let mut changes = Vec::new();
+        for (path, change) in changes_str {
+            let path = MPath::new(path)?;
+            changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
+        }
+        let mf_changes = ManifestChanges { cs_id, changes };
+        all_mf_changes.push(mf_changes);
+        stack_of_commits.push(cs_id);
+    }
+
+    let derived = derive_manifests_for_simple_stack_of_commits(
+        ctx.clone(),
+        blobstore.clone(),
+        parent,
+        all_mf_changes,
+        {
+            cloned!(ctx, blobstore);
+            move |TreeInfo { subentries, .. }, _| {
+                let subentries = subentries
+                    .into_iter()
+                    .map(|(path, (_, id))| (path, id))
+                    .collect();
+                cloned!(ctx, blobstore);
+                async move {
+                    let id = TestManifestU64(subentries).store(&ctx, &blobstore).await?;
+                    Ok(((), id))
+                }
+            }
+        },
+        {
+            cloned!(ctx, blobstore);
+            move |leaf_info, _| {
+                cloned!(ctx, blobstore);
+                async move {
+                    match leaf_info.leaf {
+                        None => Err(Error::msg("leaf only conflict")),
+                        Some(leaf) => {
+                            let id = leaf.store(&ctx, &blobstore).await?;
+                            Ok(((), id))
+                        }
+                    }
+                }
+            }
+        },
+    )
+    .await?;
+
+    let mut res = BTreeMap::new();
+    for cs_id in stack_of_commits {
+        res.insert(cs_id, derived.get(&cs_id).unwrap().clone());
+    }
+    Ok(res)
 }
 
 struct Files(TestManifestIdU64);
@@ -542,6 +608,382 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
                 "/file" => "content",
             })?,
             files(mf0).await?,
+        );
+    }
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_derive_stack_of_manifests(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blobstore);
+
+    // derive manifest
+    let derive = {
+        move |parents, changes| async move {
+            derive_test_stack_of_manifests(ctx, blobstore, parents, changes).await
+        }
+    };
+
+    // load all files for specified manifest
+    let files = {
+        move |manifest_id: TestManifestIdU64| async move {
+            Loadable::load(&Files(manifest_id), ctx, blobstore).await
+        }
+    };
+
+    // Simple case - add files one after another
+    {
+        let mfs = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/one/one" => Some("one"),
+                },
+                TWOS_CSID => btreemap! {
+                    "/two/two" => Some("two"),
+                },
+                THREES_CSID => btreemap! {
+                    "/three/three" => Some("three"),
+                },
+            },
+        )
+        .await?;
+
+        let mfid1 = *mfs.get(&ONES_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/one" => "one",
+            })?,
+            files(mfid1).await?,
+        );
+        let mfid2 = *mfs.get(&TWOS_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/one" => "one",
+                "/two/two" => "two",
+            })?,
+            files(mfid2).await?,
+        );
+        let mfid3 = *mfs.get(&THREES_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/one" => "one",
+                "/two/two" => "two",
+                "/three/three" => "three",
+            })?,
+            files(mfid3).await?,
+        );
+    }
+
+    // Stack which creates/deleted and recreates a few files
+    {
+        let mfs = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/one/two" => Some("two"),
+                    "/one/three" => Some("three"),
+                    "/five/six" => Some("six"),
+                },
+                TWOS_CSID => btreemap! {
+                    "/one/two" => None,
+                    "/one/three" => None,
+                },
+                THREES_CSID => btreemap! {
+                    "/one/two" => Some("two_recreated"),
+                    "/one/three" => Some("three_recreated"),
+                    "/one/four" => Some("four"),
+                },
+            },
+        )
+        .await?;
+
+        let mfid1 = *mfs.get(&ONES_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/two" => "two",
+                "/one/three" => "three",
+                "/five/six" => "six",
+            })?,
+            files(mfid1).await?,
+        );
+        let mfid2 = *mfs.get(&TWOS_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/five/six" => "six",
+            })?,
+            files(mfid2).await?,
+        );
+        let mfid3 = *mfs.get(&THREES_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/two" => "two_recreated",
+                "/one/three" => "three_recreated",
+                "/one/four" => "four",
+                "/five/six" => "six",
+            })?,
+            files(mfid3).await?,
+        );
+    }
+
+    // Check that parents are processed correctly
+    {
+        let mfs = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/one/two" => Some("two"),
+                    "/one/three" => Some("three"),
+                    "/five/six" => Some("six"),
+                },
+            },
+        )
+        .await?;
+        let mfid1 = *mfs.get(&ONES_CSID).unwrap();
+
+        let mfs = derive(
+            Some(mfid1),
+            btreemap! {
+                TWOS_CSID => btreemap! {
+                    "/one/two" => None,
+                    "/one/three" => None,
+                },
+                THREES_CSID => btreemap! {
+                    "/one/two" => Some("two_recreated"),
+                    "/one/three" => Some("three_recreated"),
+                    "/one/four" => Some("four"),
+                },
+            },
+        )
+        .await?;
+        let mfid2 = *mfs.get(&TWOS_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/five/six" => "six",
+            })?,
+            files(mfid2).await?,
+        );
+        let mfid3 = *mfs.get(&THREES_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/two" => "two_recreated",
+                "/one/three" => "three_recreated",
+                "/one/four" => "four",
+                "/five/six" => "six",
+            })?,
+            files(mfid3).await?,
+        );
+    }
+
+    // Simple file/dir conflict is resolved
+    {
+        let mfs = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/one/two" => Some("two"),
+                    "/one/three" => Some("three"),
+                },
+            },
+        )
+        .await?;
+
+        let mfid1 = *mfs.get(&ONES_CSID).unwrap();
+
+        let mfs = derive(
+            Some(mfid1),
+            btreemap! {
+                TWOS_CSID => btreemap! {
+                    "/one" => Some("resolved_file_dir"),
+                },
+            },
+        )
+        .await?;
+        let mfid2 = *mfs.get(&TWOS_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one" => "resolved_file_dir",
+            })?,
+            files(mfid2).await?,
+        );
+    }
+
+    // We don't allow paths that are prefixes of each other - raise an error
+    {
+        let res = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/one/two" => Some("two"),
+                },
+                TWOS_CSID => btreemap! {
+                    "/one" => Some("overridden"),
+                },
+            },
+        )
+        .await;
+
+        assert!(res.is_err());
+    }
+
+    // Now let's do an empty commit
+    {
+        let mfs = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/one/two" => Some("two"),
+                },
+                TWOS_CSID => btreemap!{}
+            },
+        )
+        .await?;
+        let mfid1 = *mfs.get(&ONES_CSID).unwrap();
+        let mfid2 = *mfs.get(&TWOS_CSID).unwrap();
+        assert_eq!(mfid1, mfid2);
+    }
+
+    // Weird case - if a directory is deleted as a file, then
+    // it should just be ignored
+    {
+        let mfs = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/one/one" => Some("one"),
+                },
+            },
+        )
+        .await?;
+
+        let mfid1 = *mfs.get(&ONES_CSID).unwrap();
+        let mfs = derive(
+            Some(mfid1),
+            btreemap! {
+                TWOS_CSID => btreemap! {
+                    "/one" => None,
+                },
+            },
+        )
+        .await?;
+
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/one" => "one",
+            })?,
+            files(mfid1).await?,
+        );
+        let mfid2 = *mfs.get(&TWOS_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/one" => "one",
+            })?,
+            files(mfid2).await?,
+        );
+    }
+
+    // Weird case - deleting non-existing file is fine
+    {
+        let mfs = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/file" => Some("content"),
+                    "/one/one" => None,
+                },
+            },
+        )
+        .await?;
+
+        let mfid1 = *mfs.get(&ONES_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/file" => "content",
+            })?,
+            files(mfid1).await?,
+        );
+    }
+
+    // Replace a dir with a file in a single commit
+    {
+        let mfs = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/one" => Some("one"),
+                },
+            },
+        )
+        .await?;
+
+        let mfid1 = *mfs.get(&ONES_CSID).unwrap();
+
+        let mfs = derive(
+            Some(mfid1),
+            btreemap! {
+                TWOS_CSID => btreemap! {
+                    "/one" => None,
+                    "/one/one" => Some("one"),
+                },
+            },
+        )
+        .await?;
+        let mfid2 = *mfs.get(&TWOS_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/one/one" => "one",
+            })?,
+            files(mfid2).await?,
+        );
+    }
+
+    // Replace a dir with a file in a single commit
+    {
+        let mfs = derive(
+            None,
+            btreemap! {
+                ONES_CSID => btreemap! {
+                    "/dir/one" => Some("one"),
+                },
+            },
+        )
+        .await?;
+
+        let mfid1 = *mfs.get(&ONES_CSID).unwrap();
+
+        let mfs = derive(
+            Some(mfid1),
+            btreemap! {
+                TWOS_CSID => btreemap! {
+                    "/dir/anotherfile" => Some("anotherfile"),
+                },
+                THREES_CSID => btreemap! {
+                    "/dir/one" => None,
+                    "/dir/one/one" => Some("one"),
+                },
+            },
+        )
+        .await?;
+
+        let mfid2 = *mfs.get(&TWOS_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/dir/one" => "one",
+                "/dir/anotherfile" => "anotherfile",
+            })?,
+            files(mfid2).await?,
+        );
+
+        let mfid3 = *mfs.get(&THREES_CSID).unwrap();
+        assert_eq!(
+            files_reference(btreemap! {
+                "/dir/one/one" => "one",
+                "/dir/anotherfile" => "anotherfile",
+            })?,
+            files(mfid3).await?,
         );
     }
 
