@@ -72,3 +72,68 @@ impl DerivedDataManager {
         }
     }
 }
+
+pub mod derived_data_service {
+    use std::sync::Arc;
+
+    use super::DerivedDataManager;
+    use anyhow::Result;
+    use bonsai_hg_mapping::BonsaiHgMapping;
+    use cacheblob::LeaseOps;
+    use changesets::Changesets;
+    use filenodes::Filenodes;
+    use metaconfig_types::DerivedDataConfig;
+    use mononoke_types::RepositoryId;
+    use repo_blobstore::RepoBlobstore;
+    use scuba_ext::MononokeScubaSampleBuilder;
+
+    #[facet::facet]
+    pub struct DerivedDataManagerSet {
+        prod: DerivedDataManager,
+        backfilling: DerivedDataManager,
+    }
+
+    impl DerivedDataManagerSet {
+        pub fn get_prod(&self) -> &DerivedDataManager {
+            return &self.prod;
+        }
+
+        pub fn get_backfilling(&self) -> &DerivedDataManager {
+            return &self.backfilling;
+        }
+    }
+
+    #[facet::container]
+    pub struct DerivedDataServiceRepo {
+        #[facet]
+        pub manager_set: DerivedDataManagerSet,
+    }
+
+    impl DerivedDataManagerSet {
+        pub fn new(
+            repo_id: RepositoryId,
+            repo_name: String,
+            changesets: Arc<dyn Changesets>,
+            bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+            filenodes: Arc<dyn Filenodes>,
+            repo_blobstore: RepoBlobstore,
+            lease: Arc<dyn LeaseOps>,
+            scuba: MononokeScubaSampleBuilder,
+            config: DerivedDataConfig,
+        ) -> Result<Self> {
+            let prod = DerivedDataManager::new(
+                repo_id,
+                repo_name,
+                changesets,
+                bonsai_hg_mapping,
+                filenodes,
+                repo_blobstore,
+                lease,
+                scuba,
+                config.enabled.clone(),
+            );
+            let backfilling = prod.with_replaced_config(config.backfilling.clone());
+            Ok(Self { prod, backfilling })
+        }
+    }
+}

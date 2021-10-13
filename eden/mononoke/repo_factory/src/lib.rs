@@ -45,10 +45,12 @@ use changesets::ArcChangesets;
 use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
 use context::SessionContainer;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
+use derived_data_manager::{ArcDerivedDataManagerSet, DerivedDataManagerSet};
 use environment::{Caching, MononokeEnvironment};
 use ephemeral_blobstore::{
     ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore, RepoEphemeralBlobstoreBuilder,
 };
+use fbinit::FacebookInit;
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use futures_watchdog::WatchdogExt;
@@ -79,6 +81,8 @@ use thiserror::Error;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 
 pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
+
+const DERIVED_DATA_LEASE: &str = "derived-data-lease";
 
 #[derive(Clone)]
 struct RepoFactoryCache<K: Clone + Eq + Hash, V: Clone> {
@@ -729,17 +733,12 @@ impl RepoFactory {
         repo_blobstore: &ArcRepoBlobstore,
     ) -> Result<ArcRepoDerivedData> {
         let config = repo_config.derived_data_config.clone();
-        // Derived data leasing is performed through the cache, so is only
-        // available if caching is enabled.
-        let lease: Arc<dyn LeaseOps> = if let Caching::Enabled(_) = self.env.caching {
-            Arc::new(MemcacheOps::new(self.env.fb, "derived-data-lease", "")?)
-        } else {
-            Arc::new(InProcessLease::new())
-        };
-        let mut scuba =
-            MononokeScubaSampleBuilder::with_opt_table(self.env.fb, config.scuba_table.clone());
-        scuba.add_common_server_data();
-        scuba.add("reponame", repo_identity.name());
+        let lease = lease_init(self.env.fb, self.env.caching, DERIVED_DATA_LEASE)?;
+        let scuba = build_scuba(
+            self.env.fb,
+            config.scuba_table.clone(),
+            repo_identity.name(),
+        );
         Ok(Arc::new(RepoDerivedData::new(
             repo_identity.id(),
             repo_identity.name().to_string(),
@@ -842,4 +841,58 @@ impl RepoFactory {
             .context(RepoFactoryError::MutableRenames)?;
         Ok(Arc::new(MutableRenames::new(repo_config.repoid, sql_store)))
     }
+
+    pub fn derived_data_manager_set(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        repo_config: &ArcRepoConfig,
+        changesets: &ArcChangesets,
+        bonsai_hg_mapping: &ArcBonsaiHgMapping,
+        filenodes: &ArcFilenodes,
+        repo_blobstore: &ArcRepoBlobstore,
+    ) -> Result<ArcDerivedDataManagerSet> {
+        let config = repo_config.derived_data_config.clone();
+        let lease = lease_init(self.env.fb, self.env.caching, DERIVED_DATA_LEASE)?;
+        let scuba = build_scuba(
+            self.env.fb,
+            config.scuba_table.clone(),
+            repo_identity.name(),
+        );
+        Ok::<_, anyhow::Error>(Arc::new(DerivedDataManagerSet::new(
+            repo_identity.id(),
+            repo_identity.name().to_string(),
+            changesets.clone(),
+            bonsai_hg_mapping.clone(),
+            filenodes.clone(),
+            repo_blobstore.as_ref().clone(),
+            lease,
+            scuba,
+            config,
+        )?))
+    }
+}
+
+fn lease_init(
+    fb: FacebookInit,
+    caching: Caching,
+    lease_type: &'static str,
+) -> Result<Arc<dyn LeaseOps>> {
+    // Derived data leasing is performed through the cache, so is only
+    // available if caching is enabled.
+    if let Caching::Enabled(_) = caching {
+        Ok(Arc::new(MemcacheOps::new(fb, lease_type, "")?))
+    } else {
+        Ok(Arc::new(InProcessLease::new()))
+    }
+}
+
+fn build_scuba(
+    fb: FacebookInit,
+    scuba_table: Option<String>,
+    reponame: &str,
+) -> MononokeScubaSampleBuilder {
+    let mut scuba = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table);
+    scuba.add_common_server_data();
+    scuba.add("reponame", reponame);
+    scuba
 }

@@ -126,6 +126,15 @@ impl DerivedDataManager {
         }
     }
 
+    pub fn with_replaced_config(&self, config: DerivedDataTypesConfig) -> Self {
+        Self {
+            inner: Arc::new(DerivedDataManagerInner {
+                config,
+                ..self.inner.as_ref().clone()
+            }),
+        }
+    }
+
     pub fn repo_id(&self) -> RepositoryId {
         self.inner.repo_id
     }
