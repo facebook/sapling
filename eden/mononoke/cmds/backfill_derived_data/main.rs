@@ -21,7 +21,7 @@ use borrowed::borrowed;
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, InProcessLease, LeaseOps, MemWritesBlobstore};
 use changesets::{deserialize_cs_entries, ChangesetEntry};
-use clap::{Arg, SubCommand};
+use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{
     args::{self, MononokeMatches, RepoRequirement},
@@ -613,45 +613,8 @@ async fn run_subcmd<'a>(
                 .value_of_lossy(ARG_CHANGESET)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_CHANGESET))?
                 .to_string();
-            let all = sub_m.is_present(ARG_ALL_TYPES);
-            let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE);
-            let (repo, types): (_, Vec<String>) = match (all, derived_data_types) {
-                (true, None) => {
-                    let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
-                    let types = repo
-                        .get_derived_data_config()
-                        .enabled
-                        .types
-                        .iter()
-                        .cloned()
-                        .collect();
-                    (repo, types)
-                }
-                (false, Some(derived_data_types)) => {
-                    let derived_data_types = derived_data_types
-                        .into_iter()
-                        .map(|s| s.to_string())
-                        .collect::<Vec<_>>();
-                    let repo: BlobRepo =
-                        open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_types)
-                            .await?;
-                    (repo, derived_data_types)
-                }
-                (true, Some(_)) => {
-                    return Err(format_err!(
-                        "{} and {} can't be specified",
-                        ARG_ALL_TYPES,
-                        ARG_DERIVED_DATA_TYPE
-                    ));
-                }
-                (false, None) => {
-                    return Err(format_err!(
-                        "{} or {} should be specified",
-                        ARG_ALL_TYPES,
-                        ARG_DERIVED_DATA_TYPE
-                    ));
-                }
-            };
+            let (repo, types) =
+                parse_repo_and_derived_data_types(fb, logger, matches, sub_m).await?;
             let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
             subcommand_single(&ctx, &repo, csid, types).await
         }
@@ -753,6 +716,54 @@ async fn run_subcmd<'a>(
         }
         (name, _) => Err(format_err!("unhandled subcommand: {}", name)),
     }
+}
+
+async fn parse_repo_and_derived_data_types(
+    fb: FacebookInit,
+    logger: &Logger,
+    matches: &MononokeMatches<'_>,
+    sub_m: &ArgMatches<'_>,
+) -> Result<(BlobRepo, Vec<String>)> {
+    let all = sub_m.is_present(ARG_ALL_TYPES);
+    let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE);
+    let (repo, types): (_, Vec<String>) = match (all, derived_data_types) {
+        (true, None) => {
+            let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
+            let types = repo
+                .get_derived_data_config()
+                .enabled
+                .types
+                .iter()
+                .cloned()
+                .collect();
+            (repo, types)
+        }
+        (false, Some(derived_data_types)) => {
+            let derived_data_types = derived_data_types
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>();
+            let repo: BlobRepo =
+                open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_types).await?;
+            (repo, derived_data_types)
+        }
+        (true, Some(_)) => {
+            return Err(format_err!(
+                "{} and {} can't be specified",
+                ARG_ALL_TYPES,
+                ARG_DERIVED_DATA_TYPE
+            ));
+        }
+        (false, None) => {
+            return Err(format_err!(
+                "{} or {} should be specified",
+                ARG_ALL_TYPES,
+                ARG_DERIVED_DATA_TYPE
+            ));
+        }
+    };
+
+    Ok((repo, types))
 }
 
 fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntry>> {
