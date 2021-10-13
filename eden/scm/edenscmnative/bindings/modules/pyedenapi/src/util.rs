@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use cpython::*;
 
+use cpython_ext::convert::Serde;
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
 use edenapi::ResponseMeta;
 use edenapi_types::{ContentId, TreeAttributes, UploadTreeEntry};
@@ -20,12 +21,6 @@ pub fn to_path(py: Python, name: &PyPath) -> PyResult<RepoPathBuf> {
     name.to_repo_path()
         .map_pyerr(py)
         .map(|path| path.to_owned())
-}
-
-fn to_hgid(py: Python, hgid: &PyBytes) -> HgId {
-    let mut bytes = [0u8; 20];
-    bytes.copy_from_slice(&hgid.data(py)[0..20]);
-    HgId::from(&bytes)
 }
 
 pub fn to_contentid(py: Python, content_id: &PyBytes) -> ContentId {
@@ -56,8 +51,7 @@ pub fn to_tree_attrs(py: Python, attrs: &PyDict) -> PyResult<TreeAttributes> {
     Ok(attributes)
 }
 
-pub fn to_key(py: Python, path: &PyPath, hgid: &PyBytes) -> PyResult<Key> {
-    let hgid = to_hgid(py, hgid);
+pub fn to_key(py: Python, path: &PyPath, hgid: HgId) -> PyResult<Key> {
     let path = to_path(py, path)?;
     Ok(Key::new(path, hgid))
 }
@@ -65,27 +59,21 @@ pub fn to_key(py: Python, path: &PyPath, hgid: &PyBytes) -> PyResult<Key> {
 pub fn to_key_with_parents(
     py: Python,
     path: &PyPath,
-    hgid: &PyBytes,
-    p1: &PyBytes,
-    p2: &PyBytes,
+    hgid: HgId,
+    p1: HgId,
+    p2: HgId,
 ) -> PyResult<(Key, Parents)> {
-    let hgid = to_hgid(py, hgid);
     let path = to_path(py, path)?;
-    let p1 = to_hgid(py, p1);
-    let p2 = to_hgid(py, p2);
     Ok((Key::new(path, hgid), Parents::new(p1, p2)))
 }
 
 pub fn to_trees_upload_item(
     py: Python,
-    hgid: &PyBytes,
-    p1: &PyBytes,
-    p2: &PyBytes,
+    hgid: HgId,
+    p1: HgId,
+    p2: HgId,
     data: &PyBytes,
 ) -> PyResult<UploadTreeEntry> {
-    let hgid = to_hgid(py, hgid);
-    let p1 = to_hgid(py, p1);
-    let p2 = to_hgid(py, p2);
     Ok(UploadTreeEntry {
         node_id: hgid,
         data: data.data(py).to_vec(),
@@ -95,29 +83,29 @@ pub fn to_trees_upload_item(
 
 pub fn to_keys<'a>(
     py: Python,
-    keys: impl IntoIterator<Item = &'a (PyPathBuf, PyBytes)>,
+    keys: impl IntoIterator<Item = &'a (PyPathBuf, Serde<HgId>)>,
 ) -> PyResult<Vec<Key>> {
     keys.into_iter()
-        .map(|(path, hgid)| to_key(py, path, hgid))
+        .map(|(path, hgid)| to_key(py, path, hgid.0))
         .collect()
 }
 
 pub fn to_keys_with_parents<'a>(
     py: Python,
-    keys: impl IntoIterator<Item = &'a (PyPathBuf, PyBytes, PyBytes, PyBytes)>,
+    keys: impl IntoIterator<Item = &'a (PyPathBuf, Serde<HgId>, Serde<HgId>, Serde<HgId>)>,
 ) -> PyResult<Vec<(Key, Parents)>> {
     keys.into_iter()
-        .map(|(path, hgid, p1, p2)| to_key_with_parents(py, path, hgid, p1, p2))
+        .map(|(path, hgid, p1, p2)| to_key_with_parents(py, path, hgid.0, p1.0, p2.0))
         .collect()
 }
 
 pub fn to_trees_upload_items<'a>(
     py: Python,
-    items: impl IntoIterator<Item = &'a (PyBytes, PyBytes, PyBytes, PyBytes)>,
+    items: impl IntoIterator<Item = &'a (Serde<HgId>, Serde<HgId>, Serde<HgId>, PyBytes)>,
 ) -> PyResult<Vec<UploadTreeEntry>> {
     items
         .into_iter()
-        .map(|(hgid, p1, p2, data)| to_trees_upload_item(py, hgid, p1, p2, data))
+        .map(|(hgid, p1, p2, data)| to_trees_upload_item(py, hgid.0, p1.0, p2.0, data))
         .collect()
 }
 

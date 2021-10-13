@@ -61,7 +61,7 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>,
+        keys: Vec<(PyPathBuf, Serde<HgId>)>,
     ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
         let keys = to_keys(py, &keys)?;
         let entries = py
@@ -76,7 +76,7 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>,
+        keys: Vec<(PyPathBuf, Serde<HgId>)>,
         length: Option<u32>,
     ) -> PyResult<TStream<anyhow::Result<Serde<HistoryEntry>>>> {
         let keys = to_keys(py, &keys)?;
@@ -93,7 +93,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         store: PyObject,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>,
+        keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<PyDict>,
         progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<stats> {
@@ -126,7 +126,7 @@ pub trait EdenApiPyExt: EdenApi {
         self: Arc<Self>,
         py: Python,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>,
+        keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<PyDict>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<TreeEntry>>>, PyFuture)> {
         let keys = to_keys(py, &keys)?;
@@ -405,7 +405,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         store: PyObject,
         repo: String,
-        keys: Vec<(PyPathBuf /* path */, PyBytes /* hgid */)>,
+        keys: Vec<(PyPathBuf /* path */, Serde<HgId> /* hgid */)>,
     ) -> PyResult<(
         TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
         PyFuture,
@@ -495,10 +495,10 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         repo: String,
         keys: Vec<(
-            PyPathBuf, /* path */
-            PyBytes,   /* hgid */
-            PyBytes,   /* p1 */
-            PyBytes,   /* p2 */
+            PyPathBuf,   /* path */
+            Serde<HgId>, /* hgid */
+            Serde<HgId>, /* p1 */
+            Serde<HgId>, /* p2 */
         )>,
     ) -> PyResult<(
         TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
@@ -606,10 +606,10 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         items: Vec<(
-            PyBytes, /* hgid */
-            PyBytes, /* p1 */
-            PyBytes, /* p2 */
-            PyBytes, /* data */
+            Serde<HgId>, /* hgid */
+            Serde<HgId>, /* p1 */
+            Serde<HgId>, /* p2 */
+            PyBytes,     /* data */
         )>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTreeResponse>>>, PyFuture)> {
         let items = to_trees_upload_items(py, &items)?;

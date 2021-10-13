@@ -88,7 +88,7 @@ py_class!(pub class client |py| {
     def files(
         &self,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>
+        keys: Vec<(PyPathBuf, Serde<HgId>)>
     ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
         self.inner(py).clone().files_py(py, repo, keys)
     }
@@ -96,7 +96,7 @@ py_class!(pub class client |py| {
     def history(
         &self,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>,
+        keys: Vec<(PyPathBuf, Serde<HgId>)>,
         length: Option<u32> = None
     ) -> PyResult<TStream<anyhow::Result<Serde<HistoryEntry>>>> {
         self.inner(py).clone().history_py(py, repo, keys, length)
@@ -106,7 +106,7 @@ py_class!(pub class client |py| {
         &self,
         store: PyObject,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>,
+        keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<PyDict> = None
     ) -> PyResult<stats> {
         let progress = self.progress(py).clone();
@@ -116,7 +116,7 @@ py_class!(pub class client |py| {
     def trees(
         &self,
         repo: String,
-        keys: Vec<(PyPathBuf, PyBytes)>,
+        keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<PyDict> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<TreeEntry>>>, PyFuture)> {
         self.inner(py).clone().trees_py(py, repo, keys, attributes)
@@ -279,8 +279,8 @@ py_class!(pub class client |py| {
         store: PyObject,
         repo: String,
         keys: Vec<(
-            PyPathBuf, /* path */
-            PyBytes,   /* hgid */
+            PyPathBuf,   /* path */
+            Serde<HgId>, /* hgid */
         )>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadfileblobs_py(py, store, repo, keys)
@@ -292,10 +292,10 @@ py_class!(pub class client |py| {
         store: PyObject,
         repo: String,
         keys: Vec<(
-            PyPathBuf, /* path */
-            PyBytes,   /* hgid */
-            PyBytes,   /* p1 */
-            PyBytes,   /* p2 */
+            PyPathBuf,     /* path */
+            Serde<HgId>,   /* hgid */
+            Serde<HgId>,   /* p1 */
+            Serde<HgId>,   /* p2 */
         )>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadfiles_py(py, store, repo, keys)
@@ -306,10 +306,10 @@ py_class!(pub class client |py| {
         &self,
         repo: String,
         items: Vec<(
-            PyBytes,   /* hgid */
-            PyBytes,   /* p1 */
-            PyBytes,   /* p2 */
-            PyBytes,   /* data */
+            Serde<HgId>,  /* hgid */
+            Serde<HgId>,  /* p1 */
+            Serde<HgId>,  /* p2 */
+            PyBytes,      /* data */
         )>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTreeResponse>>>, PyFuture)> {
         self.inner(py).clone().uploadtrees_py(py, repo, items)
