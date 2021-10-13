@@ -135,6 +135,13 @@ impl EdenApiFileStore {
     ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
         BlockingResponse::from_async(self.client.files_attrs(self.repo.clone(), reqs))
     }
+
+    pub async fn files_attrs(
+        &self,
+        reqs: Vec<FileSpec>,
+    ) -> Result<Response<FileEntry>, EdenApiError> {
+        self.client.files_attrs(self.repo.clone(), reqs).await
+    }
 }
 
 impl EdenApiTreeStore {
