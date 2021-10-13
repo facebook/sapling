@@ -50,45 +50,26 @@ Import and start mononoke
   $ mononoke
   $ wait_for_mononoke
 
-
-Create and send file data request.
-  $ edenapi_make_req commit-hash-to-location > req.cbor <<EOF
-  > {
-  >   "master_heads": [
+Prepare request.
+  $ cat > master_heads << EOF
+  > [
   >     "$D",
   >     "$E"
-  >   ],
-  >   "hgids": [
+  > ]
+  > EOF
+
+  $ cat > hgids << EOF
+  > [
   >     "$B",
   >     "$C"
-  >   ],
-  >   "unfiltered": true
-  > }
+  > ]
   > EOF
-  Reading from stdin
-  Generated request: WireCommitHashToLocationRequestBatch {
-      client_head: Some(
-          WireHgId("f585351a92f85104bff7c284233c338b10eb1df7"),
-      ),
-      hgids: [
-          WireHgId("112478962961147124edd43549aedd1a335e44bf"),
-          WireHgId("26805aba1e600a82e93661149f2313866a221a7b"),
-      ],
-      master_heads: [
-          WireHgId("f585351a92f85104bff7c284233c338b10eb1df7"),
-          WireHgId("49cb92066bfd0763fff729c354345650b7428554"),
-      ],
-      unfiltered: Some(
-          true,
-      ),
-  }
 
-  $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/commit/hash_to_location" --data-binary @req.cbor > res.cbor
-
-Check files in response.
-  $ edenapi_read_res commit-hash-to-location res.cbor
-  Reading from file: "res.cbor"
-  112478962961147124edd43549aedd1a335e44bf =>
-      Err(code=1, msg='InternalError(InternalError(error while getting an up to date dag')
-  26805aba1e600a82e93661149f2313866a221a7b =>
-      Err(code=1, msg='InternalError(InternalError(error while getting an up to date dag')
+Check response.
+  $ hgedenapi debugapi -e commithashtolocation -f master_heads -f hgids
+  [{"hgid": bin("112478962961147124edd43549aedd1a335e44bf"),
+    "result": {"Err": {"code": 1,
+                       "message": "InternalError(InternalError(error while getting an up to date dag\n\nCaused by:\n    server cannot match the clients heads, repo 0, client_heads: [ChangesetId(Blake2(86de925f9338cbc325f5ec1620b6556fb441d1e08466f65ae51930fae6abe120)), ChangesetId(Blake2(582452dd18b423e3212130c383fcf9b31ee52e215a5df6f45fc594b3d48df3e4))]))"}}},
+   {"hgid": bin("26805aba1e600a82e93661149f2313866a221a7b"),
+    "result": {"Err": {"code": 1,
+                       "message": "InternalError(InternalError(error while getting an up to date dag\n\nCaused by:\n    server cannot match the clients heads, repo 0, client_heads: [ChangesetId(Blake2(86de925f9338cbc325f5ec1620b6556fb441d1e08466f65ae51930fae6abe120)), ChangesetId(Blake2(582452dd18b423e3212130c383fcf9b31ee52e215a5df6f45fc594b3d48df3e4))]))"}}}]
