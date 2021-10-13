@@ -562,6 +562,7 @@ impl<'a> TreeStoreBuilder<'a> {
             contentstore,
 
             creation_time: Instant::now(),
+            flush_on_drop: true,
         })
     }
 }

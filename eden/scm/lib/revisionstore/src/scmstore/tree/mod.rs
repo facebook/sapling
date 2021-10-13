@@ -61,11 +61,15 @@ pub struct TreeStore {
     pub contentstore: Option<Arc<ContentStore>>,
 
     pub creation_time: Instant,
+
+    pub flush_on_drop: bool,
 }
 
 impl Drop for TreeStore {
     fn drop(&mut self) {
-        let _ = self.flush();
+        if self.flush_on_drop {
+            let _ = self.flush();
+        }
     }
 }
 
@@ -246,6 +250,7 @@ impl TreeStore {
             edenapi: None,
             contentstore: None,
             creation_time: Instant::now(),
+            flush_on_drop: false,
         }
     }
 
@@ -264,6 +269,7 @@ impl TreeStore {
             contentstore: None,
 
             creation_time: Instant::now(),
+            flush_on_drop: true,
         }
     }
 
@@ -307,6 +313,7 @@ impl LegacyStore for TreeStore {
             edenapi: None,
             contentstore: None,
             creation_time: Instant::now(),
+            flush_on_drop: true,
         })
     }
 
