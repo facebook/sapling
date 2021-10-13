@@ -40,30 +40,8 @@ Start up EdenAPI server.
   $ mononoke
   $ wait_for_mononoke
 
-Create and send file data request.
-  $ edenapi_make_req bookmark > req.cbor <<EOF
-  > {
-  >   "bookmarks": [
-  >     "alpha",
-  >     "beta",
-  >     "unknown"
-  >   ]
-  > }
-  > EOF
-  Reading from stdin
-  Generated request: WireBookmarkRequest {
-      bookmarks: [
-          "alpha",
-          "beta",
-          "unknown",
-      ],
-  }
-
-  $ sslcurl -s "$EDENAPI_URI/repo/bookmarks" --data-binary @req.cbor > res.cbor
-
-Check hgids in response.
-  $ edenapi_read_res bookmark res.cbor
-  Reading from file: "res.cbor"
-  alpha: 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
-  beta: 112478962961147124edd43549aedd1a335e44bf
-  unknown: Bookmark not found
+Check response.
+  $ hgedenapi debugapi -e bookmarks -i '["alpha", "beta", "unknown"]'
+  {"beta": "112478962961147124edd43549aedd1a335e44bf",
+   "alpha": "426bada5c67598ca65036d57d9e4b64b0c1ce7a0",
+   "unknown": None}
