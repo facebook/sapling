@@ -20,6 +20,7 @@ use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::FileEntry;
 use edenapi_types::HistoryEntry;
+use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use edenapi_types::{
     CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashResponse,
@@ -107,19 +108,19 @@ py_class!(pub class client |py| {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
-        attributes: Option<PyDict> = None
+        attributes: Option<Serde<TreeAttributes>> = None
     ) -> PyResult<stats> {
         let progress = self.progress(py).clone();
-        self.inner(py).clone().storetrees_py(py, store, repo, keys, attributes, progress)
+        self.inner(py).clone().storetrees_py(py, store, repo, keys, attributes.map(|a| a.0), progress)
     }
 
     def trees(
         &self,
         repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
-        attributes: Option<PyDict> = None
+        attributes: Option<Serde<TreeAttributes>> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<TreeEntry>>>, PyFuture)> {
-        self.inner(py).clone().trees_py(py, repo, keys, attributes)
+        self.inner(py).clone().trees_py(py, repo, keys, attributes.map(|a| a.0))
     }
 
     /// commitdata(repo: str, nodes: [bytes], progress=None) -> [(node: bytes, data: bytes)], stats

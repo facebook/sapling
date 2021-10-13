@@ -213,9 +213,16 @@ pub struct TreeRequest {
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct TreeAttributes {
+    #[serde(default = "get_true")]
     pub manifest_blob: bool,
+    #[serde(default = "get_true")]
     pub parents: bool,
+    #[serde(default = "get_true")]
     pub child_metadata: bool,
+}
+
+fn get_true() -> bool {
+    true
 }
 
 impl TreeAttributes {

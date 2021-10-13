@@ -12,7 +12,7 @@ use cpython::*;
 use cpython_ext::convert::Serde;
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
 use edenapi::ResponseMeta;
-use edenapi_types::{ContentId, TreeAttributes, UploadTreeEntry};
+use edenapi_types::{ContentId, UploadTreeEntry};
 use pyrevisionstore::mutabledeltastore;
 use revisionstore::HgIdMutableDeltaStore;
 use types::{HgId, Key, Parents, RepoPathBuf};
@@ -27,28 +27,6 @@ pub fn to_contentid(py: Python, content_id: &PyBytes) -> ContentId {
     let mut bytes = [0u8; ContentId::len()];
     bytes.copy_from_slice(&content_id.data(py)[0..ContentId::len()]);
     ContentId::from(bytes)
-}
-
-pub fn to_tree_attrs(py: Python, attrs: &PyDict) -> PyResult<TreeAttributes> {
-    let mut attributes = TreeAttributes::default();
-
-    attributes.manifest_blob = attrs
-        .get_item(py, "manifest_blob")
-        .map(|v| v.extract::<bool>(py))
-        .transpose()?
-        .unwrap_or(attributes.manifest_blob);
-    attributes.parents = attrs
-        .get_item(py, "parents")
-        .map(|v| v.extract::<bool>(py))
-        .transpose()?
-        .unwrap_or(attributes.parents);
-    attributes.child_metadata = attrs
-        .get_item(py, "child_metadata")
-        .map(|v| v.extract::<bool>(py))
-        .transpose()?
-        .unwrap_or(attributes.child_metadata);
-
-    Ok(attributes)
 }
 
 pub fn to_key(py: Python, path: &PyPath, hgid: HgId) -> PyResult<Key> {

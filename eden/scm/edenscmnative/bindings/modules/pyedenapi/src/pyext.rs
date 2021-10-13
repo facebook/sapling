@@ -22,6 +22,7 @@ use dag_types::{Location, VertexName};
 use edenapi::{EdenApi, EdenApiError, Response, Stats};
 use edenapi_ext::{calc_contentid, download_files, upload_snapshot};
 use edenapi_types::HistoryEntry;
+use edenapi_types::TreeAttributes;
 use edenapi_types::{
     AnyFileContentId, AnyId, CommitGraphEntry, CommitHashLookupResponse,
     CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
@@ -41,7 +42,7 @@ use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
     as_deltastore, meta_to_dict, to_contentid, to_keys, to_keys_with_parents, to_path,
-    to_tree_attrs, to_trees_upload_items,
+    to_trees_upload_items,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -94,15 +95,11 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
-        attributes: Option<PyDict>,
+        attributes: Option<TreeAttributes>,
         progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<stats> {
         let keys = to_keys(py, &keys)?;
         let store = as_deltastore(py, store)?;
-        let attributes = attributes
-            .as_ref()
-            .map(|a| to_tree_attrs(py, a))
-            .transpose()?;
 
         let stats = py
             .allow_threads(|| {
@@ -127,14 +124,9 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
-        attributes: Option<PyDict>,
+        attributes: Option<TreeAttributes>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<TreeEntry>>>, PyFuture)> {
         let keys = to_keys(py, &keys)?;
-        let attributes = attributes
-            .as_ref()
-            .map(|a| to_tree_attrs(py, a))
-            .transpose()?;
-
         let (trees, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
