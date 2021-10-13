@@ -33,7 +33,6 @@ pub mod commit;
 pub mod errors;
 pub mod file;
 pub mod history;
-pub mod json;
 pub mod metadata;
 pub mod token;
 pub mod tree;
