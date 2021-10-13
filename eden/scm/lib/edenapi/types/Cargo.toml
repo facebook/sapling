@@ -12,7 +12,7 @@ path = "test/basic_test.rs"
 anyhow = "1.0"
 bytes = { version = "1.0", features = ["serde"] }
 dag-types = { path = "../../dag/dag-types", features = ["for-tests"] }
-faster-hex = "0.4"
+paste = "1.0"
 quickcheck = "1.0"
 revisionstore_types = { path = "../../revisionstore/types" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
@@ -25,7 +25,6 @@ types = { path = "../../types" }
 
 [dev-dependencies]
 insta_ext = { path = "../../insta_ext" }
-paste = "1.0"
 quickcheck_macros = "1.0"
 
 [features]

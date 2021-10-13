@@ -24,6 +24,8 @@ use thiserror::Error;
 /// 1: SegmentedChangelogMismatchedHeads
 ///    Fatal inconsistency between client and server. The client will want to reclone in this
 ///    situation.
+/// 2: HexError
+///    Failed to convert hex to binary hash.
 pub struct ServerError {
     pub message: String,
     pub code: u64,
@@ -46,5 +48,11 @@ impl ServerError {
 impl quickcheck::Arbitrary for ServerError {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         ServerError::new(String::arbitrary(g), u64::arbitrary(g))
+    }
+}
+
+impl From<types::hash::HexError> for ServerError {
+    fn from(e: types::hash::HexError) -> Self {
+        Self::new(e.to_string(), 2)
     }
 }
