@@ -61,67 +61,27 @@ Start up EdenAPI server.
   $ mononoke
   $ wait_for_mononoke
 
-Create and send file data request.
-  $ edenapi_make_req commit-location-to-hash > req.cbor <<EOF
-  > {
-  >   "requests": [{
-  >       "location": {
-  >           "descendant": "$COMMIT_B1",
-  >           "distance": 1
-  >       },
-  >       "count": 2
-  >     }, {
-  >       "location": {
-  >           "descendant": "$COMMIT_B1",
-  >           "distance": 2
-  >       },
-  >       "count": 1
-  >     }, {
-  >       "location": {
-  >           "descendant": "$COMMIT_M1",
-  >           "distance": 1
-  >       },
-  >       "count": 1
-  >     }
-  >   ]
-  > }
+Prepare request.
+  $ cat > req <<EOF
+  > [
+  >   ("$COMMIT_B1", 1, 2),
+  >   ("$COMMIT_B1", 2, 1),
+  >   ("$COMMIT_M1", 1, 1),
+  > ]
   > EOF
-  Reading from stdin
-  Generated request: WireCommitLocationToHashRequestBatch {
-      requests: [
-          WireCommitLocationToHashRequest {
-              location: WireCommitLocation {
-                  descendant: WireHgId("45a08a9d95ee1053cf34273c8a427973d4ffd11a"),
-                  distance: 1,
-              },
-              count: 2,
-          },
-          WireCommitLocationToHashRequest {
-              location: WireCommitLocation {
-                  descendant: WireHgId("45a08a9d95ee1053cf34273c8a427973d4ffd11a"),
-                  distance: 2,
-              },
-              count: 1,
-          },
-          WireCommitLocationToHashRequest {
-              location: WireCommitLocation {
-                  descendant: WireHgId("b5bc5249412595662f15a1aca5ae50fec4a93628"),
-                  distance: 1,
-              },
-              count: 1,
-          },
-      ],
-  }
-
-  $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/commit/location_to_hash" --data-binary @req.cbor > res.cbor
 
 Check files in response.
-  $ edenapi_read_res commit-location-to-hash res.cbor
-  Reading from file: "res.cbor"
-  LocationToHashRequest(known=45a08a9d95ee1053cf34273c8a427973d4ffd11a, dist=1, count=2)
-    c7dcf24fab3a8ab956273fa40d5cc44bc26ec655
-    e83645968c8f2954b97a3c79ce5a6b90a464c54d
-  LocationToHashRequest(known=45a08a9d95ee1053cf34273c8a427973d4ffd11a, dist=2, count=1)
-    e83645968c8f2954b97a3c79ce5a6b90a464c54d
-  LocationToHashRequest(known=b5bc5249412595662f15a1aca5ae50fec4a93628, dist=1, count=1)
-    ce33edd793793f108fbe78aa90f3fedbeae09082
+  $ hgedenapi debugapi -e commitlocationtohash -f req
+  [{"count": 2,
+    "hgids": [bin("c7dcf24fab3a8ab956273fa40d5cc44bc26ec655"),
+              bin("e83645968c8f2954b97a3c79ce5a6b90a464c54d")],
+    "location": {"distance": 1,
+                 "descendant": bin("45a08a9d95ee1053cf34273c8a427973d4ffd11a")}},
+   {"count": 1,
+    "hgids": [bin("e83645968c8f2954b97a3c79ce5a6b90a464c54d")],
+    "location": {"distance": 2,
+                 "descendant": bin("45a08a9d95ee1053cf34273c8a427973d4ffd11a")}},
+   {"count": 1,
+    "hgids": [bin("ce33edd793793f108fbe78aa90f3fedbeae09082")],
+    "location": {"distance": 1,
+                 "descendant": bin("b5bc5249412595662f15a1aca5ae50fec4a93628")}}]
