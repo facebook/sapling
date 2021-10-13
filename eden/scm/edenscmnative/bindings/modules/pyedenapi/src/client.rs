@@ -18,7 +18,9 @@ use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
+use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FileEntry;
+use edenapi_types::FileSpec;
 use edenapi_types::HistoryEntry;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
@@ -28,6 +30,7 @@ use edenapi_types::{
     HgMutationEntryContent, LookupResponse, SnapshotRawData, UploadSnapshotResponse, UploadToken,
     UploadTokensResponse, UploadTreeResponse,
 };
+use futures::TryStreamExt;
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
@@ -92,6 +95,20 @@ py_class!(pub class client |py| {
         keys: Vec<(PyPathBuf, Serde<HgId>)>
     ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
         self.inner(py).clone().files_py(py, repo, keys)
+    }
+
+    def filesattrs(
+        &self,
+        repo: String,
+        spec: Serde<Vec<FileSpec>>,
+    ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
+        let inner = self.inner(py).clone();
+        let entries = py
+            .allow_threads(|| block_unless_interrupted(inner.files_attrs(repo, spec.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+            .entries;
+        Ok(entries.map_ok(Serde).map_err(Into::into).into())
     }
 
     def history(
@@ -356,6 +373,18 @@ py_class!(pub class client |py| {
         files: Vec<(PyPathBuf, Serde<UploadToken>)>,
     ) -> PyResult<bool> {
         self.inner(py).clone().downloadfiles_py(py, repo, root, files)
+    }
+
+    def ephemeralprepare(&self, repo: String)
+        -> PyResult<TStream<anyhow::Result<Serde<EphemeralPrepareResponse>>>>
+    {
+        let inner = self.inner(py).clone();
+        let entries = py
+            .allow_threads(|| block_unless_interrupted(inner.ephemeral_prepare(repo)))
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+            .entries;
+        Ok(entries.map_ok(Serde).map_err(Into::into).into())
     }
 });
 
