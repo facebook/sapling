@@ -15,6 +15,7 @@ fbthrift = { package = "fbthrift_eden_oss", path = "../third-party/rust/fbthrift
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 hgclient_conf = { path = "hgclient_conf" }
 thiserror = "1.0.29"
+tracing = "0.1.27"
 
 [build-dependencies]
 tempfile = "3.1"

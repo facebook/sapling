@@ -19,7 +19,6 @@ use fbthrift_socket::SocketTransport;
 use thrift_types::edenfs::{client::EdenService, types::DaemonInfo};
 use thrift_types::fb303_core::types::fb303_status;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
-use thrift_types::fbthrift::NoopSpawner;
 use tokio_uds_compat::UnixStream;
 use tracing::{event, Level};
 
@@ -61,7 +60,7 @@ impl EdenFsInstance {
             .await
             .map_err(EdenFsError::ThriftIoError)?;
         let transport = SocketTransport::new(stream);
-        let client = <dyn EdenService>::new::<_, _, NoopSpawner>(BinaryProtocol, transport);
+        let client = <dyn EdenService>::new(BinaryProtocol, transport);
 
         Ok(client)
     }

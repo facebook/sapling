@@ -2109,7 +2109,7 @@ pub mod services {
 /// Client implementation for each service in `fb303_core`.
 pub mod client {
 
-    pub struct BaseServiceImpl<P, T, S> {
+    pub struct BaseServiceImpl<P, T, S = ::fbthrift::NoopSpawner> {
         transport: T,
         _phantom: ::std::marker::PhantomData<fn() -> (P, S)>,
     }
@@ -2475,7 +2475,6 @@ pub mod client {
         P::Deserializer: ::std::marker::Send,
         S: ::fbthrift::help::Spawner,
     {
-        #[::tracing::instrument(name = "BaseService.getStatus", skip_all)]
         fn getStatus(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + ::std::marker::Send + 'static>> {
@@ -2514,11 +2513,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetStatusError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getStatus"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getName", skip_all)]
         fn getName(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetNameError>> + ::std::marker::Send + 'static>> {
@@ -2557,11 +2556,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetNameError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getName"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getVersion", skip_all)]
         fn getVersion(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetVersionError>> + ::std::marker::Send + 'static>> {
@@ -2600,11 +2599,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetVersionError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getVersion"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getStatusDetails", skip_all)]
         fn getStatusDetails(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::base_service::GetStatusDetailsError>> + ::std::marker::Send + 'static>> {
@@ -2643,11 +2642,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetStatusDetailsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getStatusDetails"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getCounters", skip_all)]
         fn getCounters(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>, crate::errors::base_service::GetCountersError>> + ::std::marker::Send + 'static>> {
@@ -2686,11 +2685,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetCountersError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getCounters"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getRegexCounters", skip_all)]
         fn getRegexCounters(
             &self,
             arg_regex: &::std::primitive::str,
@@ -2731,11 +2730,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetRegexCountersError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getRegexCounters"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getSelectedCounters", skip_all)]
         fn getSelectedCounters(
             &self,
             arg_keys: &[::std::string::String],
@@ -2776,11 +2775,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetSelectedCountersError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getSelectedCounters"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getCounter", skip_all)]
         fn getCounter(
             &self,
             arg_key: &::std::primitive::str,
@@ -2821,11 +2820,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetCounterError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getCounter"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getExportedValues", skip_all)]
         fn getExportedValues(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetExportedValuesError>> + ::std::marker::Send + 'static>> {
@@ -2864,11 +2863,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetExportedValuesError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getExportedValues"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getSelectedExportedValues", skip_all)]
         fn getSelectedExportedValues(
             &self,
             arg_keys: &[::std::string::String],
@@ -2909,11 +2908,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetSelectedExportedValuesError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getSelectedExportedValues"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getRegexExportedValues", skip_all)]
         fn getRegexExportedValues(
             &self,
             arg_regex: &::std::primitive::str,
@@ -2954,11 +2953,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetRegexExportedValuesError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getRegexExportedValues"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getExportedValue", skip_all)]
         fn getExportedValue(
             &self,
             arg_key: &::std::primitive::str,
@@ -2999,11 +2998,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetExportedValueError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getExportedValue"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.setOption", skip_all)]
         fn setOption(
             &self,
             arg_key: &::std::primitive::str,
@@ -3046,11 +3045,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::SetOptionError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.setOption"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getOption", skip_all)]
         fn getOption(
             &self,
             arg_key: &::std::primitive::str,
@@ -3091,11 +3090,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetOptionError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getOption"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.getOptions", skip_all)]
         fn getOptions(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::collections::BTreeMap<::std::string::String, ::std::string::String>, crate::errors::base_service::GetOptionsError>> + ::std::marker::Send + 'static>> {
@@ -3134,11 +3133,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::GetOptionsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.getOptions"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "BaseService.aliveSince", skip_all)]
         fn aliveSince(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::base_service::AliveSinceError>> + ::std::marker::Send + 'static>> {
@@ -3177,6 +3176,7 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::base_service::AliveSinceError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("BaseService.aliveSince"))
             .boxed()
         }
 
@@ -3320,9 +3320,23 @@ pub mod client {
     /// # };
     /// ```
     impl dyn BaseService {
-        pub fn new<P, T, S>(
+        pub fn new<P, T>(
             protocol: P,
             transport: T,
+        ) -> ::std::sync::Arc<impl BaseService + ::std::marker::Send + 'static>
+        where
+            P: ::fbthrift::Protocol<Frame = T>,
+            T: ::fbthrift::Transport,
+            P::Deserializer: ::std::marker::Send,
+        {
+            let spawner = ::fbthrift::help::NoopSpawner;
+            Self::with_spawner(protocol, transport, spawner)
+        }
+
+        pub fn with_spawner<P, T, S>(
+            protocol: P,
+            transport: T,
+            spawner: S,
         ) -> ::std::sync::Arc<impl BaseService + ::std::marker::Send + 'static>
         where
             P: ::fbthrift::Protocol<Frame = T>,
@@ -3331,6 +3345,7 @@ pub mod client {
             S: ::fbthrift::help::Spawner,
         {
             let _ = protocol;
+            let _ = spawner;
             ::std::sync::Arc::new(BaseServiceImpl::<P, T, S>::new(transport))
         }
     }
@@ -3343,14 +3358,14 @@ pub mod client {
     impl ::fbthrift::ClientFactory for make_BaseService {
         type Api = dyn BaseService + ::std::marker::Send + ::std::marker::Sync + 'static;
 
-        fn new<P, T, S>(protocol: P, transport: T) -> ::std::sync::Arc<Self::Api>
+        fn with_spawner<P, T, S>(protocol: P, transport: T, spawner: S) -> ::std::sync::Arc<Self::Api>
         where
             P: ::fbthrift::Protocol<Frame = T>,
             T: ::fbthrift::Transport + ::std::marker::Sync,
             P::Deserializer: ::std::marker::Send,
             S: ::fbthrift::help::Spawner,
         {
-            <dyn BaseService>::new::<P, T, S>(protocol, transport)
+            <dyn BaseService>::with_spawner(protocol, transport, spawner)
         }
     }
 

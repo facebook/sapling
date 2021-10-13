@@ -33,7 +33,7 @@ use std::str;
 use std::sync::Arc;
 use thrift_types::fb303_core::client::BaseService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
-use thrift_types::fbthrift::{ApplicationExceptionErrorCode, NoopSpawner};
+use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 #[cfg(unix)]
 use tokio::net::UnixStream;
 
@@ -99,13 +99,13 @@ async fn maybe_status_fastpath_internal(
         .map_err(|_| FallbackToPython)?;
 
     let transport = SocketTransport::new(sock);
-    let client = <dyn EdenService>::new::<_, _, NoopSpawner>(BinaryProtocol, transport);
+    let client = <dyn EdenService>::new(BinaryProtocol, transport);
     let sock2 = UnixStream::connect(sock_addr)
         .await
         .map_err(|_| FallbackToPython)?;
 
     let transport = SocketTransport::new(sock2);
-    let fb303_client = <dyn BaseService>::new::<_, _, NoopSpawner>(BinaryProtocol, transport);
+    let fb303_client = <dyn BaseService>::new(BinaryProtocol, transport);
 
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.
     let dirstate_data = read_hg_dirstate(&repo_root)?;

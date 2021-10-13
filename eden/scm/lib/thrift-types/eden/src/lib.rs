@@ -14270,7 +14270,7 @@ pub mod services {
 /// Client implementation for each service in `eden`.
 pub mod client {
 
-    pub struct EdenServiceImpl<P, T, S> {
+    pub struct EdenServiceImpl<P, T, S = ::fbthrift::NoopSpawner> {
         parent: fb303_core::client::BaseServiceImpl<P, T, S>,
     }
 
@@ -15759,7 +15759,6 @@ pub mod client {
         P::Deserializer: ::std::marker::Send,
         S: ::fbthrift::help::Spawner,
     {
-        #[::tracing::instrument(name = "EdenService.listMounts", skip_all)]
         fn listMounts(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError>> + ::std::marker::Send + 'static>> {
@@ -15798,11 +15797,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::ListMountsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.listMounts"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.mount", skip_all)]
         fn mount(
             &self,
             arg_info: &crate::types::MountArgument,
@@ -15843,11 +15842,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::MountError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.mount"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.unmount", skip_all)]
         fn unmount(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -15888,11 +15887,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::UnmountError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.unmount"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.checkOutRevision", skip_all)]
         fn checkOutRevision(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -15939,11 +15938,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::CheckOutRevisionError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.checkOutRevision"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.resetParentCommits", skip_all)]
         fn resetParentCommits(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -15988,11 +15987,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::ResetParentCommitsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.resetParentCommits"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getSHA1", skip_all)]
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16035,11 +16034,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetSHA1Error::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getSHA1"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getBindMounts", skip_all)]
         fn getBindMounts(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16080,11 +16079,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetBindMountsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getBindMounts"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.addBindMount", skip_all)]
         fn addBindMount(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16129,11 +16128,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::AddBindMountError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.addBindMount"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.removeBindMount", skip_all)]
         fn removeBindMount(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16176,11 +16175,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::RemoveBindMountError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.removeBindMount"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getCurrentJournalPosition", skip_all)]
         fn getCurrentJournalPosition(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16221,11 +16220,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetCurrentJournalPositionError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getCurrentJournalPosition"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getFilesChangedSince", skip_all)]
         fn getFilesChangedSince(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16268,11 +16267,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetFilesChangedSinceError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getFilesChangedSince"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.setJournalMemoryLimit", skip_all)]
         fn setJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16315,11 +16314,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::SetJournalMemoryLimitError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.setJournalMemoryLimit"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getJournalMemoryLimit", skip_all)]
         fn getJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16360,11 +16359,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetJournalMemoryLimitError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getJournalMemoryLimit"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.flushJournal", skip_all)]
         fn flushJournal(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16405,11 +16404,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::FlushJournalError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.flushJournal"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugGetRawJournal", skip_all)]
         fn debugGetRawJournal(
             &self,
             arg_params: &crate::types::DebugGetRawJournalParams,
@@ -16450,11 +16449,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugGetRawJournalError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugGetRawJournal"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getEntryInformation", skip_all)]
         fn getEntryInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16497,11 +16496,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetEntryInformationError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getEntryInformation"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getFileInformation", skip_all)]
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16544,11 +16543,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetFileInformationError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getFileInformation"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.glob", skip_all)]
         fn glob(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16591,11 +16590,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GlobError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.glob"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.globFiles", skip_all)]
         fn globFiles(
             &self,
             arg_params: &crate::types::GlobParams,
@@ -16636,11 +16635,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GlobFilesError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.globFiles"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.predictiveGlobFiles", skip_all)]
         fn predictiveGlobFiles(
             &self,
             arg_params: &crate::types::GlobParams,
@@ -16681,11 +16680,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::PredictiveGlobFilesError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.predictiveGlobFiles"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.chown", skip_all)]
         fn chown(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16730,11 +16729,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::ChownError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.chown"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getScmStatusV2", skip_all)]
         fn getScmStatusV2(
             &self,
             arg_params: &crate::types::GetScmStatusParams,
@@ -16775,11 +16774,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusV2Error::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getScmStatusV2"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getScmStatus", skip_all)]
         fn getScmStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16824,11 +16823,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getScmStatus"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getScmStatusBetweenRevisions", skip_all)]
         fn getScmStatusBetweenRevisions(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -16873,11 +16872,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getScmStatusBetweenRevisions"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getDaemonInfo", skip_all)]
         fn getDaemonInfo(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError>> + ::std::marker::Send + 'static>> {
@@ -16916,11 +16915,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetDaemonInfoError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getDaemonInfo"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.checkPrivHelper", skip_all)]
         fn checkPrivHelper(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::PrivHelperInfo, crate::errors::eden_service::CheckPrivHelperError>> + ::std::marker::Send + 'static>> {
@@ -16959,11 +16958,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::CheckPrivHelperError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.checkPrivHelper"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getPid", skip_all)]
         fn getPid(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::eden_service::GetPidError>> + ::std::marker::Send + 'static>> {
@@ -17002,11 +17001,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetPidError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getPid"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.initiateShutdown", skip_all)]
         fn initiateShutdown(
             &self,
             arg_reason: &::std::primitive::str,
@@ -17047,11 +17046,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::InitiateShutdownError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.initiateShutdown"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getConfig", skip_all)]
         fn getConfig(
             &self,
             arg_params: &crate::types::GetConfigParams,
@@ -17092,11 +17091,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetConfigError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getConfig"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.reloadConfig", skip_all)]
         fn reloadConfig(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ReloadConfigError>> + ::std::marker::Send + 'static>> {
@@ -17135,11 +17134,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::ReloadConfigError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.reloadConfig"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugGetScmTree", skip_all)]
         fn debugGetScmTree(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17184,11 +17183,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmTreeError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugGetScmTree"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugGetScmBlob", skip_all)]
         fn debugGetScmBlob(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17233,11 +17232,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugGetScmBlob"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugGetScmBlobMetadata", skip_all)]
         fn debugGetScmBlobMetadata(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17282,11 +17281,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugGetScmBlobMetadata"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugInodeStatus", skip_all)]
         fn debugInodeStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17331,11 +17330,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugInodeStatusError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugInodeStatus"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugOutstandingFuseCalls", skip_all)]
         fn debugOutstandingFuseCalls(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17376,11 +17375,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingFuseCallsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugOutstandingFuseCalls"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugOutstandingNfsCalls", skip_all)]
         fn debugOutstandingNfsCalls(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17421,11 +17420,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugOutstandingNfsCallsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugOutstandingNfsCalls"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugStartRecordingActivity", skip_all)]
         fn debugStartRecordingActivity(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17468,11 +17467,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugStartRecordingActivityError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugStartRecordingActivity"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugStopRecordingActivity", skip_all)]
         fn debugStopRecordingActivity(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17515,11 +17514,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugStopRecordingActivityError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugStopRecordingActivity"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugListActivityRecordings", skip_all)]
         fn debugListActivityRecordings(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17560,11 +17559,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugListActivityRecordingsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugListActivityRecordings"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugGetInodePath", skip_all)]
         fn debugGetInodePath(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -17607,11 +17606,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugGetInodePathError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugGetInodePath"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.clearFetchCounts", skip_all)]
         fn clearFetchCounts(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearFetchCountsError>> + ::std::marker::Send + 'static>> {
@@ -17650,11 +17649,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.clearFetchCounts"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.clearFetchCountsByMount", skip_all)]
         fn clearFetchCountsByMount(
             &self,
             arg_mountPath: &crate::types::PathString,
@@ -17695,11 +17694,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::ClearFetchCountsByMountError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.clearFetchCountsByMount"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getAccessCounts", skip_all)]
         fn getAccessCounts(
             &self,
             arg_duration: ::std::primitive::i64,
@@ -17740,11 +17739,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetAccessCountsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getAccessCounts"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.startRecordingBackingStoreFetch", skip_all)]
         fn startRecordingBackingStoreFetch(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::StartRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
@@ -17783,11 +17782,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::StartRecordingBackingStoreFetchError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.startRecordingBackingStoreFetch"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.stopRecordingBackingStoreFetch", skip_all)]
         fn stopRecordingBackingStoreFetch(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<crate::types::GetFetchedFilesResult, crate::errors::eden_service::StopRecordingBackingStoreFetchError>> + ::std::marker::Send + 'static>> {
@@ -17826,11 +17825,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::StopRecordingBackingStoreFetchError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.stopRecordingBackingStoreFetch"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.clearAndCompactLocalStore", skip_all)]
         fn clearAndCompactLocalStore(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError>> + ::std::marker::Send + 'static>> {
@@ -17869,11 +17868,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.clearAndCompactLocalStore"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugClearLocalStoreCaches", skip_all)]
         fn debugClearLocalStoreCaches(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError>> + ::std::marker::Send + 'static>> {
@@ -17912,11 +17911,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugClearLocalStoreCaches"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.debugCompactLocalStorage", skip_all)]
         fn debugCompactLocalStorage(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError>> + ::std::marker::Send + 'static>> {
@@ -17955,11 +17954,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DebugCompactLocalStorageError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.debugCompactLocalStorage"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.unloadInodeForPath", skip_all)]
         fn unloadInodeForPath(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -18004,11 +18003,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::UnloadInodeForPathError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.unloadInodeForPath"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.flushStatsNow", skip_all)]
         fn flushStatsNow(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::FlushStatsNowError>> + ::std::marker::Send + 'static>> {
@@ -18047,11 +18046,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::FlushStatsNowError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.flushStatsNow"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.invalidateKernelInodeCache", skip_all)]
         fn invalidateKernelInodeCache(
             &self,
             arg_mountPoint: &crate::types::PathString,
@@ -18094,11 +18093,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.invalidateKernelInodeCache"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getStatInfo", skip_all)]
         fn getStatInfo(
             &self,
             arg_params: &crate::types::GetStatInfoParams,
@@ -18139,11 +18138,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetStatInfoError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getStatInfo"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.enableTracing", skip_all)]
         fn enableTracing(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::EnableTracingError>> + ::std::marker::Send + 'static>> {
@@ -18182,11 +18181,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::EnableTracingError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.enableTracing"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.disableTracing", skip_all)]
         fn disableTracing(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::eden_service::DisableTracingError>> + ::std::marker::Send + 'static>> {
@@ -18225,11 +18224,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::DisableTracingError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.disableTracing"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.getTracePoints", skip_all)]
         fn getTracePoints(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError>> + ::std::marker::Send + 'static>> {
@@ -18268,11 +18267,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::GetTracePointsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.getTracePoints"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.injectFault", skip_all)]
         fn injectFault(
             &self,
             arg_fault: &crate::types::FaultDefinition,
@@ -18313,11 +18312,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::InjectFaultError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.injectFault"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.removeFault", skip_all)]
         fn removeFault(
             &self,
             arg_fault: &crate::types::RemoveFaultArg,
@@ -18358,11 +18357,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::RemoveFaultError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.removeFault"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.unblockFault", skip_all)]
         fn unblockFault(
             &self,
             arg_info: &crate::types::UnblockFaultArg,
@@ -18403,11 +18402,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::UnblockFaultError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.unblockFault"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "EdenService.setPathObjectId", skip_all)]
         fn setPathObjectId(
             &self,
             arg_params: &crate::types::SetPathObjectIdParams,
@@ -18448,6 +18447,7 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::eden_service::SetPathObjectIdError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("EdenService.setPathObjectId"))
             .boxed()
         }
 
@@ -18988,9 +18988,23 @@ pub mod client {
     /// # };
     /// ```
     impl dyn EdenService {
-        pub fn new<P, T, S>(
+        pub fn new<P, T>(
             protocol: P,
             transport: T,
+        ) -> ::std::sync::Arc<impl EdenService + ::std::marker::Send + 'static>
+        where
+            P: ::fbthrift::Protocol<Frame = T>,
+            T: ::fbthrift::Transport,
+            P::Deserializer: ::std::marker::Send,
+        {
+            let spawner = ::fbthrift::help::NoopSpawner;
+            Self::with_spawner(protocol, transport, spawner)
+        }
+
+        pub fn with_spawner<P, T, S>(
+            protocol: P,
+            transport: T,
+            spawner: S,
         ) -> ::std::sync::Arc<impl EdenService + ::std::marker::Send + 'static>
         where
             P: ::fbthrift::Protocol<Frame = T>,
@@ -18999,6 +19013,7 @@ pub mod client {
             S: ::fbthrift::help::Spawner,
         {
             let _ = protocol;
+            let _ = spawner;
             ::std::sync::Arc::new(EdenServiceImpl::<P, T, S>::new(transport))
         }
     }
@@ -19011,14 +19026,14 @@ pub mod client {
     impl ::fbthrift::ClientFactory for make_EdenService {
         type Api = dyn EdenService + ::std::marker::Send + ::std::marker::Sync + 'static;
 
-        fn new<P, T, S>(protocol: P, transport: T) -> ::std::sync::Arc<Self::Api>
+        fn with_spawner<P, T, S>(protocol: P, transport: T, spawner: S) -> ::std::sync::Arc<Self::Api>
         where
             P: ::fbthrift::Protocol<Frame = T>,
             T: ::fbthrift::Transport + ::std::marker::Sync,
             P::Deserializer: ::std::marker::Send,
             S: ::fbthrift::help::Spawner,
         {
-            <dyn EdenService>::new::<P, T, S>(protocol, transport)
+            <dyn EdenService>::with_spawner(protocol, transport, spawner)
         }
     }
 

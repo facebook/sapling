@@ -1376,7 +1376,7 @@ pub mod services {
 /// Client implementation for each service in `fb303`.
 pub mod client {
 
-    pub struct FacebookServiceImpl<P, T, S> {
+    pub struct FacebookServiceImpl<P, T, S = ::fbthrift::NoopSpawner> {
         parent: fb303_core::client::BaseServiceImpl<P, T, S>,
     }
 
@@ -1621,7 +1621,6 @@ pub mod client {
         P::Deserializer: ::std::marker::Send,
         S: ::fbthrift::help::Spawner,
     {
-        #[::tracing::instrument(name = "FacebookService.getCpuProfile", skip_all)]
         fn getCpuProfile(
             &self,
             arg_profileDurationInSec: ::std::primitive::i32,
@@ -1662,11 +1661,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::GetCpuProfileError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.getCpuProfile"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "FacebookService.getCpuProfileWithOptions", skip_all)]
         fn getCpuProfileWithOptions(
             &self,
             arg_options: &crate::types::CpuProfileOptions,
@@ -1707,11 +1706,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::GetCpuProfileWithOptionsError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.getCpuProfileWithOptions"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "FacebookService.getWallTimeProfile", skip_all)]
         fn getWallTimeProfile(
             &self,
             arg_profileDurationInSec: ::std::primitive::i32,
@@ -1752,11 +1751,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::GetWallTimeProfileError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.getWallTimeProfile"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "FacebookService.getMemoryUsage", skip_all)]
         fn getMemoryUsage(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::facebook_service::GetMemoryUsageError>> + ::std::marker::Send + 'static>> {
@@ -1795,11 +1794,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::GetMemoryUsageError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.getMemoryUsage"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "FacebookService.getLoad", skip_all)]
         fn getLoad(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::f64, crate::errors::facebook_service::GetLoadError>> + ::std::marker::Send + 'static>> {
@@ -1838,11 +1837,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::GetLoadError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.getLoad"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "FacebookService.getPid", skip_all)]
         fn getPid(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::primitive::i64, crate::errors::facebook_service::GetPidError>> + ::std::marker::Send + 'static>> {
@@ -1881,11 +1880,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::GetPidError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.getPid"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "FacebookService.getCommandLine", skip_all)]
         fn getCommandLine(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, crate::errors::facebook_service::GetCommandLineError>> + ::std::marker::Send + 'static>> {
@@ -1924,11 +1923,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::GetCommandLineError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.getCommandLine"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "FacebookService.reinitialize", skip_all)]
         fn reinitialize(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::facebook_service::ReinitializeError>> + ::std::marker::Send + 'static>> {
@@ -1967,11 +1966,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::ReinitializeError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.reinitialize"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "FacebookService.shutdown", skip_all)]
         fn shutdown(
             &self,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<(), crate::errors::facebook_service::ShutdownError>> + ::std::marker::Send + 'static>> {
@@ -2010,11 +2009,11 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::ShutdownError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.shutdown"))
             .boxed()
         }
 
 
-        #[::tracing::instrument(name = "FacebookService.translateFrames", skip_all)]
         fn translateFrames(
             &self,
             arg_pointers: &[::std::primitive::i64],
@@ -2055,6 +2054,7 @@ pub mod client {
                         ::std::result::Result::Err(crate::errors::facebook_service::TranslateFramesError::ApplicationException(aexn))
                 }
             }
+            .instrument(::tracing::info_span!("FacebookService.translateFrames"))
             .boxed()
         }
 
@@ -2153,9 +2153,23 @@ pub mod client {
     /// # };
     /// ```
     impl dyn FacebookService {
-        pub fn new<P, T, S>(
+        pub fn new<P, T>(
             protocol: P,
             transport: T,
+        ) -> ::std::sync::Arc<impl FacebookService + ::std::marker::Send + 'static>
+        where
+            P: ::fbthrift::Protocol<Frame = T>,
+            T: ::fbthrift::Transport,
+            P::Deserializer: ::std::marker::Send,
+        {
+            let spawner = ::fbthrift::help::NoopSpawner;
+            Self::with_spawner(protocol, transport, spawner)
+        }
+
+        pub fn with_spawner<P, T, S>(
+            protocol: P,
+            transport: T,
+            spawner: S,
         ) -> ::std::sync::Arc<impl FacebookService + ::std::marker::Send + 'static>
         where
             P: ::fbthrift::Protocol<Frame = T>,
@@ -2164,6 +2178,7 @@ pub mod client {
             S: ::fbthrift::help::Spawner,
         {
             let _ = protocol;
+            let _ = spawner;
             ::std::sync::Arc::new(FacebookServiceImpl::<P, T, S>::new(transport))
         }
     }
@@ -2176,14 +2191,14 @@ pub mod client {
     impl ::fbthrift::ClientFactory for make_FacebookService {
         type Api = dyn FacebookService + ::std::marker::Send + ::std::marker::Sync + 'static;
 
-        fn new<P, T, S>(protocol: P, transport: T) -> ::std::sync::Arc<Self::Api>
+        fn with_spawner<P, T, S>(protocol: P, transport: T, spawner: S) -> ::std::sync::Arc<Self::Api>
         where
             P: ::fbthrift::Protocol<Frame = T>,
             T: ::fbthrift::Transport + ::std::marker::Sync,
             P::Deserializer: ::std::marker::Send,
             S: ::fbthrift::help::Spawner,
         {
-            <dyn FacebookService>::new::<P, T, S>(protocol, transport)
+            <dyn FacebookService>::with_spawner(protocol, transport, spawner)
         }
     }
 
