@@ -9,7 +9,7 @@ use bytes::Bytes as RawBytes;
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::fmt::Debug;
-use std::fs::{create_dir_all, File};
+use std::fs::create_dir_all;
 use std::iter::FromIterator;
 use std::num::NonZeroU64;
 use std::sync::Arc;
@@ -29,7 +29,6 @@ use auth::check_certs;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::{
-    json::ToJson,
     make_hash_lookup_request,
     wire::{
         WireBookmarkEntry, WireCloneData, WireCommitGraphEntry, WireCommitHashLookupResponse,
@@ -307,7 +306,7 @@ impl Client {
     }
 
     /// Log the request to the configured log directory as JSON.
-    fn log_request<R: ToJson + Debug>(&self, req: &R, label: &str) {
+    fn log_request<R: Serialize + Debug>(&self, req: &R, label: &str) {
         tracing::trace!("Sending request: {:?}", req);
 
         let log_dir = match &self.config().log_dir {
@@ -315,21 +314,19 @@ impl Client {
             None => return,
         };
 
-        let json = req.to_json();
+        let value: serde_cbor::Value = match serde_cbor::value::to_value(req) {
+            Ok(v) => v,
+            Err(_e) => return,
+        };
         let timestamp = chrono::Local::now().format("%y%m%d_%H%M%S_%f");
-        let name = format!("{}_{}.json", &timestamp, label);
+        let name = format!("{}_{}.log", &timestamp, label);
         let path = log_dir.join(&name);
 
         let _ = async_runtime::spawn_blocking(move || {
-            if let Err(e) = || -> anyhow::Result<()> {
+            if let Err(e) = || -> std::io::Result<()> {
                 create_dir_all(&log_dir)?;
-                let file = File::create(&path)?;
-
-                // Log as prettified JSON so that requests are easy for humans
-                // to edit when debugging issues. Should not be a problem for
-                // normal usage since logging is disabled by default.
-                serde_json::to_writer_pretty(file, &json)?;
-                Ok(())
+                let data = pprint::pformat_value(&value);
+                std::fs::write(&path, data)
             }() {
                 tracing::warn!("Failed to log request: {:?}", &e);
             }
