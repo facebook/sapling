@@ -52,9 +52,6 @@ pub struct FetchState {
     /// A table tracking if each key is local-only or cache/shared so that computed aux data can be written to the appropriate store
     key_origin: HashMap<Key, StoreType>,
 
-    /// File content found in memcache, may be cached locally (currently only content may be found in memcache)
-    found_in_memcache: HashSet<Key>,
-
     /// Attributes computed from other attributes, may be cached locally (currently only aux_data may be computed)
     computed_aux_data: HashMap<Key, StoreType>,
 
@@ -84,7 +81,6 @@ impl FetchState {
             key_origin: HashMap::new(),
             pointer_origin: Arc::new(RwLock::new(HashMap::new())),
 
-            found_in_memcache: HashSet::new(),
             computed_aux_data: HashMap::new(),
 
             fetch_logger: file_store.fetch_logger.clone(),
@@ -170,6 +166,7 @@ impl FetchState {
         }
     }
 
+    #[instrument(level = "trace", skip(file, indexedlog_cache, memcache), fields(memcache = memcache.is_some()))]
     fn evict_to_cache(
         key: Key,
         file: LazyFile,
@@ -298,21 +295,40 @@ impl FetchState {
         }
     }
 
-    #[instrument(level = "debug", skip(self, entry))]
-    fn found_memcache(&mut self, entry: McData) {
+    #[instrument(level = "debug", skip(self, entry, indexedlog_cache))]
+    fn found_memcache(
+        &mut self,
+        entry: McData,
+        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
+    ) {
         let key = entry.key.clone();
         if entry.metadata.is_lfs() {
             match entry.try_into() {
                 Ok(ptr) => self.found_pointer(key, ptr, StoreType::Shared, true),
                 Err(err) => self.errors.keyed_error(key, err),
             }
+        } else if let Some(indexedlog_cache) = indexedlog_cache {
+            match Self::evict_to_cache(
+                key.clone(),
+                LazyFile::Memcache(entry),
+                indexedlog_cache,
+                None,
+            ) {
+                Ok(cached) => {
+                    self.found_attributes(key, cached.into(), None);
+                }
+                Err(err) => self.errors.keyed_error(key, err),
+            }
         } else {
-            self.found_in_memcache.insert(key.clone());
             self.found_attributes(key, LazyFile::Memcache(entry).into(), None);
         }
     }
 
-    fn fetch_memcache_inner(&mut self, store: &MemcacheStore) -> Result<()> {
+    fn fetch_memcache_inner(
+        &mut self,
+        store: &MemcacheStore,
+        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
+    ) -> Result<()> {
         let pending = self.pending_nonlfs(FileAttributes::CONTENT);
         if pending.is_empty() {
             return Ok(());
@@ -323,16 +339,20 @@ impl FetchState {
 
         for res in store.get_data_iter(&pending)?.into_iter() {
             match res {
-                Ok(mcdata) => self.found_memcache(mcdata),
+                Ok(mcdata) => self.found_memcache(mcdata, indexedlog_cache),
                 Err(err) => self.errors.other_error(err),
             }
         }
         Ok(())
     }
 
-    #[instrument(skip(self, store))]
-    pub(crate) fn fetch_memcache(&mut self, store: &MemcacheStore) {
-        if let Err(err) = self.fetch_memcache_inner(store) {
+    #[instrument(skip(self, store, indexedlog_cache))]
+    pub(crate) fn fetch_memcache(
+        &mut self,
+        store: &MemcacheStore,
+        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
+    ) {
+        if let Err(err) = self.fetch_memcache_inner(store, indexedlog_cache) {
             self.errors.other_error(err);
         }
     }
@@ -685,33 +705,15 @@ impl FetchState {
     // TODO(meyer): Improve how local caching works. At the very least do this in the background.
     // TODO(meyer): Log errors here instead of just ignoring.
     #[instrument(
-        skip(self, indexedlog_cache, memcache, aux_cache, aux_local),
+        skip(self, aux_cache, aux_local),
         fields(
-            indexedlog_cache = indexedlog_cache.is_some(),
-            memcache = memcache.is_some(),
             aux_cache = aux_cache.is_some(),
             aux_local = aux_local.is_some()))]
     pub(crate) fn write_to_cache(
         &mut self,
-        indexedlog_cache: Option<&IndexedLogHgIdDataStore>,
-        memcache: Option<&MemcacheStore>,
         aux_cache: Option<&AuxStore>,
         aux_local: Option<&AuxStore>,
     ) {
-        {
-            let span = tracing::trace_span!("memcache");
-            let _guard = span.enter();
-            for key in self.found_in_memcache.drain() {
-                if let Some(lazy_file) = self.common.found[&key].content.as_ref() {
-                    if let Ok(Some(cache_entry)) = lazy_file.indexedlog_cache_entry(key) {
-                        if let Some(ref indexedlog_cache) = indexedlog_cache {
-                            let _ = indexedlog_cache.put_entry(cache_entry);
-                        }
-                    }
-                }
-            }
-        }
-
         {
             let span = tracing::trace_span!("computed");
             let _guard = span.enter();

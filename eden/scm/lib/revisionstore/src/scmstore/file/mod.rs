@@ -162,7 +162,7 @@ impl FileStore {
 
         if self.use_memcache() {
             if let Some(ref memcache) = self.memcache {
-                state.fetch_memcache(memcache);
+                state.fetch_memcache(memcache, self.indexedlog_cache.as_ref().map(|s| s.as_ref()));
             }
         }
 
@@ -199,20 +199,6 @@ impl FileStore {
         state.derive_computable();
 
         state.write_to_cache(
-            self.indexedlog_cache.as_ref().and_then(|s| {
-                if self.cache_to_local_cache {
-                    Some(s.as_ref())
-                } else {
-                    None
-                }
-            }),
-            self.memcache.as_ref().and_then(|s| {
-                if self.cache_to_memcache && self.use_memcache() {
-                    Some(s.as_ref())
-                } else {
-                    None
-                }
-            }),
             self.aux_cache.as_ref().map(|s| s.as_ref()),
             self.aux_local.as_ref().map(|s| s.as_ref()),
         );
