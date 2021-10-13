@@ -22,15 +22,9 @@ Enable Segmented Changelog
   $ mononoke
   $ wait_for_mononoke
 
-  $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/clone" -X POST > res.cbor
-
-Check files in response.
-  $ edenapi_read_res clone res.cbor
-  Reading from file: "res.cbor"
-  flat_segments: [
-    0, 2, []
-  ]
-  idmap: {
-    2: 26805aba1e600a82e93661149f2313866a221a7b
-  }
-
+Check response.
+  $ hgedenapi debugapi -e clonedata
+  {"idmap": {2: bin("26805aba1e600a82e93661149f2313866a221a7b")},
+   "flat_segments": {"segments": [{"low": 0,
+                                   "high": 2,
+                                   "parents": []}]}}
