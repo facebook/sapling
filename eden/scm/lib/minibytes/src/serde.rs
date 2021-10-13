@@ -32,6 +32,14 @@ impl<'de> de::Visitor<'de> for BytesVisitor {
     fn visit_borrowed_str<E: de::Error>(self, v: &'de str) -> Result<Self::Value, E> {
         Ok(Bytes::copy_from_slice(v.as_bytes()))
     }
+
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E> {
+        Ok(Bytes::from(v))
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E> {
+        Ok(Bytes::copy_from_slice(v))
+    }
 }
 
 impl<'de> Deserialize<'de> for Bytes {
