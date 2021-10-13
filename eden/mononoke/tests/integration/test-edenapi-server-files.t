@@ -28,72 +28,109 @@ Blobimport test repo.
   $ blobimport repo-hg/.hg repo
 
 Start up EdenAPI server.
+  $ setup_mononoke_config
   $ mononoke
   $ wait_for_mononoke
 
 Create and send file request.
-  $ edenapi_make_req file > req.cbor <<EOF
-  > {
-  >   "keys": [
-  >     ["copy.txt", "$COPY_FILENODE"]
-  >   ],
-  >   "reqs": [
-  >     [["test.txt", "$TEST_FILENODE"], {"aux_data": true, "content": true}]
-  >   ]
-  > }
+  $ cat > req << EOF
+  > [{
+  >   "key": {"path": "copy.txt", "node": "$COPY_FILENODE"},
+  >   "attrs": {"aux_data": True, "content": True}
+  > }]
   > EOF
-  Reading from stdin
-  Generated request: WireFileRequest {
-      keys: [
-          WireKey {
-              path: WireRepoPathBuf(
-                  "copy.txt",
-              ),
-              hgid: WireHgId("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
-          },
-      ],
-      reqs: [
-          WireFileSpec {
-              key: WireKey {
-                  path: WireRepoPathBuf(
-                      "test.txt",
-                  ),
-                  hgid: WireHgId("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
-              },
-              attrs: WireFileAttributes {
-                  content: true,
-                  aux_data: true,
-              },
-          },
-      ],
-  }
-  $ sslcurl -s "$EDENAPI_URI/repo/files" -d@req.cbor > res.cbor
 
 Check files in response.
-  $ edenapi_read_res file ls res.cbor
-  Reading from file: "res.cbor"
-  17b8d4e3bafd4ec4812ad7c930aace9bf07ab033 copy.txt
-  186cafa3319c24956783383dc44c5cbc68c5a0ca test.txt
+  $ hgedenapi debugapi -e filesattrs -f req
+  [{"key": {"node": bin("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
+            "path": "copy.txt"},
+    "content": {"metadata": {"size": None,
+                             "flags": None},
+                "hg_file_blob": b"\x01\ncopy: test.txt\ncopyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca\n\x01\ntest content\n"},
+    "parents": None,
+    "aux_data": {"sha1": [79,
+                          226,
+                          184,
+                          221,
+                          18,
+                          205,
+                          156,
+                          214,
+                          164,
+                          19,
+                          234,
+                          150,
+                          12,
+                          216,
+                          192,
+                          156,
+                          37,
+                          241,
+                          149,
+                          39],
+                 "sha256": [161,
+                            255,
+                            240,
+                            255,
+                            239,
+                            185,
+                            234,
+                            206,
+                            114,
+                            48,
+                            194,
+                            78,
+                            80,
+                            115,
+                            31,
+                            10,
+                            145,
+                            198,
+                            47,
+                            156,
+                            239,
+                            223,
+                            231,
+                            113,
+                            33,
+                            194,
+                            246,
+                            7,
+                            18,
+                            93,
+                            255,
+                            174],
+                 "content_id": [136,
+                                141,
+                                207,
+                                83,
+                                58,
+                                53,
+                                76,
+                                35,
+                                228,
+                                191,
+                                103,
+                                225,
+                                173,
+                                169,
+                                132,
+                                217,
+                                107,
+                                177,
+                                8,
+                                155,
+                                12,
+                                60,
+                                3,
+                                244,
+                                194,
+                                203,
+                                119,
+                                55,
+                                9,
+                                231,
+                                170,
+                                66],
+                 "total_size": 13}}]
 
-Verify that filenode hashes match contents.
-  $ edenapi_read_res file check res.cbor
-  Reading from file: "res.cbor"
-
-Examine file data.
-  $ edenapi_read_res file cat res.cbor -p test.txt -h $TEST_FILENODE
-  Reading from file: "res.cbor"
-  test content
-
-Examine entry structure.
-  $ edenapi_read_res file cat res.cbor --debug -p test.txt -h $TEST_FILENODE
-  Reading from file: "res.cbor"
-  FileEntry { key: Key { path: RepoPathBuf("test.txt"), hgid: HgId("186cafa3319c24956783383dc44c5cbc68c5a0ca") }, parents: None, content: Some(FileContent { hg_file_blob: b"test content\n", metadata: Metadata { size: None, flags: None } }), aux_data: Some(FileAuxData { total_size: 13, content_id: ContentId("888dcf533a354c23e4bf67e1ada984d96bb1089b0c3c03f4c2cb773709e7aa42"), sha1: Sha1("4fe2b8dd12cd9cd6a413ea960cd8c09c25f19527"), sha256: Sha256("a1fff0ffefb9eace7230c24e50731f0a91c62f9cefdfe77121c2f607125dffae") }) }
-
-Note that copyinfo header is present for the copied file.
-  $ edenapi_read_res file cat res.cbor -p copy.txt -h $COPY_FILENODE
-  Reading from file: "res.cbor"
-  \x01 (esc)
-  copy: test.txt
-  copyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca
-  \x01 (esc)
-  test content
