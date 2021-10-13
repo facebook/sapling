@@ -89,12 +89,17 @@ pub struct FileStore {
 
     // Records the store creation time, so we can only use memcache for long running commands.
     pub(crate) creation_time: Instant,
+
+    // Don't flush on drop when we're using FileStore in a "disposable" context, like backingstore
+    pub flush_on_drop: bool,
 }
 
 impl Drop for FileStore {
     #[instrument(skip(self))]
     fn drop(&mut self) {
-        let _ = self.flush();
+        if self.flush_on_drop {
+            let _ = self.flush();
+        }
     }
 }
 
@@ -324,6 +329,9 @@ impl FileStore {
             aux_cache: self.aux_cache.clone(),
 
             creation_time: self.creation_time,
+
+            // Don't flush the local-only subset of stores on drop, rely on the parent instead
+            flush_on_drop: false,
         }
     }
 
@@ -409,6 +417,7 @@ impl FileStore {
             aux_cache: None,
 
             creation_time: Instant::now(),
+            flush_on_drop: true,
         }
     }
 }
@@ -452,6 +461,9 @@ impl LegacyStore for FileStore {
             aux_cache: None,
 
             creation_time: Instant::now(),
+
+            // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
+            flush_on_drop: true,
         })
     }
 

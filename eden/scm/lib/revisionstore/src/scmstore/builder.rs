@@ -390,6 +390,7 @@ impl<'a> FileStoreBuilder<'a> {
             aux_cache,
 
             creation_time: Instant::now(),
+            flush_on_drop: true,
         })
     }
 }
