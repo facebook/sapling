@@ -30,14 +30,6 @@ Start up EdenAPI server.
   $ mononoke
   $ wait_for_mononoke
 
-Create and send file data request.
-  $ echo "{}" | edenapi_make_req ephemeral-prepare > req.cbor
-  Reading from stdin
-  Generated request: WireEphemeralPrepareRequest
-
-  $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/ephemeral/prepare" --data-binary @req.cbor > res.cbor
-
-Check files in response.
-  $ edenapi_read_res ephemeral-prepare res.cbor
-  Reading from file: "res.cbor"
-  Bubble id: 1
+Check response.
+  $ hgedenapi debugapi -e ephemeralprepare
+  [{"bubble_id": 1}]
