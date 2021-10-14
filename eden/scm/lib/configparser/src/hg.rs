@@ -610,7 +610,7 @@ pub fn generate_dynamicconfig(
         // Atomically rename file to avoid race conditions.
         tmp.write_all(config_str.as_bytes())?;
         tmp.as_file().sync_all()?;
-        tmp.persist(hgrc_path)?;
+        tmp.persist(hgrc_path).map_err(|err| err.error)?;
     }
 
     Ok(())
