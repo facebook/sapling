@@ -194,7 +194,7 @@ impl ChangesetInfo {
         })?)
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::ChangesetInfo {
+    pub fn into_thrift(self) -> thrift::ChangesetInfo {
         thrift::ChangesetInfo {
             changeset_id: self.changeset_id.into_thrift(),
             parents: self
