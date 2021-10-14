@@ -253,6 +253,11 @@ def uploadhgchangesets(repo, revs, force=False, skipknowncheck=False):
     uploadcommitqueue = (
         nodes if (force or skipknowncheck) else _filtercommits(repo, nodes)
     )
+
+    if not uploadcommitqueue:
+        # No commits to upload
+        return set(), set()
+
     repo.ui.status(
         _n(
             "queue %d commit for upload\n",

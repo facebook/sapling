@@ -7,12 +7,25 @@ from edenscm.mercurial.edenapi_upload import (
     getreponame,
     filetypefromfile,
     parentsfromctx,
+    uploadhgchangesets,
 )
 from edenscm.mercurial.i18n import _
 
 
+def _backupcurrentcommit(repo):
+    """make sure the current commit is backed up in commitcloud"""
+    currentcommit = (repo["."].node(),)
+    draftrevs = repo.changelog.torevset(
+        repo.dageval(lambda: ancestors(currentcommit) & draft())
+    )
+
+    uploadhgchangesets(repo, draftrevs)
+
+
 def createremote(ui, repo, **opts):
     with repo.lock():
+        _backupcurrentcommit(repo)
+
         # Current working context
         wctx = repo[None]
 
