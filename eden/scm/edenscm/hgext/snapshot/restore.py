@@ -68,9 +68,12 @@ def restore(ui, repo, csid, clean=False):
             component="snapshot",
         )
 
-        hg.updatetotally(
-            ui, repo, repo[snapshot["hg_parents"]], None, updatecheck="abort"
-        )
+        rev = snapshot["hg_parents"].hex()
+        # This will resolve the parent revision even if it's not available locally
+        # and needs pulling from server.
+        rev = scmutil.revsingle(repo, rev, rev).rev()
+
+        hg.updatetotally(ui, repo, rev, None, updatecheck="abort")
 
         files2download = []
         files2hgadd = []
