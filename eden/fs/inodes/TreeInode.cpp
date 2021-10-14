@@ -1538,7 +1538,14 @@ Future<Unit> TreeInode::rename(
     // rename.
     if (!needSrc && !needDest) {
       return doRename(
-          std::move(locks), name, srcIter, destParent, destName, invalidate);
+                 std::move(locks),
+                 name,
+                 srcIter,
+                 destParent,
+                 destName,
+                 invalidate)
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
     }
 
     // If we are still here we have to load either the source or destination,
@@ -1601,7 +1608,7 @@ bool isAncestor(const RenameLock& renameLock, TreeInode* a, TreeInode* b) {
 }
 } // namespace
 
-Future<Unit> TreeInode::doRename(
+ImmediateFuture<Unit> TreeInode::doRename(
     TreeRenameLocks&& locks,
     PathComponentPiece srcName,
     PathMap<DirEntry>::iterator srcIter,
@@ -1632,7 +1639,8 @@ Future<Unit> TreeInode::doRename(
         boost::polymorphic_downcast<TreeInode*>(srcEntry.getInode());
     if (srcTreeInode == destParent.get() ||
         isAncestor(locks.renameLock(), srcTreeInode, destParent.get())) {
-      return makeFuture<Unit>(InodeError(EINVAL, destParent, destName));
+      return ImmediateFuture<Unit>{
+          folly::Try<Unit>{InodeError{EINVAL, destParent, destName}}};
     }
   }
 

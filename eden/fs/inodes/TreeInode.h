@@ -460,7 +460,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   void materialize(const RenameLock* renameLock = nullptr);
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> doRename(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> doRename(
       TreeRenameLocks&& locks,
       PathComponentPiece srcName,
       PathMap<DirEntry>::iterator srcIter,
