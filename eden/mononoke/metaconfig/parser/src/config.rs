@@ -16,7 +16,7 @@ use std::{
 
 use crate::convert::Convert;
 use crate::errors::ConfigurationError;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use cached_config::ConfigStore;
 use metaconfig_types::{
     AllowlistEntry, BackupRepoConfig, BlobConfig, CensoredScubaParams, CommitSyncConfig,
@@ -24,8 +24,10 @@ use metaconfig_types::{
     RepoReadOnly, StorageConfig,
 };
 use mononoke_types::RepositoryId;
+use pretty_assertions::Comparison;
 use repos::{
-    RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawStorageConfig,
+    RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinition,
+    RawStorageConfig,
 };
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
@@ -61,29 +63,311 @@ pub fn load_repo_configs(
         common,
         repos,
         storage,
-        repo_definitions: _,
+        repo_definitions,
     } = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
+    let repo_definitions = repo_definitions.repo_definitions;
+    let repo_configs = repos;
+    let storage_configs = storage;
 
     let commit_sync = parse_commit_sync_config(commit_sync)?;
 
-    let mut repo_configs = HashMap::new();
+    let mut resolved_repo_configs = HashMap::new();
     let mut repoids = HashSet::new();
 
-    for (reponame, raw_repo_config) in repos.into_iter() {
-        let config = parse_repo_config(&reponame, raw_repo_config, &storage, &commit_sync)?;
-
-        if !repoids.insert(config.repoid) {
-            return Err(ConfigurationError::DuplicatedRepoId(config.repoid).into());
+    {
+        // This block of code used purely to compare repos in repo_definitions
+        // with repos in repo_configs
+        // TODO T103363241 delete this after old structure of configs gets deprecated completely.
+        if repo_configs.keys().collect::<Vec<_>>().sort()
+            != repo_definitions.keys().collect::<Vec<_>>().sort()
+        {
+            panic!("Mismatch between repos in repo_definitions nd repo_configs");
         }
-
-        repo_configs.insert(reponame.clone(), config);
     }
 
-    let common = parse_common_config(common, &storage)?;
+    for (reponame, raw_repo_definition) in repo_definitions.into_iter() {
+        let repo_config = parse_with_repo_definition(
+            raw_repo_definition,
+            &repo_configs,
+            &storage_configs,
+            &commit_sync,
+        )?;
+
+        if !repoids.insert(repo_config.repoid) {
+            return Err(ConfigurationError::DuplicatedRepoId(repo_config.repoid).into());
+        }
+
+        {
+            // This block of code used purely to compare result of parsing the old structure of configs
+            // with the new structure with indirect named repo configs.
+            // TODO T103363241 delete this after old structure of configs gets deprecated completely.
+            let old_repo_config = repo_configs
+                .get(&reponame)
+                .expect(&format!("Missing RawRepoConfig for {}", &reponame));
+            let old_config = parse_old(
+                &reponame,
+                old_repo_config.clone(),
+                &storage_configs,
+                &commit_sync,
+            )?;
+            if repo_config != old_config {
+                panic!(
+                    "Config mismatch\n{}",
+                    Comparison::new(&old_config, &repo_config)
+                );
+            }
+        }
+
+        resolved_repo_configs.insert(reponame, repo_config);
+    }
+
+    let common = parse_common_config(common, &storage_configs)?;
 
     Ok(RepoConfigs {
-        repos: repo_configs,
+        repos: resolved_repo_configs,
         common,
+    })
+}
+
+fn parse_with_repo_definition(
+    repo_definition: RawRepoDefinition,
+    named_repo_configs: &HashMap<String, RawRepoConfig>,
+    named_storage_configs: &HashMap<String, RawStorageConfig>,
+    commit_sync_config: &HashMap<String, CommitSyncConfig>,
+) -> Result<RepoConfig> {
+    let RawRepoDefinition {
+        repo_id: repoid,
+        backup_source_repo_name,
+        repo_name,
+        repo_config,
+        write_lock_db_address,
+        hipster_acl,
+        enabled,
+        readonly,
+        needs_backup: _,
+        external_repo_id: _,
+    } = repo_definition;
+
+    let named_repo_config_name = repo_config
+        .clone()
+        .ok_or_else(|| ConfigurationError::InvalidConfig(format!("No named_repo_config")))?;
+
+    let named_repo_config = named_repo_configs
+        .get(named_repo_config_name.as_str())
+        .ok_or_else(|| {
+            ConfigurationError::InvalidConfig(format!(
+                "no named_repo_config \"{}\" for repo \"{:?}\".",
+                named_repo_config_name, repo_name
+            ))
+        })?
+        .clone();
+
+    let reponame = repo_name.ok_or_else(|| {
+        ConfigurationError::InvalidConfig(format!("No repo_name in repo_definition"))
+    })?;
+
+    let backup_repo_config = if let Some(backup_source_repo_name) = backup_source_repo_name {
+        if backup_source_repo_name != reponame {
+            Some(BackupRepoConfig {
+                source_repo_name: backup_source_repo_name,
+            })
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let RawRepoConfig {
+        storage_config,
+        storage,
+        bookmarks,
+        hook_manager_params,
+        hooks,
+        redaction,
+        generation_cache_size,
+        scuba_table_hooks,
+        cache_warmup,
+        push,
+        pushrebase,
+        lfs,
+        wireproto_logging,
+        hash_validation_percentage,
+        skiplist_index_blobstore_key,
+        bundle2_replay_params,
+        infinitepush,
+        list_keys_patterns_max,
+        filestore,
+        hook_max_file_size,
+        source_control_service,
+        source_control_service_monitoring,
+        derived_data_config,
+        scuba_local_path_hooks,
+        hgsql_name,
+        hgsql_globalrevs_name,
+        enforce_lfs_acl_check,
+        repo_client_use_warm_bookmarks_cache,
+        segmented_changelog_config,
+        repo_client_knobs,
+        phabricator_callsign,
+        ..
+    } = named_repo_config;
+
+    let named_storage_config = storage_config;
+
+    let repoid = RepositoryId::new(repoid.context("missing repoid from configuration")?);
+
+    let enabled = enabled.unwrap_or(true);
+
+    let hooks: Vec<_> = hooks.unwrap_or_default().convert()?;
+
+    let get_storage = move |name: &str| -> Result<StorageConfig> {
+        let raw_storage_config = storage
+            .as_ref()
+            .and_then(|s| s.get(name))
+            .or_else(|| named_storage_configs.get(name))
+            .cloned()
+            .ok_or_else(|| {
+                ConfigurationError::InvalidConfig(format!("Storage \"{}\" not defined", name))
+            })?;
+
+        raw_storage_config.convert()
+    };
+
+    let storage_config = get_storage(
+        &named_storage_config
+            .ok_or_else(|| anyhow!("missing storage_config from configuration"))?,
+    )?;
+
+    let wireproto_logging = wireproto_logging
+        .map(|raw| crate::convert::repo::convert_wireproto_logging_config(raw, get_storage))
+        .transpose()?
+        .unwrap_or_default();
+
+    let cache_warmup = cache_warmup.convert()?;
+
+    let hook_manager_params = hook_manager_params.convert()?;
+
+    let bookmarks = bookmarks.unwrap_or_default().convert()?;
+
+    let push = push.convert()?.unwrap_or_default();
+
+    let pushrebase = pushrebase.convert()?.unwrap_or_default();
+
+    let bundle2_replay_params = bundle2_replay_params.convert()?.unwrap_or_default();
+
+    let lfs = lfs.convert()?.unwrap_or_default();
+
+    let hash_validation_percentage = hash_validation_percentage
+        .map(|v| v.try_into())
+        .transpose()?
+        .unwrap_or(0);
+
+    let readonly = if readonly.unwrap_or_default() {
+        RepoReadOnly::ReadOnly("Set by config option".to_string())
+    } else {
+        RepoReadOnly::ReadWrite
+    };
+
+    let redaction = if redaction.unwrap_or(true) {
+        Redaction::Enabled
+    } else {
+        Redaction::Disabled
+    };
+
+    let infinitepush = infinitepush.convert()?.unwrap_or_default();
+
+    let generation_cache_size: usize = generation_cache_size
+        .map(|v| v.try_into())
+        .transpose()?
+        .unwrap_or(10 * 1024 * 1024);
+
+    let list_keys_patterns_max: u64 = list_keys_patterns_max
+        .map(|v| v.try_into())
+        .transpose()?
+        .unwrap_or(LIST_KEYS_PATTERNS_MAX_DEFAULT);
+
+    let hook_max_file_size: u64 = hook_max_file_size
+        .map(|v| v.try_into())
+        .transpose()?
+        .unwrap_or(HOOK_MAX_FILE_SIZE_DEFAULT);
+
+    let filestore = filestore.convert()?;
+
+    let source_control_service = source_control_service.convert()?.unwrap_or_default();
+
+    let source_control_service_monitoring = source_control_service_monitoring.convert()?;
+
+    let derived_data_config = derived_data_config.convert()?.unwrap_or_default();
+
+    // XXX only www has it explicitly specified.
+    let hgsql_name = HgsqlName(hgsql_name.unwrap_or_else(|| reponame.to_string()));
+
+    let hgsql_globalrevs_name =
+        HgsqlGlobalrevsName(hgsql_globalrevs_name.unwrap_or_else(|| hgsql_name.0.clone()));
+
+    let relevant_commit_sync_configs: Vec<&CommitSyncConfig> = commit_sync_config
+        .values()
+        .filter(|config| is_commit_sync_config_relevant_to_repo(&repoid, config))
+        .collect();
+    let commit_sync_config = match relevant_commit_sync_configs.as_slice() {
+        [] => None,
+        [commit_sync_config] => Some((*commit_sync_config).clone()),
+        _ => {
+            return Err(anyhow!(
+                "Repo {} participates in more than one commit sync config",
+                repoid,
+            ));
+        }
+    };
+
+    let enforce_lfs_acl_check = enforce_lfs_acl_check.unwrap_or(false);
+    let repo_client_use_warm_bookmarks_cache =
+        repo_client_use_warm_bookmarks_cache.unwrap_or(false);
+
+    let segmented_changelog_config = segmented_changelog_config.convert()?.unwrap_or_default();
+
+    let repo_client_knobs = repo_client_knobs.convert()?.unwrap_or_default();
+
+
+    Ok(RepoConfig {
+        enabled,
+        storage_config,
+        generation_cache_size,
+        repoid,
+        scuba_table_hooks,
+        scuba_local_path_hooks,
+        cache_warmup,
+        hook_manager_params,
+        bookmarks,
+        hooks,
+        push,
+        pushrebase,
+        lfs,
+        wireproto_logging,
+        hash_validation_percentage,
+        readonly,
+        redaction,
+        skiplist_index_blobstore_key,
+        bundle2_replay_params,
+        write_lock_db_address,
+        infinitepush,
+        list_keys_patterns_max,
+        filestore,
+        commit_sync_config,
+        hook_max_file_size,
+        hipster_acl,
+        source_control_service,
+        source_control_service_monitoring,
+        derived_data_config,
+        hgsql_name,
+        hgsql_globalrevs_name,
+        enforce_lfs_acl_check,
+        repo_client_use_warm_bookmarks_cache,
+        segmented_changelog_config,
+        repo_client_knobs,
+        phabricator_callsign,
+        backup_repo_config,
     })
 }
 
@@ -209,7 +493,7 @@ fn parse_common_config(
     })
 }
 
-fn parse_repo_config(
+fn parse_old(
     reponame: &str,
     repo_config: RawRepoConfig,
     common_storage_config: &HashMap<String, RawStorageConfig>,
@@ -228,8 +512,6 @@ fn parse_repo_config(
         redaction,
         generation_cache_size,
         scuba_table_hooks,
-        delay_mean: _,
-        delay_stddev: _,
         cache_warmup,
         push,
         pushrebase,
@@ -245,7 +527,6 @@ fn parse_repo_config(
         hipster_acl,
         source_control_service,
         source_control_service_monitoring,
-        name: _,
         derived_data_config,
         scuba_local_path_hooks,
         hgsql_name,
@@ -496,8 +777,10 @@ mod test {
     ) -> TempDir {
         let tmp_dir = TempDir::new("mononoke_test_config").expect("tmp_dir failed");
 
-        // Always create repos directory
+        // Always create repos directory and repo_definitions directory
         create_dir_all(tmp_dir.path().join("repos")).expect("create repos failed");
+        create_dir_all(tmp_dir.path().join("repo_definitions"))
+            .expect("create repo_definitions failed");
 
         for (path, content) in files.into_iter() {
             let path = path.as_ref();
@@ -709,11 +992,25 @@ mod test {
             identity_data = "user"
         "#;
 
+        let www1_repo_def = r#"
+            repo_id=1
+            repo_name="www1"
+            repo_config="www1"
+        "#;
+
+        let www2_repo_def = r#"
+            repo_id=1
+            repo_name="www2"
+            repo_config="www2"
+        "#;
+
         let paths = btreemap! {
             "common/common.toml" => common_content,
             "common/commitsyncmap.toml" => "",
             "repos/www1/server.toml" => www_content,
             "repos/www2/server.toml" => www_content,
+            "repo_definitions/www1/server.toml" => www1_repo_def,
+            "repo_definitions/www2/server.toml" => www2_repo_def,
         };
 
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
@@ -830,6 +1127,15 @@ mod test {
             verification_enabled = false
             create_backup_repo = false
         "#;
+        let fbsource_repo_def = r#"
+            repo_id=0
+            write_lock_db_address="write_lock_db_address"
+            repo_name="fbsource"
+            hipster_acl="foo/test"
+            repo_config="fbsource"
+            needs_backup=false
+            backup_source_repo_name="source"
+        "#;
         let www_content = r#"
             repoid=1
             scuba_table_hooks="scm_hooks"
@@ -837,6 +1143,11 @@ mod test {
             hgsql_name = "www-foobar"
             hgsql_globalrevs_name = "www-barfoo"
             phabricator_callsign="WWW"
+        "#;
+        let www_repo_def = r#"
+            repo_id=1
+            repo_name="www"
+            repo_config="www"
         "#;
         let common_content = r#"
             loadlimiter_category="test-category"
@@ -896,6 +1207,8 @@ mod test {
             "common/commitsyncmap.toml" => "",
             "repos/fbsource/server.toml" => fbsource_content,
             "repos/www/server.toml" => www_content,
+            "repo_definitions/fbsource/server.toml" => fbsource_repo_def,
+            "repo_definitions/www/server.toml" => www_repo_def,
             "my_path/my_files" => "",
         };
 
@@ -1264,9 +1577,16 @@ mod test {
             bypass_pushvar="var"
         "#;
 
+        let content_def = r#"
+            repo_id = 0
+            repo_name = "fbsource"
+            repo_config = "fbsource"
+        "#;
+
         let paths = btreemap! {
             "common/commitsyncmap.toml" => "",
             "repos/fbsource/server.toml" => content,
+            "repo_definitions/fbsource/server.toml" => content_def,
         };
 
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
@@ -1292,10 +1612,17 @@ mod test {
                 path = "/tmp/fbsource"
             "#;
 
+            let content_def = r#"
+                repo_id = 0
+                repo_name = "fbsource"
+                repo_config = "fbsource"
+            "#;
+
             let paths = btreemap! {
                 "common/common.toml" => common,
                 "common/commitsyncmap.toml" => "",
                 "repos/fbsource/server.toml" => content,
+                "repo_definitions/fbsource/server.toml" => content_def,
             };
 
             let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
@@ -1371,6 +1698,12 @@ mod test {
         disabled = {}
         "#;
 
+        const REPO_DEF: &str = r#"
+            repo_id = 123
+            repo_config = "test"
+            repo_name = "test"
+        "#;
+
         const COMMON: &str = r#"
         [redaction_config]
         blobstore = "multiplex_store"
@@ -1382,6 +1715,7 @@ mod test {
             "common/common.toml" => COMMON,
             "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
+            "repo_definitions/test/server.toml" => REPO_DEF,
         };
 
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
@@ -1476,6 +1810,12 @@ mod test {
         disabled = {}
         "#;
 
+        const REPO_DEF: &str = r#"
+        repo_id = 123
+        repo_config = "test"
+        repo_name = "test"
+        "#;
+
         const COMMON: &str = r#"
         [redaction_config]
         blobstore = "multiplex_store"
@@ -1487,6 +1827,7 @@ mod test {
             "common/common.toml" => COMMON,
             "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
+            "repo_definitions/test/server.toml" => REPO_DEF,
         };
 
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
@@ -1539,9 +1880,15 @@ mod test {
         readonly = true
         "#;
 
+        const REPO_DEF: &str = r#"
+         repo_id = 123
+         readonly = true
+         "#;
+
         let paths = btreemap! {
             "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
+            "repo_definitions/test/server.toml" => REPO_DEF,
         };
 
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
@@ -1575,6 +1922,12 @@ mod test {
         storage_config = "multiplex_store"
         "#;
 
+        const REPO_DEF: &str = r#"
+        repo_id = 123
+        repo_name = "test"
+        repo_config = "test"
+        "#;
+
         const COMMON: &str = r#"
         [redaction_config]
         blobstore = "multiplex_store"
@@ -1586,6 +1939,7 @@ mod test {
             "common/common.toml" => COMMON,
             "common/commitsyncmap.toml" => "",
             "repos/test/server.toml" => REPO,
+            "repo_definitions/test/server.toml" => REPO_DEF,
         };
 
         let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);

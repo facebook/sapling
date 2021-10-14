@@ -11,8 +11,8 @@ use std::path::Path;
 use anyhow::{anyhow, Result};
 use cached_config::ConfigStore;
 use repos::{
-    RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinitions,
-    RawStorageConfig,
+    RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinition,
+    RawRepoDefinitions, RawStorageConfig,
 };
 
 use crate::errors::ConfigurationError;
@@ -62,8 +62,40 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
         config_path.join("common").join("storage.toml").as_path(),
         true,
     )?;
-    let repo_definitions =
-        read_toml_path::<RawRepoDefinitions>(config_path.join("repo_definitions").as_path(), true)?;
+
+    let mut repo_definitions_map = HashMap::new();
+    let repo_definitions_dir = config_path.join("repo_definitions");
+    if !repo_definitions_dir.is_dir() {
+        return Err(ConfigurationError::InvalidFileStructure(format!(
+            "expected 'repo_definitions' directory under {}",
+            config_path.display()
+        ))
+        .into());
+    }
+
+    for entry in repo_definitions_dir.read_dir()? {
+        let repo_definition_path = entry?.path();
+        let reponame = repo_definition_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .ok_or_else(|| {
+                ConfigurationError::InvalidFileStructure(format!(
+                    "invalid repo path {:?}",
+                    repo_definition_path
+                ))
+            })?
+            .to_string();
+
+        let repo_definition = read_toml_path::<RawRepoDefinition>(
+            repo_definition_path.join("server.toml").as_path(),
+            false,
+        )?;
+        repo_definitions_map.insert(reponame, repo_definition);
+    }
+
+    let repo_definitions = RawRepoDefinitions {
+        repo_definitions: repo_definitions_map,
+    };
 
     let mut repos = HashMap::new();
     let repos_dir = config_path.join("repos");

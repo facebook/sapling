@@ -770,6 +770,7 @@ function setup_mononoke_repo_config {
   local reponame="$1"
   local storageconfig="$2"
   mkdir -p "repos/$reponame"
+  mkdir -p "repo_definitions/$reponame"
   mkdir -p "$TESTTMP/monsql"
   mkdir -p "$TESTTMP/$reponame"
   mkdir -p "$TESTTMP/traffic-replay-blobstore"
@@ -778,6 +779,14 @@ repoid=$REPOID
 enabled=${ENABLED:-true}
 hash_validation_percentage=100
 CONFIG
+
+  cat > "repo_definitions/$reponame/server.toml" <<CONFIG
+repo_id=$REPOID
+repo_name="$reponame"
+repo_config="$reponame"
+enabled=${ENABLED:-true}
+CONFIG
+
 
 if [[ -n "${HGSQL_NAME:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
@@ -789,10 +798,18 @@ if [[ -n "${ACL_NAME:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 hipster_acl = "$ACL_NAME"
 CONFIG
+
+  cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
+hipster_acl = "$ACL_NAME"
+CONFIG
 fi
 
 if [[ -n "${READ_ONLY_REPO:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
+readonly=true
+CONFIG
+
+  cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
 readonly=true
 CONFIG
 fi
@@ -1038,6 +1055,9 @@ if [[ -n "${BACKUP_FROM:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [backup_config]
 backup_source_name="$BACKUP_FROM"
+CONFIG
+  cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
+backup_source_repo_name="$BACKUP_FROM"
 CONFIG
 fi
 }

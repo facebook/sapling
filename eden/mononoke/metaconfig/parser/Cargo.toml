@@ -16,6 +16,7 @@ itertools = "0.10.1"
 metaconfig_types = { version = "0.1.0", path = "../types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"
+pretty_assertions = "0.6"
 regex = "1.4.2"
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
@@ -26,7 +27,6 @@ toml = "=0.5.7"
 
 [dev-dependencies]
 maplit = "1.0"
-pretty_assertions = "0.6"
 tempdir = "0.3"
 
 [patch.crates-io]
