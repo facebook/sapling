@@ -143,31 +143,16 @@ TEST(ImmediateFuture, exceptionContinuation) {
       std::move(exceptedFut).get(), std::logic_error, "Test exception");
 }
 
-TEST(ImmediateFuture, hasImmediate) {
-  int value = 42;
-  ImmediateFuture<int> fortyTwo{value};
-  EXPECT_TRUE(fortyTwo.hasImmediate());
-  auto fortyThree = std::move(fortyTwo).thenValue([](int v) { return v + 1; });
-  EXPECT_TRUE(fortyThree.hasImmediate());
-  auto fortyFour =
-      std::move(fortyThree).thenValue([](int v) { return folly::Try{v + 1}; });
-  EXPECT_TRUE(fortyFour.hasImmediate());
-  auto fortyFive = std::move(fortyFour).thenValue(
-      [](int v) { return folly::makeSemiFuture(v + 1); });
-  EXPECT_FALSE(fortyFive.hasImmediate());
-  EXPECT_EQ(std::move(fortyFive).get(), 45);
-}
-
 ImmediateFuture<folly::Unit> unitFunc() {
   return folly::unit;
 }
 
 TEST(ImmediateFuture, unit) {
   auto fut = unitFunc();
-  EXPECT_TRUE(fut.hasImmediate());
+  EXPECT_TRUE(fut.isReady());
 
   auto voidFut = std::move(fut).thenValue([](folly::Unit) {});
-  EXPECT_TRUE(voidFut.hasImmediate());
+  EXPECT_TRUE(voidFut.isReady());
 }
 
 class Foo {
@@ -228,16 +213,63 @@ TEST(ImmediateFuture, getTimeout) {
 
 TEST(ImmediateFuture, makeImmediateFutureWith) {
   auto fut1 = makeImmediateFutureWith([]() { return 42; });
-  EXPECT_TRUE(fut1.hasImmediate());
+  EXPECT_TRUE(fut1.isReady());
   EXPECT_EQ(std::move(fut1).get(), 42);
 
   auto fut2 = makeImmediateFutureWith(
       []() { throw std::logic_error("Test exception"); });
-  EXPECT_TRUE(fut2.hasImmediate());
+  EXPECT_TRUE(fut2.isReady());
   EXPECT_THROW_RE(std::move(fut2).get(), std::logic_error, "Test exception");
 
   auto fut3 =
       makeImmediateFutureWith([]() { return folly::makeSemiFuture(42); });
-  EXPECT_FALSE(fut3.hasImmediate());
+  EXPECT_TRUE(fut3.isReady());
   EXPECT_EQ(std::move(fut3).get(), 42);
+
+  auto [p, sf] = folly::makePromiseContract<int>();
+  auto fut4 = makeImmediateFutureWith(
+      [sf = std::move(sf)]() mutable { return std::move(sf); });
+  EXPECT_FALSE(fut4.isReady());
+  p.setValue(42);
+  EXPECT_FALSE(fut4.isReady());
+  EXPECT_EQ(std::move(fut4).get(), 42);
+}
+
+TEST(ImmediateFuture, isReady_from_value) {
+  int value = 42;
+  ImmediateFuture<int> fortyTwo{value};
+  EXPECT_TRUE(fortyTwo.isReady());
+}
+
+TEST(ImmediateFuture, isReady_from_completed_SemiFuture) {
+  auto semi = folly::makeSemiFuture<int>(10);
+  auto imm = ImmediateFuture<int>{std::move(semi)};
+  EXPECT_TRUE(imm.isReady());
+  EXPECT_EQ(10, std::move(imm).get());
+}
+
+TEST(ImmediateFuture, ready_ImmediateFuture_thenValue_is_also_ready) {
+  auto semi = folly::makeSemiFuture<int>(10);
+  EXPECT_TRUE(semi.isReady());
+  auto imm = ImmediateFuture<int>{std::move(semi)};
+  EXPECT_TRUE(imm.isReady());
+  auto then =
+      std::move(imm).thenValue([](int i) -> ImmediateFuture<int> { return i; });
+  EXPECT_TRUE(then.isReady());
+}
+
+TEST(
+    ImmediateFuture,
+    ImmediateFuture_does_not_run_SemiFuture_callbacks_until_scheduled_on_executor) {
+  bool run = false;
+  auto semi = folly::makeSemiFuture<int>(10).deferValue([&](int x) {
+    run = true;
+    return x + 10;
+  });
+  EXPECT_FALSE(semi.isReady());
+  auto imm = ImmediateFuture<int>{std::move(semi)};
+  EXPECT_FALSE(imm.isReady());
+  EXPECT_FALSE(run);
+  EXPECT_EQ(20, std::move(imm).get());
+  EXPECT_TRUE(run);
 }

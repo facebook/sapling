@@ -15,10 +15,17 @@
 namespace facebook::eden {
 
 /**
- * An ImmediateFuture is a small wrapper around either a folly::SemiFuture<T>,
- * or a folly::Try<T>. This allows code to not pay the overhead of
- * folly::SemiFuture for when an immediate value is available. In particular, an
- * ImmediateFuture will not allocate memory in this case.
+ * An ImmediateFuture is a Future type with similar semantics to folly::Future
+ * except that it optimizes the already-fulfilled case by storing a Try<T>
+ * inline. This allows code to not pay the allocation and atomic refcounting
+ * overhead of folly::SemiFuture when an immediate value is available.
+ *
+ * Unlike Future and like SemiFuture, ImmediateFuture will never run an attached
+ * callback on the thread that fulfills the corresponding Promise.
+ *
+ * Like Future and unlike SemiFuture, callbacks must handle running immediately.
+ * An attached callback may run either immediately or later, when the
+ * ImmediateFuture's value is consumed.
  *
  * All methods can throw an DestroyedImmediateFutureError if an ImmediateFuture
  * is used after being destroyed. This can happen if an ImmediateFuture is used
@@ -56,10 +63,15 @@ class ImmediateFuture {
 
   /**
    * Construct an ImmediateFuture with a SemiFuture.
+   *
+   * If the given SemiFuture is ready, the resulting value is moved into and
+   * stored inline in this ImmediateFuture.
+   *
+   * If lazy evaluation of SemiFuture's callbacks is intentional, an unfulfilled
+   * SemiFuture can be created with `.defer()` and passed in.
    */
   /* implicit */ ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept(
-      std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>)
-      : semi_{std::move(fut)}, kind_{Kind::SemiFuture} {}
+      std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>);
 
   ~ImmediateFuture();
 
@@ -72,11 +84,11 @@ class ImmediateFuture {
   /**
    * Queue the func continuation once this future is ready.
    *
-   * When the ImmediateFuture is an immediate value, the passed in function
-   * will be called without waiting. When a SemiFuture value, the function will
-   * be called in the same executor as the previous future executor.
+   * If this ImmediateFuture already has a value, `func` will be called without
+   * waiting. Otherwise, it will be called on the executor on which the end of
+   * the Future chain is scheduled with `SemiFuture::via()`.
    *
-   * Func must be a function taking a T as the only argument, its return value
+   * Func must be a function taking a T as the only argument. Its return value
    * must be of a type that an ImmediateFuture can be constructed from
    * (folly::Try, folly::SemiFuture, etc).
    *
@@ -93,9 +105,9 @@ class ImmediateFuture {
   /**
    * Queue the func continuation once this future is ready.
    *
-   * When the ImmediateFuture is an immediate value, the passed in function
-   * will be called without waiting. When a SemiFuture value, the function will
-   * be called in the same executor as the previous future executor.
+   * If this ImmediateFuture already has a value, `func` will be called without
+   * waiting. Otherwise, it will be called on the executor on which the end of
+   * the Future chain is scheduled with `SemiFuture::via()`.
    *
    * Func must be a function taking a Try<T> as the only argument, its return
    * value must be of a type that an ImmediateFuture can be constructed from
@@ -126,6 +138,14 @@ class ImmediateFuture {
    */
   template <typename Func>
   ImmediateFuture<T> ensure(Func&& func) &&;
+
+  /**
+   * Returns true if a value is immediately available.
+   *
+   * That is, if isReady() returns true, calling `thenValue` or `thenTry` is
+   * guaranteed to run the callback immediately.
+   */
+  bool isReady() const;
 
   /**
    * Build a SemiFuture out of this ImmediateFuture and returns it.
@@ -175,10 +195,6 @@ class ImmediateFuture {
    */
   folly::Try<T> getTry(folly::HighResDuration timeout) &&;
 
-  bool hasImmediate() const {
-    return kind_ == Kind::Immediate;
-  }
-
  private:
   /**
    * Destroy this ImmediatureFuture.
@@ -201,6 +217,9 @@ class ImmediateFuture {
     Nothing,
   };
 
+  // TODO: At the cost of reimplementing parts of Try, we could save a byte or
+  // four by merging these tag bits with Try's tag bits, and differentiate
+  // between Value, Exception, SemiFuture, and Nothing.
   Kind kind_;
 };
 

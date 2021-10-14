@@ -27,6 +27,18 @@ void ImmediateFuture<T>::destroy() {
 }
 
 template <typename T>
+ImmediateFuture<T>::ImmediateFuture(folly::SemiFuture<T>&& fut) noexcept(
+    std::is_nothrow_move_constructible_v<folly::SemiFuture<T>>) {
+  if (fut.isReady()) {
+    kind_ = Kind::Immediate;
+    new (&immediate_) folly::Try<T>{std::move(fut).getTry()};
+  } else {
+    kind_ = Kind::SemiFuture;
+    new (&semi_) folly::SemiFuture<T>{std::move(fut)};
+  }
+}
+
+template <typename T>
 ImmediateFuture<T>::~ImmediateFuture() {
   destroy();
 }
@@ -96,6 +108,20 @@ ImmediateFuture<T> ImmediateFuture<T>::ensure(Func&& func) && {
         func();
         return try_;
       });
+}
+
+template <typename T>
+bool ImmediateFuture<T>::isReady() const {
+  switch (kind_) {
+    case Kind::Immediate:
+      return true;
+    case Kind::SemiFuture:
+      // TODO: This could return semi_.isReady() if we also changed thenTry to
+      // check semi_.isReady() and call .get() instead of .defer().
+      return false;
+    case Kind::Nothing:
+      throw DestroyedImmediateFutureError{};
+  }
 }
 
 template <typename T>
