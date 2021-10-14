@@ -39,7 +39,7 @@ def _fullclean(ui, repo):
 
 
 def restore(ui, repo, csid, clean=False):
-    ui.status(_(f"Will restore snapshot {csid}\n"), component="snapshot")
+    ui.status(_("Will restore snapshot {}\n").format(csid), component="snapshot")
 
     snapshot = repo.edenapi.fetchsnapshot(
         getreponame(repo),
@@ -52,7 +52,7 @@ def restore(ui, repo, csid, clean=False):
     # than one parent
     assert isinstance(snapshot["hg_parents"], bytes)
 
-    with repo.wlock():
+    with repo.wlock(), repo.lock(), repo.transaction("snapshot-restore"):
         if _hasanychanges(repo):
             if clean:
                 _fullclean(ui, repo)
@@ -64,7 +64,7 @@ def restore(ui, repo, csid, clean=False):
                 )
 
         ui.status(
-            _(f"Updating to parent {snapshot['hg_parents'].hex()}\n"),
+            _("Updating to parent {}\n").format(snapshot["hg_parents"].hex()),
             component="snapshot",
         )
 
