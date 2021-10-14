@@ -414,7 +414,6 @@ TEST_F(RenameTest, renameIntoUnlinkedDir) {
       InvalidationRequired::No,
       ObjectFetchContext::getNullContext());
   ASSERT_TRUE(rmdirFuture.isReady());
-  EXPECT_FALSE(rmdirFuture.hasException());
   std::move(rmdirFuture).get();
 
   // Do the rename

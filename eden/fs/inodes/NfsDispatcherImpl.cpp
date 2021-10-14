@@ -223,8 +223,7 @@ ImmediateFuture<NfsDispatcher::UnlinkRes> NfsDispatcherImpl::unlink(
               // TODO(xavierd): Modify unlink to obtain the pre and post stat
               // of the directory.
               return NfsDispatcher::UnlinkRes{std::nullopt, std::nullopt};
-            })
-            .semi();
+            });
       });
 }
 
@@ -239,8 +238,7 @@ ImmediateFuture<NfsDispatcher::RmdirRes> NfsDispatcherImpl::rmdir(
               // TODO(xavierd): Modify rmdir to obtain the pre and post stat of
               // the directory.
               return NfsDispatcher::RmdirRes{std::nullopt, std::nullopt};
-            })
-            .semi();
+            });
       });
 }
 

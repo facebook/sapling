@@ -195,11 +195,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   TreeInodePtr
   mkdir(PathComponentPiece name, mode_t mode, InvalidationRequired invalidate);
-  FOLLY_NODISCARD folly::Future<folly::Unit> unlink(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> unlink(
       PathComponentPiece name,
       InvalidationRequired invalidate,
       ObjectFetchContext& context);
-  FOLLY_NODISCARD folly::Future<folly::Unit> rmdir(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> rmdir(
       PathComponentPiece name,
       InvalidationRequired invalidate,
       ObjectFetchContext& context);

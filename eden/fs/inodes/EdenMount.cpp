@@ -382,12 +382,14 @@ Future<Unit> ensureDotEdenSymlink(
           case Action::UnlinkThenSymlink:
             return directory
                 ->unlink(symlinkName, InvalidationRequired::Yes, *context)
-                .thenValueInline([=](Unit&&) {
+                .thenValue([=](Unit&&) {
                   directory->symlink(
                       symlinkName,
                       symlinkTarget.stringPiece(),
                       InvalidationRequired::Yes);
-                });
+                })
+                .semi()
+                .via(&folly::QueuedImmediateExecutor::instance());
         }
         EDEN_BUG() << "unexpected action type when configuring .eden directory";
       })

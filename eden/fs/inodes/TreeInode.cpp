@@ -1116,7 +1116,7 @@ TreeInodePtr TreeInode::mkdir(
   return newChild;
 }
 
-folly::Future<folly::Unit> TreeInode::unlink(
+ImmediateFuture<folly::Unit> TreeInode::unlink(
     PathComponentPiece name,
     InvalidationRequired invalidate,
     ObjectFetchContext& context) {
@@ -1127,12 +1127,10 @@ folly::Future<folly::Unit> TreeInode::unlink(
                   &context](const InodePtr& child) mutable {
         return self->removeImpl<FileInodePtr>(
             std::move(childName), child, invalidate, 1, context);
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+      });
 }
 
-folly::Future<folly::Unit> TreeInode::rmdir(
+ImmediateFuture<folly::Unit> TreeInode::rmdir(
     PathComponentPiece name,
     InvalidationRequired invalidate,
     ObjectFetchContext& context) {
@@ -1143,9 +1141,7 @@ folly::Future<folly::Unit> TreeInode::rmdir(
                   &context](const InodePtr& child) mutable {
         return self->removeImpl<TreeInodePtr>(
             std::move(childName), child, invalidate, 1, context);
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+      });
 }
 
 template <typename InodePtrType>

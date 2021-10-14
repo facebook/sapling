@@ -254,20 +254,21 @@ folly::Future<folly::Unit> removeInode(
     RelativePath path,
     InodeType inodeType,
     ObjectFetchContext& context) {
-  auto inodeFut = mount.getInode(path.dirname(), context)
-                      .semi()
-                      .via(&folly::QueuedImmediateExecutor::instance());
-  return std::move(inodeFut).thenValue(
-      [path = std::move(path), inodeType, &context](const InodePtr inode) {
-        auto treeInodePtr = inode.asTreePtr();
-        if (inodeType == InodeType::Tree) {
-          return treeInodePtr->rmdir(
-              path.basename(), InvalidationRequired::No, context);
-        } else {
-          return treeInodePtr->unlink(
-              path.basename(), InvalidationRequired::No, context);
-        }
-      });
+  auto inodeFut = mount.getInode(path.dirname(), context);
+  return std::move(inodeFut)
+      .thenValue(
+          [path = std::move(path), inodeType, &context](const InodePtr inode) {
+            auto treeInodePtr = inode.asTreePtr();
+            if (inodeType == InodeType::Tree) {
+              return treeInodePtr->rmdir(
+                  path.basename(), InvalidationRequired::No, context);
+            } else {
+              return treeInodePtr->unlink(
+                  path.basename(), InvalidationRequired::No, context);
+            }
+          })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 } // namespace

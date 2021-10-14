@@ -377,8 +377,7 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::unlink(
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [&context, childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
-        return inode->unlink(childName, InvalidationRequired::No, context)
-            .semi();
+        return inode->unlink(childName, InvalidationRequired::No, context);
       });
 }
 
@@ -389,8 +388,7 @@ ImmediateFuture<folly::Unit> FuseDispatcherImpl::rmdir(
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [&context, childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
-        return inode->rmdir(childName, InvalidationRequired::No, context)
-            .semi();
+        return inode->rmdir(childName, InvalidationRequired::No, context);
       });
 }
 
