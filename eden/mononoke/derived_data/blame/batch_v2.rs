@@ -30,7 +30,7 @@ pub async fn derive_blame_v2_in_batch(
 ) -> Result<HashMap<ChangesetId, RootBlameV2>, Error> {
     let batch_len = bonsais.len();
     // We must split on any change as blame data must use the parent file.
-    let linear_stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::AnyChange).await?;
+    let linear_stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::AnyChange)?;
     let bonsais = Mutex::new(
         bonsais
             .into_iter()

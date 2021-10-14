@@ -123,7 +123,7 @@ impl DerivationContext {
 
     /// Fetch a dependency for all parents of a changeset if the dependency is
     /// not already known.
-    pub(crate) async fn fetch_unknown_parents<Derivable>(
+    pub async fn fetch_unknown_parents<Derivable>(
         &self,
         ctx: &CoreContext,
         known: Option<&HashMap<ChangesetId, Derivable>>,
@@ -133,18 +133,33 @@ impl DerivationContext {
         Derivable: BonsaiDerivable,
     {
         try_join_all(bonsai.parents().map(|p| async move {
-            if let Some(parent) = known.and_then(|k| k.get(&p)) {
-                return Ok(parent.clone());
-            }
-            self.fetch_dependency(ctx, p).await.with_context(|| {
-                format!(
-                    "could not fetch '{}' for parents of {}",
-                    Derivable::NAME,
-                    bonsai.get_changeset_id(),
-                )
-            })
+            self.fetch_unknown_dependency(&ctx, known, p)
+                .await
+                .with_context(|| {
+                    format!(
+                        "could not fetch '{}' for parents of {}",
+                        Derivable::NAME,
+                        bonsai.get_changeset_id(),
+                    )
+                })
         }))
         .await
+    }
+
+    /// Fetch derived data value for changeset if it is not already known.
+    pub async fn fetch_unknown_dependency<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        known: Option<&HashMap<ChangesetId, Derivable>>,
+        csid: ChangesetId,
+    ) -> Result<Derivable>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        if let Some(parent) = known.and_then(|k| k.get(&csid)) {
+            return Ok(parent.clone());
+        }
+        self.fetch_dependency(ctx, csid).await
     }
 
     /// Cause derivation of a dependency, and fetch the result.

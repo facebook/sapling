@@ -203,6 +203,7 @@ pub struct MononokeTunables {
 
     force_unode_v2: AtomicBool,
     fastlog_use_gen_num_traversal: AtomicBool,
+    unodes_use_batch_derivation: AtomicBool,
 
     // Changing the value of this tunable forces all mononoke instances
     // to reload segmented changelog. One can also specify jitter (or use default)

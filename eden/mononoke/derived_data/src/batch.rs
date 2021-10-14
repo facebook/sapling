@@ -41,7 +41,7 @@ pub async fn split_batch_in_linear_stacks(
     .buffered(100)
     .try_collect::<Vec<_>>()
     .await?;
-    split_bonsais_in_linear_stacks(&bonsais, file_conflicts).await
+    split_bonsais_in_linear_stacks(&bonsais, file_conflicts)
 }
 
 /// We follow a few rules when splitting a batch in the stacks:
@@ -50,7 +50,7 @@ pub async fn split_batch_in_linear_stacks(
 ///    go to a separate stacks (because of the way bonsai interprets these files)
 /// 3) If a file was modified in one commit and delete in other then they go
 ///    to different stacks
-pub async fn split_bonsais_in_linear_stacks(
+pub fn split_bonsais_in_linear_stacks(
     bonsais: &[BonsaiChangeset],
     file_conflicts: FileConflicts,
 ) -> Result<Vec<LinearStack>, Error> {

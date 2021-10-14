@@ -19,7 +19,10 @@ use futures::{
         self as new_future, try_join_all, BoxFuture, FutureExt as NewFutureExt, TryFutureExt,
     },
 };
-use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
+use manifest::{
+    derive_manifest_with_io_sender, derive_manifests_for_simple_stack_of_commits, Entry, LeafInfo,
+    ManifestChanges, TreeInfo,
+};
 use metaconfig_types::UnodeVersion;
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
 use mononoke_types::{
@@ -27,8 +30,63 @@ use mononoke_types::{
     ManifestUnodeId, MononokeId,
 };
 use sorted_vector_map::SortedVectorMap;
+use std::collections::{BTreeMap, HashMap};
 
 use crate::ErrorKind;
+
+pub(crate) async fn derive_unode_manifest_stack(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    file_changes: Vec<(ChangesetId, BTreeMap<MPath, Option<(ContentId, FileType)>>)>,
+    parent: Option<ManifestUnodeId>,
+    unode_version: UnodeVersion,
+) -> Result<HashMap<ChangesetId, ManifestUnodeId>, Error> {
+    let blobstore = derivation_ctx.blobstore();
+
+    let manifest_changes = file_changes
+        .into_iter()
+        .map(|(cs_id, file_changes)| ManifestChanges {
+            cs_id,
+            changes: file_changes.into_iter().collect(),
+        })
+        .collect::<Vec<_>>();
+
+    let res = derive_manifests_for_simple_stack_of_commits(
+        ctx.clone(),
+        blobstore.clone(),
+        parent,
+        manifest_changes,
+        {
+            cloned!(ctx, blobstore);
+            move |tree_info, cs_id| {
+                create_unode_manifest(
+                    ctx.clone(),
+                    cs_id,
+                    blobstore.clone(),
+                    None,
+                    tree_info,
+                    unode_version,
+                )
+            }
+        },
+        {
+            cloned!(ctx, blobstore);
+            move |leaf_info, cs_id| {
+                create_unode_file(
+                    ctx.clone(),
+                    cs_id,
+                    blobstore.clone(),
+                    None,
+                    leaf_info,
+                    unode_version,
+                )
+            }
+        },
+    )
+    .await?;
+
+    Ok(res.into_iter().collect())
+}
 
 /// Derives unode manifests for bonsai changeset `cs_id` given parent unode manifests.
 /// Note that `derive_manifest()` does a lot of the heavy lifting for us, and this crate has to

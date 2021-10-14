@@ -5,19 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use crate::derive::derive_unode_manifest;
-use anyhow::{Error, Result};
+use crate::derive::{derive_unode_manifest, derive_unode_manifest_stack};
+use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, Loadable};
 use bytes::Bytes;
 use context::CoreContext;
+use derived_data::batch::{split_bonsais_in_linear_stacks, FileConflicts};
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
-use futures::TryFutureExt;
+use futures::{future::try_join_all, TryFutureExt};
 use metaconfig_types::UnodeVersion;
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,
 };
+use slog::debug;
+use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -88,6 +91,88 @@ impl BonsaiDerivable for RootUnodeManifestId {
         .await
     }
 
+    async fn derive_batch(
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        bonsais: Vec<BonsaiChangeset>,
+        _gap_size: Option<usize>,
+    ) -> Result<HashMap<ChangesetId, Self>> {
+        if bonsais.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let mut res = HashMap::new();
+        if !tunables::tunables().get_unodes_use_batch_derivation() {
+            for bonsai in bonsais {
+                let csid = bonsai.get_changeset_id();
+                let parents = derivation_ctx
+                    .fetch_unknown_parents(ctx, Some(&res), &bonsai)
+                    .await?;
+                let derived = Self::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
+                res.insert(csid, derived);
+            }
+            return Ok(res);
+        }
+
+        let batch_len = bonsais.len();
+        let stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::ChangeDelete)?;
+
+        let unode_version = derivation_ctx.config().unode_version;
+        for stack in stacks {
+            let derived_parents = try_join_all(
+                stack
+                    .parents
+                    .into_iter()
+                    .map(|p| derivation_ctx.fetch_unknown_dependency::<Self>(&ctx, Some(&res), p)),
+            )
+            .await?;
+            if let Some(item) = stack.file_changes.first() {
+                debug!(
+                    ctx.logger(),
+                    "derive unode batch at {} (stack of {} from batch of {})",
+                    item.cs_id.to_hex(),
+                    stack.file_changes.len(),
+                    batch_len,
+                );
+            }
+
+            if derived_parents.len() > 1 {
+                // we can't derive stack for a merge commit,
+                // so let's derive it without batching
+                for item in stack.file_changes {
+                    let bonsai = item.cs_id.load(&ctx, derivation_ctx.blobstore()).await?;
+                    let parents = derivation_ctx
+                        .fetch_unknown_parents(ctx, Some(&res), &bonsai)
+                        .await?;
+                    let derived = Self::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
+                    res.insert(item.cs_id, derived);
+                }
+            } else {
+                let first = stack.file_changes.first().map(|item| item.cs_id);
+                let last = stack.file_changes.last().map(|item| item.cs_id);
+                let derived = derive_unode_manifest_stack(
+                    ctx,
+                    derivation_ctx,
+                    stack
+                        .file_changes
+                        .into_iter()
+                        .map(|item| (item.cs_id, item.per_commit_file_changes))
+                        .collect(),
+                    derived_parents
+                        .get(0)
+                        .map(|mf_id| *mf_id.manifest_unode_id()),
+                    unode_version,
+                )
+                .await
+                .with_context(|| format!("failed deriving stack of {:?} to {:?}", first, last,))?;
+
+                res.extend(derived.into_iter().map(|(csid, mf_id)| (csid, Self(mf_id))));
+            }
+        }
+
+        Ok(res)
+    }
+
     async fn store_mapping(
         self,
         ctx: &CoreContext,
@@ -137,17 +222,21 @@ mod test {
     use borrowed::borrowed;
     use cloned::cloned;
     use derived_data::BonsaiDerived;
+    use derived_data_manager::BatchDeriveOptions;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::{compat::Stream01CompatExt, future, Future, Stream, TryStreamExt};
+    use futures::{compat::Stream01CompatExt, Future, FutureExt, Stream, TryStreamExt};
     use manifest::Entry;
+    use maplit::hashmap;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use mononoke_types::ChangesetId;
+    use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
+    use tests_utils::CreateCommitContext;
 
     async fn fetch_manifest_by_cs_id(
         ctx: &CoreContext,
@@ -162,21 +251,20 @@ mod test {
         repo: &BlobRepo,
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
-    ) -> Result<(), Error> {
-        let unode_entries = {
-            async move {
-                let mf_unode_id = RootUnodeManifestId::derive(ctx, repo, bcs_id)
-                    .await?
-                    .manifest_unode_id()
-                    .clone();
-                let mut paths = iterate_all_manifest_entries(ctx, repo, Entry::Tree(mf_unode_id))
-                    .map_ok(|(path, _)| path)
-                    .try_collect::<Vec<_>>()
-                    .await?;
-                paths.sort();
-                Ok(paths)
-            }
-        };
+    ) -> Result<RootUnodeManifestId, Error> {
+        let (unode_entries, mf_unode_id) = async move {
+            let mf_unode_id = RootUnodeManifestId::derive(ctx, repo, bcs_id)
+                .await?
+                .manifest_unode_id()
+                .clone();
+            let mut paths = iterate_all_manifest_entries(ctx, repo, Entry::Tree(mf_unode_id))
+                .map_ok(|(path, _)| path)
+                .try_collect::<Vec<_>>()
+                .await?;
+            paths.sort();
+            Result::<_, Error>::Ok((paths, RootUnodeManifestId(mf_unode_id)))
+        }
+        .await?;
 
         let filenode_entries = async move {
             let root_mf_id = fetch_manifest_by_cs_id(ctx, repo, hg_cs_id).await?;
@@ -185,17 +273,16 @@ mod test {
                 .try_collect::<Vec<_>>()
                 .await?;
             paths.sort();
-            Ok(paths)
+            Result::<_, Error>::Ok(paths)
         };
 
-        future::try_join(unode_entries, filenode_entries)
-            .map_ok(|(unode_entries, filenode_entries)| {
-                assert_eq!(unode_entries, filenode_entries);
-            })
-            .await
+        let filenode_entries = filenode_entries.await?;
+        assert_eq!(unode_entries, filenode_entries);
+
+        Ok(mf_unode_id)
     }
 
-    fn all_commits(
+    fn all_commits_descendants_to_ancestors(
         ctx: CoreContext,
         repo: BlobRepo,
     ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
@@ -211,40 +298,187 @@ mod test {
                             let hg_cs_id = repo
                                 .get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
                                 .await?;
-                            Ok((new_bcs_id, hg_cs_id))
+                            Result::<_, Error>::Ok((new_bcs_id, hg_cs_id))
                         }
                     })
             })
             .try_flatten_stream()
     }
 
-    async fn verify_repo<F>(fb: FacebookInit, repo: F)
+    async fn verify_repo<F, Fut>(fb: FacebookInit, repo_func: F)
     where
-        F: Future<Output = BlobRepo>,
+        F: Fn() -> Fut,
+        Fut: Future<Output = BlobRepo>,
     {
         let ctx = CoreContext::test_mock(fb);
-        let repo = repo.await;
+        let repo = repo_func().await;
         println!("Processing {}", repo.name());
         borrowed!(ctx, repo);
 
-        all_commits(ctx.clone(), repo.clone())
-            .and_then(move |(bcs_id, hg_cs_id)| verify_unode(&ctx, &repo, bcs_id, hg_cs_id))
+        let commits_desc_to_anc = all_commits_descendants_to_ancestors(ctx.clone(), repo.clone())
+            .and_then(move |(bcs_id, hg_cs_id)| async move {
+                let unode_id = verify_unode(&ctx, &repo, bcs_id, hg_cs_id).await?;
+                Ok((bcs_id, hg_cs_id, unode_id))
+            })
             .try_collect::<Vec<_>>()
             .await
             .unwrap();
+
+        // Recreate repo from scratch and derive everything again
+        let repo = repo_func().await;
+        let options = BatchDeriveOptions::Parallel { gap_size: None };
+        let csids = commits_desc_to_anc
+            .clone()
+            .into_iter()
+            .rev()
+            .map(|(cs_id, _, _)| cs_id)
+            .collect::<Vec<_>>();
+        let manager = repo.repo_derived_data().manager();
+
+        let tunables = tunables::MononokeTunables::default();
+        tunables.update_bools(&hashmap! {"unodes_use_batch_derivation".to_string() => true});
+
+        let batch_derived = tunables::with_tunables_async(
+            tunables,
+            async {
+                manager
+                    .backfill_batch::<RootUnodeManifestId>(&ctx, csids.clone(), options, None)
+                    .await?;
+                manager
+                    .fetch_derived_batch::<RootUnodeManifestId>(&ctx, csids, None)
+                    .await
+            }
+            .boxed(),
+        )
+        .await
+        .unwrap();
+
+        for (cs_id, hg_cs_id, unode_id) in commits_desc_to_anc.into_iter().rev() {
+            println!("{} {}", cs_id, hg_cs_id);
+            println!("{:?} {:?}", batch_derived.get(&cs_id), Some(&unode_id));
+            assert_eq!(batch_derived.get(&cs_id), Some(&unode_id));
+        }
     }
 
     #[fbinit::test]
-    async fn test_derive_data(fb: FacebookInit) {
-        verify_repo(fb, linear::getrepo(fb)).await;
-        verify_repo(fb, branch_even::getrepo(fb)).await;
-        verify_repo(fb, branch_uneven::getrepo(fb)).await;
-        verify_repo(fb, branch_wide::getrepo(fb)).await;
-        verify_repo(fb, many_diamonds::getrepo(fb)).await;
-        verify_repo(fb, many_files_dirs::getrepo(fb)).await;
-        verify_repo(fb, merge_even::getrepo(fb)).await;
-        verify_repo(fb, merge_uneven::getrepo(fb)).await;
-        verify_repo(fb, unshared_merge_even::getrepo(fb)).await;
-        verify_repo(fb, unshared_merge_uneven::getrepo(fb)).await;
+    async fn test_unode_derivation_on_multiple_repos(fb: FacebookInit) {
+        verify_repo(fb, || linear::getrepo(fb)).await;
+        verify_repo(fb, || branch_even::getrepo(fb)).await;
+        verify_repo(fb, || branch_uneven::getrepo(fb)).await;
+        verify_repo(fb, || branch_wide::getrepo(fb)).await;
+        verify_repo(fb, || many_diamonds::getrepo(fb)).await;
+        verify_repo(fb, || many_files_dirs::getrepo(fb)).await;
+        verify_repo(fb, || merge_even::getrepo(fb)).await;
+        verify_repo(fb, || merge_uneven::getrepo(fb)).await;
+        verify_repo(fb, || unshared_merge_even::getrepo(fb)).await;
+        verify_repo(fb, || unshared_merge_uneven::getrepo(fb)).await;
+        // Create a repo with a few empty commits in a row
+        verify_repo(fb, || async {
+            let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+            let ctx = CoreContext::test_mock(fb);
+            let root_empty = CreateCommitContext::new_root(&ctx, &repo)
+                .commit()
+                .await
+                .unwrap();
+            let first_empty = CreateCommitContext::new(&ctx, &repo, vec![root_empty])
+                .commit()
+                .await
+                .unwrap();
+            let second_empty = CreateCommitContext::new(&ctx, &repo, vec![first_empty])
+                .commit()
+                .await
+                .unwrap();
+            let first_non_empty = CreateCommitContext::new(&ctx, &repo, vec![second_empty])
+                .add_file("file", "a")
+                .commit()
+                .await
+                .unwrap();
+            let third_empty = CreateCommitContext::new(&ctx, &repo, vec![first_non_empty])
+                .delete_file("file")
+                .commit()
+                .await
+                .unwrap();
+            let fourth_empty = CreateCommitContext::new(&ctx, &repo, vec![third_empty])
+                .commit()
+                .await
+                .unwrap();
+            let fifth_empty = CreateCommitContext::new(&ctx, &repo, vec![fourth_empty])
+                .commit()
+                .await
+                .unwrap();
+
+            tests_utils::bookmark(&ctx, &repo, "master")
+                .set_to(fifth_empty)
+                .await
+                .unwrap();
+            repo
+        })
+        .await;
+
+        verify_repo(fb, || async {
+            let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+            let ctx = CoreContext::test_mock(fb);
+            let root = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("dir/subdir/to_replace", "one")
+                .add_file("dir/subdir/file", "content")
+                .add_file("somefile", "somecontent")
+                .commit()
+                .await
+                .unwrap();
+            let modify_unrelated = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("dir/subdir/file", "content2")
+                .delete_file("somefile")
+                .commit()
+                .await
+                .unwrap();
+            let replace_file_with_dir =
+                CreateCommitContext::new(&ctx, &repo, vec![modify_unrelated])
+                    .delete_file("dir/subdir/to_replace")
+                    .add_file("dir/subdir/to_replace/file", "newcontent")
+                    .commit()
+                    .await
+                    .unwrap();
+
+            tests_utils::bookmark(&ctx, &repo, "master")
+                .set_to(replace_file_with_dir)
+                .await
+                .unwrap();
+            repo
+        })
+        .await;
+
+        // Weird case - let's delete a file that was already replaced with a directory
+        verify_repo(fb, || async {
+            let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+            let ctx = CoreContext::test_mock(fb);
+            let root = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("dir/subdir/to_replace", "one")
+                .commit()
+                .await
+                .unwrap();
+            let replace_file_with_dir = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .delete_file("dir/subdir/to_replace")
+                .add_file("dir/subdir/to_replace/file", "newcontent")
+                .commit()
+                .await
+                .unwrap();
+            let noop_delete = CreateCommitContext::new(&ctx, &repo, vec![replace_file_with_dir])
+                .delete_file("dir/subdir/to_replace")
+                .commit()
+                .await
+                .unwrap();
+            let second_noop_delete = CreateCommitContext::new(&ctx, &repo, vec![noop_delete])
+                .delete_file("dir/subdir/to_replace")
+                .commit()
+                .await
+                .unwrap();
+
+            tests_utils::bookmark(&ctx, &repo, "master")
+                .set_to(second_noop_delete)
+                .await
+                .unwrap();
+            repo
+        })
+        .await;
     }
 }

@@ -17,6 +17,7 @@ pub use crate::ordered_ops::ManifestOrderedOps;
 pub use crate::select::PathOrPrefix;
 pub use crate::types::{Entry, Manifest, OrderedManifest, PathTree, Traced};
 pub use blobstore::StoreLoadable;
+pub use derive_batch::{derive_manifests_for_simple_stack_of_commits, ManifestChanges};
 
 mod bonsai;
 mod derive;
