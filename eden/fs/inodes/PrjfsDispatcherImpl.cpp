@@ -325,12 +325,14 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
             //
             // This should be *extremely* rare, for now let's just let it
             // error out.
-            return oldParentTreePtr->rename(
-                oldPath.basename(),
-                newParentTreePtr,
-                newPath.basename(),
-                InvalidationRequired::No,
-                context);
+            return oldParentTreePtr
+                ->rename(
+                    oldPath.basename(),
+                    newParentTreePtr,
+                    newPath.basename(),
+                    InvalidationRequired::No,
+                    context)
+                .semi();
           });
 }
 

@@ -1450,7 +1450,7 @@ class TreeInode::TreeRenameLocks {
   PathMap<DirEntry>::iterator destChildIter_;
 };
 
-Future<Unit> TreeInode::rename(
+ImmediateFuture<Unit> TreeInode::rename(
     PathComponentPiece name,
     TreeInodePtr destParent,
     PathComponentPiece destName,
@@ -1458,10 +1458,12 @@ Future<Unit> TreeInode::rename(
     ObjectFetchContext& context) {
 #ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
-    return makeFuture<Unit>(InodeError(EPERM, inodePtrFromThis(), name));
+    return ImmediateFuture<Unit>{
+        folly::Try<Unit>{InodeError{EPERM, inodePtrFromThis(), name}}};
   }
   if (destParent->getNodeId() == getMount()->getDotEdenInodeNumber()) {
-    return makeFuture<Unit>(InodeError(EPERM, destParent, destName));
+    return ImmediateFuture<Unit>{
+        folly::Try<Unit>{InodeError{EPERM, destParent, destName}}};
   }
 #endif
   validatePathComponentLength(destName);
@@ -1484,7 +1486,8 @@ Future<Unit> TreeInode::rename(
     auto srcIter = locks.srcContents()->find(name);
     if (srcIter == locks.srcContents()->end()) {
       // The source path does not exist.  Fail the rename.
-      return makeFuture<Unit>(InodeError(ENOENT, inodePtrFromThis(), name));
+      return ImmediateFuture<Unit>{
+          folly::Try<Unit>{InodeError{ENOENT, inodePtrFromThis(), name}}};
     }
     DirEntry& srcEntry = srcIter->second;
 
@@ -1501,14 +1504,16 @@ Future<Unit> TreeInode::rename(
           XLOG(DBG4) << "attempted to rename directory " << getLogPath() << "/"
                      << name << " over file " << destParent->getLogPath() << "/"
                      << destName;
-          return makeFuture<Unit>(InodeError(ENOTDIR, destParent, destName));
+          return ImmediateFuture<Unit>{
+              folly::Try<Unit>{InodeError{ENOTDIR, destParent, destName}}};
         } else if (
             locks.destChild() != srcEntry.getInode() &&
             !locks.destChildIsEmpty()) {
           XLOG(DBG4) << "attempted to rename directory " << getLogPath() << "/"
                      << name << " over non-empty directory "
                      << destParent->getLogPath() << "/" << destName;
-          return makeFuture<Unit>(InodeError(ENOTEMPTY, destParent, destName));
+          return ImmediateFuture<Unit>{
+              folly::Try<Unit>{InodeError{ENOTEMPTY, destParent, destName}}};
         }
       }
     } else {
@@ -1518,7 +1523,8 @@ Future<Unit> TreeInode::rename(
         XLOG(DBG4) << "attempted to rename file " << getLogPath() << "/" << name
                    << " over directory " << destParent->getLogPath() << "/"
                    << destName;
-        return makeFuture<Unit>(InodeError(EISDIR, destParent, destName));
+        return ImmediateFuture<Unit>{
+            folly::Try<Unit>{InodeError{EISDIR, destParent, destName}}};
       }
     }
 
@@ -1527,7 +1533,8 @@ Future<Unit> TreeInode::rename(
       XLOG(DBG4) << "attempted to rename file " << getLogPath() << "/" << name
                  << " into deleted directory " << destParent->getLogPath()
                  << " ( as " << destName << ")";
-      return makeFuture<Unit>(InodeError(ENOENT, destParent));
+      return ImmediateFuture<Unit>{
+          folly::Try<Unit>{InodeError{ENOENT, destParent}}};
     }
 
     // Check to see if we need to load the source or destination inodes
@@ -1538,14 +1545,7 @@ Future<Unit> TreeInode::rename(
     // rename.
     if (!needSrc && !needDest) {
       return doRename(
-                 std::move(locks),
-                 name,
-                 srcIter,
-                 destParent,
-                 destName,
-                 invalidate)
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          std::move(locks), name, srcIter, destParent, destName, invalidate);
     }
 
     // If we are still here we have to load either the source or destination,
@@ -1571,26 +1571,19 @@ Future<Unit> TreeInode::rename(
   };
 
   if (needSrc && needDest) {
-    auto srcFuture = getOrLoadChild(name, context)
-                         .semi()
-                         .via(&folly::QueuedImmediateExecutor::instance());
-    auto destFuture = destParent->getOrLoadChild(destName, context)
-                          .semi()
-                          .via(&folly::QueuedImmediateExecutor::instance());
-    // folly::collect is safe here because onLoadFinish has captured strong
-    // references.
-    return folly::collectUnsafe(srcFuture, destFuture)
-        .thenValue(onLoadFinished);
+    auto srcFuture = getOrLoadChild(name, context);
+    auto destFuture = destParent->getOrLoadChild(destName, context);
+
+    return std::move(srcFuture).thenValue(
+        [destFuture = std::move(destFuture),
+         onLoadFinished = std::move(onLoadFinished)](auto&&) mutable {
+          return std::move(destFuture).thenValue(std::move(onLoadFinished));
+        });
   } else if (needSrc) {
-    return getOrLoadChild(name, context)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance())
-        .thenValue(onLoadFinished);
+    return getOrLoadChild(name, context).thenValue(onLoadFinished);
   } else {
     XCHECK(needDest);
     return destParent->getOrLoadChild(destName, context)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance())
         .thenValue(onLoadFinished);
   }
 }

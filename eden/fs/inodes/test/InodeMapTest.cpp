@@ -342,7 +342,7 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
-  ASSERT_TRUE(renameFuture.isReady());
+  std::move(renameFuture).get(1ms);
   EXPECT_FALSE(fileFuture.isReady());
 
   // Now mark the rest of the tree ready

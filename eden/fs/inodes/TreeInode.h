@@ -149,7 +149,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   InodeNumber getChildInodeNumber(PathComponentPiece name);
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> rename(
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> rename(
       PathComponentPiece name,
       TreeInodePtr newParent,
       PathComponentPiece newName,
