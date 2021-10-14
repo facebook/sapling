@@ -82,7 +82,7 @@ impl Logger {
 
     fn write(&self, e: &Entry) -> Result<()> {
         if let Some(storage) = &self.storage {
-            let mut storage = storage.lock();
+            let storage = storage.lock();
             storage.save(e)?;
         }
 
@@ -93,7 +93,7 @@ impl Logger {
 /// Entry represents one runlog entry (i.e. a single hg command
 /// execution).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-struct Entry {
+pub struct Entry {
     id: String,
     command: Vec<String>,
     pid: u64,

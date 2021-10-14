@@ -25,6 +25,7 @@ commands! {
     mod scmstorereplay;
     mod python;
     mod racyoutput;
+    mod runlog;
     mod segmentclone;
     mod segmentgraph;
     mod segmentpull;

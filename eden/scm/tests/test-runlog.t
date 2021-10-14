@@ -302,3 +302,40 @@ Test we always clean up with chance=1
   $ hg root > /dev/null
   $ ls .hg/runlog/* | wc -l | sed -e 's/ //g'
   2
+
+Test runlog CLI command
+
+Show completed entries (i.e. exited "root" entry)
+  $ setconfig runlog.cleanup_chance=0
+  $ rm -f .hg/runlog/*
+  $ hg root > /dev/null
+  $ hg debugrunlog --ended
+  Entry {
+      id: ".*", (re)
+      command: [
+          "root",
+      ],
+      pid: \d+, (re)
+      start_time: .*, (re)
+      end_time: Some(
+          .*, (re)
+      ),
+      exit_code: Some(
+          0,
+      ),
+      progress: [],
+  }
+
+Show only running commands (i.e. "debugrunlog" command itself)
+  $ hg debugrunlog
+  Entry {
+      id: ".*", (re)
+      command: [
+          "debugrunlog",
+      ],
+      pid: \d+, (re)
+      start_time: .*, (re)
+      end_time: None,
+      exit_code: None,
+      progress: [],
+  }

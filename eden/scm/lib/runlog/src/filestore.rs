@@ -44,7 +44,7 @@ impl FileStore {
         Ok(FileStore { dir, lock_file })
     }
 
-    pub(crate) fn save(&mut self, e: &Entry) -> Result<()> {
+    pub(crate) fn save(&self, e: &Entry) -> Result<()> {
         // Retry a few times since renaming file fails on windows if
         // destination path exists and is open.
         let mut retries = 3;
@@ -58,7 +58,7 @@ impl FileStore {
         }
     }
 
-    fn save_attempt(&mut self, e: &Entry) -> Result<()> {
+    fn save_attempt(&self, e: &Entry) -> Result<()> {
         // Write to temp file and rename to avoid incomplete writes.
         let tmp = tempfile::NamedTempFile::new_in(&self.dir)?;
 
@@ -72,9 +72,7 @@ impl FileStore {
     }
 
     pub(crate) fn cleanup<P: AsRef<Path>>(dir: P, threshold: Duration) -> Result<()> {
-        if !dir.as_ref().exists() {
-            return Ok(());
-        }
+        create_shared_dir(&dir)?;
 
         for dir_entry in fs::read_dir(dir)? {
             let path = dir_entry?.path();
@@ -89,17 +87,10 @@ impl FileStore {
                 continue;
             }
 
-            match fs::File::open(path.with_extension(LOCK_EXT)) {
-                Ok(f) => {
-                    // Command process is still running - don't clean up.
-                    if f.try_lock_shared().is_err() {
-                        continue;
-                    }
-                }
-                Err(err) if err.kind() == io::ErrorKind::NotFound => {}
-                Err(err) => return Err(Error::new(err)),
-            };
-
+            // Command process is still running - don't clean up.
+            if is_locked(&path)? {
+                continue;
+            }
 
             // Avoid trying to read the contents so we can clean up
             // incomplete files.
@@ -114,6 +105,34 @@ impl FileStore {
 
         Ok(())
     }
+
+    // Iterates each entry, yielding the entry and whether the
+    // associated command is still running.
+    pub fn entry_iter<P: AsRef<Path>>(
+        dir: P,
+    ) -> Result<impl Iterator<Item = Result<(Entry, bool), Error>>> {
+        create_shared_dir(&dir)?;
+
+        Ok(fs::read_dir(&dir)?.filter_map(|file| match file {
+            Ok(file) => {
+                // We only care about ".json" files.
+                match file.path().extension().and_then(OsStr::to_str) {
+                    Some(ext) if ext == JSON_EXT => {}
+                    _ => return None,
+                };
+
+                match fs::File::open(file.path()) {
+                    Ok(f) => Some(
+                        serde_json::from_reader(&f)
+                            .map_err(Error::new)
+                            .and_then(|e| Ok((e, is_locked(file.path())?))),
+                    ),
+                    Err(err) => Some(Err(Error::new(err))),
+                }
+            }
+            Err(err) => Some(Err(Error::new(err))),
+        }))
+    }
 }
 
 fn remove_file_ignore_missing<P: AsRef<Path>>(path: P) -> io::Result<()> {
@@ -121,6 +140,16 @@ fn remove_file_ignore_missing<P: AsRef<Path>>(path: P) -> io::Result<()> {
         io::ErrorKind::NotFound => Ok(()),
         _ => Err(err),
     })
+}
+
+// Return whether path's corresponding locked file is exclusively
+// locked (by running command). Return false if lock file doesn't exist.
+fn is_locked<P: AsRef<Path>>(path: P) -> Result<bool> {
+    match fs::File::open(path.as_ref().with_extension(LOCK_EXT)) {
+        Ok(f) => Ok(f.try_lock_shared().is_err()),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(err) => Err(Error::new(err)),
+    }
 }
 
 #[cfg(test)]
@@ -134,7 +163,7 @@ mod tests {
         let td = tempdir().unwrap();
 
         let fs_dir = td.path().join("banana");
-        let mut fs = FileStore::new(fs_dir.clone(), "some_id").unwrap();
+        let fs = FileStore::new(fs_dir.clone(), "some_id").unwrap();
         // Make sure FileStore creates directory automatically.
         assert!(fs_dir.exists());
 
@@ -163,7 +192,7 @@ mod tests {
         let entry_path = td.path().join(&e.id).with_extension(JSON_EXT);
 
         {
-            let mut fs = FileStore::new(td.path().into(), &e.id).unwrap();
+            let fs = FileStore::new(td.path().into(), &e.id).unwrap();
             fs.save(&e).unwrap();
 
             // Still locked, don't clean up.
@@ -178,5 +207,29 @@ mod tests {
         // Met threshold - delete.
         FileStore::cleanup(&td, Duration::ZERO).unwrap();
         assert!(!entry_path.exists());
+    }
+
+    #[test]
+    fn test_iter() {
+        let td = tempdir().unwrap();
+
+        let a = Entry::new(vec!["a".to_string()]);
+        let a_fs = FileStore::new(td.path().into(), &a.id).unwrap();
+        a_fs.save(&a).unwrap();
+
+
+        let b = Entry::new(vec!["b".to_string()]);
+        {
+            let b_fs = FileStore::new(td.path().into(), &b.id).unwrap();
+            b_fs.save(&b).unwrap();
+        }
+
+        let mut got: Vec<(Entry, bool)> = FileStore::entry_iter(td.path())
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        got.sort_by(|a, b| a.0.command[0].cmp(&b.0.command[0]));
+
+        assert_eq!(vec![(a, true), (b, false)], got)
     }
 }

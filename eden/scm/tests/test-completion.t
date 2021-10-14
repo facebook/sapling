@@ -175,6 +175,7 @@ Show debug commands if there are no other candidates
   debugresetheads
   debugrevlog
   debugrevspec
+  debugrunlog
   debugrunshell
   debugscmstore
   debugscmstorereplay
@@ -218,8 +219,6 @@ Do not show the alias of a debug command if there are other candidates
 Show the alias of a debug command if there are no other candidates
   $ hg debugcomplete rawc
   
-
-
 
 Show the global options
   $ hg debugcomplete --options | LC_ALL=C sort
@@ -491,6 +490,7 @@ Show all commands + options
   debugresetheads: 
   debugrevlog: changelog, manifest, dir, dump
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
+  debugrunlog: ended, template
   debugrunshell: cmd
   debugscmstore: mode, path, python
   debugscmstorereplay: path

@@ -1060,6 +1060,7 @@ Test list of internal help commands
                  reset heads of repo so it looks like after a fresh clone
    debugrevlog   show data and statistics about a revlog
    debugrevspec  parse and apply a revision specification
+   debugrunlog   display runlog entries
    debugrunshell
                  run a shell command
    debugscmstore
