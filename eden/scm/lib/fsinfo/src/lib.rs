@@ -357,6 +357,7 @@ mod macos {
                 "edenfs_eden" => FsType::EDENFS,
                 "macfuse_eden" => FsType::EDENFS,
                 "osxfuse_eden" => FsType::EDENFS,
+                "edenfs:" => FsType::EDENFS,
                 _ => FsType::Unknown(value.to_string()),
             }
         }
