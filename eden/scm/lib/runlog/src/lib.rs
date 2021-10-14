@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use clidispatch::repo::Repo;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Logger logs runtime information for a single hg command invocation.
 pub struct Logger {
@@ -30,19 +31,30 @@ impl Logger {
     /// Initialize a new logger and write out initial runlog entry.
     /// Respects runlog.enable config field.
     pub fn new(repo: Option<&Repo>, command: Vec<String>) -> Result<Arc<Self>> {
-        let mut logger = Self {
-            entry: Mutex::new(Entry::new(command)),
-            storage: None,
-        };
+        let entry = Entry::new(command);
+        let mut storage: Option<Mutex<FileStore>> = None;
 
         if let Some(repo) = repo {
             if repo.config().get_or("runlog", "enable", || false)? {
-                logger.storage = Some(Mutex::new(FileStore::new(
-                    repo.shared_dot_hg_path().join("runlog"),
-                )?))
+                let dir = repo.shared_dot_hg_path().join("runlog");
+
+                // Probabilistically clean up old entries to avoid doing the work every time.
+                let cleanup_chance = repo.config().get_or("runlog", "cleanup_chance", || 0.01)?;
+                if cleanup_chance > rand::thread_rng().gen::<f64>() {
+                    let threshold = repo
+                        .config()
+                        .get_or("runlog", "cleanup_threshold", || 3600.0)?;
+                    FileStore::cleanup(&dir, Duration::from_secs_f64(threshold))?;
+                }
+
+                storage = Some(Mutex::new(FileStore::new(dir, &entry.id)?))
             }
         }
 
+        let logger = Self {
+            entry: Mutex::new(entry),
+            storage,
+        };
         logger.write(&logger.entry.lock())?;
 
         return Ok(Arc::new(logger));
@@ -70,7 +82,7 @@ impl Logger {
 
     fn write(&self, e: &Entry) -> Result<()> {
         if let Some(storage) = &self.storage {
-            let storage = storage.lock();
+            let mut storage = storage.lock();
             storage.save(e)?;
         }
 

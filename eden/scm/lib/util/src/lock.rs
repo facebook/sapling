@@ -20,11 +20,8 @@ pub struct PathLock {
 impl PathLock {
     /// Take an exclusive lock on `path`. The lock file will be created on
     /// demand.
-    pub fn exclusive(path: &Path) -> io::Result<Self> {
-        let file = fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(&path)?;
+    pub fn exclusive<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+        let file = fs::OpenOptions::new().write(true).create(true).open(path)?;
         file.lock_exclusive()?;
         Ok(PathLock { file })
     }

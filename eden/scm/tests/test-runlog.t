@@ -4,7 +4,7 @@
   $ setconfig extensions.rustprogresstest="$TESTDIR/runlogtest.py" runlog.enable=True runlog.progress_refresh=0
 
   $ waitforrunlog() {
-  >   while ! cat .hg/runlog/* 2> /dev/null; do
+  >   while ! cat .hg/runlog/*.json 2> /dev/null; do
   >     sleep 0.001
   >   done
   >   rm .hg/runlog/*
@@ -288,3 +288,17 @@ Make sure runlog works with rust renderer.
     "exit_code": 0,
     "progress": []
   } (no-eol)
+
+Test we don't clean up entries with chance=0
+  $ setconfig runlog.cleanup_chance=0 runlog.cleanup_threshold=0
+  $ rm -f .hg/runlog/*
+  $ hg root > /dev/null
+  $ hg root > /dev/null
+  $ ls .hg/runlog/* | wc -l | sed -e 's/ //g'
+  4
+
+Test we always clean up with chance=1
+  $ setconfig runlog.cleanup_chance=1
+  $ hg root > /dev/null
+  $ ls .hg/runlog/* | wc -l | sed -e 's/ //g'
+  2
