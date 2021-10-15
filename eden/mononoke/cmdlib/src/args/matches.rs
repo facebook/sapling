@@ -58,8 +58,9 @@ use super::{
         MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT,
         MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT,
         MYSQL_SQLBLOB_POOL_LIMIT, MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM,
-        PUT_MEAN_DELAY_SECS_ARG, PUT_STDDEV_DELAY_SECS_ARG, READ_BURST_BYTES_ARG, READ_BYTES_ARG,
-        READ_CHAOS_ARG, READ_QPS_ARG, RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS,
+        NO_DEFAULT_SCUBA_DATASET_ARG, PUT_MEAN_DELAY_SECS_ARG, PUT_STDDEV_DELAY_SECS_ARG,
+        READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG,
+        RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS, SCUBA_DATASET_ARG, SCUBA_LOG_FILE_ARG,
         TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG,
         WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG, WRITE_BYTES_ARG, WRITE_CHAOS_ARG,
         WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
@@ -366,10 +367,10 @@ fn create_scuba_sample_builder(
     app_data: &MononokeAppData,
     observability_context: &ObservabilityContext,
 ) -> Result<MononokeScubaSampleBuilder> {
-    let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of("scuba-dataset") {
+    let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of(SCUBA_DATASET_ARG) {
         MononokeScubaSampleBuilder::new(fb, scuba_dataset)
     } else if let Some(default_scuba_dataset) = app_data.default_scuba_dataset.as_ref() {
-        if matches.is_present("no-default-scuba-dataset") {
+        if matches.is_present(NO_DEFAULT_SCUBA_DATASET_ARG) {
             MononokeScubaSampleBuilder::with_discard()
         } else {
             MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)
@@ -377,7 +378,7 @@ fn create_scuba_sample_builder(
     } else {
         MononokeScubaSampleBuilder::with_discard()
     };
-    if let Some(scuba_log_file) = matches.value_of("scuba-log-file") {
+    if let Some(scuba_log_file) = matches.value_of(SCUBA_LOG_FILE_ARG) {
         scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
     }
     let mut scuba_logger = scuba_logger

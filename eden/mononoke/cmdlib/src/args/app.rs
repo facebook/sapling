@@ -80,6 +80,10 @@ pub const LOG_INCLUDE_TAG: &str = "log-include-tag";
 pub const LOG_EXCLUDE_TAG: &str = "log-exclude-tag";
 pub const LOGVIEW_CATEGORY: &str = "logview-category";
 pub const LOGVIEW_ADDITIONAL_LEVEL_FILTER: &str = "logview-additional-level-filter";
+pub const SCUBA_DATASET_ARG: &str = "scuba-dataset";
+pub const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
+pub const NO_DEFAULT_SCUBA_DATASET_ARG: &str = "no-default-scuba-dataset";
+
 // Argument, responsible for instantiation of `ObservabilityContext::Dynamic`
 pub const WITH_DYNAMIC_OBSERVABILITY: &str = "with-dynamic-observability";
 
@@ -1069,22 +1073,22 @@ fn add_shutdown_timeout_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>, has_default: bool) -> App<'a, 'b> {
     let mut app = app
         .arg(
-            Arg::with_name("scuba-dataset")
-                .long("scuba-dataset")
+            Arg::with_name(SCUBA_DATASET_ARG)
+                .long(SCUBA_DATASET_ARG)
                 .takes_value(true)
                 .help("The name of the scuba dataset to log to"),
         )
         .arg(
-            Arg::with_name("scuba-log-file")
-                .long("scuba-log-file")
+            Arg::with_name(SCUBA_LOG_FILE_ARG)
+                .long(SCUBA_LOG_FILE_ARG)
                 .takes_value(true)
-                .help("A log file to write Scuba logs to (primarily useful in testing)"),
+                .help("A log file to write JSON Scuba logs to (primarily useful in testing)"),
         );
 
     if has_default {
         app = app.arg(
-            Arg::with_name("no-default-scuba-dataset")
-                .long("no-default-scuba-dataset")
+            Arg::with_name(NO_DEFAULT_SCUBA_DATASET_ARG)
+                .long(NO_DEFAULT_SCUBA_DATASET_ARG)
                 .takes_value(false)
                 .help("Do not to the default scuba dataset for this app"),
         )
