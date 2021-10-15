@@ -18,14 +18,11 @@ use http::Uri;
 use hyper::{body, client::connect::HttpConnector, Client, StatusCode};
 use hyper_openssl::HttpsConnector;
 use mononoke_types::hash;
-use pin_project::pin_project;
 use rand::{thread_rng, Rng};
 use slog::{error, warn};
 use std::convert::TryInto;
-use std::pin::Pin;
 use std::str;
 use std::sync::Arc;
-use std::task::{Context, Poll};
 use tokio::sync::Semaphore;
 use tokio::time::{sleep, Duration};
 /// We will not try to parse any file bigger then this.
@@ -106,38 +103,6 @@ fn parse_lfs_metafile(gitblob: &[u8], gitid: &Oid) -> Option<LfsMetaData> {
     })
 }
 
-/// A stream that holds a object until it is destructed.
-/// Used here to carry the sempahore lock limiting the amount
-/// of simultainous connections we do to the LFS server.
-#[pin_project]
-struct StreamWithObject<St, O> {
-    #[pin]
-    stream: St,
-    object: O,
-}
-
-impl<St, O> StreamWithObject<St, O> {
-    pub fn new(stream: St, object: O) -> Self {
-        Self { stream, object }
-    }
-}
-
-impl<St, O> Stream for StreamWithObject<St, O>
-where
-    St: Stream,
-{
-    type Item = St::Item;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut this = self.project();
-        this.stream.as_mut().poll_next(cx)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.stream.size_hint()
-    }
-}
-
 impl GitImportLfs {
     pub fn new_disabled() -> Self {
         GitImportLfs { inner: None }
@@ -183,13 +148,6 @@ impl GitImportLfs {
             format_err!("GitImportLfs::fetch_bytes_internal called on disabled GitImportLfs")
         })?;
 
-        // If configured a connection limit, grab semaphore lock enforcing it.
-        let slock = if let Some(semaphore) = &inner.conn_limit_sem {
-            Some(semaphore.clone().acquire_owned().await?)
-        } else {
-            None
-        };
-
         let uri = [&inner.lfs_server, "/", &metadata.sha256.to_string()]
             .concat()
             .parse::<Uri>()?;
@@ -197,10 +155,6 @@ impl GitImportLfs {
 
         if resp.status().is_success() {
             let bytes = resp.into_body().map_err(Error::from);
-
-            // The semaphore lock will follow the lifeline of the Stream we return.
-            let bytes = StreamWithObject::new(bytes, slock);
-
             let sr = StoreRequest::with_sha256(metadata.size, metadata.sha256);
             return Ok((sr, bytes.left_stream()));
         }
