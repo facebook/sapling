@@ -67,12 +67,10 @@ struct TreeInodePtrRoot {
   }
 
   /** Arrange to load a child TreeInode */
-  Future<TreeInodePtr> getOrLoadChildTree(
+  ImmediateFuture<TreeInodePtr> getOrLoadChildTree(
       PathComponentPiece name,
       ObjectFetchContext& context) {
-    return root->getOrLoadChildTree(name, context)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+    return root->getOrLoadChildTree(name, context);
   }
   /** Returns true if we should call getOrLoadChildTree() for the given
    * ENTRY.  We only do this if the child is already materialized */
@@ -165,7 +163,7 @@ struct TreeRoot {
   /** We can never load a TreeInodePtr from a raw Tree, so this always
    * fails.  We never call this method because entryShouldLoadChildTree()
    * always returns false. */
-  folly::Future<TreeInodePtr> getOrLoadChildTree(
+  ImmediateFuture<TreeInodePtr> getOrLoadChildTree(
       PathComponentPiece,
       ObjectFetchContext&) {
     throw std::runtime_error("impossible to get here");
@@ -409,15 +407,19 @@ Future<folly::Unit> GlobNode::evaluateImpl(
                                          fileBlobsToPrefetch,
                                          &globResult,
                                          &originRootId](TreeInodePtr dir) {
-                               return node->evaluateImpl(
-                                   store,
-                                   context,
-                                   candidateName,
-                                   TreeInodePtrRoot(std::move(dir)),
-                                   fileBlobsToPrefetch,
-                                   globResult,
-                                   originRootId);
-                             }));
+                               return node
+                                   ->evaluateImpl(
+                                       store,
+                                       context,
+                                       candidateName,
+                                       TreeInodePtrRoot(std::move(dir)),
+                                       fileBlobsToPrefetch,
+                                       globResult,
+                                       originRootId)
+                                   .semi();
+                             })
+                             .semi()
+                             .via(&folly::QueuedImmediateExecutor::instance()));
   }
 
   // Note: we use collectAll() rather than collect() here to make sure that
@@ -583,15 +585,18 @@ Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
                         &globResult,
                         &originRootId](TreeInodePtr dir) {
               return evaluateRecursiveComponentImpl(
-                  store,
-                  context,
-                  rootPath,
-                  candidateName,
-                  TreeInodePtrRoot(std::move(dir)),
-                  fileBlobsToPrefetch,
-                  globResult,
-                  originRootId);
-            }));
+                         store,
+                         context,
+                         rootPath,
+                         candidateName,
+                         TreeInodePtrRoot(std::move(dir)),
+                         fileBlobsToPrefetch,
+                         globResult,
+                         originRootId)
+                  .semi();
+            })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance()));
   }
 
   // Note: we use collectAll() rather than collect() here to make sure that
