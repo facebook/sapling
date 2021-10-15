@@ -197,6 +197,11 @@ fn register_error_handlers() {
                 py,
                 cpython_ext::Str::from(format!("{}", e)),
             ))
+        } else if e.is::<auth::MissingCerts>() {
+            Some(PyErr::new::<CertificateError, _>(
+                py,
+                cpython_ext::Str::from(format!("{}", e)),
+            ))
         } else if e.is::<auth::X509Error>() {
             Some(PyErr::new::<CertificateError, _>(
                 py,
