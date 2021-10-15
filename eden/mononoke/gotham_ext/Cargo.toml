@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0"
 async-compression = { version = "0.3.8", features = ["all-implementations", "brotli", "bzip2", "deflate", "gzip", "zlib", "zstd"] }
 async-trait = "0.1.51"
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
@@ -29,7 +29,7 @@ pin-project = "0.4.28"
 quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"

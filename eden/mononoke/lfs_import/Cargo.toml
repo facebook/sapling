@@ -16,7 +16,7 @@ test = false
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }

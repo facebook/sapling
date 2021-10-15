@@ -18,7 +18,7 @@ anyhow = "1.0"
 async-trait = "0.1.51"
 auto_impl = "0.4"
 bonsai_globalrev_mapping_thrift = { version = "0.1.0", path = "if" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
 context = { version = "0.1.0", path = "../server/context" }
@@ -27,7 +27,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }

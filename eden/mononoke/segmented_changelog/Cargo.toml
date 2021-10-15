@@ -15,7 +15,7 @@ async-trait = "0.1.51"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bulkops = { version = "0.1.0", path = "../bulkops" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
@@ -37,7 +37,7 @@ reloader = { version = "0.1.0", path = "../common/reloader" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog_types = { version = "0.1.0", path = "types" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
@@ -51,7 +51,7 @@ fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperiment
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
-once_cell = "1.4"
+once_cell = "1.8"
 revset = { version = "0.1.0", path = "../revset" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
 

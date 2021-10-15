@@ -14,4 +14,4 @@ types = { path = "../types" }
 vfs = { path = "../vfs" }
 
 [dev-dependencies]
-tempfile = "3.1"
+tempfile = "3.2"

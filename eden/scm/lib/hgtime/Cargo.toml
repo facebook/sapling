@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-humantime = "1.3"
+humantime = "2.1"

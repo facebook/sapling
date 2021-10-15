@@ -17,7 +17,7 @@ metaconfig_types = { version = "0.1.0", path = "../types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"
 pretty_assertions = "0.6"
-regex = "1.4.2"
+regex = "1.5.4"
 repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_ignored = "0.1"

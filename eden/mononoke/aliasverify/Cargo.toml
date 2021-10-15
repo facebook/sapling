@@ -15,7 +15,7 @@ path = "../cmds/aliasverify.rs"
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 changesets = { version = "0.1.0", path = "../changesets" }
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
@@ -27,7 +27,7 @@ futures-old = { package = "futures", version = "0.1.31" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 sha2 = "0.8"
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 
 [patch.crates-io]
 curl-sys = { git = "https://github.com/mzr/curl-rust", rev = "97694cf73ea9309d9e8ed067ec0c05367841d405" }

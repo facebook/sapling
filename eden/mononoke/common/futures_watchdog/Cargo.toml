@@ -11,7 +11,7 @@ license = "GPLv2+"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 maybe-owned = "0.3.4"
 pin-project = "0.4.28"
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 
 [patch.crates-io]
 curl-sys = { git = "https://github.com/mzr/curl-rust", rev = "97694cf73ea9309d9e8ed067ec0c05367841d405" }

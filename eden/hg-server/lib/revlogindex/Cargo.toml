@@ -20,4 +20,4 @@ util = { path = "../util" }
 
 [dev-dependencies]
 anyhow = "1.0"
-tempfile = "3.1"
+tempfile = "3.2"

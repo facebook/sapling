@@ -11,7 +11,7 @@ license = "GPLv2+"
 anyhow = "1.0"
 async-trait = "0.1.51"
 blobstore = { version = "0.1.0", path = "../blobstore" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../server/context" }
 digest = "0.8"
@@ -23,7 +23,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pin-project = "0.4.28"
 sha-1 = "0.8"
 sha2 = "0.8"
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 thiserror = "1.0.29"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 

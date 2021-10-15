@@ -92,7 +92,7 @@ blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bulkops = { version = "0.1.0", path = "bulkops" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 bytesize = "1.0"
 cacheblob = { version = "0.1.0", path = "blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -133,12 +133,12 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "derived_data/skeleton_manifest" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "common/rust/sql_ext" }
 sqlblob = { version = "0.1.0", path = "blobstore/sqlblob" }
 streaming_clone = { version = "0.1.0", path = "repo_client/streaming_clone" }
-tempfile = "3.1"
+tempfile = "3.2"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 toml = "=0.5.7"

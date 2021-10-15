@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 dag-types = { path = "../../dag/dag-types", features = ["for-tests"] }
 quickcheck = "1.0"
 revisionstore_types = { path = "../../revisionstore/types" }

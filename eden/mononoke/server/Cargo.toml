@@ -22,7 +22,7 @@ openssl = "0.10.35"
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_listener = { version = "0.1.0", path = "repo_listener" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 
 [patch.crates-io]
 curl-sys = { git = "https://github.com/mzr/curl-rust", rev = "97694cf73ea9309d9e8ed067ec0c05367841d405" }

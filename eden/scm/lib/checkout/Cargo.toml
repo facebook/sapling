@@ -24,5 +24,5 @@ vfs = { path = "../vfs" }
 [dev-dependencies]
 manifest-tree = { path = "../manifest-tree", features = ["for-tests"] }
 quickcheck = "1.0"
-tempfile = "3.1"
-walkdir = "2.2.9"
+tempfile = "3.2"
+walkdir = "2.3"

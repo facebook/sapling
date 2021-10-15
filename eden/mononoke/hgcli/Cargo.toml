@@ -14,7 +14,7 @@ test = false
 [dependencies]
 alpn = { version = "0.1.0", path = "../alpn" }
 anyhow = "1.0"
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 clap = "2.33"
 dns-lookup = "1.0"
@@ -33,8 +33,8 @@ rand = { version = "0.8", features = ["small_rng"] }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 session_id = { version = "0.1.0", path = "../server/session_id" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
-slog-term = "2.4.2"
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
+slog-term = "2.8"
 sshrelay = { version = "0.1.0", path = "../sshrelay" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"

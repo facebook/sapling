@@ -17,7 +17,7 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 changeset_info = { version = "0.1.0", path = "../derived_data/changeset_info" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
@@ -51,7 +51,7 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
-regex = "1.4.2"
+regex = "1.5.4"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_read_write_status = { version = "0.1.0", path = "../repo_client/repo_read_write_status" }
@@ -59,7 +59,7 @@ revset = { version = "0.1.0", path = "../revset" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }

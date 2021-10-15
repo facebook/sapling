@@ -45,7 +45,7 @@ assert_matches = "1.5"
 async-trait = "0.1.51"
 blobrepo_errors = { version = "0.1.0", path = "errors" }
 blobrepo_hg = { version = "0.1.0", path = "blobrepo_hg" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }

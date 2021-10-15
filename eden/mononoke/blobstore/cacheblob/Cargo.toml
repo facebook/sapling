@@ -12,7 +12,7 @@ anyhow = "1.0"
 async-trait = "0.1.51"
 auto_impl = "0.4"
 blobstore = { version = "0.1.0", path = ".." }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../../server/context" }
@@ -28,7 +28,7 @@ memcache_lock_thrift = { version = "0.1.0", path = "../if" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 prefixblob = { version = "0.1.0", path = "../prefixblob" }
 redactedblobstore = { version = "0.1.0", path = "../redactedblobstore" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 

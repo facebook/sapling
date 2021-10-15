@@ -9,7 +9,7 @@ anyhow = "1.0"
 async-runtime = { path = "../async-runtime" }
 async-trait = "0.1.51"
 auth = { path = "../auth" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 configmodel = { path = "../configmodel" }
 edenapi_trait = { path = "trait" }
@@ -20,14 +20,13 @@ http-client = { path = "../http-client" }
 itertools = "0.10.1"
 metrics = { path = "../metrics" }
 minibytes = { path = "../minibytes" }
-once_cell = "1.4"
+once_cell = "1.8"
 parking_lot = "0.10.2"
 percent-encoding = "2.1"
 pprint = { path = "../pprint" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
-structopt = "0.3.23"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.27"
 types = { path = "../types" }

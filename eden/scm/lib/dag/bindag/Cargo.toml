@@ -8,5 +8,5 @@ edition = "2018"
 dag = { path = ".." }
 drawdag = { path = "../../drawdag" }
 nonblocking = { path = "../../nonblocking" }
-tempfile = "3.1"
+tempfile = "3.2"
 vlqencoding = { path = "../../vlqencoding" }

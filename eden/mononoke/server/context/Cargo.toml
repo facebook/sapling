@@ -22,7 +22,7 @@ ratelimit_meter = "5"
 scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 session_id = { version = "0.1.0", path = "../session_id" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog_glog_fmt = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sshrelay = { version = "0.1.0", path = "../../sshrelay" }
 

@@ -25,9 +25,11 @@ changesets_impl = { version = "0.1.0", path = "../changesets/changesets_impl" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 context = { version = "0.1.0", path = "../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
+derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures_watchdog = { version = "0.1.0", path = "../common/futures_watchdog" }
@@ -48,7 +50,7 @@ scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 segmented_changelog_types = { version = "0.1.0", path = "../segmented_changelog/types" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 thiserror = "1.0.29"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }

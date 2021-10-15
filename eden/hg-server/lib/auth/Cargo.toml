@@ -16,4 +16,4 @@ url = "2.2.2"
 util = { path = "../util" }
 
 [dev-dependencies]
-once_cell = "1.4"
+once_cell = "1.8"

@@ -13,7 +13,7 @@ ascii = "1.0"
 async-trait = "0.1.51"
 blobstore = { version = "0.1.0", path = ".." }
 bufsize = "1.0"
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

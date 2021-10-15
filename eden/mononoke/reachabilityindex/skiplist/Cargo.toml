@@ -12,7 +12,7 @@ anyhow = "1.0"
 arc-swap = "1.1"
 async-trait = "0.1.51"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 common = { version = "0.1.0", path = "../common" }
@@ -27,7 +27,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 reachabilityindex = { version = "0.1.0", path = ".." }
 reloader = { version = "0.1.0", path = "../../common/reloader" }
 skiplist_thrift = { version = "0.1.0", path = "../if" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 

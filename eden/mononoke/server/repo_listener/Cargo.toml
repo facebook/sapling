@@ -15,7 +15,7 @@ base64 = "0.11.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 cache_warmup = { version = "0.1.0", path = "../../cache_warmup" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -56,9 +56,9 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
 session_id = { version = "0.1.0", path = "../session_id" }
 sha-1 = "0.8"
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog-kvfilter = "0.7"
-slog-term = "2.4.2"
+slog-term = "2.8"
 slog_ext = { version = "0.1.0", path = "../../common/rust/slog_ext" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }

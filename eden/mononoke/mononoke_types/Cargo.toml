@@ -19,7 +19,7 @@ blake2 = "0.8"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 context = { version = "0.1.0", path = "../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
@@ -31,7 +31,7 @@ lazy_static = "1.0"
 lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 mononoke_types_thrift = { version = "0.1.0", path = "if" }
 quickcheck = "1.0"
-regex = "1.4.2"
+regex = "1.5.4"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }

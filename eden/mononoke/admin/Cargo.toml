@@ -27,7 +27,7 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 bulkops = { version = "0.1.0", path = "../bulkops" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
@@ -53,7 +53,7 @@ fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 git_types = { version = "0.1.0", path = "../git/git_types" }
-humantime = "1.3"
+humantime = "2.1"
 itertools = "0.10.1"
 live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { version = "0.1.0", path = "../manifest" }
@@ -73,7 +73,7 @@ prefixblob = { version = "0.1.0", path = "../blobstore/prefixblob" }
 prettytable-rs = "0.8"
 pushrebase = { version = "0.1.0", path = "../pushrebase" }
 redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
-regex = "1.4.2"
+regex = "1.5.4"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
@@ -84,7 +84,7 @@ serde_derive = "1.0"
 serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 source_control = { version = "0.1.0", path = "../scs/if" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }

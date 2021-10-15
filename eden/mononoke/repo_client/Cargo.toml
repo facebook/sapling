@@ -14,7 +14,7 @@ blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks/bookmarks_types" }
-bytes = { version = "1.0", features = ["serde"] }
+bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 bytes_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
@@ -45,14 +45,14 @@ nonzero_ext = "0.2"
 percent-encoding = "2.1"
 rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
-regex = "1.4.2"
+regex = "1.5.4"
 remotefilelog = { version = "0.1.0", path = "remotefilelog" }
 repo_read_write_status = { version = "0.1.0", path = "repo_read_write_status" }
 revisionstore_types = { version = "0.1.0", path = "../../scm/lib/revisionstore/types" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
-slog = { version = "2.5", features = ["max_level_trace", "nested-values"] }
+slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 streaming_clone = { version = "0.1.0", path = "streaming_clone" }
 thiserror = "1.0.29"

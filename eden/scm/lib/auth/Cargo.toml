@@ -18,4 +18,4 @@ util = { path = "../util" }
 
 [dev-dependencies]
 configparser = { path = "../configparser" }
-once_cell = "1.4"
+once_cell = "1.8"
