@@ -10,6 +10,7 @@
 use anyhow::{format_err, Error};
 use bytes::Bytes;
 use context::CoreContext;
+use core::future::Future;
 use filestore::StoreRequest;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use git2::Oid;
@@ -27,7 +28,6 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use tokio::sync::Semaphore;
 use tokio::time::{sleep, Duration};
-
 /// We will not try to parse any file bigger then this.
 /// Any valid gitlfs metadata file should be smaller then this.
 const MAX_METADATA_LENGTH: usize = 511;
@@ -40,20 +40,20 @@ const MAX_METADATA_LENGTH: usize = 511;
 #[derive(Debug)]
 pub struct GitImportLfsInner {
     /// Server information.
-    pub lfs_server: String,
+    lfs_server: String,
     /// How to deal with the case when the file does not exist on the LFS server.
     /// allow_not_found=false
     ///   A non existing LFS file considerd unrecoverable error and bail out
     /// allow_not_found=true
     ///   put the content of the LFS-metafile in its place, and print a warning.
-    pub allow_not_found: bool,
+    allow_not_found: bool,
     /// Retries.
-    pub max_attempts: u32,
-    pub time_ms_between_attempts: u32,
+    max_attempts: u32,
+    time_ms_between_attempts: u32,
     /// Limit the amount of simultainous connections.
-    pub conn_limit_sem: Option<Arc<Semaphore>>,
+    conn_limit_sem: Option<Arc<Semaphore>>,
     /// Hyperium client we use to connect with
-    pub client: Client<HttpsConnector<HttpConnector>>,
+    client: Client<HttpsConnector<HttpConnector>>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -172,7 +172,13 @@ impl GitImportLfs {
         &self,
         ctx: &CoreContext,
         metadata: &LfsMetaData,
-    ) -> Result<(StoreRequest, impl Stream<Item = Result<Bytes, Error>>), Error> {
+    ) -> Result<
+        (
+            StoreRequest,
+            impl Stream<Item = Result<Bytes, Error>> + Unpin,
+        ),
+        Error,
+    > {
         let inner = self.inner.as_ref().ok_or_else(|| {
             format_err!("GitImportLfs::fetch_bytes_internal called on disabled GitImportLfs")
         })?;
@@ -211,12 +217,12 @@ impl GitImportLfs {
                 size,
             )?;
             let sr = StoreRequest::with_git_sha1(size, git_sha1);
-            return Ok((sr, stream::once(async move { Ok(bytes) }).right_stream()));
+            return Ok((sr, stream::once(futures::future::ok(bytes)).right_stream()));
         }
         Err(format_err!("{} response {:?}", uri, resp))
     }
 
-    pub async fn fetch_bytes(
+    async fn fetch_bytes(
         &self,
         ctx: &CoreContext,
         metadata: &LfsMetaData,
@@ -253,5 +259,41 @@ impl GitImportLfs {
                 }
             }
         }
+    }
+
+    pub async fn with<F, T, Fut>(
+        self,
+        ctx: CoreContext,
+        metadata: LfsMetaData,
+        f: F,
+    ) -> Result<T, Error>
+    where
+        F: FnOnce(
+                CoreContext,
+                LfsMetaData,
+                StoreRequest,
+                Box<dyn Stream<Item = Result<Bytes, Error>> + Send + Unpin>,
+            ) -> Fut
+            + Send
+            + 'static,
+        T: Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Error>> + Send,
+    {
+        tokio::spawn(async move {
+            let inner = self.inner.as_ref().ok_or_else(|| {
+                format_err!("GitImportLfs::fetch_bytes_internal called on disabled GitImportLfs")
+            })?;
+
+            // If configured a connection limit, grab semaphore lock enforcing it.
+            let _slock = if let Some(semaphore) = &inner.conn_limit_sem {
+                Some(semaphore.clone().acquire_owned().await?)
+            } else {
+                None
+            };
+
+            let (req, bstream) = self.fetch_bytes(&ctx, &metadata).await?;
+            f(ctx, metadata, req, Box::new(bstream)).await
+        })
+        .await?
     }
 }

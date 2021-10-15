@@ -66,23 +66,6 @@ fn git_store_request(
     Ok((req, stream::once(async move { Ok(git_bytes) })))
 }
 
-async fn lfs_store_request(
-    ctx: &CoreContext,
-    lfs: &GitImportLfs,
-    lfs_meta: LfsMetaData,
-    path: &MPath,
-) -> Result<(StoreRequest, impl Stream<Item = Result<Bytes, Error>>), Error> {
-    let (store_req, bstream) = lfs.fetch_bytes(ctx, &lfs_meta).await?;
-    info!(
-        ctx.logger(),
-        "Uploading LFS {} sha256:{} size:{}",
-        path,
-        lfs_meta.sha256.to_brief(),
-        lfs_meta.size,
-    );
-    Ok((store_req, bstream))
-}
-
 async fn do_upload<B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     blobstore: &B,
@@ -103,17 +86,28 @@ async fn do_upload<B: Blobstore + Clone + 'static>(
         })
         .await?;
 
-    let (req, bstream) = if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, &git_id) {
-        let (req, bstream) = lfs_store_request(ctx, lfs, lfs_meta, path).await?;
-        (req, bstream.left_stream())
+    if let Some(lfs_meta) = lfs.is_lfs_file(&git_bytes, &git_id) {
+        cloned!(ctx, lfs, blobstore, filestore_config, path);
+        Ok(lfs
+            .with(
+                ctx,
+                lfs_meta,
+                move |ctx, lfs_meta, req, bstream| async move {
+                    info!(
+                        ctx.logger(),
+                        "Uploading LFS {} sha256:{} size:{}",
+                        path,
+                        lfs_meta.sha256.to_brief(),
+                        lfs_meta.size,
+                    );
+                    filestore::store(&blobstore, filestore_config, &ctx, &req, bstream).await
+                },
+            )
+            .await?)
     } else {
         let (req, bstream) = git_store_request(ctx, git_id, git_bytes)?;
-        (req, bstream.right_stream())
-    };
-
-    let meta = filestore::store(blobstore, filestore_config, ctx, &req, bstream).await?;
-
-    Ok(meta)
+        Ok(filestore::store(blobstore, filestore_config, ctx, &req, bstream).await?)
+    }
 }
 
 // TODO: Try to produce copy-info?
