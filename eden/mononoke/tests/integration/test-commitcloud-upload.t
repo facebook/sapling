@@ -108,6 +108,13 @@ This test also checks file content deduplication. We upload 1 file content and 1
   $ hgedenapi addremove -q
 
   $ hgedenapi commit -m "New files Dir1"
+
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not uploaded
+
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 not backed up
+
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
    INFO edenapi::client: Requesting lookup for 1 item(s)
   commitcloud: head '536d3fb3929e' hasn't been uploaded yet
@@ -128,6 +135,9 @@ This test also checks file content deduplication. We upload 1 file content and 1
   edenapi: uploaded 1 changeset
 
   $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9
+  536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 uploaded
+
+  $ hgedenapi cloud check -r 536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 --config commitcloud.usehttpupload=False
   536d3fb3929eab4b01e63ab7fc9b25a5c8a08bc9 backed up
 
 
@@ -138,6 +148,13 @@ The files of the second commit are identical to the files of the first commit, s
   $ for i in {0..99} ; do touch dir2/$i ; done
   $ hgedenapi addremove -q
   $ hgedenapi commit -m "New files Dir2"
+
+  $ hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
+  65289540f44d80cecffca8a3fd655c0ca6243cd9 not uploaded
+
+  $ hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9 --config commitcloud.usehttpupload=False
+  65289540f44d80cecffca8a3fd655c0ca6243cd9 not backed up
+
   $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud upload
    INFO edenapi::client: Requesting lookup for 2 item(s)
   commitcloud: head '65289540f44d' hasn't been uploaded yet
@@ -156,6 +173,9 @@ The files of the second commit are identical to the files of the first commit, s
   commitcloud: nothing to upload
 
   $ hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9
+  65289540f44d80cecffca8a3fd655c0ca6243cd9 uploaded
+
+  $ hgedenapi cloud check -r 65289540f44d80cecffca8a3fd655c0ca6243cd9 --config commitcloud.usehttpupload=False
   65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
 
   $ cd ..
@@ -175,12 +195,12 @@ Try pull an uploaded commit from another client
   │
   @  8b2dca0c8a72 'base_commit'
   
-  $ hgedenapi cloud check -r 65289540f44d  # pull doesn't update backup state
+  $ hgedenapi cloud check -r 65289540f44d --config commitcloud.usehttpupload=False  # pull doesn't update backup state
   65289540f44d80cecffca8a3fd655c0ca6243cd9 not backed up
 
   $ hgedenapi cloud upload
   commitcloud: nothing to upload
-  $ hgedenapi cloud check -r 65289540f44d  # upload does
+  $ hgedenapi cloud check -r 65289540f44d  --config commitcloud.usehttpupload=False # upload does
   65289540f44d80cecffca8a3fd655c0ca6243cd9 backed up
 
   $ cd ..

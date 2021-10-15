@@ -238,7 +238,7 @@ Create logs directory and set correct permissions
   remote:     b18e25de2cf5  D
   remote:     26805aba1e60  C
   $ hg cloud check -r ':'
-  7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 not backed up
+  7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 backed up
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0 backed up
   112478962961147124edd43549aedd1a335e44bf backed up
   b18e25de2cf5fc4699a029ed635882849e53ef73 backed up

@@ -13,6 +13,7 @@ import time
 from edenscm.mercurial import (
     bookmarks as bookmarksmod,
     cmdutil,
+    edenapi_upload,
     error,
     extensions,
     hg,
@@ -1352,6 +1353,19 @@ def cloudcheck(ui, repo, **opts):
     If no revision are specified then it checks working copy parent.
     """
 
+    if ui.configbool("commitcloud", "usehttpupload"):
+        # eden api based lookup
+        revs = opts.get("rev")
+        if not revs:
+            revs = ["."]
+        nodestocheck = [repo[r].node() for r in scmutil.revrange(repo, revs)]
+        missingnodes = set(edenapi_upload._filtercommits(repo, nodestocheck))
+        for n in nodestocheck:
+            ui.write(nodemod.hex(n), " ")
+            ui.write(_("uploaded") if not (n in missingnodes) else _("not uploaded"))
+            ui.write(_("\n"))
+            return
+
     revs = opts.get("rev")
     remote = opts.get("remote")
     if not revs:
@@ -1362,6 +1376,7 @@ def cloudcheck(ui, repo, **opts):
     nodestocheck = [repo[r].hex() for r in revs]
 
     if remote:
+        # wireproto based lookup
         remotepath = ccutil.getremotepath(ui)
         getconnection = lambda: repo.connectionpool.get(remotepath, opts)
         isbackedup = {
@@ -1371,8 +1386,12 @@ def cloudcheck(ui, repo, **opts):
             )
         }
     else:
+        # local backup state based lookup
         backeduprevs = unfi.revs("backedup()")
-        isbackedup = {node: unfi[node].rev() in backeduprevs for node in nodestocheck}
+        isbackedup = {
+            node: (unfi[node].rev() in backeduprevs) or not unfi[node].mutable()
+            for node in nodestocheck
+        }
 
     for n in nodestocheck:
         ui.write(n, " ")
