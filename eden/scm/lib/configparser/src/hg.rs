@@ -10,11 +10,13 @@
 use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::fs::{self, read_to_string};
+use std::fs::{self, read_to_string, Permissions};
 use std::hash::Hash;
 use std::io;
 use std::io::{Error as IOError, ErrorKind, Write};
 use std::iter::FromIterator;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
@@ -608,6 +610,11 @@ pub fn generate_dynamicconfig(
         set_file_mtime(hgrc_path, FileTime::now())?;
     } else {
         // Atomically rename file to avoid race conditions.
+
+        #[cfg(unix)]
+        tmp.as_file_mut()
+            .set_permissions(Permissions::from_mode(util::file::apply_umask(0o666)))?;
+
         tmp.write_all(config_str.as_bytes())?;
         tmp.as_file().sync_all()?;
         tmp.persist(hgrc_path).map_err(|err| err.error)?;

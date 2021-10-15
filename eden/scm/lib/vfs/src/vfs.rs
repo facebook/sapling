@@ -29,7 +29,6 @@ use util::path::remove_file;
 use crate::pathauditor::PathAuditor;
 
 use minibytes::Bytes;
-use once_cell::sync::Lazy;
 
 #[derive(Clone)]
 pub struct VFS {
@@ -49,14 +48,6 @@ pub enum UpdateFlag {
     Symlink,
     Executable,
 }
-
-#[cfg(unix)]
-static UMASK: Lazy<u32> = Lazy::new(|| unsafe {
-    let umask = libc::umask(0);
-    libc::umask(umask);
-    #[allow(clippy::useless_conversion)] // mode_t is u16 on mac and u32 on linux
-    umask.into()
-});
 
 impl VFS {
     pub fn new(root: PathBuf) -> Result<Self> {
@@ -167,7 +158,7 @@ impl VFS {
     #[cfg(unix)]
     fn update_mode(mode: u32, exec: bool) -> u32 {
         if exec {
-            mode | (mode & 0o444) >> 2 & !*UMASK
+            mode | util::file::apply_umask((mode & 0o444) >> 2)
         } else {
             mode & 0o666
         }

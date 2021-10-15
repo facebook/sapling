@@ -52,6 +52,11 @@ Verify it can be automatically synchronously generated
   [section]
   key=value
   
+#if no-windows
+  $ ls -l .hg/hgrc.dynamic
+   *-rw-r--r--.* (re)
+#endif
+
 Verify it can be automatically asynchronously regenerated
 
   $ cat > $TESTTMP/test_hgrc <<EOF
