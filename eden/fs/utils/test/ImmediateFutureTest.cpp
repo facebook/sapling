@@ -273,3 +273,86 @@ TEST(
   EXPECT_EQ(20, std::move(imm).get());
   EXPECT_TRUE(run);
 }
+
+TEST(ImmediateFuture, collectAllImmediate) {
+  std::vector<ImmediateFuture<int>> vec;
+  vec.push_back(ImmediateFuture<int>{42});
+  vec.push_back(ImmediateFuture<int>{43});
+
+  auto fut = collectAll(std::move(vec));
+  EXPECT_TRUE(fut.isReady());
+  auto res = std::move(fut).get();
+  EXPECT_EQ(*res[0], 42);
+  EXPECT_EQ(*res[1], 43);
+}
+
+TEST(ImmediateFuture, collectAllSemi) {
+  std::vector<ImmediateFuture<int>> vec;
+
+  auto [promise1, semiFut1] = folly::makePromiseContract<int>();
+  vec.push_back(ImmediateFuture<int>{std::move(semiFut1)});
+
+  auto [promise2, semiFut2] = folly::makePromiseContract<int>();
+  vec.push_back(ImmediateFuture<int>{std::move(semiFut2)});
+
+  auto fut = collectAll(std::move(vec));
+  EXPECT_FALSE(fut.isReady());
+
+  promise1.setValue(42);
+  promise2.setValue(43);
+
+  auto res = std::move(fut).get();
+  EXPECT_EQ(*res[0], 42);
+  EXPECT_EQ(*res[1], 43);
+}
+
+TEST(ImmediateFuture, collectAllMixed) {
+  std::vector<ImmediateFuture<int>> vec;
+
+  auto [promise, semiFut] = folly::makePromiseContract<int>();
+  vec.push_back(ImmediateFuture<int>{std::move(semiFut)});
+  vec.push_back(ImmediateFuture<int>{43});
+
+  auto fut = collectAll(std::move(vec));
+  EXPECT_FALSE(fut.isReady());
+
+  promise.setValue(42);
+
+  auto res = std::move(fut).get();
+  EXPECT_EQ(*res[0], 42);
+  EXPECT_EQ(*res[1], 43);
+}
+
+TEST(ImmediateFuture, collectUncopyable) {
+  struct Uncopyable {
+    Uncopyable(Uncopyable&&) = default;
+    Uncopyable(const Uncopyable&) = delete;
+
+    Uncopyable& operator=(Uncopyable&&) = default;
+    Uncopyable& operator=(const Uncopyable&) = delete;
+  };
+  std::vector<ImmediateFuture<Uncopyable>> vec;
+  vec.push_back(Uncopyable{});
+
+  auto fut = collectAll(std::move(vec));
+  EXPECT_TRUE(fut.isReady());
+}
+
+TEST(ImmediateFuture, collectAllOrdering) {
+  std::vector<ImmediateFuture<int>> vec;
+
+  auto [promise, semiFut] = folly::makePromiseContract<int>();
+  vec.push_back(ImmediateFuture<int>{std::move(semiFut)});
+  vec.push_back(ImmediateFuture<int>{43});
+
+  auto fut = collectAll(std::move(vec));
+  EXPECT_FALSE(fut.isReady());
+
+  promise.setValue(42);
+
+  // Despite semiFut having completed after the second ImmediateFuture, it
+  // should still be first in the returned vector.
+  auto res = std::move(fut).get();
+  EXPECT_EQ(*res[0], 42);
+  EXPECT_EQ(*res[1], 43);
+}

@@ -7,9 +7,7 @@
 
 #pragma once
 
-#include <folly/Executor.h>
 #include <folly/futures/Future.h>
-#include <variant>
 #include "eden/fs/utils/ImmediateFuture-pre.h"
 
 namespace facebook::eden {
@@ -243,6 +241,17 @@ class DestroyedImmediateFutureError : public std::logic_error {
  */
 template <typename Func>
 auto makeImmediateFutureWith(Func&& func);
+
+/**
+ * Run all the passed in ImmediateFuture to completion.
+ *
+ * The returned ImmediateFuture will complete when all the passed in
+ * ImmediateFuture have completed. The returned vector keeps the same ordering
+ * as the given vector ImmediateFuture.
+ */
+template <typename T>
+ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
+    std::vector<ImmediateFuture<T>> futures);
 
 } // namespace facebook::eden
 

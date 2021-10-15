@@ -230,4 +230,42 @@ auto makeImmediateFutureWith(Func&& func) {
       [func = std::forward<Func>(func)](auto&&) mutable { return func(); });
 }
 
+template <typename T>
+ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
+    std::vector<ImmediateFuture<T>> futures) {
+  std::vector<folly::SemiFuture<T>> semis;
+  std::vector<size_t> semisIndices;
+  std::vector<folly::Try<T>> res;
+  res.reserve(futures.size());
+
+  size_t currentIndex = 0;
+  for (auto& fut : futures) {
+    if (fut.isReady()) {
+      res.emplace_back(std::move(fut).getTry());
+    } else {
+      semis.emplace_back(std::move(fut).semi());
+      semisIndices.push_back(currentIndex);
+      res.emplace_back(
+          folly::Try<T>{std::logic_error("Uncompleted SemiFuture")});
+    }
+    currentIndex++;
+  }
+
+  if (semis.empty()) {
+    // All the ImmediateFuture were immediate, let's return an ImmediateFuture
+    // that holds an immediate vector too.
+    return std::move(res);
+  }
+
+  return folly::collectAll(std::move(semis))
+      .deferValue(
+          [res = std::move(res), semisIndices = std::move(semisIndices)](
+              std::vector<folly::Try<T>> semisRes) mutable {
+            for (size_t i = 0; i < semisRes.size(); i++) {
+              res[semisIndices[i]] = std::move(semisRes[i]);
+            }
+            return std::move(res);
+          });
+}
+
 } // namespace facebook::eden
