@@ -90,9 +90,14 @@ template <typename T>
 template <typename Func>
 ImmediateFuture<detail::continuation_result_t<Func, T>>
 ImmediateFuture<T>::thenValue(Func&& func) && {
+  using RetType = detail::continuation_result_t<Func, T>;
+  if (kind_ == Kind::Immediate && immediate_.hasException()) {
+    return ImmediateFuture<RetType>{
+        folly::Try<RetType>{std::move(immediate_).exception()}};
+  }
+
   return std::move(*this).thenTry(
-      [func = std::forward<Func>(func)](
-          folly::Try<T>&& try_) mutable -> std::invoke_result_t<Func, T> {
+      [func = std::forward<Func>(func)](folly::Try<T>&& try_) mutable {
         // If try_ doesn't store a value, this will rethrow the exception which
         // will be caught by the thenTry method below.
         return func(std::move(try_).value());
