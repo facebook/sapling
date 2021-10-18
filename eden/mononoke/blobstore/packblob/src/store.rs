@@ -416,7 +416,7 @@ mod tests {
         let compressed = pack::SingleCompressed::new(19, value.clone())?;
 
         assert!(
-            compressed.get_compressed_size() < 65535,
+            compressed.get_compressed_size()? < 65535,
             "Blob grew in compression"
         );
 

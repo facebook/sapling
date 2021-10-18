@@ -30,6 +30,7 @@ const PACK_PREFIX: &str = "multiblob-";
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Packer")
         .with_advanced_args_hidden()
+        .with_scuba_logging_args()
         .with_repo_required(args::RepoRequirement::ExactlyOne)
         .build()
         .about("Given a set of blob names on stdin, replace them with a packed version that takes less space")
@@ -135,6 +136,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         .lock()
         .lines()
         .collect::<Result<_, io::Error>>()?;
+
+    let mut scuba = matches.scuba_sample_builder();
+    scuba.add_opt("blobstore_id", inner_id);
+
     runtime.block_on(async move {
         let blobstore = make_packblob(
             fb,
@@ -147,7 +152,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .await?;
         stream::iter(input_lines.split(String::is_empty).map(Result::Ok))
             .try_for_each_concurrent(max_parallelism, |pack_keys| {
-                borrowed!(ctx, repo_prefix, blobstore);
+                borrowed!(ctx, repo_prefix, blobstore, scuba);
                 async move {
                     let pack_keys: Vec<&str> = pack_keys.iter().map(|i| i.as_ref()).collect();
                     pack_utils::repack_keys(
@@ -158,6 +163,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                         &repo_prefix,
                         &pack_keys,
                         dry_run,
+                        scuba,
                     )
                     .await
                 }

@@ -53,7 +53,7 @@ impl SingleCompressed {
         Self { value }
     }
     /// Gets the size of this blob in compressed form, minus framing overheads
-    pub fn get_compressed_size(&self) -> usize {
+    pub fn get_compressed_size(&self) -> Result<usize> {
         get_value_compressed_size(&self.value)
     }
     pub(crate) fn into_blobstore_bytes(self) -> BlobstoreBytes {
@@ -140,10 +140,16 @@ impl Pack {
     }
 
     /// Returns the compressed size of the pack contents, minus framing overheads
-    pub fn get_compressed_size(&self) -> usize {
-        self.entries.iter().fold(0, |size, entry| {
-            size + get_entry_compressed_size(entry) + entry.key.len()
-        })
+    pub fn get_compressed_size(&self) -> Result<usize> {
+        let mut size = 0;
+        for e in self.entries.iter() {
+            size = size + get_entry_compressed_size(e)? + e.key.len();
+        }
+        Ok(size)
+    }
+
+    pub fn entries(&self) -> &[PackedEntry] {
+        &self.entries
     }
 
     /// Converts the pack into something that can go into a blobstore
@@ -192,22 +198,20 @@ impl Pack {
     }
 }
 
-// Not to be used with a SingleValue loaded from a blobstore - panics instead of handling errors
-fn get_value_compressed_size(value: &SingleValue) -> usize {
+fn get_value_compressed_size(value: &SingleValue) -> Result<usize> {
     match value {
-        SingleValue::Raw(bytes) | SingleValue::Zstd(bytes) => bytes.len(),
+        SingleValue::Raw(bytes) | SingleValue::Zstd(bytes) => Ok(bytes.len()),
         // Can't happen, by construction - this only takes values created by this module
-        SingleValue::UnknownField(_) => panic!("Unknown field"),
+        SingleValue::UnknownField(_) => bail!("Unknown field"),
     }
 }
 
-// Not to be used with a PackedEntry loaded from a blobstore - panics instead of handling errors
-fn get_entry_compressed_size(entry: &PackedEntry) -> usize {
+pub fn get_entry_compressed_size(entry: &PackedEntry) -> Result<usize> {
     match &entry.data {
         PackedValue::Single(value) => get_value_compressed_size(value),
-        PackedValue::ZstdFromDict(ZstdFromDictValue { zstd, .. }) => zstd.len(),
+        PackedValue::ZstdFromDict(ZstdFromDictValue { zstd, .. }) => Ok(zstd.len()),
         // Can't happen, by construction - this only takes values created by this module
-        PackedValue::UnknownField(_) => panic!("Unknown field"),
+        PackedValue::UnknownField(_) => bail!("Unknown field"),
     }
 }
 
@@ -591,7 +595,7 @@ mod tests {
             pack.add_base_blob(base_key, BlobstoreBytes::from_bytes(base_version.clone()))?;
 
         // Check the compressed size is reasonable
-        let base_compressed_size = pack.get_compressed_size();
+        let base_compressed_size = pack.get_compressed_size()?;
         assert!(
             base_compressed_size > 1024,
             "Compression turned 64 KiB into {} bytes - suspiciously small",
@@ -620,7 +624,7 @@ mod tests {
         }
 
         // And check it's grown, but not too far given how compressible this should be.
-        let compressed_size = pack.get_compressed_size();
+        let compressed_size = pack.get_compressed_size()?;
         assert!(
             compressed_size > base_compressed_size,
             "Pack shrank as it gained data"
