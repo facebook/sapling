@@ -146,11 +146,6 @@ changes, such that we have the following history::
    o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42
         Add alpha
 
-If you run ``hg histedit --outgoing`` on the clone then it is the same
-as running ``hg histedit 836302820282``. If you need plan to push to a
-repository that Mercurial does not detect to be related to the source
-repo, you can add a ``--force`` option.
-
 Autoverb
 --------
 Autoverb is an experimental feature that uses the first lines of commit
@@ -1013,33 +1008,6 @@ class message(histeditaction):
         return cmdutil.getcommiteditor(edit=True, editform="histedit.mess")
 
 
-def findoutgoing(ui, repo, remote=None, force=False, opts=None):
-    """utility function to find the first outgoing changeset
-
-    Used by initialization code"""
-    if opts is None:
-        opts = {}
-    dest = ui.expandpath(remote or "default-push", remote or "default")
-    dest, revs = hg.parseurl(dest, None)[:2]
-    ui.status(_("comparing with %s\n") % util.hidepassword(dest))
-
-    revs, checkout = hg.addbranchrevs(repo, repo, revs, None)
-    other = hg.peer(repo, opts, dest)
-
-    if revs:
-        revs = [repo.lookup(rev) for rev in revs]
-
-    outgoing = discovery.findcommonoutgoing(repo, other, revs, force=force)
-    if not outgoing.missing:
-        raise error.Abort(_("no outgoing ancestors"))
-    roots = list(repo.revs("roots(%ln)", outgoing.missing))
-    if 1 < len(roots):
-        msg = _("there are ambiguous outgoing revisions")
-        hint = _("see 'hg help histedit' for more detail")
-        raise error.Abort(msg, hint=hint)
-    return repo.lookup(roots[0])
-
-
 @command(
     "histedit|histe|histed|histedi",
     [
@@ -1054,12 +1022,10 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
         ("", "edit-plan", False, _("edit remaining actions list")),
         ("k", "keep", False, _("don't strip old nodes after edit is complete")),
         ("", "abort", False, _("abort an edit in progress")),
-        ("o", "outgoing", False, _("changesets not found in destination")),
-        ("f", "force", False, _("force outgoing even for unrelated repositories")),
         ("r", "rev", [], _("first revision to be edited"), _("REV")),
     ]
     + cmdutil.formatteropts,
-    _("[OPTION]... ([ANCESTOR] | --outgoing [URL])"),
+    _("[OPTION]... [ANCESTOR]"),
 )
 def histedit(ui, repo, *freeargs, **opts):
     """interactively reorder, combine, or delete commits
@@ -1086,25 +1052,11 @@ def histedit(ui, repo, *freeargs, **opts):
 
     - Specify ANCESTOR directly
 
-    - Use --outgoing -- it will be the first linear changeset not
-      included in destination. (See :hg:`help config.paths.default-push`)
-
     - Otherwise, the value from the "histedit.defaultrev" config option
       is used as a revset to select the base revision when ANCESTOR is not
       specified. The first revision returned by the revset is used. By
       default, this selects the editable history that is unique to the
       ancestry of the working directory.
-
-    .. container:: verbose
-
-       If you use --outgoing, this command will abort if there are ambiguous
-       outgoing revisions. For example, if there are multiple branches
-       containing outgoing revisions.
-
-       Use "min(outgoing() and ::.)" or similar revset specification
-       instead of --outgoing to specify edit target revision exactly in
-       such ambiguous situation. See :hg:`help revsets` for detail about
-       selecting revisions.
 
     .. container:: verbose
 
@@ -1196,40 +1148,30 @@ def _readfile(ui, path):
 
 def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
     # basic argument incompatibility processing
-    outg = opts.get("outgoing")
     editplan = opts.get("edit_plan")
     abort = opts.get("abort")
-    force = opts.get("force")
-    if force and not outg:
-        raise error.Abort(_("--force only allowed with --outgoing"))
     if goal == "continue":
-        if any((outg, abort, revs, freeargs, rules, editplan)):
+        if any((abort, revs, freeargs, rules, editplan)):
             raise error.Abort(_("no arguments allowed with --continue"))
     elif goal == "abort":
-        if any((outg, revs, freeargs, rules, editplan)):
+        if any((revs, freeargs, rules, editplan)):
             raise error.Abort(_("no arguments allowed with --abort"))
     elif goal == "edit-plan":
-        if any((outg, revs, freeargs)):
+        if any((revs, freeargs)):
             raise error.Abort(_("only --commands argument allowed with " "--edit-plan"))
     else:
         if os.path.exists(os.path.join(repo.path, "histedit-state")):
             raise error.Abort(
                 _("history edit already in progress, try " "--continue or --abort")
             )
-        if outg:
-            if revs:
-                raise error.Abort(_("no revisions allowed with --outgoing"))
-            if len(freeargs) > 1:
-                raise error.Abort(_("only one repo argument allowed with --outgoing"))
-        else:
-            revs.extend(freeargs)
-            if len(revs) == 0:
-                defaultrev = destutil.desthistedit(ui, repo)
-                if defaultrev is not None:
-                    revs.append(repo[defaultrev].hex())
+        revs.extend(freeargs)
+        if len(revs) == 0:
+            defaultrev = destutil.desthistedit(ui, repo)
+            if defaultrev is not None:
+                revs.append(repo[defaultrev].hex())
 
-            if len(revs) != 1:
-                raise error.Abort(_("histedit requires exactly one ancestor revision"))
+        if len(revs) != 1:
+            raise error.Abort(_("histedit requires exactly one ancestor revision"))
 
 
 def _histedit(ui, repo, state, *freeargs, **opts):
@@ -1423,27 +1365,18 @@ def _edithisteditplan(ui, repo, state, rules):
 
 
 def _newhistedit(ui, repo, state, revs, freeargs, opts):
-    outg = opts.get("outgoing")
     rules = opts.get("commands", "")
-    force = opts.get("force")
 
     cmdutil.checkunfinished(repo)
     cmdutil.bailifchanged(repo)
 
     topmost, empty = repo.dirstate.parents()
-    if outg:
-        if freeargs:
-            remote = freeargs[0]
-        else:
-            remote = None
-        root = findoutgoing(ui, repo, remote, force, opts)
-    else:
-        rr = list(repo.set("roots(%ld)", scmutil.revrange(repo, revs)))
-        if len(rr) != 1:
-            raise error.Abort(
-                _("The specified revisions must have " "exactly one common root")
-            )
-        root = rr[0].node()
+    rr = list(repo.set("roots(%ld)", scmutil.revrange(repo, revs)))
+    if len(rr) != 1:
+        raise error.Abort(
+            _("The specified revisions must have " "exactly one common root")
+        )
+    root = rr[0].node()
 
     revs = between(repo, root, topmost, state.keep)
     if not revs:
