@@ -1,6 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
   $ configure modern
   $ enable shelve
 

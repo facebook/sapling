@@ -1,6 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
   $ configure modern
   $ newserver server1
   $ drawdag << 'EOS'

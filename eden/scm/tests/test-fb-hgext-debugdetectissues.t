@@ -1,5 +1,4 @@
   $ configure modern
-  $ setconfig experimental.allowfilepeer=True
 
   $ newserver master
   $ cat >> .hg/hgrc <<EOF

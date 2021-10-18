@@ -8,7 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "setconfig experimental.allowfilepeer=True"
 (
     sh % "cat"
     << r"""
@@ -53,8 +52,8 @@ sh % "hg log -r D1234 -T '{desc}\n'" == r"""
     [255]"""
 
 # 'pull -r Dxxx' will be rewritten to 'pull -r HASH'
-sh % "hg pull -r D1234 --config paths.default=." == r"""
-    pulling from $TESTTMP/repo
+sh % "hg pull -r D1234 --config paths.default=test:fake_server" == r"""
+    pulling from test:fake_server
     rewriting pull rev 'D1234' into '6008bb23d775556ff6c3528541ca5a2177b4bb92'
     abort: unknown revision '6008bb23d775556ff6c3528541ca5a2177b4bb92'!
     [255]"""

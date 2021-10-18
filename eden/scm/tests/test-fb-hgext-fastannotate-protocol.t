@@ -1,6 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
 
   $ configure dummyssh
   $ enable fastannotate

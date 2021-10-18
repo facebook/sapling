@@ -1,14 +1,14 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
+  $ configure modernclient
 
 Testing diff --change
 
-  $ hg init a
-  $ cd a
+  $ newclientrepo a
 
   $ echo "first" > file.txt
   $ hg add file.txt
   $ hg commit -m 'first commit' # 0
+  $ hg push -q -r . --to head0 --create
 
   $ echo "second" > file.txt
   $ hg commit -m 'second commit' # 1
@@ -31,14 +31,12 @@ Testing diff --change
   @@ -1,1 +1,1 @@
   -first
   +second
-
-  $ cd ..
+  $ hg push -q -r . --to book --create
 
 Test dumb revspecs: top-level "x:y", "x:", ":y" and ":" ranges should be handled
 as pairs even if x == y, but not for "f(x:y)" nor "x::y" (issue3474, issue4774)
 
-  $ hg clone -q a dumbspec
-  $ cd dumbspec
+  $ newclientrepo dumbspec test:a_server book
   $ echo "wdir" > file.txt
 
   $ hg diff -r 'desc(third)':'desc(third)'
@@ -71,13 +69,10 @@ as pairs even if x == y, but not for "f(x:y)" nor "x::y" (issue3474, issue4774)
   abort: empty revision range
   [255]
 
-  $ cd ..
-
-  $ hg clone -qr0 a dumbspec-rev0
-  $ cd dumbspec-rev0
+  $ newclientrepo dumbspec-rev0 test:a_server book head0
+  $ hg up -q head0
   $ echo "wdir" > file.txt
 
-  $ hg diff -r :
   $ hg diff -r 'first(:)' --nodates
   diff -r 4bb65dda5db4 file.txt
   --- a/file.txt

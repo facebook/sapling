@@ -1,6 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
   $ configure modern
 
   $ setconfig paths.default=test:e1 ui.traceback=1

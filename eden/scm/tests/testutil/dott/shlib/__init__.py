@@ -348,7 +348,7 @@ def setconfig(*args):
 
 
 def setmodernconfig():
-    enable("remotenames", "amend", "journal", "blackbox")
+    enable("remotenames", "amend", "journal", "blackbox", "infinitepush")
     setconfig(
         "experimental.narrow-heads=true",
         "visibility.enabled=true",
@@ -357,6 +357,22 @@ def setmodernconfig():
         "mutation.date=0 0",
         "experimental.evolution=obsolete",
         "remotenames.rename.default=remote",
+        "remotenames.hoist=remote",
+        "remotenames.selectivepull=True",
+        "remotenames.selectivepulldefault=master",
+        "experimental.changegroup3=True",
+    )
+
+
+def setmodernclient():
+    setmodernconfig()
+    from .. import testtmp  # avoid side effect
+
+    open(os.path.join(testtmp.TESTTMP, ".eagerepo"), "w+").write("")
+    setconfig(
+        "clone.force-edenapi-clonedata=True",
+        "remotefilelog.http=True",
+        "treemanifest.http=True",
     )
 
 
@@ -364,6 +380,8 @@ def configure(*args):
     for arg in args:
         if arg == "dummyssh":
             setconfig("ui.ssh={}".format(DUMMYSSH))
+        elif arg == "modernclient":
+            setmodernclient()
         else:
             raise RuntimeError("Unrecognised configure: {}".format(arg))
 
@@ -381,6 +399,25 @@ def newrepo(name=None):
     path = os.path.join(testtmp.TESTTMP, name)
     hg("init", path)
     cd(path)
+
+
+def newclientrepo(name=None, server=None, *bookmarks):
+    from .. import testtmp  # avoid side effect
+
+    if name is None:
+        global _newrepoid
+        _newrepoid += 1
+        name = "repo%s" % _newrepoid
+    path = os.path.join(testtmp.TESTTMP, name)
+    if server is None:
+        server = "test:%s_server" % name
+    hgexcept("clone", server, path)
+
+    cd(path)
+    for bookmark in bookmarks:
+        hgexcept("pull", "-q", "-B", bookmark)
+    hg("up", "-q", "tip")
+    rm(os.path.join(path, ".hg", "blackbox*"))
 
 
 def drawdag(*args, **kwargs):

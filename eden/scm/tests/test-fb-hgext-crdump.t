@@ -1,6 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
   $ configure mutation-norecord dummyssh
   $ enable amend crdump remotenames
   $ showgraph() {

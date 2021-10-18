@@ -10,8 +10,8 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "setconfig experimental.allowfilepeer=True"
-sh % "setconfig 'extensions.treemanifest=!'"
+sh % "configure modernclient"
+
 (
     sh % "cat"
     << r"""
@@ -22,38 +22,34 @@ remotenames=
     >> "$HGRCPATH"
 )
 
-sh % "hg init repo"
-sh % "cd repo"
+sh % "newclientrepo repo"
 
 sh % "echo x" > "x"
-sh % "hg commit -qAm x"
-sh % "hg book master"
+sh % "hg commit -qAm x1"
+sh % "hg book master1"
 sh % "echo x" >> "x"
 sh % "hg commit -qAm x2"
+sh % "hg push -r . -q --to master1 --create"
 
 # Non-bookmarked public heads should not be visible in smartlog
 
-sh % "cd .."
-sh % "hg clone repo client" == r"""
-    updating to branch default
-    1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "cd client"
-sh % "hg book mybook -r 0"
-sh % "hg up 0" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
-sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
-    o  1  default/master
+sh % "newclientrepo client test:repo_server master1" == ""
+sh % "hg book mybook -r 'desc(x1)'"
+sh % "hg up 'desc(x1)'" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "hg smartlog -T '{desc} {bookmarks} {remotebookmarks}'" == r"""
+    o  x2  remote/master1
     │
-    @  0 mybook"""
+    @  x1 mybook"""
 
 # Old head (rev 1) is still visible
 
 sh % "echo z" >> "x"
 sh % "hg commit -qAm x3"
-sh % "hg push --non-forward-move -q --to master"
-sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
-    @  2  default/master
+sh % "hg push --non-forward-move -q --to master1"
+sh % "hg smartlog -T '{desc} {bookmarks} {remotebookmarks}'" == r"""
+    @  x3  remote/master1
     │
-    o  0 mybook"""
+    o  x1 mybook"""
 
 # Test configuration of "interesting" bookmarks
 
@@ -61,18 +57,20 @@ sh % "hg up -q '.^'"
 sh % "echo x" >> "x"
 sh % "hg commit -qAm x4"
 sh % "hg push -q --to project/bookmark --create"
-sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
-    o  2  default/master
+sh % "hg smartlog -T '{desc} {bookmarks} {remotebookmarks}'" == r"""
+    o  x3  remote/master1
     │
-    │ @  3  default/project/bookmark
+    │ @  x4
     ├─╯
-    o  0 mybook"""
+    o  x1 mybook"""
 
 sh % "hg up '.^'" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
-sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
-    o  2  default/master
+sh % "hg smartlog -T '{desc} {bookmarks} {remotebookmarks}'" == r"""
+    o  x3  remote/master1
     │
-    @  0 mybook"""
+    │ o  x4
+    ├─╯
+    @  x1 mybook"""
 (
     sh % "cat"
     << r"""
@@ -82,10 +80,12 @@ names=project/bookmark
 """
     >> "$HGRCPATH"
 )
-sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
-    o  3  default/project/bookmark
+sh % "hg smartlog -T '{desc} {bookmarks} {remotebookmarks}'" == r"""
+    o  x3  remote/master1
     │
-    @  0 mybook"""
+    │ o  x4
+    ├─╯
+    @  x1 mybook"""
 (
     sh % "cat"
     << r"""
@@ -94,9 +94,9 @@ names=master project/bookmark
 """
     >> "$HGRCPATH"
 )
-sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
-    o  2  default/master
+sh % "hg smartlog -T '{desc} {bookmarks} {remotebookmarks}'" == r"""
+    o  x3  remote/master1
     │
-    │ o  3  default/project/bookmark
+    │ o  x4
     ├─╯
-    @  0 mybook"""
+    @  x1 mybook"""

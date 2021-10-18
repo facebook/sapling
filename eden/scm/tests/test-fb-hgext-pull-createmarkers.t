@@ -1,5 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ disable treemanifest
 

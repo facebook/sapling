@@ -10,8 +10,7 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "setconfig experimental.allowfilepeer=True"
-sh % "setconfig 'extensions.treemanifest=!'"
+sh % "configure modernclient"
 (
     sh % "cat"
     << r"""
@@ -22,25 +21,22 @@ remotenames=
     >> "$HGRCPATH"
 )
 
-sh % "hg init repo"
-sh % "cd repo"
+sh % "newclientrepo repo"
 
 sh % "echo x" > "x"
 sh % "hg commit -qAm x"
 sh % "hg book foo"
 sh % "echo x" >> "x"
 sh % "hg commit -qAm x2"
+sh % "hg push -q -r . --to foo --create"
 
 # Resetting past a remote bookmark should not delete the remote bookmark
 
-sh % "cd .."
-sh % "hg clone repo client" == r"""
-    updating to branch default
-    1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "cd client"
+sh % "newclientrepo client test:repo_server foo"
+sh % "hg book --list-remote *"
 sh % "hg book bar"
-sh % "hg reset --clean 'default/foo^'"
+sh % "hg reset --clean 'remote/foo^'"
 sh % "hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\\n'" == r"""
-    o  a89d614e2364  default/foo
+    o  a89d614e2364  remote/foo
     │
     @  b292c1e3311f bar"""

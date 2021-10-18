@@ -1,5 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure modern
   $ setconfig format.use-symlink-atomic-write=1

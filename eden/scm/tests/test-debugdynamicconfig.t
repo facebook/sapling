@@ -1,6 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
   $ configure modern
 
   $ export HG_TEST_DYNAMICCONFIG="$TESTTMP/test_hgrc"
