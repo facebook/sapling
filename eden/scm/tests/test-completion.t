@@ -36,13 +36,11 @@ Show all commands except debug commands
   histgrep
   identify
   import
-  incoming
   init
   locate
   log
   manifest
   merge
-  outgoing
   parents
   paths
   phase
@@ -342,13 +340,11 @@ Show aliases with -v
   histgrep
   identify
   import patch
-  incoming
   init
   locate
   log history
   manifest
   merge
-  outgoing
   parents
   paths
   phase
@@ -534,13 +530,11 @@ Show all commands + options
   histgrep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, template, include, exclude
   identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, template
   import: strip, base, edit, force, no-commit, bypass, partial, exact, prefix, message, logfile, date, user, similarity
-  incoming: force, newest-first, bundle, rev, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd
   init: ssh, remotecmd
   locate: rev, print0, fullpath, include, exclude
   log: follow, follow-first, date, copies, keyword, rev, line-range, removed, only-merges, user, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   manifest: rev, all, template
   merge: force, rev, preview, tool
-  outgoing: force, rev, newest-first, bookmarks, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd
   parents: rev, style, template
   paths: template
   phase: public, draft, secret, force, rev

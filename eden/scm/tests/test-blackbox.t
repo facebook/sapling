@@ -109,13 +109,6 @@ we must not cause a failure if we cannot write to the log
   $ rm -rf .hg/blackbox*
   $ mkdir -p .hg/blackbox
   $ touch .hg/blackbox/v1
-  $ hg --debug incoming
-  comparing with test:blackboxtest_server
-  query 1; heads
-  searching for changes
-  local heads: 2; remote heads: 2 (explicit: 0); initial common: 2
-  all remote heads known locally
-  no changes found
   $ hg pull
   pulling from test:blackboxtest_server
 

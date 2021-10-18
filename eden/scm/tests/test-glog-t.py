@@ -977,62 +977,6 @@ sh % "hg log -G '--style=xml' one" == r"""
 
 sh % "cd .."
 
-# Incoming and outgoing:
-
-sh % "hg clone -U -r31 repo repo2" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 31 changesets with 31 changes to 1 files"""
-sh % "cd repo2"
-
-sh % "hg incoming --graph ../repo" == r"""
-    comparing with ../repo
-    searching for changes
-    o  commit:      fea3ac5810e0
-    │  user:        test
-    │  date:        Thu Jan 01 00:00:34 1970 +0000
-    │  summary:     (34) head
-    │
-    │ o  commit:      68608f5145f9
-    │    user:        test
-    │    date:        Thu Jan 01 00:00:33 1970 +0000
-    │    summary:     (33) head
-    │
-    o  commit:      d06dffa21a31
-    │  user:        test
-    │  date:        Thu Jan 01 00:00:32 1970 +0000
-    │  summary:     (32) expand
-    │
-    o  commit:      886ed638191b
-       user:        test
-       date:        Thu Jan 01 00:00:27 1970 +0000
-       summary:     (27) collapse"""
-sh % "cd .."
-
-sh % "hg -R repo outgoing --graph repo2" == r"""
-    comparing with repo2
-    searching for changes
-    @  commit:      fea3ac5810e0
-    │  user:        test
-    │  date:        Thu Jan 01 00:00:34 1970 +0000
-    │  summary:     (34) head
-    │
-    │ o  commit:      68608f5145f9
-    │    user:        test
-    │    date:        Thu Jan 01 00:00:33 1970 +0000
-    │    summary:     (33) head
-    │
-    o  commit:      d06dffa21a31
-    │  user:        test
-    │  date:        Thu Jan 01 00:00:32 1970 +0000
-    │  summary:     (32) expand
-    │
-    o  commit:      886ed638191b
-       user:        test
-       date:        Thu Jan 01 00:00:27 1970 +0000
-       summary:     (27) collapse"""
-
 # File + limit with revs != cset revs:
 sh % "cd repo"
 sh % "touch b"

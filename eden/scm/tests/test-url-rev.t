@@ -80,17 +80,12 @@ Changing original repo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a
   
-  $ hg -q outgoing '../clone'
-  7d4251d04d20
-  ad4513930219
   $ hg summary --remote --config paths.default='../clone'
   parent: ad4513930219 
    add bar
   commit: (clean)
   phases: 4 draft
   remote: 2 outgoing
-  $ hg -q outgoing '../clone#foo'
-  7d4251d04d20
   $ hg summary --remote --config paths.default='../clone#foo'
   parent: ad4513930219 
    add bar
@@ -98,8 +93,6 @@ Changing original repo:
   phases: 4 draft
   remote: 1 outgoing
 
-  $ hg -q --cwd ../clone incoming '../repo#foo'
-  7d4251d04d20
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
   parent: 17d330177ee9 
    change a
@@ -117,7 +110,6 @@ Changing original repo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     new head of branch foo
   
-  $ hg -q --cwd ../clone incoming '../repo#foo'
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
   parent: 17d330177ee9 
    change a
@@ -128,8 +120,6 @@ Changing original repo:
   $ cd ..
 
   $ cd clone
-
-  $ hg -q incoming
 
   $ hg -q pull
 
@@ -216,9 +206,6 @@ Test handling common incoming revisions between "default" and
   $ hg update -q -C default
   $ echo modified >> bar
   $ hg commit -m "new head to push current default head"
-
-  $ hg -q outgoing '../clone'
-  44b4e0c07491
 
   $ hg summary --remote --config paths.default='../clone#foo' --config paths.default-push='../clone'
   parent: 44b4e0c07491 

@@ -4,7 +4,6 @@
   $ readconfig <<EOF
   > [alias]
   > tlog = log --template "{node|short}: '{desc}'\n"
-  > tout = out --template "{node|short}: '{desc}'\n"
   > EOF
 
   $ hg init a
@@ -70,19 +69,7 @@
   o  f7b1eb17ad24 '0'
   
 
-  $ hg tout
-  comparing with $TESTTMP/a
-  searching for changes
-  5de9cb7d8f67: '3'
-  acadbdc73b28: '4'
-
   $ hg tlog -r 'outgoing()'
-  5de9cb7d8f67: '3'
-  acadbdc73b28: '4'
-
-  $ hg tout ../a
-  comparing with ../a
-  searching for changes
   5de9cb7d8f67: '3'
   acadbdc73b28: '4'
 
@@ -108,10 +95,6 @@
   # name and email (local to this repository, optional), e.g.
   # username = Jane Doe <jdoe@example.com>
   green = ../a
-
-  $ hg tout green
-  abort: repository green does not exist!
-  [255]
 
   $ hg tlog -r 'outgoing("green")'
   abort: repository green does not exist!

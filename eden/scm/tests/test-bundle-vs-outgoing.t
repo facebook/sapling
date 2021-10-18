@@ -105,17 +105,6 @@ sanity check of outgoing: expect revs 4 5 6 7 8
 
   $ hg push -q -r 'desc(3)' --to book --create
 
-this should (and does) report 5 outgoing revisions: 4 5 6 7 8
-
-  $ hg outgoing --template "{node}\n" test:repo1_server
-  comparing with test:repo1_server
-  searching for changes
-  4afa705929a3d9af58f4b035944e8ee600c7b571
-  ee67ca2f52ac8c7904cc477b8cf04da764fea594
-  a1e3db6b8fc126320c3bffd4c4b163c0d7f5038f
-  de61c22a80e9fbe65e3f207212eb55d9c56e491b
-  5f52be4fcfe9ac3202b79e6beb8804d871b98e10
-
 test bundle (destination repo): expect 5 revisions
 
 this should bundle the same 5 revisions that outgoing reported, but it

@@ -662,7 +662,6 @@ ignorerevnumincompatiblelist = """
     test-import-merge.t
     test-import-t.py
     test-import-unknown-t.py
-    test-incoming-outgoing.t
     test-issue1438-t.py
     test-issue612-t.py
     test-issue660-t.py

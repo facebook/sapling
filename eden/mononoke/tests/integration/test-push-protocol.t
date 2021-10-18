@@ -184,41 +184,6 @@ move master bookmarks
    1 files changed, 1 insertions(+), 0 deletions(-)
    (re)
 
-  $ hgmn outgoing ssh://user@dummy/repo
-  comparing with ssh://user@dummy/repo
-  searching for changes
-  commit:      bb0985934a0f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     b
-   (re)
-  commit:      f40c09205504
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     c
-   (re)
-  commit:      fbd6b221382e
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     d
-   (re)
-  commit:      30da5bf63484
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     e
-   (re)
-  commit:      8315ea53ef41
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     f
-   (re)
-  commit:      634de738bb0f
-  bookmark:    master_bookmark
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     g
-   (re)
-
 push to Mononoke
 
   $ hgmn push --force --config treemanifest.treeonly=True --debug ssh://user@dummy/repo

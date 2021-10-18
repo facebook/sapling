@@ -22,13 +22,7 @@ with paths:
   $ echo '[paths]' >> .hg/hgrc
   $ echo 'dupe = ../b#tip' >> .hg/hgrc
   $ echo 'expand = $SOMETHING/bar' >> .hg/hgrc
-  $ hg in dupe
-  comparing with $TESTTMP/b
-  no changes found
   $ cd ..
-  $ hg -R a in dupe
-  comparing with $TESTTMP/b
-  no changes found
   $ cd a
   $ hg paths
   dupe = $TESTTMP/b#tip

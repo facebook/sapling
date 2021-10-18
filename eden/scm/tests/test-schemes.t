@@ -41,10 +41,6 @@ test converting debug output for all paths
 
 check that paths are expanded
 
-  $ PWD=`pwd` hg incoming z://
-  comparing with z://
-  no changes found
-
 check that debugexpandscheme outputs the canonical form
 
   $ hg debugexpandscheme fb-test://opsfiles

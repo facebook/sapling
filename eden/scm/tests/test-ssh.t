@@ -123,39 +123,6 @@ updating rc
   $ echo "[ui]" >> .hg/hgrc
   $ echo "ssh = $(dummysshcmd)" >> .hg/hgrc
 
-find outgoing
-
-  $ hg out ssh://user@dummy/remote
-  comparing with ssh://user@dummy/remote
-  searching for changes
-  commit:      a28a9d1a809c
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add
-  
-
-find incoming on the remote side
-
-  $ hg incoming -R ../remote ssh://user@dummy/local
-  comparing with ssh://user@dummy/local
-  searching for changes
-  commit:      a28a9d1a809c
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add
-  
-
-find incoming on the remote side (using absolute path)
-
-  $ hg incoming -R ../remote "ssh://user@dummy/`pwd`"
-  comparing with ssh://user@dummy/$TESTTMP/local
-  searching for changes
-  commit:      a28a9d1a809c
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add
-  
-
 push
 
   $ hg push
@@ -190,10 +157,6 @@ test pushkeys and bookmarks
   namespaces	
   phases	
   $ hg book foo -r 'desc(init)'
-  $ hg out -B
-  comparing with ssh://user@dummy/remote
-  searching for changed bookmarks
-     foo                       1160648e36ce
   $ hg push -B foo
   pushing to ssh://user@dummy/remote
   searching for changes
@@ -210,10 +173,6 @@ test pushkeys and bookmarks
   updating bookmark foo
   [1]
   $ hg book -d foo
-  $ hg in -B
-  comparing with ssh://user@dummy/remote
-  searching for changed bookmarks
-     foo                       a28a9d1a809c
   $ hg book -f -r 'desc(init)' foo
   $ hg pull -B foo
   pulling from ssh://user@dummy/remote
@@ -427,12 +386,7 @@ debug output
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R doesnotexist serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-  Got arguments 1:user@dummy 2:hg -R local serve --stdio
-  Got arguments 1:user@dummy 2:hg -R $TESTTMP/local serve --stdio
-  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   changegroup-in-remote hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_NODE_LAST=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_URL=remote:ssh:$LOCALIP
-  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
-  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
