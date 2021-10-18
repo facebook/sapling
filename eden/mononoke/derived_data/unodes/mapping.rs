@@ -102,7 +102,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
         }
 
         let mut res = HashMap::new();
-        if !tunables::tunables().get_unodes_use_batch_derivation() {
+        if !tunables::tunables().get_unodes_use_new_batch_derivation() {
             for bonsai in bonsais {
                 let csid = bonsai.get_changeset_id();
                 let parents = derivation_ctx

@@ -17,16 +17,55 @@ use derived_data_manager::DerivationContext;
 use futures::channel::mpsc;
 use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{FuturesOrdered, FuturesUnordered, TryStreamExt};
-use manifest::{derive_manifest_with_io_sender, Entry, TreeInfo};
+use manifest::{
+    derive_manifest_with_io_sender, derive_manifests_for_simple_stack_of_commits, Entry,
+    ManifestChanges, TreeInfo,
+};
 use mononoke_types::skeleton_manifest::{
     SkeletonManifest, SkeletonManifestDirectory, SkeletonManifestEntry, SkeletonManifestSummary,
 };
 use mononoke_types::{
-    BlobstoreValue, ContentId, FileType, MPath, MPathElement, MononokeId, SkeletonManifestId,
+    BlobstoreValue, ChangesetId, ContentId, FileType, MPath, MPathElement, MononokeId,
+    SkeletonManifestId,
 };
 use sorted_vector_map::SortedVectorMap;
 
 use crate::SkeletonManifestDerivationError;
+
+pub(crate) async fn derive_skeleton_manifest_stack(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    file_changes: Vec<(ChangesetId, BTreeMap<MPath, Option<(ContentId, FileType)>>)>,
+    parent: Option<SkeletonManifestId>,
+) -> Result<HashMap<ChangesetId, SkeletonManifestId>, Error> {
+    let blobstore = derivation_ctx.blobstore();
+
+    let manifest_changes = file_changes
+        .into_iter()
+        .map(|(cs_id, file_changes)| ManifestChanges {
+            cs_id,
+            changes: file_changes.into_iter().collect(),
+        })
+        .collect::<Vec<_>>();
+
+    let res = derive_manifests_for_simple_stack_of_commits(
+        ctx.clone(),
+        blobstore.clone(),
+        parent,
+        manifest_changes,
+        {
+            cloned!(blobstore, ctx);
+            move |tree_info, _cs_id| {
+                cloned!(blobstore, ctx);
+                async move { create_skeleton_manifest(&ctx, &blobstore, None, tree_info).await }
+            }
+        },
+        |_leaf_info, _cs_id| async { Ok((None, ())) },
+    )
+    .await?;
+
+    Ok(res.into_iter().collect())
+}
 
 /// Derives skeleton manifests for bonsai_changeset `cs_id` given parent
 /// skeleton manifests. Note that `derive_manifest()` does a lot of the heavy
