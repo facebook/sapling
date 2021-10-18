@@ -10,21 +10,30 @@ use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use cacheblob::{dummy::DummyLease, LeaseOps};
 use clap::{App, Arg, ArgMatches};
+use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use derived_data_utils::{derived_data_utils, BackfillDeriveStats, DerivedUtils};
-use futures::{stream, StreamExt, TryStreamExt};
+use derived_data_utils::{build_derive_graph, derived_data_utils, DeriveGraph, ThinOut};
+use futures::{stream, FutureExt, StreamExt, TryStreamExt};
 use futures_stats::TimedTryFutureExt;
 use mononoke_types::ChangesetId;
-use serde::ser::SerializeStruct;
 use slog::debug;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 const ARG_BACKFILL: &str = "backfill";
 const ARG_BATCH_SIZE: &str = "batch-size";
 const ARG_PARALLEL: &str = "parallel";
 
-pub enum DeriveOptions {
+pub struct DeriveOptions {
+    batch_size: u64,
+    derivation_type: DerivationType,
+}
+
+#[derive(Eq, PartialEq)]
+pub enum DerivationType {
     // Simple case - derive commits one by one
     Simple,
     // Derive commits one by one, but send all writes
@@ -34,7 +43,7 @@ pub enum DeriveOptions {
     // Use backfill mode, but also use parallel derivation -
     // some derived data types (e.g. fsnodes, skeleton manifests)
     // can derive the whole stack of commits in parallel.
-    BackfillParallel { batch_size: Option<u64> },
+    BackfillParallel,
 }
 
 impl DeriveOptions {
@@ -60,176 +69,130 @@ impl DeriveOptions {
                     .long(ARG_BATCH_SIZE)
                     .required(false)
                     .takes_value(true)
-                    .requires(ARG_PARALLEL)
                     .help("size of batch that will be derived in parallel"),
             )
     }
 
     pub fn from_matches(matches: &ArgMatches<'_>) -> Result<DeriveOptions, Error> {
-        let opts = if matches.is_present(ARG_BACKFILL) {
+        let batch_size = args::get_u64(&matches, ARG_BATCH_SIZE, 20);
+        let derivation_type = if matches.is_present(ARG_BACKFILL) {
             if matches.is_present(ARG_PARALLEL) {
-                let batch_size = args::get_u64_opt(&matches, ARG_BATCH_SIZE);
-
-                DeriveOptions::BackfillParallel { batch_size }
+                DerivationType::BackfillParallel
             } else {
-                DeriveOptions::Backfill
+                DerivationType::Backfill
             }
         } else {
-            DeriveOptions::Simple
+            DerivationType::Simple
         };
 
-        Ok(opts)
+        Ok(DeriveOptions {
+            batch_size,
+            derivation_type,
+        })
     }
-}
-
-pub enum BenchmarkResult {
-    Simple {
-        // Time it took to derive all changesets
-        total_time: Duration,
-        // How long it took to derive a given commit including saving data
-        // to blobstore
-        per_commit_stats: Vec<(ChangesetId, Duration)>,
-    },
-    Backfill {
-        // Time it took to derive all changesets
-        total_time: Duration,
-        // How long it took to derive a given commit.
-        // NOTE: Since backfilling mode is used this time DOES NOT
-        // include the time it took to save data to blobstore.
-        per_commit_stats: Vec<(ChangesetId, Duration)>,
-    },
-    BackfillParallel {
-        // Time it took to derive all changesets
-        total_time: Duration,
-    },
 }
 
 pub async fn regenerate_derived_data(
     ctx: &CoreContext,
     repo: &BlobRepo,
     csids: Vec<ChangesetId>,
-    derived_data_type: String,
+    derived_data_types: Vec<String>,
     opts: &DeriveOptions,
-) -> Result<BenchmarkResult, Error> {
+) -> Result<RegenerateStats, Error> {
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
 
-    let derived_utils = derived_data_utils(ctx.fb, &repo, derived_data_type)?;
-    // For benchmark we want all commits to be derived already - in that case we know that
-    // we can use `backfill_batch_dangerous()` function (because all dependent derive data
-    // types are derived) and also we know that all ancestors of `csids` are derived.
-    let pending = derived_utils
-        .pending(ctx.clone(), repo.clone(), csids.clone())
-        .await?;
-    if !pending.is_empty() {
-        return Err(anyhow!(
-            "{} commits are not derived yet. \
-        Regenerating requires all commits to be derived. List of underived commits: {:?}",
-            pending.len(),
-            pending
-        ));
+    let mut derived_utils = vec![];
+    for ty in derived_data_types {
+        derived_utils.push(derived_data_utils(ctx.fb, &repo, ty)?);
     }
+
+    for utils in &derived_utils {
+        // For benchmark we want all commits to be derived already - in that case we know that
+        // we can use `backfill_batch_dangerous()` function (because all dependent derive data
+        // types are derived) and also we know that all ancestors of `csids` are derived.
+        let pending = utils
+            .pending(ctx.clone(), repo.clone(), csids.clone())
+            .await?;
+        if !pending.is_empty() {
+            return Err(anyhow!(
+                "{} commits are not derived yet. \
+            Benchmarking requires all commits to be derived. List of underived commits: {:?}",
+                pending.len(),
+                pending
+            ));
+        }
+    }
+
     let csids = topo_sort(&ctx, &repo, csids).await?;
-
-    match opts {
-        DeriveOptions::Simple => derive_simple(&ctx, &repo, csids, derived_utils).await,
-        DeriveOptions::Backfill => derive_with_backfill(&ctx, &repo, csids, derived_utils).await,
-        DeriveOptions::BackfillParallel { batch_size } => {
-            derive_with_parallel_backfill(&ctx, &repo, csids, derived_utils, *batch_size).await
-        }
+    for utils in &derived_utils {
+        utils.regenerate(&csids);
     }
-}
 
-async fn derive_simple(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    csids: Vec<ChangesetId>,
-    derived_data_utils: Arc<dyn DerivedUtils>,
-) -> Result<BenchmarkResult, Error> {
-    derived_data_utils.regenerate(&csids);
-    let (stats, per_commit_stats) = async {
-        let mut per_commit_stats = vec![];
-        for csid in csids {
-            let (stats, _) = derived_data_utils
-                .derive(ctx.clone(), repo.clone(), csid)
-                .try_timed()
-                .await?;
-            per_commit_stats.push((csid, stats.completion_time));
-        }
-        Result::<_, Error>::Ok(per_commit_stats)
-    }
+    let (stats, derive_graph) = build_derive_graph(
+        ctx,
+        &repo,
+        csids,
+        derived_utils.clone(),
+        opts.batch_size as usize,
+        ThinOut::new(1000.0, 1.5),
+    )
     .try_timed()
     .await?;
+    let build_derive_graph_duration = stats.completion_time;
 
-    Ok(BenchmarkResult::Simple {
-        total_time: stats.completion_time,
-        per_commit_stats,
-    })
-}
-
-async fn derive_with_backfill(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    csids: Vec<ChangesetId>,
-    derived_data_utils: Arc<dyn DerivedUtils>,
-) -> Result<BenchmarkResult, Error> {
-    derived_data_utils.regenerate(&csids);
-    let (stats, backfill_derive_stats) = derived_data_utils
-        .backfill_batch_dangerous(
-            ctx.clone(),
-            repo.clone(),
-            csids,
-            false, /* parallel */
-            None,
-        )
-        .try_timed()
-        .await?;
-
-    let mut all_per_commit_stats = vec![];
-    if let BackfillDeriveStats::Serial(per_commit_stats) = backfill_derive_stats {
-        let per_commit_stats = per_commit_stats
-            .into_iter()
-            .map(|(cs_id, stat)| (cs_id, stat))
-            .collect::<Vec<_>>();
-        all_per_commit_stats.extend(per_commit_stats);
-    }
-
-    Ok(BenchmarkResult::Backfill {
-        total_time: stats.completion_time,
-        per_commit_stats: all_per_commit_stats,
-    })
-}
-
-async fn derive_with_parallel_backfill(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    csids: Vec<ChangesetId>,
-    derived_data_utils: Arc<dyn DerivedUtils>,
-    batch_size: Option<u64>,
-) -> Result<BenchmarkResult, Error> {
-    let batch_size = batch_size.unwrap_or(csids.len() as u64);
-
-    let (stats, ()) = async {
-        for chunk in csids.chunks(batch_size as usize) {
-            derived_data_utils.regenerate(&chunk.to_vec());
-            derived_data_utils
-                .backfill_batch_dangerous(
+    let start = Instant::now();
+    match opts.derivation_type {
+        DerivationType::Simple => {
+            bounded_traversal::bounded_traversal_dag(
+                100,
+                derive_graph.clone(),
+                |node| {
+                    async move {
+                        let deps = node.dependencies.clone();
+                        Ok((node, deps))
+                    }
+                    .boxed()
+                },
+                {
+                    cloned!(repo);
+                    move |node: DeriveGraph, _| {
+                        cloned!(ctx, repo);
+                        async move {
+                            if let Some(deriver) = &node.deriver {
+                                for csid in &node.csids {
+                                    deriver.derive(ctx.clone(), repo.clone(), *csid).await?;
+                                }
+                            }
+                            Result::<_, Error>::Ok(())
+                        }
+                        .boxed()
+                    }
+                },
+            )
+            .await?;
+        }
+        DerivationType::Backfill | DerivationType::BackfillParallel => {
+            let parallel = opts.derivation_type == DerivationType::BackfillParallel;
+            derive_graph
+                .derive(
                     ctx.clone(),
                     repo.clone(),
-                    chunk.to_vec(),
-                    true, /* parallel */
-                    None,
+                    parallel,
+                    None, /* gap size */
                 )
                 .await?;
-            derived_data_utils.clear_regenerate();
         }
-        Result::<_, Error>::Ok(())
-    }
-    .try_timed()
-    .await?;
+    };
 
-    Ok(BenchmarkResult::BackfillParallel {
-        total_time: stats.completion_time,
+    Ok(RegenerateStats {
+        build_derive_graph: build_derive_graph_duration,
+        derivation: start.elapsed(),
     })
+}
+
+pub struct RegenerateStats {
+    pub build_derive_graph: Duration,
+    pub derivation: Duration,
 }
 
 async fn topo_sort(
@@ -253,76 +216,4 @@ async fn topo_sort(
         .into_iter()
         .map(|(csid, _)| csid)
         .collect())
-}
-
-impl serde::Serialize for BenchmarkResult {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        use BenchmarkResult::*;
-        match self {
-            Simple {
-                total_time,
-                per_commit_stats,
-            } => {
-                let mut s = serializer.serialize_struct("BenchmarkResult", 3)?;
-                s.serialize_field("type", "simple")?;
-                s.serialize_field("total_time", total_time)?;
-                s.serialize_field("per_commit_stats", per_commit_stats)?;
-                s.end()
-            }
-            Backfill {
-                total_time,
-                per_commit_stats,
-            } => {
-                let mut s = serializer.serialize_struct("BenchmarkResult", 3)?;
-                s.serialize_field("type", "backfill")?;
-                s.serialize_field("total_time", total_time)?;
-                s.serialize_field("per_commit_stats", per_commit_stats)?;
-                s.end()
-            }
-            BackfillParallel { total_time } => {
-                let mut s = serializer.serialize_struct("BenchmarkResult", 2)?;
-                s.serialize_field("type", "backfill_parallel")?;
-                s.serialize_field("total_time", total_time)?;
-                s.end()
-            }
-        }
-    }
-}
-
-pub fn print_benchmark_result(res: &BenchmarkResult, json: bool) -> Result<(), Error> {
-    use BenchmarkResult::*;
-
-    if json {
-        let s = serde_json::to_string_pretty(res)?;
-        println!("{}", s);
-    } else {
-        match res {
-            Simple {
-                total_time,
-                per_commit_stats,
-            } => {
-                println!("Total time: {}ms", total_time.as_millis());
-                for (cs_id, time) in per_commit_stats {
-                    println!("{}: {}ms", cs_id, time.as_millis());
-                }
-            }
-            Backfill {
-                total_time,
-                per_commit_stats,
-            } => {
-                println!("Total time: {}ms", total_time.as_millis());
-                for (cs_id, time) in per_commit_stats {
-                    println!("{}: {}ms", cs_id, time.as_millis());
-                }
-            }
-            BackfillParallel { total_time } => {
-                println!("Total time: {}ms", total_time.as_millis());
-            }
-        }
-    }
-
-    Ok(())
 }

@@ -373,6 +373,13 @@ fn main(fb: FacebookInit) -> Result<()> {
                     .help("derived data type for which backfill will be run"),
             )
             .arg(
+                Arg::with_name(ARG_ALL_TYPES)
+                    .long(ARG_ALL_TYPES)
+                    .required(false)
+                    .takes_value(false)
+                    .help("derive all derived data types enabled for this repo"),
+            )
+            .arg(
                 Arg::with_name(ARG_JSON)
                     .long(ARG_JSON)
                     .required(false)
@@ -619,26 +626,19 @@ async fn run_subcmd<'a>(
             subcommand_single(&ctx, &repo, csid, types).await
         }
         (SUBCOMMAND_BENCHMARK, Some(sub_m)) => {
-            let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
+            let (repo, types) =
+                parse_repo_and_derived_data_types(fb, logger, matches, sub_m).await?;
             let csids = CommitDiscoveryOptions::from_matches(&ctx, &repo, sub_m)
                 .await?
                 .get_commits();
 
-            let derived_data_type = sub_m
-                .value_of(ARG_DERIVED_DATA_TYPE)
-                .ok_or_else(|| anyhow!("{} is not set", ARG_DERIVED_DATA_TYPE))?;
             let opts = regenerate::DeriveOptions::from_matches(sub_m)?;
 
-            let res = regenerate::regenerate_derived_data(
-                &ctx,
-                &repo,
-                csids,
-                derived_data_type.to_string(),
-                &opts,
-            )
-            .await?;
+            let stats =
+                regenerate::regenerate_derived_data(&ctx, &repo, csids, types, &opts).await?;
 
-            regenerate::print_benchmark_result(&res, sub_m.is_present(ARG_JSON))?;
+            println!("Building derive graph took {:?}", stats.build_derive_graph);
+            println!("Derivation took {:?}", stats.derivation);
 
             Ok(())
         }
@@ -681,7 +681,7 @@ async fn run_subcmd<'a>(
                     &ctx,
                     &repo,
                     chunk.clone(),
-                    derived_data_type.to_string(),
+                    vec![derived_data_type.to_string()],
                     &opts,
                 )
                 .await?;
