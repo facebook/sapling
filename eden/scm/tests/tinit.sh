@@ -47,7 +47,7 @@ newclientrepo() {
   if [ -z "$server" ]; then
       server="test:${reponame}_server"
   fi
-  hg clone -q "$server" "$TESTTMP/$reponame"
+  hg clone --shallow -q "$server" "$TESTTMP/$reponame"
 
   cd "$TESTTMP/$reponame"
   for book in $bookmarks ; do
@@ -222,6 +222,7 @@ configure() {
         ;;
       modernclient)
         touch $TESTTMP/.eagerepo
+        enable remotefilelog
         setconfig remotefilelog.http=True
         setconfig treemanifest.http=True
         configure modern

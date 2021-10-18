@@ -326,6 +326,13 @@ def cloneshallow(orig, ui, repo, *args, **opts):
 
             wrapfunction(localrepo.localrepository, "stream_in", stream_in_shallow)
 
+        def newreporequirements(orig, repo):
+            reqs = orig(repo)
+            reqs.add(shallowrepo.requirement)
+            return reqs
+
+        wrapfunction(localrepo, "newreporequirements", newreporequirements)
+
     orig(ui, repo, *args, **opts)
 
 

@@ -1,12 +1,10 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
-  $ configure modern
-  $ setconfig paths.default=test:e1 ui.ssh=false
+  $ configure modernclient
 
 Prepare Repo:
 
-  $ newremoterepo
+  $ newclientrepo repo
   $ setconfig paths.default=test:e1
   $ drawdag << 'EOS'
   > E
@@ -24,8 +22,7 @@ Prepare Repo:
 
 Clone the lazy repo:
 
-  $ hg clone -U --shallow test:e1 --config remotefilelog.reponame=x cloned1 -q
-  $ cd cloned1
+  $ newclientrepo cloned1 test:e1
 
 Commit and edit on top of B:
 
