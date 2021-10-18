@@ -358,7 +358,7 @@ where
 /// file, either all the parents have the same file contents, or the
 /// changeset includes a change for that file.
 async fn check_fsnode_leaf(
-    leaf_info: LeafInfo<FsnodeFile, (ContentId, FileType)>,
+    leaf_info: LeafInfo<(ContentId, FileType), (ContentId, FileType)>,
 ) -> Result<(Option<FsnodeSummary>, (ContentId, FileType))> {
     if let Some(content_id_and_file_type) = leaf_info.leaf {
         Ok((None, content_id_and_file_type))

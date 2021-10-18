@@ -75,13 +75,13 @@ where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     Leaf: Send + 'static,
-    IntermediateLeafId: Send + From<LeafId> + 'static,
+    IntermediateLeafId: Send + From<LeafId> + 'static + fmt::Debug + Clone + Eq + Hash,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
     <TreeId as StoreLoadable<Store>>::Value: Send,
     T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut + Send + Sync + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
-    L: Fn(LeafInfo<LeafId, Leaf>) -> LFut + Send + Sync + 'static,
+    L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
     LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'static,
     Ctx: Send + 'static,
 {
@@ -163,13 +163,13 @@ where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     Leaf: Send + 'static,
-    IntermediateLeafId: Send + From<LeafId> + 'static,
+    IntermediateLeafId: Send + From<LeafId> + 'static + Eq + Hash + Clone + fmt::Debug,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
     <TreeId as StoreLoadable<Store>>::Value: Send,
     T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut + Send + Sync + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
-    L: Fn(LeafInfo<LeafId, Leaf>) -> LFut + Send + Sync + 'static,
+    L: Fn(LeafInfo<IntermediateLeafId, Leaf>) -> LFut + Send + Sync + 'static,
     LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'static,
     Ctx: Send + 'static,
 {
@@ -186,12 +186,14 @@ where
             parents: parents.into_iter().map(Entry::Tree).collect(),
         },
         // unfold, all merge logic happens in this unfold function
-        move |merge_node| merge(ctx.clone(), store.clone(), merge_node).boxed(),
+        move |merge_node: MergeNode<_, IntermediateLeafId, _>| {
+            merge(ctx.clone(), store.clone(), merge_node).boxed()
+        },
         // fold, this function only creates entries from merge result and already merged subentries
         {
             let create_tree = Arc::new(create_tree);
             let create_leaf = Arc::new(create_leaf);
-            move |merge_result, subentries| {
+            move |merge_result: MergeResult<_, IntermediateLeafId, _>, subentries| {
                 let create_tree = create_tree.clone();
                 let create_leaf = create_leaf.clone();
                 async move {
@@ -301,7 +303,7 @@ pub fn derive_manifest_with_io_sender<
 where
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
     Leaf: Send + 'static,
-    IntermediateLeafId: Send + From<LeafId> + 'static,
+    IntermediateLeafId: Send + From<LeafId> + 'static + Eq + Hash + fmt::Debug + Clone,
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
@@ -314,7 +316,7 @@ where
         + Sync
         + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'static,
-    L: Fn(LeafInfo<LeafId, Leaf>, mpsc::UnboundedSender<BoxFuture<(), Error>>) -> LFut
+    L: Fn(LeafInfo<IntermediateLeafId, Leaf>, mpsc::UnboundedSender<BoxFuture<(), Error>>) -> LFut
         + Send
         + Sync
         + 'static,
@@ -384,19 +386,20 @@ struct MergeNode<TreeId, LeafId, Leaf> {
     parents: Vec<Entry<TreeId, LeafId>>, // unmerged parents of current node
 }
 
-async fn merge<TreeId, LeafId, Leaf, Store>(
+async fn merge<TreeId, LeafId, IntermediateLeafId, Leaf, Store>(
     ctx: CoreContext,
     store: Store,
-    node: MergeNode<TreeId, LeafId, Leaf>,
+    node: MergeNode<TreeId, IntermediateLeafId, Leaf>,
 ) -> Result<
     (
-        MergeResult<TreeId, LeafId, Leaf>,
-        Vec<MergeNode<TreeId, LeafId, Leaf>>,
+        MergeResult<TreeId, IntermediateLeafId, Leaf>,
+        Vec<MergeNode<TreeId, IntermediateLeafId, Leaf>>,
     ),
     Error,
 >
 where
     Store: Sync + Send + Clone + 'static,
+    IntermediateLeafId: Send + From<LeafId> + 'static + fmt::Debug + Clone + Eq + Hash,
     LeafId: Clone + Eq + Hash + fmt::Debug,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Sync,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
@@ -546,7 +549,7 @@ where
                 changes: Default::default(),
                 parents: Default::default(),
             });
-            subentry.parents.push(entry);
+            subentry.parents.push(convert_to_intermediate_entry(entry));
         }
     }
     // add subentries from changes
