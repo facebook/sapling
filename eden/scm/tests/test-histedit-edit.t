@@ -1,5 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ . "$TESTDIR/histedit-helpers.sh"
 
@@ -353,57 +352,3 @@ then, check "modify the message" itself
   summary:     f
   
 
-  $ cd ..
-  $ hg clone -qr0 r r0
-  $ cd r0
-  $ hg histedit --commands - 'desc(a)' 2>&1 << EOF
-  > edit cb9a9f314b8b a > $EDITED
-  > EOF
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  adding a
-  Editing (cb9a9f314b8b), you may commit or record as needed now.
-  (hg histedit --continue to resume)
-  [1]
-  $ HGEDITOR=true hg histedit --continue
-
-  $ hg log -G
-  @  commit:      0efcea34f18a
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
-  
-  $ echo foo >> b
-  $ hg addr
-  adding b
-  $ hg ci -m 'add b'
-  $ echo foo >> a
-  $ hg ci -m 'extend a'
-  $ hg debugmakepublic 'desc(add)'
-Attempting to fold a change into a public change should not work:
-  $ cat > ../edit.sh <<EOF
-  > cat "\$1" | sed s/pick/fold/ > tmp
-  > mv tmp "\$1"
-  > EOF
-  $ HGEDITOR="sh ../edit.sh" hg histedit 'desc(extend)'
-  warning: histedit rules saved to: .hg/histedit-last-edit.txt
-  hg: parse error: first changeset cannot use verb "fold"
-  [255]
-  $ cat .hg/histedit-last-edit.txt
-  fold 0012be4a27ea extend a
-  
-  # Edit history between 0012be4a27ea and 0012be4a27ea
-  #
-  # Commits are listed from least to most recent
-  #
-  # You can reorder changesets by reordering the lines
-  #
-  # Commands:
-  #
-  #  e, edit = use commit, but stop for amending
-  #  m, mess = edit commit message without changing commit content
-  #  p, fold = use commit
-  #  b, base = checkout changeset and apply further changesets from there
-  #  d, drop = remove commit from history
-  #  f, fold = use commit, but combine it with the one above
-  #  r, roll = like fold, but discard this commit's description and date
-  #

@@ -1550,7 +1550,7 @@ def debuginitgit(ui, destpath, **opts):
     gitdir = os.path.realpath(opts.get("git_dir"))
     if not os.path.exists(os.path.join(gitdir, "refs")):
         raise error.Abort(_("invalid --git-dir: %s") % gitdir)
-    repo = hg.peer(ui, opts, ui.expandpath(destpath), create=True).local()
+    repo = hg.repository(ui, ui.expandpath(destpath), create=True).local()
     with repo.lock(), repo.transaction("initgit"):
         repo.svfs.writeutf8("gitdir", gitdir)
         repo.storerequirements.add("gitchangelog")

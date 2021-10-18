@@ -1,13 +1,13 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
-hide outer repo
-  $ hg init
+  $ configure modernclient
 
 Use hgrc within $TESTTMP
 
+  $ cp $HGRCPATH orig.hgrc
   $ HGRCPATH=`pwd`/hgrc
   $ export HGRCPATH
+  $ cp orig.hgrc hgrc
 
 Use an alternate var for scribbling on hgrc to keep check-code from
 complaining about the important settings we may be overwriting:
@@ -28,22 +28,16 @@ Basic syntax error
     = expected equal_sign
   
   [255]
-  $ cat > $HGRC <<EOF
-  > [experimental]
-  > allowfilepeer=True
-  > EOF
+  $ cp orig.hgrc hgrc
 
 Issue1199: Can't use '%' in hgrc (eg url encoded username)
 
-  $ hg init "foo%bar"
-  $ hg clone "foo%bar" foobar
-  updating to branch default
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd foobar
+  $ newclientrepo "foo%bar"
+  $ newclientrepo foobar test:foo%bar_server
   $ cat .hg/hgrc
   # example repository config (see 'hg help config' for more info)
   [paths]
-  default = $TESTTMP/foo%bar
+  default = test:foo%EF%BF%BDr_server
   
   # path aliases to other clones of this repo in URLs or filesystem paths
   # (see 'hg help config.paths' for more info)
@@ -56,11 +50,11 @@ Issue1199: Can't use '%' in hgrc (eg url encoded username)
   # name and email (local to this repository, optional), e.g.
   # username = Jane Doe <jdoe@example.com>
   $ hg paths
-  default = $TESTTMP/foo%bar
-  $ hg showconfig
+  default = test:foo%EF%BF%BDr_server
+  $ hg showconfig paths
+  paths.default=test:foo%EF%BF%BDr_server
+  $ hg showconfig bundle
   bundle.mainreporoot=$TESTTMP/foobar
-  experimental.allowfilepeer=True
-  paths.default=$TESTTMP/foo%bar
   $ cd ..
 
 issue1829: wrong indentation
@@ -83,17 +77,22 @@ issue1829: wrong indentation
   foo.bar=a\nb\nc\nde\nfg
   foo.baz=bif cb
 
+  $ cp $TESTTMP/orig.hgrc $HGRC
   $ FAKEPATH=/path/to/nowhere
   $ export FAKEPATH
-  $ echo '%include $FAKEPATH/no-such-file' > $HGRC
+  $ echo '%include $FAKEPATH/no-such-file' >> $HGRC
   $ hg version
   EdenSCM * (glob)
   $ unset FAKEPATH
 
 make sure global options given on the cmdline take precedence
 
-  $ hg showconfig --config ui.verbose=True --quiet
-  bundle.mainreporoot=$TESTTMP
+  $ hg showconfig --config ui.verbose=True --quiet ui
+  ui.slash=True
+  ui.interactive=False
+  ui.mergemarkers=detailed
+  ui.promptecho=True
+  ui.ssh=* (glob)
   ui.verbose=False
   ui.debug=False
   ui.quiet=True
@@ -124,7 +123,6 @@ username expansion
   $ cd ..
 
   $ hg showconfig
-  bundle.mainreporoot=$TESTTMP
   ui.username=$FAKEUSER
 
   $ unset FAKEUSER
@@ -167,7 +165,6 @@ customized hgrc
 
   $ hg showconfig
   $TESTTMP/hgrc:13: alias.log=log -g
-  repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:11: defaults.identify=-n
   $TESTTMP/hgrc:2: ui.debug=true
   $TESTTMP/hgrc:3: ui.fallbackencoding=ASCII
@@ -182,7 +179,6 @@ plain hgrc
 
   $ HGPLAIN=; export HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
-  repo: bundle.mainreporoot=$TESTTMP
   --config: ui.traceback=True
   --verbose: ui.verbose=False
   --debug: ui.debug=True
@@ -191,7 +187,6 @@ plain hgrc
 with environment variables
 
   $ PAGER=p1 EDITOR=e1 VISUAL=e2 hg showconfig --debug
-  repo: bundle.mainreporoot=$TESTTMP
   $VISUAL: ui.editor=e2
   --verbose: ui.verbose=False
   --debug: ui.debug=True
@@ -212,7 +207,6 @@ plain mode with exceptions
   $ HGPLAINEXCEPT=; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
-  repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   --config: ui.traceback=True
   --verbose: ui.verbose=False
@@ -221,7 +215,6 @@ plain mode with exceptions
   $ unset HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
-  repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   --config: ui.traceback=True
   --verbose: ui.verbose=False
@@ -230,7 +223,6 @@ plain mode with exceptions
   $ HGPLAINEXCEPT=i18n; export HGPLAINEXCEPT
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
-  repo: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   --config: ui.traceback=True
   --verbose: ui.verbose=False

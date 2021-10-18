@@ -1,39 +1,29 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
-  $ hg init a
-  $ cd a
+  $ configure modernclient
+
+  $ newclientrepo server
+  $ newclientrepo a test:server_server
   $ echo a > a
   $ hg ci -A -d'1 0' -m a
   adding a
+  $ hg push -q -r . --to master_a --create
 
-  $ cd ..
-
-  $ hg init b
-  $ cd b
+  $ newclientrepo b test:server_server
   $ echo b > b
   $ hg ci -A -d'1 0' -m b
   adding b
+  $ hg push -q -r . --to master_b --create --force
+  warning: repository is unrelated
 
-  $ cd ..
-
-  $ hg clone a c
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd c
+  $ newclientrepo c test:server_server master_a
   $ cat >> .hg/hgrc <<EOF
   > [paths]
   > relative = ../a
   > EOF
-  $ hg pull -f ../b
-  pulling from ../b
+  $ hg pull -f test:server_server -B master_b
+  pulling from test:server_server
   searching for changes
-  warning: repository is unrelated
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -81,6 +71,8 @@ Abbreviation of long option:
 
   $ hg --repo c tip
   commit:      b6c483daf290
+  bookmark:    remote/master_b
+  hoistedname: master_b
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
@@ -90,6 +82,8 @@ earlygetopt with duplicate options (36d23de02da1):
 
   $ hg --cwd a --cwd b --cwd c tip
   commit:      b6c483daf290
+  bookmark:    remote/master_b
+  hoistedname: master_b
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
@@ -157,6 +151,8 @@ Testing -v/--verbose:
 
   $ hg --cwd c head -v
   commit:      b6c483daf290
+  bookmark:    remote/master_b
+  hoistedname: master_b
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   files:       b
@@ -165,6 +161,8 @@ Testing -v/--verbose:
   
   
   commit:      8580ff50825a
+  bookmark:    remote/master_a
+  hoistedname: master_a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   files:       a
@@ -206,7 +204,9 @@ Testing --debug:
 
   $ hg --cwd c log --debug
   commit:      b6c483daf2907ce5825c0bb50f5716226281cc1a
-  phase:       draft
+  bookmark:    remote/master_b
+  hoistedname: master_b
+  phase:       public
   manifest:    23226e7a252cacdc2d99e4fbdc3653441056de49
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -217,7 +217,9 @@ Testing --debug:
   
   
   commit:      8580ff50825a50c8f716709acdf8de0deddcd6ab
-  phase:       draft
+  bookmark:    remote/master_a
+  hoistedname: master_a
+  phase:       public
   manifest:    a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -284,14 +286,26 @@ Testing -h/--help:
   Commit changes and modify commits:
   
    commit        save all pending changes or specified files in a new commit
+   amend         save pending changes to the current commit
+   metaedit      edit commit message and other metadata
   
   Rearrange commits:
   
    graft         copy commits from a different location
+   hide          hide commits and their descendants
+   unhide        unhide commits and their ancestors
+  
+  Work with stacks of commits:
+  
+   previous      check out the parent commit
+   next          check out a child commit
+   split         split a changeset into smaller changesets
+   fold          combine multiple commits into a single commit
   
   Undo changes:
   
    uncommit      uncommit part or all of the current commit
+   unamend       undo the last amend operation on the current commit
   
   Other commands:
   
@@ -341,14 +355,26 @@ Testing -h/--help:
   Commit changes and modify commits:
   
    commit        save all pending changes or specified files in a new commit
+   amend         save pending changes to the current commit
+   metaedit      edit commit message and other metadata
   
   Rearrange commits:
   
    graft         copy commits from a different location
+   hide          hide commits and their descendants
+   unhide        unhide commits and their ancestors
+  
+  Work with stacks of commits:
+  
+   previous      check out the parent commit
+   next          check out a child commit
+   split         split a changeset into smaller changesets
+   fold          combine multiple commits into a single commit
   
   Undo changes:
   
    uncommit      uncommit part or all of the current commit
+   unamend       undo the last amend operation on the current commit
   
   Other commands:
   

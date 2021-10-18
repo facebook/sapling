@@ -1,34 +1,23 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
 #require execbit
 
+  $ configure modernclient
+
   $ umask 027
 
-  $ hg init test1
-  $ cd test1
+  $ newclientrepo test1
   $ touch a b
   $ hg add a b
   $ hg ci -m "added a b"
+  $ hg push -r . -q --to book --create
 
-  $ cd ..
-  $ hg clone test1 test3
-  updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ newclientrepo test3 test:test1_server book
 
-  $ hg init test2
-  $ cd test2
-  $ hg pull ../test1
-  pulling from ../test1
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 2 changes to 2 files
-  $ hg co
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ newclientrepo test2 test:test1_server book
   $ chmod +x a
   $ hg ci -m "chmod +x a"
+  $ hg push -q -r . --to book2 --create
 
 the changelog should mention file a:
 
@@ -38,16 +27,15 @@ the changelog should mention file a:
   $ cd ../test1
   $ echo 123 >>a
   $ hg ci -m "a updated"
+  $ hg push -q -r . --to book1 --create
 
-  $ hg pull ../test2
-  pulling from ../test2
+  $ hg pull -B book2
+  pulling from test:test1_server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
   $ hg heads
   commit:      7f4313b42a34
+  bookmark:    remote/book2
+  hoistedname: book2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
@@ -59,6 +47,8 @@ the changelog should mention file a:
   
   $ hg history
   commit:      7f4313b42a34
+  bookmark:    remote/book2
+  hoistedname: book2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
@@ -86,15 +76,20 @@ the changelog should mention file a:
   $ echo 123 >>b
   $ hg ci -m "b updated"
 
-  $ hg pull ../test2
-  pulling from ../test2
+  $ hg pull test:test1_server -B book1 -B book2
+  pulling from test:test1_server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
   $ hg heads
+  commit:      c6ecefc45368
+  bookmark:    remote/book1
+  hoistedname: book1
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a updated
+  
   commit:      7f4313b42a34
+  bookmark:    remote/book2
+  hoistedname: book2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
@@ -105,7 +100,16 @@ the changelog should mention file a:
   summary:     b updated
   
   $ hg history
+  commit:      c6ecefc45368
+  bookmark:    remote/book1
+  hoistedname: book1
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a updated
+  
   commit:      7f4313b42a34
+  bookmark:    remote/book2
+  hoistedname: book2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
@@ -116,12 +120,14 @@ the changelog should mention file a:
   summary:     b updated
   
   commit:      22a449e20da5
+  bookmark:    remote/book
+  hoistedname: book
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     added a b
   
 
-  $ hg -v merge
+  $ hg -v merge -r book2
   resolving manifests
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -132,15 +138,3 @@ the changelog should mention file a:
   -rwxr-x---
   -rwxr-x---
 
-  $ hg debugindex a
-     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
-       0         0       0  .....       0 b80de5d13875 000000000000 000000000000 (re)
-  $ hg debugindex -R ../test2 a
-     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
-       0         0       0  .....       0 b80de5d13875 000000000000 000000000000 (re)
-  $ hg debugindex -R ../test1 a
-     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
-       0         0       0  .....       0 b80de5d13875 000000000000 000000000000 (re)
-       1         0       5  .....       1 7fe919cc0336 b80de5d13875 000000000000 (re)
-
-  $ cd ..

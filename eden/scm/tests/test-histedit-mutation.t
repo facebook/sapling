@@ -1,5 +1,4 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
   $ configure mutation
   $ . "$TESTDIR/histedit-helpers.sh"
@@ -281,53 +280,6 @@ stabilise
   $ hg rebase  -r '(obsolete()::) - obsolete()' -d .
   rebasing 2a7423bdcce6 "f"
   $ hg up tip -q
-
-Test dropping of changeset on the top of the stack
--------------------------------------------------------
-
-Nothing is rewritten below, the working directory parent must be change for the
-dropped changeset to be hidden.
-
-  $ cd ..
-  $ hg clone base droplast
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd droplast
-  $ hg histedit -r '05d885d5bf7b' --commands - << EOF
-  > pick 05d885d5bf7b 12 c
-  > drop c3accca457aa 13 f
-  > EOF
-  $ hg log -G
-  @  05d885d5bf7b c
-  │
-  o  cb9a9f314b8b a
-  
-
-
-With rewritten ancestors
-
-  $ echo e > e
-  $ hg add e
-  $ hg commit -m g
-  $ echo f > f
-  $ hg add f
-  $ hg commit -m h
-  $ hg histedit -r '05d885d5bf7b' --commands - << EOF
-  > pick 0ad9c053181f 12 g
-  > pick 05d885d5bf7b 10 c
-  > drop c9ce38eda099 13 h
-  > EOF
-  $ hg log -G
-  @  14ea19c40480 c
-  │
-  o  64f466521de4 g
-  │
-  o  cb9a9f314b8b a
-  
-
-  $ cd ../base
-
-
 
 Test phases support
 ===========================================
