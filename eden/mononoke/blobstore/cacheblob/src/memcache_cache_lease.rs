@@ -7,15 +7,12 @@
 
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures::{
-    compat::Future01CompatExt,
-    future::{select, BoxFuture, Either},
-};
+use futures::future::{select, BoxFuture, Either};
 use memcache::{KeyGen, MemcacheClient};
 use memcache_lock_thrift::LockState;
 use slog::warn;
@@ -101,7 +98,6 @@ async fn mc_raw_put(
     let lock_ttl = Duration::from_secs(50);
     let res = memcache
         .set_with_ttl(presence_key, uploaded, lock_ttl)
-        .compat()
         .await;
     if res.is_err() {
         STATS::presence_put_err.add_value(1);
@@ -109,7 +105,7 @@ async fn mc_raw_put(
 
     if value.as_bytes().len() < MEMCACHE_MAX_SIZE {
         STATS::blob_put.add_value(1);
-        let res = memcache.set(key, value.into_raw_bytes()).compat().await;
+        let res = memcache.set(key, value.into_raw_bytes()).await;
         if res.is_err() {
             STATS::blob_put_err.add_value(1);
         }
@@ -148,14 +144,14 @@ impl MemcacheOps {
     async fn get_lock_state(&self, key: String) -> Option<LockState> {
         let mc_key = self.presence_keygen.key(key.clone());
         STATS::presence_get.add_value(1);
-        match self.memcache.get(mc_key.clone()).compat().await {
+        match self.memcache.get(mc_key.clone()).await {
             Ok(opt_blob) => {
                 let blob = opt_blob?;
                 let state = compact_protocol::deserialize(Vec::from(blob)).ok()?;
                 if let LockState::uploaded_key(ref up_key) = state {
                     if key != *up_key {
                         // The lock state is invalid - fix it up by dropping the lock
-                        let _ = self.memcache.del(mc_key).compat().await;
+                        let _ = self.memcache.del(mc_key).await;
                         return None;
                     }
                 }
@@ -210,7 +206,7 @@ impl CacheOps for MemcacheOps {
     // Turns errors to Ok(None)
     async fn get(&self, key: &str) -> Option<BlobstoreGetData> {
         let mc_key = self.keygen.key(key);
-        let buf = self.memcache.get(mc_key).compat().await.ok()??;
+        let buf = self.memcache.get(mc_key).await.ok()??;
         Some(BlobstoreGetData::from_bytes(buf))
     }
 
@@ -235,7 +231,7 @@ impl CacheOps for MemcacheOps {
                 STATS::presence_check_miss.add_value(1);
                 let mc_key = self.keygen.key(key);
                 STATS::blob_presence.add_value(1);
-                let blob_presence = self.memcache.get(mc_key).compat().await;
+                let blob_presence = self.memcache.get(mc_key).await;
                 match blob_presence {
                     Ok(Some(_)) => STATS::blob_presence_hit.add_value(1),
                     Ok(None) => STATS::blob_presence_miss.add_value(1),
@@ -257,14 +253,13 @@ impl LeaseOps for MemcacheOps {
         let res = self
             .memcache
             .add_with_ttl(mc_key, lockstate, lock_ttl)
-            .compat()
             .await;
         match res {
             Ok(true) => LEASE_STATS::claim.add_value(1, (lease_type,)),
             Ok(false) => LEASE_STATS::conflict.add_value(1, (lease_type,)),
             Err(_) => LEASE_STATS::claim_err.add_value(1, (lease_type,)),
         }
-        res.map_err(|()| anyhow!("Failed talking to Memcache"))
+        res
     }
 
     fn renew_lease_until(&self, ctx: CoreContext, key: &str, mut done: BoxFuture<'static, ()>) {
@@ -279,7 +274,6 @@ impl LeaseOps for MemcacheOps {
             loop {
                 let res = memcache
                     .set_with_ttl(mc_key.clone(), lockstate.clone(), lock_ttl)
-                    .compat()
                     .await;
                 if res.is_err() {
                     warn!(ctx.logger(), "failed to renew lease for {}", mc_key);
@@ -317,7 +311,7 @@ impl LeaseOps for MemcacheOps {
         // This future checks the state of the lease, and releases it only
         // if it's locked by us right now.
         let f = async move {
-            let bytes = match memcache.get(mc_key.clone()).compat().await {
+            let bytes = match memcache.get(mc_key.clone()).await {
                 Ok(Some(bytes)) => bytes,
                 Ok(None) => {
                     LEASE_STATS::release_no_lease.add_value(1, (lease_type,));
@@ -331,7 +325,7 @@ impl LeaseOps for MemcacheOps {
                 Err(_) => {
                     LEASE_STATS::release_bad_key.add_value(1, (lease_type,));
                     // Fix up invalid value
-                    let _ = memcache.del(mc_key).compat().await;
+                    let _ = memcache.del(mc_key).await;
                     return;
                 }
             };
@@ -341,7 +335,7 @@ impl LeaseOps for MemcacheOps {
                     if locked_by == hostname {
                         LEASE_STATS::release_good.add_value(1, (lease_type,));
                         // The lease is held by us - just remove it
-                        let _ = memcache.del(mc_key).compat().await;
+                        let _ = memcache.del(mc_key).await;
                     } else {
                         LEASE_STATS::release_held_by_other.add_value(1, (lease_type,));
                         // Someone else grabbed a lease, leave it alone
@@ -352,7 +346,7 @@ impl LeaseOps for MemcacheOps {
                         LEASE_STATS::release_bad_key.add_value(1, (lease_type,));
                         // Invalid key - fix it up. Normally that shouldn't
                         // ever occur
-                        let _ = memcache.del(mc_key).compat().await;
+                        let _ = memcache.del(mc_key).await;
                     } else {
                         LEASE_STATS::release_key_set.add_value(1, (lease_type,));
                         // Key is valid, and is most likely set by

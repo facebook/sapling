@@ -193,7 +193,7 @@ async fn get_single_filenode_from_memcache(
             STATS::point_filenode_miss.add_value(1);
             return None;
         }
-        Err(()) => {
+        Err(_) => {
             STATS::point_filenode_internal_err.add_value(1);
             return None;
         }
@@ -241,7 +241,7 @@ async fn get_history_from_memcache(
             STATS::gaf_miss.add_value(1);
             return None;
         }
-        Err(()) => {
+        Err(_) => {
             STATS::gaf_internal_err.add_value(1);
             return None;
         }
@@ -383,7 +383,10 @@ async fn fill_history(
                         // longer than the pointer
                         let chunk_ttl = Duration::from_secs(TTL_SEC + TTL_SEC_RAND);
 
-                        memcache.set_with_ttl(chunk_key, chunk, chunk_ttl).await?;
+                        memcache
+                            .set_with_ttl(chunk_key, chunk, chunk_ttl)
+                            .await
+                            .map_err(drop)?;
 
                         Ok(pointer)
                     }
@@ -398,7 +401,10 @@ async fn fill_history(
     let root_key = keygen.key(&key.key);
     let root_ttl = Duration::from_secs(TTL_SEC + random::<u64>() % TTL_SEC_RAND);
 
-    memcache.set_with_ttl(root_key, root, root_ttl).await?;
+    memcache
+        .set_with_ttl(root_key, root, root_ttl)
+        .await
+        .map_err(drop)?;
 
     Ok(())
 }

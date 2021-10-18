@@ -299,7 +299,7 @@ where
                 let res = memcache
                     .get(memcache_key.0.clone())
                     .await
-                    .map_err(|()| McErrorKind::MemcacheInternal)
+                    .map_err(|_| McErrorKind::MemcacheInternal)
                     .and_then(|maybe_bytes| maybe_bytes.ok_or(McErrorKind::Missing))
                     .and_then(|bytes| {
                         V::deserialize(bytes).map_err(|()| McErrorKind::Deserialization)

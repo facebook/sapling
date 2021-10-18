@@ -6,8 +6,8 @@
  */
 
 use crate::mock_store::MockStore;
+use anyhow::Result;
 use bytes::Bytes;
-use futures::compat::Future01CompatExt;
 use memcache::{MemcacheClient, MemcacheSetType};
 use std::{sync::atomic::Ordering, time::Duration};
 
@@ -25,25 +25,23 @@ impl From<MemcacheClient> for MemcacheHandler {
 }
 
 impl MemcacheHandler {
-    pub async fn get(&self, key: String) -> Result<Option<Bytes>, ()> {
+    pub async fn get(&self, key: String) -> Result<Option<Bytes>> {
         match self {
-            MemcacheHandler::Real(ref client) => client
-                .get(key)
-                .compat()
-                .await
-                .map(|value| value.map(Bytes::from)),
+            MemcacheHandler::Real(ref client) => {
+                client.get(key).await.map(|value| value.map(Bytes::from))
+            }
             MemcacheHandler::Mock(store) => Ok(store.get(&key)),
         }
     }
 
-    pub async fn set<V>(&self, key: String, value: V) -> Result<(), ()>
+    pub async fn set<V>(&self, key: String, value: V) -> Result<()>
     where
         MemcacheSetType: From<V>,
         Bytes: From<V>,
         V: 'static,
     {
         match self {
-            MemcacheHandler::Real(ref client) => client.set(key, value).compat().await,
+            MemcacheHandler::Real(ref client) => client.set(key, value).await,
             MemcacheHandler::Mock(store) => {
                 store.set(&key, value.into());
                 Ok(())
@@ -51,16 +49,14 @@ impl MemcacheHandler {
         }
     }
 
-    pub async fn set_with_ttl<V>(&self, key: String, value: V, duration: Duration) -> Result<(), ()>
+    pub async fn set_with_ttl<V>(&self, key: String, value: V, duration: Duration) -> Result<()>
     where
         MemcacheSetType: From<V>,
         Bytes: From<V>,
         V: 'static,
     {
         match self {
-            MemcacheHandler::Real(ref client) => {
-                client.set_with_ttl(key, value, duration).compat().await
-            }
+            MemcacheHandler::Real(ref client) => client.set_with_ttl(key, value, duration).await,
             MemcacheHandler::Mock(_) => {
                 // For now we ignore TTLs here
                 self.set(key, value).await
