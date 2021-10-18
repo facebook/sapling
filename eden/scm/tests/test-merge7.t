@@ -1,9 +1,8 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
+  $ configure modernclient
 
 initial
-  $ hg init test-a
-  $ cd test-a
+  $ newclientrepo test-a
   $ cat >test.txt <<"EOF"
   > 1
   > 2
@@ -11,21 +10,20 @@ initial
   > EOF
   $ hg add test.txt
   $ hg commit -m "Initial"
+  $ hg push -q --to book --create
 
 clone
-  $ cd ..
-  $ hg clone test-a test-b
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ newclientrepo test-b test:test-a_server book
 
 change test-a
-  $ cd test-a
+  $ cd ../test-a
   $ cat >test.txt <<"EOF"
   > one
   > two
   > three
   > EOF
   $ hg commit -m "Numbers as words"
+  $ hg push -q --to book
 
 change test-b
   $ cd ../test-b
@@ -37,14 +35,10 @@ change test-b
   $ hg commit -m "2 -> 2.5"
 
 now pull and merge from test-a
-  $ hg pull ../test-a
-  pulling from ../test-a
+  $ hg pull test:test-a_server
+  pulling from test:test-a_server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  $ hg merge
+  $ hg merge 'desc("Numbers as words")'
   merging test.txt
   warning: 1 conflicts while merging test.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -69,16 +63,13 @@ change test-a again
   > three
   > EOF
   $ hg commit -m "two -> two-point-one"
+  $ hg push -q --to book
 
 pull and merge from test-a again
   $ cd ../test-b
-  $ hg pull ../test-a
-  pulling from ../test-a
+  $ hg pull test:test-a_server
+  pulling from test:test-a_server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg merge --debug
     searching for copies back to d1e159716d41
   resolving manifests
@@ -108,16 +99,10 @@ pull and merge from test-a again
   >>>>>>> merge rev:    40d11a4173a8 - test: two -> two-point-one
   three
 
-  $ hg debugindex test.txt
-     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
-       0         0       7  .....       0 01365c4cca56 000000000000 000000000000 (re)
-       1         7       9  .....       1 7b013192566a 01365c4cca56 000000000000 (re)
-       2        16      15  .....       2 8fe46a3eb557 01365c4cca56 000000000000 (re)
-       3        31      2.  .....       3 fc3148072371 7b013192566a 8fe46a3eb557 (re)
-       4        5.      25  .....       4 d40249267ae3 8fe46a3eb557 000000000000 (re)
-
   $ hg log
   commit:      40d11a4173a8
+  bookmark:    remote/book
+  hoistedname: book
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     two -> two-point-one
