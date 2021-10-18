@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, path::PathBuf, str};
+use std::{collections::HashMap, collections::HashSet, path::PathBuf, str};
 
 use anyhow::{Error, Result};
 use indexmap::IndexMap;
@@ -22,7 +22,7 @@ pub use x509::{check_certs, X509Error};
 #[derive(Debug, Error)]
 #[error("Certificate(s) or private key(s) not found: {missing:?}\n{msg}")]
 pub struct MissingCerts {
-    missing: Vec<PathBuf>,
+    missing: HashSet<PathBuf>,
     msg: String,
 }
 
@@ -152,7 +152,7 @@ impl<'a> AuthSection<'a> {
     /// Find the best matching auth group for the given URL.
     pub fn best_match_for(&self, url: &Url) -> Result<Option<AuthGroup>, MissingCerts> {
         let mut best: Option<&AuthGroup> = None;
-        let mut missing = Vec::new();
+        let mut missing = HashSet::new();
 
         let scheme = url.scheme().to_string();
         let username = url.username();
@@ -210,7 +210,7 @@ impl<'a> AuthSection<'a> {
                             &label,
                             &path
                         );
-                        missing.push(path.to_path_buf());
+                        missing.insert(path.to_path_buf());
                         continue 'groups;
                     }
                     _ => {}
