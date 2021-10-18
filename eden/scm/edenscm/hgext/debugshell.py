@@ -91,33 +91,32 @@ def _assignobjects(objects, repo):
 def debugshell(ui, repo, *args, **opts):
     command = opts.get("command")
 
-    _assignobjects(locals(), repo)
-    globals().update(locals())
+    env = globals()
+    env['ui'] = ui
+    _assignobjects(env, repo)
     sys.argv = pycompat.sysargv = args
 
     if command:
-        exec(command)
+        exec(command, env, env)
         return 0
     if args:
         path = args[0]
         with open(path) as f:
             command = f.read()
-        globalvars = dict(globals())
-        localvars = dict(locals())
-        globalvars["__file__"] = path
-        exec(command, globalvars, localvars)
+        env["__file__"] = path
+        exec(command, env, env)
         return 0
     elif not ui.interactive():
         command = ui.fin.read()
-        exec(command)
+        exec(command, env, env)
         return 0
 
     # IPython is incompatible with demandimport.
     with hgdemandimport.deactivated():
-        _startipython(ui, repo)
+        _startipython(ui, repo, env)
 
 
-def _startipython(ui, repo):
+def _startipython(ui, repo, env):
     # IPython requires time.clock. It is missing on Windows. Polyfill it.
     if getattr(time, "clock", None) is None:
         time.clock = time.time
@@ -163,7 +162,7 @@ Available IPython magics (auto magic is on, `%` is optional):
     shell = InteractiveShellEmbed.instance(config=config)
     _configipython(ui, shell)
 
-    locals().update(globals())
+    locals().update(env)
     shell()
 
 
