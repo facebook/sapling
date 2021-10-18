@@ -20,14 +20,78 @@ use filestore::{get_metadata, FetchKey};
 use futures::channel::mpsc;
 use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{FuturesOrdered, FuturesUnordered, TryStreamExt};
-use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
+use manifest::{
+    derive_manifest_with_io_sender, derive_manifests_for_simple_stack_of_commits, Entry, LeafInfo,
+    ManifestChanges, TreeInfo,
+};
 use mononoke_types::fsnode::{Fsnode, FsnodeDirectory, FsnodeEntry, FsnodeFile, FsnodeSummary};
 use mononoke_types::hash::{Sha1, Sha256};
-use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, FileType, FsnodeId, MononokeId};
+use mononoke_types::{
+    BlobstoreValue, ChangesetId, ContentId, ContentMetadata, FileType, FsnodeId, MononokeId,
+};
 use mononoke_types::{MPath, MPathElement};
 use sorted_vector_map::SortedVectorMap;
 
 use crate::FsnodeDerivationError;
+
+pub(crate) async fn derive_fsnodes_stack(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    file_changes: Vec<(ChangesetId, BTreeMap<MPath, Option<(ContentId, FileType)>>)>,
+    parent: Option<FsnodeId>,
+) -> Result<HashMap<ChangesetId, FsnodeId>, Error> {
+    let blobstore = derivation_ctx.blobstore();
+
+    let content_ids = file_changes
+        .iter()
+        .map(|(_cs_id, per_commit_file_changes)| {
+            per_commit_file_changes
+                .iter()
+                .filter_map(|(_mpath, content_id_and_file_type)| {
+                    content_id_and_file_type.map(|(content_id, _file_type)| content_id)
+                })
+        })
+        .flatten()
+        .collect();
+
+    let prefetched_content_metadata =
+        Arc::new(prefetch_content_metadata(ctx, &blobstore, content_ids).await?);
+
+    let manifest_changes = file_changes
+        .into_iter()
+        .map(|(cs_id, file_changes)| ManifestChanges {
+            cs_id,
+            changes: file_changes.into_iter().collect(),
+        })
+        .collect::<Vec<_>>();
+
+    let res = derive_manifests_for_simple_stack_of_commits(
+        ctx.clone(),
+        blobstore.clone(),
+        parent,
+        manifest_changes,
+        {
+            cloned!(blobstore, ctx, prefetched_content_metadata);
+            move |tree_info, _cs_id| {
+                cloned!(blobstore, ctx, prefetched_content_metadata);
+                async move {
+                    create_fsnode(
+                        &ctx,
+                        &blobstore,
+                        None,
+                        prefetched_content_metadata,
+                        tree_info,
+                    )
+                    .await
+                }
+            }
+        },
+        |leaf_info, _cs_id| check_fsnode_leaf(leaf_info),
+    )
+    .await?;
+
+    Ok(res.into_iter().collect())
+}
 
 /// Derives fsnodes for bonsai_changeset `cs_id` given parent fsnodes. Note
 /// that `derive_manifest()` does a lot of the heavy lifting for us, and this

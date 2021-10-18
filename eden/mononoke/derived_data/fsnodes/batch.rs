@@ -7,16 +7,18 @@
 
 use std::collections::HashMap;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
+use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts};
-use derived_data_manager::DerivationContext;
+use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts, StackItem};
+use derived_data_manager::{BonsaiDerivable, DerivationContext};
 use futures::stream::{FuturesOrdered, TryStreamExt};
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, FsnodeId};
+use tunables::tunables;
 
-use crate::derive::derive_fsnode;
+use crate::derive::{derive_fsnode, derive_fsnodes_stack};
 use crate::RootFsnodeId;
 
 /// Derive a batch of fsnodes, potentially doing it faster than deriving fsnodes sequentially.
@@ -84,46 +86,120 @@ pub async fn derive_fsnode_in_batch(
             .try_collect::<Vec<_>>()
             .await?;
 
-        let to_derive = match gap_size {
-            Some(gap_size) => linear_stack
-                .file_changes
-                .chunks(gap_size)
-                .filter_map(|chunk| chunk.last().cloned())
-                .collect(),
-            None => linear_stack.file_changes,
-        };
-
-        let new_fsnodes = to_derive
-            .into_iter()
-            .map(|item| {
-                // Clone the values that we need owned copies of to move
-                // into the future we are going to spawn, which means it
-                // must have static lifetime.
-                cloned!(ctx, derivation_ctx, parent_fsnodes);
-                async move {
-                    let cs_id = item.cs_id;
-                    let derivation_fut = async move {
-                        derive_fsnode(
-                            &ctx,
-                            &derivation_ctx,
-                            parent_fsnodes,
-                            item.combined_file_changes.into_iter().collect(),
-                        )
-                        .await
-                    };
-                    let derivation_handle = tokio::spawn(derivation_fut);
-                    let fsnode_id = RootFsnodeId(derivation_handle.await??);
-                    anyhow::Result::<_>::Ok((cs_id, fsnode_id))
-                }
-            })
-            .collect::<FuturesOrdered<_>>()
-            .try_collect::<Vec<_>>()
-            .await?;
-
+        let new_fsnodes =
+            if !tunables().get_fsnodes_use_new_batch_derivation() || gap_size.is_some() {
+                old_batch_derivation(
+                    ctx,
+                    derivation_ctx,
+                    parent_fsnodes,
+                    gap_size,
+                    linear_stack.file_changes,
+                )
+                .await?
+            } else {
+                new_batch_derivation(
+                    ctx,
+                    derivation_ctx,
+                    parent_fsnodes,
+                    linear_stack.file_changes,
+                )
+                .await?
+            };
         res.extend(new_fsnodes);
     }
 
     Ok(res)
+}
+
+pub async fn old_batch_derivation(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    parent_fsnodes: Vec<FsnodeId>,
+    gap_size: Option<usize>,
+    file_changes: Vec<StackItem>,
+) -> Result<Vec<(ChangesetId, RootFsnodeId)>, Error> {
+    let to_derive = match gap_size {
+        Some(gap_size) => file_changes
+            .chunks(gap_size)
+            .filter_map(|chunk| chunk.last().cloned())
+            .collect(),
+        None => file_changes,
+    };
+
+    let new_fsnodes = to_derive
+        .into_iter()
+        .map(|item| {
+            // Clone the values that we need owned copies of to move
+            // into the future we are going to spawn, which means it
+            // must have static lifetime.
+            cloned!(ctx, derivation_ctx, parent_fsnodes);
+            async move {
+                let cs_id = item.cs_id;
+                let derivation_fut = async move {
+                    derive_fsnode(
+                        &ctx,
+                        &derivation_ctx,
+                        parent_fsnodes,
+                        item.combined_file_changes.into_iter().collect(),
+                    )
+                    .await
+                };
+                let derivation_handle = tokio::spawn(derivation_fut);
+                let fsnode_id = RootFsnodeId(derivation_handle.await??);
+                anyhow::Result::<_>::Ok((cs_id, fsnode_id))
+            }
+        })
+        .collect::<FuturesOrdered<_>>()
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    Ok(new_fsnodes)
+}
+
+pub async fn new_batch_derivation(
+    ctx: &CoreContext,
+    derivation_ctx: &DerivationContext,
+    parent_fsnode_manifests: Vec<FsnodeId>,
+    file_changes: Vec<StackItem>,
+) -> Result<Vec<(ChangesetId, RootFsnodeId)>, Error> {
+    let mut res = HashMap::new();
+    if parent_fsnode_manifests.len() > 1 {
+        // we can't derive stack for a merge commit,
+        // so let's derive it without batching
+        for item in file_changes {
+            let bonsai = item.cs_id.load(&ctx, derivation_ctx.blobstore()).await?;
+            let parents = derivation_ctx
+                .fetch_unknown_parents(ctx, Some(&res), &bonsai)
+                .await?;
+            let derived = RootFsnodeId::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
+            res.insert(item.cs_id, derived);
+        }
+    } else {
+        let first = file_changes.first().map(|item| item.cs_id);
+        let last = file_changes.last().map(|item| item.cs_id);
+
+        let file_changes: Vec<_> = file_changes
+            .into_iter()
+            .map(|item| (item.cs_id, item.per_commit_file_changes))
+            .collect();
+
+        let derived = derive_fsnodes_stack(
+            ctx,
+            derivation_ctx,
+            file_changes,
+            parent_fsnode_manifests.get(0).map(|mf_id| *mf_id),
+        )
+        .await
+        .with_context(|| format!("failed deriving stack of {:?} to {:?}", first, last,))?;
+
+        res.extend(
+            derived
+                .into_iter()
+                .map(|(csid, mf_id)| (csid, RootFsnodeId(mf_id))),
+        );
+    }
+
+    Ok(res.into_iter().collect())
 }
 
 #[cfg(test)]
@@ -132,15 +208,17 @@ mod test {
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use futures::compat::Stream01CompatExt;
+    use futures::{compat::Stream01CompatExt, FutureExt};
+    use maplit::hashmap;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use tests_utils::resolve_cs_id;
+    use tunables::{with_tunables_async, MononokeTunables};
 
     #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let batch = {
+        let old_batch = {
             let repo = linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
@@ -166,6 +244,44 @@ mod test {
                 .into_fsnode_id()
         };
 
+        let new_batch = {
+            let repo = linear::getrepo(fb).await;
+            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+
+            let mut cs_ids =
+                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
+                    .compat()
+                    .try_collect::<Vec<_>>()
+                    .await?;
+            cs_ids.reverse();
+
+            let manager = repo.repo_derived_data().manager();
+
+            let tunables = MononokeTunables::default();
+            tunables.update_bools(&hashmap! {
+                "skeleton_manifests_use_new_batch_derivation".to_string() => true,
+            });
+
+            with_tunables_async(
+                tunables,
+                manager
+                    .backfill_batch::<RootFsnodeId>(
+                        &ctx,
+                        cs_ids,
+                        BatchDeriveOptions::Parallel { gap_size: None },
+                        None,
+                    )
+                    .boxed(),
+            )
+            .await?;
+
+            manager
+                .fetch_derived::<RootFsnodeId>(&ctx, master_cs_id, None)
+                .await?
+                .unwrap()
+                .into_fsnode_id()
+        };
+
         let sequential = {
             let repo = linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
@@ -176,7 +292,8 @@ mod test {
                 .into_fsnode_id()
         };
 
-        assert_eq!(batch, sequential);
+        assert_eq!(old_batch, sequential);
+        assert_eq!(new_batch, sequential);
         Ok(())
     }
 }

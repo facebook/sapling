@@ -203,6 +203,7 @@ pub struct MononokeTunables {
 
     force_unode_v2: AtomicBool,
     fastlog_use_gen_num_traversal: AtomicBool,
+    fsnodes_use_new_batch_derivation: AtomicBool,
     unodes_use_new_batch_derivation: AtomicBool,
     skeleton_manifests_use_new_batch_derivation: AtomicBool,
 

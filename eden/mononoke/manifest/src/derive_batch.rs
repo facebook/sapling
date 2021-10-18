@@ -34,6 +34,7 @@ pub async fn derive_manifests_for_simple_stack_of_commits<
     'caller,
     TreeId,
     LeafId,
+    IntermediateLeafId,
     Leaf,
     T,
     TFut,
@@ -52,14 +53,15 @@ pub async fn derive_manifests_for_simple_stack_of_commits<
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static + Sync,
+    IntermediateLeafId: Clone + Send + From<LeafId> + 'static + Sync,
     Leaf: Send + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Sync,
     <TreeId as StoreLoadable<Store>>::Value: Send,
-    T: Fn(TreeInfo<TreeId, LeafId, Ctx>, ChangesetId) -> TFut + Send + Sync + 'static,
+    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>, ChangesetId) -> TFut + Send + Sync + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'caller,
-    L: Fn(LeafInfo<LeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, LeafId), Error>> + Send + 'caller,
+    L: Fn(LeafInfo<IntermediateLeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'caller,
     Ctx: Clone + Send + Sync + 'static,
 {
     Deriver {
@@ -69,6 +71,7 @@ where
         changes,
         create_tree,
         create_leaf,
+        _marker: std::marker::PhantomData,
     }
     .derive()
     .await
@@ -82,27 +85,42 @@ struct EntryStack<TreeId, LeafId, Ctx> {
 
 // This struct is not necessary, it just exists so that we don't need to repeat
 // a long list of generic restrictions for each function
-struct Deriver<TreeId, Leaf, T, L, Store> {
+struct Deriver<TreeId, Leaf, IntermediateLeafId, T, L, Store> {
     ctx: CoreContext,
     store: Store,
     parent: Option<TreeId>,
     changes: Vec<ManifestChanges<Leaf>>,
     create_tree: T,
     create_leaf: L,
+    _marker: std::marker::PhantomData<IntermediateLeafId>,
 }
 
-impl<'caller, TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store> Deriver<TreeId, Leaf, T, L, Store>
+fn convert_to_intermediate_entry<TreeId, LeafId, IntermediateLeafId>(
+    e: Entry<TreeId, LeafId>,
+) -> Entry<TreeId, IntermediateLeafId>
+where
+    IntermediateLeafId: From<LeafId>,
+{
+    match e {
+        Entry::Tree(t) => Entry::Tree(t),
+        Entry::Leaf(l) => Entry::Leaf(l.into()),
+    }
+}
+
+impl<'caller, TreeId, LeafId, IntermediateLeafId, Leaf, T, TFut, L, LFut, Ctx, Store>
+    Deriver<TreeId, Leaf, IntermediateLeafId, T, L, Store>
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static + Sync,
+    IntermediateLeafId: Clone + Send + From<LeafId> + 'static + Sync,
     Leaf: Send + 'static,
     TreeId: StoreLoadable<Store> + Clone + Eq + Hash + fmt::Debug + Send + Sync + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Sync,
     <TreeId as StoreLoadable<Store>>::Value: Send,
-    T: Fn(TreeInfo<TreeId, LeafId, Ctx>, ChangesetId) -> TFut + Send + Sync + 'static,
+    T: Fn(TreeInfo<TreeId, IntermediateLeafId, Ctx>, ChangesetId) -> TFut + Send + Sync + 'static,
     TFut: Future<Output = Result<(Ctx, TreeId), Error>> + Send + 'caller,
-    L: Fn(LeafInfo<LeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
-    LFut: Future<Output = Result<(Ctx, LeafId), Error>> + Send + 'caller,
+    L: Fn(LeafInfo<IntermediateLeafId, Leaf>, ChangesetId) -> LFut + Send + Sync + 'static,
+    LFut: Future<Output = Result<(Ctx, IntermediateLeafId), Error>> + Send + 'caller,
     Ctx: Clone + Send + Sync + 'static,
 {
     async fn derive(self) -> Result<BTreeMap<ChangesetId, TreeId>, Error> {
@@ -113,6 +131,7 @@ where
             changes,
             create_tree,
             create_leaf,
+            ..
         } = self;
 
         // This is a tree of paths, and for each path we store a list of
@@ -259,7 +278,7 @@ where
                                 Ok((FoldState::CreateTrees(None, None, None, None), vec![]))
                             } else {
                                 // No changes, no subentries - just reuse the entry
-                                Ok((FoldState::Reuse(path, name, parent), vec![]))
+                                Ok((FoldState::Reuse(path, name, parent.map(convert_to_intermediate_entry)), vec![]))
                             }
                         }
                     }
@@ -292,7 +311,7 @@ where
                                 let entry_stack = Self::create_leaves(
                                     &ctx,
                                     path,
-                                    parent,
+                                    parent.map(convert_to_intermediate_entry),
                                     leaves,
                                     create_leaf,
                                     create_tree,
@@ -304,7 +323,7 @@ where
                             FoldState::CreateTrees(path, name, parent, maybe_file_deletion) => {
                                 let entry_stack = Self::create_trees(
                                     path,
-                                    parent,
+                                    parent.map(convert_to_intermediate_entry),
                                     subentries,
                                     create_tree,
                                     stack_of_commits,
@@ -315,7 +334,7 @@ where
                             }
                             FoldState::Reuse(_, name, maybe_entry) => {
                                 let entry_stack = EntryStack {
-                                    parent: maybe_entry,
+                                    parent: maybe_entry.map(convert_to_intermediate_entry),
                                     values: vec![],
                                 };
                                 Ok((name, entry_stack))
@@ -363,12 +382,12 @@ where
     async fn create_leaves(
         ctx: &CoreContext,
         path: MPath,
-        parent: Option<Entry<TreeId, LeafId>>,
+        parent: Option<Entry<TreeId, IntermediateLeafId>>,
         changes: Vec<(ChangesetId, Option<Leaf>)>,
         create_leaf: Arc<L>,
         create_tree: Arc<T>,
         store: Store,
-    ) -> Result<EntryStack<TreeId, LeafId, Ctx>, Error> {
+    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>, Error> {
         let mut entry_stack = EntryStack {
             parent: parent.clone(),
             values: vec![],
@@ -408,7 +427,9 @@ where
                         let parent_mf = tree_id.load(&ctx, &store).await?;
                         let subentries = parent_mf
                             .list()
-                            .map(|(path, entry)| (path, (None, entry)))
+                            .map(|(path, entry)| {
+                                (path, (None, convert_to_intermediate_entry(entry)))
+                            })
                             .collect();
                         let (upload_ctx, tree_id) = create_tree(
                             TreeInfo {
@@ -438,12 +459,12 @@ where
 
     async fn create_trees(
         path: Option<MPath>,
-        parent: Option<Entry<TreeId, LeafId>>,
-        stack_sub_entries: BTreeMap<MPathElement, EntryStack<TreeId, LeafId, Ctx>>,
+        parent: Option<Entry<TreeId, IntermediateLeafId>>,
+        stack_sub_entries: BTreeMap<MPathElement, EntryStack<TreeId, IntermediateLeafId, Ctx>>,
         create_tree: Arc<T>,
         stack_of_commits: Arc<Vec<ChangesetId>>,
         maybe_file_deletion: Option<ChangesetId>,
-    ) -> Result<EntryStack<TreeId, LeafId, Ctx>, Error> {
+    ) -> Result<EntryStack<TreeId, IntermediateLeafId, Ctx>, Error> {
         // These are all sub entries for the commit we are currently processing.
         // We start with parent entries, and then apply delta changes on top.
         let mut cur_sub_entries: BTreeMap<MPathElement, (Option<Ctx>, Entry<_, _>)> =
