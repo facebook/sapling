@@ -56,9 +56,23 @@ use std::{
     hash::{Hash, Hasher},
     str::FromStr,
 };
+use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
 use crate::walk::OutgoingEdge;
+
+#[derive(Error, Debug)]
+pub enum HashValidationError {
+    #[error("Error while computing hash validation")]
+    Error(#[from] Error),
+    #[error("failed to validate filenode hash: expected {expected_hash} actual {actual_hash}")]
+    HashMismatch {
+        actual_hash: String,
+        expected_hash: String,
+    },
+    #[error("hash validation for {0} is not supported")]
+    NotSupported(String),
+}
 
 // Helper to save repetition for the type enums
 macro_rules! define_type_enum {
@@ -1008,7 +1022,7 @@ impl Node {
         ctx: CoreContext,
         repo: BlobRepo,
         node_data: &NodeData,
-    ) -> BoxFuture<Result<(), Error>> {
+    ) -> BoxFuture<Result<(), HashValidationError>> {
         match (&self, node_data) {
             (Node::HgFileEnvelope(hg_filenode_id), NodeData::HgFileEnvelope(envelope)) => {
                 let hg_filenode_id = hg_filenode_id.clone();
@@ -1043,11 +1057,10 @@ impl Node {
                     let actual = HgFileNodeId::new(actual);
 
                     if actual != hg_filenode_id {
-                        return Err(format_err!(
-                            "failed to validate filenode hash: expected {} actual {}",
-                            hg_filenode_id,
-                            actual
-                        ));
+                        return Err(HashValidationError::HashMismatch {
+                            actual_hash: format!("{}", actual),
+                            expected_hash: format!("{}", hg_filenode_id),
+                        });
                     }
                     Ok(())
                 }
@@ -1055,11 +1068,8 @@ impl Node {
             }
             _ => {
                 let ty = self.get_type();
-                async move {
-                    let s: &str = ty.into();
-                    Err(format_err!("hash validation for {} is not supported", s,))
-                }
-                .boxed()
+                let s: &str = ty.into();
+                async move { Err(HashValidationError::NotSupported(s.to_string())) }.boxed()
             }
         }
     }

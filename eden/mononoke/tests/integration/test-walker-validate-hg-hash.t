@@ -51,5 +51,5 @@ Neither scrub nor validate modes notice corrupt blobs
   Walked* (glob)
 
 Now run with hash validation, make sure it fails
-  $ mononoke_walker scrub -I deep -q -b master_bookmark --include-hash-validation-node-type HgFileEnvelope 2>&1 | strip_glog | grep 'failed to validate'
-      Hash validation failure: failed to validate filenode hash: expected 35e7525ce3a48913275d7061dd9a867ffef1e34d actual a2e456504a5e61f763f1a0b36a6c247c7541b2b3
+  $ mononoke_walker scrub -I deep -q -b master_bookmark --include-hash-validation-node-type HgFileEnvelope 2>&1 | strip_glog | grep 'Hash validation failure'
+      Hash validation failure: HashMismatch { actual_hash: *, expected_hash: * } (glob)

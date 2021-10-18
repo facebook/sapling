@@ -6,8 +6,9 @@
  */
 
 use crate::graph::{
-    AliasKey, ChangesetKey, EdgeType, FastlogKey, FileContentData, Node, NodeData, NodeType,
-    PathKey, SqlShardInfo, UnodeFlags, UnodeKey, UnodeManifestEntry, WrappedPath,
+    AliasKey, ChangesetKey, EdgeType, FastlogKey, FileContentData, HashValidationError, Node,
+    NodeData, NodeType, PathKey, SqlShardInfo, UnodeFlags, UnodeKey, UnodeManifestEntry,
+    WrappedPath,
 };
 use crate::log;
 use crate::setup::JobWalkParams;
@@ -2073,7 +2074,15 @@ where
                     .validate_hash(ctx.clone(), repo.clone(), &node_data);
                 match f.await {
                     Ok(()) => Ok(StepOutput::Done(node_data, children)),
-                    Err(err) => Err(StepError::HashValidationFailure(err)),
+                    Err(err @ HashValidationError::HashMismatch { .. }) => {
+                        Err(StepError::HashValidationFailure(format_err!("{:?}", err)))
+                    }
+                    Err(HashValidationError::Error(err)) => {
+                        return Err(err);
+                    }
+                    Err(HashValidationError::NotSupported(err)) => {
+                        return Err(format_err!("{}", err));
+                    }
                 }
             } else {
                 Ok(StepOutput::Done(node_data, children))
