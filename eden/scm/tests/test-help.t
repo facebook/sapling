@@ -319,8 +319,6 @@ Test extension help:
        fbscmquery    (no help text available)
        generic_bisect
                      (no help text available)
-       gitlookup     extension that will look up hashes from an hg-git map file
-                     over the wire.
        gitrevset     map a git hash to a Mercurial hash:
        globalrevs    extension for providing strictly increasing revision
                      numbers

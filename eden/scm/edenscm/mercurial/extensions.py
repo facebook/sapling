@@ -50,6 +50,7 @@ _ignoreextensions = {
     "fbsparse",
     "fixcorrupt",
     "graphlog",
+    "gitlookup",
     "hbisect",
     "hgcia",
     "hgk",
