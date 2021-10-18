@@ -10,6 +10,7 @@ use std::num::NonZeroU64;
 use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
 use bytes::Bytes;
+use context::PerfCounterType;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -75,6 +76,7 @@ impl EdenApiHandler for FilesHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let ctx = repo.ctx().clone();
 
+        let len = request.keys.len() + request.reqs.len();
         let reqs = request
             .keys
             .into_iter()
@@ -86,6 +88,8 @@ impl EdenApiHandler for FilesHandler {
                 },
             })
             .chain(request.reqs.into_iter());
+        ctx.perf_counters()
+            .add_to_counter(PerfCounterType::EdenapiFiles, len as i64);
         let fetches = reqs.map(move |FileSpec { key, attrs }| fetch_file(repo.clone(), key, attrs));
 
         Ok(stream::iter(fetches)

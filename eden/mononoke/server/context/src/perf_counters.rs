@@ -62,6 +62,7 @@ define_perf_counters! {
         BytesSent,
         CachelibHits,
         CachelibMisses,
+        EdenapiFiles,
         GetbundleFilenodesTotalWeight,
         GetbundleNumCommits,
         GetbundleNumDrafts,
@@ -153,6 +154,7 @@ impl PerfCounterType {
             | BytesSent
             | CachelibHits
             | CachelibMisses
+            | EdenapiFiles
             | GetbundleFilenodesTotalWeight
             | GetbundleNumCommits
             | GetbundleNumDrafts
