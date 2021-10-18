@@ -1,15 +1,14 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
+  $ configure modernclient
+
   $ tipparents() {
   > hg parents --template "{node|short} {desc|firstline}\n" -r tip
   > }
 
 Test import and merge diffs
 
-  $ hg init repo
-  $ cd repo
+  $ newclientrepo repo test:server
   $ echo a > a
   $ hg ci -Am adda
   adding a
@@ -18,11 +17,13 @@ Test import and merge diffs
   $ echo c > c
   $ hg ci -Am addc
   adding c
+  $ hg push -r . -q --to rev2 --create
   $ hg up 'desc(adda)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > b
   $ hg ci -Am addb
   adding b
+  $ hg push -r . -q --to rev3 --create
   $ hg up 'desc(changea)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge 'desc(addb)'
@@ -31,22 +32,10 @@ Test import and merge diffs
   $ hg ci -m merge
   $ hg export . > ../merge.diff
   $ grep -v '^merge$' ../merge.diff > ../merge.nomsg.diff
-  $ cd ..
-  $ hg clone -r2 repo repo2
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 3 changes to 2 files
-  updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd repo2
-  $ hg pull -r3 ../repo
-  pulling from ../repo
+  $ newclientrepo repo2 test:server rev2
+  $ hg pull -B rev3
+  pulling from test:server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
 
 Test without --exact and diff.p1 == workingdir.p1
 
@@ -125,12 +114,13 @@ Test with --bypass and --exact
 
 Test that --exact on a bad header doesn't corrupt the repo (issue3616)
 
-  $ hg init repo3
-  $ cd repo3
+  $ newclientrepo repo3
   $ echo a>a
   $ hg ci -Aqm0
+  $ hg push -q -r . --to rev0 --create
   $ echo a>>a
   $ hg ci -m1
+  $ hg push -q -r . --to rev1 --create
   $ echo a>>a
   $ hg ci -m2
   $ echo a>a
@@ -143,10 +133,8 @@ Test that --exact on a bad header doesn't corrupt the repo (issue3616)
   >>> apatch = open("../a.patch", "ab")
   >>> _ = apatch.write(b"".join(open("out", "rb").readlines()[7:]))
 
-  $ cd ..
-  $ hg clone -qr0 repo3 repo3-clone
-  $ cd repo3-clone
-  $ hg pull -qr1 ../repo3
+  $ newclientrepo repor-clone test:repo3_server rev0
+  $ hg pull -q -B rev1
 
   $ hg import --exact ../a.patch
   applying ../a.patch
@@ -155,5 +143,3 @@ Test that --exact on a bad header doesn't corrupt the repo (issue3616)
   Hunk #1 succeeded at 1 with fuzz 1 (offset -1 lines).
   abort: patch is damaged or loses information
   [255]
-  $ hg verify
-  warning: verify does not actually check anything in this repo

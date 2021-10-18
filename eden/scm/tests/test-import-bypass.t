@@ -1,6 +1,6 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
+  $ configure modernclient
 
   $ shortlog() {
   >     hg log -G --template '{node|short} {author} {date|hgdate} - {desc|firstline}\n'
@@ -9,13 +9,13 @@
 
 Test --bypass with other options
 
-  $ hg init repo-options
-  $ cd repo-options
+  $ newclientrepo repo-options test:server
   $ echo a > a
   $ hg ci -Am adda
   adding a
   $ echo a >> a
   $ hg ci -Am changea
+  $ hg push -r . -q --to head1 --create
   $ hg export . > ../test.diff
   $ hg up null
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -240,18 +240,12 @@ Test applying multiple patches
   $ echo f > f
   $ hg ci -Am addf
   adding f
+  $ hg push -r . -q --to head2 --create
   $ hg export . > ../patch2.diff
   $ cd ..
-  $ hg clone -r1 repo-options repo-multi1
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 1 files
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd repo-multi1
+  $ newclientrepo repo-multi1 test:server head1 head2
   $ hg up 'desc(adda)'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg import --bypass ../patch1.diff ../patch2.diff
   applying ../patch1.diff
   applying ../patch2.diff
@@ -260,6 +254,8 @@ Test applying multiple patches
   │
   o  16581080145e test 0 0 - adde
   │
+  │ o  f24ac4984bef test 0 0 - addf
+  │ │
   │ o  540395c44225 test 0 0 - changea
   ├─╯
   @  07f494440405 test 0 0 - adda
@@ -267,24 +263,18 @@ Test applying multiple patches
 
 Test applying multiple patches with --exact
 
-  $ cd ..
-  $ hg clone -r1 repo-options repo-multi2
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 1 files
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd repo-multi2
+  $ newclientrepo repo-multi2 test:server head1 head2
+  $ hg up 540395c44225
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg import --bypass --exact ../patch1.diff ../patch2.diff
   applying ../patch1.diff
   applying ../patch2.diff
   $ shortlog
-  o  f24ac4984bef test 0 0 - addf
+  o  16581080145e test 0 0 - adde
   │
-  │ o  16581080145e test 0 0 - adde
+  │ o  f24ac4984bef test 0 0 - addf
   │ │
-  @ │  540395c44225 test 0 0 - changea
+  │ @  540395c44225 test 0 0 - changea
   ├─╯
   o  07f494440405 test 0 0 - adda
   
@@ -314,8 +304,7 @@ even if commit message is empty
 
 Test complicated patch with --exact
 
-  $ hg init repo-exact
-  $ cd repo-exact
+  $ newclientrepo repo-exact
   $ echo a > a
   $ echo c > c
   $ echo d > d

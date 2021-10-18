@@ -13,49 +13,48 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "setconfig experimental.allowfilepeer=True"
+sh % "configure modernclient"
 sh % "enable amend"
 
-sh % "hg init a"
-sh % "mkdir a/d1"
-sh % "mkdir a/d1/d2"
-sh % "echo line 1" > "a/a"
-sh % "echo line 1" > "a/d1/d2/a"
-sh % "hg --cwd a ci -Ama" == r"""
+sh % "newclientrepo a"
+sh % "mkdir d1"
+sh % "mkdir d1/d2"
+sh % "echo line 1" > "a"
+sh % "echo line 1" > "d1/d2/a"
+sh % "hg ci -Ama" == r"""
     adding a
     adding d1/d2/a"""
+sh % "hg book rev0"
+sh % "hg book -i"
+sh % "hg push -q -r . --to rev0 --create"
 
-sh % "echo line 2" >> "a/a"
-sh % "hg --cwd a ci -u someone -d '1 0' '-msecond change'"
+sh % "echo line 2" >> "a"
+sh % "hg ci -u someone -d '1 0' '-msecond change'"
+sh % "hg book rev1"
+sh % "hg book -i"
 
 # import with no args:
 
-sh % "hg --cwd a import" == r"""
+sh % "hg import" == r"""
     abort: need at least one patch to import
     [255]"""
 
 # generate patches for the test
 
-sh % "hg --cwd a export tip" > "exported-tip.patch"
-sh % "hg --cwd a diff '-r0:1'" > "diffed-tip.patch"
+sh % "hg export tip" > "../exported-tip.patch"
+sh % "hg diff '-r rev0:'" > "../diffed-tip.patch"
 
 
 # import exported patch
 # (this also tests that editor is not invoked, if the patch contains the
 # commit message and '--edit' is not specified)
 
-sh % "hg clone -r0 a b" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
-sh % "'HGEDITOR=cat' hg --cwd b import ../exported-tip.patch" == "applying ../exported-tip.patch"
+sh % "newclientrepo b test:a_server rev0" == ""
+sh % "'HGEDITOR=cat' hg import ../exported-tip.patch" == "applying ../exported-tip.patch"
 
 # message and committer and date should be same
 
-sh % "hg --cwd b tip" == r"""
+sh % "hg tip" == r"""
     commit:      * (glob)
     user:        someone
     date:        Thu Jan 01 00:00:01 1970 +0000
@@ -70,9 +69,9 @@ sh % "cat" << r"""
 from __future__ import print_function
 print('patching file a')
 open('a', 'wb').write(b'line2\n')
-""" > "dummypatch.py"
-sh % "hg clone -qr0 a b0"
-sh % "'HGEDITOR=cat' hg --config \"ui.patch=$PYTHON ../dummypatch.py\" --cwd b0 import --edit ../exported-tip.patch" == r"""
+""" > "../dummypatch.py"
+sh % "newclientrepo b0 test:a_server rev0"
+sh % "'HGEDITOR=cat' hg --config \"ui.patch=$PYTHON ../dummypatch.py\" import --edit ../exported-tip.patch" == r"""
     applying ../exported-tip.patch
     second change
 
@@ -83,19 +82,19 @@ sh % "'HGEDITOR=cat' hg --config \"ui.patch=$PYTHON ../dummypatch.py\" --cwd b0 
     HG: user: someone
     HG: branch 'default'
     HG: changed a"""
-sh % "cat b0/a" == "line2"
+sh % "cat a" == "line2"
 
 
 # import of plain diff should fail without message
 # (this also tests that editor is invoked, if the patch doesn't contain
 # the commit message, regardless of '--edit')
 
-sh % "hg clone -r0 a b1 -q"
+sh % "newclientrepo b1 test:a_server rev0"
 sh % "cat" << r"""
 env | grep HGEDITFORM
 cat \$1
 """ > "$TESTTMP/editor.sh"
-sh % "'HGEDITOR=cat' hg --cwd b1 import ../diffed-tip.patch" == r"""
+sh % "'HGEDITOR=cat' hg import ../diffed-tip.patch" == r"""
     applying ../diffed-tip.patch
 
 
@@ -111,29 +110,29 @@ sh % "'HGEDITOR=cat' hg --cwd b1 import ../diffed-tip.patch" == r"""
 # Test avoiding editor invocation at applying the patch with --exact,
 # even if commit message is empty
 
-sh % "echo a" >> "b1/a"
-sh % "hg --cwd b1 commit -m ' '"
-sh % "hg --cwd b1 tip -T '{node}\\n'" == "e7df5eeeca3300b311991dbe19748d533edb2e8a"
-sh % "hg --cwd b1 export -o ../empty-log.diff ."
-sh % "hg --cwd b1 update -q -C '.^1'"
-sh % "hg --cwd b1 debugstrip -q tip"
-sh % "'HGEDITOR=cat' hg --cwd b1 import --exact ../empty-log.diff" == "applying ../empty-log.diff"
-sh % "hg --cwd b1 tip -T '{node}\\n'" == "e7df5eeeca3300b311991dbe19748d533edb2e8a"
+sh % "echo a" >> "a"
+sh % "hg commit -m ' '"
+sh % "hg tip -T '{node}\\n'" == "e7df5eeeca3300b311991dbe19748d533edb2e8a"
+sh % "hg export -o ../empty-log.diff ."
+sh % "hg update -q -C '.^1'"
+sh % "hg debugstrip -q tip"
+sh % "'HGEDITOR=cat' hg import --exact ../empty-log.diff" == "applying ../empty-log.diff"
+sh % "hg tip -T '{node}\\n'" == "e7df5eeeca3300b311991dbe19748d533edb2e8a"
 
 
 # import of plain diff should be ok with message
 
-sh % "hg clone -r0 a b2 -q"
-sh % "hg --cwd b2 import -mpatch ../diffed-tip.patch" == "applying ../diffed-tip.patch"
+sh % "newclientrepo b2 test:a_server rev0"
+sh % "hg import -mpatch ../diffed-tip.patch" == "applying ../diffed-tip.patch"
 
 
 # import of plain diff with specific date and user
 # (this also tests that editor is not invoked, if
 # '--message'/'--logfile' is specified and '--edit' is not)
 
-sh % "hg clone -qr0 a b3"
-sh % "hg --cwd b3 import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch" == "applying ../diffed-tip.patch"
-sh % "hg -R b3 tip -pv" == r"""
+sh % "newclientrepo b3 test:a_server rev0"
+sh % "hg import -mpatch -d '1 0' -u 'user@nowhere.net' ../diffed-tip.patch" == "applying ../diffed-tip.patch"
+sh % "hg tip -pv" == r"""
     commit:      * (glob)
     user:        user@nowhere.net
     date:        Thu Jan 01 00:00:01 1970 +0000
@@ -154,9 +153,9 @@ sh % "hg -R b3 tip -pv" == r"""
 # (this also tests that editor is not invoked, if '--no-commit' is
 # specified, regardless of '--edit')
 
-sh % "hg clone -qr0 a b4"
-sh % "'HGEDITOR=cat' hg --cwd b4 import --no-commit --edit ../diffed-tip.patch" == "applying ../diffed-tip.patch"
-sh % "hg --cwd b4 diff --nodates" == r"""
+sh % "newclientrepo b4 test:a_server rev0"
+sh % "'HGEDITOR=cat' hg import --no-commit --edit ../diffed-tip.patch" == "applying ../diffed-tip.patch"
+sh % "hg diff --nodates" == r"""
     diff -r * a (glob)
     --- a/a
     +++ b/a
@@ -167,12 +166,12 @@ sh % "hg --cwd b4 diff --nodates" == r"""
 
 # import of malformed plain diff should fail
 
-sh % "hg clone -qr0 a b5"
+sh % "newclientrepo b5 test:a_server rev0"
 
-content = open("diffed-tip.patch", "rb").read().replace(b"1,1", b"foo")
-open("broken.patch", "wb").write(content)
+content = open("../diffed-tip.patch", "rb").read().replace(b"1,1", b"foo")
+open("../broken.patch", "wb").write(content)
 
-sh % "hg --cwd b5 import -mpatch ../broken.patch" == r"""
+sh % "hg import -mpatch ../broken.patch" == r"""
     applying ../broken.patch
     abort: bad hunk #1
     [255]"""
@@ -183,31 +182,33 @@ sh % "hg --cwd b5 import -mpatch ../broken.patch" == r"""
 # used to hide a bug.
 
 sh % "mkdir dir"
-sh % "hg clone -qr0 a dir/b"
-sh % "cd dir"
+sh % "newclientrepo dir/b test:a_server rev0"
+sh % "cd .."
 sh % "hg -R b import ../exported-tip.patch" == "applying ../exported-tip.patch"
 sh % "cd .."
 
 
 # import from stdin
 
-sh % "hg clone -qr0 a b6"
-sh % "hg --cwd b6 import -" << open(
-    "exported-tip.patch"
+sh % "newclientrepo b6 test:a_server rev0"
+sh % "hg import -" << open(
+    "../exported-tip.patch"
 ).read() == "applying patch from stdin"
 
 
 # import two patches in one stream
 
-sh % "hg init b7"
-sh % "hg --cwd a export '0:tip'" | "hg --cwd b7 import -" == "applying patch from stdin"
-sh % "hg --cwd a id" == "da4d12908167"
+sh % "newclientrepo b7"
+sh % "cd .."
+sh % "hg --cwd a export 'rev0:tip'" | "hg --cwd b7 import -" == "applying patch from stdin"
+sh % "hg --cwd a id" == "da4d12908167 rev1"
 sh % "hg --cwd b7 id" == "da4d12908167"
 
 
 # override commit message
 
-sh % "hg clone -qr0 a b8"
+sh % "newclientrepo b8 test:a_server rev0"
+sh % "cd .."
 sh % "hg --cwd b8 import -m override -" << open(
     "exported-tip.patch"
 ).read() == "applying patch from stdin"
@@ -229,7 +230,8 @@ def mkmsg(path1, path2):
 
 # plain diff in email, subject, message body
 
-sh % "hg clone -qr0 a b9"
+sh % "newclientrepo b9 test:a_server rev0"
+sh % "cd .."
 
 mkmsg("diffed-tip.patch", "msg.patch")
 
@@ -242,7 +244,8 @@ sh % "hg --cwd b9 log -r tip -T '{author}\\n{desc}'" == r"""
 
 # hg export in email, should use patch header
 
-sh % "hg clone -qr0 a b10"
+sh % "newclientrepo b10 test:a_server rev0"
+sh % "cd .."
 
 mkmsg("exported-tip.patch", "msg.patch")
 
@@ -267,7 +270,9 @@ def mkmsg2(path1, path2):
 
 # plain diff in email, [PATCH] subject, message body with subject
 
-sh % "hg clone -qr0 a b11"
+sh % "newclientrepo b11 test:a_server rev0"
+sh % "cd .."
+
 mkmsg2("diffed-tip.patch", "msg.patch")
 sh % "cat msg.patch" | "hg --cwd b11 import -" == "applying patch from stdin"
 sh % "hg --cwd b11 tip --template '{desc}\\n'" == r"""
@@ -284,9 +289,12 @@ sh % "hg --cwd b11 tip --template '{desc}\\n'" == r"""
 
 sh % "echo line 3" >> "a/a"
 sh % "hg --cwd a ci '-mthird change'"
-sh % "hg --cwd a export -o '../patch%R' 1 2"
-sh % "hg clone -qr0 a b12"
-sh % "hg --cwd b12 parents --template 'parent: {rev}\\n'" == "parent: 0"
+sh % "hg --cwd a book rev2"
+sh % "hg --cwd a book -i"
+sh % "hg --cwd a export -o '../patch%n' rev1 rev2"
+sh % "newclientrepo b12 test:a_server rev0"
+sh % "cd .."
+sh % "hg --cwd b12 parents --template 'parent: {desc}\\n'" == "parent: a"
 sh % "hg --cwd b12 import -v ../patch1 ../patch2" == r"""
     applying ../patch1
     patching file a
@@ -303,7 +311,7 @@ sh % "hg --cwd b12 import -v ../patch1 ../patch2" == r"""
     committing changelog
     created * (glob)"""
 sh % "hg --cwd b12 hide -q tip" == ""
-sh % "hg --cwd b12 parents --template 'parent: {rev}\\n'" == "parent: 1"
+sh % "hg --cwd b12 parents --template 'parent: {desc}\\n'" == "parent: second change"
 
 # importing a patch in a subdirectory failed at the commit stage
 
@@ -312,13 +320,8 @@ sh % "hg --cwd a ci -u someoneelse -d '1 0' '-msubdir change'"
 
 # hg import in a subdirectory
 
-sh % "hg clone -r0 a b13" == r"""
-    adding changesets
-    adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files
-    updating to branch default
-    2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
+sh % "newclientrepo b13 test:a_server rev0"
+sh % "cd .."
 sh % "hg --cwd a export tip" > "tmp"
 open("subdir-tip.patch", "wb").write(open("tmp", "rb").read().replace(b"d1/d2", b""))
 
@@ -342,19 +345,19 @@ sh % "hg --cwd b13 status"
 
 # Test fuzziness (ambiguous patch location, fuzz=2)
 
-sh % "hg init fuzzy"
-sh % "cd fuzzy"
+sh % "newclientrepo fuzzy"
 sh % "echo line1" > "a"
 sh % "echo line0" >> "a"
 sh % "echo line3" >> "a"
 sh % "hg ci -Am adda" == "adding a"
+sh % "hg book -i rev0"
 sh % "echo line1" > "a"
 sh % "echo line2" >> "a"
 sh % "echo line0" >> "a"
 sh % "echo line3" >> "a"
 sh % "hg ci -m change a"
 sh % "hg export tip" > "fuzzy-tip.patch"
-sh % "hg up -C 0" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "hg up -C rev0 --inactive" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "echo line1" > "a"
 sh % "echo line0" >> "a"
 sh % "echo line1" >> "a"
@@ -392,8 +395,7 @@ sh % "cd .."
 
 # Test hunk touching empty files (issue906)
 
-sh % "hg init empty"
-sh % "cd empty"
+sh % "newclientrepo empty"
 sh % "touch a"
 sh % "touch b1"
 sh % "touch c1"
@@ -403,6 +405,7 @@ sh % "hg ci -Am init" == r"""
     adding b1
     adding c1
     adding d"""
+sh % "hg book -i rev0"
 sh % "echo a" > "a"
 sh % "echo b" > "b1"
 sh % "hg mv b1 b2"
@@ -442,20 +445,20 @@ sh % "hg diff --git" == r"""
     -d"""
 sh % "hg ci -m empty"
 sh % "hg export --git tip" > "empty.diff"
-sh % "hg up -C 0" == "4 files updated, 0 files merged, 2 files removed, 0 files unresolved"
+sh % "hg up -C rev0 --inactive" == "4 files updated, 0 files merged, 2 files removed, 0 files unresolved"
 sh % "hg import empty.diff" == "applying empty.diff"
 sh % "cd .."
 
 
 # Test importing a patch ending with a binary file removal
 
-sh % "hg init binaryremoval"
-sh % "cd binaryremoval"
+sh % "newclientrepo binaryremoval"
 sh % "echo a" > "a"
 open("b", "wb").write(b"a\0b")
 sh % "hg ci -Am addall" == r"""
     adding a
     adding b"""
+sh % "hg book -i rev0"
 sh % "hg rm a"
 sh % "hg rm b"
 sh % "hg st" == r"""
@@ -468,7 +471,7 @@ eq(
     [l for l in open("remove.diff") if "git" in l],
     ["diff --git a/a b/a\n", "diff --git a/b b/b\n"],
 )
-sh % "hg up -C 0" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "hg up -C rev0 --inactive" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg import remove.diff" == "applying remove.diff"
 sh % "hg manifest"
 sh % "cd .."
@@ -476,10 +479,10 @@ sh % "cd .."
 
 # Issue927: test update+rename with common name
 
-sh % "hg init t"
-sh % "cd t"
+sh % "newclientrepo t"
 sh % "touch a"
 sh % "hg ci -Am t" == "adding a"
+sh % "hg book -i rev0"
 sh % "echo a" > "a"
 
 # Here, bfile.startswith(afile)
@@ -487,7 +490,7 @@ sh % "echo a" > "a"
 sh % "hg copy a a2"
 sh % "hg ci -m copya"
 sh % "hg export --git tip" > "copy.diff"
-sh % "hg up -C 0" == "1 files updated, 0 files merged, 1 files removed, 0 files unresolved"
+sh % "hg up -C rev0 --inactive" == "1 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "hg import copy.diff" == "applying copy.diff"
 
 # a should contain an 'a'
@@ -502,8 +505,7 @@ sh % "cd .."
 
 # test -p0
 
-sh % "hg init p0"
-sh % "cd p0"
+sh % "newclientrepo p0"
 sh % "echo a" > "a"
 sh % "hg ci -Am t" == "adding a"
 sh % "hg import -p foo" == r"""
@@ -542,8 +544,7 @@ sh % "cd .."
 
 sh % "mkdir outside"
 sh % "touch outside/foo"
-sh % "hg init inside"
-sh % "cd inside"
+sh % "newclientrepo inside"
 sh % "hg import -" << r"""
 diff --git a/a b/b
 rename from ../outside/foo
@@ -557,8 +558,7 @@ sh % "cd .."
 
 # test import with similarity and git and strip (issue295 et al.)
 
-sh % "hg init sim"
-sh % "cd sim"
+sh % "newclientrepo sim"
 sh % "echo 'this is a test'" > "a"
 sh % "hg ci -Ama" == "adding a"
 sh % "cat" << r"""
@@ -607,8 +607,7 @@ sh % "cd .."
 
 # Issue1495: add empty file from the end of patch
 
-sh % "hg init addemptyend"
-sh % "cd addemptyend"
+sh % "newclientrepo addemptyend"
 sh % "touch a"
 sh % "hg addremove" == "adding a"
 sh % "hg ci -m commit"
@@ -634,7 +633,7 @@ sh % "hg import a.patch empty.patch" == r"""
     applying empty.patch
     abort: empty.patch: no diffs found
     [255]"""
-sh % "hg tip --template '{rev}  {desc|firstline}\\n'" == "0  commit"
+sh % "hg tip --template '{desc|firstline}\\n'" == "commit"
 sh % "hg -q status" == "M a"
 sh % "cd .."
 
@@ -657,8 +656,7 @@ diff -Naur proj-orig/foo proj-new/foo
 @@ -0,0 +1,1 @@
 +a
 """ > "create2.patch"
-sh % "hg init oddcreate"
-sh % "cd oddcreate"
+sh % "newclientrepo oddcreate"
 sh % "hg import --no-commit ../create.patch" == "applying ../create.patch"
 sh % "cat foo" == "a"
 sh % "rm foo"
@@ -670,8 +668,7 @@ sh % "cd .."
 
 # Issue1859: first line mistaken for email headers
 
-sh % "hg init emailconfusion"
-sh % "cd emailconfusion"
+sh % "newclientrepo emailconfusion"
 sh % "cat" << r"""
 module: summary
 
@@ -699,8 +696,7 @@ sh % "cd .."
 
 # in commit message
 
-sh % "hg init commitconfusion"
-sh % "cd commitconfusion"
+sh % "newclientrepo commitconfusion"
 sh % "cat" << r"""
 module: summary
 
@@ -747,8 +743,7 @@ diff -r 000000000000 -r f2be6a1170ac foo
 """
 )
 
-sh % "hg init trickyheaders"
-sh % "cd trickyheaders"
+sh % "newclientrepo trickyheaders"
 sh % "hg import -d '0 0' ../trickyheaders.patch" == "applying ../trickyheaders.patch"
 sh % "hg export --git tip" == r"""
     # HG changeset patch
@@ -772,8 +767,7 @@ sh % "cd .."
 
 # Issue2102: hg export and hg import speak different languages
 
-sh % "hg init issue2102"
-sh % "cd issue2102"
+sh % "newclientrepo issue2102"
 sh % "mkdir -p src/cmd/gc"
 sh % "touch src/cmd/gc/mksys.bash"
 sh % "hg ci -Am init" == "adding src/cmd/gc/mksys.bash"
@@ -860,8 +854,7 @@ sh % "cd .."
 
 # diff lines looking like headers
 
-sh % "hg init difflineslikeheaders"
-sh % "cd difflineslikeheaders"
+sh % "newclientrepo difflineslikeheaders"
 sh % "echo a" > "a"
 sh % "echo b" > "b"
 sh % "echo c" > "c"
@@ -869,15 +862,17 @@ sh % "hg ci -Am1" == r"""
     adding a
     adding b
     adding c"""
+sh % "hg book -i rev0"
 
 sh % "echo 'key: value'" >> "a"
 sh % "echo 'key: value'" >> "b"
 sh % "echo foo" >> "c"
 sh % "hg ci -m2"
+sh % "hg book -i rev1"
 
-sh % "hg up -C 0" == "3 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "hg up -C rev0 --inactive" == "3 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg diff --git -c1" > "want"
-sh % "hg diff -c1" | "hg import --no-commit -" == "applying patch from stdin"
+sh % "hg diff -c rev1" | "hg import --no-commit -" == "applying patch from stdin"
 sh % "hg diff --git" == r"""
     diff --git a/a b/a
     --- a/a
@@ -901,8 +896,7 @@ sh % "cd .."
 
 # import a unified diff with no lines of context (diff -U0)
 
-sh % "hg init diffzero"
-sh % "cd diffzero"
+sh % "newclientrepo diffzero"
 sh % "cat" << r"""
 c2
 c4
@@ -938,8 +932,7 @@ sh % "cd .."
 
 # commit message that looks like a diff header (issue1879)
 
-sh % "hg init headerlikemsg"
-sh % "cd headerlikemsg"
+sh % "newclientrepo headerlikemsg"
 sh % "touch empty"
 sh % "echo nonempty" >> "nonempty"
 (
@@ -950,8 +943,10 @@ diff blah
 blah blah
 """
 )
+sh % "hg book -i rev0"
 sh % "hg --config 'diff.git=1' log -pv" == r"""
     commit:      c6ef204ef767
+    bookmark:    rev0
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       empty nonempty
@@ -972,8 +967,9 @@ sh % "hg --config 'diff.git=1' log -pv" == r"""
 
 #  (without --git, empty file is lost, but commit message should be preserved)
 
-sh % "hg init plain"
-sh % "hg export 0" | "hg -R plain import -" == "applying patch from stdin"
+sh % "newclientrepo plain"
+sh % "cd .."
+sh % "hg --cwd headerlikemsg export rev0" | "hg -R plain import -" == "applying patch from stdin"
 sh % "hg --config 'diff.git=1' -R plain log -pv" == r"""
     commit:      60a2d231e71f
     user:        test
@@ -994,8 +990,9 @@ sh % "hg --config 'diff.git=1' -R plain log -pv" == r"""
 
 #  (with --git, patch contents should be fully preserved)
 
-sh % "hg init git"
-sh % "hg --config 'diff.git=1' export 0" | "hg -R git import -" == "applying patch from stdin"
+sh % "newclientrepo git"
+sh % "cd .."
+sh % "hg --config 'diff.git=1' --cwd headerlikemsg export rev0" | "hg -R git import -" == "applying patch from stdin"
 sh % "hg --config 'diff.git=1' -R git log -pv" == r"""
     commit:      c6ef204ef767
     user:        test
@@ -1021,8 +1018,7 @@ sh % "cd .."
 # no segfault while importing a unified diff which start line is zero but chunk
 # size is non-zero
 
-sh % "hg init startlinezero"
-sh % "cd startlinezero"
+sh % "newclientrepo startlinezero"
 sh % "echo foo" > "foo"
 sh % "hg commit -Amfoo" == "adding foo"
 
@@ -1038,8 +1034,7 @@ sh % "cd .."
 
 # Test corner case involving fuzz and skew
 
-sh % "hg init morecornercases"
-sh % "cd morecornercases"
+sh % "newclientrepo morecornercases"
 
 sh % "cat" << r"""
 diff --git a/a b/a
@@ -1153,8 +1148,7 @@ sh % "cd .."
 
 # prepare a stack of patches depending on each other
 
-sh % "hg init partial"
-sh % "cd partial"
+sh % "newclientrepo partial"
 sh % "cat" << r"""
 one
 two
@@ -1488,8 +1482,7 @@ diff --git a/filedir/file1 b/filedir/file1
 
 # test import crash (issue5375)
 sh % "cd .."
-sh % "hg init repo"
-sh % "cd repo"
+sh % "newclientrepo repo"
 sh % "printf 'diff --git a/a b/b\\nrename from a\\nrename to b'" | "hg import -" == r"""
     applying patch from stdin
     abort: source file 'a' does not exist

@@ -8,20 +8,17 @@ from __future__ import absolute_import
 
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
+sh % "configure modernclient"
 
-sh % "setconfig experimental.allowfilepeer=True"
-sh % "hg init base"
+sh % "newclientrepo base"
 
-sh % "cd base"
 sh % "echo alpha" > "alpha"
 sh % "hg ci -A -m 'add alpha'" == "adding alpha"
+sh % "hg push -q --to book --create"
 sh % "cd .."
 
-sh % "hg clone base work" == r"""
-    updating to branch default
-    1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
+sh % "newclientrepo work test:base_server book"
 
-sh % "cd work"
 sh % "echo beta" > "beta"
 sh % "hg ci -A -m 'add beta'" == "adding beta"
 sh % "cd .."
@@ -29,6 +26,7 @@ sh % "cd .."
 sh % "cd base"
 sh % "echo gamma" > "gamma"
 sh % "hg ci -A -m 'add gamma'" == "adding gamma"
+sh % "hg push -q --to book"
 sh % "cd .."
 
 sh % "cd work"
@@ -40,6 +38,6 @@ sh % "hg merge" == r"""
 # Update --clean to revision 1 to simulate a failed merge:
 
 sh % "rm alpha beta gamma"
-sh % "hg update --clean 1" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+sh % "hg update --clean 'desc(beta)'" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 
 sh % "cd .."

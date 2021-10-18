@@ -1,7 +1,8 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
 #require execbit
+
+  $ configure modernclient
 
 Create extension that can disable exec checks:
 
@@ -16,16 +17,16 @@ Create extension that can disable exec checks:
   >     extensions.wrapfunction(util, 'checkexec', checkexec)
   > EOF
 
-  $ hg init unix-repo
-  $ cd unix-repo
+  $ newclientrepo unix-repo test:server
   $ touch a
   $ hg add a
   $ hg commit -m 'unix: add a'
-  $ hg clone . ../win-repo
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg push -q -r . --to book --create
+  $ newclientrepo win-repo test:server book
+  $ cd ../unix-repo
   $ chmod +x a
   $ hg commit -m 'unix: chmod a'
+  $ hg push -q -r . --to book --create
   $ hg manifest -v
   755 * a
 
@@ -39,15 +40,11 @@ Create extension that can disable exec checks:
   644   a
   644   b
 
-  $ hg pull
-  pulling from $TESTTMP/unix-repo
+  $ hg pull -B book
+  pulling from test:server
   searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
 
-  $ hg manifest -v -r tip
+  $ hg manifest -v -r book
   755 * a
 
 Simulate a Windows merge:

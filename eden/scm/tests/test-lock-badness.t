@@ -1,18 +1,20 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
 #require unix-permissions no-root no-windows
 
+  $ configure modernclient
+
 Prepare
 
-  $ hg init a
+  $ newclientrepo a
+  $ cd ..
   $ echo a > a/a
   $ hg -R a ci -A -m a
   adding a
+  $ hg -R a push -q --to book --create
 
-  $ hg clone a b
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ newclientrepo b test:a_server book
+  $ cd ..
 
 Test that raising an exception in the release function doesn't cause the lock to choke
 

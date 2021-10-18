@@ -1,16 +1,14 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
 
-  $ disable treemanifest
 Test log FILE history handling with renames / file node collisions.
 
   $ . $TESTDIR/library.sh
+  $ configure modernclient
 
 Create a repo with two files X and Y. Create 3 branches (B+E, C, D) where X and
 Y are swapped 0 to 2 times, and merge those branches.
 
-  $ newrepo nonshallow1
-  $ setconfig remotefilelog.server=1
+  $ newclientrepo nonshallow1
   $ drawdag <<'EOS'
   >   H
   >  / \
@@ -32,59 +30,6 @@ Y are swapped 0 to 2 times, and merge those branches.
   >         # A/Y=1
   >         # drawdag.defaultfiles=false
   > EOS
-
-  $ for i in B C D E H; do
-  >   echo log via $i:
-  >   hg log -fr "desc($i)" X -T '{desc}\n' -G
-  > done
-  log via B:
-  o  B
-  │
-  o  A
-  
-  log via C:
-  o  A
-  
-  log via D:
-  o  D
-  │
-  o  A
-  
-  log via E:
-  o  E
-  │
-  o  B
-  │
-  o  A
-  
-  log via H:
-  o  E
-  │
-  │ o  D
-  │ │
-  o │  B
-  ├─╯
-  o  A
-  
-(incorrect: C disappeared in "log via H" and "log via C")
-
-"--removed" does not change things.
-
-  $ hg log -fr "desc(H)" X -T '{desc}\n' -G
-  o  E
-  │
-  │ o  D
-  │ │
-  o │  B
-  ├─╯
-  o  A
-  
-
-Try the same on a shallow repo
-
-  $ hgcloneshallow ssh://user@dummy/nonshallow1 $TESTTMP/shallow1 -q
-  * files fetched over * (glob) (?)
-  $ cd $TESTTMP/shallow1
 
   $ for i in B C D E H; do
   >   echo log via $i:
@@ -123,13 +68,70 @@ Try the same on a shallow repo
   ├─╯
   o  A
   
+"--removed" does not change things.
+
+  $ hg log -fr "desc(H)" X -T '{desc}\n' -G
+  o  E
+  │
+  │ o  D
+  │ │
+  │ │ o  C
+  │ ├─╯
+  o │  B
+  ├─╯
+  o  A
+  
+
+  $ hg push -r tip --to book --create -q
+
+Try the same on a shallow repo
+
+  $ newclientrepo shallow1 test:nonshallow1_server book
+  * files fetched over * (glob) (?)
+
+  $ for i in B C D E H; do
+  >   echo log via $i:
+  >   hg log -fr "desc($i)" X -T '{desc}\n' -G
+  > done
+  log via B:
+  o  B
+  │
+  o  A
+  
+  log via C:
+  o  C
+  │
+  o  A
+  
+  log via D:
+  o  D
+  │
+  o  A
+  
+  log via E:
+  o  E
+  │
+  o  B
+  │
+  o  A
+  
+  log via H:
+  o  E
+  │
+  o  B
+  │
+  │ o  C
+  ├─╯
+  │ o  D
+  ├─╯
+  o  A
+  
 
 Test file node collisions created by file delection.
 
 Create a repo with one file X. Delete and recreate a few times.
 
-  $ newrepo nonshallow2
-  $ setconfig remotefilelog.server=1
+  $ newclientrepo nonshallow2
   $ drawdag <<'EOS'
   > G       # G/X=
   > |
@@ -158,15 +160,19 @@ Create a repo with one file X. Delete and recreate a few times.
   o  A
   
   log via E:
+  o  D
+  │
   o  A
   
   log via G:
   o    G
   ├─╮
-  ╷ o  C
-  ╷ │
-  ╷ o  B
-  ╭─╯
+  o ╷  C
+  │ ╷
+  │ o  D
+  │ │
+  o │  B
+  ├─╯
   o  A
   
 (incorrect: D, E disappeared in "log via E" and "log via G"; F disappeared in "log via G")
@@ -176,20 +182,19 @@ With "--removed", it is slightly better.
   $ hg log -fr "desc(G)" X -T '{desc}\n' -G --removed
   o    G
   ├─╮
-  ╷ o  C
-  ╷ │
-  o │  D
+  o ╷  C
+  │ ╷
+  │ o  D
   │ │
-  │ o  B
+  o │  B
   ├─╯
   o  A
   
+  $ hg push -q -r tip --to book --create
 
 Try again in a shallow repo:
 
-  $ hgcloneshallow ssh://user@dummy/nonshallow2 $TESTTMP/shallow2 -q
-  * files fetched over * (glob) (?)
-  $ cd $TESTTMP/shallow2
+  $ newclientrepo shallow2 test:nonshallow2_server book
 
   $ for i in A C E G; do
   >   echo log via $i:
@@ -213,9 +218,9 @@ Try again in a shallow repo:
   log via G:
   @    G
   ├─╮
-  ╷ o  C
-  ╷ │
-  o │  D
+  o ╷  D
+  │ ╷
+  │ o  C
   │ │
   │ o  B
   ├─╯
@@ -228,9 +233,9 @@ Try again in a shallow repo:
   $ hg log -fr "desc(G)" X -T '{desc}\n' -G --removed
   @    G
   ├─╮
-  ╷ o  C
-  ╷ │
-  o │  D
+  o ╷  D
+  │ ╷
+  │ o  C
   │ │
   │ o  B
   ├─╯

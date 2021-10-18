@@ -1,13 +1,11 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
+  $ configure modernclient
 
   $ add()
   > {
   >     echo $2 >> $1
   > }
-  $ hg init t
-  $ cd t
+  $ newclientrepo t
 
 set up a boring main branch
 
@@ -16,13 +14,14 @@ set up a boring main branch
   $ mkdir x
   $ add x/x x
   $ hg add x/x
-  $ hg ci -m0
+  $ hg ci -m o0
   $ add a m1
-  $ hg ci -m1
+  $ hg ci -m o1
   $ add a m2
   $ add x/y y1
   $ hg add x/y
-  $ hg ci -m2
+  $ hg ci -m o2
+  $ hg push -q --to book --create
   $ cd ..
 
   $ show()
@@ -45,8 +44,8 @@ $3 - working dir action
 
   $ tb()
   > {
-  >     hg clone -q t t2 ; cd t2
-  >     hg co -q -C 0
+  >     newclientrepo t2 test:t_server book
+  >     hg co -q -C 'desc(o0)'
   > 
   >     echo % add a $count
   >     add a $count
@@ -65,12 +64,12 @@ $3 - working dir action
   >     $3
   >     echo
   >     show "" "working to parent"
-  >     show "--rev 0" "working to root"
-  >     show "--rev 2" "working to branch"
-  >     show "--rev 0 --rev ." "root to parent"
-  >     show "--rev . --rev 0" "parent to root"
-  >     show "--rev 2 --rev ." "branch to parent"
-  >     show "--rev . --rev 2" "parent to branch"
+  >     show "--rev desc(o0)" "working to root"
+  >     show "--rev desc(o2)" "working to branch"
+  >     show "--rev desc(o0) --rev ." "root to parent"
+  >     show "--rev . --rev desc(o0)" "parent to root"
+  >     show "--rev desc(o2) --rev ." "branch to parent"
+  >     show "--rev . --rev desc(o2)" "parent to branch"
   >     echo
   >     cd ..
   >     rm -rf t2
@@ -101,12 +100,12 @@ rename in working dir
   
   # working to root:
   
-  % hg st -C --rev 0
+  % hg st -C --rev desc(o0)
   A b
     a
   R a
   
-  % hg diff --git --rev 0
+  % hg diff --git --rev desc(o0)
   diff --git a/a b/b
   rename from a
   rename to b
@@ -120,13 +119,13 @@ rename in working dir
   
   # working to branch:
   
-  % hg st -C --rev 2
+  % hg st -C --rev desc(o2)
   A b
     a
   R a
   R x/y
   
-  % hg diff --git --rev 2
+  % hg diff --git --rev desc(o2)
   diff --git a/a b/b
   rename from a
   rename to b
@@ -148,10 +147,10 @@ rename in working dir
   
   # root to parent:
   
-  % hg st -C --rev 0 --rev .
+  % hg st -C --rev desc(o0) --rev .
   M a
   
-  % hg diff --git --rev 0 --rev .
+  % hg diff --git --rev desc(o0) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -163,10 +162,10 @@ rename in working dir
   
   # parent to root:
   
-  % hg st -C --rev . --rev 0
+  % hg st -C --rev . --rev desc(o0)
   M a
   
-  % hg diff --git --rev . --rev 0
+  % hg diff --git --rev . --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -178,11 +177,11 @@ rename in working dir
   
   # branch to parent:
   
-  % hg st -C --rev 2 --rev .
+  % hg st -C --rev desc(o2) --rev .
   M a
   R x/y
   
-  % hg diff --git --rev 2 --rev .
+  % hg diff --git --rev desc(o2) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -202,11 +201,11 @@ rename in working dir
   
   # parent to branch:
   
-  % hg st -C --rev . --rev 2
+  % hg st -C --rev . --rev desc(o2)
   M a
   A x/y
   
-  % hg diff --git --rev . --rev 2
+  % hg diff --git --rev . --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -249,12 +248,12 @@ copy in working dir
   
   # working to root:
   
-  % hg st -C --rev 0
+  % hg st -C --rev desc(o0)
   M a
   A b
     a
   
-  % hg diff --git --rev 0
+  % hg diff --git --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -276,13 +275,13 @@ copy in working dir
   
   # working to branch:
   
-  % hg st -C --rev 2
+  % hg st -C --rev desc(o2)
   M a
   A b
     a
   R x/y
   
-  % hg diff --git --rev 2
+  % hg diff --git --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -314,10 +313,10 @@ copy in working dir
   
   # root to parent:
   
-  % hg st -C --rev 0 --rev .
+  % hg st -C --rev desc(o0) --rev .
   M a
   
-  % hg diff --git --rev 0 --rev .
+  % hg diff --git --rev desc(o0) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -329,10 +328,10 @@ copy in working dir
   
   # parent to root:
   
-  % hg st -C --rev . --rev 0
+  % hg st -C --rev . --rev desc(o0)
   M a
   
-  % hg diff --git --rev . --rev 0
+  % hg diff --git --rev . --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -344,11 +343,11 @@ copy in working dir
   
   # branch to parent:
   
-  % hg st -C --rev 2 --rev .
+  % hg st -C --rev desc(o2) --rev .
   M a
   R x/y
   
-  % hg diff --git --rev 2 --rev .
+  % hg diff --git --rev desc(o2) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -368,11 +367,11 @@ copy in working dir
   
   # parent to branch:
   
-  % hg st -C --rev . --rev 2
+  % hg st -C --rev . --rev desc(o2)
   M a
   A x/y
   
-  % hg diff --git --rev . --rev 2
+  % hg diff --git --rev . --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -419,12 +418,12 @@ single rename
   
   # working to root:
   
-  % hg st -C --rev 0
+  % hg st -C --rev desc(o0)
   A b
     a
   R a
   
-  % hg diff --git --rev 0
+  % hg diff --git --rev desc(o0)
   diff --git a/a b/b
   rename from a
   rename to b
@@ -438,13 +437,13 @@ single rename
   
   # working to branch:
   
-  % hg st -C --rev 2
+  % hg st -C --rev desc(o2)
   A b
     a
   R a
   R x/y
   
-  % hg diff --git --rev 2
+  % hg diff --git --rev desc(o2)
   diff --git a/a b/b
   rename from a
   rename to b
@@ -466,12 +465,12 @@ single rename
   
   # root to parent:
   
-  % hg st -C --rev 0 --rev .
+  % hg st -C --rev desc(o0) --rev .
   A b
     a
   R a
   
-  % hg diff --git --rev 0 --rev .
+  % hg diff --git --rev desc(o0) --rev .
   diff --git a/a b/b
   rename from a
   rename to b
@@ -484,12 +483,12 @@ single rename
   
   # parent to root:
   
-  % hg st -C --rev . --rev 0
+  % hg st -C --rev . --rev desc(o0)
   A a
     b
   R b
   
-  % hg diff --git --rev . --rev 0
+  % hg diff --git --rev . --rev desc(o0)
   diff --git a/b b/a
   rename from b
   rename to a
@@ -502,13 +501,13 @@ single rename
   
   # branch to parent:
   
-  % hg st -C --rev 2 --rev .
+  % hg st -C --rev desc(o2) --rev .
   A b
     a
   R a
   R x/y
   
-  % hg diff --git --rev 2 --rev .
+  % hg diff --git --rev desc(o2) --rev .
   diff --git a/a b/b
   rename from a
   rename to b
@@ -529,13 +528,13 @@ single rename
   
   # parent to branch:
   
-  % hg st -C --rev . --rev 2
+  % hg st -C --rev . --rev desc(o2)
   A a
     b
   A x/y
   R b
   
-  % hg diff --git --rev . --rev 2
+  % hg diff --git --rev . --rev desc(o2)
   diff --git a/b b/a
   rename from b
   rename to a
@@ -582,12 +581,12 @@ single copy
   
   # working to root:
   
-  % hg st -C --rev 0
+  % hg st -C --rev desc(o0)
   M a
   A b
     a
   
-  % hg diff --git --rev 0
+  % hg diff --git --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -607,13 +606,13 @@ single copy
   
   # working to branch:
   
-  % hg st -C --rev 2
+  % hg st -C --rev desc(o2)
   M a
   A b
     a
   R x/y
   
-  % hg diff --git --rev 2
+  % hg diff --git --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -643,12 +642,12 @@ single copy
   
   # root to parent:
   
-  % hg st -C --rev 0 --rev .
+  % hg st -C --rev desc(o0) --rev .
   M a
   A b
     a
   
-  % hg diff --git --rev 0 --rev .
+  % hg diff --git --rev desc(o0) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -667,11 +666,11 @@ single copy
   
   # parent to root:
   
-  % hg st -C --rev . --rev 0
+  % hg st -C --rev . --rev desc(o0)
   M a
   R b
   
-  % hg diff --git --rev . --rev 0
+  % hg diff --git --rev . --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -689,13 +688,13 @@ single copy
   
   # branch to parent:
   
-  % hg st -C --rev 2 --rev .
+  % hg st -C --rev desc(o2) --rev .
   M a
   A b
     a
   R x/y
   
-  % hg diff --git --rev 2 --rev .
+  % hg diff --git --rev desc(o2) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -724,12 +723,12 @@ single copy
   
   # parent to branch:
   
-  % hg st -C --rev . --rev 2
+  % hg st -C --rev . --rev desc(o2)
   M a
   A x/y
   R b
   
-  % hg diff --git --rev . --rev 2
+  % hg diff --git --rev . --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -779,12 +778,12 @@ rename chain
   
   # working to root:
   
-  % hg st -C --rev 0
+  % hg st -C --rev desc(o0)
   A d
     a
   R a
   
-  % hg diff --git --rev 0
+  % hg diff --git --rev desc(o0)
   diff --git a/a b/d
   rename from a
   rename to d
@@ -796,13 +795,13 @@ rename chain
   
   # working to branch:
   
-  % hg st -C --rev 2
+  % hg st -C --rev desc(o2)
   A d
     a
   R a
   R x/y
   
-  % hg diff --git --rev 2
+  % hg diff --git --rev desc(o2)
   diff --git a/a b/d
   rename from a
   rename to d
@@ -822,12 +821,12 @@ rename chain
   
   # root to parent:
   
-  % hg st -C --rev 0 --rev .
+  % hg st -C --rev desc(o0) --rev .
   A c
     a
   R a
   
-  % hg diff --git --rev 0 --rev .
+  % hg diff --git --rev desc(o0) --rev .
   diff --git a/a b/c
   rename from a
   rename to c
@@ -839,12 +838,12 @@ rename chain
   
   # parent to root:
   
-  % hg st -C --rev . --rev 0
+  % hg st -C --rev . --rev desc(o0)
   A a
     c
   R c
   
-  % hg diff --git --rev . --rev 0
+  % hg diff --git --rev . --rev desc(o0)
   diff --git a/c b/a
   rename from c
   rename to a
@@ -856,13 +855,13 @@ rename chain
   
   # branch to parent:
   
-  % hg st -C --rev 2 --rev .
+  % hg st -C --rev desc(o2) --rev .
   A c
     a
   R a
   R x/y
   
-  % hg diff --git --rev 2 --rev .
+  % hg diff --git --rev desc(o2) --rev .
   diff --git a/a b/c
   rename from a
   rename to c
@@ -882,13 +881,13 @@ rename chain
   
   # parent to branch:
   
-  % hg st -C --rev . --rev 2
+  % hg st -C --rev . --rev desc(o2)
   A a
     c
   A x/y
   R c
   
-  % hg diff --git --rev . --rev 2
+  % hg diff --git --rev . --rev desc(o2)
   diff --git a/c b/a
   rename from c
   rename to a
@@ -931,7 +930,7 @@ copy chain
   
   # working to root:
   
-  % hg st -C --rev 0
+  % hg st -C --rev desc(o0)
   M a
   A b
     a
@@ -940,7 +939,7 @@ copy chain
   A d
     a
   
-  % hg diff --git --rev 0
+  % hg diff --git --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -974,7 +973,7 @@ copy chain
   
   # working to branch:
   
-  % hg st -C --rev 2
+  % hg st -C --rev desc(o2)
   M a
   A b
     a
@@ -984,7 +983,7 @@ copy chain
     a
   R x/y
   
-  % hg diff --git --rev 2
+  % hg diff --git --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1032,14 +1031,14 @@ copy chain
   
   # root to parent:
   
-  % hg st -C --rev 0 --rev .
+  % hg st -C --rev desc(o0) --rev .
   M a
   A b
     a
   A c
     a
   
-  % hg diff --git --rev 0 --rev .
+  % hg diff --git --rev desc(o0) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1065,12 +1064,12 @@ copy chain
   
   # parent to root:
   
-  % hg st -C --rev . --rev 0
+  % hg st -C --rev . --rev desc(o0)
   M a
   R b
   R c
   
-  % hg diff --git --rev . --rev 0
+  % hg diff --git --rev . --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1094,7 +1093,7 @@ copy chain
   
   # branch to parent:
   
-  % hg st -C --rev 2 --rev .
+  % hg st -C --rev desc(o2) --rev .
   M a
   A b
     a
@@ -1102,7 +1101,7 @@ copy chain
     a
   R x/y
   
-  % hg diff --git --rev 2 --rev .
+  % hg diff --git --rev desc(o2) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1140,13 +1139,13 @@ copy chain
   
   # parent to branch:
   
-  % hg st -C --rev . --rev 2
+  % hg st -C --rev . --rev desc(o2)
   M a
   A x/y
   R b
   R c
   
-  % hg diff --git --rev . --rev 2
+  % hg diff --git --rev . --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1202,10 +1201,10 @@ circular rename
   
   # working to root:
   
-  % hg st -C --rev 0
+  % hg st -C --rev desc(o0)
   M a
   
-  % hg diff --git --rev 0
+  % hg diff --git --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1216,11 +1215,11 @@ circular rename
   
   # working to branch:
   
-  % hg st -C --rev 2
+  % hg st -C --rev desc(o2)
   M a
   R x/y
   
-  % hg diff --git --rev 2
+  % hg diff --git --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1239,12 +1238,12 @@ circular rename
   
   # root to parent:
   
-  % hg st -C --rev 0 --rev .
+  % hg st -C --rev desc(o0) --rev .
   A b
     a
   R a
   
-  % hg diff --git --rev 0 --rev .
+  % hg diff --git --rev desc(o0) --rev .
   diff --git a/a b/b
   rename from a
   rename to b
@@ -1257,12 +1256,12 @@ circular rename
   
   # parent to root:
   
-  % hg st -C --rev . --rev 0
+  % hg st -C --rev . --rev desc(o0)
   A a
     b
   R b
   
-  % hg diff --git --rev . --rev 0
+  % hg diff --git --rev . --rev desc(o0)
   diff --git a/b b/a
   rename from b
   rename to a
@@ -1275,13 +1274,13 @@ circular rename
   
   # branch to parent:
   
-  % hg st -C --rev 2 --rev .
+  % hg st -C --rev desc(o2) --rev .
   A b
     a
   R a
   R x/y
   
-  % hg diff --git --rev 2 --rev .
+  % hg diff --git --rev desc(o2) --rev .
   diff --git a/a b/b
   rename from a
   rename to b
@@ -1302,13 +1301,13 @@ circular rename
   
   # parent to branch:
   
-  % hg st -C --rev . --rev 2
+  % hg st -C --rev . --rev desc(o2)
   A a
     b
   A x/y
   R b
   
-  % hg diff --git --rev . --rev 2
+  % hg diff --git --rev . --rev desc(o2)
   diff --git a/b b/a
   rename from b
   rename to a
@@ -1356,13 +1355,13 @@ directory move
   
   # working to root:
   
-  % hg st -C --rev 0
+  % hg st -C --rev desc(o0)
   M a
   A y/x
     x/x
   R x/x
   
-  % hg diff --git --rev 0
+  % hg diff --git --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1381,14 +1380,14 @@ directory move
   
   # working to branch:
   
-  % hg st -C --rev 2
+  % hg st -C --rev desc(o2)
   M a
   A y/x
     x/x
   R x/x
   R x/y
   
-  % hg diff --git --rev 2
+  % hg diff --git --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1415,13 +1414,13 @@ directory move
   
   # root to parent:
   
-  % hg st -C --rev 0 --rev .
+  % hg st -C --rev desc(o0) --rev .
   M a
   A y/x
     x/x
   R x/x
   
-  % hg diff --git --rev 0 --rev .
+  % hg diff --git --rev desc(o0) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1439,13 +1438,13 @@ directory move
   
   # parent to root:
   
-  % hg st -C --rev . --rev 0
+  % hg st -C --rev . --rev desc(o0)
   M a
   A x/x
     y/x
   R y/x
   
-  % hg diff --git --rev . --rev 0
+  % hg diff --git --rev . --rev desc(o0)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1463,14 +1462,14 @@ directory move
   
   # branch to parent:
   
-  % hg st -C --rev 2 --rev .
+  % hg st -C --rev desc(o2) --rev .
   M a
   A y/x
     x/x
   R x/x
   R x/y
   
-  % hg diff --git --rev 2 --rev .
+  % hg diff --git --rev desc(o2) --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1496,14 +1495,14 @@ directory move
   
   # parent to branch:
   
-  % hg st -C --rev . --rev 2
+  % hg st -C --rev . --rev desc(o2)
   M a
   A x/x
     y/x
   A x/y
   R y/x
   
-  % hg diff --git --rev . --rev 2
+  % hg diff --git --rev . --rev desc(o2)
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1532,8 +1531,7 @@ directory move
 Cannot implement unrelated branch with tb
 testing copies with unrelated branch
 
-  $ hg init unrelated
-  $ cd unrelated
+  $ newclientrepo unrelated
   $ echo a >> a
   $ hg ci -Am adda
   adding a
@@ -1547,7 +1545,7 @@ testing copies with unrelated branch
 
 unrelated branch diff
 
-  $ hg diff --git -r 2 -r 1
+  $ hg diff --git -r 'desc(addunrelateda)' -r 'desc(movea)'
   diff --git a/a b/a
   deleted file mode 100644
   --- a/a
@@ -1565,13 +1563,12 @@ unrelated branch diff
 
 test for case where we didn't look sufficiently far back to find rename ancestor
 
-  $ hg init diffstop
-  $ cd diffstop
+  $ newclientrepo diffstop
   $ echo > f
   $ hg ci -qAmf
   $ hg mv f g
   $ hg ci -m'f->g'
-  $ hg up -qr0
+  $ hg up -qr .^
   $ touch x
   $ hg ci -qAmx
   $ echo f > f
@@ -1589,14 +1586,18 @@ test for case where we didn't look sufficiently far back to find rename ancestor
   ├─╯
   o  f
   
-  $ hg diff --git -r 2
-  diff --git a/f b/g
-  rename from f
-  rename to g
+  $ hg diff --git -r 'desc("f=f")'
+  diff --git a/f b/f
+  deleted file mode 100644
   --- a/f
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -f
+  diff --git a/g b/g
+  new file mode 100644
+  --- /dev/null
   +++ b/g
-  @@ -1,1 +1,1 @@
-  -
+  @@ -0,0 +1,1 @@
   +f
   $ cd ..
 
@@ -1607,8 +1608,7 @@ If the first file revision after the diff base has a linkrev pointing to a
 changeset on another branch with a revision lower that the diff base, we can
 jump past the copy detection limit and fail to detect the rename.
 
-  $ hg init diffstoplinkrev
-  $ cd diffstoplinkrev
+  $ newclientrepo diffstoplinkrev
 
   $ touch f
   $ hg ci -Aqm 'empty f'

@@ -1,9 +1,7 @@
 #chg-compatible
-  $ setconfig experimental.allowfilepeer=True
-
 'narrow-heads' requires remotenames and visibility
 
-  $ configure dummyssh
+  $ configure dummyssh modernclient
   $ enable remotenames amend
   $ setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date="0 0" experimental.evolution= remotenames.rename.default=remote
   $ setconfig 'infinitepush.branchpattern=re:(^hack/.*)'
@@ -11,38 +9,35 @@
 
 Prepare the server repo
 
-  $ newrepo server --config extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
-  $ setconfig treemanifest.server=true extensions.treemanifest=$TESTDIR/../edenscm/hgext/treemanifestserver.py
+  $ newclientrepo server
   $ drawdag << 'EOS'
   > B
   > |
   > A
   > EOS
 
-  $ hg bookmark -r $B master
-  $ hg bookmark -r $A stable
+  $ hg push -q -r $B --to fake_master --create
+  $ hg push -q -r $A --to stable --create
 
 Prepare the client repo
 
-  $ cd ..
-  $ hg clone ssh://user@dummy/server $TESTTMP/client -q 
-  $ cd $TESTTMP/client
+  $ newclientrepo client test:server_server fake_master stable
 
 Verify the commits
 
-  $ hg bookmarks --remote
-     remote/master             112478962961
+  $ hg bookmarks --list-subscriptions
+     remote/fake_master        112478962961
      remote/stable             426bada5c675
 
 Revsets after the initial clone
 
   $ hg log -Gr 'all()' -T '{desc} {remotenames} {phase}'
-  @  B remote/master public
+  @  B remote/fake_master public
   │
   o  A remote/stable public
   
   $ hg log -Gr 'head()' -T '{desc} {remotenames}'
-  @  B remote/master
+  @  B remote/fake_master
   │
   ~
 
@@ -73,14 +68,14 @@ head() should include one 'D' commit, and one 'B'
   ~
 
 all() should not show C
-Commits under ::master should be public
+Commits under ::fake_master should be public
 
   $ hg log -Gr 'all()' -T '{desc} {phase} {remotebookmarks}'
   o  D draft
   │
   @  C2 draft
   │
-  │ o  B public remote/master
+  │ o  B public remote/fake_master
   ├─╯
   o  A public remote/stable
   
@@ -152,7 +147,7 @@ Phases
 
 Rebase
 
-  $ newrepo
+  $ newclientrepo repo2
   $ enable rebase amend
   $ drawdag << 'EOS'
   > B C
@@ -161,7 +156,7 @@ Rebase
   > |/
   > A
   > EOS
-  $ hg debugremotebookmark master $B
+  $ hg debugremotebookmark fake_master $B
   $ hg hide $D -q
   $ hg rebase -s $D -d $B
   "source" revision set is invisible - nothing to rebase
@@ -169,7 +164,7 @@ Rebase
 
 Visible heads got out of sync with "." or bookmarks
 
-  $ newrepo
+  $ newclientrepo repo3
   $ drawdag << 'EOS'
   > M B
   > |/
@@ -179,7 +174,7 @@ Visible heads got out of sync with "." or bookmarks
   > |/
   > A
   > EOS
-  $ hg debugremotebookmark master $M
+  $ hg debugremotebookmark fake_master $M
   $ hg hide -q $B+$C+$D
   $ hg up -q $C
   $ hg bookmark -r $D book-D
@@ -205,31 +200,3 @@ Visible heads got out of sync with "." or bookmarks
   ~
 
 
-Prepare the server repo with draft branches
-
-  $ newrepo server1
-  $ setconfig treemanifest.server=true
-  $ drawdag << 'EOS'
-  > B C
-  > |/
-  > A
-  > EOS
-
-  $ hg bookmark -r $B master
-  $ hg bookmark -r $C hack/feature-foo
-
-Prepare the client repo
-
-  $ hg clone $TESTTMP/server1 $TESTTMP/client1 -q --pull -U
-  $ cd $TESTTMP/client1
-
-  $ hg log -r 'draft()' -T '{desc}\n'
-  C
-
-Check the draft branch can be hidden
-
-  $ hg hide $C
-  hiding commit dc0947a82db8 "C"
-  1 changeset hidden
-
-  $ hg log -r 'draft()' -T '{desc}\n'
