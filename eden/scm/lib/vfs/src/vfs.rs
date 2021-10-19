@@ -5,24 +5,35 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    fs::{create_dir_all, remove_dir, remove_dir_all, symlink_metadata, File},
-    io::{self, ErrorKind, Write},
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::fs::create_dir_all;
+use std::fs::remove_dir;
+use std::fs::remove_dir_all;
+use std::fs::symlink_metadata;
+use std::fs::File;
+use std::io::ErrorKind;
+use std::io::Write;
+use std::io::{self};
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use std::fs::{Metadata, OpenOptions};
+use std::fs::Metadata;
+use std::fs::OpenOptions;
 
-#[cfg(not(windows))]
-use std::{
-    fs::{set_permissions, Permissions},
-    os::unix::fs::PermissionsExt,
-};
+#[cfg(unix)]
+use std::fs::set_permissions;
+#[cfg(unix)]
+use std::fs::Permissions;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Context;
+use anyhow::Result;
 
-use fsinfo::{fstype, FsType};
+use fsinfo::fstype;
+use fsinfo::FsType;
 use types::RepoPath;
 use util::path::remove_file;
 

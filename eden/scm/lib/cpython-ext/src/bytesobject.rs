@@ -5,19 +5,28 @@
  * GNU General Public License version 2.
  */
 
+use std::mem;
 #[cfg(feature = "python3")]
 use std::os::raw::c_char;
-use std::{mem, slice};
+use std::slice;
 
-use cpython::{PyObject as RustPyObject, Python as RustPythonGILGuard};
-#[cfg(feature = "python3")]
-use python3_sys::{
-    PyBytes_Type, PyObject, PyTypeObject, PyVarObject, Py_hash_t, Py_ssize_t, _PyObject_NewVar,
-};
+use cpython::PyObject as RustPyObject;
+use cpython::Python as RustPythonGILGuard;
 #[cfg(feature = "python2")]
-use python27_sys::{
-    PyBytesObject, PyBytes_Type, PyObject, PyTypeObject, PyVarObject, Py_ssize_t, _PyObject_NewVar,
-};
+use ffi::PyBytesObject;
+use ffi::PyBytes_Type;
+use ffi::PyObject;
+use ffi::PyTypeObject;
+use ffi::PyVarObject;
+#[cfg(feature = "python3")]
+use ffi::Py_hash_t;
+use ffi::Py_ssize_t;
+use ffi::_PyObject_NewVar;
+
+#[cfg(feature = "python3")]
+use python3_sys as ffi;
+#[cfg(feature = "python2")]
+use python27_sys as ffi;
 
 // From Python bytesobject.h. Must match the C definition.
 #[cfg(feature = "python3")]

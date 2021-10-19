@@ -7,13 +7,16 @@
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
+use std::process::Child;
+use std::process::Command;
 #[cfg(unix)]
 use std::process::Stdio;
-use std::process::{Child, Command};
 
 use anyhow::Result;
 #[cfg(windows)]
-use winapi::um::winbase::{CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW};
+use winapi::um::winbase::CREATE_NEW_PROCESS_GROUP;
+#[cfg(windows)]
+use winapi::um::winbase::CREATE_NO_WINDOW;
 
 pub fn run_background(mut command: Command) -> Result<Child> {
     #[cfg(windows)]

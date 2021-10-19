@@ -11,7 +11,8 @@
 
 use abomonation_derive::Abomonation;
 pub use minibytes::Bytes;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::fmt;
 use std::io;
 use std::ops;
@@ -260,7 +261,9 @@ impl Iterator for IdIter {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Id {

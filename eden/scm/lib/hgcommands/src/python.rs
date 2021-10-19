@@ -12,15 +12,22 @@ use libc::c_int;
 use libc::wchar_t;
 
 #[cfg(feature = "python3")]
-use python3_sys::{
-    PyEval_InitThreads, PyGILState_Ensure, PySys_SetArgv, PyUnicode_AsWideCharString,
-    PyUnicode_FromString, Py_Finalize, Py_Initialize, Py_IsInitialized, Py_Main, Py_SetProgramName,
-};
+use python3_sys as ffi;
 #[cfg(feature = "python2")]
-use python27_sys::{
-    PyEval_InitThreads, PyGILState_Ensure, PySys_SetArgv, Py_Finalize, Py_Initialize,
-    Py_IsInitialized, Py_Main, Py_SetProgramName,
-};
+use python27_sys as ffi;
+
+use ffi::PyEval_InitThreads;
+use ffi::PyGILState_Ensure;
+use ffi::PySys_SetArgv;
+#[cfg(feature = "python3")]
+use ffi::PyUnicode_AsWideCharString;
+#[cfg(feature = "python3")]
+use ffi::PyUnicode_FromString;
+use ffi::Py_Finalize;
+use ffi::Py_Initialize;
+use ffi::Py_IsInitialized;
+use ffi::Py_Main;
+use ffi::Py_SetProgramName;
 use std::ffi::CString;
 
 #[cfg(feature = "python2")]

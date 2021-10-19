@@ -18,20 +18,21 @@ mod unix;
 #[cfg(windows)]
 mod windows;
 
-use std::ffi::{CString, OsStr};
+use std::ffi::CString;
+use std::ffi::OsStr;
 use std::path::Path;
 
 use types::RepoPath;
 
 #[cfg(unix)]
-pub use crate::unix::{
-    local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes, path_to_local_bytes,
-};
-
+use unix as sys;
 #[cfg(windows)]
-pub use windows::{
-    local_bytes_to_osstring, local_bytes_to_path, osstring_to_local_bytes, path_to_local_bytes,
-};
+use windows as sys;
+
+pub use sys::local_bytes_to_osstring;
+pub use sys::local_bytes_to_path;
+pub use sys::osstring_to_local_bytes;
+pub use sys::path_to_local_bytes;
 
 /// Convert a `Path` to a `CString` of local bytes
 /// This function panics on failure.
@@ -95,7 +96,8 @@ mod tests {
 
         #[cfg(windows)]
         let bytes = {
-            use local_encoding::{Encoder, Encoding};
+            use local_encoding::Encoder;
+            use local_encoding::Encoding;
             match Encoding::ANSI.to_bytes(::std::str::from_utf8(bytes).expect("from_utf8")) {
                 Ok(s) => s,
                 _ => return, // Cannot be encoded using local encoding. Skip the test.

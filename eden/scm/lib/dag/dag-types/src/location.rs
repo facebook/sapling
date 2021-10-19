@@ -7,7 +7,8 @@
 
 use std::future::Future;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// The position of one node in the graph relative their known descendant.
 /// This structure is relevant when the IdMap is lazy. Assuming that all parents of merges
@@ -84,7 +85,9 @@ impl<Name> Location<Name> {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl<Name> Arbitrary for Location<Name>

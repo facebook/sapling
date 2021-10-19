@@ -7,27 +7,43 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{
-    cell::RefCell,
-    mem,
-    path::PathBuf,
-    str,
-    sync::Arc,
-    thread::{self, JoinHandle},
-};
+use std::cell::RefCell;
+use std::mem;
+use std::path::PathBuf;
+use std::str;
+use std::sync::Arc;
+use std::thread::JoinHandle;
+use std::thread::{self};
 
-use anyhow::{bail, format_err, Context, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
 use cpython::*;
-use crossbeam::channel::{bounded, Receiver, Sender};
+use crossbeam::channel::bounded;
+use crossbeam::channel::Receiver;
+use crossbeam::channel::Sender;
 
-use cpython_ext::{ExtractInner, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
-use pyrevisionstore::{contentstore, filescmstore};
-use revisionstore::{
-    datastore::RemoteDataStore, localstore::LocalStore, redact_if_needed, HgIdDataStore,
-    LegacyStore, StoreKey, StoreResult,
-};
-use types::{HgId, Key, RepoPathBuf};
-use vfs::{UpdateFlag, VFS};
+use cpython_ext::ExtractInner;
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
+use pyrevisionstore::contentstore;
+use pyrevisionstore::filescmstore;
+use revisionstore::datastore::RemoteDataStore;
+use revisionstore::localstore::LocalStore;
+use revisionstore::redact_if_needed;
+use revisionstore::HgIdDataStore;
+use revisionstore::LegacyStore;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
+use types::HgId;
+use types::Key;
+use types::RepoPathBuf;
+use vfs::UpdateFlag;
+use vfs::VFS;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "worker"].join(".");
@@ -341,25 +357,33 @@ mod tests {
     use super::*;
 
     use std::collections::HashSet;
-    use std::fs::{create_dir_all, metadata, read_dir, read_to_string, symlink_metadata, File};
+    use std::fs::create_dir_all;
+    use std::fs::metadata;
+    use std::fs::read_dir;
+    use std::fs::read_to_string;
+    use std::fs::symlink_metadata;
+    use std::fs::File;
+    #[cfg(windows)]
+    use std::fs::OpenOptions;
     use std::io::Write;
     #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
     #[cfg(windows)]
-    use std::{fs::OpenOptions, os::windows::fs::OpenOptionsExt};
+    use std::os::windows::fs::OpenOptionsExt;
 
     use anyhow::ensure;
     use memmap::MmapOptions;
     use minibytes::Bytes;
-    use quickcheck::{quickcheck, TestResult};
+    use quickcheck::quickcheck;
+    use quickcheck::TestResult;
     use tempfile::TempDir;
 
-    use revisionstore::{
-        datastore::{Delta, HgIdMutableDeltaStore},
-        testutil::make_config,
-        ContentStore,
-    };
-    use types::{testutil::key, RepoPath};
+    use revisionstore::datastore::Delta;
+    use revisionstore::datastore::HgIdMutableDeltaStore;
+    use revisionstore::testutil::make_config;
+    use revisionstore::ContentStore;
+    use types::testutil::key;
+    use types::RepoPath;
 
     #[test]
     fn test_update_basic() -> Result<()> {

@@ -6,19 +6,25 @@
  */
 
 use std::borrow::Borrow;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::fmt;
 use std::mem;
 use std::ops::Deref;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use cpython::*;
 use thiserror::Error;
 
 #[cfg(feature = "python2")]
-use encoding::{local_bytes_to_path, path_to_local_bytes};
-use types::{PathComponentBuf, RepoPath, RepoPathBuf};
+use encoding::local_bytes_to_path;
+#[cfg(feature = "python2")]
+use encoding::path_to_local_bytes;
+use types::PathComponentBuf;
+use types::RepoPath;
+use types::RepoPathBuf;
 
 #[cfg(feature = "python2")]
 use crate::ResultPyErrExt;

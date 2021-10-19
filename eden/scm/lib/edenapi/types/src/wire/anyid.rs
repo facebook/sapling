@@ -7,13 +7,19 @@
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-#[cfg(any(test, feature = "for-tests"))]
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use crate::anyid::{AnyId, BonsaiChangesetId};
-use crate::wire::{ToApi, ToWire, WireAnyFileContentId, WireHgId, WireToApiConversionError};
+use crate::anyid::AnyId;
+use crate::anyid::BonsaiChangesetId;
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireAnyFileContentId;
+use crate::wire::WireHgId;
+use crate::wire::WireToApiConversionError;
 
-pub use crate::anyid::{WireLookupRequest, WireLookupResponse};
+pub use crate::anyid::WireLookupRequest;
+pub use crate::anyid::WireLookupResponse;
 
 wire_hash! {
     wire => WireBonsaiChangesetId,

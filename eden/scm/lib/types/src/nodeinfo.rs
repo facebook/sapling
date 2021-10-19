@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use crate::{hgid::HgId, key::Key};
+use crate::hgid::HgId;
+use crate::key::Key;
 
 #[derive(
     Clone,
@@ -27,7 +29,9 @@ pub struct NodeInfo {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for NodeInfo {

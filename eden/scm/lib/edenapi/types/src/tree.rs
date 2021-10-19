@@ -6,15 +6,24 @@
  */
 
 use bytes::Bytes;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use thiserror::Error;
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
 
-use types::{hgid::HgId, key::Key, parents::Parents};
+use types::hgid::HgId;
+use types::key::Key;
+use types::parents::Parents;
 
-use crate::{DirectoryMetadata, EdenApiServerError, FileMetadata, InvalidHgId, UploadToken};
+use crate::DirectoryMetadata;
+use crate::EdenApiServerError;
+use crate::FileMetadata;
+use crate::InvalidHgId;
+use crate::UploadToken;
 use type_macros::auto_wire;
 
 #[derive(Debug, Error)]

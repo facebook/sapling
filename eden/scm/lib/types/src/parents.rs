@@ -7,9 +7,11 @@
 
 use std::iter::FromIterator;
 
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use crate::hgid::{HgId, NULL_ID};
+use crate::hgid::HgId;
+use crate::hgid::NULL_ID;
 
 /// Enum representing a Mercurial hgid's parents.
 ///
@@ -132,7 +134,9 @@ impl Iterator for ParentIter {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for Parents {
@@ -150,7 +154,8 @@ impl Arbitrary for Parents {
 mod tests {
     use super::*;
 
-    use serde_json::{self, json};
+    use serde_json::json;
+    use serde_json::{self};
 
     #[test]
     fn from_iter() {

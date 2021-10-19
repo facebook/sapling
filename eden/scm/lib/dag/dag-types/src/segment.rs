@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::id::Id;
 
@@ -21,7 +22,9 @@ pub struct FlatSegment {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
 use std::collections::BTreeSet;
 
 #[cfg(any(test, feature = "for-tests"))]

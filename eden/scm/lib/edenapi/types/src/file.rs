@@ -6,17 +6,26 @@
  */
 
 use bytes::Bytes;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use thiserror::Error;
 use type_macros::auto_wire;
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
 
 use revisionstore_types::Metadata;
-use types::{hgid::HgId, key::Key, parents::Parents};
+use types::hgid::HgId;
+use types::key::Key;
+use types::parents::Parents;
 
-use crate::{ContentId, InvalidHgId, Sha1, Sha256, UploadToken};
+use crate::ContentId;
+use crate::InvalidHgId;
+use crate::Sha1;
+use crate::Sha256;
+use crate::UploadToken;
 
 /// Tombstone string that replaces the content of redacted files.
 /// TODO(T48685378): Handle redacted content in a less hacky way.

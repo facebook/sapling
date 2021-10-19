@@ -9,14 +9,22 @@ use anyhow::Result;
 use bytes::Bytes;
 use dag_types::Location;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
-use serde_derive::{Deserialize, Serialize};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use std::iter;
 use std::num::NonZeroU64;
 use type_macros::auto_wire;
-use types::{hgid::HgId, Parents, RepoPathBuf};
+use types::hgid::HgId;
+use types::Parents;
+use types::RepoPathBuf;
 
-use crate::{BonsaiChangesetId, FileType, ServerError, UploadToken};
+use crate::BonsaiChangesetId;
+use crate::FileType;
+use crate::ServerError;
+use crate::UploadToken;
 
 /// Given a graph location, return `count` hashes following first parent links.
 ///

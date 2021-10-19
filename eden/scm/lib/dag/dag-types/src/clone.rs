@@ -7,7 +7,8 @@
 
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::id::Id;
 use crate::segment::PreparedFlatSegments;
@@ -30,7 +31,9 @@ impl<Name> CloneData<Name> {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl<Name> Arbitrary for CloneData<Name>

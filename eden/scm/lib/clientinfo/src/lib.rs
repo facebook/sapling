@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use configparser::config::ConfigSet;
 use hostname::get_hostname;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 pub const CLIENT_INFO_HEADER: &str = "X-Client-Info";
 
@@ -16,12 +18,11 @@ pub const CLIENT_INFO_HEADER: &str = "X-Client-Info";
 mod facebook;
 #[cfg(not(fbcode_build))]
 mod oss;
-
-#[cfg(fbcode_build)]
-use facebook::{get_fb_client_info, FbClientInfo};
-
 #[cfg(not(fbcode_build))]
-use oss::{get_fb_client_info, FbClientInfo};
+use oss as facebook;
+
+use facebook::get_fb_client_info;
+use facebook::FbClientInfo;
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct ClientInfo {

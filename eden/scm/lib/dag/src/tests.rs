@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::id::{Group, VertexName};
+use crate::id::Group;
+use crate::id::VertexName;
 use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
@@ -39,7 +40,11 @@ use crate::namedag::MemNameDag;
 #[cfg(test)]
 use crate::ops::IdConvert;
 #[cfg(test)]
-use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
+use crate::protocol::Process;
+#[cfg(test)]
+use crate::protocol::RequestLocationToName;
+#[cfg(test)]
+use crate::protocol::RequestNameToLocation;
 #[cfg(test)]
 use crate::render::render_segment_dag;
 #[cfg(test)]

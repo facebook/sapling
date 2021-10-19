@@ -8,14 +8,16 @@
 use crate::utils::get_prefix_bounds;
 
 #[cfg(feature = "python")]
-use cpython::{
-    FromPyObject, PyBool, PyInt, PyList, PyObject, PyResult, PyString, Python, PythonObject,
-    ToPyObject,
-};
+use cpython::*;
 #[cfg(feature = "python")]
-use cpython_ext::{Bytes, PyNone, Str};
+use cpython_ext::Bytes;
+#[cfg(feature = "python")]
+use cpython_ext::PyNone;
+#[cfg(feature = "python")]
+use cpython_ext::Str;
 use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

@@ -9,8 +9,11 @@ use std::num::NonZeroU64;
 
 use crate::AnyId;
 #[cfg(any(test, feature = "for-tests"))]
-use quickcheck::{Arbitrary, Gen};
-use serde_derive::{Deserialize, Serialize};
+use quickcheck::Arbitrary;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Gen;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use type_macros::auto_wire;
 
 #[auto_wire]

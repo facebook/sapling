@@ -5,16 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use cpython::{PyObject as RustPyObject, Python as RustPythonGILGuard};
+use cpython::PyObject as RustPyObject;
+use cpython::Python as RustPythonGILGuard;
+use ffi::PyByteArray_Size;
+use ffi::PyByteArray_Type;
+use ffi::PyObject;
+use ffi::PyTypeObject;
 #[cfg(feature = "python3")]
-use python3_sys::{
-    PyByteArray_Size, PyByteArray_Type, PyObject, PyTypeObject, PyVarObject, Py_ssize_t,
-    _PyObject_New,
-};
+use ffi::PyVarObject;
+use ffi::Py_ssize_t;
+use ffi::_PyObject_New;
+#[cfg(feature = "python3")]
+use python3_sys as ffi;
 #[cfg(feature = "python2")]
-use python27_sys::{
-    PyByteArray_Size, PyByteArray_Type, PyObject, PyTypeObject, Py_ssize_t, _PyObject_New,
-};
+use python27_sys as ffi;
 use std::mem;
 use std::os::raw::c_int;
 

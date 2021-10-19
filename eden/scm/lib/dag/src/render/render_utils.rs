@@ -5,19 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use super::render::{Ancestor, Renderer};
+use super::render::Ancestor;
+use super::render::Renderer;
 use crate::nameset::SyncNameSetQuery;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::IdConvert;
-use crate::{DagAlgorithm, VertexName};
+use crate::DagAlgorithm;
 #[cfg(any(test, feature = "indexedlog-backend"))]
-use crate::{Group, IdSpan, Level, NameDag};
+use crate::Group;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use crate::IdSpan;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use crate::Level;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use crate::NameDag;
+use crate::VertexName;
 
 use anyhow::Result;
 use nonblocking::non_blocking_result;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
-use std::{cmp::Ordering, io::Write};
+use std::cmp::Ordering;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use std::io::Write;
 
 /// Render a NameDag or MemNameDag into a String.
 pub fn render_namedag(
