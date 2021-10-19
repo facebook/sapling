@@ -40,18 +40,18 @@ def _filtercommits(repo, nodes):
         raise error.Abort(e)
 
 
-def _filteruploaded(repo, blobs, trees):
+def _filteruploaded(repo, files, trees):
     """Returns list of missing blobs and trees"""
     try:
         with repo.ui.timesection("http.edenapi.upload_lookup"):
             stream = repo.edenapi.lookup_filenodes_and_trees(
                 getreponame(repo),
-                [blob[1] for blob in blobs],
+                [fctx.filenode() for fctx in files],
                 [tree[0] for tree in trees],
             )
 
             results = list(stream)
-            blobslen = len(blobs)
+            blobslen = len(files)
 
             foundindicesblobs = {
                 item[INDEX_KEY]
@@ -64,9 +64,9 @@ def _filteruploaded(repo, blobs, trees):
                 if item[TOKEN_KEY] and "HgTreeId" in item[TOKEN_KEY]["data"]["id"]
             }
 
-            missingblobs = [
-                blob
-                for index, blob in enumerate(blobs)
+            missingfiles = [
+                fctx
+                for index, fctx in enumerate(files)
                 if index not in foundindicesblobs
             ]
             missingtrees = [
@@ -75,15 +75,19 @@ def _filteruploaded(repo, blobs, trees):
                 if index not in foundindicestrees
             ]
 
-            return missingblobs, missingtrees
+            return missingfiles, missingtrees
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
 
 
-def _uploadfilenodes(repo, keys):
+def _uploadfilenodes(repo, fctxs):
     """Upload file content and filenodes"""
-    if not keys:
+    if not fctxs:
         return
+    keys = []
+    for fctx in fctxs:
+        p1, p2 = fctx.filelog().parents(fctx.filenode())
+        keys.append((fctx.path(), fctx.filenode(), p1, p2))
     dpack, _hpack = repo.fileslog.getmutablelocalpacks()
     try:
         with repo.ui.timesection("http.edenapi.upload_files"):
@@ -104,10 +108,17 @@ def _uploadfilenodes(repo, keys):
         raise error.Abort(e)
 
 
-def _uploadtrees(repo, trees):
+def _uploadtrees(repo, treesbase):
     """Upload trees"""
-    if not trees:
+    if not treesbase:
         return
+    trees = []
+    for treenode, subdir, treetext in treesbase:
+        p1, p2, _link, _copy = repo.manifestlog.historystore.getnodeinfo(
+            subdir, treenode
+        )
+        trees.append((treenode, p1, p2, treetext))
+
     try:
         with repo.ui.timesection("http.edenapi.upload_trees"):
             stream, _stats = repo.edenapi.uploadtrees(getreponame(repo), trees)
@@ -155,7 +166,7 @@ def _uploadchangesets(repo, changesets, mutations):
         raise error.Abort(e)
 
 
-def _getblobs(repo, nodes):
+def _getfiles(repo, nodes):
     """Get changed files"""
     toupload = set()
     for node in nodes.iterrev():
@@ -164,8 +175,7 @@ def _getblobs(repo, nodes):
             if f not in ctx:
                 continue
             fctx = ctx[f]
-            p1, p2 = fctx.filelog().parents(fctx.filenode())
-            toupload.add((fctx.path(), fctx.filenode(), p1, p2))
+            toupload.add(fctx)
     return toupload
 
 
@@ -182,10 +192,7 @@ def _gettrees(repo, nodes):
             repo.manifestlog.datastore, "", mfnode, basemfnodes, treedepth
         )
         for subdir, treenode, treetext, _x, _x, _x in difftrees:
-            p1, p2, _link, _copy = repo.manifestlog.historystore.getnodeinfo(
-                subdir, treenode
-            )
-            yield treenode, p1, p2, treetext
+            yield treenode, subdir, treetext
 
 
 def _torevs(repo, uploadednodes, failednodes):
@@ -272,13 +279,13 @@ def uploadhgchangesets(repo, revs, force=False, skipknowncheck=False):
     uploadcommitqueue = repo.changelog.dag.sort(uploadcommitqueue)
 
     # Build a queue of missing filenodes to upload
-    blobs = list(_getblobs(repo, uploadcommitqueue))
+    files = list(_getfiles(repo, uploadcommitqueue))
 
     # Build a queue of missing trees to upload
     trees = list(_gettrees(repo, uploadcommitqueue))
 
     uploadblobqueue, uploadtreesqueue = (
-        (blobs, trees) if force else _filteruploaded(repo, blobs, trees)
+        (files, trees) if force else _filteruploaded(repo, files, trees)
     )
 
     repo.ui.status(
