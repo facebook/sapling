@@ -8,7 +8,10 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
-use cpython_ext::{Bytes, PyNone, ResultPyErrExt, Str};
+use cpython_ext::Bytes;
+use cpython_ext::PyNone;
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 #[cfg(feature = "python3")]
@@ -18,13 +21,14 @@ use python27_sys as ffi;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::sync::Arc;
 use tracing::Level;
-use tracing_collector::{
-    model::{Action, EspanId, TreeSpans},
-    TracingData,
-};
+use tracing_collector::model::Action;
+use tracing_collector::model::EspanId;
+use tracing_collector::model::TreeSpans;
+use tracing_collector::TracingData;
 use tracing_runtime_callsite::CallsiteInfo;
 use tracing_runtime_callsite::CallsiteKey;
 use tracing_runtime_callsite::EventKindType;

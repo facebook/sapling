@@ -5,21 +5,28 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    cmp::Ordering,
-    collections::{HashMap, HashSet},
-    fs::File,
-    io::{Cursor, Read, Write},
-    path::Path,
-};
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fs::File;
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Write;
+use std::path::Path;
 
 use anyhow::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use memmap::{Mmap, MmapOptions};
-use sha1::{Digest, Sha1};
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use memmap::Mmap;
+use memmap::MmapOptions;
+use sha1::Digest;
+use sha1::Sha1;
 use thiserror::Error;
 
-use types::{HgId, Key, RepoPath};
+use types::HgId;
+use types::Key;
+use types::RepoPath;
 
 use crate::fanouttable::FanoutTable;
 use crate::historypack::HistoryPackVersion;

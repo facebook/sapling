@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::{io::IO, repo::Repo};
+use crate::io::IO;
+use crate::repo::Repo;
 use anyhow::Result;
-use cliparser::parser::{Flag, ParseOutput, StructFlags};
+use cliparser::parser::Flag;
+use cliparser::parser::ParseOutput;
+use cliparser::parser::StructFlags;
 use configparser::config::ConfigSet;
 use std::collections::BTreeMap;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::ops::Deref;
 
 pub enum CommandFunc {

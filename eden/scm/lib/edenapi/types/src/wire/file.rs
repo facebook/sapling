@@ -8,20 +8,26 @@
 use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use crate::{
-    file::{FileContent, FileEntry},
-    wire::{
-        is_default, ToApi, ToWire, WireKey, WireParents, WireRevisionstoreMetadata,
-        WireToApiConversionError,
-    },
-};
+use crate::file::FileContent;
+use crate::file::FileEntry;
+use crate::wire::is_default;
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireKey;
+use crate::wire::WireParents;
+use crate::wire::WireRevisionstoreMetadata;
+use crate::wire::WireToApiConversionError;
 
-pub use crate::file::{
-    WireFileAttributes, WireFileAuxData, WireFileRequest, WireFileSpec, WireHgFilenodeData,
-    WireUploadHgFilenodeRequest, WireUploadTokensResponse,
-};
+pub use crate::file::WireFileAttributes;
+pub use crate::file::WireFileAuxData;
+pub use crate::file::WireFileRequest;
+pub use crate::file::WireFileSpec;
+pub use crate::file::WireHgFilenodeData;
+pub use crate::file::WireUploadHgFilenodeRequest;
+pub use crate::file::WireUploadTokensResponse;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct WireFileEntry {

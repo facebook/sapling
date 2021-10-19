@@ -7,7 +7,8 @@
 
 use std::collections::HashMap;
 use std::fmt;
-use types::{RepoPath, RepoPathBuf};
+use types::RepoPath;
+use types::RepoPathBuf;
 
 #[derive(Default)]
 pub struct Status {

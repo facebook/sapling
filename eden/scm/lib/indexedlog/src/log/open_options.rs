@@ -8,9 +8,13 @@
 use crate::errors::ResultExt;
 use crate::index::Index;
 use crate::lock::ScopedDirLock;
-use crate::log::{GenericPath, Log, LogMetadata, PRIMARY_START_OFFSET};
+use crate::log::GenericPath;
+use crate::log::Log;
+use crate::log::LogMetadata;
+use crate::log::PRIMARY_START_OFFSET;
 use std::borrow::Cow;
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
+use std::fmt::{self};
 use std::ops::Range;
 
 use tracing::debug_span;

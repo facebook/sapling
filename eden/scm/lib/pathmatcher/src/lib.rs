@@ -184,4 +184,6 @@ impl Matcher for UnionMatcher {
 
 pub use gitignore_matcher::GitignoreMatcher;
 pub use tree_matcher::TreeMatcher;
-pub use utils::{expand_curly_brackets, normalize_glob, plain_to_glob};
+pub use utils::expand_curly_brackets;
+pub use utils::normalize_glob;
+pub use utils::plain_to_glob;

@@ -8,17 +8,24 @@
 use thrift_types::edenfs as eden;
 
 use crate::path_relativizer::PathRelativizer;
-use anyhow::{bail, ensure, Error, Result};
-use byteorder::{BigEndian, ByteOrder};
-use clidispatch::{
-    errors::FallbackToPython,
-    io::{CanColor, IO},
-};
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Error;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use clidispatch::errors::FallbackToPython;
+use clidispatch::io::CanColor;
+use clidispatch::io::IO;
 use eden::client::EdenService;
-use eden::{GetScmStatusParams, GetScmStatusResult, ScmFileStatus, ScmStatus};
+use eden::GetScmStatusParams;
+use eden::GetScmStatusResult;
+use eden::ScmFileStatus;
+use eden::ScmStatus;
 #[cfg(unix)]
 use fbthrift_socket::SocketTransport;
-use sha2::{Digest, Sha256};
+use sha2::Digest;
+use sha2::Sha256;
 use std::collections::HashMap;
 use std::default::Default;
 use std::fs::read_link;
@@ -786,8 +793,10 @@ enum DirstateMergeState {
 mod test {
     use super::*;
     use std::collections::BTreeMap;
-    use telemetry::hgargparse::{hg_parser, parse_args};
-    use telemetry::test_utils::{generate_fixture, Fixture};
+    use telemetry::hgargparse::hg_parser;
+    use telemetry::hgargparse::parse_args;
+    use telemetry::test_utils::generate_fixture;
+    use telemetry::test_utils::Fixture;
 
     #[derive(Default)]
     struct StatusTestCase<'a> {

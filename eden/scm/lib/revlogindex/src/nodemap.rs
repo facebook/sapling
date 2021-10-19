@@ -9,9 +9,11 @@ use crate::errors::corruption;
 use crate::Result;
 use crate::RevlogEntry;
 use radixbuf::key::KeyId;
-use radixbuf::radix::{
-    radix_insert, radix_lookup, radix_lookup_unchecked, radix_prefix_lookup, RADIX_NCHILDREN,
-};
+use radixbuf::radix::radix_insert;
+use radixbuf::radix::radix_lookup;
+use radixbuf::radix::radix_lookup_unchecked;
+use radixbuf::radix::radix_prefix_lookup;
+use radixbuf::radix::RADIX_NCHILDREN;
 use std::sync::Arc;
 use std::u32;
 

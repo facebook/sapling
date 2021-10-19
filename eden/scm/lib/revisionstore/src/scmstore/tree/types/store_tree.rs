@@ -7,14 +7,14 @@
 
 use std::ops::BitOr;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 
-use crate::scmstore::{
-    tree::types::{LazyTree, TreeAttributes},
-    value::StoreValue,
-};
+use crate::scmstore::tree::types::LazyTree;
+use crate::scmstore::tree::types::TreeAttributes;
+use crate::scmstore::value::StoreValue;
 
 #[derive(Debug)]
 pub struct StoreTree {

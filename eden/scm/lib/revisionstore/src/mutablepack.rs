@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::fs::Permissions;
+use std::io::ErrorKind;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::{fs::Permissions, io::ErrorKind, path::PathBuf};
+use std::path::PathBuf;
 
 use anyhow::Result;
 use tempfile::NamedTempFile;

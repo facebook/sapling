@@ -12,7 +12,8 @@ use super::define_flags;
 use super::Repo;
 use super::Result;
 use super::IO;
-use revisionstore::scmstore::{activitylogger, FileStoreBuilder};
+use revisionstore::scmstore::activitylogger;
+use revisionstore::scmstore::FileStoreBuilder;
 
 define_flags! {
     pub struct DebugScmStoreReplayOpts {

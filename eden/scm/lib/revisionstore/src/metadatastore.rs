@@ -5,33 +5,37 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use anyhow::{format_err, Result};
+use anyhow::format_err;
+use anyhow::Result;
 
-use configparser::{config::ConfigSet, convert::ByteCount};
-use types::{Key, NodeInfo};
+use configparser::config::ConfigSet;
+use configparser::convert::ByteCount;
+use types::Key;
+use types::NodeInfo;
 
-use crate::{
-    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
-    indexedloghistorystore::IndexedLogHgIdHistoryStore,
-    indexedlogutil::StoreType,
-    localstore::LocalStore,
-    memcache::MemcacheStore,
-    multiplexstore::MultiplexHgIdHistoryStore,
-    packstore::{CorruptionPolicy, MutableHistoryPackStore},
-    remotestore::HgIdRemoteStore,
-    repack::RepackLocation,
-    types::StoreKey,
-    unionhistorystore::UnionHgIdHistoryStore,
-    util::{
-        get_cache_packs_path, get_cache_path, get_indexedloghistorystore_path, get_local_path,
-        get_packs_path,
-    },
-};
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::historystore::RemoteHistoryStore;
+use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
+use crate::indexedlogutil::StoreType;
+use crate::localstore::LocalStore;
+use crate::memcache::MemcacheStore;
+use crate::multiplexstore::MultiplexHgIdHistoryStore;
+use crate::packstore::CorruptionPolicy;
+use crate::packstore::MutableHistoryPackStore;
+use crate::remotestore::HgIdRemoteStore;
+use crate::repack::RepackLocation;
+use crate::types::StoreKey;
+use crate::unionhistorystore::UnionHgIdHistoryStore;
+use crate::util::get_cache_packs_path;
+use crate::util::get_cache_path;
+use crate::util::get_indexedloghistorystore_path;
+use crate::util::get_local_path;
+use crate::util::get_packs_path;
 
 /// A `MetadataStore` aggregate all the local and remote stores and expose them as one. Both local and
 /// remote stores can be queried and accessed via the `HgIdHistoryStore` trait. The local store can also
@@ -374,7 +378,8 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::testutil::{make_config, FakeHgIdRemoteStore};
+    use crate::testutil::make_config;
+    use crate::testutil::FakeHgIdRemoteStore;
 
     #[test]
     fn test_new() -> Result<()> {

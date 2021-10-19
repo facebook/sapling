@@ -7,9 +7,15 @@
 
 //! Rotation support for a set of [`Log`]s.
 
-use crate::errors::{IoResultExt, ResultExt};
+use crate::errors::IoResultExt;
+use crate::errors::ResultExt;
 use crate::lock::ScopedDirLock;
-use crate::log::{self, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, Log};
+use crate::log::FlushFilterContext;
+use crate::log::FlushFilterFunc;
+use crate::log::FlushFilterOutput;
+use crate::log::IndexDef;
+use crate::log::Log;
+use crate::log::{self};
 use crate::repair::OpenOptionsRepair;
 use crate::utils;
 use minibytes::Bytes;
@@ -17,9 +23,13 @@ use once_cell::sync::OnceCell;
 use std::fmt;
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
-use tracing::{debug, debug_span, trace};
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::SeqCst;
+use tracing::debug;
+use tracing::debug_span;
+use tracing::trace;
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
 /// exceed size or count limits.
@@ -1662,7 +1672,8 @@ Reset latest to 2"#
             .max_bytes_per_log(200)
             .index_defs(indexes);
 
-        use std::sync::{Arc, Barrier};
+        use std::sync::Arc;
+        use std::sync::Barrier;
         let barrier = Arc::new(Barrier::new(THREAD_COUNT as usize));
         let threads: Vec<_> = (0..THREAD_COUNT)
             .map(|i| {

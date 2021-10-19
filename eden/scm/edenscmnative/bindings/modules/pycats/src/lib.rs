@@ -9,8 +9,10 @@
 
 use cpython::*;
 
-use cats::{self, CatsSection};
-use cpython_ext::{PyNone, ResultPyErrExt};
+use cats::CatsSection;
+use cats::{self};
+use cpython_ext::PyNone;
+use cpython_ext::ResultPyErrExt;
 use pyconfigparser::config;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

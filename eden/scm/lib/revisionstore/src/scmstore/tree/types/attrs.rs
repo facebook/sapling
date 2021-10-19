@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::ops::{BitAnd, BitOr, Not, Sub};
+use std::ops::BitAnd;
+use std::ops::BitOr;
+use std::ops::Not;
+use std::ops::Sub;
 
 use crate::scmstore::attrs::StoreAttrs;
 

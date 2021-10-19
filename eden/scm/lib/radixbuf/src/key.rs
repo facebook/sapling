@@ -29,7 +29,8 @@ use crate::errors::ErrorKind;
 use crate::traits::Resize;
 use crate::Result;
 use std::io::Write;
-use vlqencoding::{VLQDecodeAt, VLQEncode};
+use vlqencoding::VLQDecodeAt;
+use vlqencoding::VLQEncode;
 
 /// Integer that maps to a key (`[u8]`).
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Default)]
@@ -132,7 +133,10 @@ impl VariantKey {
 mod tests {
     use super::*;
 
-    use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
+    use rand::distributions::Alphanumeric;
+    use rand::thread_rng;
+    use rand::Rng;
+    use rand::RngCore;
 
     #[test]
     fn test_variant_key_round_trip() {

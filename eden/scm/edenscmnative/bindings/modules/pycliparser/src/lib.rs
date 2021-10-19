@@ -11,7 +11,8 @@ use cliparser::parser::*;
 use cpython::*;
 use cpython_ext::Str;
 use pyconfigparser::config;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 mod exceptions {
     use super::*;

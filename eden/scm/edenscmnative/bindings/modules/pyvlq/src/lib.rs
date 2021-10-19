@@ -7,7 +7,9 @@
 
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
-use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQDecodeAt;
+use vlqencoding::VLQEncode;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "vlq"].join(".");

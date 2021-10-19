@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::{fmt, io, path::Path};
+use std::fmt;
+use std::io;
+use std::path::Path;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 
 #[cfg(target_os = "linux")]
 use self::linux::fstype as fstype_imp;
@@ -55,25 +58,30 @@ impl fmt::Display for FsType {
 mod windows {
     use super::*;
 
-    use std::{os::windows::ffi::OsStrExt, path::PathBuf, ptr::null_mut};
+    use std::os::windows::ffi::OsStrExt;
+    use std::path::PathBuf;
+    use std::ptr::null_mut;
 
-    use winapi::{
-        shared::{
-            minwindef::{DWORD, MAX_PATH, ULONG},
-            winerror::ERROR_NOT_A_REPARSE_POINT,
-        },
-        um::{
-            fileapi::{CreateFileW, GetVolumeInformationByHandleW, OPEN_EXISTING},
-            handleapi::{CloseHandle, INVALID_HANDLE_VALUE},
-            ioapiset::DeviceIoControl,
-            winbase::FILE_FLAG_BACKUP_SEMANTICS,
-            winioctl::FSCTL_GET_REPARSE_POINT,
-            winnt::{
-                FILE_GENERIC_READ, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE,
-                IO_REPARSE_TAG_GVFS, MAXIMUM_REPARSE_DATA_BUFFER_SIZE, REPARSE_GUID_DATA_BUFFER,
-            },
-        },
-    };
+    use winapi::shared::minwindef::DWORD;
+    use winapi::shared::minwindef::MAX_PATH;
+    use winapi::shared::minwindef::ULONG;
+    use winapi::shared::winerror::ERROR_NOT_A_REPARSE_POINT;
+    use winapi::um::fileapi::CreateFileW;
+    use winapi::um::fileapi::GetVolumeInformationByHandleW;
+    use winapi::um::fileapi::OPEN_EXISTING;
+    use winapi::um::handleapi::CloseHandle;
+    use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+    use winapi::um::ioapiset::DeviceIoControl;
+    use winapi::um::winbase::FILE_FLAG_BACKUP_SEMANTICS;
+    use winapi::um::winioctl::FSCTL_GET_REPARSE_POINT;
+    use winapi::um::winnt::FILE_GENERIC_READ;
+    use winapi::um::winnt::FILE_SHARE_DELETE;
+    use winapi::um::winnt::FILE_SHARE_READ;
+    use winapi::um::winnt::FILE_SHARE_WRITE;
+    use winapi::um::winnt::HANDLE;
+    use winapi::um::winnt::IO_REPARSE_TAG_GVFS;
+    use winapi::um::winnt::MAXIMUM_REPARSE_DATA_BUFFER_SIZE;
+    use winapi::um::winnt::REPARSE_GUID_DATA_BUFFER;
 
     struct WinFileHandle {
         handle: HANDLE,

@@ -9,7 +9,9 @@ use super::define_flags;
 use super::Repo;
 use super::Result;
 use super::IO;
-use blackbox::{event::Event, json, SessionId};
+use blackbox::event::Event;
+use blackbox::json;
+use blackbox::SessionId;
 use clidispatch::errors;
 
 define_flags! {

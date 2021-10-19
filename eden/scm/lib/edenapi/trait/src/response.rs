@@ -8,9 +8,14 @@
 use std::pin::Pin;
 
 use futures::prelude::*;
-use http::{header, HeaderMap, StatusCode, Version};
+use http::header;
+use http::HeaderMap;
+use http::StatusCode;
+use http::Version;
 
-use http_client::{AsyncResponse as AsyncHttpResponse, Response as HttpResponse, Stats};
+use http_client::AsyncResponse as AsyncHttpResponse;
+use http_client::Response as HttpResponse;
+use http_client::Stats;
 
 use crate::errors::EdenApiError;
 

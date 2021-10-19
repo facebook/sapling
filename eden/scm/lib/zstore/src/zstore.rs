@@ -9,17 +9,23 @@
 //!
 //! See [Zstore] for the main structure.
 
-use indexedlog::{log as ilog, DefaultOpenOptions};
+use indexedlog::log as ilog;
+use indexedlog::DefaultOpenOptions;
 use lazy_static::lazy_static;
 use lru_cache::LruCache;
 use minibytes::Bytes;
 use parking_lot::Mutex;
-use serde::{Deserialize, Serialize};
-use sha1::{Digest, Sha1};
+use serde::Deserialize;
+use serde::Serialize;
+use sha1::Digest;
+use sha1::Sha1;
 use std::borrow::Cow;
 use std::fmt;
-use std::path::{Path, PathBuf};
-use tracing::{debug_span, info_span, trace_span};
+use std::path::Path;
+use std::path::PathBuf;
+use tracing::debug_span;
+use tracing::info_span;
+use tracing::trace_span;
 pub use types::Id20;
 
 /// An append-only local-disk blob storage.

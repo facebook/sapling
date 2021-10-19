@@ -9,54 +9,90 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{
-    convert::TryInto,
-    fs::read_dir,
-    io::Write,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::convert::TryInto;
+use std::fs::read_dir;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use cpython::*;
 use parking_lot::RwLock;
 
-use async_runtime::{block_on, stream_to_iter as block_on_stream};
+use async_runtime::block_on;
+use async_runtime::stream_to_iter as block_on_stream;
 use configparser::config::ConfigSet;
-use cpython_ext::{
-    ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
-};
+use cpython_ext::ExtractInner;
+use cpython_ext::ExtractInnerRef;
+use cpython_ext::PyErr;
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
 use io::IO;
 use progress::null::NullProgressFactory;
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
-use revisionstore::{
-    repack,
-    scmstore::{
-        file_to_async_key_stream, FileAttributes, FileStore, FileStoreBuilder, TreeStore,
-        TreeStoreBuilder,
-    },
-    ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
-    Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore, HgIdHistoryStore,
-    HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore,
-    HistoryPackVersion, IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore, LegacyStore,
-    LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
-    MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey,
-    StoreResult, StoreType,
-};
-use types::{Key, NodeInfo};
+use revisionstore::repack;
+use revisionstore::scmstore::file_to_async_key_stream;
+use revisionstore::scmstore::FileAttributes;
+use revisionstore::scmstore::FileStore;
+use revisionstore::scmstore::FileStoreBuilder;
+use revisionstore::scmstore::TreeStore;
+use revisionstore::scmstore::TreeStoreBuilder;
+use revisionstore::ContentStore;
+use revisionstore::ContentStoreBuilder;
+use revisionstore::CorruptionPolicy;
+use revisionstore::DataPack;
+use revisionstore::DataPackStore;
+use revisionstore::DataPackVersion;
+use revisionstore::Delta;
+use revisionstore::EdenApiFileStore;
+use revisionstore::EdenApiTreeStore;
+use revisionstore::ExtStoredPolicy;
+use revisionstore::HgIdDataStore;
+use revisionstore::HgIdHistoryStore;
+use revisionstore::HgIdMutableDeltaStore;
+use revisionstore::HgIdMutableHistoryStore;
+use revisionstore::HgIdRemoteStore;
+use revisionstore::HistoryPack;
+use revisionstore::HistoryPackStore;
+use revisionstore::HistoryPackVersion;
+use revisionstore::IndexedLogHgIdDataStore;
+use revisionstore::IndexedLogHgIdHistoryStore;
+use revisionstore::LegacyStore;
+use revisionstore::LocalStore;
+use revisionstore::MemcacheStore;
+use revisionstore::Metadata;
+use revisionstore::MetadataStore;
+use revisionstore::MetadataStoreBuilder;
+use revisionstore::MutableDataPack;
+use revisionstore::MutableHistoryPack;
+use revisionstore::RemoteDataStore;
+use revisionstore::RemoteHistoryStore;
+use revisionstore::RepackKind;
+use revisionstore::RepackLocation;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
+use revisionstore::StoreType;
+use types::Key;
+use types::NodeInfo;
 
-use crate::{
-    datastorepyext::{
-        ContentDataStorePyExt, HgIdDataStorePyExt, HgIdMutableDeltaStorePyExt,
-        IterableHgIdDataStorePyExt, RemoteDataStorePyExt,
-    },
-    historystorepyext::{
-        HgIdHistoryStorePyExt, HgIdMutableHistoryStorePyExt, IterableHgIdHistoryStorePyExt,
-        RemoteHistoryStorePyExt,
-    },
-    pythonutil::{from_key, from_key_to_tuple, from_tuple_to_key},
-};
+use crate::datastorepyext::ContentDataStorePyExt;
+use crate::datastorepyext::HgIdDataStorePyExt;
+use crate::datastorepyext::HgIdMutableDeltaStorePyExt;
+use crate::datastorepyext::IterableHgIdDataStorePyExt;
+use crate::datastorepyext::RemoteDataStorePyExt;
+use crate::historystorepyext::HgIdHistoryStorePyExt;
+use crate::historystorepyext::HgIdMutableHistoryStorePyExt;
+use crate::historystorepyext::IterableHgIdHistoryStorePyExt;
+use crate::historystorepyext::RemoteHistoryStorePyExt;
+use crate::pythonutil::from_key;
+use crate::pythonutil::from_key_to_tuple;
+use crate::pythonutil::from_tuple_to_key;
 
 mod datastorepyext;
 mod historystorepyext;

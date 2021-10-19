@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
 // TODO: Consider cleaning up and moving this to utils::path.
 fn relativize(base: &Path, path: &Path) -> PathBuf {

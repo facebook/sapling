@@ -5,12 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use crate::commands::{FormatterOpts, WalkOpts};
+use crate::commands::FormatterOpts;
+use crate::commands::WalkOpts;
 use anyhow::Result;
-use clidispatch::{errors, io::IO, repo::Repo};
+use clidispatch::errors;
+use clidispatch::io::IO;
+use clidispatch::repo::Repo;
 use cliparser::define_flags;
 
-use edenfs_client::status::{maybe_status_fastpath, PrintConfig, PrintConfigStatusTypes};
+use edenfs_client::status::maybe_status_fastpath;
+use edenfs_client::status::PrintConfig;
+use edenfs_client::status::PrintConfigStatusTypes;
 
 define_flags! {
     pub struct StatusOpts {

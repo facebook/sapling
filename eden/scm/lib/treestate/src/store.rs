@@ -8,7 +8,8 @@
 //! Trait defining an append-only storage system.
 
 use crate::errors::ErrorKind;
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use std::borrow::Cow;
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash)]
@@ -61,7 +62,9 @@ impl StoreView for NullStore {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::store::{BlockId, Store, StoreView};
+    use crate::store::BlockId;
+    use crate::store::Store;
+    use crate::store::StoreView;
     use std::borrow::Cow;
     use std::collections::HashMap;
 

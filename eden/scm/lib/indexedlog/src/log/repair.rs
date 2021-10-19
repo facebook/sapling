@@ -5,16 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::{IoResultExt, ResultExt};
+use crate::errors::IoResultExt;
+use crate::errors::ResultExt;
 use crate::lock::ScopedDirLock;
-use crate::log::{
-    GenericPath, LogMetadata, OpenOptions, META_FILE, PRIMARY_FILE, PRIMARY_HEADER,
-    PRIMARY_START_OFFSET,
-};
+use crate::log::GenericPath;
+use crate::log::LogMetadata;
+use crate::log::OpenOptions;
+use crate::log::META_FILE;
+use crate::log::PRIMARY_FILE;
+use crate::log::PRIMARY_HEADER;
+use crate::log::PRIMARY_START_OFFSET;
 use crate::repair::OpenOptionsRepair;
-use crate::utils::{self, mmap_path};
+use crate::utils::mmap_path;
+use crate::utils::{self};
 use std::fs::{self};
-use std::io::{self, BufRead, Read, Seek, SeekFrom, Write};
+use std::io::BufRead;
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Write;
+use std::io::{self};
 use std::path::Path;
 
 // Repair

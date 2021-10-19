@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::{UpdateFlag, VFS};
+use crate::UpdateFlag;
+use crate::VFS;
 use anyhow::Result;
-use crossbeam::channel::{self, Receiver, Sender};
+use crossbeam::channel::Receiver;
+use crossbeam::channel::Sender;
+use crossbeam::channel::{self};
 use minibytes::Bytes;
 use std::thread;
 use std::thread::JoinHandle;

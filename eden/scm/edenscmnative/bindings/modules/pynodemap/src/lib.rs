@@ -11,8 +11,14 @@ use std::cell::RefCell;
 
 use cpython::*;
 
-use ::nodemap::{NodeMap, NodeSet, Repair};
-use cpython_ext::{Bytes, PyNone, PyPath, ResultPyErrExt, Str};
+use ::nodemap::NodeMap;
+use ::nodemap::NodeSet;
+use ::nodemap::Repair;
+use cpython_ext::Bytes;
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
 use types::node::Node;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

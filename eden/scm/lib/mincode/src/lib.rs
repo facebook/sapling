@@ -14,10 +14,12 @@ mod tests;
 
 use self::de::Deserializer;
 use self::ser::Serializer;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::io;
 
-pub use self::error::{Error, Result};
+pub use self::error::Error;
+pub use self::error::Result;
 
 pub fn serialize<T>(value: &T) -> Result<Vec<u8>>
 where

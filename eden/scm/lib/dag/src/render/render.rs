@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::cmp::{max, min};
+use std::cmp::max;
+use std::cmp::min;
 use std::collections::BTreeMap;
 
 use bitflags::bitflags;
 
-use super::column::{Column, ColumnsExt};
+use super::column::Column;
+use super::column::ColumnsExt;
 use super::output::OutputRendererBuilder;
 
 pub trait Renderer<N> {

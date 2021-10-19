@@ -5,18 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    fs::{self, File},
-    hash::Hasher,
-    io::{self, Read, Write},
-    path::Path,
-    sync::atomic::{self, AtomicI64},
-};
+use std::fs::File;
+use std::fs::{self};
+use std::hash::Hasher;
+use std::io::Read;
+use std::io::Write;
+use std::io::{self};
+use std::path::Path;
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::{self};
 
-use crate::errors::{IoResultExt, ResultExt};
+use crate::errors::IoResultExt;
+use crate::errors::ResultExt;
 use memmap::MmapOptions;
 use minibytes::Bytes;
-use twox_hash::{XxHash, XxHash32};
+use twox_hash::XxHash;
+use twox_hash::XxHash32;
 
 /// Return a read-only view of the entire file.
 ///

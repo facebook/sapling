@@ -18,7 +18,10 @@ pub mod testutil;
 use anyhow::Result;
 
 use pathmatcher::Matcher;
-use types::{HgId, PathComponentBuf, RepoPath, RepoPathBuf};
+use types::HgId;
+use types::PathComponentBuf;
+use types::RepoPath;
+use types::RepoPathBuf;
 
 /// Manifest describes a mapping between file path ([`String`]) and file metadata ([`FileMetadata`]).
 /// Fundamentally it is just a Map<file_path, file_metadata>.

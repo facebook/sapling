@@ -10,12 +10,19 @@ use super::Repo;
 use super::Result;
 use super::IO;
 use clidispatch::errors;
-use revisionstore::{
-    CorruptionPolicy, DataPackStore, ExtStoredPolicy, HgIdDataStore, IndexedLogHgIdDataStore,
-    StoreKey, StoreResult, StoreType, UnionHgIdDataStore,
-};
+use revisionstore::CorruptionPolicy;
+use revisionstore::DataPackStore;
+use revisionstore::ExtStoredPolicy;
+use revisionstore::HgIdDataStore;
+use revisionstore::IndexedLogHgIdDataStore;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
+use revisionstore::StoreType;
+use revisionstore::UnionHgIdDataStore;
 use std::str::FromStr;
-use types::{HgId, Key, RepoPathBuf};
+use types::HgId;
+use types::Key;
+use types::RepoPathBuf;
 
 define_flags! {
     pub struct DebugstoreOpts {

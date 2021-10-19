@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use futures::channel::{mpsc, oneshot};
+use futures::channel::mpsc;
+use futures::channel::oneshot;
 
-use crate::errors::{Abort, HttpClientError};
+use crate::errors::Abort;
+use crate::errors::HttpClientError;
 use crate::header::Header;
 use crate::receiver::Receiver;
 

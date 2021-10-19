@@ -6,9 +6,12 @@
  */
 
 use std::convert::TryFrom;
-use std::fs::{read_to_string, OpenOptions};
-use std::io::{ErrorKind, Write};
-use std::path::{Path, PathBuf};
+use std::fs::read_to_string;
+use std::fs::OpenOptions;
+use std::io::ErrorKind;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use hgtime::HgTime;
@@ -17,7 +20,8 @@ use tracing::Span;
 
 use configparser::config::ConfigSet;
 use edenapi::Stats;
-use util::path::{create_dir, create_shared_dir};
+use util::path::create_dir;
+use util::path::create_shared_dir;
 
 #[derive(Error, Debug)]
 pub enum Error {

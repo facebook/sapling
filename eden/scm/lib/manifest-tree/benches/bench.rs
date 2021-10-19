@@ -7,16 +7,23 @@
 
 use std::sync::Arc;
 
-use quickcheck::{Arbitrary, StdGen};
+use quickcheck::Arbitrary;
+use quickcheck::StdGen;
 use rand::SeedableRng;
 use rand_chacha::ChaChaRng;
 
-use minibench::{bench, elapsed};
+use minibench::bench;
+use minibench::elapsed;
 use pathmatcher::AlwaysMatcher;
-use types::{testutil::generate_repo_paths, HgId, RepoPathBuf};
+use types::testutil::generate_repo_paths;
+use types::HgId;
+use types::RepoPathBuf;
 
-use manifest::{FileMetadata, Manifest};
-use manifest_tree::{testutil::*, TreeManifest, TreeStore};
+use manifest::FileMetadata;
+use manifest::Manifest;
+use manifest_tree::testutil::*;
+use manifest_tree::TreeManifest;
+use manifest_tree::TreeStore;
 
 const INIT_SET_COUNT: usize = 4_000_000;
 const OP_COUNT: usize = 1_000_000;

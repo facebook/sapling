@@ -7,7 +7,8 @@
 
 //! This mod provides utilities functions needed for running tests.
 
-use crate::raw::{CBytes, CFallible};
+use crate::raw::CBytes;
+use crate::raw::CFallible;
 
 /// Returns a `CFallible` with success return value 1. This function is intended to be called from
 /// C++ tests.

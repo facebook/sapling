@@ -9,7 +9,9 @@
 //!
 //! See [`IdMap`] for the main structure.
 
-use crate::id::{Group, Id, VertexName};
+use crate::id::Group;
+use crate::id::Id;
+use crate::id::VertexName;
 use crate::ops::IdConvert;
 use crate::ops::Parents;
 use crate::segment::PreparedFlatSegments;
@@ -97,7 +99,9 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
             /// Assigned Id. Will be picked by and pushed to the current `parent_ids` stack.
             AssignedId(Id),
         }
-        use Todo::{Assign, AssignedId, Visit};
+        use Todo::Assign;
+        use Todo::AssignedId;
+        use Todo::Visit;
         let mut parent_ids: Vec<Id> = Vec::new();
 
         let mut todo_stack: Vec<Todo> = vec![Visit(head.clone())];

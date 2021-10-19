@@ -7,12 +7,14 @@
 
 use std::io::Write;
 
-use async_runtime::{block_on, stream_to_iter as block_on_stream};
+use async_runtime::block_on;
+use async_runtime::stream_to_iter as block_on_stream;
 use clidispatch::errors;
 use configparser::config::ConfigSet;
-use revisionstore::scmstore::{
-    file_to_async_key_stream, FileAttributes, FileStoreBuilder, TreeStoreBuilder,
-};
+use revisionstore::scmstore::file_to_async_key_stream;
+use revisionstore::scmstore::FileAttributes;
+use revisionstore::scmstore::FileStoreBuilder;
+use revisionstore::scmstore::TreeStoreBuilder;
 use types::Key;
 
 use super::define_flags;

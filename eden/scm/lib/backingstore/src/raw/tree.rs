@@ -10,8 +10,11 @@
 //! Structs in this file should be keep in sync with `eden/fs/model/{Tree, TreeEntry}.h`.
 
 use crate::raw::CBytes;
-use anyhow::{format_err, Result};
-use manifest::{FileType, FsNodeMetadata, List};
+use anyhow::format_err;
+use anyhow::Result;
+use manifest::FileType;
+use manifest::FsNodeMetadata;
+use manifest::List;
 use std::convert::TryFrom;
 use types::PathComponentBuf;
 

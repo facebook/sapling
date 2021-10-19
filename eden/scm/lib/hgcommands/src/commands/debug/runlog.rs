@@ -8,7 +8,9 @@
 use std::io::Write;
 
 use anyhow::Result;
-use clidispatch::{errors, io::IO, repo::Repo};
+use clidispatch::errors;
+use clidispatch::io::IO;
+use clidispatch::repo::Repo;
 use cliparser::define_flags;
 
 define_flags! {

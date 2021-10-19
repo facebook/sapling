@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::TryInto;
+use std::path::PathBuf;
 use std::sync::Arc;
-use std::{convert::TryInto, path::PathBuf};
 
 use anyhow::Error;
 use libc::size_t;
@@ -14,10 +15,15 @@ use libc::size_t;
 use edenapi::BlockingResponse;
 use edenapi::Builder;
 use edenapi::EdenApi;
-use edenapi_types::{EdenApiServerError, TreeEntry};
+use edenapi_types::EdenApiServerError;
+use edenapi_types::TreeEntry;
 use types::Key as ApiKey;
 
-use crate::{ptr_len_to_slice, types::TreeAttributes, EdenApiClient, Key, TreeEntryFetch};
+use crate::ptr_len_to_slice;
+use crate::types::TreeAttributes;
+use crate::EdenApiClient;
+use crate::Key;
+use crate::TreeEntryFetch;
 
 type Client = Arc<dyn EdenApi>;
 

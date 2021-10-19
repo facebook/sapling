@@ -7,12 +7,16 @@
 
 use std::ops::BitOr;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use tracing::instrument;
 
 use minibytes::Bytes;
 
-use crate::scmstore::{file::LazyFile, value::StoreValue, FileAttributes, FileAuxData};
+use crate::scmstore::file::LazyFile;
+use crate::scmstore::value::StoreValue;
+use crate::scmstore::FileAttributes;
+use crate::scmstore::FileAuxData;
 
 #[derive(Debug)]
 pub struct StoreFile {

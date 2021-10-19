@@ -57,7 +57,14 @@ fn format_bytes(value: &[u8], out: &mut String) {
 /// Main entry. Write `value` to `out`.
 /// For added new lines, prefix them with `indent` spaces.
 fn format_value(value: &Value, indent: usize, out: &mut String) {
-    use Value::{Array, Bool, Bytes, Float, Integer, Map, Null, Text};
+    use Value::Array;
+    use Value::Bool;
+    use Value::Bytes;
+    use Value::Float;
+    use Value::Integer;
+    use Value::Map;
+    use Value::Null;
+    use Value::Text;
     match value {
         Null => out.push_str("None"),
         Bool(v) => out.push_str(if *v { "True" } else { "False" }),

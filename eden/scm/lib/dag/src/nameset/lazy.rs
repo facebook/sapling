@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
-use super::{AsyncNameSetQuery, Hints};
+use super::Hints;
 use crate::Result;
 use crate::VertexName;
 use futures::lock::Mutex;

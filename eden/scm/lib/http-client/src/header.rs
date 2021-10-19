@@ -7,11 +7,10 @@
 
 use std::str;
 
-use http::{
-    header::{HeaderName, HeaderValue},
-    status::StatusCode,
-    version::Version,
-};
+use http::header::HeaderName;
+use http::header::HeaderValue;
+use http::status::StatusCode;
+use http::version::Version;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use thiserror::Error;

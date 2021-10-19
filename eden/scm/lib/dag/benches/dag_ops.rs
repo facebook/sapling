@@ -6,14 +6,20 @@
  */
 
 use dag::iddagstore::IdDagStore;
+use dag::idmap::IdMap;
 use dag::idmap::IdMapAssignHead;
 use dag::namedag::NameDag;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::Persist;
+use dag::Group;
+use dag::Id;
+use dag::IdDag;
+use dag::IdSet;
 use dag::Set;
-use dag::{idmap::IdMap, Group, Id, IdDag, IdSet, VertexName};
-use minibench::{bench, elapsed};
+use dag::VertexName;
+use minibench::bench;
+use minibench::elapsed;
 use nonblocking::non_blocking_result as nbr;
 use tempfile::tempdir;
 

@@ -5,14 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use std::{ops::Deref, path::PathBuf};
+use std::ops::Deref;
+use std::path::PathBuf;
 
 use anyhow::Result;
 
 use edenapi_types::HistoryEntry;
-use types::{Key, NodeInfo};
+use types::Key;
+use types::NodeInfo;
 
-use crate::{localstore::LocalStore, types::StoreKey};
+use crate::localstore::LocalStore;
+use crate::types::StoreKey;
 
 pub trait HgIdHistoryStore: LocalStore + Send + Sync {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>>;

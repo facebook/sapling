@@ -6,7 +6,8 @@
  */
 
 use quickcheck::quickcheck;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Wrap(f64, i32, u8);

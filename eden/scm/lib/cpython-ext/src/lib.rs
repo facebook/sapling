@@ -25,16 +25,27 @@ mod str;
 #[cfg(not(all(fbcode_build, feature = "python2")))]
 mod tests;
 
-pub use crate::bytearrayobject::{boxed_slice_to_pyobj, vec_to_pyobj};
+pub use crate::bytearrayobject::boxed_slice_to_pyobj;
+pub use crate::bytearrayobject::vec_to_pyobj;
 pub use crate::bytesobject::allocate_pybytes;
 pub use crate::cell::PyCell;
-pub use crate::error::{format_py_error, AnyhowResultExt, PyErr, ResultPyErrExt};
-pub use crate::extract::{ExtractInner, ExtractInnerRef};
-pub use crate::io::{wrap_pyio, wrap_rust_write, PyRustWrite, WrappedIO};
+pub use crate::error::format_py_error;
+pub use crate::error::AnyhowResultExt;
+pub use crate::error::PyErr;
+pub use crate::error::ResultPyErrExt;
+pub use crate::extract::ExtractInner;
+pub use crate::extract::ExtractInnerRef;
+pub use crate::io::wrap_pyio;
+pub use crate::io::wrap_rust_write;
+pub use crate::io::PyRustWrite;
+pub use crate::io::WrappedIO;
 pub use crate::none::PyNone;
-pub use crate::path::{Error, PyPath, PyPathBuf};
+pub use crate::path::Error;
+pub use crate::path::PyPath;
+pub use crate::path::PyPathBuf;
 pub use crate::pybuf::SimplePyBuf;
-pub use crate::pyset::{pyset_add, pyset_new};
+pub use crate::pyset::pyset_add;
+pub use crate::pyset::pyset_new;
 pub use crate::str::Str;
 pub use bytes::Bytes;
 

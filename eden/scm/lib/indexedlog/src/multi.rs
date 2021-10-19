@@ -7,9 +7,12 @@
 
 //! Atomic `sync` support for multiple [`Log`]s.
 
-use crate::errors::{IoResultExt, ResultExt};
+use crate::errors::IoResultExt;
+use crate::errors::ResultExt;
 use crate::lock::ScopedDirLock;
-use crate::log::{self, GenericPath, LogMetadata};
+use crate::log::GenericPath;
+use crate::log::LogMetadata;
+use crate::log::{self};
 use crate::repair::OpenOptionsRepair;
 use crate::utils;
 use std::collections::BTreeMap;
@@ -17,9 +20,12 @@ use std::collections::HashMap;
 use std::io;
 use std::mem;
 use std::ops;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-use vlqencoding::{VLQDecode, VLQEncode};
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::Mutex;
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQEncode;
 
 /// Options used to configure how a [`MultiLog`] is opened.
 #[derive(Clone, Default)]

@@ -6,7 +6,9 @@
  */
 
 use anyhow::Result;
-use types::{Key, Node, RepoPath};
+use types::Key;
+use types::Node;
+use types::RepoPath;
 
 pub fn key_from_path_node_slice(path: &[u8], node: &[u8]) -> Result<Key> {
     let path = RepoPath::from_utf8(path)?.to_owned();

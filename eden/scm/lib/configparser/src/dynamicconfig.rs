@@ -9,15 +9,20 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::fs;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::ops::Range;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Result;
 use hostname;
 use minibytes::Text;
 use regex::Regex;
-use serde_json::{self, Value};
+use serde_json::Value;
+use serde_json::{self};
 
 use hgtime::HgTime;
 

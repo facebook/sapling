@@ -5,26 +5,34 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use log::warn;
-use tracing::{event, instrument, Level};
+use tracing::event;
+use tracing::instrument;
+use tracing::Level;
 
 use configparser::config::ConfigSet;
 use manifest::List;
 use progress::null::NullProgressFactory;
-use revisionstore::{
-    scmstore::{
-        FileAttributes, FileAuxData, FileStore, FileStoreBuilder, StoreFile, TreeStore,
-        TreeStoreBuilder,
-    },
-    HgIdDataStore, MemcacheStore,
-};
-use types::{HgId, Key, RepoPathBuf};
+use revisionstore::scmstore::FileAttributes;
+use revisionstore::scmstore::FileAuxData;
+use revisionstore::scmstore::FileStore;
+use revisionstore::scmstore::FileStoreBuilder;
+use revisionstore::scmstore::StoreFile;
+use revisionstore::scmstore::TreeStore;
+use revisionstore::scmstore::TreeStoreBuilder;
+use revisionstore::HgIdDataStore;
+use revisionstore::MemcacheStore;
+use types::HgId;
+use types::Key;
+use types::RepoPathBuf;
 
 use crate::utils::key_from_path_node_slice;
 

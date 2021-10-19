@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use indexedlog::index::{InsertKey, InsertValue, OpenOptions};
-use minibench::{bench, elapsed, measure, Measure};
-use rand_chacha::{
-    rand_core::{RngCore, SeedableRng},
-    ChaChaRng,
-};
+use indexedlog::index::InsertKey;
+use indexedlog::index::InsertValue;
+use indexedlog::index::OpenOptions;
+use minibench::bench;
+use minibench::elapsed;
+use minibench::measure;
+use minibench::Measure;
+use rand_chacha::rand_core::RngCore;
+use rand_chacha::rand_core::SeedableRng;
+use rand_chacha::ChaChaRng;
 use std::sync::Arc;
 use tempfile::tempdir;
 

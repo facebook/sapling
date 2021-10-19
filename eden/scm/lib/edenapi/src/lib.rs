@@ -16,9 +16,12 @@ pub use crate::api::EdenApi;
 pub use crate::builder::Builder;
 pub use crate::builder::HttpClientBuilder;
 pub use crate::client::Client;
-pub use crate::errors::{ConfigError, EdenApiError};
+pub use crate::errors::ConfigError;
+pub use crate::errors::EdenApiError;
 pub use crate::response::BlockingResponse;
-pub use edenapi_trait::{Entries, Response, ResponseMeta};
+pub use edenapi_trait::Entries;
+pub use edenapi_trait::Response;
+pub use edenapi_trait::ResponseMeta;
 
 // Re-export for convenience.
 pub use configmodel;

@@ -6,8 +6,9 @@
  */
 
 use super::hints::Flags;
+use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
-use super::{AsyncNameSetQuery, Hints};
+use super::Hints;
 use crate::Result;
 use crate::VertexName;
 use indexmap::IndexSet;

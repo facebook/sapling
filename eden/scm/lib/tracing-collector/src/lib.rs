@@ -15,10 +15,17 @@ pub use model::TracingData;
 
 use parking_lot::Mutex;
 use std::sync::Arc;
-use tracing::span::{Attributes, Record};
+use tracing::span::Attributes;
+use tracing::span::Record;
 use tracing::subscriber::SetGlobalDefaultError;
-use tracing::{Event, Id, Level, Metadata, Subscriber};
-use tracing_subscriber::layer::{Context, Layer, SubscriberExt};
+use tracing::Event;
+use tracing::Id;
+use tracing::Level;
+use tracing::Metadata;
+use tracing::Subscriber;
+use tracing_subscriber::layer::Context;
+use tracing_subscriber::layer::Layer;
+use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Registry;
 

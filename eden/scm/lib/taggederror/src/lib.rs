@@ -7,7 +7,11 @@
 
 use std::any::type_name;
 use std::error::Error;
-use std::fmt::{self, Debug, Display, Formatter, Write};
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Write;
+use std::fmt::{self};
 
 use thiserror::Error;
 

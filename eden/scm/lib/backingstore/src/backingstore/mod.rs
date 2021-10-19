@@ -10,13 +10,15 @@ mod scmstores;
 
 use std::path::Path;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 
 use manifest::List;
 use revisionstore::scmstore::file::FileAuxData;
 use types::Key;
 
-use crate::backingstore::{contentstores::BackingContentStores, scmstores::BackingScmStores};
+use crate::backingstore::contentstores::BackingContentStores;
+use crate::backingstore::scmstores::BackingScmStores;
 
 pub enum BackingStore {
     Old(BackingContentStores),

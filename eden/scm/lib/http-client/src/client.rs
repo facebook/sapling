@@ -5,24 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::pin::Pin;
 
 use curl::easy::Easy2;
 use futures::prelude::*;
 
-use crate::{
-    driver::MultiDriver,
-    errors::{Abort, HttpClientError},
-    event_listeners::HttpClientEventListeners,
-    handler::{Buffered, HandlerExt, Streaming},
-    pool::Pool,
-    progress::Progress,
-    receiver::{ChannelReceiver, Receiver},
-    request::{Request, StreamRequest},
-    response::{AsyncResponse, Response},
-    stats::Stats,
-};
+use crate::driver::MultiDriver;
+use crate::errors::Abort;
+use crate::errors::HttpClientError;
+use crate::event_listeners::HttpClientEventListeners;
+use crate::handler::Buffered;
+use crate::handler::HandlerExt;
+use crate::handler::Streaming;
+use crate::pool::Pool;
+use crate::progress::Progress;
+use crate::receiver::ChannelReceiver;
+use crate::receiver::Receiver;
+use crate::request::Request;
+use crate::request::StreamRequest;
+use crate::response::AsyncResponse;
+use crate::response::Response;
+use crate::stats::Stats;
 
 pub type ResponseFuture =
     Pin<Box<dyn Future<Output = Result<AsyncResponse, HttpClientError>> + Send + 'static>>;

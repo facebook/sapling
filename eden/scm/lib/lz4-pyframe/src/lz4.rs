@@ -6,12 +6,20 @@
  */
 
 use crate::Result;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use libc::{c_int, c_void};
-use lz4_sys::{
-    LZ4StreamDecode, LZ4StreamEncode, LZ4_compressBound, LZ4_compress_continue, LZ4_createStream,
-    LZ4_createStreamDecode, LZ4_decompress_safe_continue, LZ4_freeStream, LZ4_freeStreamDecode,
-};
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use libc::c_int;
+use libc::c_void;
+use lz4_sys::LZ4StreamDecode;
+use lz4_sys::LZ4StreamEncode;
+use lz4_sys::LZ4_compressBound;
+use lz4_sys::LZ4_compress_continue;
+use lz4_sys::LZ4_createStream;
+use lz4_sys::LZ4_createStreamDecode;
+use lz4_sys::LZ4_decompress_safe_continue;
+use lz4_sys::LZ4_freeStream;
+use lz4_sys::LZ4_freeStreamDecode;
 use std::io::Cursor;
 use thiserror::Error;
 

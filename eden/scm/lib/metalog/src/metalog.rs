@@ -5,19 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use crate::{Error, Result};
+use crate::Error;
+use crate::Result;
 use anyhow::Context;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::log as ilog;
 use indexedlog::Repair;
 use lazy_static::lazy_static;
 use minibytes::Bytes;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 pub use zstore::Id20;
 use zstore::Zstore;
 
@@ -525,9 +528,12 @@ mod tests {
     use indexedlog::DefaultOpenOptions;
     use quickcheck::quickcheck;
     use rand_chacha::ChaChaRng;
-    use rand_core::{RngCore, SeedableRng};
+    use rand_core::RngCore;
+    use rand_core::SeedableRng;
     use std::fs;
-    use std::io::{Seek, SeekFrom, Write};
+    use std::io::Seek;
+    use std::io::SeekFrom;
+    use std::io::Write;
     use tempfile::TempDir;
 
     #[test]

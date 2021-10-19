@@ -5,23 +5,33 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    io::{Cursor, Read, Write},
-    path::Path,
-};
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Write;
+use std::path::Path;
 
-use anyhow::{bail, Result};
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use anyhow::bail;
+use anyhow::Result;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 
-use configparser::{config::ConfigSet, convert::ByteCount};
-use edenapi_types::{ContentId, FileAuxData, Sha1, Sha256};
+use configparser::config::ConfigSet;
+use configparser::convert::ByteCount;
+use edenapi_types::ContentId;
+use edenapi_types::FileAuxData;
+use edenapi_types::Sha1;
+use edenapi_types::Sha256;
 use indexedlog::log::IndexOutput;
-use types::{hgid::ReadHgIdExt, HgId};
-use vlqencoding::{VLQDecode, VLQEncode};
+use types::hgid::ReadHgIdExt;
+use types::HgId;
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQEncode;
 
-use crate::indexedlogutil::{Store, StoreOpenOptions, StoreType};
+use crate::indexedlogutil::Store;
+use crate::indexedlogutil::StoreOpenOptions;
+use crate::indexedlogutil::StoreType;
 
 /// See edenapi_types::FileAuxData and mononoke_types::ContentMetadata
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
@@ -205,11 +215,12 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::{
-        scmstore::{FileAttributes, FileStore},
-        testutil::*,
-        ExtStoredPolicy, HgIdMutableDeltaStore, IndexedLogHgIdDataStore,
-    };
+    use crate::scmstore::FileAttributes;
+    use crate::scmstore::FileStore;
+    use crate::testutil::*;
+    use crate::ExtStoredPolicy;
+    use crate::HgIdMutableDeltaStore;
+    use crate::IndexedLogHgIdDataStore;
 
     fn single_byte_sha1(fst: u8) -> Sha1 {
         let mut x: [u8; Sha1::len()] = Default::default();

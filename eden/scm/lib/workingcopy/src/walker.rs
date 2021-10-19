@@ -5,16 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use std::fs::{self, DirEntry, Metadata};
+use std::fs::DirEntry;
+use std::fs::Metadata;
+use std::fs::{self};
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use thiserror::Error;
 
-use pathmatcher::{DirectoryMatch, Matcher};
+use pathmatcher::DirectoryMatch;
+use pathmatcher::Matcher;
 use types::path::ParseError;
-use types::{RepoPath, RepoPathBuf};
+use types::RepoPath;
+use types::RepoPathBuf;
 
 #[derive(Error, Debug)]
 pub enum WalkError {
@@ -172,12 +177,14 @@ where
 mod tests {
     use super::*;
 
-    use std::fs::{create_dir_all, OpenOptions};
+    use std::fs::create_dir_all;
+    use std::fs::OpenOptions;
     use std::path::PathBuf;
 
     use tempfile::tempdir;
 
-    use pathmatcher::{AlwaysMatcher, NeverMatcher};
+    use pathmatcher::AlwaysMatcher;
+    use pathmatcher::NeverMatcher;
 
     fn create_directory(
         directories: &std::vec::Vec<&str>,

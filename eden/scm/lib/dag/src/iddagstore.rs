@@ -6,12 +6,15 @@
  */
 
 use crate::errors::bug;
-use crate::id::{Group, Id};
-use crate::segment::{Segment, SegmentFlags};
+use crate::id::Group;
+use crate::id::Id;
+use crate::segment::Segment;
+use crate::segment::SegmentFlags;
 use crate::spanset::Span;
 use crate::Level;
 use crate::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::fmt;
 
 mod in_process_store;

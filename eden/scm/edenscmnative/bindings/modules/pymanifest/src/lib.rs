@@ -7,22 +7,49 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{borrow::Borrow, cell::RefCell, collections::HashSet, ops::Deref, str, sync::Arc};
+use std::borrow::Borrow;
+use std::cell::RefCell;
+use std::collections::HashSet;
+use std::ops::Deref;
+use std::str;
+use std::sync::Arc;
 
-use anyhow::{format_err, Error};
+use anyhow::format_err;
+use anyhow::Error;
 use bytes::Bytes;
 use cpython::*;
 use parking_lot::RwLock;
 
-use cpython_ext::{pyset_add, pyset_new, ExtractInner};
-use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
-use manifest::{DiffType, File, FileMetadata, FileType, FsNodeMetadata, Manifest};
+use cpython_ext::pyset_add;
+use cpython_ext::pyset_new;
+use cpython_ext::ExtractInner;
+use cpython_ext::PyNone;
+use cpython_ext::PyPathBuf;
+use cpython_ext::ResultPyErrExt;
+use manifest::DiffType;
+use manifest::File;
+use manifest::FileMetadata;
+use manifest::FileType;
+use manifest::FsNodeMetadata;
+use manifest::Manifest;
 use manifest_tree::TreeManifest;
-use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
-use pypathmatcher::{extract_matcher, extract_option_matcher};
-use pyrevisionstore::{contentstore, filescmstore, PythonHgIdDataStore};
-use revisionstore::{HgIdDataStore, LegacyStore, RemoteDataStore, StoreKey, StoreResult};
-use types::{Key, Node, RepoPath, RepoPathBuf};
+use pathmatcher::AlwaysMatcher;
+use pathmatcher::Matcher;
+use pathmatcher::TreeMatcher;
+use pypathmatcher::extract_matcher;
+use pypathmatcher::extract_option_matcher;
+use pyrevisionstore::contentstore;
+use pyrevisionstore::filescmstore;
+use pyrevisionstore::PythonHgIdDataStore;
+use revisionstore::HgIdDataStore;
+use revisionstore::LegacyStore;
+use revisionstore::RemoteDataStore;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
+use types::Key;
+use types::Node;
+use types::RepoPath;
+use types::RepoPathBuf;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 

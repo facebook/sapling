@@ -6,8 +6,10 @@
  */
 
 use super::hints::Flags;
+use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
-use super::{AsyncNameSetQuery, Hints, NameSet};
+use super::Hints;
+use super::NameSet;
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::VertexName;

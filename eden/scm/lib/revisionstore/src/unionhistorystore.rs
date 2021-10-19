@@ -8,13 +8,13 @@
 // Union history store
 use anyhow::Result;
 
-use types::{Key, NodeInfo};
+use types::Key;
+use types::NodeInfo;
 
-use crate::{
-    historystore::{HgIdHistoryStore, RemoteHistoryStore},
-    types::StoreKey,
-    unionstore::UnionStore,
-};
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::RemoteHistoryStore;
+use crate::types::StoreKey;
+use crate::unionstore::UnionStore;
 
 pub type UnionHgIdHistoryStore<T> = UnionStore<T>;
 
@@ -65,7 +65,8 @@ mod tests {
     use quickcheck::quickcheck;
     use thiserror::Error;
 
-    use crate::{localstore::LocalStore, types::StoreKey};
+    use crate::localstore::LocalStore;
+    use crate::types::StoreKey;
 
     struct BadHgIdHistoryStore;
 

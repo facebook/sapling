@@ -5,12 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use crate::{parse_bindag, ParentRevs};
+use crate::parse_bindag;
+use crate::ParentRevs;
 use dag::nameset::SyncNameSetQuery;
 use dag::ops::DagAlgorithm;
+use dag::ops::DagPersistent;
 use dag::ops::IdConvert;
+use dag::Id;
+use dag::IdSet;
+use dag::NameDag;
 use dag::OnDiskIdDag;
-use dag::{ops::DagPersistent, Id, IdSet, NameDag, VertexName};
+use dag::VertexName;
 use nonblocking::non_blocking_result;
 use std::collections::HashMap;
 use std::collections::HashSet;

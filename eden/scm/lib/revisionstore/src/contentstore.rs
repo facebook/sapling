@@ -5,44 +5,59 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    collections::HashSet,
-    fs,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::collections::HashSet;
+use std::fs;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use anyhow::{format_err, Result};
+use anyhow::format_err;
+use anyhow::Result;
 use minibytes::Bytes;
 use regex::Regex;
 use tracing::info_span;
 
-use configparser::{config::ConfigSet, convert::ByteCount};
+use configparser::config::ConfigSet;
+use configparser::convert::ByteCount;
 use hgtime::HgTime;
-use types::{Key, RepoPathBuf};
+use types::Key;
+use types::RepoPathBuf;
 
-use crate::{
-    datastore::{
-        strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
-        HgIdMutableDeltaStore, LegacyStore, Metadata, RemoteDataStore, ReportingRemoteDataStore,
-        StoreResult,
-    },
-    indexedlogdatastore::IndexedLogHgIdDataStore,
-    indexedlogutil::StoreType,
-    lfs::{LfsFallbackRemoteStore, LfsMultiplexer, LfsRemote, LfsStore},
-    localstore::{ExtStoredPolicy, LocalStore},
-    memcache::MemcacheStore,
-    multiplexstore::MultiplexDeltaStore,
-    packstore::{CorruptionPolicy, MutableDataPackStore},
-    remotestore::HgIdRemoteStore,
-    repack::RepackLocation,
-    types::StoreKey,
-    uniondatastore::{UnionContentDataStore, UnionHgIdDataStore},
-    util::{
-        check_run_once, get_cache_packs_path, get_cache_path, get_indexedlogdatastore_path,
-        get_local_path, get_packs_path, RUN_ONCE_FILENAME,
-    },
-};
+use crate::datastore::strip_metadata;
+use crate::datastore::ContentDataStore;
+use crate::datastore::ContentMetadata;
+use crate::datastore::Delta;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::LegacyStore;
+use crate::datastore::Metadata;
+use crate::datastore::RemoteDataStore;
+use crate::datastore::ReportingRemoteDataStore;
+use crate::datastore::StoreResult;
+use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+use crate::indexedlogutil::StoreType;
+use crate::lfs::LfsFallbackRemoteStore;
+use crate::lfs::LfsMultiplexer;
+use crate::lfs::LfsRemote;
+use crate::lfs::LfsStore;
+use crate::localstore::ExtStoredPolicy;
+use crate::localstore::LocalStore;
+use crate::memcache::MemcacheStore;
+use crate::multiplexstore::MultiplexDeltaStore;
+use crate::packstore::CorruptionPolicy;
+use crate::packstore::MutableDataPackStore;
+use crate::remotestore::HgIdRemoteStore;
+use crate::repack::RepackLocation;
+use crate::types::StoreKey;
+use crate::uniondatastore::UnionContentDataStore;
+use crate::uniondatastore::UnionHgIdDataStore;
+use crate::util::check_run_once;
+use crate::util::get_cache_packs_path;
+use crate::util::get_cache_path;
+use crate::util::get_indexedlogdatastore_path;
+use crate::util::get_local_path;
+use crate::util::get_packs_path;
+use crate::util::RUN_ONCE_FILENAME;
 
 /// A `ContentStore` aggregate all the local and remote stores and expose them as one. Both local and
 /// remote stores can be queried and accessed via the `HgIdDataStore` trait. The local store can also
@@ -636,7 +651,8 @@ mod tests {
 
     use std::collections::HashMap;
     use std::ffi::OsString;
-    use std::ops::{Add, Sub};
+    use std::ops::Add;
+    use std::ops::Sub;
 
     use minibytes::Bytes;
     use tempfile::TempDir;
@@ -644,15 +660,18 @@ mod tests {
     use types::testutil::*;
     use util::path::create_dir;
 
-    use crate::{
-        metadatastore::MetadataStore,
-        repack::{repack, RepackKind, RepackLocation},
-        testutil::{
-            example_blob, get_lfs_batch_mock, get_lfs_download_mock, make_config, make_lfs_config,
-            FakeHgIdRemoteStore, TestBlob,
-        },
-        types::ContentHash,
-    };
+    use crate::metadatastore::MetadataStore;
+    use crate::repack::repack;
+    use crate::repack::RepackKind;
+    use crate::repack::RepackLocation;
+    use crate::testutil::example_blob;
+    use crate::testutil::get_lfs_batch_mock;
+    use crate::testutil::get_lfs_download_mock;
+    use crate::testutil::make_config;
+    use crate::testutil::make_lfs_config;
+    use crate::testutil::FakeHgIdRemoteStore;
+    use crate::testutil::TestBlob;
+    use crate::types::ContentHash;
 
     use mockito::Mock;
 

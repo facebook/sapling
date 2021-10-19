@@ -5,19 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, collections::HashSet, path::PathBuf, str};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::path::PathBuf;
+use std::str;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use indexmap::IndexMap;
 use thiserror::Error;
 use url::Url;
 
-use configmodel::{Config, Text};
+use configmodel::Config;
+use configmodel::Text;
 use util::path::expand_path;
 
 pub mod x509;
 
-pub use x509::{check_certs, X509Error};
+pub use x509::check_certs;
+pub use x509::X509Error;
 
 #[derive(Debug, Error)]
 #[error("Certificate(s) or private key(s) not found: {missing:?}\n{msg}")]

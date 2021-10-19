@@ -10,12 +10,19 @@ use std::sync::Arc;
 use cpython::*;
 
 use cpython_ext::convert::Serde;
-use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
+use cpython_ext::ExtractInner;
+use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
+use cpython_ext::ResultPyErrExt;
 use edenapi::ResponseMeta;
-use edenapi_types::{ContentId, UploadTreeEntry};
+use edenapi_types::ContentId;
+use edenapi_types::UploadTreeEntry;
 use pyrevisionstore::mutabledeltastore;
 use revisionstore::HgIdMutableDeltaStore;
-use types::{HgId, Key, Parents, RepoPathBuf};
+use types::HgId;
+use types::Key;
+use types::Parents;
+use types::RepoPathBuf;
 
 pub fn to_path(py: Python, name: &PyPath) -> PyResult<RepoPathBuf> {
     name.to_repo_path()

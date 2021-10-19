@@ -16,7 +16,8 @@
 use super::ToValue;
 use anyhow::Result;
 use serde_alt::serde_alt;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::fmt;

@@ -5,23 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    cmp::Ordering,
-    collections::VecDeque,
-    sync::mpsc::{channel, Receiver, Sender},
-    sync::Arc,
-    thread::JoinHandle,
-    time::Duration,
-};
+use std::cmp::Ordering;
+use std::collections::VecDeque;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::Sender;
+use std::sync::Arc;
+use std::thread::JoinHandle;
+use std::time::Duration;
 
 use anyhow::Result;
 
-use manifest::{DiffEntry, File};
-use pathmatcher::{DirectoryMatch, Matcher};
+use manifest::DiffEntry;
+use manifest::File;
+use pathmatcher::DirectoryMatch;
+use pathmatcher::Matcher;
 use progress_model::ProgressBar;
 use types::RepoPath;
 
-use crate::{store::InnerStore, DirLink, TreeManifest};
+use crate::store::InnerStore;
+use crate::DirLink;
+use crate::TreeManifest;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Side {
@@ -444,11 +448,18 @@ mod tests {
 
     use std::sync::Arc;
 
-    use manifest::{testutil::*, DiffType, FileMetadata, FileType, Manifest};
-    use pathmatcher::{AlwaysMatcher, TreeMatcher};
+    use manifest::testutil::*;
+    use manifest::DiffType;
+    use manifest::FileMetadata;
+    use manifest::FileType;
+    use manifest::Manifest;
+    use pathmatcher::AlwaysMatcher;
+    use pathmatcher::TreeMatcher;
     use types::testutil::*;
 
-    use crate::{link::DirLink, testutil::*, Link};
+    use crate::link::DirLink;
+    use crate::testutil::*;
+    use crate::Link;
 
     #[test]
     fn test_diff_entry_from_file() {

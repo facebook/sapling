@@ -5,7 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use cpython::{exc, FromPyObject, PyErr, PyObject, PyResult, Python, ToPyObject};
+use cpython::exc;
+use cpython::FromPyObject;
+use cpython::PyErr;
+use cpython::PyObject;
+use cpython::PyResult;
+use cpython::Python;
+use cpython::ToPyObject;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Default, Hash, Ord)]
 pub struct PyNone;

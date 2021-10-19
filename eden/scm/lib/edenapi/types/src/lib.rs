@@ -38,45 +38,91 @@ pub mod token;
 pub mod tree;
 pub mod wire;
 
-pub use crate::anyid::{AnyId, BonsaiChangesetId, LookupRequest, LookupResponse};
+pub use crate::anyid::AnyId;
+pub use crate::anyid::BonsaiChangesetId;
+pub use crate::anyid::LookupRequest;
+pub use crate::anyid::LookupResponse;
 pub use crate::batch::Batch;
-pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
+pub use crate::bookmark::BookmarkEntry;
+pub use crate::bookmark::BookmarkRequest;
 pub use crate::commit::make_hash_lookup_request;
+pub use crate::commit::BonsaiChangesetContent;
+pub use crate::commit::BonsaiFileChange;
+pub use crate::commit::CommitGraphEntry;
+pub use crate::commit::CommitGraphRequest;
+pub use crate::commit::CommitHashLookupRequest;
+pub use crate::commit::CommitHashLookupResponse;
+pub use crate::commit::CommitHashToLocationRequestBatch;
+pub use crate::commit::CommitHashToLocationResponse;
 pub use crate::commit::CommitKnownResponse;
-pub use crate::commit::{
-    BonsaiChangesetContent, BonsaiFileChange, CommitGraphEntry, CommitGraphRequest,
-    CommitHashLookupRequest, CommitHashLookupResponse, CommitHashToLocationRequestBatch,
-    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest,
-    EphemeralPrepareRequest, EphemeralPrepareResponse, Extra, FetchSnapshotRequest,
-    FetchSnapshotResponse, HgChangesetContent, HgMutationEntryContent, SnapshotRawData,
-    SnapshotRawFiles, UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
-    UploadSnapshotResponse,
-};
+pub use crate::commit::CommitLocationToHashRequest;
+pub use crate::commit::CommitLocationToHashRequestBatch;
+pub use crate::commit::CommitLocationToHashResponse;
+pub use crate::commit::CommitRevlogData;
+pub use crate::commit::CommitRevlogDataRequest;
+pub use crate::commit::EphemeralPrepareRequest;
+pub use crate::commit::EphemeralPrepareResponse;
+pub use crate::commit::Extra;
+pub use crate::commit::FetchSnapshotRequest;
+pub use crate::commit::FetchSnapshotResponse;
+pub use crate::commit::HgChangesetContent;
+pub use crate::commit::HgMutationEntryContent;
+pub use crate::commit::SnapshotRawData;
+pub use crate::commit::SnapshotRawFiles;
+pub use crate::commit::UploadBonsaiChangesetRequest;
+pub use crate::commit::UploadHgChangeset;
+pub use crate::commit::UploadHgChangesetsRequest;
+pub use crate::commit::UploadSnapshotResponse;
 pub use crate::errors::ServerError;
-pub use crate::file::{
-    FileAttributes, FileAuxData, FileContent, FileEntry, FileError, FileRequest, FileSpec,
-    HgFilenodeData, UploadHgFilenodeRequest, UploadTokensResponse,
-};
-pub use crate::history::{
-    HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
-};
-pub use crate::metadata::{
-    AnyFileContentId, ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata,
-    FileMetadataRequest, FileType, FsnodeId, Sha1, Sha256,
-};
-pub use crate::token::{
-    FileContentTokenMetadata, UploadToken, UploadTokenData, UploadTokenMetadata,
-    UploadTokenSignature,
-};
-pub use crate::tree::{
-    TreeAttributes, TreeChildDirectoryEntry, TreeChildEntry, TreeChildFileEntry, TreeEntry,
-    TreeError, TreeRequest, UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
-};
-pub use crate::wire::{ToApi, ToWire, WireToApiConversionError};
+pub use crate::file::FileAttributes;
+pub use crate::file::FileAuxData;
+pub use crate::file::FileContent;
+pub use crate::file::FileEntry;
+pub use crate::file::FileError;
+pub use crate::file::FileRequest;
+pub use crate::file::FileSpec;
+pub use crate::file::HgFilenodeData;
+pub use crate::file::UploadHgFilenodeRequest;
+pub use crate::file::UploadTokensResponse;
+pub use crate::history::HistoryEntry;
+pub use crate::history::HistoryRequest;
+pub use crate::history::HistoryResponse;
+pub use crate::history::HistoryResponseChunk;
+pub use crate::history::WireHistoryEntry;
+pub use crate::metadata::AnyFileContentId;
+pub use crate::metadata::ContentId;
+pub use crate::metadata::DirectoryMetadata;
+pub use crate::metadata::DirectoryMetadataRequest;
+pub use crate::metadata::FileMetadata;
+pub use crate::metadata::FileMetadataRequest;
+pub use crate::metadata::FileType;
+pub use crate::metadata::FsnodeId;
+pub use crate::metadata::Sha1;
+pub use crate::metadata::Sha256;
+pub use crate::token::FileContentTokenMetadata;
+pub use crate::token::UploadToken;
+pub use crate::token::UploadTokenData;
+pub use crate::token::UploadTokenMetadata;
+pub use crate::token::UploadTokenSignature;
+pub use crate::tree::TreeAttributes;
+pub use crate::tree::TreeChildDirectoryEntry;
+pub use crate::tree::TreeChildEntry;
+pub use crate::tree::TreeChildFileEntry;
+pub use crate::tree::TreeEntry;
+pub use crate::tree::TreeError;
+pub use crate::tree::TreeRequest;
+pub use crate::tree::UploadTreeEntry;
+pub use crate::tree::UploadTreeRequest;
+pub use crate::tree::UploadTreeResponse;
+pub use crate::wire::ToApi;
+pub use crate::wire::ToWire;
+pub use crate::wire::WireToApiConversionError;
 
 // re-export CloneData
-pub use dag_types::{CloneData, FlatSegment, Location as CommitLocation, PreparedFlatSegments};
+pub use dag_types::CloneData;
+pub use dag_types::FlatSegment;
+pub use dag_types::Location as CommitLocation;
+pub use dag_types::PreparedFlatSegments;
 
 pub use types::nodeinfo::NodeInfo;
 
@@ -85,7 +131,10 @@ use quickcheck::Arbitrary;
 use thiserror::Error;
 
 use bytes::Bytes;
-pub use types::{hgid::HgId, key::Key, parents::Parents, path::RepoPathBuf};
+pub use types::hgid::HgId;
+pub use types::key::Key;
+pub use types::parents::Parents;
+pub use types::path::RepoPathBuf;
 
 #[derive(Debug, Error)]
 #[error("Invalid hash: {expected} (expected) != {computed} (computed)")]

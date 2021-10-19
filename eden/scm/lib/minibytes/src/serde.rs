@@ -6,7 +6,11 @@
  */
 
 use crate::Bytes;
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::de;
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
+use serde::Serializer;
 use std::fmt;
 
 impl Serialize for Bytes {

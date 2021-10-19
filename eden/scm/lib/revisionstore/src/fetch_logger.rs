@@ -10,7 +10,8 @@ use std::collections::HashSet;
 use parking_lot::Mutex;
 use regex::Regex;
 
-use types::{Key, RepoPathBuf};
+use types::Key;
+use types::RepoPathBuf;
 
 use crate::StoreKey;
 

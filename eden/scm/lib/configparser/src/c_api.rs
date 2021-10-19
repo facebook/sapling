@@ -7,13 +7,15 @@
 
 //! This module exports some symbols to allow calling the config parser from C/C++
 use std::ffi::CStr;
+use std::os::raw::c_char;
+use std::path::Path;
 use std::ptr;
 use std::slice;
-use std::{os::raw::c_char, path::Path};
 
 use minibytes::Text;
 
-use crate::config::{ConfigSet, Options};
+use crate::config::ConfigSet;
+use crate::config::Options;
 use crate::error::Error;
 use crate::hg::ConfigSetHgExt;
 use crate::hg::OptionsHgExt;

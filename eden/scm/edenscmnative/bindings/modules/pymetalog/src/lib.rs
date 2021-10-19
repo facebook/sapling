@@ -7,11 +7,17 @@
 
 #![allow(non_camel_case_types)]
 
-use ::metalog::{CommitOptions, Id20, MetaLog, Repair};
+use ::metalog::CommitOptions;
+use ::metalog::Id20;
+use ::metalog::MetaLog;
+use ::metalog::Repair;
 use cpython::*;
+use cpython_ext::Bytes;
+use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
-use cpython_ext::{Bytes, PyNone, ResultPyErrExt, Str};
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
 use std::cell::RefCell;
 use std::path::Path;
 use std::time::SystemTime;

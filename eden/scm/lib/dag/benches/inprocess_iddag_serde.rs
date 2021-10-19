@@ -7,11 +7,16 @@
 
 use tempfile::tempdir;
 
-use minibench::{bench, elapsed};
+use minibench::bench;
+use minibench::elapsed;
 use nonblocking::non_blocking_result as nbr;
 
-use dag::idmap::{IdMap, IdMapAssignHead};
-use dag::{Group, IdDag, InProcessIdDag, VertexName};
+use dag::idmap::IdMap;
+use dag::idmap::IdMapAssignHead;
+use dag::Group;
+use dag::IdDag;
+use dag::InProcessIdDag;
+use dag::VertexName;
 
 type ParentsFunc<'a> = Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync + 'a>;
 

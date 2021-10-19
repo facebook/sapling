@@ -12,14 +12,18 @@
 use crate::bsearch::BinarySearchBy;
 use crate::id::Id;
 use dag_types::FlatSegment;
-use std::cmp::{
-    Ordering::{self, Equal, Greater, Less},
-    PartialOrd,
-};
+use std::cmp::Ordering::Equal;
+use std::cmp::Ordering::Greater;
+use std::cmp::Ordering::Less;
+use std::cmp::Ordering::{self};
+use std::cmp::PartialOrd;
 use std::collections::BinaryHeap;
 use std::collections::VecDeque;
-use std::fmt::{self, Debug};
-use std::ops::{Bound, RangeBounds, RangeInclusive};
+use std::fmt::Debug;
+use std::fmt::{self};
+use std::ops::Bound;
+use std::ops::RangeBounds;
+use std::ops::RangeInclusive;
 
 /// Range `low..=high`. `low` must be <= `high`.
 #[derive(Copy, Clone, Debug, Eq)]
@@ -93,7 +97,8 @@ impl Span {
     }
 
     pub(crate) fn try_from_bounds(bounds: impl RangeBounds<Id>) -> Option<Self> {
-        use Bound::{Excluded, Included};
+        use Bound::Excluded;
+        use Bound::Included;
         #[cfg(debug_assertions)]
         {
             use Bound::Unbounded;

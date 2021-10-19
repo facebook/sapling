@@ -5,13 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::io::{self, Read, Write};
+use std::io::Read;
+use std::io::Write;
+use std::io::{self};
 
 use crate::hash::AbstractHashType;
 use crate::hash::HashTypeInfo;
 
 use crate::parents::Parents;
-use sha1::{Digest, Sha1};
+use sha1::Digest;
+use sha1::Sha1;
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::RngCore;

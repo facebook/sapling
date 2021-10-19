@@ -5,14 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::hash_map;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::anyhow;
+use anyhow::Error;
+use anyhow::Result;
 use tracing::instrument;
 
 use types::Key;
 
-use crate::scmstore::{attrs::StoreAttrs, value::StoreValue};
+use crate::scmstore::attrs::StoreAttrs;
+use crate::scmstore::value::StoreValue;
 
 pub(crate) struct CommonFetchState<T: StoreValue> {
     /// Requested keys for which at least some attributes haven't been found.

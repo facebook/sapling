@@ -9,7 +9,8 @@
 
 use ::revlogindex::RevlogIndex;
 use cpython::*;
-use cpython_ext::{PyNone, ResultPyErrExt};
+use cpython_ext::PyNone;
+use cpython_ext::ResultPyErrExt;
 use pydag::Spans;
 use std::cell::RefCell;
 use std::path::Path;

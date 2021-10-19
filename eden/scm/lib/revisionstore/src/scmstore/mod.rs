@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-pub use self::{
-    builder::{FileStoreBuilder, TreeStoreBuilder},
-    file::{FileAttributes, FileAuxData, FileStore, StoreFile},
-    tree::TreeStore,
-    util::file_to_async_key_stream,
-};
+pub use self::builder::FileStoreBuilder;
+pub use self::builder::TreeStoreBuilder;
+pub use self::file::FileAttributes;
+pub use self::file::FileAuxData;
+pub use self::file::FileStore;
+pub use self::file::StoreFile;
+pub use self::tree::TreeStore;
+pub use self::util::file_to_async_key_stream;
 
 pub mod activitylogger;
 pub mod attrs;

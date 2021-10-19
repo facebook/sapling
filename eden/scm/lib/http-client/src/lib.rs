@@ -23,15 +23,26 @@ mod response;
 mod stats;
 mod stream;
 
-pub use client::{HttpClient, ResponseFuture, StatsFuture};
+pub use client::HttpClient;
+pub use client::ResponseFuture;
+pub use client::StatsFuture;
 pub use curl::easy::HttpVersion;
-pub use errors::{Abort, HttpClientError, TlsError};
+pub use errors::Abort;
+pub use errors::HttpClientError;
+pub use errors::TlsError;
 pub use header::Header;
 pub use progress::Progress;
 pub use receiver::Receiver;
-pub use request::{
-    Encoding, Method, MinTransferSpeed, Request, RequestContext, RequestInfo, StreamRequest,
-};
-pub use response::{AsyncBody, AsyncResponse, Response};
+pub use request::Encoding;
+pub use request::Method;
+pub use request::MinTransferSpeed;
+pub use request::Request;
+pub use request::RequestContext;
+pub use request::RequestInfo;
+pub use request::StreamRequest;
+pub use response::AsyncBody;
+pub use response::AsyncResponse;
+pub use response::Response;
 pub use stats::Stats;
-pub use stream::{BufferedStream, CborStream};
+pub use stream::BufferedStream;
+pub use stream::CborStream;

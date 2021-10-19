@@ -5,18 +5,25 @@
  * GNU General Public License version 2.
  */
 
-use super::{capture_pattern, json, match_pattern};
+use super::capture_pattern;
+use super::json;
+use super::match_pattern;
 use crate::event::Event;
 use anyhow::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use indexedlog::log::IndexOutput;
-use indexedlog::rotate::{OpenOptions, RotateLog, RotateLowLevelExt};
+use indexedlog::rotate::OpenOptions;
+use indexedlog::rotate::RotateLog;
+use indexedlog::rotate::RotateLowLevelExt;
 use lazy_static::lazy_static;
 use serde_json::Value;
 use std::cell::Cell;
 use std::collections::BTreeSet;
 use std::fs;
-use std::io::{Cursor, Write};
+use std::io::Cursor;
+use std::io::Write;
 use std::path::Path;
 use std::time::SystemTime;
 

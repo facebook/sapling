@@ -13,31 +13,46 @@ use async_runtime::block_unless_interrupted;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
+use cpython_ext::ExtractInner;
+use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyCell;
-use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
-use edenapi::{Builder, EdenApi};
+use cpython_ext::PyPathBuf;
+use cpython_ext::ResultPyErrExt;
+use edenapi::Builder;
+use edenapi::EdenApi;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::CommitGraphEntry;
+use edenapi_types::CommitHashLookupResponse;
+use edenapi_types::CommitHashToLocationResponse;
 use edenapi_types::CommitKnownResponse;
+use edenapi_types::CommitLocationToHashResponse;
+use edenapi_types::CommitRevlogData;
 use edenapi_types::EphemeralPrepareResponse;
+use edenapi_types::FetchSnapshotRequest;
+use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileEntry;
 use edenapi_types::FileSpec;
+use edenapi_types::HgChangesetContent;
+use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
+use edenapi_types::LookupResponse;
+use edenapi_types::SnapshotRawData;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
-use edenapi_types::{
-    CommitHashLookupResponse, CommitHashToLocationResponse, CommitLocationToHashResponse,
-    CommitRevlogData, FetchSnapshotRequest, FetchSnapshotResponse, HgChangesetContent,
-    HgMutationEntryContent, LookupResponse, SnapshotRawData, UploadSnapshotResponse, UploadToken,
-    UploadTokensResponse, UploadTreeResponse,
-};
+use edenapi_types::UploadSnapshotResponse;
+use edenapi_types::UploadToken;
+use edenapi_types::UploadTokensResponse;
+use edenapi_types::UploadTreeResponse;
 use futures::TryStreamExt;
 use minibytes::Bytes;
-use progress::{NullProgressFactory, ProgressFactory};
+use progress::NullProgressFactory;
+use progress::ProgressFactory;
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
-use pyrevisionstore::{edenapifilestore, edenapitreestore};
-use revisionstore::{EdenApiFileStore, EdenApiTreeStore};
+use pyrevisionstore::edenapifilestore;
+use pyrevisionstore::edenapitreestore;
+use revisionstore::EdenApiFileStore;
+use revisionstore::EdenApiTreeStore;
 use std::num::NonZeroU64;
 use types::HgId;
 use types::RepoPathBuf;

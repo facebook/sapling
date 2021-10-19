@@ -5,29 +5,33 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    collections::HashSet,
-    ops::Deref,
-    path::PathBuf,
-    str::{self, FromStr},
-    sync::Arc,
-};
+use std::collections::HashSet;
+use std::ops::Deref;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::str::{self};
+use std::sync::Arc;
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use minibytes::Bytes;
 use regex::Regex;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use edenapi_types::{FileEntry, TreeEntry};
-use types::{HgId, Key, RepoPath, RepoPathBuf};
+use edenapi_types::FileEntry;
+use edenapi_types::TreeEntry;
+use types::HgId;
+use types::Key;
+use types::RepoPath;
+use types::RepoPathBuf;
 
+use crate::fetch_logger::FetchLogger;
+use crate::localstore::LocalStore;
+use crate::types::ContentHash;
+use crate::types::StoreKey;
 pub use crate::Metadata;
-use crate::{
-    fetch_logger::FetchLogger,
-    localstore::LocalStore,
-    types::{ContentHash, StoreKey},
-    RepackLocation,
-};
+use crate::RepackLocation;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {

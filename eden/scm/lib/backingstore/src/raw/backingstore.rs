@@ -7,15 +7,24 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
-use anyhow::{ensure, Error, Result};
-use libc::{c_char, c_void, size_t};
+use anyhow::ensure;
+use anyhow::Error;
+use anyhow::Result;
+use libc::c_char;
+use libc::c_void;
+use libc::size_t;
 use std::convert::TryInto;
+use std::slice;
+use std::str;
 use std::vec::Vec;
-use std::{slice, str};
 use types::Key;
 
 use crate::backingstore::BackingStore;
-use crate::raw::{CBytes, CFallible, FileAuxData, Request, Tree};
+use crate::raw::CBytes;
+use crate::raw::CFallible;
+use crate::raw::FileAuxData;
+use crate::raw::Request;
+use crate::raw::Tree;
 
 use manifest::List;
 use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;

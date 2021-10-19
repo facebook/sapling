@@ -8,21 +8,29 @@
 use bytes::Bytes;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use crate::{
-    tree::{
-        TreeAttributes, TreeChildDirectoryEntry, TreeChildEntry, TreeChildFileEntry, TreeEntry,
-        TreeRequest,
-    },
-    wire::{
-        is_default, ToApi, ToWire, WireDirectoryMetadata, WireEdenApiServerError, WireFileMetadata,
-        WireKey, WireParents, WireToApiConversionError,
-    },
-    EdenApiServerError,
-};
+use crate::tree::TreeAttributes;
+use crate::tree::TreeChildDirectoryEntry;
+use crate::tree::TreeChildEntry;
+use crate::tree::TreeChildFileEntry;
+use crate::tree::TreeEntry;
+use crate::tree::TreeRequest;
+use crate::wire::is_default;
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireDirectoryMetadata;
+use crate::wire::WireEdenApiServerError;
+use crate::wire::WireFileMetadata;
+use crate::wire::WireKey;
+use crate::wire::WireParents;
+use crate::wire::WireToApiConversionError;
+use crate::EdenApiServerError;
 
-pub use crate::tree::{WireUploadTreeEntry, WireUploadTreeRequest, WireUploadTreeResponse};
+pub use crate::tree::WireUploadTreeEntry;
+pub use crate::tree::WireUploadTreeRequest;
+pub use crate::tree::WireUploadTreeResponse;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct WireTreeEntry {

@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::{commands, HgPython};
+use crate::commands;
+use crate::HgPython;
 use anyhow::Result;
 use blackbox::serde_json;
+use clidispatch::dispatch;
+use clidispatch::errors;
 use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::io::IsTty;
 use clidispatch::io::IO;
-use clidispatch::{dispatch, errors};
 use clientinfo::ClientInfo;
 use configparser::config::ConfigSet;
 use configparser::configmodel::ConfigExt;
@@ -23,17 +25,22 @@ use progress_model::Registry;
 use std::env;
 use std::fs::File;
 use std::io;
-use std::io::{BufWriter, Write};
-use std::ops::{Deref, DerefMut};
+use std::io::BufWriter;
+use std::io::Write;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
 use std::sync::Weak;
 use std::thread;
+use std::time::Duration;
+use std::time::Instant;
 use std::time::SystemTime;
-use std::time::{Duration, Instant};
-use tracing::dispatcher::{self, Dispatch};
+use tracing::dispatcher::Dispatch;
+use tracing::dispatcher::{self};
 use tracing::Level;
 use tracing_collector::TracingData;
 use tracing_subscriber::fmt::format::FmtSpan;

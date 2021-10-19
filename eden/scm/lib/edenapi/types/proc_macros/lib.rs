@@ -8,7 +8,8 @@
 extern crate proc_macro;
 
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::format_ident;
+use quote::quote;
 use syn::spanned::Spanned;
 use syn::*;
 

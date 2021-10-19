@@ -7,11 +7,15 @@
 
 mod zstdelta;
 
-use crate::zstdelta::{apply, diff};
+use crate::zstdelta::apply;
+use crate::zstdelta::diff;
 use std::env::args;
 use std::fs::File;
-use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
+use std::io::Read;
+use std::io::Write;
+use std::io::{self};
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::exit;
 
 fn read(path: &Path) -> Vec<u8> {

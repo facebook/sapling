@@ -9,41 +9,75 @@ use std::sync::Arc;
 
 use cpython::*;
 use futures::prelude::*;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
-use anyhow::{bail, format_err, Context};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
 use async_runtime::block_unless_interrupted;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::PyCell;
-use cpython_ext::{PyPathBuf, ResultPyErrExt};
-use dag_types::{Location, VertexName};
-use edenapi::{EdenApi, EdenApiError, Response, Stats};
-use edenapi_ext::{calc_contentid, download_files, upload_snapshot};
+use cpython_ext::PyPathBuf;
+use cpython_ext::ResultPyErrExt;
+use dag_types::Location;
+use dag_types::VertexName;
+use edenapi::EdenApi;
+use edenapi::EdenApiError;
+use edenapi::Response;
+use edenapi::Stats;
+use edenapi_ext::calc_contentid;
+use edenapi_ext::download_files;
+use edenapi_ext::upload_snapshot;
+use edenapi_types::AnyFileContentId;
+use edenapi_types::AnyId;
+use edenapi_types::CommitGraphEntry;
+use edenapi_types::CommitHashLookupResponse;
+use edenapi_types::CommitHashToLocationResponse;
+use edenapi_types::CommitKnownResponse;
+use edenapi_types::CommitLocationToHashRequest;
+use edenapi_types::CommitLocationToHashResponse;
+use edenapi_types::CommitRevlogData;
+use edenapi_types::EdenApiServerError;
+use edenapi_types::FetchSnapshotRequest;
+use edenapi_types::FetchSnapshotResponse;
+use edenapi_types::FileEntry;
+use edenapi_types::HgChangesetContent;
+use edenapi_types::HgFilenodeData;
+use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
+use edenapi_types::LookupResponse;
+use edenapi_types::SnapshotRawData;
 use edenapi_types::TreeAttributes;
-use edenapi_types::{
-    AnyFileContentId, AnyId, CommitGraphEntry, CommitHashLookupResponse,
-    CommitHashToLocationResponse, CommitKnownResponse, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FetchSnapshotRequest,
-    FetchSnapshotResponse, FileEntry, HgChangesetContent, HgFilenodeData, HgMutationEntryContent,
-    LookupResponse, SnapshotRawData, TreeEntry, UploadHgChangeset, UploadSnapshotResponse,
-    UploadToken, UploadTokensResponse, UploadTreeResponse,
-};
+use edenapi_types::TreeEntry;
+use edenapi_types::UploadHgChangeset;
+use edenapi_types::UploadSnapshotResponse;
+use edenapi_types::UploadToken;
+use edenapi_types::UploadTokensResponse;
+use edenapi_types::UploadTreeResponse;
 use futures::stream;
-use progress::{ProgressBar, ProgressFactory, Unit};
+use progress::ProgressBar;
+use progress::ProgressFactory;
+use progress::Unit;
 use pyrevisionstore::as_legacystore;
-use revisionstore::{datastore::separate_metadata, HgIdMutableDeltaStore, StoreKey, StoreResult};
+use revisionstore::datastore::separate_metadata;
+use revisionstore::HgIdMutableDeltaStore;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
 use types::HgId;
 use types::RepoPathBuf;
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
-use crate::util::{
-    as_deltastore, meta_to_dict, to_contentid, to_keys, to_keys_with_parents, to_path,
-    to_trees_upload_items,
-};
+use crate::util::as_deltastore;
+use crate::util::meta_to_dict;
+use crate::util::to_contentid;
+use crate::util::to_keys;
+use crate::util::to_keys_with_parents;
+use crate::util::to_path;
+use crate::util::to_trees_upload_items;
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
 ///

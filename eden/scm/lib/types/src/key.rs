@@ -7,9 +7,11 @@
 
 use std::fmt;
 
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use crate::{hgid::HgId, path::RepoPathBuf};
+use crate::hgid::HgId;
+use crate::path::RepoPathBuf;
 
 #[derive(
     Clone,
@@ -57,7 +59,9 @@ impl Arbitrary for Key {
 #[cfg(any(test, feature = "for-tests"))]
 pub mod mocks {
     use super::Key;
-    use crate::hgid::mocks::{ONES, THREES, TWOS};
+    use crate::hgid::mocks::ONES;
+    use crate::hgid::mocks::THREES;
+    use crate::hgid::mocks::TWOS;
     use crate::testutil::*;
 
     use lazy_static::lazy_static;

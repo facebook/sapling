@@ -13,12 +13,17 @@ use std::convert::TryFrom;
 
 use libc::size_t;
 
-use anyhow::{Error, Result};
-use edenapi_types::{
-    metadata::{ContentId as ApiContentId, Sha1 as ApiSha1, Sha256 as ApiSha256},
-    FileType as ApiFileType, TreeAttributes as ApiTreeAttributes,
-};
-use types::{HgId as ApiHgId, Key as ApiKey, Parents as ApiParents, RepoPathBuf};
+use anyhow::Error;
+use anyhow::Result;
+use edenapi_types::metadata::ContentId as ApiContentId;
+use edenapi_types::metadata::Sha1 as ApiSha1;
+use edenapi_types::metadata::Sha256 as ApiSha256;
+use edenapi_types::FileType as ApiFileType;
+use edenapi_types::TreeAttributes as ApiTreeAttributes;
+use types::HgId as ApiHgId;
+use types::Key as ApiKey;
+use types::Parents as ApiParents;
+use types::RepoPathBuf;
 
 use crate::ptr_len_to_slice;
 

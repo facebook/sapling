@@ -5,37 +5,58 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
+use anyhow::Result;
 use futures::StreamExt;
 use parking_lot::RwLock;
-use tracing::{field, instrument};
+use tracing::field;
+use tracing::instrument;
 
-use async_runtime::{block_on, spawn_blocking, stream_to_iter};
-use edenapi_types::{FileEntry, FileSpec};
-use types::{Key, Sha256};
+use async_runtime::block_on;
+use async_runtime::spawn_blocking;
+use async_runtime::stream_to_iter;
+use edenapi_types::FileEntry;
+use edenapi_types::FileSpec;
+use types::Key;
+use types::Sha256;
 
-use crate::{
-    datastore::{HgIdDataStore, RemoteDataStore},
-    fetch_logger::FetchLogger,
-    indexedlogauxstore::{AuxStore, Entry as AuxDataEntry},
-    indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
-    indexedlogutil::StoreType,
-    lfs::{LfsPointersEntry, LfsRemoteInner, LfsStore, LfsStoreEntry},
-    memcache::McData,
-    scmstore::{
-        attrs::StoreAttrs,
-        fetch::{CommonFetchState, FetchErrors, FetchResults},
-        file::{metrics::FileStoreFetchMetrics, LazyFile},
-        value::StoreValue,
-        FileAttributes, FileAuxData, FileStore, StoreFile,
-    },
-    util, ContentHash, ContentStore, EdenApiFileStore, ExtStoredPolicy, MemcacheStore, Metadata,
-    StoreKey,
-};
+use crate::datastore::HgIdDataStore;
+use crate::datastore::RemoteDataStore;
+use crate::fetch_logger::FetchLogger;
+use crate::indexedlogauxstore::AuxStore;
+use crate::indexedlogauxstore::Entry as AuxDataEntry;
+use crate::indexedlogdatastore::Entry;
+use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+use crate::indexedlogutil::StoreType;
+use crate::lfs::LfsPointersEntry;
+use crate::lfs::LfsRemoteInner;
+use crate::lfs::LfsStore;
+use crate::lfs::LfsStoreEntry;
+use crate::memcache::McData;
+use crate::scmstore::attrs::StoreAttrs;
+use crate::scmstore::fetch::CommonFetchState;
+use crate::scmstore::fetch::FetchErrors;
+use crate::scmstore::fetch::FetchResults;
+use crate::scmstore::file::metrics::FileStoreFetchMetrics;
+use crate::scmstore::file::LazyFile;
+use crate::scmstore::value::StoreValue;
+use crate::scmstore::FileAttributes;
+use crate::scmstore::FileAuxData;
+use crate::scmstore::FileStore;
+use crate::scmstore::StoreFile;
+use crate::util;
+use crate::ContentHash;
+use crate::ContentStore;
+use crate::EdenApiFileStore;
+use crate::ExtStoredPolicy;
+use crate::MemcacheStore;
+use crate::Metadata;
+use crate::StoreKey;
 
 pub struct FetchState {
     common: CommonFetchState<StoreFile>,

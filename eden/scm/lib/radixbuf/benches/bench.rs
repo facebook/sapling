@@ -5,11 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use minibench::{bench, elapsed};
-use rand::{ChaChaRng, RngCore};
+use minibench::bench;
+use minibench::elapsed;
+use rand::ChaChaRng;
+use rand::RngCore;
 
-use radixbuf::key::{FixedKey, KeyId};
-use radixbuf::radix::{radix_insert, radix_lookup};
+use radixbuf::key::FixedKey;
+use radixbuf::key::KeyId;
+use radixbuf::radix::radix_insert;
+use radixbuf::radix::radix_lookup;
 
 const N: usize = 204800;
 

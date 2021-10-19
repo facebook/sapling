@@ -10,21 +10,29 @@ use std::io::Cursor;
 use std::pin::Pin;
 
 use anyhow::anyhow;
-use async_compression::tokio::bufread::{BrotliDecoder, DeflateDecoder, GzipDecoder, ZstdDecoder};
+use async_compression::tokio::bufread::BrotliDecoder;
+use async_compression::tokio::bufread::DeflateDecoder;
+use async_compression::tokio::bufread::GzipDecoder;
+use async_compression::tokio::bufread::ZstdDecoder;
 use futures::prelude::*;
-use http::header::{self, HeaderMap};
+use http::header::HeaderMap;
+use http::header::{self};
 use http::status::StatusCode;
 use http::version::Version;
 use serde::de::DeserializeOwned;
 use tokio::io::BufReader;
-use tokio_util::io::{ReaderStream, StreamReader};
+use tokio_util::io::ReaderStream;
+use tokio_util::io::StreamReader;
 
 use crate::errors::HttpClientError;
-use crate::handler::{Buffered, HandlerExt};
+use crate::handler::Buffered;
+use crate::handler::HandlerExt;
 use crate::header::Header;
 use crate::receiver::ResponseStreams;
-use crate::request::{Encoding, RequestInfo};
-use crate::stream::{BufferedStream, CborStream};
+use crate::request::Encoding;
+use crate::request::RequestInfo;
+use crate::stream::BufferedStream;
+use crate::stream::CborStream;
 
 #[derive(Debug)]
 pub struct Head {
@@ -330,7 +338,8 @@ mod tests {
     use mockito::mock;
     use url::Url;
 
-    use crate::request::{Encoding, Request};
+    use crate::request::Encoding;
+    use crate::request::Request;
 
     #[tokio::test]
     async fn test_decompression() -> Result<()> {

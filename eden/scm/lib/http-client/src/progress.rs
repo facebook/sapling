@@ -5,16 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    cell::RefCell,
-    fmt,
-    iter::Sum,
-    ops::{Add, AddAssign, Sub},
-    sync::atomic::AtomicUsize,
-    sync::atomic::Ordering::{AcqRel, Acquire, Relaxed, Release},
-    sync::Arc,
-    time::Instant,
-};
+use std::cell::RefCell;
+use std::fmt;
+use std::iter::Sum;
+use std::ops::Add;
+use std::ops::AddAssign;
+use std::ops::Sub;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::AcqRel;
+use std::sync::atomic::Ordering::Acquire;
+use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::Ordering::Release;
+use std::sync::Arc;
+use std::time::Instant;
 
 use once_cell::sync::OnceCell;
 

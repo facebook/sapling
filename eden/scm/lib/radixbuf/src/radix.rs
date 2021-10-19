@@ -397,7 +397,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::key::{FixedKey, VariantKey};
+    use crate::key::FixedKey;
+    use crate::key::VariantKey;
     use quickcheck::quickcheck;
     use std::collections::HashSet;
     use std::mem::transmute;

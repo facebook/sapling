@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::{fmt::Debug, slice::SliceIndex};
+use std::fmt::Debug;
+use std::slice::SliceIndex;
 
 use anyhow::Result;
 use thiserror::Error;

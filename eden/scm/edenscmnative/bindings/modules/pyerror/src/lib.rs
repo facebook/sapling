@@ -6,9 +6,13 @@
  */
 
 use cpython::*;
-use cpython_ext::{error, ResultPyErrExt};
+use cpython_ext::error;
+use cpython_ext::ResultPyErrExt;
 
-use taggederror::{intentional_bail, intentional_error, CommonMetadata, FilteredAnyhow};
+use taggederror::intentional_bail;
+use taggederror::intentional_error;
+use taggederror::CommonMetadata;
+use taggederror::FilteredAnyhow;
 use taggederror_util::AnyhowEdenExt;
 
 py_exception!(error, CertificateError);

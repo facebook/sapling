@@ -10,11 +10,20 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-pub use anyhow::{Error, Result};
-use cpython::{exc, FromPyObject, ObjectProtocol, PyClone, PyList, PyModule, PyResult, Python};
+pub use anyhow::Error;
+pub use anyhow::Result;
+use cpython::exc;
+use cpython::FromPyObject;
+use cpython::ObjectProtocol;
+use cpython::PyClone;
+use cpython::PyList;
+use cpython::PyModule;
+use cpython::PyResult;
+use cpython::Python;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use taggederror::{CommonMetadata, TaggedError};
+use taggederror::CommonMetadata;
+use taggederror::TaggedError;
 use taggederror_util::AnyhowEdenExt;
 
 /// Extends the `Result` type to allow conversion to `PyResult` from a native

@@ -9,7 +9,8 @@ use futures::Future;
 use once_cell::sync::Lazy;
 use once_cell::sync::OnceCell;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::RwLock;
 
 pub struct Counter {

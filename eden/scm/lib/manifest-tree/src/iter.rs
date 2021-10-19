@@ -6,27 +6,33 @@
  */
 
 use std::collections::btree_map;
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
-};
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use futures::channel::mpsc::unbounded;
-use futures::{stream, StreamExt};
+use futures::stream;
+use futures::StreamExt;
 use futures_batch::ChunksTimeoutStreamExt;
 
-use async_runtime::{RunStream, RunStreamOptions};
+use async_runtime::RunStream;
+use async_runtime::RunStreamOptions;
 use manifest::FsNodeMetadata;
 use pathmatcher::Matcher;
-use types::{Key, PathComponentBuf, RepoPath, RepoPathBuf};
+use types::Key;
+use types::PathComponentBuf;
+use types::RepoPath;
+use types::RepoPathBuf;
 
-use crate::{
-    link::{Durable, Ephemeral, Leaf, Link},
-    store::InnerStore,
-    TreeManifest,
-};
+use crate::link::Durable;
+use crate::link::Ephemeral;
+use crate::link::Leaf;
+use crate::link::Link;
+use crate::store::InnerStore;
+use crate::TreeManifest;
 
 pub struct BfsIter {
     iter: RunStream<Result<(RepoPathBuf, FsNodeMetadata)>>,
@@ -324,8 +330,10 @@ mod tests {
 
     use std::sync::Arc;
 
-    use manifest::{testutil::*, Manifest};
-    use pathmatcher::{AlwaysMatcher, TreeMatcher};
+    use manifest::testutil::*;
+    use manifest::Manifest;
+    use pathmatcher::AlwaysMatcher;
+    use pathmatcher::TreeMatcher;
     use types::testutil::*;
 
     use crate::testutil::*;

@@ -5,12 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use crate::{Error, Result};
-use byteorder::{NetworkEndian, ReadBytesExt};
-use serde::de::{
-    self, Deserialize, DeserializeSeed, EnumAccess, IntoDeserializer, SeqAccess, VariantAccess,
-    Visitor,
-};
+use crate::Error;
+use crate::Result;
+use byteorder::NetworkEndian;
+use byteorder::ReadBytesExt;
+use serde::de::Deserialize;
+use serde::de::DeserializeSeed;
+use serde::de::EnumAccess;
+use serde::de::IntoDeserializer;
+use serde::de::SeqAccess;
+use serde::de::VariantAccess;
+use serde::de::Visitor;
+use serde::de::{self};
 use std::str;
 use vlqencoding::VLQDecode;
 

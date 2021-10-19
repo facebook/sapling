@@ -10,7 +10,12 @@ use std::marker::PhantomData;
 use itertools::Itertools;
 
 use super::output::OutputRendererOptions;
-use super::render::{Ancestor, GraphRow, LinkLine, NodeLine, PadLine, Renderer};
+use super::render::Ancestor;
+use super::render::GraphRow;
+use super::render::LinkLine;
+use super::render::NodeLine;
+use super::render::PadLine;
+use super::render::Renderer;
 
 mod glyph {
     pub(super) const SPACE: usize = 0;
@@ -290,8 +295,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::test_fixtures::{self, TestFixture};
-    use super::super::test_utils::{render_string, render_string_with_order};
+    use super::super::test_fixtures::TestFixture;
+    use super::super::test_fixtures::{self};
+    use super::super::test_utils::render_string;
+    use super::super::test_utils::render_string_with_order;
     use crate::render::GraphRowRenderer;
 
     fn render(fixture: &TestFixture) -> String {

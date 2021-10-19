@@ -7,14 +7,19 @@
 
 use crate::errors::bug;
 use crate::errors::NotFoundError;
-use crate::id::{Group, Id};
+use crate::id::Group;
+use crate::id::Id;
+use crate::iddagstore::IdDagStore;
+use crate::iddagstore::InProcessStore;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::iddagstore::IndexedLogStore;
-use crate::iddagstore::{IdDagStore, InProcessStore};
 use crate::ops::Persist;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::TryClone;
-use crate::segment::{FlatSegment, PreparedFlatSegments, Segment, SegmentFlags};
+use crate::segment::FlatSegment;
+use crate::segment::PreparedFlatSegments;
+use crate::segment::Segment;
+use crate::segment::SegmentFlags;
 use crate::spanset;
 use crate::Error::Programming;
 use crate::IdSet;
@@ -23,11 +28,15 @@ use crate::Level;
 use crate::Result;
 use crate::VerLink;
 use indexmap::set::IndexSet;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
+use std::collections::BTreeSet;
+use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::{BTreeSet, BinaryHeap};
-use std::fmt::{self, Debug, Formatter};
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::{self};
 use std::ops::Deref;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use std::path::Path;

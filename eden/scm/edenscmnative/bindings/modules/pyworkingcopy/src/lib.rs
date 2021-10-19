@@ -16,10 +16,12 @@ use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use pypathmatcher::UnsafePythonMatcher;
 use pytreestate::treestate;
-use workingcopy::filesystem::{
-    ChangeType, PendingChangeResult, PendingChanges, PhysicalFileSystem,
-};
-use workingcopy::walker::{WalkError, Walker};
+use workingcopy::filesystem::ChangeType;
+use workingcopy::filesystem::PendingChangeResult;
+use workingcopy::filesystem::PendingChanges;
+use workingcopy::filesystem::PhysicalFileSystem;
+use workingcopy::walker::WalkError;
+use workingcopy::walker::Walker;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");

@@ -9,7 +9,9 @@
 //!
 //! Useful for cases where it's inconvenient to pass [`Blackbox`] around.
 
-use crate::{event::Event, Blackbox, BlackboxOptions};
+use crate::event::Event;
+use crate::Blackbox;
+use crate::BlackboxOptions;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use std::ops::DerefMut;

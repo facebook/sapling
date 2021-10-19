@@ -8,7 +8,8 @@
 use indexedlog::base16::Base16Iter;
 use indexedlog::lock::ScopedFileLock;
 use indexedlog::utils::open_dir;
-use minibench::{bench, elapsed};
+use minibench::bench;
+use minibench::elapsed;
 use tempfile::tempdir;
 
 fn main() {

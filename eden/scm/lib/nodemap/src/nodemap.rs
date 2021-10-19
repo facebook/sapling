@@ -9,10 +9,10 @@ use std::ops::Range;
 use std::path::Path;
 
 use anyhow::Result;
-use indexedlog::{
-    log::{self, IndexOutput, Log},
-    DefaultOpenOptions,
-};
+use indexedlog::log::IndexOutput;
+use indexedlog::log::Log;
+use indexedlog::log::{self};
+use indexedlog::DefaultOpenOptions;
 use thiserror::Error;
 use types::errors::KeyError;
 use types::node::Node;

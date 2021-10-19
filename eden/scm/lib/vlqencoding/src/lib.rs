@@ -7,7 +7,9 @@
 
 //! VLQ (Variable-length quantity) encoding.
 
-use std::io::{self, Read, Write};
+use std::io::Read;
+use std::io::Write;
+use std::io::{self};
 use std::mem::size_of;
 
 pub trait VLQEncode<T> {
@@ -236,7 +238,10 @@ impl_signed_primitive!(i8, u8);
 mod tests {
     use super::*;
     use quickcheck::quickcheck;
-    use std::io::{self, Cursor, Seek, SeekFrom};
+    use std::io::Cursor;
+    use std::io::Seek;
+    use std::io::SeekFrom;
+    use std::io::{self};
 
     macro_rules! check_round_trip {
         ($N: expr) => {{

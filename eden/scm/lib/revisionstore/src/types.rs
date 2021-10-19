@@ -8,10 +8,13 @@
 use std::io::Write;
 
 use minibytes::Bytes;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use edenapi_types::{ContentId, Sha1};
-use types::{Key, Sha256};
+use edenapi_types::ContentId;
+use edenapi_types::Sha1;
+use types::Key;
+use types::Sha256;
 
 /// Kind of content hash stored in the LFS pointer. Adding new types is acceptable, re-ordering or
 /// removal is forbidden.
@@ -50,7 +53,9 @@ impl ContentHash {
     }
 
     pub(crate) fn content_id(data: &Bytes) -> ContentId {
-        use blake2::{digest::Input, digest::VariableOutput, VarBlake2b};
+        use blake2::digest::Input;
+        use blake2::digest::VariableOutput;
+        use blake2::VarBlake2b;
 
         // cribbed from pyedenapi
         let mut hash = VarBlake2b::new_keyed(b"content", ContentId::len());

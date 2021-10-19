@@ -76,7 +76,8 @@ fn tzset() -> Option<i32> {
     }
     #[cfg(windows)]
     {
-        use std::os::raw::{c_int, c_long};
+        use std::os::raw::c_int;
+        use std::os::raw::c_long;
         extern "C" {
             // See https://docs.microsoft.com/en-us/cpp/c-runtime-library/daylight-dstbias-timezone-and-tzname?view=vs-2019
             fn _tzset();

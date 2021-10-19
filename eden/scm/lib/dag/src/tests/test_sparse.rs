@@ -7,10 +7,12 @@
 
 use super::ProtocolMonitor;
 use super::TestDag;
+use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
+use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
+use crate::ops::DagPullFastForwardMasterData;
 use crate::ops::IdConvert;
-use crate::ops::{DagAddHeads, DagImportPullData, DagPullFastForwardMasterData};
 use crate::Group;
 use crate::Id;
 use crate::VertexName;

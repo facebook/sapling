@@ -7,9 +7,14 @@
 
 use std::iter::FromIterator;
 
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
-use types::{hgid::HgId, key::Key, nodeinfo::NodeInfo, parents::Parents, path::RepoPathBuf};
+use types::hgid::HgId;
+use types::key::Key;
+use types::nodeinfo::NodeInfo;
+use types::parents::Parents;
+use types::path::RepoPathBuf;
 
 /// Structure containing the fields corresponding to the client's
 /// in-memory representation of a history entry. Useful for adding

@@ -9,7 +9,8 @@ use crate::errors::IoResultExt;
 use fs2::FileExt;
 use std::fs::File;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
 /// RAII style file locking.
 pub struct ScopedFileLock<'a> {
@@ -79,7 +80,10 @@ impl Drop for ScopedDirLock {
 mod tests {
     use super::*;
     use std::fs::OpenOptions;
-    use std::io::{Read, Seek, SeekFrom, Write};
+    use std::io::Read;
+    use std::io::Seek;
+    use std::io::SeekFrom;
+    use std::io::Write;
     use std::thread;
     use tempfile::tempdir;
 

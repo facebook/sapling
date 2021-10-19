@@ -5,74 +5,116 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    cmp::min,
-    collections::{HashMap, HashSet},
-    convert::TryInto,
-    fs::File,
-    io::{ErrorKind, Read, Write},
-    iter, mem,
-    ops::Range,
-    path::{Path, PathBuf},
-    str::{self, FromStr},
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
-    time::Duration,
-    time::Instant,
-};
+use std::cmp::min;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::convert::TryInto;
+use std::fs::File;
+use std::io::ErrorKind;
+use std::io::Read;
+use std::io::Write;
+use std::iter;
+use std::mem;
+use std::ops::Range;
+use std::path::Path;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::str::{self};
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 
-use anyhow::{anyhow, bail, ensure, format_err, Context, Result};
-use futures::{
-    future::FutureExt,
-    stream::{iter, FuturesUnordered, StreamExt, TryStreamExt},
-};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
+use futures::future::FutureExt;
+use futures::stream::iter;
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use http::header::HeaderMap;
 use http::status::StatusCode;
 use minibytes::Bytes;
-use parking_lot::{Mutex, RwLock};
-use rand::{thread_rng, Rng};
-use serde_derive::{Deserialize, Serialize};
+use parking_lot::Mutex;
+use parking_lot::RwLock;
+use rand::thread_rng;
+use rand::Rng;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use std::num::NonZeroU64;
-use tokio::{
-    task::spawn_blocking,
-    time::{sleep, timeout},
-};
-use tracing::{info_span, trace_span, Instrument};
+use tokio::task::spawn_blocking;
+use tokio::time::sleep;
+use tokio::time::timeout;
+use tracing::info_span;
+use tracing::trace_span;
+use tracing::Instrument;
 use url::Url;
 
 use async_runtime::block_on;
-use auth::{AuthGroup, AuthSection};
-use configparser::{config::ConfigSet, convert::ByteCount};
+use auth::AuthGroup;
+use auth::AuthSection;
+use configparser::config::ConfigSet;
+use configparser::convert::ByteCount;
 use hg_http::http_client;
-use http_client::{
-    Encoding, HttpClient, HttpClientError, HttpVersion, Method, MinTransferSpeed, Request,
-};
-use indexedlog::{log::IndexOutput, rotate, DefaultOpenOptions, Repair};
-use lfs_protocol::{
-    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
-    Sha256 as LfsSha256,
-};
-use mincode::{deserialize, serialize};
-use types::{HgId, Key, RepoPath, Sha256};
-use util::path::{create_dir, create_shared_dir, remove_file};
+use http_client::Encoding;
+use http_client::HttpClient;
+use http_client::HttpClientError;
+use http_client::HttpVersion;
+use http_client::Method;
+use http_client::MinTransferSpeed;
+use http_client::Request;
+use indexedlog::log::IndexOutput;
+use indexedlog::rotate;
+use indexedlog::DefaultOpenOptions;
+use indexedlog::Repair;
+use lfs_protocol::ObjectAction;
+use lfs_protocol::ObjectStatus;
+use lfs_protocol::Operation;
+use lfs_protocol::RequestBatch;
+use lfs_protocol::RequestObject;
+use lfs_protocol::ResponseBatch;
+use lfs_protocol::Sha256 as LfsSha256;
+use mincode::deserialize;
+use mincode::serialize;
+use types::HgId;
+use types::Key;
+use types::RepoPath;
+use types::Sha256;
+use util::path::create_dir;
+use util::path::create_shared_dir;
+use util::path::remove_file;
 
-use crate::{
-    datastore::{
-        strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
-        HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
-    },
-    error::{FetchError, TransferError},
-    historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
-    indexedlogutil::{Store, StoreOpenOptions},
-    localstore::LocalStore,
-    redacted::{self, is_redacted},
-    remotestore::HgIdRemoteStore,
-    types::{ContentHash, StoreKey},
-    uniondatastore::UnionHgIdDataStore,
-    util::{get_lfs_blobs_path, get_lfs_objects_path, get_lfs_pointers_path, get_str_config},
-};
+use crate::datastore::strip_metadata;
+use crate::datastore::ContentDataStore;
+use crate::datastore::ContentMetadata;
+use crate::datastore::Delta;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::Metadata;
+use crate::datastore::RemoteDataStore;
+use crate::datastore::StoreResult;
+use crate::error::FetchError;
+use crate::error::TransferError;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::historystore::RemoteHistoryStore;
+use crate::indexedlogutil::Store;
+use crate::indexedlogutil::StoreOpenOptions;
+use crate::localstore::LocalStore;
+use crate::redacted::is_redacted;
+use crate::redacted::{self};
+use crate::remotestore::HgIdRemoteStore;
+use crate::types::ContentHash;
+use crate::types::StoreKey;
+use crate::uniondatastore::UnionHgIdDataStore;
+use crate::util::get_lfs_blobs_path;
+use crate::util::get_lfs_objects_path;
+use crate::util::get_lfs_pointers_path;
+use crate::util::get_str_config;
 
 /// The `LfsPointersStore` holds the mapping between a `HgId` and the content hash (sha256) of the LFS blob.
 struct LfsPointersStore(Store);
@@ -1983,15 +2025,16 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::{
-        indexedlogdatastore::IndexedLogHgIdDataStore,
-        indexedlogutil::StoreType,
-        localstore::ExtStoredPolicy,
-        testutil::{
-            example_blob, example_blob2, get_lfs_batch_mock, get_lfs_download_mock,
-            make_lfs_config, nonexistent_blob, TestBlob,
-        },
-    };
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+    use crate::indexedlogutil::StoreType;
+    use crate::localstore::ExtStoredPolicy;
+    use crate::testutil::example_blob;
+    use crate::testutil::example_blob2;
+    use crate::testutil::get_lfs_batch_mock;
+    use crate::testutil::get_lfs_download_mock;
+    use crate::testutil::make_lfs_config;
+    use crate::testutil::nonexistent_blob;
+    use crate::testutil::TestBlob;
 
     #[test]
     fn test_new_shared() -> Result<()> {

@@ -7,20 +7,36 @@
 
 use std::convert::TryInto;
 
-use anyhow::{format_err, Result};
-use cpython::{
-    PyBytes, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject, ToPyObject,
-};
+use anyhow::format_err;
+use anyhow::Result;
+use cpython::PyBytes;
+use cpython::PyIterator;
+use cpython::PyList;
+use cpython::PyObject;
+use cpython::PyResult;
+use cpython::PyTuple;
+use cpython::Python;
+use cpython::PythonObject;
+use cpython::ToPyObject;
 
-use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
-use revisionstore::{
-    HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore, StoreKey, ToKeys,
-};
-use types::{Key, NodeInfo};
+use cpython_ext::PyNone;
+use cpython_ext::PyPathBuf;
+use cpython_ext::ResultPyErrExt;
+use revisionstore::HgIdHistoryStore;
+use revisionstore::HgIdMutableHistoryStore;
+use revisionstore::RemoteHistoryStore;
+use revisionstore::StoreKey;
+use revisionstore::ToKeys;
+use types::Key;
+use types::NodeInfo;
 
-use crate::pythonutil::{
-    from_key, from_key_to_tuple, from_tuple_to_key, key_error, to_key, to_node, to_path,
-};
+use crate::pythonutil::from_key;
+use crate::pythonutil::from_key_to_tuple;
+use crate::pythonutil::from_tuple_to_key;
+use crate::pythonutil::key_error;
+use crate::pythonutil::to_key;
+use crate::pythonutil::to_node;
+use crate::pythonutil::to_path;
 
 pub trait HgIdHistoryStorePyExt {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;

@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
-use edenapi_types::{ContentId, FileAuxData as EdenApiFileAuxData, Sha1};
+use edenapi_types::ContentId;
+use edenapi_types::FileAuxData as EdenApiFileAuxData;
+use edenapi_types::Sha1;
 use types::Sha256;
 
 use crate::indexedlogauxstore::Entry as AuxDataEntry;

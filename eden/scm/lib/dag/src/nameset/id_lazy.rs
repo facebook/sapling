@@ -7,8 +7,9 @@
 
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
+use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
-use super::{AsyncNameSetQuery, Hints};
+use super::Hints;
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::protocol::disable_remote_protocol;
@@ -21,7 +22,9 @@ use indexmap::IndexSet;
 use nonblocking::non_blocking_result;
 use std::any::Any;
 use std::fmt;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 /// A set backed by a lazy iterator of Ids.
 pub struct IdLazySet {
@@ -360,7 +363,8 @@ pub(crate) mod tests {
     use nonblocking::non_blocking_result as r;
     use std::collections::HashSet;
     use std::convert::TryInto;
-    use std::sync::atomic::{AtomicU64, Ordering::AcqRel};
+    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::Ordering::AcqRel;
 
     pub fn lazy_set(a: &[u64]) -> IdLazySet {
         let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();

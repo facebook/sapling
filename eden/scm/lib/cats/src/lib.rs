@@ -11,12 +11,16 @@
 // different_entry_name.priority=5
 // different_entry_name.more_custom_data=/some/other
 
-use std::{collections::HashMap, path::PathBuf, str};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::str;
 
 use anyhow::Result;
-use configmodel::{Config, Text};
+use configmodel::Config;
+use configmodel::Text;
 use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use thiserror::Error;
 use util::path::expand_path;
 

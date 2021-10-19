@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use dag::{Id, IdSet};
-use minibench::{bench, elapsed};
+use dag::Id;
+use dag::IdSet;
+use minibench::bench;
+use minibench::elapsed;
 
 fn main() {
     // Ruby code to generate random IdSet:

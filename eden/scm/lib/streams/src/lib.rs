@@ -19,4 +19,5 @@ mod select_drop;
 
 pub use hybrid::HybridResolver;
 pub use hybrid::HybridStream;
-pub use select_drop::{select_drop, SelectDrop};
+pub use select_drop::select_drop;
+pub use select_drop::SelectDrop;

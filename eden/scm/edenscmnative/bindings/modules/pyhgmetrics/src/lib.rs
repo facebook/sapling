@@ -8,7 +8,8 @@
 use std::collections::HashMap;
 
 use cpython::*;
-use cpython_ext::{PyNone, Str};
+use cpython_ext::PyNone;
+use cpython_ext::Str;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "hgmetrics"].join(".");

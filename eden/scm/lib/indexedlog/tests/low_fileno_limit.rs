@@ -9,7 +9,8 @@
 
 #[cfg(unix)]
 mod unix_tests {
-    use indexedlog::log::{IndexDef, IndexOutput};
+    use indexedlog::log::IndexDef;
+    use indexedlog::log::IndexOutput;
     use indexedlog::rotate::OpenOptions;
     use tempfile::tempdir;
 
@@ -57,7 +58,8 @@ mod unix_tests {
             .max_bytes_per_log(50)
             .index_defs(indexes);
 
-        use std::sync::{Arc, Barrier};
+        use std::sync::Arc;
+        use std::sync::Barrier;
         let barrier = Arc::new(Barrier::new(THREAD_COUNT as usize));
         let threads: Vec<_> = (0..THREAD_COUNT)
             .map(|i| {

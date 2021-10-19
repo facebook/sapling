@@ -10,9 +10,14 @@
 use std::fs;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use structopt::StructOpt;
-use xdiff::{diff_unified, CopyInfo, DiffFile, DiffOpts, FileType};
+use xdiff::diff_unified;
+use xdiff::CopyInfo;
+use xdiff::DiffFile;
+use xdiff::DiffOpts;
+use xdiff::FileType;
 
 const EXEC_BIT: u32 = 0o0000100;
 

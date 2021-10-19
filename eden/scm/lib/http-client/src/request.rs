@@ -8,19 +8,21 @@
 use maplit::hashmap;
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::AcqRel;
 use std::time::Duration;
 
-use curl::{
-    self,
-    easy::{Easy2, HttpVersion, List},
-};
+use curl::easy::Easy2;
+use curl::easy::HttpVersion;
+use curl::easy::List;
+use curl::{self};
 use http::header;
 use once_cell::sync::Lazy;
 use openssl::pkcs12::Pkcs12;
@@ -30,14 +32,16 @@ use parking_lot::RwLock;
 use serde::Serialize;
 use url::Url;
 
-use crate::{
-    errors::HttpClientError,
-    event_listeners::RequestCreationEventListeners,
-    event_listeners::RequestEventListeners,
-    handler::{Buffered, HandlerExt, Streaming},
-    receiver::{ChannelReceiver, Receiver},
-    response::{AsyncResponse, Response},
-};
+use crate::errors::HttpClientError;
+use crate::event_listeners::RequestCreationEventListeners;
+use crate::event_listeners::RequestEventListeners;
+use crate::handler::Buffered;
+use crate::handler::HandlerExt;
+use crate::handler::Streaming;
+use crate::receiver::ChannelReceiver;
+use crate::receiver::Receiver;
+use crate::response::AsyncResponse;
+use crate::response::Response;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Method {
@@ -858,11 +862,12 @@ mod tests {
 
     use anyhow::Result;
     use futures::TryStreamExt;
-    use http::{
-        header::{self, HeaderName, HeaderValue},
-        StatusCode,
-    };
-    use mockito::{mock, Matcher};
+    use http::header::HeaderName;
+    use http::header::HeaderValue;
+    use http::header::{self};
+    use http::StatusCode;
+    use mockito::mock;
+    use mockito::Matcher;
     use serde_json::json;
 
     #[test]

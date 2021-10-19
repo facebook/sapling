@@ -7,7 +7,8 @@
 
 #![no_main]
 
-use bindag::{octopus, OctopusTestContext};
+use bindag::octopus;
+use bindag::OctopusTestContext;
 use lazy_static::lazy_static;
 use libfuzzer_sys::fuzz_target;
 

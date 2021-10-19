@@ -34,15 +34,21 @@ mod verlink;
 pub use dag_types::clone;
 pub use dag_types::id;
 
-pub use dag_types::{CloneData, Group, Id, Location, VertexName};
-pub use iddag::{FirstAncestorConstraint, IdDag};
+pub use dag_types::CloneData;
+pub use dag_types::Group;
+pub use dag_types::Id;
+pub use dag_types::Location;
+pub use dag_types::VertexName;
+pub use iddag::FirstAncestorConstraint;
+pub use iddag::IdDag;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use idmap::IdMap;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use namedag::NameDag;
 pub use nameset::NameSet;
 pub use ops::DagAlgorithm;
-pub use segment::{FlatSegment, PreparedFlatSegments};
+pub use segment::FlatSegment;
+pub use segment::PreparedFlatSegments;
 pub use verlink::VerLink;
 
 pub type Level = u8;

@@ -17,7 +17,8 @@
 //! - Name -> Id: Name -> RequestNameToLocation -> ResponseIdNamePair -> Id
 
 use crate::id::VertexName;
-use crate::iddag::{FirstAncestorConstraint, IdDag};
+use crate::iddag::FirstAncestorConstraint;
+use crate::iddag::IdDag;
 use crate::iddagstore::IdDagStore;
 use crate::ops::IdConvert;
 use crate::Group;
@@ -29,7 +30,8 @@ use crate::Result;
 use futures::stream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::cell::RefCell;
 use std::fmt;
 use std::thread_local;

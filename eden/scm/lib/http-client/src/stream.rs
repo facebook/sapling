@@ -9,11 +9,10 @@ use std::marker::PhantomData;
 use std::mem;
 use std::pin::Pin;
 
-use futures::{
-    prelude::*,
-    ready,
-    task::{Context, Poll},
-};
+use futures::prelude::*;
+use futures::ready;
+use futures::task::Context;
+use futures::task::Poll;
 use pin_project::pin_project;
 use serde::de::DeserializeOwned;
 use serde_cbor::Deserializer;
@@ -216,8 +215,10 @@ where
 mod tests {
     use super::*;
 
-    use anyhow::{anyhow, Result};
-    use serde::{Deserialize, Serialize};
+    use anyhow::anyhow;
+    use anyhow::Result;
+    use serde::Deserialize;
+    use serde::Serialize;
 
     #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
     struct TestItem(String);

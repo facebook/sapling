@@ -6,14 +6,15 @@
  */
 
 use std::fs::File;
-use std::io::{self, prelude::*};
-use std::path::{Path, PathBuf};
+use std::io::prelude::*;
+use std::io::{self};
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::anyhow;
-use chrono::{
-    offset::{Local, Utc},
-    DateTime,
-};
+use chrono::offset::Local;
+use chrono::offset::Utc;
+use chrono::DateTime;
 use simple_asn1::ASN1Block;
 use thiserror::Error;
 

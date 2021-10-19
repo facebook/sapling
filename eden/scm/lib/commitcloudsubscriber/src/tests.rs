@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::util::{read_access_token, TOKEN_FILENAME};
+use crate::util::read_access_token;
+use crate::util::TOKEN_FILENAME;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;

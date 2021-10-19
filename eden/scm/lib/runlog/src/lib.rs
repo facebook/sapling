@@ -13,8 +13,10 @@ use anyhow::Result;
 use chrono;
 use parking_lot::Mutex;
 use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
+use rand::thread_rng;
+use rand::Rng;
+use serde::Deserialize;
+use serde::Serialize;
 
 use clidispatch::repo::Repo;
 

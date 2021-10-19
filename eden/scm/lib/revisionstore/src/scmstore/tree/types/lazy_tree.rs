@@ -11,9 +11,12 @@ use tracing::instrument;
 use edenapi_types::TreeEntry;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
-use types::{HgId, Key};
+use types::HgId;
+use types::Key;
 
-use crate::{indexedlogdatastore::Entry, memcache::McData, Metadata};
+use crate::indexedlogdatastore::Entry;
+use crate::memcache::McData;
+use crate::Metadata;
 
 /// A minimal tree enum that simply wraps the possible underlying tree types,
 /// with no processing.

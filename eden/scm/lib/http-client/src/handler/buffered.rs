@@ -5,11 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::io::{Read, SeekFrom};
+use std::io::Read;
+use std::io::SeekFrom;
 use std::mem;
 
-use curl::easy::{Handler, ReadError, SeekResult, WriteError};
-use http::{header, HeaderMap, StatusCode, Version};
+use curl::easy::Handler;
+use curl::easy::ReadError;
+use curl::easy::SeekResult;
+use curl::easy::WriteError;
+use http::header;
+use http::HeaderMap;
+use http::StatusCode;
+use http::Version;
 
 use crate::header::Header;
 use crate::progress::Progress;

@@ -9,8 +9,10 @@
 
 use cpython::*;
 use std::cell::Cell;
-use std::sync::{Condvar, Mutex};
-use std::thread::{self, ThreadId};
+use std::sync::Condvar;
+use std::sync::Mutex;
+use std::thread::ThreadId;
+use std::thread::{self};
 use std::time::Duration;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

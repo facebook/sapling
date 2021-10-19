@@ -6,7 +6,10 @@
  */
 
 extern crate proc_macro;
-use proc_macro::{Group, Ident, TokenStream, TokenTree};
+use proc_macro::Group;
+use proc_macro::Ident;
+use proc_macro::TokenStream;
+use proc_macro::TokenTree;
 
 /// Define an alternative structure (or enum) ending with `Alt`, with serde
 /// attribute "alias" and "rename" swapped.

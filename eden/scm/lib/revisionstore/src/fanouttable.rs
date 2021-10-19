@@ -5,21 +5,14 @@
  * GNU General Public License version 2.
  */
 
-/// A FanoutTable trait for providing fast HgId -> Bounds lookups to find bounds for bisecting.
-/// It comes with two modes, small-mode keys off the first byte in the hgid, while large-mode keys
-/// off the first two bytes in the hgid.
-///
-/// The serialization format is a big-endian serialized array of u32's, with one entry for each
-/// possible 1 or 2 byte prefix. If nodes exist with that prefix, that fanout slot is set to the
-/// offset of the earliest hgid with that prefix. If a fanout slot has no nodes, it's value is set
-/// to the value of the last valid offset, or 0 if there is none.
-use std::{
-    io::{Cursor, Write},
-    option::Option,
-};
+use std::io::Cursor;
+use std::io::Write;
+use std::option::Option;
 
 use anyhow::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use thiserror::Error;
 
 use types::HgId;

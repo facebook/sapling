@@ -7,13 +7,16 @@
 
 // Union store
 
-use std::{slice::Iter, vec::IntoIter};
+use std::slice::Iter;
+use std::vec::IntoIter;
 
 use anyhow::Result;
 
 use types::Key;
 
-use crate::{localstore::LocalStore, repack::ToKeys, types::StoreKey};
+use crate::localstore::LocalStore;
+use crate::repack::ToKeys;
+use crate::types::StoreKey;
 
 pub struct UnionStore<T> {
     stores: Vec<T>,

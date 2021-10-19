@@ -5,38 +5,47 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    cell::RefCell,
-    collections::vec_deque::{Iter, IterMut},
-    collections::VecDeque,
-    fs::{read_dir, DirEntry},
-    io::ErrorKind,
-    path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
-    time::{Duration, Instant},
-};
+use std::cell::RefCell;
+use std::collections::vec_deque::Iter;
+use std::collections::vec_deque::IterMut;
+use std::collections::VecDeque;
+use std::fs::read_dir;
+use std::fs::DirEntry;
+use std::io::ErrorKind;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Result;
 use parking_lot::Mutex;
 
-use types::{Key, NodeInfo};
+use types::Key;
+use types::NodeInfo;
 
-use crate::{
-    datapack::{DataPack, DataPackVersion},
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
-    historypack::{HistoryPack, HistoryPackVersion},
-    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
-    localstore::{ExtStoredPolicy, LocalStore, StoreFromPath},
-    mutabledatapack::MutableDataPack,
-    mutablehistorypack::MutableHistoryPack,
-    repack::Repackable,
-    types::StoreKey,
-    uniondatastore::UnionHgIdDataStore,
-    unionhistorystore::UnionHgIdHistoryStore,
-};
+use crate::datapack::DataPack;
+use crate::datapack::DataPackVersion;
+use crate::datastore::Delta;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::Metadata;
+use crate::datastore::StoreResult;
+use crate::historypack::HistoryPack;
+use crate::historypack::HistoryPackVersion;
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::localstore::ExtStoredPolicy;
+use crate::localstore::LocalStore;
+use crate::localstore::StoreFromPath;
+use crate::mutabledatapack::MutableDataPack;
+use crate::mutablehistorypack::MutableHistoryPack;
+use crate::repack::Repackable;
+use crate::types::StoreKey;
+use crate::uniondatastore::UnionHgIdDataStore;
+use crate::unionhistorystore::UnionHgIdHistoryStore;
 
 /// Naive implementation of a store that order its underlying stores based on how recently we found
 /// data in them. This helps in reducing the number of stores that are iterated on.
@@ -695,7 +704,8 @@ impl HgIdMutableHistoryStore for MutableHistoryPackStore {
 mod tests {
     use super::*;
 
-    use std::fs::{self, OpenOptions};
+    use std::fs::OpenOptions;
+    use std::fs::{self};
 
     use minibytes::Bytes;
     use rand::SeedableRng;
@@ -705,7 +715,8 @@ mod tests {
     use types::testutil::*;
 
     use crate::datapack::tests::make_datapack;
-    use crate::historypack::tests::{get_nodes, make_historypack};
+    use crate::historypack::tests::get_nodes;
+    use crate::historypack::tests::make_historypack;
 
     #[test]
     fn test_datapack_created_before() -> Result<()> {

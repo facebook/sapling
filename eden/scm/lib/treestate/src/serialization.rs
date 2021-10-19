@@ -8,17 +8,29 @@
 //! Trait for serialization and deserialization of tree data.
 
 use crate::errors::*;
-use crate::filestate::{FileState, FileStateV2, StateFlags};
+use crate::filestate::FileState;
+use crate::filestate::FileStateV2;
+use crate::filestate::StateFlags;
 use crate::store::BlockId;
-use crate::tree::{AggregatedState, Key, Node, NodeEntry, NodeEntryMap};
+use crate::tree::AggregatedState;
+use crate::tree::Key;
+use crate::tree::Node;
+use crate::tree::NodeEntry;
+use crate::tree::NodeEntryMap;
 use crate::treedirstate::TreeDirstateRoot;
 use crate::treestate::TreeStateRoot;
-use anyhow::{bail, Result};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use anyhow::bail;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use std::hash::Hasher;
-use std::io::{Cursor, Read, Write};
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Write;
 use twox_hash::XxHash;
-use vlqencoding::{VLQDecode, VLQEncode};
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQEncode;
 
 pub trait Serializable
 where

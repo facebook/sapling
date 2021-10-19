@@ -14,7 +14,8 @@ use cpython::PyTuple;
 use cpython::Python;
 use cpython::PythonObject;
 use cpython::ToPyObject;
-use serde::{ser, Serialize};
+use serde::ser;
+use serde::Serialize;
 use std::marker::PhantomData;
 
 /// Serialize into Python object.

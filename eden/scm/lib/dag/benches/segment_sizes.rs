@@ -5,10 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use dag::idmap::IdMap;
 use dag::idmap::IdMapAssignHead;
 use dag::ops::Persist;
-use dag::{idmap::IdMap, Group, Id, IdDag, VertexName};
-use minibench::{bench, elapsed};
+use dag::Group;
+use dag::Id;
+use dag::IdDag;
+use dag::VertexName;
+use minibench::bench;
+use minibench::elapsed;
 use nonblocking::non_blocking_result as nbr;
 use tempfile::tempdir;
 

@@ -5,26 +5,31 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    collections::HashSet,
-    convert::{TryFrom, TryInto},
-    fs::Metadata,
-    path::PathBuf,
-    sync::Arc,
-    time::SystemTime,
-};
+use std::collections::HashSet;
+use std::convert::TryFrom;
+use std::convert::TryInto;
+use std::fs::Metadata;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::SystemTime;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use parking_lot::Mutex;
 
 use pathmatcher::Matcher;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
-use types::{RepoPath, RepoPathBuf};
-use vfs::{is_executable, is_symlink, VFS};
+use types::RepoPath;
+use types::RepoPathBuf;
+use vfs::is_executable;
+use vfs::is_symlink;
+use vfs::VFS;
 
-use crate::walker::{WalkEntry, WalkError, Walker};
+use crate::walker::WalkEntry;
+use crate::walker::WalkError;
+use crate::walker::Walker;
 
 /// Represents a file modification time in Mercurial, in seconds since the unix epoch.
 #[derive(PartialEq)]

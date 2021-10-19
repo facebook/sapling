@@ -8,9 +8,14 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
+use cpython_ext::allocate_pybytes;
+use cpython_ext::vec_to_pyobj;
 use cpython_ext::ResultPyErrExt;
-use cpython_ext::{allocate_pybytes, vec_to_pyobj, SimplePyBuf};
-use lz4_pyframe::{compress, compresshc, decompress_into, decompress_size};
+use cpython_ext::SimplePyBuf;
+use lz4_pyframe::compress;
+use lz4_pyframe::compresshc;
+use lz4_pyframe::decompress_into;
+use lz4_pyframe::decompress_size;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "lz4"].join(".");

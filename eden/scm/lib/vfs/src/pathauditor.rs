@@ -7,11 +7,15 @@
 
 use dashmap::DashMap;
 use std::fs::symlink_metadata;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
-use anyhow::{ensure, Context, Result};
+use anyhow::ensure;
+use anyhow::Context;
+use anyhow::Result;
 
-use types::{RepoPath, RepoPathBuf};
+use types::RepoPath;
+use types::RepoPathBuf;
 
 /// Audit repositories path to make sure that it is safe to write/remove through them.
 ///
@@ -77,7 +81,9 @@ impl PathAuditor {
 mod tests {
     use super::*;
 
-    use std::fs::{create_dir_all, read_link, remove_dir_all};
+    use std::fs::create_dir_all;
+    use std::fs::read_link;
+    use std::fs::remove_dir_all;
     use tempfile::TempDir;
 
     #[test]

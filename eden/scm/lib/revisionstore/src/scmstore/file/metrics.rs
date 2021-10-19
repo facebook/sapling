@@ -10,9 +10,11 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use crate::scmstore::metrics::{
-    namespaced, ApiMetrics, FetchMetrics, LocalAndCacheFetchMetrics, WriteMetrics,
-};
+use crate::scmstore::metrics::namespaced;
+use crate::scmstore::metrics::ApiMetrics;
+use crate::scmstore::metrics::FetchMetrics;
+use crate::scmstore::metrics::LocalAndCacheFetchMetrics;
+use crate::scmstore::metrics::WriteMetrics;
 
 #[derive(Clone, Debug, Default)]
 pub struct ContentStoreFetchMetrics {

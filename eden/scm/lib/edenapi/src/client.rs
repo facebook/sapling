@@ -20,45 +20,95 @@ use futures::future::BoxFuture;
 use futures::prelude::*;
 use itertools::Itertools;
 use minibytes::Bytes;
-use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
-use serde::{de::DeserializeOwned, Serialize};
+use percent_encoding::utf8_percent_encode;
+use percent_encoding::AsciiSet;
+use percent_encoding::NON_ALPHANUMERIC;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use url::Url;
 
 use auth::check_certs;
+use edenapi_types::make_hash_lookup_request;
+use edenapi_types::wire::WireBookmarkEntry;
+use edenapi_types::wire::WireCloneData;
+use edenapi_types::wire::WireCommitGraphEntry;
+use edenapi_types::wire::WireCommitHashLookupResponse;
+use edenapi_types::wire::WireCommitHashToLocationResponse;
+use edenapi_types::wire::WireCommitLocationToHashResponse;
+use edenapi_types::wire::WireEphemeralPrepareResponse;
+use edenapi_types::wire::WireFetchSnapshotResponse;
+use edenapi_types::wire::WireFileEntry;
+use edenapi_types::wire::WireHistoryResponseChunk;
+use edenapi_types::wire::WireLookupResponse;
+use edenapi_types::wire::WireTreeEntry;
+use edenapi_types::wire::WireUploadToken;
+use edenapi_types::wire::WireUploadTokensResponse;
+use edenapi_types::wire::WireUploadTreeResponse;
+use edenapi_types::AnyFileContentId;
+use edenapi_types::AnyId;
+use edenapi_types::Batch;
+use edenapi_types::BonsaiChangesetContent;
+use edenapi_types::BookmarkEntry;
+use edenapi_types::BookmarkRequest;
+use edenapi_types::CloneData;
 use edenapi_types::CommitGraphEntry;
+use edenapi_types::CommitGraphRequest;
+use edenapi_types::CommitHashLookupRequest;
+use edenapi_types::CommitHashLookupResponse;
+use edenapi_types::CommitHashToLocationRequestBatch;
+use edenapi_types::CommitHashToLocationResponse;
 use edenapi_types::CommitKnownResponse;
-use edenapi_types::{
-    make_hash_lookup_request,
-    wire::{
-        WireBookmarkEntry, WireCloneData, WireCommitGraphEntry, WireCommitHashLookupResponse,
-        WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
-        WireEphemeralPrepareResponse, WireFetchSnapshotResponse, WireFileEntry,
-        WireHistoryResponseChunk, WireLookupResponse, WireTreeEntry, WireUploadToken,
-        WireUploadTokensResponse, WireUploadTreeResponse,
-    },
-    AnyFileContentId, AnyId, Batch, BonsaiChangesetContent, BookmarkEntry, BookmarkRequest,
-    CloneData, CommitGraphRequest, CommitHashLookupRequest, CommitHashLookupResponse,
-    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
-    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
-    CommitRevlogDataRequest, EdenApiServerError, EphemeralPrepareRequest, EphemeralPrepareResponse,
-    FetchSnapshotRequest, FetchSnapshotResponse, FileEntry, FileRequest, FileSpec, HgFilenodeData,
-    HgMutationEntryContent, HistoryEntry, HistoryRequest, LookupRequest, LookupResponse,
-    ServerError, ToApi, ToWire, TreeAttributes, TreeEntry, TreeRequest,
-    UploadBonsaiChangesetRequest, UploadHgChangeset, UploadHgChangesetsRequest,
-    UploadHgFilenodeRequest, UploadToken, UploadTokenMetadata, UploadTokensResponse,
-    UploadTreeEntry, UploadTreeRequest, UploadTreeResponse,
-};
+use edenapi_types::CommitLocationToHashRequest;
+use edenapi_types::CommitLocationToHashRequestBatch;
+use edenapi_types::CommitLocationToHashResponse;
+use edenapi_types::CommitRevlogData;
+use edenapi_types::CommitRevlogDataRequest;
+use edenapi_types::EdenApiServerError;
+use edenapi_types::EphemeralPrepareRequest;
+use edenapi_types::EphemeralPrepareResponse;
+use edenapi_types::FetchSnapshotRequest;
+use edenapi_types::FetchSnapshotResponse;
+use edenapi_types::FileEntry;
+use edenapi_types::FileRequest;
+use edenapi_types::FileSpec;
+use edenapi_types::HgFilenodeData;
+use edenapi_types::HgMutationEntryContent;
+use edenapi_types::HistoryEntry;
+use edenapi_types::HistoryRequest;
+use edenapi_types::LookupRequest;
+use edenapi_types::LookupResponse;
+use edenapi_types::ServerError;
+use edenapi_types::ToApi;
+use edenapi_types::ToWire;
+use edenapi_types::TreeAttributes;
+use edenapi_types::TreeEntry;
+use edenapi_types::TreeRequest;
+use edenapi_types::UploadBonsaiChangesetRequest;
+use edenapi_types::UploadHgChangeset;
+use edenapi_types::UploadHgChangesetsRequest;
+use edenapi_types::UploadHgFilenodeRequest;
+use edenapi_types::UploadToken;
+use edenapi_types::UploadTokenMetadata;
+use edenapi_types::UploadTokensResponse;
+use edenapi_types::UploadTreeEntry;
+use edenapi_types::UploadTreeRequest;
+use edenapi_types::UploadTreeResponse;
 use hg_http::http_client;
-use http_client::{AsyncResponse, HttpClient, Request};
-use types::{HgId, Key};
+use http_client::AsyncResponse;
+use http_client::HttpClient;
+use http_client::Request;
+use types::HgId;
+use types::Key;
 
 use crate::api::EdenApi;
 use crate::builder::Config;
 use crate::errors::EdenApiError;
-use crate::response::{Response, ResponseMeta};
+use crate::response::Response;
+use crate::response::ResponseMeta;
 use crate::types::wire::pull::PullFastForwardRequest;
-use metrics::{Counter, EntranceGuard};
+use metrics::Counter;
+use metrics::EntranceGuard;
 use std::time::Duration;
 
 /// All non-alphanumeric characters (except hypens, underscores, and periods)

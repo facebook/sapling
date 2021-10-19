@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use taggederror::{CommonMetadata, IntentionalError, Tagged, TaggedError};
+use taggederror::CommonMetadata;
+use taggederror::IntentionalError;
+use taggederror::Tagged;
+use taggederror::TaggedError;
 
 pub trait AnyhowEdenExt {
     /// Like AnyhowExt::common_metadata, except provides default metadata for known-Tagged Eden types.

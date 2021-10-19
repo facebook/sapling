@@ -8,7 +8,9 @@
 use crate::parser::ParseError;
 use crate::utils::get_prefix_bounds;
 use shlex::split;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// Expands all aliases accounting for circular references and prefix matching.
 ///

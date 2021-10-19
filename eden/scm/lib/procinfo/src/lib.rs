@@ -14,14 +14,17 @@ extern "C" {
 #[cfg(windows)]
 mod windows {
     use std::ffi::OsString;
-    use std::mem::{size_of, zeroed};
+    use std::mem::size_of;
+    use std::mem::zeroed;
     use std::os::windows::ffi::OsStringExt;
     use winapi::shared::minwindef::DWORD;
-    use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
-    use winapi::um::tlhelp32::{
-        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
-        TH32CS_SNAPPROCESS,
-    };
+    use winapi::um::handleapi::CloseHandle;
+    use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+    use winapi::um::tlhelp32::CreateToolhelp32Snapshot;
+    use winapi::um::tlhelp32::Process32FirstW;
+    use winapi::um::tlhelp32::Process32NextW;
+    use winapi::um::tlhelp32::PROCESSENTRY32W;
+    use winapi::um::tlhelp32::TH32CS_SNAPPROCESS;
     use winapi::um::winnt::HANDLE;
 
     pub(crate) struct Snapshot {
@@ -126,7 +129,8 @@ pub fn max_rss_bytes() -> u64 {
     {
         use winapi::shared::minwindef::DWORD;
         use winapi::um::processthreadsapi::GetCurrentProcess;
-        use winapi::um::psapi::{K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS};
+        use winapi::um::psapi::K32GetProcessMemoryInfo;
+        use winapi::um::psapi::PROCESS_MEMORY_COUNTERS;
         let mut pmc: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
         pmc.cb = std::mem::size_of_val(&pmc) as DWORD;
         return match unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut pmc, pmc.cb) } {

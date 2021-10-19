@@ -7,7 +7,8 @@
 
 //! Measurement based on procfs (/proc)
 
-use super::{Bytes, Measure};
+use super::Bytes;
+use super::Measure;
 
 /// Measure IO.
 pub struct IO {

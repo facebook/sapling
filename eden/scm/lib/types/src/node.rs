@@ -5,9 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::io::{self, Read, Write};
+use std::io::Read;
+use std::io::Write;
+use std::io::{self};
 
-use crate::hgid::{HgId, ReadHgIdExt, WriteHgIdExt};
+use crate::hgid::HgId;
+use crate::hgid::ReadHgIdExt;
+use crate::hgid::WriteHgIdExt;
 
 pub type Node = HgId;
 

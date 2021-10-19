@@ -7,13 +7,20 @@
 
 //! Tracking of commit mutations (amends, rebases, etc.)
 
-use std::io::{Read, Write};
+use std::io::Read;
+use std::io::Write;
 
-use anyhow::{anyhow, Result};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use vlqencoding::{VLQDecode, VLQEncode};
+use anyhow::anyhow;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQEncode;
 
-use crate::node::{Node, ReadNodeExt, WriteNodeExt};
+use crate::node::Node;
+use crate::node::ReadNodeExt;
+use crate::node::WriteNodeExt;
 
 #[derive(Clone, PartialEq, PartialOrd)]
 pub struct MutationEntry {

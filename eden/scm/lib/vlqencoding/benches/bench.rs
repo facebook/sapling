@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use minibench::{bench, elapsed};
+use minibench::bench;
+use minibench::elapsed;
 use std::io::Cursor;
-use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQDecodeAt;
+use vlqencoding::VLQEncode;
 
 const COUNT: u64 = 16384;
 

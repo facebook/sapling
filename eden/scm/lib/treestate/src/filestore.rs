@@ -8,14 +8,24 @@
 //! Implementation of a store using file I/O.
 
 use crate::errors::ErrorKind;
-use crate::store::{BlockId, Store, StoreView};
-use anyhow::{bail, Result};
-use byteorder::{BigEndian, ByteOrder, ReadBytesExt, WriteBytesExt};
+use crate::store::BlockId;
+use crate::store::Store;
+use crate::store::StoreView;
+use anyhow::bail;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::{BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::BufWriter;
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Write;
 use std::path::Path;
 
 // File storage format:
@@ -218,7 +228,9 @@ impl StoreView for FileStore {
 #[cfg(test)]
 mod tests {
     use crate::filestore::FileStore;
-    use crate::store::{BlockId, Store, StoreView};
+    use crate::store::BlockId;
+    use crate::store::Store;
+    use crate::store::StoreView;
     use std::fs;
     use std::io::Write;
     use tempdir::TempDir;

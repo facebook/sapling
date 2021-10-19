@@ -7,12 +7,16 @@
 
 #![allow(non_camel_case_types)]
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
+use anyhow::Context;
 use cpython::*;
 use url::Url;
 
-use auth::{self, AuthSection};
-use cpython_ext::{PyNone, PyPath, ResultPyErrExt};
+use auth::AuthSection;
+use auth::{self};
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::ResultPyErrExt;
 use pyconfigparser::config;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

@@ -11,12 +11,16 @@
 
 use anyhow::Result;
 use bitflags::bitflags;
-use globset::{Glob, GlobBuilder, GlobSet, GlobSetBuilder};
+use globset::Glob;
+use globset::GlobBuilder;
+use globset::GlobSet;
+use globset::GlobSetBuilder;
 use std::path::Path;
 
 use types::RepoPath;
 
-use crate::{DirectoryMatch, Matcher};
+use crate::DirectoryMatch;
+use crate::Matcher;
 
 bitflags! {
     struct RuleFlags: u8 {

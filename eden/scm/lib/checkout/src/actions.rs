@@ -6,11 +6,18 @@
  */
 
 use anyhow::Result;
-use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
-use pathmatcher::{Matcher, XorMatcher};
-use std::collections::{hash_map::Entry, HashMap};
+use manifest::DiffEntry;
+use manifest::DiffType;
+use manifest::FileMetadata;
+use manifest::FileType;
+use manifest::Manifest;
+use pathmatcher::Matcher;
+use pathmatcher::XorMatcher;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::fmt;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::sync::Arc;
 use types::RepoPathBuf;
 
@@ -190,7 +197,8 @@ fn pyflags(t: &FileType) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use manifest_tree::testutil::{make_tree_manifest_from_meta, TestStore};
+    use manifest_tree::testutil::make_tree_manifest_from_meta;
+    use manifest_tree::testutil::TestStore;
     use pathmatcher::TreeMatcher;
     use std::sync::Arc;
     use types::HgId;

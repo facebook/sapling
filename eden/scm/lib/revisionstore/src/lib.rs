@@ -162,33 +162,55 @@ pub mod uniondatastore;
 pub mod unionhistorystore;
 pub mod util;
 
-pub use crate::contentstore::{ContentStore, ContentStoreBuilder};
-pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
-pub use crate::datastore::{
-    ContentDataStore, ContentMetadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, LegacyStore,
-    RemoteDataStore, StoreResult,
-};
-pub use crate::edenapi::{EdenApiFileStore, EdenApiRemoteStore, EdenApiTreeStore};
-pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
-pub use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore};
+pub use crate::contentstore::ContentStore;
+pub use crate::contentstore::ContentStoreBuilder;
+pub use crate::datapack::DataEntry;
+pub use crate::datapack::DataPack;
+pub use crate::datapack::DataPackVersion;
+pub use crate::datastore::ContentDataStore;
+pub use crate::datastore::ContentMetadata;
+pub use crate::datastore::Delta;
+pub use crate::datastore::HgIdDataStore;
+pub use crate::datastore::HgIdMutableDeltaStore;
+pub use crate::datastore::LegacyStore;
+pub use crate::datastore::RemoteDataStore;
+pub use crate::datastore::StoreResult;
+pub use crate::edenapi::EdenApiFileStore;
+pub use crate::edenapi::EdenApiRemoteStore;
+pub use crate::edenapi::EdenApiTreeStore;
+pub use crate::historypack::HistoryEntry;
+pub use crate::historypack::HistoryPack;
+pub use crate::historypack::HistoryPackVersion;
+pub use crate::historystore::HgIdHistoryStore;
+pub use crate::historystore::HgIdMutableHistoryStore;
+pub use crate::historystore::RemoteHistoryStore;
 pub use crate::indexedlogauxstore::AuxStore;
 pub use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 pub use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
 pub use crate::indexedlogutil::StoreType;
-pub use crate::localstore::{ExtStoredPolicy, LocalStore};
+pub use crate::localstore::ExtStoredPolicy;
+pub use crate::localstore::LocalStore;
 pub use crate::memcache::MemcacheStore;
-pub use crate::metadatastore::{MetadataStore, MetadataStoreBuilder};
-pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHgIdHistoryStore};
+pub use crate::metadatastore::MetadataStore;
+pub use crate::metadatastore::MetadataStoreBuilder;
+pub use crate::multiplexstore::MultiplexDeltaStore;
+pub use crate::multiplexstore::MultiplexHgIdHistoryStore;
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
-pub use crate::packstore::{
-    CorruptionPolicy, DataPackStore, HistoryPackStore, MutableDataPackStore,
-    MutableHistoryPackStore,
-};
+pub use crate::packstore::CorruptionPolicy;
+pub use crate::packstore::DataPackStore;
+pub use crate::packstore::HistoryPackStore;
+pub use crate::packstore::MutableDataPackStore;
+pub use crate::packstore::MutableHistoryPackStore;
 pub use crate::redacted::redact_if_needed;
 pub use crate::remotestore::HgIdRemoteStore;
-pub use crate::repack::{repack, RepackKind, RepackLocation, Repackable, ToKeys};
-pub use crate::types::{ContentHash, StoreKey};
+pub use crate::repack::repack;
+pub use crate::repack::RepackKind;
+pub use crate::repack::RepackLocation;
+pub use crate::repack::Repackable;
+pub use crate::repack::ToKeys;
+pub use crate::types::ContentHash;
+pub use crate::types::StoreKey;
 pub use crate::uniondatastore::UnionHgIdDataStore;
 pub use crate::util::Error;
 

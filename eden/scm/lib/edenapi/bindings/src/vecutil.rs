@@ -7,7 +7,9 @@
 
 use libc::size_t;
 
-use crate::{EdenApiServerError, TreeChildEntry, TreeEntry};
+use crate::EdenApiServerError;
+use crate::TreeChildEntry;
+use crate::TreeEntry;
 
 // Monomorphization for Vec<Result<TreeEntry, EdenApiServerError>>
 #[no_mangle]

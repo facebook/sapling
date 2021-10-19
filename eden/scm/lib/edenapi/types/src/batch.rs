@@ -7,7 +7,8 @@
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Generic container for a bunch of uniform objects. This is primarily intended for requests and
 /// responses which can be difficult to evolve when the top level object is an array.

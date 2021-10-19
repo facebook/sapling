@@ -12,32 +12,46 @@ mod store;
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;
 
-use std::{
-    collections::{btree_map::Entry, BTreeMap},
-    fmt,
-    sync::Arc,
-};
+use std::collections::btree_map::Entry;
+use std::collections::BTreeMap;
+use std::fmt;
+use std::sync::Arc;
 
 use anyhow::Result;
 use bytes::Bytes;
 use once_cell::sync::OnceCell;
-use sha1::{Digest, Sha1};
+use sha1::Digest;
+use sha1::Sha1;
 use thiserror::Error;
 
-use manifest::{DiffEntry, Directory, File, FileMetadata, FsNodeMetadata, List, Manifest};
+use manifest::DiffEntry;
+use manifest::Directory;
+use manifest::File;
+use manifest::FileMetadata;
+use manifest::FsNodeMetadata;
+use manifest::List;
+use manifest::Manifest;
 use pathmatcher::Matcher;
-use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+use types::HgId;
+use types::Key;
+use types::PathComponent;
+use types::PathComponentBuf;
+use types::RepoPath;
+use types::RepoPathBuf;
 
+pub use self::diff::Diff;
 pub(crate) use self::link::Link;
-pub use self::{
-    diff::Diff,
-    store::{Entry as TreeEntry, TreeStore},
-};
-use crate::{
-    iter::{BfsIter, DfsCursor, Step},
-    link::{DirLink, Durable, DurableEntry, Ephemeral, Leaf},
-    store::InnerStore,
-};
+pub use self::store::Entry as TreeEntry;
+pub use self::store::TreeStore;
+use crate::iter::BfsIter;
+use crate::iter::DfsCursor;
+use crate::iter::Step;
+use crate::link::DirLink;
+use crate::link::Durable;
+use crate::link::DurableEntry;
+use crate::link::Ephemeral;
+use crate::link::Leaf;
+use crate::store::InnerStore;
 
 /// The Tree implementation of a Manifest dedicates an inner node for each directory in the
 /// repository and a leaf for each file.
@@ -680,8 +694,10 @@ pub fn prefetch(
 mod tests {
     use super::*;
 
-    use manifest::{testutil::*, FileType};
-    use types::{hgid::NULL_ID, testutil::*};
+    use manifest::testutil::*;
+    use manifest::FileType;
+    use types::hgid::NULL_ID;
+    use types::testutil::*;
 
     use self::testutil::*;
 

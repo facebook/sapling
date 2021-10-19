@@ -6,14 +6,17 @@
  */
 
 use std::env;
-use std::io::{prelude::*, stdin, stdout};
+use std::io::prelude::*;
+use std::io::stdin;
+use std::io::stdout;
 
 use anyhow::Result;
 use futures::prelude::*;
 use structopt::StructOpt;
 use url::Url;
 
-use http_client::{AsyncResponse, Request};
+use http_client::AsyncResponse;
+use http_client::Request;
 
 const CERT_ENV_VAR: &str = "CERT";
 const KEY_ENV_VAR: &str = "KEY";

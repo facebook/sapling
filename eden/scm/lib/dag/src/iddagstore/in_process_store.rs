@@ -5,19 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::fmt;
 use std::iter;
 use std::result::Result as StdResult;
 
-use serde::de::{Error, SeqAccess, Visitor};
+use serde::de::Error;
+use serde::de::SeqAccess;
+use serde::de::Visitor;
 use serde::ser::SerializeSeq;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
+use serde::Serializer;
 
 use super::IdDagStore;
 use super::StoreId;
 use crate::errors::bug;
-use crate::id::{Group, Id};
+use crate::id::Group;
+use crate::id::Id;
 use crate::iddagstore::SegmentWithWrongHead;
 use crate::ops::Persist;
 use crate::segment::Segment;

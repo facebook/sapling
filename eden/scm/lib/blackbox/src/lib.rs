@@ -19,9 +19,19 @@ mod blackbox;
 mod match_pattern;
 mod singleton;
 
-pub use self::blackbox::{Blackbox, BlackboxOptions, Entry, SessionId, ToValue};
-pub use self::singleton::{init, log, sync, SINGLETON};
-pub use match_pattern::{capture_pattern, match_pattern};
-pub use serde_json::{self, json, Value};
+pub use self::blackbox::Blackbox;
+pub use self::blackbox::BlackboxOptions;
+pub use self::blackbox::Entry;
+pub use self::blackbox::SessionId;
+pub use self::blackbox::ToValue;
+pub use self::singleton::init;
+pub use self::singleton::log;
+pub use self::singleton::sync;
+pub use self::singleton::SINGLETON;
+pub use match_pattern::capture_pattern;
+pub use match_pattern::match_pattern;
+pub use serde_json::json;
+pub use serde_json::Value;
+pub use serde_json::{self};
 
 pub mod event;

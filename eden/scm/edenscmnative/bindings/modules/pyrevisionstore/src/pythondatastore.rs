@@ -10,19 +10,36 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
-use cpython::{
-    exc, FromPyObject, NoArgs, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python,
-    PythonObject, PythonObjectWithTypeObject,
-};
+use cpython::exc;
+use cpython::FromPyObject;
+use cpython::NoArgs;
+use cpython::ObjectProtocol;
+use cpython::PyBytes;
+use cpython::PyDict;
+use cpython::PyList;
+use cpython::PyObject;
+use cpython::Python;
+use cpython::PythonObject;
+use cpython::PythonObjectWithTypeObject;
 
-use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{
-    Delta, HgIdDataStore, HgIdMutableDeltaStore, LegacyStore, LocalStore, Metadata,
-    RemoteDataStore, RepackLocation, StoreKey, StoreResult,
-};
-use types::{Key, RepoPathBuf};
+use cpython_ext::PyErr;
+use cpython_ext::PyPathBuf;
+use revisionstore::Delta;
+use revisionstore::HgIdDataStore;
+use revisionstore::HgIdMutableDeltaStore;
+use revisionstore::LegacyStore;
+use revisionstore::LocalStore;
+use revisionstore::Metadata;
+use revisionstore::RemoteDataStore;
+use revisionstore::RepackLocation;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
+use types::Key;
+use types::RepoPathBuf;
 
-use crate::pythonutil::{from_key_to_tuple, from_tuple_to_key, to_metadata};
+use crate::pythonutil::from_key_to_tuple;
+use crate::pythonutil::from_tuple_to_key;
+use crate::pythonutil::to_metadata;
 
 pub struct PythonHgIdDataStore {
     py_store: PyObject,

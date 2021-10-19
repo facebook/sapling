@@ -9,14 +9,18 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use types::{Key, NodeInfo};
+use types::Key;
+use types::NodeInfo;
 
-use crate::{
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
-    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
-    localstore::LocalStore,
-    types::StoreKey,
-};
+use crate::datastore::Delta;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::Metadata;
+use crate::datastore::StoreResult;
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::localstore::LocalStore;
+use crate::types::StoreKey;
 
 /// A `MultiplexDeltaStore` is a store that will duplicate all the writes to all the
 /// delta stores that it is made of.

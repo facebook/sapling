@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct FbClientInfo {}

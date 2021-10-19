@@ -5,11 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::io::{Cursor, Write};
+use std::io::Cursor;
+use std::io::Write;
 
-use anyhow::{format_err, Result};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use serde_derive::{Deserialize, Serialize};
+use anyhow::format_err;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Metadata {

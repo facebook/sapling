@@ -65,34 +65,60 @@ pub mod tree;
 
 use dag_types::id::Id as DagId;
 
-pub use crate::wire::{
-    anyid::{WireAnyId, WireLookupRequest, WireLookupResponse},
-    batch::WireBatch,
-    bookmark::{WireBookmarkEntry, WireBookmarkRequest},
-    clone::{WireCloneData, WireIdMapEntry},
-    commit::{
-        WireCommitGraphEntry, WireCommitGraphRequest, WireCommitHashLookupRequest,
-        WireCommitHashLookupResponse, WireCommitHashToLocationRequestBatch,
-        WireCommitHashToLocationResponse, WireCommitLocation, WireCommitLocationToHashRequest,
-        WireCommitLocationToHashRequestBatch, WireCommitLocationToHashResponse,
-        WireEphemeralPrepareRequest, WireEphemeralPrepareResponse, WireExtra,
-        WireFetchSnapshotRequest, WireFetchSnapshotResponse, WireHgChangesetContent,
-        WireHgMutationEntryContent, WireUploadBonsaiChangesetRequest, WireUploadHgChangeset,
-        WireUploadHgChangesetsRequest,
-    },
-    errors::{WireError, WireResult},
-    file::{WireFileEntry, WireFileRequest, WireUploadHgFilenodeRequest, WireUploadTokensResponse},
-    history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},
-    metadata::{
-        WireAnyFileContentId, WireContentId, WireDirectoryMetadata, WireDirectoryMetadataRequest,
-        WireFileMetadata, WireFileMetadataRequest, WireFileType, WireSha1, WireSha256,
-    },
-    token::{WireUploadToken, WireUploadTokenData, WireUploadTokenSignature},
-    tree::{
-        WireTreeEntry, WireTreeRequest, WireUploadTreeEntry, WireUploadTreeRequest,
-        WireUploadTreeResponse,
-    },
-};
+pub use crate::wire::anyid::WireAnyId;
+pub use crate::wire::anyid::WireLookupRequest;
+pub use crate::wire::anyid::WireLookupResponse;
+pub use crate::wire::batch::WireBatch;
+pub use crate::wire::bookmark::WireBookmarkEntry;
+pub use crate::wire::bookmark::WireBookmarkRequest;
+pub use crate::wire::clone::WireCloneData;
+pub use crate::wire::clone::WireIdMapEntry;
+pub use crate::wire::commit::WireCommitGraphEntry;
+pub use crate::wire::commit::WireCommitGraphRequest;
+pub use crate::wire::commit::WireCommitHashLookupRequest;
+pub use crate::wire::commit::WireCommitHashLookupResponse;
+pub use crate::wire::commit::WireCommitHashToLocationRequestBatch;
+pub use crate::wire::commit::WireCommitHashToLocationResponse;
+pub use crate::wire::commit::WireCommitLocation;
+pub use crate::wire::commit::WireCommitLocationToHashRequest;
+pub use crate::wire::commit::WireCommitLocationToHashRequestBatch;
+pub use crate::wire::commit::WireCommitLocationToHashResponse;
+pub use crate::wire::commit::WireEphemeralPrepareRequest;
+pub use crate::wire::commit::WireEphemeralPrepareResponse;
+pub use crate::wire::commit::WireExtra;
+pub use crate::wire::commit::WireFetchSnapshotRequest;
+pub use crate::wire::commit::WireFetchSnapshotResponse;
+pub use crate::wire::commit::WireHgChangesetContent;
+pub use crate::wire::commit::WireHgMutationEntryContent;
+pub use crate::wire::commit::WireUploadBonsaiChangesetRequest;
+pub use crate::wire::commit::WireUploadHgChangeset;
+pub use crate::wire::commit::WireUploadHgChangesetsRequest;
+pub use crate::wire::errors::WireError;
+pub use crate::wire::errors::WireResult;
+pub use crate::wire::file::WireFileEntry;
+pub use crate::wire::file::WireFileRequest;
+pub use crate::wire::file::WireUploadHgFilenodeRequest;
+pub use crate::wire::file::WireUploadTokensResponse;
+pub use crate::wire::history::WireHistoryRequest;
+pub use crate::wire::history::WireHistoryResponseChunk;
+pub use crate::wire::history::WireWireHistoryEntry;
+pub use crate::wire::metadata::WireAnyFileContentId;
+pub use crate::wire::metadata::WireContentId;
+pub use crate::wire::metadata::WireDirectoryMetadata;
+pub use crate::wire::metadata::WireDirectoryMetadataRequest;
+pub use crate::wire::metadata::WireFileMetadata;
+pub use crate::wire::metadata::WireFileMetadataRequest;
+pub use crate::wire::metadata::WireFileType;
+pub use crate::wire::metadata::WireSha1;
+pub use crate::wire::metadata::WireSha256;
+pub use crate::wire::token::WireUploadToken;
+pub use crate::wire::token::WireUploadTokenData;
+pub use crate::wire::token::WireUploadTokenSignature;
+pub use crate::wire::tree::WireTreeEntry;
+pub use crate::wire::tree::WireTreeRequest;
+pub use crate::wire::tree::WireUploadTreeEntry;
+pub use crate::wire::tree::WireUploadTreeRequest;
+pub use crate::wire::tree::WireUploadTreeResponse;
 
 use std::convert::Infallible;
 use std::fmt;
@@ -100,11 +126,16 @@ use std::num::NonZeroU64;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use thiserror::Error;
 
 use revisionstore_types::Metadata as RevisionstoreMetadata;
-use types::{path::ParseError as RepoPathParseError, HgId, Key, Parents, RepoPathBuf};
+use types::path::ParseError as RepoPathParseError;
+use types::HgId;
+use types::Key;
+use types::Parents;
+use types::RepoPathBuf;
 
 use crate::EdenApiServerErrorKind;
 

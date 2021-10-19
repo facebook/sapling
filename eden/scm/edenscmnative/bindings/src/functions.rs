@@ -8,7 +8,10 @@
 //! Lightweight utilities. To optimize compile time, do not put complex
 //! functions or functions depending on other crates here.
 
-use cpython::{py_fn, PyModule, PyResult, Python};
+use cpython::py_fn;
+use cpython::PyModule;
+use cpython::PyResult;
+use cpython::Python;
 use cpython_ext::PyNone;
 
 /// Populate an existing module so it contains utilities.

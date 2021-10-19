@@ -6,21 +6,22 @@
  */
 
 use std::cell::RefCell;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Context;
-use curl::{
-    self,
-    easy::Easy2,
-    multi::{Easy2Handle, Message, Multi},
-};
+use curl::easy::Easy2;
+use curl::multi::Easy2Handle;
+use curl::multi::Message;
+use curl::multi::Multi;
+use curl::{self};
 
-use crate::{
-    errors::{Abort, HttpClientError},
-    handler::HandlerExt,
-    progress::{Progress, ProgressReporter},
-    stats::Stats,
-};
+use crate::errors::Abort;
+use crate::errors::HttpClientError;
+use crate::handler::HandlerExt;
+use crate::progress::Progress;
+use crate::progress::ProgressReporter;
+use crate::stats::Stats;
 
 /// Maximum time that libcurl should wait for socket activity during a call to
 /// `Multi::wait`. The Multi session maintains its own timeout internally based

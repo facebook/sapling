@@ -13,6 +13,10 @@ mod errors;
 mod export;
 mod metalog;
 
-pub use crate::metalog::{resolver, CommitOptions, Id20, MetaLog};
-pub use errors::{Error, Result};
+pub use crate::metalog::resolver;
+pub use crate::metalog::CommitOptions;
+pub use crate::metalog::Id20;
+pub use crate::metalog::MetaLog;
+pub use errors::Error;
+pub use errors::Result;
 pub use indexedlog::Repair;

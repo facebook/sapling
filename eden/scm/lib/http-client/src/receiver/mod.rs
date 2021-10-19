@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::{Abort, HttpClientError};
+use crate::errors::Abort;
+use crate::errors::HttpClientError;
 use crate::header::Header;
 use crate::progress::Progress;
 
 pub mod channel;
 
-pub use channel::{ChannelReceiver, ResponseStreams};
+pub use channel::ChannelReceiver;
+pub use channel::ResponseStreams;
 
 /// Interface for streaming HTTP response handlers.
 pub trait Receiver: Sized {
@@ -46,10 +48,9 @@ pub(crate) mod testutil {
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    use http::{
-        header::{HeaderName, HeaderValue},
-        StatusCode,
-    };
+    use http::header::HeaderName;
+    use http::header::HeaderValue;
+    use http::StatusCode;
 
     /// Simple receiver for use in tests.
     #[derive(Clone, Debug)]

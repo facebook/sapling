@@ -7,15 +7,23 @@
 
 use crate::util::calc_contentid;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
-use anyhow::{bail, format_err, Context, Result};
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
 use edenapi::api::EdenApi;
-use edenapi_types::{
-    AnyFileContentId, AnyId, BonsaiChangesetContent, BonsaiFileChange, SnapshotRawData,
-    SnapshotRawFiles, UploadSnapshotResponse,
-};
-use futures::{StreamExt, TryStreamExt};
+use edenapi_types::AnyFileContentId;
+use edenapi_types::AnyId;
+use edenapi_types::BonsaiChangesetContent;
+use edenapi_types::BonsaiFileChange;
+use edenapi_types::SnapshotRawData;
+use edenapi_types::SnapshotRawFiles;
+use edenapi_types::UploadSnapshotResponse;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use minibytes::Bytes;
 
 pub async fn upload_snapshot(

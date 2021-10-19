@@ -6,16 +6,18 @@
  */
 
 use super::hints::Flags;
+use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
-use super::{AsyncNameSetQuery, Hints};
+use super::Hints;
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::protocol::disable_remote_protocol;
 use crate::Group;
+use crate::IdSet;
+use crate::IdSetIter;
 use crate::IdSpan;
 use crate::Result;
 use crate::VertexName;
-use crate::{IdSet, IdSetIter};
 use nonblocking::non_blocking_result;
 use std::any::Any;
 use std::fmt;

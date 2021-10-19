@@ -7,15 +7,21 @@
 
 //! Directory State Tree.
 
-use crate::filestate::{FileState, FileStateV2, StateFlags};
+use crate::filestate::FileState;
+use crate::filestate::FileStateV2;
+use crate::filestate::StateFlags;
 use crate::serialization::Serializable;
-use crate::store::{BlockId, Store, StoreView};
+use crate::store::BlockId;
+use crate::store::Store;
+use crate::store::StoreView;
 use crate::vecmap::VecMap;
 use crate::vecstack::VecStack;
 use anyhow::Result;
 use std::cell::Cell;
 use std::collections::Bound;
-use std::io::{Cursor, Read, Write};
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Write;
 
 use types::RepoPath;
 

@@ -10,14 +10,27 @@ use std::cmp;
 use std::ffi::CStr;
 use std::io;
 
-use zstd_sys::{
-    ZSTD_DCtx_setMaxWindowSize, ZSTD_compressBound, ZSTD_compress_advanced,
-    ZSTD_compressionParameters, ZSTD_createCCtx, ZSTD_createDCtx, ZSTD_decompress_usingDict,
-    ZSTD_findDecompressedSize, ZSTD_frameParameters, ZSTD_freeCCtx, ZSTD_freeDCtx,
-    ZSTD_getErrorName, ZSTD_isError, ZSTD_parameters, ZSTD_strategy, ZSTD_CHAINLOG_MIN,
-    ZSTD_CONTENTSIZE_ERROR, ZSTD_CONTENTSIZE_UNKNOWN, ZSTD_HASHLOG_MIN, ZSTD_SEARCHLOG_MIN,
-    ZSTD_WINDOWLOG_MIN,
-};
+use zstd_sys::ZSTD_DCtx_setMaxWindowSize;
+use zstd_sys::ZSTD_compressBound;
+use zstd_sys::ZSTD_compress_advanced;
+use zstd_sys::ZSTD_compressionParameters;
+use zstd_sys::ZSTD_createCCtx;
+use zstd_sys::ZSTD_createDCtx;
+use zstd_sys::ZSTD_decompress_usingDict;
+use zstd_sys::ZSTD_findDecompressedSize;
+use zstd_sys::ZSTD_frameParameters;
+use zstd_sys::ZSTD_freeCCtx;
+use zstd_sys::ZSTD_freeDCtx;
+use zstd_sys::ZSTD_getErrorName;
+use zstd_sys::ZSTD_isError;
+use zstd_sys::ZSTD_parameters;
+use zstd_sys::ZSTD_strategy;
+use zstd_sys::ZSTD_CHAINLOG_MIN;
+use zstd_sys::ZSTD_CONTENTSIZE_ERROR;
+use zstd_sys::ZSTD_CONTENTSIZE_UNKNOWN;
+use zstd_sys::ZSTD_HASHLOG_MIN;
+use zstd_sys::ZSTD_SEARCHLOG_MIN;
+use zstd_sys::ZSTD_WINDOWLOG_MIN;
 
 // They are complex "#define"s that are not exposed by bindgen automatically
 const ZSTD_WINDOWLOG_MAX: u32 = 30;
@@ -152,7 +165,8 @@ pub fn apply(base: &[u8], delta: &[u8]) -> io::Result<Vec<u8>> {
 mod tests {
     use super::*;
     use quickcheck::quickcheck;
-    use rand::{RngCore, SeedableRng};
+    use rand::RngCore;
+    use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
 
     fn check_round_trip(base: &[u8], data: &[u8]) -> bool {

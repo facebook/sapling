@@ -6,12 +6,16 @@
  */
 
 use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
-use std::path::{Path, PathBuf};
+use std::convert::TryFrom;
+use std::convert::TryInto;
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use url::Url;
@@ -19,10 +23,13 @@ use url::Url;
 use auth::AuthSection;
 use configmodel::convert::FromConfigValue;
 use configmodel::ConfigExt;
-use http_client::{Encoding, HttpVersion, MinTransferSpeed};
+use http_client::Encoding;
+use http_client::HttpVersion;
+use http_client::MinTransferSpeed;
 
 use crate::client::Client;
-use crate::errors::{ConfigError, EdenApiError};
+use crate::errors::ConfigError;
+use crate::errors::EdenApiError;
 use crate::EdenApi;
 
 /// External function that constructs other kinds of `EdenApi` from config.

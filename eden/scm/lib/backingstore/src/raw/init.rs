@@ -7,13 +7,15 @@
 
 use parking_lot::Mutex;
 use std::env;
-use std::sync::{Arc, Once};
+use std::sync::Arc;
+use std::sync::Once;
 use tracing::Level;
 use tracing_collector::TracingData;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::Layer as FmtLayer;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::{EnvFilter, Layer};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::Layer;
 
 static RUST_INIT: Once = Once::new();
 

@@ -10,8 +10,9 @@
 //! Combination of IdMap and IdDag.
 
 use crate::clone::CloneData;
+use crate::errors::programming;
+use crate::errors::DagError;
 use crate::errors::NotFoundError;
-use crate::errors::{programming, DagError};
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
@@ -60,7 +61,9 @@ use futures::TryStreamExt;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::env::var;
 use std::fmt;
 use std::io;

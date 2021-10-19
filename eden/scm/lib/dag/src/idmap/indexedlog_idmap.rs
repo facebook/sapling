@@ -9,21 +9,28 @@ use super::IdMapWrite;
 use crate::errors::bug;
 use crate::errors::programming;
 use crate::errors::NotFoundError;
-use crate::id::{Group, Id, VertexName};
+use crate::id::Group;
+use crate::id::Id;
+use crate::id::VertexName;
 use crate::ops::IdConvert;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::ops::TryClone;
 use crate::Result;
 use crate::VerLink;
-use byteorder::{BigEndian, ReadBytesExt};
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
 use fs2::FileExt;
 use indexedlog::log;
 use std::fmt;
-use std::fs::{self, File};
-use std::io::{Cursor, Read};
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{self, AtomicU64};
+use std::fs::File;
+use std::fs::{self};
+use std::io::Cursor;
+use std::io::Read;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{self};
 
 /// Bi-directional mapping between an integer id and a name (`[u8]`).
 ///

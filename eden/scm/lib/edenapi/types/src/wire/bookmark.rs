@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-pub use crate::bookmark::{WireBookmarkEntry, WireBookmarkRequest};
+pub use crate::bookmark::WireBookmarkEntry;
+pub use crate::bookmark::WireBookmarkRequest;
 
 #[cfg(test)]
 mod tests {

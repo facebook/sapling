@@ -9,14 +9,16 @@
 //! progress to unconditionally update the progress bar rather than using
 //! conditionals at every callsite.
 
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
-};
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use anyhow::Result;
 
-use crate::{ProgressBar, ProgressFactory, ProgressSpinner, Unit};
+use crate::ProgressBar;
+use crate::ProgressFactory;
+use crate::ProgressSpinner;
+use crate::Unit;
 
 pub struct NullProgressFactory;
 

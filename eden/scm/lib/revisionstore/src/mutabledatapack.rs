@@ -5,36 +5,48 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    collections::HashMap,
-    io::{Read, Seek, SeekFrom, Write},
-    mem::replace,
-    path::{Path, PathBuf},
-    u16,
-};
+use std::collections::HashMap;
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Write;
+use std::mem::replace;
+use std::path::Path;
+use std::path::PathBuf;
+use std::u16;
 
-use anyhow::{format_err, Error, Result};
-use byteorder::{BigEndian, WriteBytesExt};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::WriteBytesExt;
 use parking_lot::Mutex;
-use sha1::{Digest, Sha1};
-use tempfile::{Builder, NamedTempFile};
+use sha1::Digest;
+use sha1::Sha1;
+use tempfile::Builder;
+use tempfile::NamedTempFile;
 use thiserror::Error;
 
 use lz4_pyframe::compress;
-use types::{HgId, Key};
+use types::HgId;
+use types::Key;
 
 use mpatch::mpatch::get_full_text;
 
-use crate::{
-    dataindex::{DataIndex, DeltaLocation},
-    datapack::{DataEntry, DataPackVersion},
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
-    error::EmptyMutablePack,
-    localstore::LocalStore,
-    mutablepack::MutablePack,
-    packwriter::PackWriter,
-    types::StoreKey,
-};
+use crate::dataindex::DataIndex;
+use crate::dataindex::DeltaLocation;
+use crate::datapack::DataEntry;
+use crate::datapack::DataPackVersion;
+use crate::datastore::Delta;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::Metadata;
+use crate::datastore::StoreResult;
+use crate::error::EmptyMutablePack;
+use crate::localstore::LocalStore;
+use crate::mutablepack::MutablePack;
+use crate::packwriter::PackWriter;
+use crate::types::StoreKey;
 
 struct MutableDataPackInner {
     dir: PathBuf,
@@ -347,15 +359,16 @@ impl LocalStore for MutableDataPack {
 mod tests {
     use super::*;
 
-    use std::{
-        fs::{self, File},
-        io::Read,
-    };
+    use std::fs::File;
+    use std::fs::{self};
+    use std::io::Read;
 
     use minibytes::Bytes;
     use tempfile::tempdir;
 
-    use types::{testutil::*, Key, RepoPathBuf};
+    use types::testutil::*;
+    use types::Key;
+    use types::RepoPathBuf;
 
     #[test]
     fn test_basic_creation() {

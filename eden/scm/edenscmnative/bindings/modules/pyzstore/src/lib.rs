@@ -7,7 +7,9 @@
 
 #![allow(non_camel_case_types)]
 
-use ::zstore::{Id20, Repair, Zstore};
+use ::zstore::Id20;
+use ::zstore::Repair;
+use ::zstore::Zstore;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;

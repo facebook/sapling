@@ -6,7 +6,9 @@
  */
 
 use cpython::*;
-use cpython_ext::{PyPath, ResultPyErrExt, Str};
+use cpython_ext::PyPath;
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "fs"].join(".");

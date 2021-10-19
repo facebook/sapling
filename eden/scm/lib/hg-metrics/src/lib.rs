@@ -7,7 +7,8 @@
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;

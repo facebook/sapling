@@ -7,17 +7,19 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::path::{Component, Path, PathBuf};
+use std::path::Component;
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
-use ignore::{
-    self,
-    gitignore::{self, Glob},
-    Match,
-};
+use ignore::gitignore::Glob;
+use ignore::gitignore::{self};
+use ignore::Match;
+use ignore::{self};
 use types::RepoPath;
 
-use crate::{DirectoryMatch, Matcher};
+use crate::DirectoryMatch;
+use crate::Matcher;
 
 /// Lazy `.gitignore` matcher that loads `.gitignore` files on demand.
 pub struct GitignoreMatcher {
@@ -319,7 +321,8 @@ impl Matcher for GitignoreMatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::{create_dir_all, File};
+    use std::fs::create_dir_all;
+    use std::fs::File;
     use std::io::Write;
     use tempfile::tempdir;
 

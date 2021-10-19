@@ -9,5 +9,6 @@ mod attrs;
 mod lazy_tree;
 mod store_tree;
 
+pub use self::attrs::TreeAttributes;
 pub(crate) use self::lazy_tree::LazyTree;
-pub use self::{attrs::TreeAttributes, store_tree::StoreTree};
+pub use self::store_tree::StoreTree;

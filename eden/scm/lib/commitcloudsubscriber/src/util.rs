@@ -7,17 +7,21 @@
 
 use crate::error::*;
 use crate::subscriber::Subscription;
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use filetime::FileTime;
 use ini::Ini;
-use log::{error, info};
+use log::error;
+use log::info;
 use std::collections::HashMap;
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::io;
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 use std::str;
 use std::time::SystemTime;
-use std::{fs, io};
 
 static JOINED_DIR: &str = ".commitcloud";
 static JOINED: &str = "joined";

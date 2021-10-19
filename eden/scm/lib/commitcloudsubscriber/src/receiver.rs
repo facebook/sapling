@@ -6,10 +6,13 @@
  */
 
 use anyhow::Result;
-use log::{error, info};
-use serde::{Deserialize, Serialize};
+use log::error;
+use log::info;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
-use std::net::{SocketAddr, TcpListener};
+use std::net::SocketAddr;
+use std::net::TcpListener;
 use std::thread;
 
 /// Set of supported commands

@@ -11,4 +11,7 @@ mod vfs;
 
 pub use crate::async_vfs::AsyncVfsWriter;
 pub use crate::pathauditor::PathAuditor;
-pub use crate::vfs::{is_executable, is_symlink, UpdateFlag, VFS};
+pub use crate::vfs::is_executable;
+pub use crate::vfs::is_symlink;
+pub use crate::vfs::UpdateFlag;
+pub use crate::vfs::VFS;

@@ -26,7 +26,8 @@ pub trait SerdeWith<SerdeType> {
 macro_rules! serde_with_mod {
     ($modname:ident, $serdetype:ty) => {
         pub mod $modname {
-            use ::serde::{Deserializer, Serializer};
+            use ::serde::Deserializer;
+            use ::serde::Serializer;
             type SerdeType = $serdetype;
 
             pub fn serialize<S, T>(key: &T, serializer: S) -> Result<S::Ok, S::Error>

@@ -33,23 +33,42 @@
 // Integers are VLQ encoded, except for XXHASH64 and XXHASH32, which uses
 // LittleEndian encoding.
 
-use crate::errors::{IoResultExt, ResultExt};
-use crate::index::{self, Index, InsertKey, InsertValue, LeafValueIter, RangeIter, ReadonlyBuffer};
+use crate::errors::IoResultExt;
+use crate::errors::ResultExt;
+use crate::index::Index;
+use crate::index::InsertKey;
+use crate::index::InsertValue;
+use crate::index::LeafValueIter;
+use crate::index::RangeIter;
+use crate::index::ReadonlyBuffer;
+use crate::index::{self};
 use crate::lock::ScopedDirLock;
-use crate::utils::{self, mmap_path, xxhash, xxhash32};
-use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use crate::utils::mmap_path;
+use crate::utils::xxhash;
+use crate::utils::xxhash32;
+use crate::utils::{self};
+use byteorder::ByteOrder;
+use byteorder::LittleEndian;
+use byteorder::WriteBytesExt;
 use minibytes::Bytes;
 use std::borrow::Cow;
-use std::fmt::{self, Debug, Formatter};
-use std::fs::{self, File};
-use std::io::{self, Seek, SeekFrom, Write};
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::{self};
+use std::fs::File;
+use std::fs::{self};
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Write;
+use std::io::{self};
 use std::ops::RangeBounds;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use tracing::debug_span;
 use tracing::trace;
-use vlqencoding::{VLQDecodeAt, VLQEncode};
+use vlqencoding::VLQDecodeAt;
+use vlqencoding::VLQEncode;
 
 mod meta;
 mod open_options;
@@ -59,10 +78,13 @@ mod repair;
 pub(crate) mod tests;
 
 pub use self::meta::LogMetadata;
-pub use open_options::{
-    ChecksumType, FlushFilterContext, FlushFilterFunc, FlushFilterOutput, IndexDef, IndexOutput,
-    OpenOptions,
-};
+pub use open_options::ChecksumType;
+pub use open_options::FlushFilterContext;
+pub use open_options::FlushFilterFunc;
+pub use open_options::FlushFilterOutput;
+pub use open_options::IndexDef;
+pub use open_options::IndexOutput;
+pub use open_options::OpenOptions;
 pub use path::GenericPath;
 
 // Constants about file names
@@ -1306,7 +1328,8 @@ impl Log {
             }
         };
 
-        use std::cmp::Ordering::{Equal, Greater};
+        use std::cmp::Ordering::Equal;
+        use std::cmp::Ordering::Greater;
         match offset.cmp(&(buf.len() as u64)) {
             Equal => return Ok(None),
             Greater => {

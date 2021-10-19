@@ -5,17 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    convert::TryFrom,
-    str::{from_utf8, FromStr},
-    sync::Arc,
-};
+use std::convert::TryFrom;
+use std::str::from_utf8;
+use std::str::FromStr;
+use std::sync::Arc;
 
-use anyhow::{format_err, Result};
-use bytes::{Bytes, BytesMut};
+use anyhow::format_err;
+use anyhow::Result;
+use bytes::Bytes;
+use bytes::BytesMut;
 
-use manifest::{FileMetadata, FileType, FsNodeMetadata};
-use types::{HgId, Key, PathComponent, PathComponentBuf, RepoPath};
+use manifest::FileMetadata;
+use manifest::FileType;
+use manifest::FsNodeMetadata;
+use types::HgId;
+use types::Key;
+use types::PathComponent;
+use types::PathComponentBuf;
+use types::RepoPath;
 
 /// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
 /// data is stored. This allows more easy iteration on serialization format. It also simplifies

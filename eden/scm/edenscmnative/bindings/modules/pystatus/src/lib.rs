@@ -7,9 +7,11 @@
 
 #![allow(non_camel_case_types)]
 
-use ::status::{Status, StatusBuilder};
+use ::status::Status;
+use ::status::StatusBuilder;
 use cpython::*;
-use cpython_ext::{ExtractInnerRef, ResultPyErrExt};
+use cpython_ext::ExtractInnerRef;
+use cpython_ext::ResultPyErrExt;
 use types::RepoPathBuf;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

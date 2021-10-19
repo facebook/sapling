@@ -12,7 +12,8 @@ use std::str::FromStr;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use type_macros::auto_wire;
 
 /// Directory entry metadata

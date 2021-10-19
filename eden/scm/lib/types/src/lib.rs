@@ -24,7 +24,10 @@ pub use crate::key::Key;
 pub use crate::node::Node;
 pub use crate::nodeinfo::NodeInfo;
 pub use crate::parents::Parents;
-pub use crate::path::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf};
+pub use crate::path::PathComponent;
+pub use crate::path::PathComponentBuf;
+pub use crate::path::RepoPath;
+pub use crate::path::RepoPathBuf;
 pub use crate::sha::Sha256;
 
 pub type Id20 = HgId;

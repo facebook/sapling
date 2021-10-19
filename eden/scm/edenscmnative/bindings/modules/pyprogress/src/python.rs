@@ -13,8 +13,12 @@ use std::cell::RefCell;
 
 use cpython::*;
 
-use cpython_ext::{PyNone, ResultPyErrExt};
-use progress::{ProgressBar, ProgressFactory, ProgressSpinner, Unit};
+use cpython_ext::PyNone;
+use cpython_ext::ResultPyErrExt;
+use progress::ProgressBar;
+use progress::ProgressFactory;
+use progress::ProgressSpinner;
+use progress::Unit;
 
 use crate::rust::PyProgressFactory;
 

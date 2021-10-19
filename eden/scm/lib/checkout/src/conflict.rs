@@ -9,7 +9,8 @@ use crate::actions::UpdateAction;
 use manifest::FileMetadata;
 use std::collections::HashMap;
 use std::fmt;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
+use std::ops::DerefMut;
 use types::RepoPathBuf;
 
 pub enum Conflict {

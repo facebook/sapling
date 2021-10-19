@@ -82,30 +82,41 @@
 //! ```
 //! [1]: new in version 1.
 
-use std::{
-    fs::File,
-    io::{Cursor, Read, Write},
-    mem::{drop, take},
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::fs::File;
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Write;
+use std::mem::drop;
+use std::mem::take;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use anyhow::{format_err, Result};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use memmap::{Mmap, MmapOptions};
+use anyhow::format_err;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use memmap::Mmap;
+use memmap::MmapOptions;
 use thiserror::Error;
 
-use types::{HgId, Key, NodeInfo, RepoPath, RepoPathBuf};
+use types::HgId;
+use types::Key;
+use types::NodeInfo;
+use types::RepoPath;
+use types::RepoPathBuf;
 use util::path::remove_file;
 
-use crate::{
-    historyindex::HistoryIndex,
-    historystore::HgIdHistoryStore,
-    localstore::{ExtStoredPolicy, LocalStore, StoreFromPath},
-    repack::{Repackable, ToKeys},
-    sliceext::SliceExt,
-    types::StoreKey,
-};
+use crate::historyindex::HistoryIndex;
+use crate::historystore::HgIdHistoryStore;
+use crate::localstore::ExtStoredPolicy;
+use crate::localstore::LocalStore;
+use crate::localstore::StoreFromPath;
+use crate::repack::Repackable;
+use crate::repack::ToKeys;
+use crate::sliceext::SliceExt;
+use crate::types::StoreKey;
 
 #[derive(Debug, Error)]
 #[error("Historypack Error: {0:?}")]
@@ -468,14 +479,16 @@ pub mod tests {
     use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
 
-    use std::{
-        collections::HashMap,
-        fs::{set_permissions, File, OpenOptions},
-    };
+    use std::collections::HashMap;
+    use std::fs::set_permissions;
+    use std::fs::File;
+    use std::fs::OpenOptions;
 
-    use types::{testutil::*, RepoPathBuf};
+    use types::testutil::*;
+    use types::RepoPathBuf;
 
-    use crate::{historystore::HgIdMutableHistoryStore, mutablehistorypack::MutableHistoryPack};
+    use crate::historystore::HgIdMutableHistoryStore;
+    use crate::mutablehistorypack::MutableHistoryPack;
 
     pub fn make_historypack(tempdir: &TempDir, nodes: &HashMap<Key, NodeInfo>) -> HistoryPack {
         let mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);

@@ -5,31 +5,51 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, format_err, Result};
-use futures::{stream, try_join, Stream, StreamExt};
-use manifest::{FileMetadata, FileType, Manifest};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Result;
+use futures::stream;
+use futures::try_join;
+use futures::Stream;
+use futures::StreamExt;
+use manifest::FileMetadata;
+use manifest::FileType;
+use manifest::Manifest;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use progress_model::ProgressBar;
 use progress_model::Registry;
-use revisionstore::{
-    datastore::strip_metadata,
-    scmstore::{FileAttributes, FileStore},
-    RemoteDataStore, StoreKey, StoreResult,
-};
+use revisionstore::datastore::strip_metadata;
+use revisionstore::scmstore::FileAttributes;
+use revisionstore::scmstore::FileStore;
+use revisionstore::RemoteDataStore;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
 use std::collections::HashMap;
 use std::fmt;
-use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::SystemTime;
-use tracing::{debug, warn};
+use tracing::debug;
+use tracing::warn;
 use treestate::filestate::StateFlags;
 use treestate::treestate::TreeState;
-use types::{HgId, Key, RepoPath, RepoPathBuf};
-use vfs::{AsyncVfsWriter, UpdateFlag, VFS};
+use types::HgId;
+use types::Key;
+use types::RepoPath;
+use types::RepoPathBuf;
+use vfs::AsyncVfsWriter;
+use vfs::UpdateFlag;
+use vfs::VFS;
 
 #[allow(dead_code)]
 mod actions;
@@ -38,11 +58,15 @@ mod conflict;
 #[allow(dead_code)]
 mod merge;
 
-pub use actions::{Action, ActionMap};
-use configmodel::{Config, ConfigExt};
+pub use actions::Action;
+pub use actions::ActionMap;
+use configmodel::Config;
+use configmodel::ConfigExt;
 pub use conflict::Conflict;
-pub use merge::{Merge, MergeResult};
-use status::{FileStatus, Status};
+pub use merge::Merge;
+pub use merge::MergeResult;
+use status::FileStatus;
+use status::Status;
 use tokio::runtime::Handle;
 
 const PREFETCH_CHUNK_SIZE: usize = 1000;
@@ -810,16 +834,19 @@ mod test {
     use super::*;
     use anyhow::ensure;
     use anyhow::Context;
-    use manifest_tree::testutil::{make_tree_manifest_from_meta, TestStore};
+    use manifest_tree::testutil::make_tree_manifest_from_meta;
+    use manifest_tree::testutil::TestStore;
     use manifest_tree::Diff;
     use pathmatcher::AlwaysMatcher;
-    use quickcheck::{Arbitrary, Gen};
+    use quickcheck::Arbitrary;
+    use quickcheck::Gen;
     use std::collections::HashMap;
     use std::fs::create_dir;
     use std::path::Path;
     use tempfile::TempDir;
     use types::testutil::generate_repo_paths;
-    use walkdir::{DirEntry, WalkDir};
+    use walkdir::DirEntry;
+    use walkdir::WalkDir;
 
     #[tokio::test]
     async fn test_basic_checkout() -> Result<()> {

@@ -7,7 +7,8 @@
 
 use libc::ssize_t;
 use mpatch_sys::*;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::c_char;
+use std::os::raw::c_void;
 use std::ptr;
 
 unsafe extern "C" fn get_next_link(deltas: *mut c_void, index: ssize_t) -> *mut mpatch_flist {

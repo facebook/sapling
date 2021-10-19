@@ -10,13 +10,14 @@ use anyhow::Result;
 
 use minibytes::Bytes;
 
-use crate::{
-    datastore::{
-        ContentDataStore, ContentMetadata, HgIdDataStore, Metadata, RemoteDataStore, StoreResult,
-    },
-    types::StoreKey,
-    unionstore::UnionStore,
-};
+use crate::datastore::ContentDataStore;
+use crate::datastore::ContentMetadata;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::Metadata;
+use crate::datastore::RemoteDataStore;
+use crate::datastore::StoreResult;
+use crate::types::StoreKey;
+use crate::unionstore::UnionStore;
 
 pub type UnionHgIdDataStore<T> = UnionStore<T>;
 
@@ -117,7 +118,8 @@ mod tests {
 
     use types::Key;
 
-    use crate::{localstore::LocalStore, types::StoreKey};
+    use crate::localstore::LocalStore;
+    use crate::types::StoreKey;
 
     struct BadHgIdDataStore;
 

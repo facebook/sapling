@@ -11,14 +11,22 @@ use std::path::Path;
 use std::sync::Arc;
 
 use cpython::*;
-use cpython_ext::error::{AnyhowResultExt, ResultPyErrExt};
-use cpython_ext::{ExtractInner, ExtractInnerRef, PyPath, PyPathBuf, Str};
+use cpython_ext::error::AnyhowResultExt;
+use cpython_ext::error::ResultPyErrExt;
+use cpython_ext::ExtractInner;
+use cpython_ext::ExtractInnerRef;
+use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
+use cpython_ext::Str;
 
 use anyhow::Result;
-use pathmatcher::{
-    AlwaysMatcher, DifferenceMatcher, DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher,
-    UnionMatcher,
-};
+use pathmatcher::AlwaysMatcher;
+use pathmatcher::DifferenceMatcher;
+use pathmatcher::DirectoryMatch;
+use pathmatcher::GitignoreMatcher;
+use pathmatcher::Matcher;
+use pathmatcher::TreeMatcher;
+use pathmatcher::UnionMatcher;
 use types::RepoPath;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

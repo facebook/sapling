@@ -9,12 +9,19 @@ use std::collections::HashMap;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 
 use types::HgId;
 
-use crate::wire::{ToApi, ToWire, WireDagId, WireHgId, WireToApiConversionError};
-use crate::{CloneData, FlatSegment, PreparedFlatSegments};
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireDagId;
+use crate::wire::WireHgId;
+use crate::wire::WireToApiConversionError;
+use crate::CloneData;
+use crate::FlatSegment;
+use crate::PreparedFlatSegments;
 
 // Only when an id has more than one parent it is sent over the wire.
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]

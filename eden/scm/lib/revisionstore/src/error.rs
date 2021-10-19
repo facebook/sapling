@@ -12,7 +12,8 @@ use thiserror::Error;
 use url::Url;
 
 use http::status::StatusCode;
-use http_client::{HttpClientError, Method};
+use http_client::HttpClientError;
+use http_client::Method;
 
 #[derive(Debug, Error)]
 #[error("Empty Mutable Pack")]

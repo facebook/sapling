@@ -7,9 +7,11 @@
 
 use crate::error::*;
 use anyhow::Result;
-use log::{error, info};
+use log::error;
+use log::info;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Command;
+use std::process::Stdio;
 use std::time::Instant;
 
 pub struct CloudSyncTrigger;

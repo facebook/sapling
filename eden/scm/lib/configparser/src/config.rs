@@ -11,18 +11,22 @@ use std::convert::AsRef;
 use std::fs;
 use std::iter::FromIterator;
 use std::ops::Range;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
 
 use indexmap::IndexMap;
 use minibytes::Text;
-use pest::{self, Parser, Span};
+use pest::Parser;
+use pest::Span;
+use pest::{self};
 use util::path::expand_path;
 
 use crate::convert::FromConfigValue;
 use crate::error::Error;
-use crate::parser::{ConfigParser, Rule};
+use crate::parser::ConfigParser;
+use crate::parser::Rule;
 
 type Pair<'a> = pest::iterators::Pair<'a, Rule>;
 

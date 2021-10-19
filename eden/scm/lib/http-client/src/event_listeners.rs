@@ -8,7 +8,9 @@
 use std::sync::Arc;
 
 use crate::progress::Progress;
-use crate::request::{Request, RequestContext, RequestInfo};
+use crate::request::Request;
+use crate::request::RequestContext;
+use crate::request::RequestInfo;
 use crate::stats::Stats;
 
 /// Generate a struct for holding event listeners (callbacks).

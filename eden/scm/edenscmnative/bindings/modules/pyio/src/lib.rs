@@ -9,7 +9,9 @@
 
 use clidispatch::io::IO as RustIO;
 use cpython::*;
-use cpython_ext::{wrap_rust_write, PyNone, ResultPyErrExt};
+use cpython_ext::wrap_rust_write;
+use cpython_ext::PyNone;
+use cpython_ext::ResultPyErrExt;
 use pyconfigparser::config as PyConfig;
 use std::cell::Cell;
 

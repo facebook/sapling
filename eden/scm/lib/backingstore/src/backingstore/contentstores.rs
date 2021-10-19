@@ -10,18 +10,31 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use log::warn;
-use tracing::{event, instrument, Level};
+use tracing::event;
+use tracing::instrument;
+use tracing::Level;
 
 use configparser::config::ConfigSet;
 use edenapi::Builder as EdenApiBuilder;
-use manifest::{List, Manifest};
+use manifest::List;
+use manifest::Manifest;
 use manifest_tree::TreeManifest;
 use progress::null::NullProgressFactory;
-use revisionstore::{
-    ContentStore, ContentStoreBuilder, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore,
-    LegacyStore, LocalStore, MemcacheStore, RemoteDataStore, StoreKey, StoreResult,
-};
-use types::{HgId, Key, RepoPath, RepoPathBuf};
+use revisionstore::ContentStore;
+use revisionstore::ContentStoreBuilder;
+use revisionstore::EdenApiFileStore;
+use revisionstore::EdenApiTreeStore;
+use revisionstore::HgIdDataStore;
+use revisionstore::LegacyStore;
+use revisionstore::LocalStore;
+use revisionstore::MemcacheStore;
+use revisionstore::RemoteDataStore;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
+use types::HgId;
+use types::Key;
+use types::RepoPath;
+use types::RepoPathBuf;
 
 use crate::remotestore::FakeRemoteStore;
 use crate::treecontentstore::TreeContentStore;

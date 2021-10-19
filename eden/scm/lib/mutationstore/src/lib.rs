@@ -39,10 +39,11 @@ use dag::Set;
 use dag::VertexName;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
-use indexedlog::{
-    log::{self as ilog, IndexDef, IndexOutput, Log},
-    DefaultOpenOptions,
-};
+use indexedlog::log::IndexDef;
+use indexedlog::log::IndexOutput;
+use indexedlog::log::Log;
+use indexedlog::log::{self as ilog};
+use indexedlog::DefaultOpenOptions;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::Cursor;

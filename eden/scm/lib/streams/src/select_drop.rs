@@ -10,10 +10,12 @@
 
 use std::pin::Pin;
 
-use futures::{
-    stream::{Fuse, FusedStream, Stream, StreamExt},
-    task::{Context, Poll},
-};
+use futures::stream::Fuse;
+use futures::stream::FusedStream;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use futures::task::Context;
+use futures::task::Poll;
 use pin_project::pin_project;
 
 /// Stream for the [`select_drop()`] function.
@@ -178,8 +180,12 @@ mod tests {
     use super::*;
 
     use anyhow::Result;
-    use futures::{channel::mpsc::channel, stream, SinkExt, StreamExt};
-    use tokio::time::{timeout, Duration};
+    use futures::channel::mpsc::channel;
+    use futures::stream;
+    use futures::SinkExt;
+    use futures::StreamExt;
+    use tokio::time::timeout;
+    use tokio::time::Duration;
 
     #[tokio::test]
     async fn test_no_deadlock() -> Result<()> {

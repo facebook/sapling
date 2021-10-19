@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    cell::{RefCell, RefMut},
-    fmt::Debug,
-    io::{self, BufWriter, Write},
-};
+use std::cell::RefCell;
+use std::cell::RefMut;
+use std::fmt::Debug;
+use std::io::BufWriter;
+use std::io::Write;
+use std::io::{self};
 
 use anyhow::Result;
 
@@ -68,10 +69,12 @@ impl<T: Write> Write for PackWriter<T> {
 mod tests {
     use super::*;
 
-    use byteorder::{ReadBytesExt, WriteBytesExt};
+    use byteorder::ReadBytesExt;
+    use byteorder::WriteBytesExt;
     use tempfile::tempfile;
 
-    use std::io::{Seek, SeekFrom};
+    use std::io::Seek;
+    use std::io::SeekFrom;
 
     #[test]
     fn test_bytes_written() {

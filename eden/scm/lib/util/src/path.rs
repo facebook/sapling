@@ -10,11 +10,16 @@
 use std::borrow::Cow;
 use std::env;
 use std::ffi::OsStr;
-use std::fs::{self, remove_file as fs_remove_file};
-use std::io::{self, ErrorKind, Write};
+use std::fs::remove_file as fs_remove_file;
+use std::fs::{self};
+use std::io::ErrorKind;
+use std::io::Write;
+use std::io::{self};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Component, Path, PathBuf};
+use std::path::Component;
+use std::path::Path;
+use std::path::PathBuf;
 
 /// Pick a random file name `path.$RAND.atomic` as `real_path`. Write `data` to
 /// it.  Then modify the symlink `path` to point to `real_path`.  Attempt to

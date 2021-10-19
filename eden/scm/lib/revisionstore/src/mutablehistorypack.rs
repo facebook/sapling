@@ -5,32 +5,40 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    io::Write,
-    iter::FromIterator,
-    path::{Path, PathBuf},
-};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
+use std::io::Write;
+use std::iter::FromIterator;
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 use byteorder::WriteBytesExt;
 use parking_lot::Mutex;
-use sha1::{Digest, Sha1};
+use sha1::Digest;
+use sha1::Sha1;
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
-use types::{Key, NodeInfo, RepoPath, RepoPathBuf};
+use types::Key;
+use types::NodeInfo;
+use types::RepoPath;
+use types::RepoPathBuf;
 
-use crate::{
-    error::EmptyMutablePack,
-    historyindex::{FileSectionLocation, HistoryIndex, NodeLocation},
-    historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion},
-    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
-    localstore::LocalStore,
-    mutablepack::MutablePack,
-    packwriter::PackWriter,
-    types::StoreKey,
-};
+use crate::error::EmptyMutablePack;
+use crate::historyindex::FileSectionLocation;
+use crate::historyindex::HistoryIndex;
+use crate::historyindex::NodeLocation;
+use crate::historypack::FileSectionHeader;
+use crate::historypack::HistoryEntry;
+use crate::historypack::HistoryPackVersion;
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::localstore::LocalStore;
+use crate::mutablepack::MutablePack;
+use crate::packwriter::PackWriter;
+use crate::types::StoreKey;
 
 #[derive(Debug, Error)]
 #[error("Mutable History Pack Error: {0:?}")]
@@ -371,7 +379,8 @@ mod tests {
     use rand_chacha::ChaChaRng;
     use tempfile::tempdir;
 
-    use types::{hgid::HgId, testutil::key};
+    use types::hgid::HgId;
+    use types::testutil::key;
 
     use crate::historypack::HistoryPack;
     use crate::repack::ToKeys;

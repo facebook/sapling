@@ -9,7 +9,9 @@
 //!
 //! Utilities to parse ASCII revision DAG and create commits from them.
 
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Direction {
@@ -54,7 +56,8 @@ enum Direction {
 /// assert_eq!(format!("{:?}", edges), expected);
 /// ```
 pub fn parse(text: impl AsRef<str>) -> BTreeMap<String, BTreeSet<String>> {
-    use Direction::{BottomTop, LeftRight};
+    use Direction::BottomTop;
+    use Direction::LeftRight;
 
     // Detect direction.
     let direction = if text.as_ref().contains('|') {

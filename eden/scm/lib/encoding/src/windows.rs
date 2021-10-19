@@ -6,10 +6,13 @@
  */
 
 use std::borrow::Cow;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
+use std::ffi::OsString;
 use std::io;
-use std::os::windows::ffi::{OsStrExt, OsStringExt};
-use std::path::{Path, PathBuf};
+use std::os::windows::ffi::OsStrExt;
+use std::os::windows::ffi::OsStringExt;
+use std::path::Path;
+use std::path::PathBuf;
 
 const MB_ERR_INVALID_CHARS: winapi::DWORD = 0x00000008;
 const WC_COMPOSITECHECK: winapi::DWORD = 0x00000200;

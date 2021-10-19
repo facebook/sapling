@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::{fmt, mem, time::Duration};
+use std::fmt;
+use std::mem;
+use std::time::Duration;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Stats {

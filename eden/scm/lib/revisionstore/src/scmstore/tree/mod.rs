@@ -11,26 +11,41 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 
-use ::types::{Key, RepoPathBuf};
+use ::types::Key;
+use ::types::RepoPathBuf;
 use minibytes::Bytes;
 use tracing::field;
 
 pub mod types;
 
-use crate::{
-    datastore::{HgIdDataStore, RemoteDataStore},
-    indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
-    memcache::MEMCACHE_DELAY,
-    scmstore::{
-        fetch::{CommonFetchState, FetchErrors, FetchResults},
-        tree::types::{LazyTree, StoreTree, TreeAttributes},
-    },
-    util, ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiTreeStore,
-    HgIdMutableDeltaStore, LegacyStore, LocalStore, MemcacheStore, Metadata, RepackLocation,
-    StoreKey, StoreResult,
-};
+use crate::datastore::HgIdDataStore;
+use crate::datastore::RemoteDataStore;
+use crate::indexedlogdatastore::Entry;
+use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+use crate::memcache::MEMCACHE_DELAY;
+use crate::scmstore::fetch::CommonFetchState;
+use crate::scmstore::fetch::FetchErrors;
+use crate::scmstore::fetch::FetchResults;
+use crate::scmstore::tree::types::LazyTree;
+use crate::scmstore::tree::types::StoreTree;
+use crate::scmstore::tree::types::TreeAttributes;
+use crate::util;
+use crate::ContentDataStore;
+use crate::ContentMetadata;
+use crate::ContentStore;
+use crate::Delta;
+use crate::EdenApiTreeStore;
+use crate::HgIdMutableDeltaStore;
+use crate::LegacyStore;
+use crate::LocalStore;
+use crate::MemcacheStore;
+use crate::Metadata;
+use crate::RepackLocation;
+use crate::StoreKey;
+use crate::StoreResult;
 
 pub struct TreeStore {
     /// The "local" indexedlog store. Stores content that is created locally.

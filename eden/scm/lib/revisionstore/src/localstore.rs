@@ -7,7 +7,8 @@
 
 //! Common method shared between all mercurial stores
 
-use std::{ops::Deref, path::Path};
+use std::ops::Deref;
+use std::path::Path;
 
 use anyhow::Result;
 

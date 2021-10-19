@@ -5,14 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use blackbox::{
-    event::{Event, NetworkOp},
-    Blackbox, BlackboxOptions, IndexFilter,
-};
-use minibench::{
-    bench,
-    measure::{Both, Bytes, Measure, WallClock, IO},
-};
+use blackbox::event::Event;
+use blackbox::event::NetworkOp;
+use blackbox::Blackbox;
+use blackbox::BlackboxOptions;
+use blackbox::IndexFilter;
+use minibench::bench;
+use minibench::measure::Both;
+use minibench::measure::Bytes;
+use minibench::measure::Measure;
+use minibench::measure::WallClock;
+use minibench::measure::IO;
 use serde_json::json;
 use tempfile::tempdir;
 

@@ -5,30 +5,46 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
 
-use anyhow::{Error, Result};
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use configparser::config::ConfigSet;
-use edenapi::{EdenApi, EdenApiError, Response, ResponseMeta, Stats};
-use edenapi_types::{
-    EdenApiServerError, FileAttributes, FileContent, FileEntry, FileSpec, HistoryEntry,
-    TreeAttributes, TreeEntry,
-};
+use edenapi::EdenApi;
+use edenapi::EdenApiError;
+use edenapi::Response;
+use edenapi::ResponseMeta;
+use edenapi::Stats;
+use edenapi_types::EdenApiServerError;
+use edenapi_types::FileAttributes;
+use edenapi_types::FileContent;
+use edenapi_types::FileEntry;
+use edenapi_types::FileSpec;
+use edenapi_types::HistoryEntry;
+use edenapi_types::TreeAttributes;
+use edenapi_types::TreeEntry;
 use futures::prelude::*;
 use minibytes::Bytes;
-use types::{Key, NodeInfo, Parents};
+use types::Key;
+use types::NodeInfo;
+use types::Parents;
 
-use crate::{
-    datastore::{
-        Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
-    },
-    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
-    localstore::LocalStore,
-    remotestore::HgIdRemoteStore,
-    scmstore::file::LazyFile,
-    types::StoreKey,
-};
+use crate::datastore::Delta;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::Metadata;
+use crate::datastore::RemoteDataStore;
+use crate::datastore::StoreResult;
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::historystore::RemoteHistoryStore;
+use crate::localstore::LocalStore;
+use crate::remotestore::HgIdRemoteStore;
+use crate::scmstore::file::LazyFile;
+use crate::types::StoreKey;
 
 #[cfg(test)]
 pub use lfs_mocks::*;
@@ -383,11 +399,17 @@ pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
 #[cfg(test)]
 mod lfs_mocks {
     use super::*;
-    use lfs_protocol::{
-        ObjectAction, ObjectError, ObjectStatus, Operation, RequestObject, ResponseBatch,
-        ResponseObject, Sha256 as LfsSha256, Transfer,
-    };
-    use mockito::{mock, Mock};
+    use lfs_protocol::ObjectAction;
+    use lfs_protocol::ObjectError;
+    use lfs_protocol::ObjectStatus;
+    use lfs_protocol::Operation;
+    use lfs_protocol::RequestObject;
+    use lfs_protocol::ResponseBatch;
+    use lfs_protocol::ResponseObject;
+    use lfs_protocol::Sha256 as LfsSha256;
+    use lfs_protocol::Transfer;
+    use mockito::mock;
+    use mockito::Mock;
     use std::convert::TryInto;
     use types::Sha256;
 

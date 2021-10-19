@@ -6,11 +6,13 @@
  */
 
 use cpython::*;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::cmp::Ord;
 use std::cmp::Ordering;
 use std::cmp::PartialOrd;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::ops::Deref;
 
 /// Wrapper type. Converts between pure Rust bytes-like types and PyBytes.

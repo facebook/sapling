@@ -9,40 +9,62 @@ mod fetch;
 mod metrics;
 mod types;
 
-pub use self::{
-    metrics::{FileStoreFetchMetrics, FileStoreMetrics, FileStoreWriteMetrics},
-    types::{FileAttributes, FileAuxData, StoreFile},
-};
+pub use self::metrics::FileStoreFetchMetrics;
+pub use self::metrics::FileStoreMetrics;
+pub use self::metrics::FileStoreWriteMetrics;
+pub use self::types::FileAttributes;
+pub use self::types::FileAuxData;
+pub use self::types::StoreFile;
 
-pub(crate) use self::{fetch::FetchState, types::LazyFile};
+pub(crate) use self::fetch::FetchState;
+pub(crate) use self::types::LazyFile;
 
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::{anyhow, bail, ensure, Result};
-use parking_lot::{Mutex, RwLock};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Result;
+use parking_lot::Mutex;
+use parking_lot::RwLock;
 use tracing::instrument;
 
-use ::types::{Key, RepoPathBuf};
+use ::types::Key;
+use ::types::RepoPathBuf;
 use minibytes::Bytes;
 
-use crate::{
-    datastore::{HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore},
-    fetch_logger::FetchLogger,
-    indexedlogauxstore::AuxStore,
-    indexedlogdatastore::{Entry, IndexedLogHgIdDataStore},
-    indexedlogutil::StoreType,
-    lfs::{lfs_from_hg_file_blob, LfsRemote, LfsStore},
-    memcache::MEMCACHE_DELAY,
-    remotestore::HgIdRemoteStore,
-    scmstore::activitylogger::ActivityLogger,
-    scmstore::fetch::FetchResults,
-    ContentDataStore, ContentMetadata, ContentStore, Delta, EdenApiFileStore, ExtStoredPolicy,
-    LegacyStore, LocalStore, MemcacheStore, Metadata, MultiplexDeltaStore, RepackLocation,
-    StoreKey, StoreResult,
-};
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::RemoteDataStore;
+use crate::fetch_logger::FetchLogger;
+use crate::indexedlogauxstore::AuxStore;
+use crate::indexedlogdatastore::Entry;
+use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+use crate::indexedlogutil::StoreType;
+use crate::lfs::lfs_from_hg_file_blob;
+use crate::lfs::LfsRemote;
+use crate::lfs::LfsStore;
+use crate::memcache::MEMCACHE_DELAY;
+use crate::remotestore::HgIdRemoteStore;
+use crate::scmstore::activitylogger::ActivityLogger;
+use crate::scmstore::fetch::FetchResults;
+use crate::ContentDataStore;
+use crate::ContentMetadata;
+use crate::ContentStore;
+use crate::Delta;
+use crate::EdenApiFileStore;
+use crate::ExtStoredPolicy;
+use crate::LegacyStore;
+use crate::LocalStore;
+use crate::MemcacheStore;
+use crate::Metadata;
+use crate::MultiplexDeltaStore;
+use crate::RepackLocation;
+use crate::StoreKey;
+use crate::StoreResult;
 
 pub struct FileStore {
     // Config

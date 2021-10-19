@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
-use crate::wire::{ToApi, ToWire, WireToApiConversionError};
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireToApiConversionError;
 use crate::ServerError;
 
 pub type WireResult<T> = Result<T, WireError>;

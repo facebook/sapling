@@ -7,16 +7,24 @@
 
 #![allow(non_camel_case_types)]
 
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
+use std::cell::RefCell;
 use std::thread::JoinHandle;
 
 use clidispatch::io::IO;
 use cpython::*;
-use cpython_ext::{PyNone, ResultPyErrExt};
-use streampager::action::{Action, ActionSender};
-use streampager::bindings::{Binding, Category, KeyCode, Keymap, Modifiers};
+use cpython_ext::PyNone;
+use cpython_ext::ResultPyErrExt;
+use streampager::action::Action;
+use streampager::action::ActionSender;
+use streampager::bindings::Binding;
+use streampager::bindings::Category;
+use streampager::bindings::KeyCode;
+use streampager::bindings::Keymap;
+use streampager::bindings::Modifiers;
 use streampager::config::InterfaceMode;
-use streampager::control::{Change, Controller};
+use streampager::control::Change;
+use streampager::control::Controller;
 use streampager::Pager;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

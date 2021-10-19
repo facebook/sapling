@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::ops::{Deref, Range};
+use std::ops::Deref;
+use std::ops::Range;
 use vlqencoding::VLQDecode;
 
 mod gca;
@@ -15,7 +16,9 @@ mod test_context;
 
 pub use gca::gca;
 pub use range::range;
-pub use test_context::{GeneralTestContext, OctopusTestContext, TestContext};
+pub use test_context::GeneralTestContext;
+pub use test_context::OctopusTestContext;
+pub use test_context::TestContext;
 
 pub static MOZILLA: &[u8] = include_bytes!("mozilla-central.bindag");
 pub static GIT: &[u8] = include_bytes!("git.bindag");

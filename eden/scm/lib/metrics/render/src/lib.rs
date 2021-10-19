@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use metrics::{Counter, Registry};
+use metrics::Counter;
+use metrics::Registry;
 use once_cell::sync::Lazy;
+use progress_model::IoSample;
+use progress_model::IoTimeSeries;
 use progress_model::Registry as ProgressRegistry;
-use progress_model::{IoSample, IoTimeSeries, TimeSeriesMode};
+use progress_model::TimeSeriesMode;
 use std::collections::HashSet;
 use std::env;
 use std::sync::Weak;

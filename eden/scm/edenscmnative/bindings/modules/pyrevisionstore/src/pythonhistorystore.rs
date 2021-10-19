@@ -6,16 +6,30 @@
  */
 
 use anyhow::Result;
-use cpython::{
-    exc, FromPyObject, NoArgs, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python,
-    PythonObject, PythonObjectWithTypeObject,
-};
+use cpython::exc;
+use cpython::FromPyObject;
+use cpython::NoArgs;
+use cpython::ObjectProtocol;
+use cpython::PyBytes;
+use cpython::PyDict;
+use cpython::PyList;
+use cpython::PyObject;
+use cpython::Python;
+use cpython::PythonObject;
+use cpython::PythonObjectWithTypeObject;
 
-use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{HgIdHistoryStore, LocalStore, StoreKey};
-use types::{Key, NodeInfo};
+use cpython_ext::PyErr;
+use cpython_ext::PyPathBuf;
+use revisionstore::HgIdHistoryStore;
+use revisionstore::LocalStore;
+use revisionstore::StoreKey;
+use types::Key;
+use types::NodeInfo;
 
-use crate::pythonutil::{bytes_from_tuple, from_key_to_tuple, from_tuple_to_key, to_node_info};
+use crate::pythonutil::bytes_from_tuple;
+use crate::pythonutil::from_key_to_tuple;
+use crate::pythonutil::from_tuple_to_key;
+use crate::pythonutil::to_node_info;
 
 pub struct PythonHgIdHistoryStore {
     py_store: PyObject,

@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use lz4_pyframe::{compress, decompress};
-use minibench::{bench, elapsed};
-use rand_core::{RngCore, SeedableRng};
+use lz4_pyframe::compress;
+use lz4_pyframe::decompress;
+use minibench::bench;
+use minibench::elapsed;
+use rand_core::RngCore;
+use rand_core::SeedableRng;
 
 fn main() {
     let mut rng = rand_chacha::ChaChaRng::seed_from_u64(0);

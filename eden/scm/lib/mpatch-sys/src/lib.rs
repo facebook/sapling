@@ -9,7 +9,9 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use std::os::raw::{c_char, c_int, c_void};
+use std::os::raw::c_char;
+use std::os::raw::c_int;
+use std::os::raw::c_void;
 
 #[repr(C)]
 pub struct mpatch_flist {

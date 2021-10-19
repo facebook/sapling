@@ -10,8 +10,14 @@
 use crate::filestate::FileState;
 use crate::filestore::FileStore;
 use crate::serialization::Serializable;
-use crate::store::{BlockId, NullStore, Store, StoreView};
-use crate::tree::{Key, KeyRef, Tree, VisitorResult};
+use crate::store::BlockId;
+use crate::store::NullStore;
+use crate::store::Store;
+use crate::store::StoreView;
+use crate::tree::Key;
+use crate::tree::KeyRef;
+use crate::tree::Tree;
+use crate::tree::VisitorResult;
 use anyhow::Result;
 use std::io::Cursor;
 use std::path::Path;

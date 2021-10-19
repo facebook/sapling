@@ -8,22 +8,28 @@
 use crate::action::CloudSyncTrigger;
 use crate::config::CommitCloudConfig;
 use crate::error::*;
-use crate::receiver::CommandName::{
-    self, CommitCloudCancelSubscriptions, CommitCloudRestartSubscriptions,
-    CommitCloudStartSubscriptions,
-};
+use crate::receiver::CommandName::CommitCloudCancelSubscriptions;
+use crate::receiver::CommandName::CommitCloudRestartSubscriptions;
+use crate::receiver::CommandName::CommitCloudStartSubscriptions;
+use crate::receiver::CommandName::{self};
 use crate::util;
-use anyhow::{bail, Result};
+use anyhow::bail;
+use anyhow::Result;
 use eventsource::reqwest::Client;
-use log::{error, info};
+use log::error;
+use log::info;
 use reqwest::Url;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{mpsc, Arc};
-use std::time::{Duration, SystemTime};
-use std::{str, thread};
+use std::str;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::sync::mpsc;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
+use std::time::SystemTime;
 
 #[allow(unused_macros)]
 macro_rules! tinfo {

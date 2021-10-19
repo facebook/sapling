@@ -14,14 +14,20 @@ use async_runtime::block_on;
 use progress::Unit;
 use tracing::field;
 
-use crate::{
-    datastore::{HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult},
-    localstore::LocalStore,
-    types::StoreKey,
-    util,
-};
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::Metadata;
+use crate::datastore::RemoteDataStore;
+use crate::datastore::StoreResult;
+use crate::localstore::LocalStore;
+use crate::types::StoreKey;
+use crate::util;
 
-use super::{hgid_keys, EdenApiRemoteStore, EdenApiStoreKind, File, Tree};
+use super::hgid_keys;
+use super::EdenApiRemoteStore;
+use super::EdenApiStoreKind;
+use super::File;
+use super::Tree;
 
 /// A data store backed by an `EdenApiRemoteStore` and a mutable store.
 ///
@@ -184,18 +190,22 @@ mod tests {
     use tempfile::TempDir;
 
     use configparser::config::ConfigSet;
-    use edenapi_types::{ContentId, Sha1};
-    use types::{testutil::*, Sha256};
+    use edenapi_types::ContentId;
+    use edenapi_types::Sha1;
+    use types::testutil::*;
+    use types::Sha256;
 
-    use crate::{
-        edenapi::{File, Tree},
-        indexedlogauxstore::AuxStore,
-        indexedlogdatastore::IndexedLogHgIdDataStore,
-        indexedlogutil::StoreType,
-        localstore::ExtStoredPolicy,
-        scmstore::{FileAttributes, FileAuxData, FileStore, TreeStore},
-        testutil::*,
-    };
+    use crate::edenapi::File;
+    use crate::edenapi::Tree;
+    use crate::indexedlogauxstore::AuxStore;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+    use crate::indexedlogutil::StoreType;
+    use crate::localstore::ExtStoredPolicy;
+    use crate::scmstore::FileAttributes;
+    use crate::scmstore::FileAuxData;
+    use crate::scmstore::FileStore;
+    use crate::scmstore::TreeStore;
+    use crate::testutil::*;
 
     #[test]
     fn test_get_file() -> Result<()> {

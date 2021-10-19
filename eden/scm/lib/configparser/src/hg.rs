@@ -8,28 +8,42 @@
 //! Mercurial-specific config postprocessing
 
 use std::cmp::Eq;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::env;
-use std::fs::{self, read_to_string, Permissions};
+use std::fs::read_to_string;
+use std::fs::Permissions;
+use std::fs::{self};
 use std::hash::Hash;
 use std::io;
-use std::io::{Error as IOError, ErrorKind, Write};
+use std::io::Error as IOError;
+use std::io::ErrorKind;
+use std::io::Write;
 use std::iter::FromIterator;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
+use std::time::SystemTime;
 
-use anyhow::{anyhow, bail, Result};
-use filetime::{set_file_mtime, FileTime};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Result;
+use filetime::set_file_mtime;
+use filetime::FileTime;
 use minibytes::Text;
 use tempfile::NamedTempFile;
-use util::{path::expand_path, run_background};
+use util::path::expand_path;
+use util::run_background;
 
-use crate::config::{ConfigSet, Options, SupersetVerification};
+use crate::config::ConfigSet;
+use crate::config::Options;
+use crate::config::SupersetVerification;
 use crate::dynamicconfig::Generator;
-use crate::error::{Error, Errors};
+use crate::error::Error;
+use crate::error::Errors;
 
 pub const HGPLAIN: &str = "HGPLAIN";
 pub const HGPLAINEXCEPT: &str = "HGPLAINEXCEPT";

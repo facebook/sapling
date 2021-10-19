@@ -8,12 +8,15 @@
 use crate::EagerRepo;
 use configmodel::Config;
 use configmodel::ConfigExt;
+use dag::ops::DagAlgorithm;
 use dag::ops::DagExportCloneData;
-use dag::ops::{DagAlgorithm, DagPullFastForwardMasterData, PrefixLookup};
+use dag::ops::DagPullFastForwardMasterData;
+use dag::ops::PrefixLookup;
 use dag::protocol::AncestorPath;
 use dag::protocol::RemoteIdConvertProtocol;
+use dag::Location;
 use dag::Vertex;
-use dag::{Location, VertexName};
+use dag::VertexName;
 use edenapi::configmodel;
 use edenapi::types::make_hash_lookup_request;
 use edenapi::types::AnyFileContentId;

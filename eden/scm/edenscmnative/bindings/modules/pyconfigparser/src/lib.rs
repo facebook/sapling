@@ -7,16 +7,22 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{cell::RefCell, convert::TryInto};
+use std::cell::RefCell;
+use std::convert::TryInto;
 
 use cpython::*;
 
-use configparser::{
-    config::{ConfigSet, Options, SupersetVerification},
-    convert::parse_list,
-    hg::{ConfigSetHgExt, OptionsHgExt},
-};
-use cpython_ext::{error::ResultPyErrExt, PyNone, PyPath, PyPathBuf, Str};
+use configparser::config::ConfigSet;
+use configparser::config::Options;
+use configparser::config::SupersetVerification;
+use configparser::convert::parse_list;
+use configparser::hg::ConfigSetHgExt;
+use configparser::hg::OptionsHgExt;
+use cpython_ext::error::ResultPyErrExt;
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
+use cpython_ext::Str;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "configparser"].join(".");

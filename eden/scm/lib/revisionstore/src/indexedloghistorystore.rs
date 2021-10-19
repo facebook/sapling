@@ -5,32 +5,40 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    io::{Cursor, Write},
-    path::{Path, PathBuf},
-};
+use std::io::Cursor;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use parking_lot::RwLock;
-use sha1::{Digest, Sha1};
+use sha1::Digest;
+use sha1::Sha1;
 
-use configparser::{config::ConfigSet, convert::ByteCount};
+use configparser::config::ConfigSet;
+use configparser::convert::ByteCount;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
-use types::{
-    hgid::{ReadHgIdExt, WriteHgIdExt},
-    HgId, Key, NodeInfo, RepoPath, RepoPathBuf,
-};
+use types::hgid::ReadHgIdExt;
+use types::hgid::WriteHgIdExt;
+use types::HgId;
+use types::Key;
+use types::NodeInfo;
+use types::RepoPath;
+use types::RepoPathBuf;
 
-use crate::{
-    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
-    indexedlogutil::{Store, StoreOpenOptions, StoreType},
-    localstore::LocalStore,
-    repack::ToKeys,
-    sliceext::SliceExt,
-    types::StoreKey,
-};
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::indexedlogutil::Store;
+use crate::indexedlogutil::StoreOpenOptions;
+use crate::indexedlogutil::StoreType;
+use crate::localstore::LocalStore;
+use crate::repack::ToKeys;
+use crate::sliceext::SliceExt;
+use crate::types::StoreKey;
 
 pub struct IndexedLogHgIdHistoryStore {
     log: RwLock<Store>,

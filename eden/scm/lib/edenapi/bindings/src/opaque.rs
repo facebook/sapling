@@ -13,12 +13,20 @@ use std::ptr;
 
 use libc::size_t;
 
-use crate::{ContentId, FileType, HgId, Parents, Sha1, Sha256};
+use crate::ContentId;
+use crate::FileType;
+use crate::HgId;
+use crate::Parents;
+use crate::Sha1;
+use crate::Sha256;
 use anyhow::Result;
 
 // Opaque types from other crates
 pub use edenapi::EdenApiError;
-pub use edenapi_types::{EdenApiServerError, FileMetadata, TreeChildEntry, TreeEntry};
+pub use edenapi_types::EdenApiServerError;
+pub use edenapi_types::FileMetadata;
+pub use edenapi_types::TreeChildEntry;
+pub use edenapi_types::TreeEntry;
 pub use types::Key as ApiKey;
 
 /// Methods for ApiKey

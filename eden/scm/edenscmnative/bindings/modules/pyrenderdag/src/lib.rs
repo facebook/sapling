@@ -13,7 +13,9 @@ use cpython::*;
 use cpython_ext::PyNone;
 use minibytes::Bytes;
 use parking_lot::Mutex;
-use renderdag::{Ancestor, GraphRowRenderer, Renderer};
+use renderdag::Ancestor;
+use renderdag::GraphRowRenderer;
+use renderdag::Renderer;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "renderdag"].join(".");

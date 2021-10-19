@@ -7,10 +7,9 @@
 
 use std::io::Write;
 
-use blake2::{
-    digest::{Input, VariableOutput},
-    VarBlake2b,
-};
+use blake2::digest::Input;
+use blake2::digest::VariableOutput;
+use blake2::VarBlake2b;
 use edenapi_types::ContentId;
 
 pub fn calc_contentid(data: &[u8]) -> ContentId {

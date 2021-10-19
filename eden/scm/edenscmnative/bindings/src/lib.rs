@@ -7,7 +7,9 @@
 
 #![allow(non_camel_case_types)]
 
-use cpython::{PyModule, PyResult, Python};
+use cpython::PyModule;
+use cpython::PyResult;
+use cpython::Python;
 use cpython_ext::PyNone;
 
 mod functions;

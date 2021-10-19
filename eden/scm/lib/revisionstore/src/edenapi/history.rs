@@ -12,15 +12,18 @@ use futures::prelude::*;
 
 use async_runtime::block_on;
 use progress::Unit;
-use types::{Key, NodeInfo};
+use types::Key;
+use types::NodeInfo;
 
-use crate::{
-    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
-    localstore::LocalStore,
-    types::StoreKey,
-};
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::historystore::RemoteHistoryStore;
+use crate::localstore::LocalStore;
+use crate::types::StoreKey;
 
-use super::{hgid_keys, EdenApiRemoteStore, File};
+use super::hgid_keys;
+use super::EdenApiRemoteStore;
+use super::File;
 
 /// A history store backed by an `EdenApiRemoteStore` and a mutable store.
 ///
@@ -99,13 +102,12 @@ mod tests {
     use configparser::config::ConfigSet;
     use types::testutil::*;
 
-    use crate::{
-        edenapi::{File, Tree},
-        indexedloghistorystore::IndexedLogHgIdHistoryStore,
-        indexedlogutil::StoreType,
-        remotestore::HgIdRemoteStore,
-        testutil::*,
-    };
+    use crate::edenapi::File;
+    use crate::edenapi::Tree;
+    use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
+    use crate::indexedlogutil::StoreType;
+    use crate::remotestore::HgIdRemoteStore;
+    use crate::testutil::*;
 
     #[test]
     fn test_file_history() -> Result<()> {

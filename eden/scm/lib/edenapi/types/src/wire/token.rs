@@ -6,12 +6,16 @@
  */
 
 use crate::token::UploadTokenMetadata;
-use crate::wire::{ToApi, ToWire, WireToApiConversionError};
-use serde::{Deserialize, Serialize};
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireToApiConversionError;
+use serde::Deserialize;
+use serde::Serialize;
 
-pub use crate::token::{
-    WireFileContentTokenMetadata, WireUploadToken, WireUploadTokenData, WireUploadTokenSignature,
-};
+pub use crate::token::WireFileContentTokenMetadata;
+pub use crate::token::WireUploadToken;
+pub use crate::token::WireUploadTokenData;
+pub use crate::token::WireUploadTokenSignature;
 
 /// Token metadata. Could be different for different token types.
 /// A signed token guarantee the metadata has been verified.

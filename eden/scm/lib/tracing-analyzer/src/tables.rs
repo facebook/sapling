@@ -12,7 +12,9 @@
 use serde_json::Value;
 // use std::borrow::Cow;
 use std::collections::BTreeMap as Map;
-use tracing_collector::model::{IndexMap, TreeSpan, TreeSpans};
+use tracing_collector::model::IndexMap;
+use tracing_collector::model::TreeSpan;
+use tracing_collector::model::TreeSpans;
 
 type Row = Map<String, Value>;
 type Rows = Vec<Row>;

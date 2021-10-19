@@ -7,21 +7,29 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{cell::RefCell, io::Cursor};
+use std::cell::RefCell;
+use std::io::Cursor;
 
 use anyhow::Error;
 use async_runtime::block_on;
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use cpython::*;
-use cpython_ext::{PyNone, PyPath, ResultPyErrExt, Str};
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
 use thiserror::Error;
 
-use ::mutationstore::{DagFlags, MutationStore, Repair};
+use ::mutationstore::DagFlags;
+use ::mutationstore::MutationStore;
+use ::mutationstore::Repair;
 use pydag::dagalgo::dagalgo;
 use pydag::Names;
 use types::mutation::MutationEntry;
 use types::node::Node;
-use vlqencoding::{VLQDecode, VLQEncode};
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQEncode;
 
 /// Supported format of bundle version.
 /// Format 1 is:

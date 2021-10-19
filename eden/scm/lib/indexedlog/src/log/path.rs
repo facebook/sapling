@@ -6,10 +6,12 @@
  */
 
 use crate::lock::ScopedDirLock;
-use crate::log::{LogMetadata, META_FILE};
+use crate::log::LogMetadata;
+use crate::log::META_FILE;
 use crate::utils;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::Mutex;
 
 /// Abstract Path for [`Log`].
 ///

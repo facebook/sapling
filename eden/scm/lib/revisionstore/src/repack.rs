@@ -5,34 +5,42 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    collections::HashSet,
-    fs,
-    io::{Error as IoError, ErrorKind as IoErrorKind},
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::collections::HashSet;
+use std::fs;
+use std::io::Error as IoError;
+use std::io::ErrorKind as IoErrorKind;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use anyhow::{format_err, Error, Result};
-use configparser::{config::ConfigSet, convert::ByteCount};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
+use configparser::config::ConfigSet;
+use configparser::convert::ByteCount;
 use minibytes::Bytes;
 use thiserror::Error;
 
 use types::Key;
 
-use crate::{
-    datapack::{DataPack, DataPackVersion},
-    datastore::{HgIdDataStore, HgIdMutableDeltaStore, StoreResult},
-    historypack::{HistoryPack, HistoryPackVersion},
-    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
-    localstore::{ExtStoredPolicy, LocalStore, StoreFromPath},
-    metadatastore::MetadataStore,
-    mutabledatapack::MutableDataPack,
-    mutablehistorypack::MutableHistoryPack,
-    mutablepack::MutablePack,
-    types::StoreKey,
-    LegacyStore,
-};
+use crate::datapack::DataPack;
+use crate::datapack::DataPackVersion;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::StoreResult;
+use crate::historypack::HistoryPack;
+use crate::historypack::HistoryPackVersion;
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::localstore::ExtStoredPolicy;
+use crate::localstore::LocalStore;
+use crate::localstore::StoreFromPath;
+use crate::metadatastore::MetadataStore;
+use crate::mutabledatapack::MutableDataPack;
+use crate::mutablehistorypack::MutableHistoryPack;
+use crate::mutablepack::MutablePack;
+use crate::types::StoreKey;
+use crate::LegacyStore;
 
 #[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub enum RepackLocation {
@@ -495,15 +503,15 @@ mod tests {
 
     use types::testutil::*;
 
-    use std::{
-        collections::HashMap,
-        fs::{set_permissions, OpenOptions},
-        io::Write,
-    };
+    use std::collections::HashMap;
+    use std::fs::set_permissions;
+    use std::fs::OpenOptions;
+    use std::io::Write;
 
     use crate::datapack::tests::make_datapack;
     use crate::datastore::Delta;
-    use crate::historypack::tests::{get_nodes, make_historypack};
+    use crate::historypack::tests::get_nodes;
+    use crate::historypack::tests::make_historypack;
 
     #[test]
     fn test_repack_filter_incremental() -> Result<()> {

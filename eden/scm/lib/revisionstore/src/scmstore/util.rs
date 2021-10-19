@@ -8,20 +8,21 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
-use futures::{
-    future,
-    stream::{Stream, StreamExt},
-};
-use tokio::{
-    fs::File,
-    io::{AsyncBufReadExt, BufReader},
-};
+use anyhow::anyhow;
+use anyhow::Result;
+use futures::future;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
+use tokio::fs::File;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::BufReader;
 use tokio_stream::wrappers::LinesStream;
 use tracing::error;
 
 //use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
-use types::{HgId, Key, RepoPathBuf};
+use types::HgId;
+use types::Key;
+use types::RepoPathBuf;
 
 // TODO(meyer): Find a better place for this. testutil? A debug command isn't really a test.
 // Maybe refactor so less logic happens in hgcommands / pyrevisionstore, and migrate the actual

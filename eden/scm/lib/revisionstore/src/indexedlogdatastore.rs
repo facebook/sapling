@@ -5,32 +5,47 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    io::{Cursor, Write},
-    path::{Path, PathBuf},
-};
+use std::io::Cursor;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 
-use anyhow::{bail, ensure, Result};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use minibytes::Bytes;
 use parking_lot::RwLock;
 
-use configparser::{config::ConfigSet, convert::ByteCount};
-use edenapi_types::{FileEntry, TreeEntry};
+use configparser::config::ConfigSet;
+use configparser::convert::ByteCount;
+use edenapi_types::FileEntry;
+use edenapi_types::TreeEntry;
 use indexedlog::log::IndexOutput;
-use lz4_pyframe::{compress, decompress};
+use lz4_pyframe::compress;
+use lz4_pyframe::decompress;
 use tracing::warn;
-use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
+use types::hgid::ReadHgIdExt;
+use types::HgId;
+use types::Key;
+use types::RepoPath;
 
+use crate::datastore::Delta;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::Metadata;
+use crate::datastore::StoreResult;
+use crate::indexedlogutil::Store;
+use crate::indexedlogutil::StoreOpenOptions;
+use crate::indexedlogutil::StoreType;
+use crate::localstore::ExtStoredPolicy;
+use crate::localstore::LocalStore;
 use crate::missing::MissingInjection;
-use crate::{
-    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
-    indexedlogutil::{Store, StoreOpenOptions, StoreType},
-    localstore::{ExtStoredPolicy, LocalStore},
-    repack::ToKeys,
-    sliceext::SliceExt,
-    types::StoreKey,
-};
+use crate::repack::ToKeys;
+use crate::sliceext::SliceExt;
+use crate::types::StoreKey;
 
 pub struct IndexedLogHgIdDataStore {
     store: RwLock<Store>,
@@ -418,10 +433,9 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::{
-        scmstore::{FileAttributes, FileStore},
-        testutil::*,
-    };
+    use crate::scmstore::FileAttributes;
+    use crate::scmstore::FileStore;
+    use crate::testutil::*;
 
     #[test]
     fn test_empty() {

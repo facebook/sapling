@@ -32,16 +32,16 @@
 //! component. Writing it in terms of `RepoPathBuf` would probably be less readable that
 //! writing it in terms of `String`.
 
-use std::{
-    borrow::{Borrow, ToOwned},
-    cmp::Ordering,
-    convert::AsRef,
-    fmt,
-    ops::Deref,
-    str::Utf8Error,
-};
+use std::borrow::Borrow;
+use std::borrow::ToOwned;
+use std::cmp::Ordering;
+use std::convert::AsRef;
+use std::fmt;
+use std::ops::Deref;
+use std::str::Utf8Error;
 
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use thiserror::Error;
 
 /// An owned version of a `RepoPath`.
@@ -708,7 +708,10 @@ mod tests {
 
     use quickcheck::quickcheck;
 
-    use crate::testutil::{path_component, path_component_buf, repo_path, repo_path_buf};
+    use crate::testutil::path_component;
+    use crate::testutil::path_component_buf;
+    use crate::testutil::repo_path;
+    use crate::testutil::repo_path_buf;
 
     #[test]
     fn test_repo_path_initialization_with_invalid_utf8() {

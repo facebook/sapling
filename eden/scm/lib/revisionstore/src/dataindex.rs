@@ -5,16 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{Cursor, Read, Write},
-    path::Path,
-};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Write;
+use std::path::Path;
 
 use anyhow::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use memmap::{Mmap, MmapOptions};
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use memmap::Mmap;
+use memmap::MmapOptions;
 use thiserror::Error;
 
 use types::HgId;

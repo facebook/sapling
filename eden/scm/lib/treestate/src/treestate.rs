@@ -8,8 +8,15 @@
 use crate::filestate::FileStateV2;
 use crate::filestore::FileStore;
 use crate::serialization::Serializable;
-use crate::store::{BlockId, Store, StoreView};
-use crate::tree::{AggregatedState, Key, KeyRef, Node, Tree, VisitorResult};
+use crate::store::BlockId;
+use crate::store::Store;
+use crate::store::StoreView;
+use crate::tree::AggregatedState;
+use crate::tree::Key;
+use crate::tree::KeyRef;
+use crate::tree::Node;
+use crate::tree::Tree;
+use crate::tree::VisitorResult;
 use anyhow::Result;
 use std::io::Cursor;
 use std::ops::Deref;
@@ -181,7 +188,8 @@ impl TreeState {
 mod tests {
     use super::*;
     use crate::filestate::StateFlags;
-    use rand::{Rng, SeedableRng};
+    use rand::Rng;
+    use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempdir::TempDir;
 

@@ -5,11 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Result};
+use anyhow::format_err;
+use anyhow::Result;
 use bytes::Bytes;
 use manifest_tree::TreeStore;
-use revisionstore::{ContentStore, HgIdDataStore, StoreKey, StoreResult};
-use types::{HgId, Key, RepoPath};
+use revisionstore::ContentStore;
+use revisionstore::HgIdDataStore;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
+use types::HgId;
+use types::Key;
+use types::RepoPath;
 
 pub(crate) struct TreeContentStore {
     inner: ContentStore,

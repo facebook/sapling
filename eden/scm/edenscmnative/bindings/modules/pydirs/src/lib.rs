@@ -13,7 +13,9 @@ use std::collections::HashMap;
 use std::str;
 
 use cpython::*;
-use cpython_ext::{PyNone, PyPath, PyPathBuf};
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "dirs"].join(".");

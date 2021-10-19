@@ -79,35 +79,47 @@
 //! ```
 //! [1]: new in version 1.
 
-use std::{
-    cell::RefCell,
-    fmt,
-    fs::File,
-    io::{Cursor, Read},
-    mem::{drop, take},
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::cell::RefCell;
+use std::fmt;
+use std::fs::File;
+use std::io::Cursor;
+use std::io::Read;
+use std::mem::drop;
+use std::mem::take;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use anyhow::{format_err, Error, Result};
-use byteorder::{BigEndian, ReadBytesExt};
-use memmap::{Mmap, MmapOptions};
+use anyhow::format_err;
+use anyhow::Error;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use memmap::Mmap;
+use memmap::MmapOptions;
 use minibytes::Bytes;
 use thiserror::Error;
 
 use lz4_pyframe::decompress;
 use mpatch::mpatch::get_full_text;
-use types::{HgId, Key, RepoPath};
+use types::HgId;
+use types::Key;
+use types::RepoPath;
 use util::path::remove_file;
 
-use crate::{
-    dataindex::{DataIndex, DeltaBaseOffset},
-    datastore::{Delta, HgIdDataStore, Metadata, StoreResult},
-    localstore::{ExtStoredPolicy, LocalStore, StoreFromPath},
-    repack::{Repackable, ToKeys},
-    sliceext::SliceExt,
-    types::StoreKey,
-};
+use crate::dataindex::DataIndex;
+use crate::dataindex::DeltaBaseOffset;
+use crate::datastore::Delta;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::Metadata;
+use crate::datastore::StoreResult;
+use crate::localstore::ExtStoredPolicy;
+use crate::localstore::LocalStore;
+use crate::localstore::StoreFromPath;
+use crate::repack::Repackable;
+use crate::repack::ToKeys;
+use crate::sliceext::SliceExt;
+use crate::types::StoreKey;
 
 #[derive(Debug, Error)]
 #[error("Datapack Error: {0:?}")]
@@ -507,7 +519,9 @@ pub mod tests {
 
     use types::testutil::*;
 
-    use crate::datastore::{Delta, HgIdMutableDeltaStore, Metadata};
+    use crate::datastore::Delta;
+    use crate::datastore::HgIdMutableDeltaStore;
+    use crate::datastore::Metadata;
     use crate::mutabledatapack::MutableDataPack;
 
     pub fn make_datapack(tempdir: &TempDir, deltas: &Vec<(Delta, Metadata)>) -> DataPack {

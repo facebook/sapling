@@ -5,9 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use serde::{de, ser};
-use std::fmt::{self, Display};
-use std::{self, error, io, str, string};
+use serde::de;
+use serde::ser;
+use std::error;
+use std::fmt::Display;
+use std::fmt::{self};
+use std::io;
+use std::str;
+use std::string;
+use std::{self};
 
 #[derive(Debug)]
 pub struct Error {

@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -13,23 +14,31 @@ use anyhow::Result;
 use parking_lot::Mutex;
 use regex::Regex;
 
-use configparser::{config::ConfigSet, convert::ByteCount};
+use configparser::config::ConfigSet;
+use configparser::convert::ByteCount;
 use edenapi::Builder;
 
-use crate::{
-    contentstore::check_cache_buster,
-    fetch_logger::FetchLogger,
-    indexedlogauxstore::AuxStore,
-    indexedlogdatastore::IndexedLogHgIdDataStore,
-    indexedlogutil::StoreType,
-    lfs::{LfsRemote, LfsStore},
-    scmstore::{activitylogger::ActivityLogger, file::FileStoreMetrics, FileStore, TreeStore},
-    util::{
-        get_cache_path, get_indexedlogdatastore_aux_path, get_indexedlogdatastore_path,
-        get_local_path, get_repo_name,
-    },
-    ContentStore, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, MemcacheStore,
-};
+use crate::contentstore::check_cache_buster;
+use crate::fetch_logger::FetchLogger;
+use crate::indexedlogauxstore::AuxStore;
+use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+use crate::indexedlogutil::StoreType;
+use crate::lfs::LfsRemote;
+use crate::lfs::LfsStore;
+use crate::scmstore::activitylogger::ActivityLogger;
+use crate::scmstore::file::FileStoreMetrics;
+use crate::scmstore::FileStore;
+use crate::scmstore::TreeStore;
+use crate::util::get_cache_path;
+use crate::util::get_indexedlogdatastore_aux_path;
+use crate::util::get_indexedlogdatastore_path;
+use crate::util::get_local_path;
+use crate::util::get_repo_name;
+use crate::ContentStore;
+use crate::EdenApiFileStore;
+use crate::EdenApiTreeStore;
+use crate::ExtStoredPolicy;
+use crate::MemcacheStore;
 
 pub struct FileStoreBuilder<'a> {
     config: &'a ConfigSet,

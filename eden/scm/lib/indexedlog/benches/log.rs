@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use indexedlog::log::{IndexDef, IndexOutput, Log};
-use minibench::{bench, elapsed, measure, Measure};
-use rand_chacha::{
-    rand_core::{RngCore, SeedableRng},
-    ChaChaRng,
-};
+use indexedlog::log::IndexDef;
+use indexedlog::log::IndexOutput;
+use indexedlog::log::Log;
+use minibench::bench;
+use minibench::elapsed;
+use minibench::measure;
+use minibench::Measure;
+use rand_chacha::rand_core::RngCore;
+use rand_chacha::rand_core::SeedableRng;
+use rand_chacha::ChaChaRng;
 use std::path::Path;
 use tempfile::tempdir;
 

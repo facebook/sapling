@@ -7,9 +7,12 @@
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
-use crate::wire::{ToApi, ToWire, WireToApiConversionError};
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireToApiConversionError;
 use crate::Batch;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]

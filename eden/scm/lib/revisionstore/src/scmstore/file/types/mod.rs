@@ -10,5 +10,7 @@ mod auxdata;
 mod lazy_file;
 mod store_file;
 
+pub use self::attrs::FileAttributes;
+pub use self::auxdata::FileAuxData;
 pub(crate) use self::lazy_file::LazyFile;
-pub use self::{attrs::FileAttributes, auxdata::FileAuxData, store_file::StoreFile};
+pub use self::store_file::StoreFile;

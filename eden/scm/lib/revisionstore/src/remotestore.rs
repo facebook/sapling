@@ -7,10 +7,10 @@
 
 use std::sync::Arc;
 
-use crate::{
-    datastore::{HgIdMutableDeltaStore, RemoteDataStore},
-    historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
-};
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::RemoteDataStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::historystore::RemoteHistoryStore;
 
 pub trait HgIdRemoteStore: Send + Sync {
     fn datastore(

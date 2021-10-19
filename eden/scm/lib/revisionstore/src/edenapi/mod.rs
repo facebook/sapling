@@ -10,17 +10,25 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use edenapi::{BlockingResponse, EdenApi, EdenApiError, Response};
-use edenapi_types::{EdenApiServerError, FileEntry, FileSpec, TreeAttributes, TreeEntry};
-use progress::{NullProgressFactory, ProgressFactory};
+use edenapi::BlockingResponse;
+use edenapi::EdenApi;
+use edenapi::EdenApiError;
+use edenapi::Response;
+use edenapi_types::EdenApiServerError;
+use edenapi_types::FileEntry;
+use edenapi_types::FileSpec;
+use edenapi_types::TreeAttributes;
+use edenapi_types::TreeEntry;
+use progress::NullProgressFactory;
+use progress::ProgressFactory;
 use types::Key;
 
-use crate::{
-    datastore::{HgIdMutableDeltaStore, RemoteDataStore},
-    historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
-    remotestore::HgIdRemoteStore,
-    types::StoreKey,
-};
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::RemoteDataStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::historystore::RemoteHistoryStore;
+use crate::remotestore::HgIdRemoteStore;
+use crate::types::StoreKey;
 
 mod data;
 mod history;

@@ -7,7 +7,8 @@
 
 use types::testutil::*;
 
-use crate::{File, FileMetadata};
+use crate::File;
+use crate::FileMetadata;
 
 pub fn make_meta(hex: &str) -> FileMetadata {
     FileMetadata::regular(hgid(hex))

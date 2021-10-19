@@ -11,11 +11,17 @@ use std::cell::RefCell;
 use std::io;
 
 use cpython::*;
-use cpython_ext::{ResultPyErrExt, SimplePyBuf};
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::SimplePyBuf;
 
-use zstd::stream::raw::{Decoder, InBuffer, Operation, OutBuffer};
-use zstd::stream::{decode_all, encode_all};
-use zstdelta::{apply, diff};
+use zstd::stream::decode_all;
+use zstd::stream::encode_all;
+use zstd::stream::raw::Decoder;
+use zstd::stream::raw::InBuffer;
+use zstd::stream::raw::Operation;
+use zstd::stream::raw::OutBuffer;
+use zstdelta::apply;
+use zstdelta::diff;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "zstd"].join(".");

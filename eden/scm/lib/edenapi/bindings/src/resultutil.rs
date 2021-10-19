@@ -12,7 +12,10 @@ use anyhow::Error;
 
 use edenapi::EdenApi;
 
-use crate::{EdenApiServerError, OwnedString, TreeChildEntry, TreeEntry};
+use crate::EdenApiServerError;
+use crate::OwnedString;
+use crate::TreeChildEntry;
+use crate::TreeEntry;
 
 type Client = Arc<dyn EdenApi>;
 

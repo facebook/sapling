@@ -7,24 +7,43 @@
 
 use std::convert::TryInto;
 
-use anyhow::{format_err, Result};
-use cpython::{
-    PyBytes, PyDict, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject,
-    ToPyObject,
-};
+use anyhow::format_err;
+use anyhow::Result;
+use cpython::PyBytes;
+use cpython::PyDict;
+use cpython::PyIterator;
+use cpython::PyList;
+use cpython::PyObject;
+use cpython::PyResult;
+use cpython::PyTuple;
+use cpython::Python;
+use cpython::PythonObject;
+use cpython::ToPyObject;
 
-use cpython_ext::{PyNone, PyPath, PyPathBuf, ResultPyErrExt};
-use revisionstore::{
-    datastore::{Delta, StoreResult},
-    ContentDataStore, ContentHash, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore, StoreKey,
-    ToKeys,
-};
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
+use cpython_ext::ResultPyErrExt;
+use revisionstore::datastore::Delta;
+use revisionstore::datastore::StoreResult;
+use revisionstore::ContentDataStore;
+use revisionstore::ContentHash;
+use revisionstore::HgIdDataStore;
+use revisionstore::HgIdMutableDeltaStore;
+use revisionstore::RemoteDataStore;
+use revisionstore::StoreKey;
+use revisionstore::ToKeys;
 use types::Node;
 
-use crate::pythonutil::{
-    from_base, from_delta_to_tuple, from_key, from_key_to_tuple, from_tuple_to_key, key_error,
-    to_delta, to_key, to_metadata,
-};
+use crate::pythonutil::from_base;
+use crate::pythonutil::from_delta_to_tuple;
+use crate::pythonutil::from_key;
+use crate::pythonutil::from_key_to_tuple;
+use crate::pythonutil::from_tuple_to_key;
+use crate::pythonutil::key_error;
+use crate::pythonutil::to_delta;
+use crate::pythonutil::to_key;
+use crate::pythonutil::to_metadata;
 
 pub trait HgIdDataStorePyExt {
     fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes>;

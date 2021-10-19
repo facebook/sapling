@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::{Bytes, Text};
+use crate::Bytes;
+use crate::Text;
 use quickcheck::quickcheck;
 
 quickcheck! {

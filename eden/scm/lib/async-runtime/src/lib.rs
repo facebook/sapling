@@ -23,12 +23,17 @@
 ///!
 ///! TODO(T74221415): monitoring, signal handling
 use futures::future::Future;
-use futures::stream::{BoxStream, Stream, StreamExt};
+use futures::pin_mut;
+use futures::select;
+use futures::stream::BoxStream;
+use futures::stream::Stream;
+use futures::stream::StreamExt;
 use futures::FutureExt;
-use futures::{pin_mut, select};
 use once_cell::sync::Lazy;
-use std::io::{Error, ErrorKind};
-use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
+use std::io::Error;
+use std::io::ErrorKind;
+use tokio::runtime::Builder as RuntimeBuilder;
+use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {

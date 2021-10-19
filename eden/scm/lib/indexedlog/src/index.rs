@@ -55,38 +55,57 @@
 // - The "INLINE_LEAF" type is basically an inlined version of EXT_KEY and LINK, to save space.
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
-use crate::utils::{xxhash, xxhash32};
+use crate::utils::xxhash;
+use crate::utils::xxhash32;
 use minibytes::Bytes;
 use std::borrow::Cow;
-use std::cmp::Ordering::{Equal, Greater, Less};
-use std::fmt::{self, Debug, Formatter};
-use std::fs::{self, File};
+use std::cmp::Ordering::Equal;
+use std::cmp::Ordering::Greater;
+use std::cmp::Ordering::Less;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::{self};
+use std::fs::File;
+use std::fs::{self};
 use std::hash::Hasher;
-use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Write;
+use std::io::{self};
 use std::mem::size_of;
-use std::ops::{
-    Bound::{self, Excluded, Included, Unbounded},
-    Deref, RangeBounds,
-};
-use std::path::{Path, PathBuf};
-use std::sync::{
-    atomic::{
-        AtomicU64,
-        Ordering::{AcqRel, Acquire, Relaxed},
-    },
-    Arc,
-};
+use std::ops::Bound::Excluded;
+use std::ops::Bound::Included;
+use std::ops::Bound::Unbounded;
+use std::ops::Bound::{self};
+use std::ops::Deref;
+use std::ops::RangeBounds;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering::AcqRel;
+use std::sync::atomic::Ordering::Acquire;
+use std::sync::atomic::Ordering::Relaxed;
+use std::sync::Arc;
 use twox_hash::XxHash;
 
-use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
-use crate::errors::{IoResultExt, ResultExt};
+use crate::base16::base16_to_base256;
+use crate::base16::single_hex_to_base16;
+use crate::base16::Base16Iter;
+use crate::errors::IoResultExt;
+use crate::errors::ResultExt;
 use crate::lock::ScopedFileLock;
-use crate::utils::{self, mmap_bytes};
+use crate::utils::mmap_bytes;
+use crate::utils::{self};
 
-use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::ByteOrder;
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use fs2::FileExt;
 use tracing::debug_span;
-use vlqencoding::{VLQDecodeAt, VLQEncode};
+use vlqencoding::VLQDecodeAt;
+use vlqencoding::VLQEncode;
 
 //// Structures and serialization
 
@@ -1825,7 +1844,8 @@ enum Side {
     Front,
     Back,
 }
-use Side::{Back, Front};
+use Side::Back;
+use Side::Front;
 
 /// State used by [`RangeIter`].
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -3488,7 +3508,8 @@ impl Debug for Index {
 mod tests {
     use super::*;
     use quickcheck::quickcheck;
-    use std::collections::{BTreeSet, HashMap};
+    use std::collections::BTreeSet;
+    use std::collections::HashMap;
     use std::fs::File;
     use tempfile::tempdir;
 

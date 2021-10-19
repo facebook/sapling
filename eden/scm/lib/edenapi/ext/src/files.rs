@@ -10,9 +10,12 @@ use std::collections::HashMap;
 use anyhow::Result;
 use edenapi::api::EdenApi;
 use edenapi_types::UploadToken;
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::stream;
+use futures::StreamExt;
+use futures::TryStreamExt;
 use types::RepoPathBuf;
-use vfs::{AsyncVfsWriter, VFS};
+use vfs::AsyncVfsWriter;
+use vfs::VFS;
 
 pub async fn download_files(
     api: &(impl EdenApi + ?Sized),

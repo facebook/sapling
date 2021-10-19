@@ -28,8 +28,10 @@ mod repair;
 pub mod rotate;
 pub mod utils;
 
-pub use errors::{Error, Result};
-pub use repair::{DefaultOpenOptions, Repair};
+pub use errors::Error;
+pub use errors::Result;
+pub use repair::DefaultOpenOptions;
+pub use repair::Repair;
 
 #[cfg(test)]
 dev_logger::init!();

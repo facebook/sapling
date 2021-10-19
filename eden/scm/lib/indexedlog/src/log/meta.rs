@@ -6,11 +6,18 @@
  */
 
 use crate::errors::IoResultExt;
-use crate::utils::{self, atomic_read, atomic_write, xxhash};
+use crate::utils::atomic_read;
+use crate::utils::atomic_write;
+use crate::utils::xxhash;
+use crate::utils::{self};
 use std::collections::BTreeMap;
-use std::io::{self, Cursor, Read, Write};
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Write;
+use std::io::{self};
 use std::path::Path;
-use vlqencoding::{VLQDecode, VLQEncode};
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQEncode;
 
 /// Metadata about index names, logical [`Log`] and [`Index`] file lengths.
 #[derive(PartialEq, Eq, Debug, Clone)]

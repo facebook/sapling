@@ -13,7 +13,8 @@ use std::collections::HashMap;
 use std::ops::Range;
 
 use cpython::*;
-use cpython_ext::{ResultPyErrExt, Str};
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "regex"].join(".");

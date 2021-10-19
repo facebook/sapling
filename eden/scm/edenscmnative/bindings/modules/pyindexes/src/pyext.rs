@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use cpython::{PyBytes, PyModule, PyObject, PyResult, Python};
+use cpython::PyBytes;
+use cpython::PyModule;
+use cpython::PyObject;
+use cpython::PyResult;
+use cpython::Python;
 use revlogindex::nodemap::empty_index_buffer;
 use revlogindex::NodeRevMap;
 use revlogindex::RevlogEntry;

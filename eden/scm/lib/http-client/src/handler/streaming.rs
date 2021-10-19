@@ -5,9 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use std::io::{Read, SeekFrom};
+use std::io::Read;
+use std::io::SeekFrom;
 
-use curl::easy::{Handler, ReadError, SeekResult, WriteError};
+use curl::easy::Handler;
+use curl::easy::ReadError;
+use curl::easy::SeekResult;
+use curl::easy::WriteError;
 
 use crate::header::Header;
 use crate::progress::Progress;
@@ -142,10 +146,13 @@ mod tests {
     use super::*;
 
     use assert_matches::assert_matches;
-    use http::header::{self, HeaderName, HeaderValue};
+    use http::header::HeaderName;
+    use http::header::HeaderValue;
+    use http::header::{self};
 
     use crate::progress::ProgressReporter;
-    use crate::receiver::testutil::{NullReceiver, TestReceiver};
+    use crate::receiver::testutil::NullReceiver;
+    use crate::receiver::testutil::TestReceiver;
 
     #[test]
     fn test_read() {

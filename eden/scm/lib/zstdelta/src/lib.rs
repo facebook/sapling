@@ -7,4 +7,5 @@
 
 mod zstdelta;
 
-pub use crate::zstdelta::{apply, diff};
+pub use crate::zstdelta::apply;
+pub use crate::zstdelta::diff;

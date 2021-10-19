@@ -5,15 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashSet, str::FromStr};
+use std::collections::HashSet;
+use std::str::FromStr;
 
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::Arbitrary;
+use quickcheck::Gen;
 
-use crate::{
-    hgid::HgId,
-    key::Key,
-    path::{PathComponent, PathComponentBuf, RepoPath, RepoPathBuf},
-};
+use crate::hgid::HgId;
+use crate::key::Key;
+use crate::path::PathComponent;
+use crate::path::PathComponentBuf;
+use crate::path::RepoPath;
+use crate::path::RepoPathBuf;
 
 pub fn repo_path(s: &str) -> &RepoPath {
     if s == "" {

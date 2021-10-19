@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use cpython::{PyModule, PyResult, Python};
+use cpython::PyModule;
+use cpython::PyResult;
+use cpython::Python;
 use cpython_ext::PyNone;
 
 /// Populate an existing empty module so it contains utilities.

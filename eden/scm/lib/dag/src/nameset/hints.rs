@@ -12,8 +12,11 @@ use crate::VerLink;
 use bitflags::bitflags;
 use std::cmp;
 use std::fmt;
-use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
-use std::sync::atomic::{AtomicU32, AtomicU64};
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering::Acquire;
+use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::Ordering::Release;
 use std::sync::Arc;
 
 bitflags! {

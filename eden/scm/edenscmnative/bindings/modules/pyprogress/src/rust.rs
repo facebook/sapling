@@ -12,11 +12,16 @@
 
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use cpython::*;
 
-use cpython_ext::{AnyhowResultExt, PyNone};
-use progress::{ProgressBar, ProgressFactory, ProgressSpinner, Unit};
+use cpython_ext::AnyhowResultExt;
+use cpython_ext::PyNone;
+use progress::ProgressBar;
+use progress::ProgressFactory;
+use progress::ProgressSpinner;
+use progress::Unit;
 
 const HG_PROGRESS_MOD: &str = "edenscm.mercurial.progress";
 const HG_UTIL_MOD: &str = "edenscm.mercurial.util";

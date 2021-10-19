@@ -8,7 +8,8 @@
 use std::io::Write;
 
 use bytes::Bytes;
-use minibench::{bench, elapsed};
+use minibench::bench;
+use minibench::elapsed;
 
 use configparser::config::ConfigSet;
 

@@ -5,16 +5,26 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use anyhow::{format_err, Result};
+use anyhow::format_err;
+use anyhow::Result;
 use bytes::Bytes;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
+use parking_lot::RwLock;
 
-use manifest::{testutil::*, Manifest};
-use types::{testutil::*, HgId, Key, RepoPath, RepoPathBuf};
+use manifest::testutil::*;
+use manifest::Manifest;
+use types::testutil::*;
+use types::HgId;
+use types::Key;
+use types::RepoPath;
+use types::RepoPathBuf;
 
-use crate::{FileMetadata, TreeManifest, TreeStore};
+use crate::FileMetadata;
+use crate::TreeManifest;
+use crate::TreeStore;
 
 pub fn make_tree_manifest<'a>(
     store: Arc<TestStore>,

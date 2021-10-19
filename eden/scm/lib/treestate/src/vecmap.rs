@@ -11,7 +11,8 @@ use std::borrow::Borrow;
 use std::collections::Bound;
 use std::collections::Bound::*;
 use std::mem;
-use std::slice::{Iter as VecIter, IterMut as VecIterMut};
+use std::slice::Iter as VecIter;
+use std::slice::IterMut as VecIterMut;
 
 #[derive(Debug)]
 pub struct VecMap<K, V> {
@@ -222,7 +223,8 @@ impl<'a, K: 'a, V: 'a> Iterator for IterMut<'a, K, V> {
 
 #[cfg(test)]
 mod tests {
-    use crate::vecmap::{Iter, VecMap};
+    use crate::vecmap::Iter;
+    use crate::vecmap::VecMap;
     use quickcheck::quickcheck;
     use std::collections::BTreeMap;
     use std::collections::Bound::*;

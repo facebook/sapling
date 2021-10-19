@@ -7,28 +7,32 @@
 
 //! Adapters around Memcache to be transparently used as HgIdDataStore or HgIdHistoryStore.
 
-use std::{
-    mem::size_of,
-    path::PathBuf,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::mem::size_of;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Result;
 use minibytes::Bytes;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use tracing::info_span;
 
-use types::{Key, NodeInfo};
+use types::Key;
+use types::NodeInfo;
 
-use crate::{
-    datastore::{
-        Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
-    },
-    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
-    localstore::LocalStore,
-    types::StoreKey,
-};
+use crate::datastore::Delta;
+use crate::datastore::HgIdDataStore;
+use crate::datastore::HgIdMutableDeltaStore;
+use crate::datastore::Metadata;
+use crate::datastore::RemoteDataStore;
+use crate::datastore::StoreResult;
+use crate::historystore::HgIdHistoryStore;
+use crate::historystore::HgIdMutableHistoryStore;
+use crate::historystore::RemoteHistoryStore;
+use crate::localstore::LocalStore;
+use crate::types::StoreKey;
 
 /// Type of blobs stored in Memcache.
 ///

@@ -7,7 +7,8 @@
 
 use cpython::PyClone;
 use cpython::Python;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use serde_bytes::ByteBuf;
 use serde_cbor::Value;
 use std::collections::HashMap;

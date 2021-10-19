@@ -7,22 +7,25 @@
 
 use std::convert::TryFrom;
 
-use anyhow::{bail, Error, Result};
+use anyhow::bail;
+use anyhow::Error;
+use anyhow::Result;
 use tracing::instrument;
 
 use edenapi_types::FileEntry;
 
 use minibytes::Bytes;
-use types::{HgId, Key};
+use types::HgId;
+use types::Key;
 
-use crate::{
-    datastore::strip_metadata,
-    indexedlogdatastore::Entry,
-    lfs::{rebuild_metadata, LfsPointersEntry},
-    memcache::McData,
-    scmstore::file::FileAuxData,
-    ContentHash, Metadata,
-};
+use crate::datastore::strip_metadata;
+use crate::indexedlogdatastore::Entry;
+use crate::lfs::rebuild_metadata;
+use crate::lfs::LfsPointersEntry;
+use crate::memcache::McData;
+use crate::scmstore::file::FileAuxData;
+use crate::ContentHash;
+use crate::Metadata;
 
 /// A minimal file enum that simply wraps the possible underlying file types,
 /// with no processing (so Entry might have the wrong Key.path, etc.)

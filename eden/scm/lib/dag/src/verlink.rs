@@ -7,7 +7,8 @@
 
 use std::cmp;
 use std::fmt;
-use std::sync::atomic::{self, AtomicU32};
+use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{self};
 use std::sync::Arc;
 
 /// A linked list tracking a logic "version" with compatibility rules:

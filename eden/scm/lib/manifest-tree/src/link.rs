@@ -5,17 +5,31 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
 use std::ops::Deref;
-use std::{cmp::Ordering, collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 
-use anyhow::{anyhow, bail, format_err, Context, Result};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::format_err;
+use anyhow::Context;
+use anyhow::Result;
 use once_cell::sync::OnceCell;
 
-use manifest::{File, FileMetadata, FsNodeMetadata};
-use pathmatcher::{DirectoryMatch, Matcher};
-use types::{HgId, Key, PathComponentBuf, RepoPath, RepoPathBuf};
+use manifest::File;
+use manifest::FileMetadata;
+use manifest::FsNodeMetadata;
+use pathmatcher::DirectoryMatch;
+use pathmatcher::Matcher;
+use types::HgId;
+use types::Key;
+use types::PathComponentBuf;
+use types::RepoPath;
+use types::RepoPathBuf;
 
-use crate::{store, store::InnerStore};
+use crate::store;
+use crate::store::InnerStore;
 
 // Allows sending link between threads, but disallows general copying.
 #[derive(Debug)]

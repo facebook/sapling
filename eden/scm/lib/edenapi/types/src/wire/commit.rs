@@ -7,28 +7,46 @@
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use std::num::NonZeroU64;
 
 use dag_types::Location;
 use types::HgId;
 
-use crate::commit::{
-    BonsaiChangesetContent, BonsaiFileChange, CommitHashLookupRequest, CommitHashLookupResponse,
-    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, EphemeralPrepareResponse,
-};
-use crate::wire::{
-    is_default, ToApi, ToWire, WireFileType, WireHgId, WireParents, WireRepoPathBuf, WireResult,
-    WireToApiConversionError, WireUploadToken,
-};
+use crate::commit::BonsaiChangesetContent;
+use crate::commit::BonsaiFileChange;
+use crate::commit::CommitHashLookupRequest;
+use crate::commit::CommitHashLookupResponse;
+use crate::commit::CommitHashToLocationRequestBatch;
+use crate::commit::CommitHashToLocationResponse;
+use crate::commit::EphemeralPrepareResponse;
+use crate::wire::is_default;
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireFileType;
+use crate::wire::WireHgId;
+use crate::wire::WireParents;
+use crate::wire::WireRepoPathBuf;
+use crate::wire::WireResult;
+use crate::wire::WireToApiConversionError;
+use crate::wire::WireUploadToken;
 
-pub use crate::commit::{
-    WireBonsaiExtra, WireCommitGraphEntry, WireCommitGraphRequest, WireCommitLocationToHashRequest,
-    WireCommitLocationToHashRequestBatch, WireCommitLocationToHashResponse,
-    WireEphemeralPrepareRequest, WireExtra, WireFetchSnapshotRequest, WireFetchSnapshotResponse,
-    WireHgChangesetContent, WireHgMutationEntryContent, WireUploadBonsaiChangesetRequest,
-    WireUploadHgChangeset, WireUploadHgChangesetsRequest,
-};
+pub use crate::commit::WireBonsaiExtra;
+pub use crate::commit::WireCommitGraphEntry;
+pub use crate::commit::WireCommitGraphRequest;
+pub use crate::commit::WireCommitLocationToHashRequest;
+pub use crate::commit::WireCommitLocationToHashRequestBatch;
+pub use crate::commit::WireCommitLocationToHashResponse;
+pub use crate::commit::WireEphemeralPrepareRequest;
+pub use crate::commit::WireExtra;
+pub use crate::commit::WireFetchSnapshotRequest;
+pub use crate::commit::WireFetchSnapshotResponse;
+pub use crate::commit::WireHgChangesetContent;
+pub use crate::commit::WireHgMutationEntryContent;
+pub use crate::commit::WireUploadBonsaiChangesetRequest;
+pub use crate::commit::WireUploadHgChangeset;
+pub use crate::commit::WireUploadHgChangesetsRequest;
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireCommitLocation {

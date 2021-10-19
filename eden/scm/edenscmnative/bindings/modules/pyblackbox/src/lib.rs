@@ -7,9 +7,18 @@
 
 //! Python bindings for native blackbox logging.
 
-use blackbox::{self, event::Event, init, log, serde_json, BlackboxOptions, SessionId, ToValue};
+use blackbox::event::Event;
+use blackbox::init;
+use blackbox::log;
+use blackbox::serde_json;
+use blackbox::BlackboxOptions;
+use blackbox::SessionId;
+use blackbox::ToValue;
+use blackbox::{self};
 use cpython::*;
-use cpython_ext::{PyNone, PyPath, ResultPyErrExt};
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::ResultPyErrExt;
 use std::ops::Deref;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {

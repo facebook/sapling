@@ -238,7 +238,8 @@ mod tests {
     use futures::stream::StreamExt;
     use std::sync::Arc;
     use std::sync::Mutex;
-    use tokio::time::{sleep, Duration};
+    use tokio::time::sleep;
+    use tokio::time::Duration;
 
     type I = usize;
     type O = String;

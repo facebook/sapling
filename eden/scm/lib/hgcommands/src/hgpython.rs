@@ -6,17 +6,27 @@
  */
 
 use crate::commands;
-use crate::python::{
-    py_finalize, py_init_threads, py_initialize, py_is_initialized, py_main, py_set_argv,
-    py_set_program_name,
-};
+use crate::python::py_finalize;
+use crate::python::py_init_threads;
+use crate::python::py_initialize;
+use crate::python::py_is_initialized;
+use crate::python::py_main;
+use crate::python::py_set_argv;
+use crate::python::py_set_program_name;
 use clidispatch::io::IO;
 use cpython::*;
-use cpython_ext::{format_py_error, wrap_pyio, Bytes, ResultPyErrExt, Str, WrappedIO};
+use cpython_ext::format_py_error;
+use cpython_ext::wrap_pyio;
+use cpython_ext::Bytes;
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
+use cpython_ext::WrappedIO;
 use encoding::osstring_to_local_cstring;
 use std::env;
-use std::ffi::{CString, OsString};
-use tracing::{debug_span, info_span};
+use std::ffi::CString;
+use std::ffi::OsString;
+use tracing::debug_span;
+use tracing::info_span;
 
 const HGPYENTRYPOINT_MOD: &str = "edenscm";
 pub struct HgPython {

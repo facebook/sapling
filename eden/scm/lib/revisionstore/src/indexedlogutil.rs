@@ -5,15 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
 
-use indexedlog::{
-    log::{self, IndexDef, IndexOutput, Log, LogLookupIter},
-    rotate::{self, RotateLog, RotateLogLookupIter},
-    Result as IndexedlogResult,
-};
+use indexedlog::log::IndexDef;
+use indexedlog::log::IndexOutput;
+use indexedlog::log::Log;
+use indexedlog::log::LogLookupIter;
+use indexedlog::log::{self};
+use indexedlog::rotate::RotateLog;
+use indexedlog::rotate::RotateLogLookupIter;
+use indexedlog::rotate::{self};
+use indexedlog::Result as IndexedlogResult;
 use minibytes::Bytes;
 use tracing::debug;
 
