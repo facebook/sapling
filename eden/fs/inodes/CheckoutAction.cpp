@@ -125,6 +125,8 @@ Future<InvalidationRequired> CheckoutAction::run(
                            std::shared_ptr<const Tree> oldTree) {
               rc->setOldTree(std::move(oldTree));
             })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance())
             .thenError(
                 [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
                   rc->error("error getting old tree", ew);
@@ -136,6 +138,8 @@ Future<InvalidationRequired> CheckoutAction::run(
             .thenValue([rc = LoadingRefcount(this)](Hash20 oldBlobSha1) {
               rc->setOldBlob(std::move(oldBlobSha1));
             })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance())
             .thenError(
                 [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
                   rc->error("error getting old blob Sha1", ew);
@@ -152,6 +156,8 @@ Future<InvalidationRequired> CheckoutAction::run(
                            std::shared_ptr<const Tree> newTree) {
               rc->setNewTree(std::move(newTree));
             })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance())
             .thenError(
                 [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
                   rc->error("error getting new tree", ew);

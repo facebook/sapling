@@ -191,6 +191,8 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     // Possibly modified directory.  Load the Tree in question.
     return context_->store
         ->getTree(scmEntry_.getHash(), context_->getFetchContext())
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance())
         .thenValue([this, treeInode = std::move(treeInode)](
                        shared_ptr<const Tree>&& tree) {
           return treeInode->diff(

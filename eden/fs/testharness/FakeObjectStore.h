@@ -38,7 +38,7 @@ class FakeObjectStore final : public IObjectStore {
       const RootId& commitID,
       ObjectFetchContext& context =
           ObjectFetchContext::getNullContext()) const override;
-  folly::Future<std::shared_ptr<const Tree>> getTree(
+  ImmediateFuture<std::shared_ptr<const Tree>> getTree(
       const ObjectId& id,
       ObjectFetchContext& context =
           ObjectFetchContext::getNullContext()) const override;

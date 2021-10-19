@@ -10,6 +10,7 @@
 #include <folly/String.h>
 #include <folly/futures/Future.h>
 #include "eden/fs/service/ThriftUtil.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -56,16 +57,16 @@ Future<shared_ptr<const Tree>> FakeObjectStore::getRootTree(
   return makeFuture(make_shared<Tree>(iter->second));
 }
 
-Future<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
+ImmediateFuture<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
     const ObjectId& id,
     ObjectFetchContext&) const {
   ++accessCounts_[id];
   auto iter = trees_.find(id);
   if (iter == trees_.end()) {
-    return makeFuture<shared_ptr<const Tree>>(
+    return makeImmediateFuture<std::shared_ptr<const Tree>>(
         std::domain_error("tree " + id.toString() + " not found"));
   }
-  return makeFuture(make_shared<Tree>(iter->second));
+  return make_shared<const Tree>(iter->second);
 }
 
 Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(

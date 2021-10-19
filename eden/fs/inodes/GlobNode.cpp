@@ -340,15 +340,19 @@ Future<folly::Unit> GlobNode::evaluateImpl(
                                 &globResult,
                                 &originRootId](
                                    std::shared_ptr<const Tree> dir) mutable {
-                      return innerNode->evaluateImpl(
-                          store,
-                          context,
-                          candidateName,
-                          TreeRoot(std::move(dir)),
-                          fileBlobsToPrefetch,
-                          globResult,
-                          originRootId);
-                    }));
+                      return innerNode
+                          ->evaluateImpl(
+                              store,
+                              context,
+                              candidateName,
+                              TreeRoot(std::move(dir)),
+                              fileBlobsToPrefetch,
+                              globResult,
+                              originRootId)
+                          .semi();
+                    })
+                    .semi()
+                    .via(&folly::QueuedImmediateExecutor::instance()));
           }
         }
       };
@@ -556,15 +560,18 @@ Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
                               &globResult,
                               &originRootId](std::shared_ptr<const Tree> tree) {
                     return evaluateRecursiveComponentImpl(
-                        store,
-                        context,
-                        rootPath,
-                        candidateName,
-                        TreeRoot(std::move(tree)),
-                        fileBlobsToPrefetch,
-                        globResult,
-                        originRootId);
-                  }));
+                               store,
+                               context,
+                               rootPath,
+                               candidateName,
+                               TreeRoot(std::move(tree)),
+                               fileBlobsToPrefetch,
+                               globResult,
+                               originRootId)
+                        .semi();
+                  })
+                  .semi()
+                  .via(&folly::QueuedImmediateExecutor::instance()));
         }
       }
     }

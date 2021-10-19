@@ -147,11 +147,11 @@ class ObjectStore : public IObjectStore,
   /**
    * Get a Tree by ID.
    *
-   * This returns a Future object that will produce the Tree when it is ready.
-   * It may result in a std::domain_error if the specified tree ID does not
-   * exist, or possibly other exceptions on error.
+   * This returns an ImmediateFuture object that will produce the Tree when it
+   * is ready.  It may result in a std::domain_error if the specified tree ID
+   * does not exist, or possibly other exceptions on error.
    */
-  folly::Future<std::shared_ptr<const Tree>> getTree(
+  ImmediateFuture<std::shared_ptr<const Tree>> getTree(
       const ObjectId& id,
       ObjectFetchContext& context) const override;
 

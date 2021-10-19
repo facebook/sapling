@@ -21,6 +21,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/utils/Future.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using folly::Future;
@@ -654,9 +655,13 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
     const GitIgnoreStack* ignore,
     bool isIgnored) {
   auto scmTreeFuture =
-      context->store->getTree(scmHash, context->getFetchContext());
+      context->store->getTree(scmHash, context->getFetchContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   auto wdTreeFuture =
-      context->store->getTree(wdHash, context->getFetchContext());
+      context->store->getTree(wdHash, context->getFetchContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   // Optimization for the case when both tree objects are immediately ready.
   // We can avoid copying the input path in this case.
   if (scmTreeFuture.isReady() && wdTreeFuture.isReady()) {
@@ -686,7 +691,9 @@ FOLLY_NODISCARD Future<Unit> diffAddedTree(
     ObjectId wdHash,
     const GitIgnoreStack* ignore,
     bool isIgnored) {
-  auto wdFuture = context->store->getTree(wdHash, context->getFetchContext());
+  auto wdFuture = context->store->getTree(wdHash, context->getFetchContext())
+                      .semi()
+                      .via(&folly::QueuedImmediateExecutor::instance());
   // Optimization for the case when the tree object is immediately ready.
   // We can avoid copying the input path in this case.
   if (wdFuture.isReady()) {
@@ -705,7 +712,9 @@ FOLLY_NODISCARD Future<Unit> diffRemovedTree(
     DiffContext* context,
     RelativePathPiece currentPath,
     ObjectId scmHash) {
-  auto scmFuture = context->store->getTree(scmHash, context->getFetchContext());
+  auto scmFuture = context->store->getTree(scmHash, context->getFetchContext())
+                       .semi()
+                       .via(&folly::QueuedImmediateExecutor::instance());
   // Optimization for the case when the tree object is immediately ready.
   // We can avoid copying the input path in this case.
   if (scmFuture.isReady()) {

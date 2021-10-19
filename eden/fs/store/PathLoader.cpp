@@ -11,6 +11,7 @@
 #include "eden/fs/service/gen-cpp2/eden_constants.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/EdenError.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook::eden {
 
@@ -48,6 +49,8 @@ folly::Future<std::shared_ptr<const Tree>> resolveTree(
   }
 
   return objectStore.getTree(child->getHash(), fetchContext)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([ctx = std::move(ctx), &objectStore, &fetchContext, index](
                      std::shared_ptr<const Tree>&& tree) mutable {
         return resolveTree(

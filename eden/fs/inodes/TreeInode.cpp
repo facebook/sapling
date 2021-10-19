@@ -630,6 +630,8 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
   if (!entry.isMaterialized()) {
     return getStore()
         ->getTree(entry.getHash(), fetchContext)
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance())
         .thenValue(
             [self = inodePtrFromThis(),
              childName = PathComponent{name},

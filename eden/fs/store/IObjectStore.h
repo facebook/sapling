@@ -29,6 +29,8 @@ class ObjectId;
 class Hash20;
 class Tree;
 class ObjectFetchContext;
+template <typename T>
+class ImmediateFuture;
 
 class IObjectStore {
  public:
@@ -44,7 +46,7 @@ class IObjectStore {
   virtual folly::Future<std::shared_ptr<const Tree>> getRootTree(
       const RootId& rootId,
       ObjectFetchContext& context) const = 0;
-  virtual folly::Future<std::shared_ptr<const Tree>> getTree(
+  virtual ImmediateFuture<std::shared_ptr<const Tree>> getTree(
       const ObjectId& id,
       ObjectFetchContext& context) const = 0;
   virtual folly::Future<std::shared_ptr<const Blob>> getBlob(

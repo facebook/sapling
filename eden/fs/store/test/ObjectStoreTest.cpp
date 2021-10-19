@@ -17,6 +17,7 @@
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/LoggingFetchContext.h"
 #include "eden/fs/testharness/StoredObject.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;

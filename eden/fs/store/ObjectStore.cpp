@@ -20,6 +20,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -146,7 +147,7 @@ folly::Future<std::shared_ptr<TreeEntry>> ObjectStore::getTreeEntryForRootId(
       .via(executor_);
 }
 
-Future<shared_ptr<const Tree>> ObjectStore::getTree(
+ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
     const ObjectId& id,
     ObjectFetchContext& fetchContext) const {
   // Check in the LocalStore first
@@ -186,12 +187,13 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
         }
 
         // promote to shared_ptr so we can store in the cache and return
-        auto sharedTree = std::shared_ptr<Tree>(std::move(result.tree));
+        auto sharedTree = std::shared_ptr<const Tree>(std::move(result.tree));
         self->treeCache_->insert(sharedTree);
         fetchContext.didFetch(ObjectFetchContext::Tree, id, result.origin);
         self->updateProcessFetch(fetchContext);
         return sharedTree;
-      });
+      })
+      .semi();
 }
 
 folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
