@@ -386,10 +386,10 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
 
     // Create commit syncer with two version - current and new
     let target_repo_dbs = TargetRepoDbs {
-        connections: factory.metadata_db().clone(),
+        connections: factory.metadata_db().clone().into(),
         bookmarks: target_repo.bookmarks().clone(),
         bookmark_update_log: target_repo.bookmark_update_log().clone(),
-        counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone()),
+        counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone().into()),
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id, target_repo_id).await?;
 
@@ -990,10 +990,10 @@ async fn init_repos(
     let target_repo: BlobRepo = factory.with_id(target_repo_id).build()?;
 
     let target_repo_dbs = TargetRepoDbs {
-        connections: factory.metadata_db().clone(),
+        connections: factory.metadata_db().clone().into(),
         bookmarks: target_repo.bookmarks().clone(),
         bookmark_update_log: target_repo.bookmark_update_log().clone(),
-        counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone()),
+        counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone().into()),
     };
     init_target_repo(&ctx, &target_repo_dbs, source_repo_id, target_repo_id).await?;
 
@@ -1284,10 +1284,12 @@ async fn init_merged_repos(
         let repoid = RepositoryId::new(idx as i32);
         let small_repo: BlobRepo = factory.with_id(repoid).build()?;
         let small_repo_dbs = TargetRepoDbs {
-            connections: factory.metadata_db().clone(),
+            connections: factory.metadata_db().clone().into(),
             bookmarks: small_repo.bookmarks().clone(),
             bookmark_update_log: small_repo.bookmark_update_log().clone(),
-            counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone()),
+            counters: SqlMutableCounters::from_sql_connections(
+                factory.metadata_db().clone().into(),
+            ),
         };
 
         // Init counters

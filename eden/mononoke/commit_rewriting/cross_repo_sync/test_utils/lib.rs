@@ -128,7 +128,8 @@ pub async fn init_small_large_repo(
     sqlite_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
     let mut factory = TestRepoFactory::with_sqlite_connection(sqlite_con)?;
     let megarepo: BlobRepo = factory.with_id(RepositoryId::new(1)).build()?;
-    let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
+    let mapping =
+        SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());
     let smallrepo: BlobRepo = factory.with_id(RepositoryId::new(0)).build()?;
 
     let repos = CommitSyncRepos::SmallToLarge {

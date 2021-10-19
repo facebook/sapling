@@ -575,7 +575,8 @@ fn prepare_repos_and_mapping() -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMap
     let mut factory = TestRepoFactory::with_sqlite_connection(sqlite_con)?;
     let megarepo = factory.with_id(RepositoryId::new(1)).build()?;
     let small_repo = factory.with_id(RepositoryId::new(0)).build()?;
-    let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
+    let mapping =
+        SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());
     Ok((small_repo, megarepo, mapping))
 }
 

@@ -1522,7 +1522,7 @@ mod tests {
 
             let repoid = repo.get_repoid();
             let mutable_counters = Arc::new(SqlMutableCounters::from_sql_connections(
-                factory.metadata_db().clone(),
+                factory.metadata_db().clone().into(),
             ));
 
             let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;

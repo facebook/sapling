@@ -68,7 +68,7 @@ async fn pushrebase_saves_mapping(fb: FacebookInit) -> Result<()> {
     .head;
 
     let prepushrebase_ids = get_prepushrebase_ids(
-        &repo_factory.metadata_db().read_connection,
+        &repo_factory.metadata_db().connections().read_connection,
         repo.get_repoid(),
         rebased,
     )

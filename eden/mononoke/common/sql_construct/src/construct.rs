@@ -8,11 +8,8 @@
 use std::path::Path;
 
 use anyhow::Result;
-use sql::Connection;
-use sql_ext::{
-    open_existing_sqlite_path, open_sqlite_in_memory, open_sqlite_path, SqlConnections,
-    SqlShardedConnections,
-};
+use sql::{Connection, SqlConnections, SqlConnectionsWithSchema, SqlShardedConnections};
+use sql_ext::{open_existing_sqlite_path, open_sqlite_in_memory, open_sqlite_path};
 
 /// Construct a SQL data manager backed by a database
 ///
@@ -29,6 +26,12 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
     ///
     /// This function may be called in an async context and must not block.
     fn from_sql_connections(connections: SqlConnections) -> Self;
+
+    // Wraps from_sql_connections, creating the sqlite schema if required
+    fn from_connections_with_schema(connections: SqlConnectionsWithSchema) -> Result<Self> {
+        connections.create_schema(Self::CREATION_QUERY)?;
+        Ok(Self::from_sql_connections(connections.into()))
+    }
 
     /// Construct an instance from an in-memory SQLite instance
     fn with_sqlite_in_memory() -> Result<Self> {
@@ -49,7 +52,7 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
             write_connection: if readonly {
                 read_connection.clone()
             } else {
-                write_connection
+                write_connection.clone()
             },
             read_master_connection: read_connection.clone(),
             read_connection,

@@ -440,9 +440,10 @@ pub async fn open_backsyncer_dbs(
     let sql_factory =
         make_metadata_sql_factory(ctx.fb, db_config, mysql_options, readonly_storage).await?;
 
-    let connections = sql_factory
+    let connections: SqlConnections = sql_factory
         .make_primary_connections("bookmark_mutable_counters".to_string())
-        .await?;
+        .await?
+        .into();
 
     let counters = SqlMutableCounters::from_sql_connections(connections.clone());
 

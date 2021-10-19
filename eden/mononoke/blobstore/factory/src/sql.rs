@@ -10,13 +10,13 @@ use fbinit::FacebookInit;
 use metaconfig_types::{
     LocalDatabaseConfig, MetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
 };
-use sql::Connection;
+use sql::{Connection, SqlConnections, SqlConnectionsWithSchema};
 use sql_construct::{
     SqlConstructFromMetadataDatabaseConfig, SqlShardableConstructFromMetadataDatabaseConfig,
 };
 use sql_ext::{
     facebook::{create_mysql_connections_unsharded, MysqlOptions},
-    open_sqlite_path, SqlConnections,
+    open_existing_sqlite_path, open_sqlite_path,
 };
 
 use crate::ReadOnlyStorage;
@@ -83,19 +83,40 @@ impl MetadataSqlFactory {
     }
 
     /// Make connections to the primary metadata database
-    pub async fn make_primary_connections(&self, label: String) -> Result<SqlConnections, Error> {
+    pub async fn make_primary_connections(
+        &self,
+        label: String,
+    ) -> Result<SqlConnectionsWithSchema, Error> {
         match &self.dbconfig {
             MetadataDatabaseConfig::Local(LocalDatabaseConfig { path }) => {
-                open_sqlite_path(path.join("sqlite_dbs"), self.readonly.0)
-                    .map(|conn| SqlConnections::new_single(Connection::with_sqlite(conn)))
+                let path = path.join("sqlite_dbs");
+                let schema_connection =
+                    Connection::with_sqlite(open_sqlite_path(path.clone(), false)?);
+                let read_connection =
+                    Connection::with_sqlite(open_existing_sqlite_path(path, true)?);
+                Ok(SqlConnectionsWithSchema::new(
+                    SqlConnections {
+                        write_connection: if self.readonly.0 {
+                            read_connection.clone()
+                        } else {
+                            schema_connection.clone()
+                        },
+                        read_master_connection: read_connection.clone(),
+                        read_connection,
+                    },
+                    Some(schema_connection),
+                ))
             }
-            MetadataDatabaseConfig::Remote(config) => create_mysql_connections_unsharded(
-                self.fb,
-                self.mysql_options.clone(),
-                label,
-                config.primary.db_address.clone(),
-                self.readonly.0,
-            ),
+            MetadataDatabaseConfig::Remote(config) => Ok(SqlConnectionsWithSchema::new(
+                create_mysql_connections_unsharded(
+                    self.fb,
+                    self.mysql_options.clone(),
+                    label,
+                    config.primary.db_address.clone(),
+                    self.readonly.0,
+                )?,
+                None,
+            )),
         }
     }
 }
