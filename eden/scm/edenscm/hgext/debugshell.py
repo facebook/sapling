@@ -92,7 +92,7 @@ def debugshell(ui, repo, *args, **opts):
     command = opts.get("command")
 
     env = globals()
-    env['ui'] = ui
+    env["ui"] = ui
     _assignobjects(env, repo)
     sys.argv = pycompat.sysargv = args
 
