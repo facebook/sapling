@@ -146,6 +146,7 @@ async fn split_commit(
         }
 
         if should_create_new_commit {
+            let num_of_files = current_file_changes.len();
             let cs_id = create_new_commit(
                 &ctx,
                 &repo,
@@ -157,10 +158,7 @@ async fn split_commit(
             parent = Some(cs_id);
             info!(
                 ctx.logger(),
-                "{}, size: {}, number of files: {}",
-                cs_id,
-                current_file_size,
-                current_file_changes.len()
+                "{}, size: {}, number of files: {}", cs_id, current_file_size, num_of_files,
             );
             current_file_changes.clear();
             current_file_size = 0;
@@ -177,6 +175,7 @@ async fn split_commit(
     }
 
     if !current_file_changes.is_empty() {
+        let num_of_files = current_file_changes.len();
         let cs_id = create_new_commit(
             &ctx,
             &repo,
@@ -188,10 +187,7 @@ async fn split_commit(
         result.push(cs_id);
         info!(
             ctx.logger(),
-            "{}, size: {}, number of files: {}",
-            cs_id,
-            current_file_size,
-            current_file_changes.len()
+            "{}, size: {}, number of files: {}", cs_id, current_file_size, num_of_files
         );
     }
 
