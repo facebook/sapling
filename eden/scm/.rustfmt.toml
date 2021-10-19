@@ -10,3 +10,6 @@ use_field_init_shorthand = true
 
 # To minimize conflicts, and make things easier to grep.
 imports_granularity = "Item"
+
+# To force an automatic order of use statements.
+group_imports = "StdExternalCrate"
