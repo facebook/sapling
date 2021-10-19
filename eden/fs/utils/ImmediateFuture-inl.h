@@ -229,6 +229,13 @@ folly::SemiFuture<T> ImmediateFuture<T>::semi() && {
   }
 }
 
+template <typename T, typename E>
+typename std::
+    enable_if_t<std::is_base_of<std::exception, E>::value, ImmediateFuture<T>>
+    makeImmediateFuture(E const& e) {
+  return ImmediateFuture<T>{folly::Try<T>{e}};
+}
+
 template <typename Func>
 auto makeImmediateFutureWith(Func&& func) {
   return ImmediateFuture<folly::Unit>().thenTry(

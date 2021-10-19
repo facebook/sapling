@@ -356,3 +356,8 @@ TEST(ImmediateFuture, collectAllOrdering) {
   EXPECT_EQ(*res[0], 42);
   EXPECT_EQ(*res[1], 43);
 }
+
+TEST(ImmediateFuture, makeImmediateFutureError) {
+  auto fut = makeImmediateFuture<int>(std::logic_error("Failure"));
+  EXPECT_THROW(std::move(fut).get(), std::logic_error);
+}

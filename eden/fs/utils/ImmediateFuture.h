@@ -231,6 +231,18 @@ class DestroyedImmediateFutureError : public std::logic_error {
 };
 
 /**
+ * Build an ImmediateFuture from an error.
+ *
+ * The ImmediateFuture type must be exclicitely passed in like:
+ *
+ *   makeImmediateFuture<int>(std::logic_error("Something is wrong!"));
+ */
+template <typename T, typename E>
+typename std::
+    enable_if_t<std::is_base_of<std::exception, E>::value, ImmediateFuture<T>>
+    makeImmediateFuture(E const& e);
+
+/**
  * Build an ImmediateFuture from func.
  *
  * Exceptions thrown by func will be captured in the returned ImmediateFuture.
