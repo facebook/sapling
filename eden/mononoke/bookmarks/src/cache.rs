@@ -408,6 +408,11 @@ impl BookmarkTransaction for CachedBookmarksTransaction {
         self.transaction.create_scratch(bookmark, new_cs)
     }
 
+    fn delete_scratch(&mut self, bookmark: &BookmarkName, old_cs: ChangesetId) -> Result<()> {
+        // Scratch bookmarks aren't stored in the cache.
+        self.transaction.delete_scratch(bookmark, old_cs)
+    }
+
     fn create_publishing(
         &mut self,
         bookmark: &BookmarkName,
@@ -641,6 +646,10 @@ mod tests {
         }
 
         fn create_scratch(&mut self, _bookmark: &BookmarkName, _new_cs: ChangesetId) -> Result<()> {
+            Ok(())
+        }
+
+        fn delete_scratch(&mut self, _bookmark: &BookmarkName, _old_cs: ChangesetId) -> Result<()> {
             Ok(())
         }
 

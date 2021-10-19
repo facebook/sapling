@@ -95,8 +95,8 @@ impl<'op> DeleteBookmarkOp<'op> {
             .check_authorized(ctx, bookmark_attrs, self.bookmark)
             .await?;
 
-        if kind == BookmarkKind::Scratch || bookmark_attrs.is_fast_forward_only(self.bookmark) {
-            // Cannot delete scratch or fast-forward-only bookmarks.
+        if bookmark_attrs.is_fast_forward_only(self.bookmark) {
+            // Cannot delete fast-forward-only bookmarks.
             return Err(BookmarkMovementError::DeletionProhibited {
                 bookmark: self.bookmark.clone(),
             });
@@ -109,12 +109,19 @@ impl<'op> DeleteBookmarkOp<'op> {
             .add("bookmark", self.bookmark.to_string())
             .log_with_msg("Deleting bookmark", None);
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
-        txn.delete(
-            self.bookmark,
-            self.old_target,
-            self.reason,
-            self.bundle_replay,
-        )?;
+        match kind {
+            BookmarkKind::Scratch => {
+                txn.delete_scratch(self.bookmark, self.old_target)?;
+            }
+            BookmarkKind::Public => {
+                txn.delete(
+                    self.bookmark,
+                    self.old_target,
+                    self.reason,
+                    self.bundle_replay,
+                )?;
+            }
+        }
 
         let ok = txn.commit().await?;
         if !ok {

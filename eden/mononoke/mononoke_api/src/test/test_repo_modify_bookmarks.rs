@@ -182,11 +182,20 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
             .is_none()
     );
 
-    // Can't delete scratch bookmarks.
+    // Deleting a scratch bookmark with the wrong old-target fails.
     assert!(
-        repo.delete_bookmark("scratch/bookmark3", None, None)
+        repo.delete_bookmark("scratch/bookmark3", Some(changesets["E"]), None)
             .await
             .is_err()
+    );
+
+    // But with the right old-target succeeds.
+    repo.delete_bookmark("scratch/bookmark3", Some(changesets["G"]), None)
+        .await?;
+    assert!(
+        repo.resolve_bookmark("scratch/bookmark3", BookmarkFreshness::MostRecent)
+            .await?
+            .is_none()
     );
 
     Ok(())

@@ -173,7 +173,7 @@ struct SqlBookmarksTransactionPayload {
     force_deletes: Vec<(BookmarkName, NewUpdateLogEntry)>,
 
     /// Operations to delete a bookmark with an old id.
-    deletes: Vec<(BookmarkName, ChangesetId, NewUpdateLogEntry)>,
+    deletes: Vec<(BookmarkName, ChangesetId, Option<NewUpdateLogEntry>)>,
 }
 
 /// Structure representing the log entries to insert when executing a
@@ -362,8 +362,10 @@ impl SqlBookmarksTransactionPayload {
         mut txn: SqlTransaction,
         log: &'op mut TransactionLogUpdates<'log>,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
-        for (bookmark, old_cs_id, log_entry) in self.deletes.iter() {
-            log.push_log_entry(bookmark, log_entry);
+        for (bookmark, old_cs_id, maybe_log_entry) in self.deletes.iter() {
+            maybe_log_entry
+                .as_ref()
+                .map(|log_entry| log.push_log_entry(bookmark, log_entry));
             let (txn_, result) =
                 DeleteBookmarkIf::query_with_transaction(txn, &self.repo_id, bookmark, old_cs_id)
                     .await?;
@@ -541,7 +543,9 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
     ) -> Result<()> {
         self.check_not_seen(bookmark)?;
         let log = NewUpdateLogEntry::new(Some(old_cs), None, reason, bundle_replay)?;
-        self.payload.deletes.push((bookmark.clone(), old_cs, log));
+        self.payload
+            .deletes
+            .push((bookmark.clone(), old_cs, Some(log)));
         Ok(())
     }
 
@@ -554,6 +558,16 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
         self.check_not_seen(bookmark)?;
         let log = NewUpdateLogEntry::new(None, None, reason, bundle_replay)?;
         self.payload.force_deletes.push((bookmark.clone(), log));
+        Ok(())
+    }
+
+    fn delete_scratch(&mut self, bookmark: &BookmarkName, old_cs: ChangesetId) -> Result<()> {
+        self.check_not_seen(bookmark)?;
+        self.payload.deletes.push((
+            bookmark.clone(),
+            old_cs,
+            None, // Scratch bookmark updates are not logged.
+        ));
         Ok(())
     }
 

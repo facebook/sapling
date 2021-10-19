@@ -109,6 +109,10 @@ pub trait BookmarkTransaction: Send + Sync + 'static {
     /// Creates a new bookmark, configured as scratch. It should not exist already.
     fn create_scratch(&mut self, bookmark: &BookmarkName, new_cs: ChangesetId) -> Result<()>;
 
+    /// Adds a scratch bookmark delete operation to the transaction set.
+    /// Deletes bookmark only if it currently points to `old_cs`.
+    fn delete_scratch(&mut self, bookmark: &BookmarkName, old_cs: ChangesetId) -> Result<()>;
+
     /// Adds a publishing bookmark create operation to the transaction set.
     /// Creates a new bookmark, configured as publishing. It should not exist already.
     fn create_publishing(
