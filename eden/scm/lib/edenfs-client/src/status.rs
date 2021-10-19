@@ -5,9 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use thrift_types::edenfs as eden;
+use std::collections::HashMap;
+use std::default::Default;
+use std::fs::read_link;
+use std::fs::symlink_metadata;
+use std::fs::File;
+use std::io;
+use std::io::BufReader;
+use std::io::Read;
+use std::path::Path;
+use std::path::PathBuf;
+use std::str;
+use std::sync::Arc;
 
-use crate::path_relativizer::PathRelativizer;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Error;
@@ -26,23 +36,14 @@ use eden::ScmStatus;
 use fbthrift_socket::SocketTransport;
 use sha2::Digest;
 use sha2::Sha256;
-use std::collections::HashMap;
-use std::default::Default;
-use std::fs::read_link;
-use std::fs::symlink_metadata;
-use std::fs::File;
-use std::io;
-use std::io::BufReader;
-use std::io::Read;
-use std::path::Path;
-use std::path::PathBuf;
-use std::str;
-use std::sync::Arc;
+use thrift_types::edenfs as eden;
 use thrift_types::fb303_core::client::BaseService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 #[cfg(unix)]
 use tokio::net::UnixStream;
+
+use crate::path_relativizer::PathRelativizer;
 
 /// Standalone status command for edenfs.
 ///
@@ -791,12 +792,14 @@ enum DirstateMergeState {
 // build and better OSS support.
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::collections::BTreeMap;
+
     use telemetry::hgargparse::hg_parser;
     use telemetry::hgargparse::parse_args;
     use telemetry::test_utils::generate_fixture;
     use telemetry::test_utils::Fixture;
+
+    use super::*;
 
     #[derive(Default)]
     struct StatusTestCase<'a> {

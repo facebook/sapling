@@ -8,7 +8,6 @@
 use cpython::*;
 use cpython_ext::error;
 use cpython_ext::ResultPyErrExt;
-
 use taggederror::intentional_bail;
 use taggederror::intentional_error;
 use taggederror::CommonMetadata;

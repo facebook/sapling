@@ -5,15 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use super::Repo;
-use super::Result;
-use super::IO;
+use std::convert::TryInto;
+use std::io::Write;
+
 use clidispatch::errors;
 use cliparser::define_flags;
 use dag::render::render_segment_dag;
 
-use std::convert::TryInto;
-use std::io::Write;
+use super::Repo;
+use super::Result;
+use super::IO;
 
 define_flags! {
     pub struct GraphOpts {

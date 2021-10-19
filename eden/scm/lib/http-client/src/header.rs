@@ -104,10 +104,10 @@ fn parse_header(header: &str) -> Option<(HeaderName, HeaderValue)> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use anyhow::Result;
     use http::header;
+
+    use super::*;
 
     #[test]
     fn test_parse_header() -> Result<()> {

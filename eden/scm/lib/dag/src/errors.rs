@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
+
+use thiserror::Error;
+
 use crate::Id;
 use crate::VertexName;
-use std::io;
-use thiserror::Error;
 
 /// Error used by the Dag crate.
 #[derive(Debug, Error)]

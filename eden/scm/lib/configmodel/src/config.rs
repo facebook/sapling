@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::convert::FromConfigValue;
-use crate::Result;
-use minibytes::Text;
 use std::collections::BTreeMap;
 use std::str;
+
+use minibytes::Text;
+
+use crate::convert::FromConfigValue;
+use crate::Result;
 
 /// Readable config. This can be used as a trait object.
 pub trait Config {

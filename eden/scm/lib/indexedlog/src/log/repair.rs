@@ -5,6 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::fs::{self};
+use std::io::BufRead;
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Write;
+use std::io::{self};
+use std::path::Path;
+
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::lock::ScopedDirLock;
@@ -18,14 +27,6 @@ use crate::log::PRIMARY_START_OFFSET;
 use crate::repair::OpenOptionsRepair;
 use crate::utils::mmap_path;
 use crate::utils::{self};
-use std::fs::{self};
-use std::io::BufRead;
-use std::io::Read;
-use std::io::Seek;
-use std::io::SeekFrom;
-use std::io::Write;
-use std::io::{self};
-use std::path::Path;
 
 // Repair
 impl OpenOptions {

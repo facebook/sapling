@@ -13,12 +13,8 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use log::warn;
-use tracing::event;
-use tracing::instrument;
-use tracing::Level;
-
 use configparser::config::ConfigSet;
+use log::warn;
 use manifest::List;
 use progress::null::NullProgressFactory;
 use revisionstore::scmstore::FileAttributes;
@@ -30,6 +26,9 @@ use revisionstore::scmstore::TreeStore;
 use revisionstore::scmstore::TreeStoreBuilder;
 use revisionstore::HgIdDataStore;
 use revisionstore::MemcacheStore;
+use tracing::event;
+use tracing::instrument;
+use tracing::Level;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;

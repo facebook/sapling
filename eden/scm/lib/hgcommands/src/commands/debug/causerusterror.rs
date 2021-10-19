@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use taggederror::intentional_error;
+use taggederror::AnyhowExt;
+use taggederror::Fault;
+
 use super::NoOpts;
 use super::Repo;
 use super::Result;
 use super::IO;
-use taggederror::intentional_error;
-use taggederror::AnyhowExt;
-use taggederror::Fault;
 
 pub fn run(_opts: NoOpts, _io: &IO, _repo: Repo) -> Result<u8> {
     // Add additional metadata via AnyhowExt trait to an anyhow::Error or anyhow::Result

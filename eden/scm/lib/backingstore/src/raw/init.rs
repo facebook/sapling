@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use parking_lot::Mutex;
 use std::env;
 use std::sync::Arc;
 use std::sync::Once;
+
+use parking_lot::Mutex;
 use tracing::Level;
 use tracing_collector::TracingData;
 use tracing_subscriber::fmt::format::FmtSpan;

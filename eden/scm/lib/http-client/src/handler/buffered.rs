@@ -18,11 +18,10 @@ use http::HeaderMap;
 use http::StatusCode;
 use http::Version;
 
+use super::HandlerExt;
 use crate::header::Header;
 use crate::progress::Progress;
 use crate::RequestContext;
-
-use super::HandlerExt;
 
 /// Initial buffer capacity to allocate if we don't get a Content-Length header.
 /// Usually, the lack of a Content-Length header indicates a streaming response,
@@ -191,11 +190,10 @@ impl HandlerExt for Buffered {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use assert_matches::assert_matches;
     use http::HeaderValue;
 
+    use super::*;
     use crate::progress::ProgressReporter;
 
     #[test]

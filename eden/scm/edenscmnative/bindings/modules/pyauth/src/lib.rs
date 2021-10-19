@@ -9,15 +9,14 @@
 
 use anyhow::anyhow;
 use anyhow::Context;
-use cpython::*;
-use url::Url;
-
 use auth::AuthSection;
 use auth::{self};
+use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use pyconfigparser::config;
+use url::Url;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "auth"].join(".");

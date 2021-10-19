@@ -162,6 +162,8 @@ pub mod uniondatastore;
 pub mod unionhistorystore;
 pub mod util;
 
+pub use revisionstore_types::*;
+
 pub use crate::contentstore::ContentStore;
 pub use crate::contentstore::ContentStoreBuilder;
 pub use crate::datapack::DataEntry;
@@ -213,8 +215,6 @@ pub use crate::types::ContentHash;
 pub use crate::types::StoreKey;
 pub use crate::uniondatastore::UnionHgIdDataStore;
 pub use crate::util::Error;
-
-pub use revisionstore_types::*;
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;

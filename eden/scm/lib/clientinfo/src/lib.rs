@@ -18,11 +18,10 @@ pub const CLIENT_INFO_HEADER: &str = "X-Client-Info";
 mod facebook;
 #[cfg(not(fbcode_build))]
 mod oss;
-#[cfg(not(fbcode_build))]
-use oss as facebook;
-
 use facebook::get_fb_client_info;
 use facebook::FbClientInfo;
+#[cfg(not(fbcode_build))]
+use oss as facebook;
 
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct ClientInfo {

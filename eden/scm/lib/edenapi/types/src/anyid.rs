@@ -7,8 +7,6 @@
 
 use std::num::NonZeroU64;
 
-use crate::AnyFileContentId;
-use crate::UploadToken;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
@@ -17,6 +15,9 @@ use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
 use types::HgId;
+
+use crate::AnyFileContentId;
+use crate::UploadToken;
 
 blake2_hash!(BonsaiChangesetId);
 

@@ -307,11 +307,12 @@ mod tests {
         }
     }
 
+    use std::convert::TryFrom;
+
     use crate::parser::Flag;
     use crate::parser::ParseOptions;
     use crate::parser::StructFlags;
     use crate::parser::Value;
-    use std::convert::TryFrom;
 
     #[test]
     fn test_struct_flags() {

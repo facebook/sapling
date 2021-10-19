@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Error;
+use std::io::ErrorKind;
+
 ///! Async job scheduling utilities for a blocking application
 ///!
 ///! We have a blocking application. We have async libraries. This crate provides common utilities
@@ -30,8 +33,6 @@ use futures::stream::Stream;
 use futures::stream::StreamExt;
 use futures::FutureExt;
 use once_cell::sync::Lazy;
-use std::io::Error;
-use std::io::ErrorKind;
 use tokio::runtime::Builder as RuntimeBuilder;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
@@ -239,12 +240,12 @@ async fn unless_interrupted<F: Future>(f: F) -> Result<F::Output, Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::thread;
 
     use futures::future;
     use futures::stream;
+
+    use super::*;
 
     #[test]
     fn test_block_on() {

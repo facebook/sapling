@@ -23,7 +23,6 @@ use memmap::MmapOptions;
 use sha1::Digest;
 use sha1::Sha1;
 use thiserror::Error;
-
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -433,12 +432,11 @@ impl quickcheck::Arbitrary for NodeLocation {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::quickcheck;
     use tempfile::NamedTempFile;
-
     use types::path::RepoPathBuf;
+
+    use super::*;
 
     fn make_index(
         file_sections: &[(&RepoPath, FileSectionLocation)],

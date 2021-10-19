@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use cpython::*;
+use std::cell::RefCell;
 
+use cpython::*;
 use dag::Id;
 use dag::IdSet;
 use dag::IdSetIter;
-use std::cell::RefCell;
 
 /// A wrapper around [`IdSet`] with Python integration.
 ///

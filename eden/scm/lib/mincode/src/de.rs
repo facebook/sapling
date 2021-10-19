@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::Error;
-use crate::Result;
+use std::str;
+
 use byteorder::NetworkEndian;
 use byteorder::ReadBytesExt;
 use serde::de::Deserialize;
@@ -17,8 +17,10 @@ use serde::de::SeqAccess;
 use serde::de::VariantAccess;
 use serde::de::Visitor;
 use serde::de::{self};
-use std::str;
 use vlqencoding::VLQDecode;
+
+use crate::Error;
+use crate::Result;
 
 pub struct Deserializer<'de> {
     bytes: &'de [u8],

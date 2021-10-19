@@ -177,8 +177,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use anyhow::Result;
     use futures::channel::mpsc::channel;
     use futures::stream;
@@ -186,6 +184,8 @@ mod tests {
     use futures::StreamExt;
     use tokio::time::timeout;
     use tokio::time::Duration;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_no_deadlock() -> Result<()> {

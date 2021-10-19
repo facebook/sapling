@@ -21,11 +21,12 @@ pub struct FlatSegment {
     pub parents: Vec<Id>,
 }
 
+use std::collections::BTreeSet;
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Gen;
-use std::collections::BTreeSet;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FlatSegment {

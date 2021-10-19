@@ -7,7 +7,6 @@
 
 // Union history store
 use anyhow::Result;
-
 use types::Key;
 use types::NodeInfo;
 
@@ -60,11 +59,10 @@ impl<T: RemoteHistoryStore> RemoteHistoryStore for UnionHgIdHistoryStore<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::quickcheck;
     use thiserror::Error;
 
+    use super::*;
     use crate::localstore::LocalStore;
     use crate::types::StoreKey;
 

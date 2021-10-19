@@ -5,6 +5,14 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use std::cmp::Ordering;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use std::io::Write;
+
+use anyhow::Result;
+use nonblocking::non_blocking_result;
+
 use super::render::Ancestor;
 use super::render::Renderer;
 use crate::nameset::SyncNameSetQuery;
@@ -20,14 +28,6 @@ use crate::Level;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::NameDag;
 use crate::VertexName;
-
-use anyhow::Result;
-use nonblocking::non_blocking_result;
-
-#[cfg(any(test, feature = "indexedlog-backend"))]
-use std::cmp::Ordering;
-#[cfg(any(test, feature = "indexedlog-backend"))]
-use std::io::Write;
 
 /// Render a NameDag or MemNameDag into a String.
 pub fn render_namedag(

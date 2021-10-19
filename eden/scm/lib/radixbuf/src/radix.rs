@@ -396,12 +396,14 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+    use std::mem::transmute;
+
+    use quickcheck::quickcheck;
+
     use super::*;
     use crate::key::FixedKey;
     use crate::key::VariantKey;
-    use quickcheck::quickcheck;
-    use std::collections::HashSet;
-    use std::mem::transmute;
 
     #[test]
     fn test_errors() {

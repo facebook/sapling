@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::PyErr as Error;
-use crate::PyNone;
 use cpython::*;
 use serde::de;
 use serde::de::Visitor;
+
+use crate::PyErr as Error;
+use crate::PyNone;
 
 type Result<T> = std::result::Result<T, Error>;
 

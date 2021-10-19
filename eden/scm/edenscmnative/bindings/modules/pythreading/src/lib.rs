@@ -7,13 +7,14 @@
 
 #![allow(non_camel_case_types)]
 
-use cpython::*;
 use std::cell::Cell;
 use std::sync::Condvar;
 use std::sync::Mutex;
 use std::thread::ThreadId;
 use std::thread::{self};
 use std::time::Duration;
+
+use cpython::*;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "threading"].join(".");
@@ -425,8 +426,9 @@ impl RGeneratorIter {
 #[cfg(test)]
 #[cfg(not(all(fbcode_build, feature = "python2")))]
 mod tests {
-    use super::*;
     use std::thread;
+
+    use super::*;
 
     #[test]
     fn test_rgenerator_iter_multi_threads() {

@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::dagalgo::dagalgo;
-use crate::idmap::NULL_NODE;
+use std::cell::RefCell;
+use std::collections::HashMap;
+
 use anyhow::Result;
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
@@ -18,8 +19,9 @@ use dag::nameset::BoxVertexStream;
 use dag::Set;
 use dag::Vertex;
 use futures::stream::StreamExt;
-use std::cell::RefCell;
-use std::collections::HashMap;
+
+use crate::dagalgo::dagalgo;
+use crate::idmap::NULL_NODE;
 
 /// A wrapper around [`Set`] with Python integration added.
 ///

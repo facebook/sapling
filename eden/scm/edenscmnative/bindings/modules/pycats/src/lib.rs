@@ -7,10 +7,9 @@
 
 #![allow(non_camel_case_types)]
 
-use cpython::*;
-
 use cats::CatsSection;
 use cats::{self};
+use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
 use pyconfigparser::config;

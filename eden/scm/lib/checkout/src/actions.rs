@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::fmt;
+use std::ops::Deref;
+use std::ops::DerefMut;
+use std::sync::Arc;
+
 use anyhow::Result;
 use manifest::DiffEntry;
 use manifest::DiffType;
@@ -13,12 +20,6 @@ use manifest::FileType;
 use manifest::Manifest;
 use pathmatcher::Matcher;
 use pathmatcher::XorMatcher;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::fmt;
-use std::ops::Deref;
-use std::ops::DerefMut;
-use std::sync::Arc;
 use types::RepoPathBuf;
 
 /// Map of simple actions that needs to be performed to move between revisions without conflicts.
@@ -196,12 +197,14 @@ fn pyflags(t: &FileType) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::sync::Arc;
+
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::testutil::TestStore;
     use pathmatcher::TreeMatcher;
-    use std::sync::Arc;
     use types::HgId;
+
+    use super::*;
 
     #[test]
     fn test_with_sparse_profile_change() -> Result<()> {

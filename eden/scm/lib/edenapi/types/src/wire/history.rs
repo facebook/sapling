@@ -159,7 +159,6 @@ impl Arbitrary for WireHistoryResponseChunk {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(

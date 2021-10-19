@@ -5,6 +5,23 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
+use std::collections::BinaryHeap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::{self};
+use std::ops::Deref;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use std::path::Path;
+
+use indexmap::set::IndexSet;
+use serde::Deserialize;
+use serde::Serialize;
+use tracing::debug;
+use tracing::trace;
+
 use crate::errors::bug;
 use crate::errors::NotFoundError;
 use crate::id::Group;
@@ -27,21 +44,6 @@ use crate::IdSpan;
 use crate::Level;
 use crate::Result;
 use crate::VerLink;
-use indexmap::set::IndexSet;
-use serde::Deserialize;
-use serde::Serialize;
-use std::collections::BTreeSet;
-use std::collections::BinaryHeap;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::{self};
-use std::ops::Deref;
-#[cfg(any(test, feature = "indexedlog-backend"))]
-use std::path::Path;
-use tracing::debug;
-use tracing::trace;
 
 /// Structure to store a DAG of integers, with indexes to speed up ancestry queries.
 ///
@@ -1728,8 +1730,9 @@ fn default_seg_size() -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn test_segment_basic_lookups() {

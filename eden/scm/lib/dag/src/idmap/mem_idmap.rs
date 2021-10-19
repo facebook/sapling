@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{self};
+
 use super::IdMapWrite;
 use crate::errors::NotFoundError;
 use crate::id::Group;
@@ -15,10 +20,6 @@ use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::Result;
 use crate::VerLink;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::{self};
 
 /// Bi-directional mapping between an integer id and a name (`[u8]`).
 ///

@@ -33,11 +33,12 @@ impl<'a> From<(LegacyCodeNeedIdAccess, IdSet, &'a NameDag)> for NameSet {
 
 #[cfg(test)]
 mod tests {
+    use nonblocking::non_blocking_result as r;
+
     use super::super::id_static::tests::with_dag;
     use super::*;
     use crate::DagAlgorithm;
     use crate::Result;
-    use nonblocking::non_blocking_result as r;
 
     #[test]
     fn test_legacy_convert() -> Result<()> {

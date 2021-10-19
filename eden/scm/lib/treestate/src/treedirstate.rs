@@ -7,6 +7,11 @@
 
 //! Directory State.
 
+use std::io::Cursor;
+use std::path::Path;
+
+use anyhow::Result;
+
 use crate::filestate::FileState;
 use crate::filestore::FileStore;
 use crate::serialization::Serializable;
@@ -18,9 +23,6 @@ use crate::tree::Key;
 use crate::tree::KeyRef;
 use crate::tree::Tree;
 use crate::tree::VisitorResult;
-use anyhow::Result;
-use std::io::Cursor;
-use std::path::Path;
 
 /// Selected backend implementation for the treedirstate.
 enum Backend {
@@ -336,9 +338,10 @@ impl TreeDirstate {
 
 #[cfg(test)]
 mod tests {
+    use tempdir::TempDir;
+
     use crate::filestate::FileState;
     use crate::treedirstate::TreeDirstate;
-    use tempdir::TempDir;
 
     fn make_state(state: u8) -> FileState {
         FileState::new(state, 0, 0, 0)

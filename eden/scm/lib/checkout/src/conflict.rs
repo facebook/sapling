@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::actions::UpdateAction;
-use manifest::FileMetadata;
 use std::collections::HashMap;
 use std::fmt;
 use std::ops::Deref;
 use std::ops::DerefMut;
+
+use manifest::FileMetadata;
 use types::RepoPathBuf;
+
+use crate::actions::UpdateAction;
 
 pub enum Conflict {
     // ("m", (f, f, f, False, pa.node()), "versions differ")

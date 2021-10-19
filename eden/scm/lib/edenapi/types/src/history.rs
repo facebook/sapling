@@ -9,7 +9,6 @@ use std::iter::FromIterator;
 
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-
 use types::hgid::HgId;
 use types::key::Key;
 use types::nodeinfo::NodeInfo;
@@ -259,9 +258,9 @@ impl Arbitrary for HistoryResponseChunk {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck_macros::quickcheck;
+
+    use super::*;
 
     #[quickcheck]
     fn history_entry_roundtrip(entry: HistoryEntry) -> bool {

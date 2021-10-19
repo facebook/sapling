@@ -20,7 +20,6 @@ use sha1::Digest;
 use sha1::Sha1;
 use tempfile::NamedTempFile;
 use thiserror::Error;
-
 use types::Key;
 use types::NodeInfo;
 use types::RepoPath;
@@ -369,8 +368,6 @@ impl LocalStore for MutableHistoryPack {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::fs;
 
     use quickcheck::quickcheck;
@@ -378,10 +375,10 @@ mod tests {
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::tempdir;
-
     use types::hgid::HgId;
     use types::testutil::key;
 
+    use super::*;
     use crate::historypack::HistoryPack;
     use crate::repack::ToKeys;
 

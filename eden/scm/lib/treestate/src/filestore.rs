@@ -7,16 +7,6 @@
 
 //! Implementation of a store using file I/O.
 
-use crate::errors::ErrorKind;
-use crate::store::BlockId;
-use crate::store::Store;
-use crate::store::StoreView;
-use anyhow::bail;
-use anyhow::Result;
-use byteorder::BigEndian;
-use byteorder::ByteOrder;
-use byteorder::ReadBytesExt;
-use byteorder::WriteBytesExt;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fs::File;
@@ -27,6 +17,18 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
+
+use anyhow::bail;
+use anyhow::Result;
+use byteorder::BigEndian;
+use byteorder::ByteOrder;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+
+use crate::errors::ErrorKind;
+use crate::store::BlockId;
+use crate::store::Store;
+use crate::store::StoreView;
 
 // File storage format:
 //
@@ -227,13 +229,15 @@ impl StoreView for FileStore {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+    use std::io::Write;
+
+    use tempdir::TempDir;
+
     use crate::filestore::FileStore;
     use crate::store::BlockId;
     use crate::store::Store;
     use crate::store::StoreView;
-    use std::fs;
-    use std::io::Write;
-    use tempdir::TempDir;
 
     #[test]
     fn goodpath() {

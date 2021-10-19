@@ -15,6 +15,7 @@ use std::io::Read;
 use std::io::Write;
 use std::iter;
 use std::mem;
+use std::num::NonZeroU64;
 use std::ops::Range;
 use std::path::Path;
 use std::path::PathBuf;
@@ -32,35 +33,19 @@ use anyhow::ensure;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
-use futures::future::FutureExt;
-use futures::stream::iter;
-use futures::stream::FuturesUnordered;
-use futures::stream::StreamExt;
-use futures::stream::TryStreamExt;
-use http::header::HeaderMap;
-use http::status::StatusCode;
-use minibytes::Bytes;
-use parking_lot::Mutex;
-use parking_lot::RwLock;
-use rand::thread_rng;
-use rand::Rng;
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
-use std::num::NonZeroU64;
-use tokio::task::spawn_blocking;
-use tokio::time::sleep;
-use tokio::time::timeout;
-use tracing::info_span;
-use tracing::trace_span;
-use tracing::Instrument;
-use url::Url;
-
 use async_runtime::block_on;
 use auth::AuthGroup;
 use auth::AuthSection;
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
+use futures::future::FutureExt;
+use futures::stream::iter;
+use futures::stream::FuturesUnordered;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
 use hg_http::http_client;
+use http::header::HeaderMap;
+use http::status::StatusCode;
 use http_client::Encoding;
 use http_client::HttpClient;
 use http_client::HttpClientError;
@@ -81,10 +66,24 @@ use lfs_protocol::ResponseBatch;
 use lfs_protocol::Sha256 as LfsSha256;
 use mincode::deserialize;
 use mincode::serialize;
+use minibytes::Bytes;
+use parking_lot::Mutex;
+use parking_lot::RwLock;
+use rand::thread_rng;
+use rand::Rng;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
+use tokio::task::spawn_blocking;
+use tokio::time::sleep;
+use tokio::time::timeout;
+use tracing::info_span;
+use tracing::trace_span;
+use tracing::Instrument;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
 use types::Sha256;
+use url::Url;
 use util::path::create_dir;
 use util::path::create_shared_dir;
 use util::path::remove_file;
@@ -2016,15 +2015,13 @@ fn join_chunks<T: AsRef<[u8]>>(chunks: &[T]) -> Bytes {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::str::FromStr;
 
     use quickcheck::quickcheck;
     use tempfile::TempDir;
-
     use types::testutil::*;
 
+    use super::*;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::indexedlogutil::StoreType;
     use crate::localstore::ExtStoredPolicy;
@@ -2603,12 +2600,14 @@ mod tests {
 
     #[cfg(feature = "fb")]
     mod fb_test {
-        use super::*;
+        use std::env::set_var;
+        use std::sync::atomic::AtomicBool;
+
         #[cfg(fbcode_build)]
         use mockito::mock;
         use parking_lot::Mutex;
-        use std::env::set_var;
-        use std::sync::atomic::AtomicBool;
+
+        use super::*;
 
         #[derive(Clone)]
         struct Sentinel(Arc<AtomicBool>);

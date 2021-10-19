@@ -17,6 +17,7 @@ mod windows {
     use std::mem::size_of;
     use std::mem::zeroed;
     use std::os::windows::ffi::OsStringExt;
+
     use winapi::shared::minwindef::DWORD;
     use winapi::um::handleapi::CloseHandle;
     use winapi::um::handleapi::INVALID_HANDLE_VALUE;

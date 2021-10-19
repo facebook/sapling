@@ -5,15 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use cpython::*;
-use serde::Deserialize;
-use serde::Serialize;
 use std::cmp::Ord;
 use std::cmp::Ordering;
 use std::cmp::PartialOrd;
 use std::hash::Hash;
 use std::hash::Hasher;
 use std::ops::Deref;
+
+use cpython::*;
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Wrapper type. Converts between pure Rust bytes-like types and PyBytes.
 ///

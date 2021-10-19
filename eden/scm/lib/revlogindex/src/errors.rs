@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::io;
+
 use dag::errors::NotFoundError;
 use dag::Id;
 use dag::Vertex;
-use std::fmt;
-use std::io;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

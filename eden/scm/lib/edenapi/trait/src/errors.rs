@@ -5,14 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use thiserror::Error;
-
 use auth::MissingCerts;
 use auth::X509Error;
 use edenapi_types::wire::WireToApiConversionError;
 use edenapi_types::EdenApiServerError;
 use http::status::StatusCode;
 use http_client::HttpClientError;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum EdenApiError {

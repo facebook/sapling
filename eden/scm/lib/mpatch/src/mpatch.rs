@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use libc::ssize_t;
-use mpatch_sys::*;
 use std::os::raw::c_char;
 use std::os::raw::c_void;
 use std::ptr;
+
+use libc::ssize_t;
+use mpatch_sys::*;
 
 unsafe extern "C" fn get_next_link(deltas: *mut c_void, index: ssize_t) -> *mut mpatch_flist {
     let deltas = (deltas as *const Vec<&[u8]>).as_ref().unwrap();

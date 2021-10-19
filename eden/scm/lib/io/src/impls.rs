@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::IsTty;
 use std::io::Cursor;
 use std::sync::Weak;
+
+use crate::IsTty;
 
 impl IsTty for std::io::Stdin {
     fn is_tty(&self) -> bool {

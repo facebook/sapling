@@ -63,11 +63,11 @@ pub use crate::hash::to_hex;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::quickcheck;
     use serde::Deserialize;
     use serde::Serialize;
+
+    use super::*;
 
     #[test]
     fn test_incorrect_length() {

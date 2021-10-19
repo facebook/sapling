@@ -11,11 +11,10 @@ use std::sync::Arc;
 use anyhow::format_err;
 use anyhow::Result;
 use bytes::Bytes;
-use parking_lot::Mutex;
-use parking_lot::RwLock;
-
 use manifest::testutil::*;
 use manifest::Manifest;
+use parking_lot::Mutex;
+use parking_lot::RwLock;
 use types::testutil::*;
 use types::HgId;
 use types::Key;

@@ -34,15 +34,16 @@
 // - Memory alignment is up to the actual implementation of "Python object".
 //   For a mmap buffer, the libc mmap function guarantees that.
 
+use std::marker::PhantomData;
+use std::mem;
+use std::slice;
+
 use cpython::PyObject;
 use cpython::Python;
 #[cfg(feature = "python3")]
 use python3_sys as cpy;
 #[cfg(feature = "python2")]
 use python27_sys as cpy;
-use std::marker::PhantomData;
-use std::mem;
-use std::slice;
 
 pub struct SimplePyBuf<T>(cpy::Py_buffer, PhantomData<T>);
 

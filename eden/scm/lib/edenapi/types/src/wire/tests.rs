@@ -6,13 +6,14 @@
  */
 
 pub(crate) mod support {
-    pub(crate) use crate::wire::ToApi;
-    pub(crate) use crate::wire::ToWire;
     pub(crate) use insta_ext;
     pub(crate) use paste::paste;
     pub(crate) use quickcheck::quickcheck;
     pub(crate) use quickcheck::Arbitrary;
     pub(crate) use quickcheck::Gen;
+
+    pub(crate) use crate::wire::ToApi;
+    pub(crate) use crate::wire::ToWire;
 
     pub(crate) fn check_wire_roundtrip<T>(original: T) -> bool
     where

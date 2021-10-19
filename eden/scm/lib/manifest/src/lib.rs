@@ -16,7 +16,6 @@
 pub mod testutil;
 
 use anyhow::Result;
-
 use pathmatcher::Matcher;
 use types::HgId;
 use types::PathComponentBuf;

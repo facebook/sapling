@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp;
+use std::fmt;
+use std::marker::PhantomData;
+use std::str::FromStr;
+
 use serde::de::Error;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
 use serde_bytes::ByteBuf;
-use std::cmp;
-use std::fmt;
-use std::marker::PhantomData;
-use std::str::FromStr;
 use thiserror::Error;
 
 /// An abstracted hash type.

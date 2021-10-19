@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::Sha256;
 use serde::ser::SerializeTuple;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serializer;
+
+use crate::Sha256;
 
 /// Serialize `Sha256` as a tuple of 32 `u8`s.
 pub fn serialize<S>(id: &Sha256, serializer: S) -> Result<S::Ok, S::Error>

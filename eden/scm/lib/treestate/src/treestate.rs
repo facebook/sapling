@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Cursor;
+use std::ops::Deref;
+use std::path::Path;
+
+use anyhow::Result;
+
 use crate::filestate::FileStateV2;
 use crate::filestore::FileStore;
 use crate::serialization::Serializable;
@@ -17,10 +23,6 @@ use crate::tree::KeyRef;
 use crate::tree::Node;
 use crate::tree::Tree;
 use crate::tree::VisitorResult;
-use anyhow::Result;
-use std::io::Cursor;
-use std::ops::Deref;
-use std::path::Path;
 
 const FILTER_LOWERCASE: u64 = 0x1;
 /// `TreeState` uses a single tree to track an extended state of `TreeDirstate`.
@@ -186,12 +188,13 @@ impl TreeState {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::filestate::StateFlags;
     use rand::Rng;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempdir::TempDir;
+
+    use super::*;
+    use crate::filestate::StateFlags;
 
     #[test]
     fn test_new() {

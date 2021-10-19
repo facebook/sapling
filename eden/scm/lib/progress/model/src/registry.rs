@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::CacheStats;
-use crate::IoTimeSeries;
-use crate::ProgressBar;
+use std::sync::Arc;
+
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use parking_lot::RwLockUpgradableReadGuard;
-use std::sync::Arc;
+
+use crate::CacheStats;
+use crate::IoTimeSeries;
+use crate::ProgressBar;
 
 /// Data needed to render render multi-line progress.
 ///

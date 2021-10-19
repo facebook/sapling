@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
+
 use super::NoOpts;
 use super::Repo;
 use super::Result;
 use super::IO;
-use std::path::Path;
 
 pub fn run(_opts: NoOpts, _io: &IO, repo: Repo) -> Result<u8> {
     let store_path = repo.store_path();

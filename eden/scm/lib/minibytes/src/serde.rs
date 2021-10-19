@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::Bytes;
+use std::fmt;
+
 use serde::de;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
 use serde::Serializer;
-use std::fmt;
+
+use crate::Bytes;
 
 impl Serialize for Bytes {
     #[inline]

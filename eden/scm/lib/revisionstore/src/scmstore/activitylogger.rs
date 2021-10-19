@@ -16,9 +16,9 @@ use std::time::SystemTime;
 use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
+use types::Key;
 
 use super::FileAttributes;
-use types::Key;
 
 pub(crate) struct ActivityLogger {
     f: File,

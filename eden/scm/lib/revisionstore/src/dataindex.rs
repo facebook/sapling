@@ -19,7 +19,6 @@ use byteorder::WriteBytesExt;
 use memmap::Mmap;
 use memmap::MmapOptions;
 use thiserror::Error;
-
 use types::HgId;
 
 use crate::fanouttable::FanoutTable;
@@ -308,12 +307,12 @@ impl DataIndex {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::quickcheck;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::NamedTempFile;
+
+    use super::*;
 
     fn make_index(values: &HashMap<HgId, DeltaLocation>) -> DataIndex {
         let mut file = NamedTempFile::new().expect("file");

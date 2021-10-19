@@ -14,7 +14,6 @@ use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use thiserror::Error;
-
 use types::HgId;
 
 const SMALL_FANOUT_FACTOR: u8 = 1;
@@ -150,11 +149,11 @@ impl FanoutTable {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::mem::size_of;
 
     use quickcheck::quickcheck;
 
-    use std::mem::size_of;
+    use super::*;
 
     fn make_hgid(first: u8, second: u8, third: u8, fourth: u8) -> HgId {
         let buf = [

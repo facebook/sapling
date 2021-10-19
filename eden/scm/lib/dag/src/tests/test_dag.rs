@@ -5,6 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+
+use futures::StreamExt;
+use nonblocking::non_blocking;
+use nonblocking::non_blocking_result;
+use parking_lot::Mutex;
+use tracing::debug;
+
 use crate::ops::CheckIntegrity;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
@@ -22,14 +32,6 @@ use crate::Level;
 use crate::NameDag;
 use crate::Result;
 use crate::Vertex;
-use futures::StreamExt;
-use nonblocking::non_blocking;
-use nonblocking::non_blocking_result;
-use parking_lot::Mutex;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
-use tracing::debug;
 
 /// Dag structure for testing purpose.
 pub struct TestDag {

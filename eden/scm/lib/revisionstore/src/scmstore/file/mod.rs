@@ -9,33 +9,30 @@ mod fetch;
 mod metrics;
 mod types;
 
-pub use self::metrics::FileStoreFetchMetrics;
-pub use self::metrics::FileStoreMetrics;
-pub use self::metrics::FileStoreWriteMetrics;
-pub use self::types::FileAttributes;
-pub use self::types::FileAuxData;
-pub use self::types::StoreFile;
-
-pub(crate) use self::fetch::FetchState;
-pub(crate) use self::types::LazyFile;
-
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use ::types::Key;
+use ::types::RepoPathBuf;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
+use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use tracing::instrument;
 
-use ::types::Key;
-use ::types::RepoPathBuf;
-use minibytes::Bytes;
-
+pub(crate) use self::fetch::FetchState;
+pub use self::metrics::FileStoreFetchMetrics;
+pub use self::metrics::FileStoreMetrics;
+pub use self::metrics::FileStoreWriteMetrics;
+pub use self::types::FileAttributes;
+pub use self::types::FileAuxData;
+pub(crate) use self::types::LazyFile;
+pub use self::types::StoreFile;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::HgIdMutableDeltaStore;
 use crate::datastore::RemoteDataStore;

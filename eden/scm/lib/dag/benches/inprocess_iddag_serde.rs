@@ -5,18 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use tempfile::tempdir;
-
-use minibench::bench;
-use minibench::elapsed;
-use nonblocking::non_blocking_result as nbr;
-
 use dag::idmap::IdMap;
 use dag::idmap::IdMapAssignHead;
 use dag::Group;
 use dag::IdDag;
 use dag::InProcessIdDag;
 use dag::VertexName;
+use minibench::bench;
+use minibench::elapsed;
+use nonblocking::non_blocking_result as nbr;
+use tempfile::tempdir;
 
 type ParentsFunc<'a> = Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync + 'a>;
 

@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::RenderingConfig;
 use progress_model::CacheStats;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
+
+use crate::RenderingConfig;
 
 #[test]
 fn test_simple_render() {

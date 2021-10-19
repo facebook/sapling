@@ -5,18 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use std::slice;
+
 use cpython::PyBytes;
 use cpython::PyModule;
 use cpython::PyObject;
 use cpython::PyResult;
 use cpython::Python;
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::SimplePyBuf;
 use revlogindex::nodemap::empty_index_buffer;
 use revlogindex::NodeRevMap;
 use revlogindex::RevlogEntry;
-use std::slice;
-
-use cpython_ext::ResultPyErrExt;
-use cpython_ext::SimplePyBuf;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "indexes"].join(".");

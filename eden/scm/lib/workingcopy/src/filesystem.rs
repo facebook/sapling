@@ -16,7 +16,6 @@ use std::time::SystemTime;
 use anyhow::Error;
 use anyhow::Result;
 use parking_lot::Mutex;
-
 use pathmatcher::Matcher;
 use treestate::filestate::StateFlags;
 use treestate::tree::VisitorResult;

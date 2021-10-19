@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use serde::de;
-use serde::ser;
 use std::error;
 use std::fmt::Display;
 use std::fmt::{self};
@@ -14,6 +12,9 @@ use std::io;
 use std::str;
 use std::string;
 use std::{self};
+
+use serde::de;
+use serde::ser;
 
 #[derive(Debug)]
 pub struct Error {

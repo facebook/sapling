@@ -152,10 +152,10 @@ impl Arbitrary for Parents {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use serde_json::json;
     use serde_json::{self};
+
+    use super::*;
 
     #[test]
     fn from_iter() {

@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::dagalgo::dagalgo;
-use crate::idmap;
-use crate::Names;
-use crate::Spans;
+use std::cell::RefCell;
+use std::sync::Arc;
+
 use anyhow::format_err;
 use anyhow::Result;
 use async_runtime::try_block_unless_interrupted as block_on;
@@ -49,8 +48,11 @@ use hgcommits::StripCommits;
 use minibytes::Bytes;
 use pyedenapi::PyClient;
 use pymetalog::metalog as PyMetaLog;
-use std::cell::RefCell;
-use std::sync::Arc;
+
+use crate::dagalgo::dagalgo;
+use crate::idmap;
+use crate::Names;
+use crate::Spans;
 
 /// A combination of other traits: commit read/write + DAG algorithms.
 pub trait Commits:

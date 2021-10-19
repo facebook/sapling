@@ -10,11 +10,9 @@ use std::convert::TryFrom;
 use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
-use tracing::instrument;
-
 use edenapi_types::FileEntry;
-
 use minibytes::Bytes;
+use tracing::instrument;
 use types::HgId;
 use types::Key;
 

@@ -7,6 +7,10 @@
 
 #![allow(non_camel_case_types)]
 
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::SystemTime;
+
 use anyhow::Result;
 use async_runtime::try_block_unless_interrupted;
 use checkout::Action;
@@ -36,9 +40,6 @@ use pyrevisionstore::filescmstore;
 use pystatus::status as PyStatus;
 use pytreestate::treestate as PyTreeState;
 use revisionstore::LegacyStore;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::SystemTime;
 use tracing::warn;
 use treestate::filestate::FileStateV2;
 use treestate::filestate::StateFlags;

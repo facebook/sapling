@@ -7,7 +7,6 @@
 
 // Union data store
 use anyhow::Result;
-
 use minibytes::Bytes;
 
 use crate::datastore::ContentDataStore;
@@ -111,13 +110,11 @@ impl<T: ContentDataStore> ContentDataStore for UnionContentDataStore<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::quickcheck;
     use thiserror::Error;
-
     use types::Key;
 
+    use super::*;
     use crate::localstore::LocalStore;
     use crate::types::StoreKey;
 

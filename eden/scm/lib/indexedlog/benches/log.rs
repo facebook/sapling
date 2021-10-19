@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
+
 use indexedlog::log::IndexDef;
 use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
@@ -15,7 +17,6 @@ use minibench::Measure;
 use rand_chacha::rand_core::RngCore;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaChaRng;
-use std::path::Path;
 use tempfile::tempdir;
 
 const N: usize = 204800;

@@ -5,19 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::array::Array;
-use crate::call_array;
-use crate::CallsiteInfo;
-use crate::EventKindType;
-use crate::Intern;
-use crate::KindType;
-use crate::SpanKindType;
-use crate::StaticBox;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::Once;
+
 use tracing::callsite::Callsite;
 use tracing::callsite::Identifier;
 use tracing::field::Field;
@@ -27,6 +20,15 @@ use tracing::subscriber::Interest;
 use tracing::Event;
 use tracing::Metadata;
 use tracing::Span;
+
+use crate::array::Array;
+use crate::call_array;
+use crate::CallsiteInfo;
+use crate::EventKindType;
+use crate::Intern;
+use crate::KindType;
+use crate::SpanKindType;
+use crate::StaticBox;
 
 /*
 

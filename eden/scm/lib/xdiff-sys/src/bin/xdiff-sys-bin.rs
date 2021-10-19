@@ -15,6 +15,7 @@ use std::fs;
 use std::os::raw::c_char;
 use std::os::raw::c_int;
 use std::os::raw::c_void;
+
 use xdiff_sys::mmfile_t;
 use xdiff_sys::xdemitcb_t;
 use xdiff_sys::xdemitconf_t;

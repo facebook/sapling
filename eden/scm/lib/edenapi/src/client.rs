@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use bytes::Bytes as RawBytes;
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::fmt::Debug;
@@ -13,22 +12,12 @@ use std::fs::create_dir_all;
 use std::iter::FromIterator;
 use std::num::NonZeroU64;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::format_err;
 use async_trait::async_trait;
-use futures::future::BoxFuture;
-use futures::prelude::*;
-use itertools::Itertools;
-use minibytes::Bytes;
-use percent_encoding::utf8_percent_encode;
-use percent_encoding::AsciiSet;
-use percent_encoding::NON_ALPHANUMERIC;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
-
-use url::Url;
-
 use auth::check_certs;
+use bytes::Bytes as RawBytes;
 use edenapi_types::make_hash_lookup_request;
 use edenapi_types::wire::WireBookmarkEntry;
 use edenapi_types::wire::WireCloneData;
@@ -94,12 +83,24 @@ use edenapi_types::UploadTokensResponse;
 use edenapi_types::UploadTreeEntry;
 use edenapi_types::UploadTreeRequest;
 use edenapi_types::UploadTreeResponse;
+use futures::future::BoxFuture;
+use futures::prelude::*;
 use hg_http::http_client;
 use http_client::AsyncResponse;
 use http_client::HttpClient;
 use http_client::Request;
+use itertools::Itertools;
+use metrics::Counter;
+use metrics::EntranceGuard;
+use minibytes::Bytes;
+use percent_encoding::utf8_percent_encode;
+use percent_encoding::AsciiSet;
+use percent_encoding::NON_ALPHANUMERIC;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use types::HgId;
 use types::Key;
+use url::Url;
 
 use crate::api::EdenApi;
 use crate::builder::Config;
@@ -107,9 +108,6 @@ use crate::errors::EdenApiError;
 use crate::response::Response;
 use crate::response::ResponseMeta;
 use crate::types::wire::pull::PullFastForwardRequest;
-use metrics::Counter;
-use metrics::EntranceGuard;
-use std::time::Duration;
 
 /// All non-alphanumeric characters (except hypens, underscores, and periods)
 /// found in the repo's name will be percent-encoded before being used in URLs.

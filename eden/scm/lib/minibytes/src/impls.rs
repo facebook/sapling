@@ -7,16 +7,17 @@
 
 //! Implement common traits for [`Bytes`] and [`Text`].
 
-use crate::Bytes;
-use crate::BytesOwner;
-use crate::Text;
-use crate::TextOwner;
 use std::ascii::escape_default;
 use std::borrow;
 use std::cmp;
 use std::fmt;
 use std::hash;
 use std::ops;
+
+use crate::Bytes;
+use crate::BytesOwner;
+use crate::Text;
+use crate::TextOwner;
 
 impl<T: BytesOwner> From<T> for Bytes {
     fn from(value: T) -> Self {

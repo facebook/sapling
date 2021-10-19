@@ -6,11 +6,10 @@
  */
 
 use anyhow::Result;
-use tracing::instrument;
-
 use edenapi_types::TreeEntry;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
+use tracing::instrument;
 use types::HgId;
 use types::Key;
 

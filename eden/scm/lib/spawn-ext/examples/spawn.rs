@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use spawn_ext::CommandExt;
 use std::process::Command;
 use std::time::SystemTime;
+
+use spawn_ext::CommandExt;
 
 fn main() {
     let exe_path = std::env::current_exe().unwrap();

@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
+use nonblocking::non_blocking;
+
 use crate::ops::DagAlgorithm;
 use crate::NameSet;
 use crate::Result;
 use crate::VerLink;
 use crate::VertexName;
-use nonblocking::non_blocking;
-use std::sync::Arc;
 
 /// The DummyDag implements a DAG that contains all vertexes with no parents.
 #[derive(Debug, Clone)]

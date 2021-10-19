@@ -13,13 +13,12 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
-use minibytes::Bytes;
-use regex::Regex;
-use tracing::info_span;
-
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use hgtime::HgTime;
+use minibytes::Bytes;
+use regex::Regex;
+use tracing::info_span;
 use types::Key;
 use types::RepoPathBuf;
 
@@ -647,19 +646,18 @@ fn delete_hgcache(store_path: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::collections::HashMap;
     use std::ffi::OsString;
     use std::ops::Add;
     use std::ops::Sub;
 
     use minibytes::Bytes;
+    use mockito::Mock;
     use tempfile::TempDir;
-
     use types::testutil::*;
     use util::path::create_dir;
 
+    use super::*;
     use crate::metadatastore::MetadataStore;
     use crate::repack::repack;
     use crate::repack::RepackKind;
@@ -672,8 +670,6 @@ mod tests {
     use crate::testutil::FakeHgIdRemoteStore;
     use crate::testutil::TestBlob;
     use crate::types::ContentHash;
-
-    use mockito::Mock;
 
     fn prepare_lfs_mocks(blob: &TestBlob) -> Vec<Mock> {
         let m1 = get_lfs_batch_mock(200, &[blob]);
@@ -1228,13 +1224,12 @@ mod tests {
 
     #[cfg(feature = "fb")]
     mod fb_tests {
-        use super::*;
-
         use std::str::FromStr;
 
+        use types::Sha256;
         use url::Url;
 
-        use types::Sha256;
+        use super::*;
 
         #[test]
         fn test_lfs_remote() -> Result<()> {
@@ -1390,15 +1385,14 @@ mod tests {
 
     #[cfg(all(fbcode_build, target_os = "linux"))]
     mod fbcode_tests {
-        use super::*;
-
         use std::str::FromStr;
 
-        use once_cell::sync::Lazy;
-
         use memcache::MockMemcache;
+        use once_cell::sync::Lazy;
         use progress::null::NullProgressFactory;
         use types::Sha256;
+
+        use super::*;
 
         static MOCK: Lazy<MockMemcache> = Lazy::new(|| MockMemcache::new());
 

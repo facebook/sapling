@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+
 use super::bytes::AbstractBytes;
 use super::bytes::AbstractOwner;
 use super::bytes::SliceLike;
-use std::any::Any;
 
 pub type Text = AbstractBytes<str>;
 pub trait TextOwner: AsRef<str> + Send + Sync + 'static {}

@@ -16,9 +16,6 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use minibytes::Bytes;
-use parking_lot::RwLock;
-
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use edenapi_types::FileEntry;
@@ -26,6 +23,8 @@ use edenapi_types::TreeEntry;
 use indexedlog::log::IndexOutput;
 use lz4_pyframe::compress;
 use lz4_pyframe::decompress;
+use minibytes::Bytes;
+use parking_lot::RwLock;
 use tracing::warn;
 use types::hgid::ReadHgIdExt;
 use types::HgId;
@@ -423,16 +422,14 @@ impl ToKeys for IndexedLogHgIdDataStore {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::fs::remove_file;
     use std::sync::Arc;
 
     use minibytes::Bytes;
     use tempfile::TempDir;
-
     use types::testutil::*;
 
+    use super::*;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;

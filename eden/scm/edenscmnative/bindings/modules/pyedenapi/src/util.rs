@@ -8,7 +8,6 @@
 use std::sync::Arc;
 
 use cpython::*;
-
 use cpython_ext::convert::Serde;
 use cpython_ext::ExtractInner;
 use cpython_ext::PyPath;

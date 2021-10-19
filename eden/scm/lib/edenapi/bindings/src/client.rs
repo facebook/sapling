@@ -10,13 +10,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Error;
-use libc::size_t;
-
 use edenapi::BlockingResponse;
 use edenapi::Builder;
 use edenapi::EdenApi;
 use edenapi_types::EdenApiServerError;
 use edenapi_types::TreeEntry;
+use libc::size_t;
 use types::Key as ApiKey;
 
 use crate::ptr_len_to_slice;

@@ -15,7 +15,6 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use anyhow::Result;
-
 use manifest::DiffEntry;
 use manifest::File;
 use pathmatcher::DirectoryMatch;
@@ -444,8 +443,6 @@ fn is_sorted<T: Ord>(iter: impl IntoIterator<Item = T>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::sync::Arc;
 
     use manifest::testutil::*;
@@ -457,6 +454,7 @@ mod tests {
     use pathmatcher::TreeMatcher;
     use types::testutil::*;
 
+    use super::*;
     use crate::link::DirLink;
     use crate::testutil::*;
     use crate::Link;

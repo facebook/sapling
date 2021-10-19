@@ -18,16 +18,14 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
+use hgtime::HgTime;
 use hostname;
 use minibytes::Text;
 use regex::Regex;
 use serde_json::Value;
 use serde_json::{self};
 
-use hgtime::HgTime;
-
 use crate::config::ConfigSet;
-
 #[cfg(feature = "fb")]
 use crate::fb::Repo;
 
@@ -423,8 +421,9 @@ fn test_rules(gen: &mut Generator, _canary_remote: Option<String>) -> Result<()>
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::*;
     use std::iter::FromIterator;
+
+    use super::*;
 
     #[test]
     fn test_basic() {

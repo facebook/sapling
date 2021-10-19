@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::parse_bindag;
-use crate::ParentRevs;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::ops::Range;
+
 use dag::nameset::SyncNameSetQuery;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
@@ -17,10 +19,10 @@ use dag::NameDag;
 use dag::OnDiskIdDag;
 use dag::VertexName;
 use nonblocking::non_blocking_result;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::ops::Range;
 use tempfile::TempDir;
+
+use crate::parse_bindag;
+use crate::ParentRevs;
 
 /// Context for testing purpose.
 /// Contains the parsed bindag and NameDag from the dag crate.

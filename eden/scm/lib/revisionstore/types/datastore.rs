@@ -138,9 +138,9 @@ fn bin_to_u64(buf: &[u8]) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::quickcheck;
+
+    use super::*;
     quickcheck! {
         fn test_roundtrip_bin_to_u64(value: u64) -> bool {
             let mut buf: Vec<u8> = vec![];

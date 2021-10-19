@@ -19,11 +19,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use bytes::Bytes;
-use once_cell::sync::OnceCell;
-use sha1::Digest;
-use sha1::Sha1;
-use thiserror::Error;
-
 use manifest::DiffEntry;
 use manifest::Directory;
 use manifest::File;
@@ -31,7 +26,11 @@ use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
 use manifest::List;
 use manifest::Manifest;
+use once_cell::sync::OnceCell;
 use pathmatcher::Matcher;
+use sha1::Digest;
+use sha1::Sha1;
+use thiserror::Error;
 use types::HgId;
 use types::Key;
 use types::PathComponent;
@@ -692,14 +691,13 @@ pub fn prefetch(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use manifest::testutil::*;
     use manifest::FileType;
     use types::hgid::NULL_ID;
     use types::testutil::*;
 
     use self::testutil::*;
+    use super::*;
 
     fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<store::Element> {
         Ok(store::Element::new(

@@ -9,13 +9,14 @@
 //!
 //! Defines types around [`Id`].
 
+use std::fmt;
+use std::io;
+use std::ops;
+
 use abomonation_derive::Abomonation;
 pub use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
-use std::fmt;
-use std::io;
-use std::ops;
 
 /// An integer [`Id`] representing a node in the graph.
 /// [`Id`]s are topologically sorted.
@@ -282,8 +283,9 @@ impl std::cmp::PartialEq<u64> for Id {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     #[test]
     fn test_vertex_from_hex_odd() {

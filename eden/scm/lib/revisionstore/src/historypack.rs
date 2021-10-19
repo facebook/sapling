@@ -100,7 +100,6 @@ use byteorder::WriteBytesExt;
 use memmap::Mmap;
 use memmap::MmapOptions;
 use thiserror::Error;
-
 use types::HgId;
 use types::Key;
 use types::NodeInfo;
@@ -472,21 +471,19 @@ impl<'a> Iterator for HistoryPackIterator<'a> {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-
-    use quickcheck::quickcheck;
-    use rand::SeedableRng;
-    use rand_chacha::ChaChaRng;
-    use tempfile::TempDir;
-
     use std::collections::HashMap;
     use std::fs::set_permissions;
     use std::fs::File;
     use std::fs::OpenOptions;
 
+    use quickcheck::quickcheck;
+    use rand::SeedableRng;
+    use rand_chacha::ChaChaRng;
+    use tempfile::TempDir;
     use types::testutil::*;
     use types::RepoPathBuf;
 
+    use super::*;
     use crate::historystore::HgIdMutableHistoryStore;
     use crate::mutablehistorypack::MutableHistoryPack;
 

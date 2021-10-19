@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::ServerError;
-
 use std::fmt;
 use std::str::FromStr;
 
@@ -15,6 +13,8 @@ use quickcheck::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use type_macros::auto_wire;
+
+use crate::ServerError;
 
 /// Directory entry metadata
 #[auto_wire]

@@ -5,14 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::command::CommandDefinition;
-use crate::command::CommandFunc;
-use crate::command::CommandTable;
-use crate::errors;
-use crate::global_flags::HgGlobalOpts;
-use crate::io::IO;
-use crate::repo::OptionalRepo;
-use crate::repo::Repo;
+use std::convert::TryInto;
+use std::env;
+use std::path::Path;
+use std::sync::atomic::Ordering::SeqCst;
+
 use anyhow::Error;
 use cliparser::alias::expand_aliases;
 use cliparser::alias::find_command_name;
@@ -21,10 +18,15 @@ use cliparser::parser::ParseOptions;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configparser::config::ConfigSet;
-use std::convert::TryInto;
-use std::env;
-use std::path::Path;
-use std::sync::atomic::Ordering::SeqCst;
+
+use crate::command::CommandDefinition;
+use crate::command::CommandFunc;
+use crate::command::CommandTable;
+use crate::errors;
+use crate::global_flags::HgGlobalOpts;
+use crate::io::IO;
+use crate::repo::OptionalRepo;
+use crate::repo::Repo;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 

@@ -7,14 +7,6 @@
 
 //! Atomic `sync` support for multiple [`Log`]s.
 
-use crate::errors::IoResultExt;
-use crate::errors::ResultExt;
-use crate::lock::ScopedDirLock;
-use crate::log::GenericPath;
-use crate::log::LogMetadata;
-use crate::log::{self};
-use crate::repair::OpenOptionsRepair;
-use crate::utils;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::io;
@@ -24,8 +16,18 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
+
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
+
+use crate::errors::IoResultExt;
+use crate::errors::ResultExt;
+use crate::lock::ScopedDirLock;
+use crate::log::GenericPath;
+use crate::log::LogMetadata;
+use crate::log::{self};
+use crate::repair::OpenOptionsRepair;
+use crate::utils;
 
 /// Options used to configure how a [`MultiLog`] is opened.
 #[derive(Clone, Default)]
@@ -601,9 +603,10 @@ fn rand_u64() -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use log::tests::pwrite;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     fn simple_open_opts() -> OpenOptions {
         OpenOptions::from_name_opts(vec![

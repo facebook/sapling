@@ -15,12 +15,13 @@ use std::path::Path;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::{self};
 
-use crate::errors::IoResultExt;
-use crate::errors::ResultExt;
 use memmap::MmapOptions;
 use minibytes::Bytes;
 use twox_hash::XxHash;
 use twox_hash::XxHash32;
+
+use crate::errors::IoResultExt;
+use crate::errors::ResultExt;
 
 /// Return a read-only view of the entire file.
 ///

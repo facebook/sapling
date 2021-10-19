@@ -18,12 +18,10 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Error;
-use cpython::*;
-use parking_lot::RwLock;
-
 use async_runtime::block_on;
 use async_runtime::stream_to_iter as block_on_stream;
 use configparser::config::ConfigSet;
+use cpython::*;
 use cpython_ext::ExtractInner;
 use cpython_ext::ExtractInnerRef;
 use cpython_ext::PyErr;
@@ -33,6 +31,7 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use io::IO;
+use parking_lot::RwLock;
 use progress::null::NullProgressFactory;
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;

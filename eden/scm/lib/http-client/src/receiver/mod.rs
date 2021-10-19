@@ -43,14 +43,14 @@ pub trait Receiver: Sized {
 pub(crate) mod testutil {
     #![allow(dead_code)]
 
-    use super::*;
-
     use std::cell::RefCell;
     use std::rc::Rc;
 
     use http::header::HeaderName;
     use http::header::HeaderValue;
     use http::StatusCode;
+
+    use super::*;
 
     /// Simple receiver for use in tests.
     #[derive(Clone, Debug)]

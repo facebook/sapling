@@ -6,17 +6,15 @@
  */
 
 use bytes::Bytes;
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
-use thiserror::Error;
-use type_macros::auto_wire;
-
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Gen;
-
 use revisionstore_types::Metadata;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
+use thiserror::Error;
+use type_macros::auto_wire;
 use types::hgid::HgId;
 use types::key::Key;
 use types::parents::Parents;

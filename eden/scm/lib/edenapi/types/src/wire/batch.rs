@@ -62,7 +62,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
     use crate::wire::WireHgId;
 

@@ -14,7 +14,6 @@ use anyhow::format_err;
 use anyhow::Result;
 use bytes::Bytes;
 use bytes::BytesMut;
-
 use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
@@ -291,11 +290,10 @@ impl Element {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::quickcheck;
-
     use types::testutil::*;
+
+    use super::*;
 
     #[test]
     fn test_element_from_byte_slice() {

@@ -10,6 +10,7 @@
 pub mod nodemap;
 pub mod nodeset;
 
+pub use indexedlog::Repair;
+
 pub use crate::nodemap::NodeMap;
 pub use crate::nodeset::NodeSet;
-pub use indexedlog::Repair;

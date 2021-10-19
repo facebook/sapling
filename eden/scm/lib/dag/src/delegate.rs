@@ -340,10 +340,11 @@ macro_rules! delegate {
 }
 
 mod impls {
-    use crate::ops::DagAlgorithm;
-    use crate::ops::IdConvert;
     use std::ops::Deref;
     use std::sync::Arc;
+
+    use crate::ops::DagAlgorithm;
+    use crate::ops::IdConvert;
 
     delegate!(IdConvert | PrefixLookup, Arc<dyn IdConvert + Send + Sync> => self.deref());
     delegate!(DagAlgorithm, Arc<dyn DagAlgorithm + Send + Sync> => self.deref());

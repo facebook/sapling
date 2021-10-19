@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Cow;
+
 use taggederror::FilteredAnyhow;
 use taggederror_util::AnyhowEdenExt;
 use thiserror::Error;
@@ -93,8 +94,9 @@ pub fn print_error(err: &anyhow::Error, io: &crate::io::IO, args: &[String]) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::io::Cursor;
+
+    use super::*;
 
     #[test]
     fn test_status_error_msg() {

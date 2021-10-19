@@ -5,8 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::Error;
-use crate::Result;
+use std::collections::BTreeMap;
+use std::fmt;
+use std::fs;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+
 use anyhow::Context;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::log as ilog;
@@ -15,14 +20,11 @@ use lazy_static::lazy_static;
 use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
-use std::collections::BTreeMap;
-use std::fmt;
-use std::fs;
-use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
 pub use zstore::Id20;
 use zstore::Zstore;
+
+use crate::Error;
+use crate::Result;
 
 /// Key-value metadata storage that can be atomically read and written,
 /// and preserves a linear history.
@@ -486,9 +488,10 @@ pub(crate) struct SerId20(#[serde(with = "types::serde_with::hgid::tuple")] pub(
 
 /// Predefined conflict resolutions.
 pub mod resolver {
+    use std::collections::BTreeSet;
+
     use super::MetaLog;
     use crate::Result;
-    use std::collections::BTreeSet;
 
     /// Fail the merge unconditionally on any kind of conflicts.
     pub fn fail(this: &mut MetaLog, other: &MetaLog, ancestor: &MetaLog) -> Result<()> {
@@ -524,17 +527,19 @@ pub mod resolver {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::fs;
+    use std::io::Seek;
+    use std::io::SeekFrom;
+    use std::io::Write;
+
     use indexedlog::DefaultOpenOptions;
     use quickcheck::quickcheck;
     use rand_chacha::ChaChaRng;
     use rand_core::RngCore;
     use rand_core::SeedableRng;
-    use std::fs;
-    use std::io::Seek;
-    use std::io::SeekFrom;
-    use std::io::Write;
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_root_id() {

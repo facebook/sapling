@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use dashmap::DashMap;
 use std::fs::symlink_metadata;
 use std::path::Path;
 use std::path::PathBuf;
@@ -13,7 +12,7 @@ use std::path::PathBuf;
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
-
+use dashmap::DashMap;
 use types::RepoPath;
 use types::RepoPathBuf;
 
@@ -79,12 +78,13 @@ impl PathAuditor {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::fs::create_dir_all;
     use std::fs::read_link;
     use std::fs::remove_dir_all;
+
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_audit_valid() -> Result<()> {

@@ -5,16 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::fmt;
+
+use futures::future::BoxFuture;
+use parking_lot::RwLock;
+
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use super::NameSet;
 use crate::Result;
 use crate::VertexName;
-use futures::future::BoxFuture;
-use parking_lot::RwLock;
-use std::any::Any;
-use std::fmt;
 
 /// A set that is lazily evaluated to another set on access, with an
 /// optional fast path for "contains".
@@ -153,9 +155,10 @@ impl AsyncNameSetQuery for MetaSet {
 
 #[cfg(test)]
 mod tests {
+    use nonblocking::non_blocking_result as r;
+
     use super::super::tests::*;
     use super::*;
-    use nonblocking::non_blocking_result as r;
 
     fn meta_set(v: &[impl ToString]) -> MetaSet {
         let v: Vec<_> = v.iter().map(|s| s.to_string()).collect();

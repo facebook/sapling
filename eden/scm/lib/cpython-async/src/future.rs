@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
+
 use cpython_ext::cpython::*;
 use cpython_ext::ResultPyErrExt;
 use futures::future::BoxFuture;
 use futures::future::Future;
 use futures::future::FutureExt;
-use std::cell::RefCell;
 
 // Type to make Python able to reason about a Rust future.
 //

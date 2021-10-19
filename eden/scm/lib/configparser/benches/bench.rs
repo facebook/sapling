@@ -8,10 +8,9 @@
 use std::io::Write;
 
 use bytes::Bytes;
+use configparser::config::ConfigSet;
 use minibench::bench;
 use minibench::elapsed;
-
-use configparser::config::ConfigSet;
 
 fn main() {
     bench("parse 645KB file", || {

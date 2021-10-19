@@ -5,6 +5,24 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::TryInto;
+use std::fs::File;
+use std::fs::{self};
+use std::io::Cursor;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU8;
+use std::sync::atomic::Ordering::AcqRel;
+use std::sync::atomic::Ordering::Acquire;
+use std::sync::atomic::Ordering::Release;
+
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use fs2::FileExt;
+use indexedlog::log;
+use minibytes::Bytes;
+
 use super::IdDagStore;
 use crate::errors::bug;
 use crate::errors::programming;
@@ -19,22 +37,6 @@ use crate::segment::SegmentFlags;
 use crate::spanset::Span;
 use crate::Level;
 use crate::Result;
-use byteorder::BigEndian;
-use byteorder::ReadBytesExt;
-use byteorder::WriteBytesExt;
-use fs2::FileExt;
-use indexedlog::log;
-use minibytes::Bytes;
-use std::convert::TryInto;
-use std::fs::File;
-use std::fs::{self};
-use std::io::Cursor;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::atomic::AtomicU8;
-use std::sync::atomic::Ordering::AcqRel;
-use std::sync::atomic::Ordering::Acquire;
-use std::sync::atomic::Ordering::Release;
 
 pub struct IndexedLogStore {
     log: log::Log,

@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::parser::ParseError;
-use crate::utils::get_prefix_bounds;
-use shlex::split;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
+
+use shlex::split;
+
+use crate::parser::ParseError;
+use crate::utils::get_prefix_bounds;
 
 /// Expands all aliases accounting for circular references and prefix matching.
 ///

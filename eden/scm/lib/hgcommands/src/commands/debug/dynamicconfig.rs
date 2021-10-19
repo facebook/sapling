@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use configparser::hg::generate_dynamicconfig;
+
 use super::define_flags;
 use super::Repo;
 use super::Result;
 use super::IO;
-use configparser::hg::generate_dynamicconfig;
 
 define_flags! {
     pub struct DebugDynamicConfigOpts {

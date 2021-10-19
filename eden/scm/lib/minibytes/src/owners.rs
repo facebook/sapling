@@ -7,9 +7,10 @@
 
 //! Implement [`BytesOwner`] and [`TextOwner`] for common types.
 
+use memmap::Mmap;
+
 use crate::BytesOwner;
 use crate::TextOwner;
-use memmap::Mmap;
 
 impl BytesOwner for Vec<u8> {}
 impl BytesOwner for Box<[u8]> {}

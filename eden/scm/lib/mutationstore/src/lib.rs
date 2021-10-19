@@ -29,6 +29,12 @@
 
 #![allow(clippy::redundant_closure)]
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::io::Cursor;
+use std::path::Path;
+use std::sync::Arc;
+
 use anyhow::Result;
 use bitflags::bitflags;
 use dag::namedag::MemNameDag;
@@ -44,16 +50,10 @@ use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
 use indexedlog::log::{self as ilog};
 use indexedlog::DefaultOpenOptions;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::io::Cursor;
-use std::path::Path;
-use std::sync::Arc;
+pub use indexedlog::Repair;
 use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::VLQDecodeAt;
-
-pub use indexedlog::Repair;
 
 pub struct MutationStore {
     log: Log,
@@ -416,13 +416,14 @@ impl MutationStore {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use dag::nonblocking::non_blocking_result;
     use dag::nonblocking::non_blocking_result as r;
     use dag::DagAlgorithm;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempdir::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_basic_store() {

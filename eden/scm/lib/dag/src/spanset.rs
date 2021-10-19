@@ -9,9 +9,6 @@
 //!
 //! See [`SpanSet`] for the main structure.
 
-use crate::bsearch::BinarySearchBy;
-use crate::id::Id;
-use dag_types::FlatSegment;
 use std::cmp::Ordering::Equal;
 use std::cmp::Ordering::Greater;
 use std::cmp::Ordering::Less;
@@ -24,6 +21,11 @@ use std::fmt::{self};
 use std::ops::Bound;
 use std::ops::RangeBounds;
 use std::ops::RangeInclusive;
+
+use dag_types::FlatSegment;
+
+use crate::bsearch::BinarySearchBy;
+use crate::id::Id;
 
 /// Range `low..=high`. `low` must be <= `high`.
 #[derive(Copy, Clone, Debug, Eq)]

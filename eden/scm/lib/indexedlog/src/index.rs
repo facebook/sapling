@@ -55,9 +55,6 @@
 // - The "INLINE_LEAF" type is basically an inlined version of EXT_KEY and LINK, to save space.
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
-use crate::utils::xxhash;
-use crate::utils::xxhash32;
-use minibytes::Bytes;
 use std::borrow::Cow;
 use std::cmp::Ordering::Equal;
 use std::cmp::Ordering::Greater;
@@ -87,7 +84,17 @@ use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
+
+use byteorder::ByteOrder;
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
+use fs2::FileExt;
+use minibytes::Bytes;
+use tracing::debug_span;
 use twox_hash::XxHash;
+use vlqencoding::VLQDecodeAt;
+use vlqencoding::VLQEncode;
 
 use crate::base16::base16_to_base256;
 use crate::base16::single_hex_to_base16;
@@ -96,16 +103,9 @@ use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::lock::ScopedFileLock;
 use crate::utils::mmap_bytes;
+use crate::utils::xxhash;
+use crate::utils::xxhash32;
 use crate::utils::{self};
-
-use byteorder::ByteOrder;
-use byteorder::LittleEndian;
-use byteorder::ReadBytesExt;
-use byteorder::WriteBytesExt;
-use fs2::FileExt;
-use tracing::debug_span;
-use vlqencoding::VLQDecodeAt;
-use vlqencoding::VLQEncode;
 
 //// Structures and serialization
 
@@ -3506,14 +3506,15 @@ impl Debug for Index {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use quickcheck::quickcheck;
     use std::collections::BTreeSet;
     use std::collections::HashMap;
     use std::fs::File;
+
+    use quickcheck::quickcheck;
     use tempfile::tempdir;
 
     use super::InsertValue::PrependReplace;
+    use super::*;
 
     fn open_opts() -> OpenOptions {
         let mut opts = OpenOptions::new();

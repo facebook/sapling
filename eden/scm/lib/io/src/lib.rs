@@ -5,13 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use configmodel::Config;
-use configmodel::ConfigExt;
-use once_cell::sync::Lazy;
-use parking_lot::Mutex;
-use parking_lot::RwLock;
-use pipe::pipe;
-use pipe::PipeWriter;
 use std::any::Any;
 use std::io;
 use std::mem;
@@ -19,6 +12,14 @@ use std::sync::Arc;
 use std::sync::Weak;
 use std::thread::spawn;
 use std::thread::JoinHandle;
+
+use configmodel::Config;
+use configmodel::ConfigExt;
+use once_cell::sync::Lazy;
+use parking_lot::Mutex;
+use parking_lot::RwLock;
+use pipe::pipe;
+use pipe::PipeWriter;
 use streampager::config::InterfaceMode;
 use streampager::config::WrappingMode;
 use streampager::Pager;

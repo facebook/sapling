@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
+
 use anyhow::Result;
 use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
 use indexedlog::log::{self};
 use indexedlog::DefaultOpenOptions;
-use std::path::Path;
 use thiserror::Error;
 use types::errors::KeyError;
 use types::node::Node;
@@ -77,10 +78,12 @@ impl NodeSet {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use quickcheck::quickcheck;
     use std::collections::HashSet;
+
+    use quickcheck::quickcheck;
     use tempfile::TempDir;
+
+    use super::*;
 
     quickcheck! {
         fn test_compare_with_hashset(nodes: HashSet<Node>) -> bool {

@@ -5,9 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::Repo;
-use super::Result;
-use super::IO;
+use std::collections::HashMap;
+
 use anyhow::Context;
 use async_runtime::block_unless_interrupted as block_on;
 use cliparser::define_flags;
@@ -17,8 +16,11 @@ use dag::ops::DagPersistent;
 use dag::ops::Open;
 use dag::CloneData;
 use dag::VertexName;
-use std::collections::HashMap;
 use types::HgId;
+
+use super::Repo;
+use super::Result;
+use super::IO;
 
 define_flags! {
     pub struct StatusOpts {

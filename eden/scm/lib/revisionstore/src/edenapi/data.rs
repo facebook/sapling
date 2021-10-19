@@ -8,12 +8,16 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::prelude::*;
-
 use async_runtime::block_on;
+use futures::prelude::*;
 use progress::Unit;
 use tracing::field;
 
+use super::hgid_keys;
+use super::EdenApiRemoteStore;
+use super::EdenApiStoreKind;
+use super::File;
+use super::Tree;
 use crate::datastore::HgIdDataStore;
 use crate::datastore::HgIdMutableDeltaStore;
 use crate::datastore::Metadata;
@@ -22,12 +26,6 @@ use crate::datastore::StoreResult;
 use crate::localstore::LocalStore;
 use crate::types::StoreKey;
 use crate::util;
-
-use super::hgid_keys;
-use super::EdenApiRemoteStore;
-use super::EdenApiStoreKind;
-use super::File;
-use super::Tree;
 
 /// A data store backed by an `EdenApiRemoteStore` and a mutable store.
 ///
@@ -182,19 +180,17 @@ impl<T: EdenApiStoreKind> LocalStore for EdenApiDataStore<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::str::FromStr;
-
-    use maplit::hashmap;
-    use tempfile::TempDir;
 
     use configparser::config::ConfigSet;
     use edenapi_types::ContentId;
     use edenapi_types::Sha1;
+    use maplit::hashmap;
+    use tempfile::TempDir;
     use types::testutil::*;
     use types::Sha256;
 
+    use super::*;
     use crate::edenapi::File;
     use crate::edenapi::Tree;
     use crate::indexedlogauxstore::AuxStore;

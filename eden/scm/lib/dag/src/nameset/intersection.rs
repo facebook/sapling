@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::cmp::Ordering;
+use std::fmt;
+
+use futures::StreamExt;
+
 use super::hints::Flags;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
@@ -14,10 +20,6 @@ use crate::fmt::write_debug;
 use crate::Id;
 use crate::Result;
 use crate::VertexName;
-use futures::StreamExt;
-use std::any::Any;
-use std::cmp::Ordering;
-use std::fmt;
 
 /// Intersection of 2 sets.
 ///
@@ -253,12 +255,13 @@ impl fmt::Debug for IntersectionSet {
 #[cfg(test)]
 #[allow(clippy::redundant_clone)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::super::id_lazy::tests::lazy_set;
     use super::super::id_lazy::tests::lazy_set_inherit;
     use super::super::tests::*;
     use super::*;
     use crate::Id;
-    use std::collections::HashSet;
 
     fn intersection(a: &[u8], b: &[u8]) -> IntersectionSet {
         let a = NameSet::from_query(VecQuery::from_bytes(a));

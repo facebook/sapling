@@ -9,11 +9,10 @@
 
 use std::cell::RefCell;
 
-use cpython::*;
-
 use ::nodemap::NodeMap;
 use ::nodemap::NodeSet;
 use ::nodemap::Repair;
+use cpython::*;
 use cpython_ext::Bytes;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;

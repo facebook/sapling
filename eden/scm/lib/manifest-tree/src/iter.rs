@@ -13,13 +13,12 @@ use std::time::Duration;
 
 use anyhow::Error;
 use anyhow::Result;
+use async_runtime::RunStream;
+use async_runtime::RunStreamOptions;
 use futures::channel::mpsc::unbounded;
 use futures::stream;
 use futures::StreamExt;
 use futures_batch::ChunksTimeoutStreamExt;
-
-use async_runtime::RunStream;
-use async_runtime::RunStreamOptions;
 use manifest::FsNodeMetadata;
 use pathmatcher::Matcher;
 use types::Key;
@@ -326,8 +325,6 @@ impl<'a> DfsCursor<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::sync::Arc;
 
     use manifest::testutil::*;
@@ -336,6 +333,7 @@ mod tests {
     use pathmatcher::TreeMatcher;
     use types::testutil::*;
 
+    use super::*;
     use crate::testutil::*;
 
     #[test]

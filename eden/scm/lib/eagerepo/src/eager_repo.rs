@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::Result;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::path::Path;
+use std::path::PathBuf;
+
 use dag::ops::DagAddHeads;
 use dag::ops::DagPersistent;
 use dag::Dag;
@@ -13,12 +17,10 @@ use dag::Vertex;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::path::Path;
-use std::path::PathBuf;
 use zstore::Id20;
 use zstore::Zstore;
+
+use crate::Result;
 
 /// Non-lazy, pure Rust, local repo implementation.
 ///

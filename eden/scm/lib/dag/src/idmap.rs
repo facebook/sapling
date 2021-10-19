@@ -174,11 +174,12 @@ pub trait IdMapWrite {
 
 #[cfg(test)]
 mod tests {
+    use nonblocking::non_blocking_result as r;
+    use tempfile::tempdir;
+
     use super::*;
     use crate::ops::Persist;
     use crate::ops::PrefixLookup;
-    use nonblocking::non_blocking_result as r;
-    use tempfile::tempdir;
 
     #[cfg(all(test, feature = "indexedlog-backend"))]
     #[test]

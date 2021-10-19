@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
+use std::path::PathBuf;
+use std::sync::Arc;
+
 use async_runtime::block_on;
 use cpython::*;
 use cpython_ext::PyNone;
@@ -15,9 +19,6 @@ use eagerepo::EagerRepo as RustEagerRepo;
 use edenapi_types::HgId;
 use pydag::dagalgo::dagalgo as PyDag;
 use pyedenapi::PyClient;
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::sync::Arc;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "eagerepo"].join(".");

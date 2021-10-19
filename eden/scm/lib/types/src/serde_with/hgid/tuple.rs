@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::HgId;
 use serde::ser::SerializeTuple;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serializer;
+
+use crate::HgId;
 
 /// Serialize `HgId` as a tuple of 20 `u8`s.
 pub fn serialize<S>(id: &HgId, serializer: S) -> Result<S::Ok, S::Error>

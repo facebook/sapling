@@ -11,7 +11,15 @@
 
 use std::ptr;
 
+use anyhow::Result;
+// Opaque types from other crates
+pub use edenapi::EdenApiError;
+pub use edenapi_types::EdenApiServerError;
+pub use edenapi_types::FileMetadata;
+pub use edenapi_types::TreeChildEntry;
+pub use edenapi_types::TreeEntry;
 use libc::size_t;
+pub use types::Key as ApiKey;
 
 use crate::ContentId;
 use crate::FileType;
@@ -19,15 +27,6 @@ use crate::HgId;
 use crate::Parents;
 use crate::Sha1;
 use crate::Sha256;
-use anyhow::Result;
-
-// Opaque types from other crates
-pub use edenapi::EdenApiError;
-pub use edenapi_types::EdenApiServerError;
-pub use edenapi_types::FileMetadata;
-pub use edenapi_types::TreeChildEntry;
-pub use edenapi_types::TreeEntry;
-pub use types::Key as ApiKey;
 
 /// Methods for ApiKey
 #[no_mangle]

@@ -7,8 +7,6 @@
 
 mod zstdelta;
 
-use crate::zstdelta::apply;
-use crate::zstdelta::diff;
 use std::env::args;
 use std::fs::File;
 use std::io::Read;
@@ -17,6 +15,9 @@ use std::io::{self};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::exit;
+
+use crate::zstdelta::apply;
+use crate::zstdelta::diff;
 
 fn read(path: &Path) -> Vec<u8> {
     let mut buf = Vec::new();

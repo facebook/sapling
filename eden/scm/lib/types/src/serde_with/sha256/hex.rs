@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::Sha256;
 use serde::Serializer;
+
+use crate::Sha256;
 
 /// Serde `serialize_with` function to serialize `Sha256` as hex string.
 pub fn serialize<S>(id: &Sha256, serializer: S) -> Result<S::Ok, S::Error>

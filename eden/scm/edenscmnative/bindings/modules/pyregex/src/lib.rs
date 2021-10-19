@@ -7,14 +7,14 @@
 
 #![allow(non_camel_case_types)]
 
-use regex::bytes::Regex as BinaryRegex;
-use regex::Regex;
 use std::collections::HashMap;
 use std::ops::Range;
 
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
+use regex::bytes::Regex as BinaryRegex;
+use regex::Regex;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "regex"].join(".");

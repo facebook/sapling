@@ -20,10 +20,11 @@
 //! // Set RUST_LOG=info and run the test.
 //! ```
 
-pub use ctor::ctor;
 use std::io;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+pub use ctor::ctor;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::fmt::Subscriber;

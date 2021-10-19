@@ -5,6 +5,20 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::io;
+
+use dag::delegate;
+use dag::errors::NotFoundError;
+use dag::ops::DagAddHeads;
+use dag::MemDag;
+use dag::Set;
+use dag::Vertex;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
+use minibytes::Bytes;
+
 use crate::strip;
 use crate::AppendCommits;
 use crate::DescribeBackend;
@@ -15,18 +29,6 @@ use crate::ReadCommitText;
 use crate::Result;
 use crate::StreamCommitText;
 use crate::StripCommits;
-use dag::delegate;
-use dag::errors::NotFoundError;
-use dag::ops::DagAddHeads;
-use dag::MemDag;
-use dag::Set;
-use dag::Vertex;
-use futures::stream::BoxStream;
-use futures::stream::StreamExt;
-use minibytes::Bytes;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::io;
 
 /// HG commits in memory.
 pub struct MemHgCommits {

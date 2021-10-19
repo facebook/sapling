@@ -677,10 +677,9 @@ pub fn is_plain(feature: Option<&str>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use tempdir::TempDir;
 
+    use super::*;
     use crate::config::tests::write_file;
     use crate::ENV_LOCK;
 

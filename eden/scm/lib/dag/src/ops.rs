@@ -7,6 +7,11 @@
 
 //! DAG and Id operations (mostly traits)
 
+use std::sync::Arc;
+
+use futures::StreamExt;
+use futures::TryStreamExt;
+
 use crate::clone::CloneData;
 use crate::default_impl;
 use crate::errors::NotFoundError;
@@ -20,9 +25,6 @@ use crate::nameset::NameSet;
 use crate::IdSet;
 use crate::Result;
 use crate::VerLink;
-use futures::StreamExt;
-use futures::TryStreamExt;
-use std::sync::Arc;
 
 /// DAG related read-only algorithms.
 #[async_trait::async_trait]

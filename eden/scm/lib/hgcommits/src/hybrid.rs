@@ -5,16 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::AppendCommits;
-use crate::DescribeBackend;
-use crate::HgCommit;
-use crate::HgCommits;
-use crate::ParentlessHgCommit;
-use crate::ReadCommitText;
-use crate::Result;
-use crate::RevlogCommits;
-use crate::StreamCommitText;
-use crate::StripCommits;
+use std::collections::HashSet;
+use std::io;
+use std::path::Path;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::SeqCst;
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use dag::delegate;
 use dag::ops::DagAlgorithm;
@@ -35,17 +32,22 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use minibytes::Bytes;
 use parking_lot::RwLock;
-use std::collections::HashSet;
-use std::io;
-use std::path::Path;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::SeqCst;
-use std::sync::Arc;
 use streams::HybridResolver;
 use streams::HybridStream;
 use tracing::instrument;
 use zstore::Id20;
 use zstore::Zstore;
+
+use crate::AppendCommits;
+use crate::DescribeBackend;
+use crate::HgCommit;
+use crate::HgCommits;
+use crate::ParentlessHgCommit;
+use crate::ReadCommitText;
+use crate::Result;
+use crate::RevlogCommits;
+use crate::StreamCommitText;
+use crate::StripCommits;
 
 /// Segmented Changelog + Revlog (Optional) + Remote.
 ///

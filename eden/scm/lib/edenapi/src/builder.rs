@@ -16,16 +16,15 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
-use once_cell::sync::Lazy;
-use parking_lot::RwLock;
-use url::Url;
-
 use auth::AuthSection;
 use configmodel::convert::FromConfigValue;
 use configmodel::ConfigExt;
 use http_client::Encoding;
 use http_client::HttpVersion;
 use http_client::MinTransferSpeed;
+use once_cell::sync::Lazy;
+use parking_lot::RwLock;
+use url::Url;
 
 use crate::client::Client;
 use crate::errors::ConfigError;

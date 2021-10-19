@@ -9,14 +9,14 @@
 //!
 //! [TreeMatcher] is the main structure.
 
+use std::path::Path;
+
 use anyhow::Result;
 use bitflags::bitflags;
 use globset::Glob;
 use globset::GlobBuilder;
 use globset::GlobSet;
 use globset::GlobSetBuilder;
-use std::path::Path;
-
 use types::RepoPath;
 
 use crate::DirectoryMatch;

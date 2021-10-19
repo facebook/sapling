@@ -5,19 +5,21 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::IoResultExt;
-use crate::utils::atomic_read;
-use crate::utils::atomic_write;
-use crate::utils::xxhash;
-use crate::utils::{self};
 use std::collections::BTreeMap;
 use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
 use std::io::{self};
 use std::path::Path;
+
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
+
+use crate::errors::IoResultExt;
+use crate::utils::atomic_read;
+use crate::utils::atomic_write;
+use crate::utils::xxhash;
+use crate::utils::{self};
 
 /// Metadata about index names, logical [`Log`] and [`Index`] file lengths.
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -141,9 +143,10 @@ impl LogMetadata {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use quickcheck::quickcheck;
     use tempfile::tempdir;
+
+    use super::*;
 
     quickcheck! {
         fn test_roundtrip_meta(primary_len: u64, indexes: BTreeMap<String, u64>, epoch: u64) -> bool {

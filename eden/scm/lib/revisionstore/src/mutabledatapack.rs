@@ -20,18 +20,16 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::WriteBytesExt;
+use lz4_pyframe::compress;
+use mpatch::mpatch::get_full_text;
 use parking_lot::Mutex;
 use sha1::Digest;
 use sha1::Sha1;
 use tempfile::Builder;
 use tempfile::NamedTempFile;
 use thiserror::Error;
-
-use lz4_pyframe::compress;
 use types::HgId;
 use types::Key;
-
-use mpatch::mpatch::get_full_text;
 
 use crate::dataindex::DataIndex;
 use crate::dataindex::DeltaLocation;
@@ -357,18 +355,17 @@ impl LocalStore for MutableDataPack {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::fs::File;
     use std::fs::{self};
     use std::io::Read;
 
     use minibytes::Bytes;
     use tempfile::tempdir;
-
     use types::testutil::*;
     use types::Key;
     use types::RepoPathBuf;
+
+    use super::*;
 
     #[test]
     fn test_basic_creation() {

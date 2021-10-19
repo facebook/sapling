@@ -8,7 +8,6 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-
 use types::Key;
 use types::NodeInfo;
 
@@ -177,14 +176,12 @@ impl<T: HgIdMutableHistoryStore> LocalStore for MultiplexHgIdHistoryStore<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    use configparser::config::ConfigSet;
     use minibytes::Bytes;
     use tempfile::TempDir;
-
-    use configparser::config::ConfigSet;
     use types::testutil::*;
 
+    use super::*;
     use crate::datapack::DataPackVersion;
     use crate::datastore::HgIdDataStore;
     use crate::historypack::HistoryPackVersion;

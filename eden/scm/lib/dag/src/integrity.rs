@@ -7,6 +7,11 @@
 
 //! Integrity checks.
 
+use std::collections::BTreeSet;
+
+use futures::StreamExt;
+use futures::TryStreamExt;
+
 use crate::iddag::IdDag;
 use crate::iddagstore::IdDagStore;
 use crate::idmap::IdMapAssignHead;
@@ -22,9 +27,6 @@ use crate::Group;
 use crate::Id;
 use crate::Result;
 use crate::VertexName;
-use futures::StreamExt;
-use futures::TryStreamExt;
-use std::collections::BTreeSet;
 
 #[async_trait::async_trait]
 impl<IS, M, P, S> CheckIntegrity for AbstractNameDag<IdDag<IS>, M, P, S>

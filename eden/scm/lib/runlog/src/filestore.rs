@@ -5,10 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
-use anyhow::Result;
-use fs2::FileExt;
-
 use std::ffi::OsStr;
 use std::fs;
 use std::io;
@@ -18,9 +14,13 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use crate::Entry;
+use anyhow::Error;
+use anyhow::Result;
+use fs2::FileExt;
 use util::lock::PathLock;
 use util::path::create_shared_dir;
+
+use crate::Entry;
 
 pub struct FileStore {
     // Directory to write files to.

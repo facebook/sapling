@@ -9,7 +9,6 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-
 use edenapi::BlockingResponse;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;

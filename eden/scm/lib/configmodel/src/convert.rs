@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
+
+use minibytes::Text;
+use util::path::expand_path;
+
 use crate::Error;
 use crate::Result;
-use minibytes::Text;
-use std::path::PathBuf;
-use util::path::expand_path;
 
 pub trait FromConfigValue: Sized {
     fn try_from_str(s: &str) -> Result<Self>;

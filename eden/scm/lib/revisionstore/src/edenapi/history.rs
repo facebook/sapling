@@ -8,22 +8,20 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::prelude::*;
-
 use async_runtime::block_on;
+use futures::prelude::*;
 use progress::Unit;
 use types::Key;
 use types::NodeInfo;
 
+use super::hgid_keys;
+use super::EdenApiRemoteStore;
+use super::File;
 use crate::historystore::HgIdHistoryStore;
 use crate::historystore::HgIdMutableHistoryStore;
 use crate::historystore::RemoteHistoryStore;
 use crate::localstore::LocalStore;
 use crate::types::StoreKey;
-
-use super::hgid_keys;
-use super::EdenApiRemoteStore;
-use super::File;
 
 /// A history store backed by an `EdenApiRemoteStore` and a mutable store.
 ///
@@ -94,14 +92,12 @@ impl LocalStore for EdenApiHistoryStore {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    use configparser::config::ConfigSet;
     use maplit::hashmap;
     use tempfile::TempDir;
-
-    use configparser::config::ConfigSet;
     use types::testutil::*;
 
+    use super::*;
     use crate::edenapi::File;
     use crate::edenapi::Tree;
     use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;

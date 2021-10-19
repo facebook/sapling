@@ -9,11 +9,10 @@
 
 use std::cell::RefCell;
 
+use ::clientinfo as client_info;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use pyconfigparser::config;
-
-use ::clientinfo as client_info;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pyclientinfo"].join(".");

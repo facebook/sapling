@@ -22,7 +22,6 @@ use ffi::PyVarObject;
 use ffi::Py_hash_t;
 use ffi::Py_ssize_t;
 use ffi::_PyObject_NewVar;
-
 #[cfg(feature = "python3")]
 use python3_sys as ffi;
 #[cfg(feature = "python2")]

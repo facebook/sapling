@@ -13,12 +13,11 @@
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 
-use once_cell::sync::Lazy;
-
 use hg_metrics::increment_counter;
 use http_client::HttpClient;
 use http_client::Request;
 use http_client::Stats;
+use once_cell::sync::Lazy;
 use progress_model::IoSample;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;

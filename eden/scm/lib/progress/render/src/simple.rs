@@ -7,14 +7,16 @@
 
 //! Simple renderer. Does not use complex ANSI escape codes (ex. colors).
 
-use crate::RenderingConfig;
+use std::borrow::Cow;
+use std::sync::Arc;
+
 use progress_model::CacheStats;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
 use progress_model::TimeSeriesMode;
-use std::borrow::Cow;
-use std::sync::Arc;
+
+use crate::RenderingConfig;
 
 /// Render progress into a multi-line string.
 pub fn render(registry: &Registry, config: &RenderingConfig) -> String {

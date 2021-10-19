@@ -13,12 +13,11 @@ use curl::easy::ReadError;
 use curl::easy::SeekResult;
 use curl::easy::WriteError;
 
+use super::HandlerExt;
 use crate::header::Header;
 use crate::progress::Progress;
 use crate::receiver::Receiver;
 use crate::RequestContext;
-
-use super::HandlerExt;
 
 pub struct Streaming<R> {
     receiver: Option<R>,
@@ -143,13 +142,12 @@ impl<R: Receiver> HandlerExt for Streaming<R> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use assert_matches::assert_matches;
     use http::header::HeaderName;
     use http::header::HeaderValue;
     use http::header::{self};
 
+    use super::*;
     use crate::progress::ProgressReporter;
     use crate::receiver::testutil::NullReceiver;
     use crate::receiver::testutil::TestReceiver;

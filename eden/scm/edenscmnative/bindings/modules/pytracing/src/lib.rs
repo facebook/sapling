@@ -7,6 +7,13 @@
 
 #![allow(non_camel_case_types)]
 
+use std::cell::Cell;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::ops::Deref;
+use std::ops::DerefMut;
+use std::sync::Arc;
+
 use cpython::*;
 use cpython_ext::Bytes;
 use cpython_ext::PyNone;
@@ -18,12 +25,6 @@ use parking_lot::Mutex;
 use python3_sys as ffi;
 #[cfg(feature = "python2")]
 use python27_sys as ffi;
-use std::cell::Cell;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::ops::DerefMut;
-use std::sync::Arc;
 use tracing::Level;
 use tracing_collector::model::Action;
 use tracing_collector::model::EspanId;

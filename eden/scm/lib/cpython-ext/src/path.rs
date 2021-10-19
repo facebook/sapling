@@ -16,12 +16,11 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use cpython::*;
-use thiserror::Error;
-
 #[cfg(feature = "python2")]
 use encoding::local_bytes_to_path;
 #[cfg(feature = "python2")]
 use encoding::path_to_local_bytes;
+use thiserror::Error;
 use types::PathComponentBuf;
 use types::RepoPath;
 use types::RepoPathBuf;

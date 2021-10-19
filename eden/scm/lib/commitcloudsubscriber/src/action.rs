@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::error::*;
-use anyhow::Result;
-use log::error;
-use log::info;
 use std::path::Path;
 use std::process::Command;
 use std::process::Stdio;
 use std::time::Instant;
+
+use anyhow::Result;
+use log::error;
+use log::info;
+
+use crate::error::*;
 
 pub struct CloudSyncTrigger;
 

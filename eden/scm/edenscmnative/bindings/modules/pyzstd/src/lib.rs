@@ -13,7 +13,6 @@ use std::io;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::SimplePyBuf;
-
 use zstd::stream::decode_all;
 use zstd::stream::encode_all;
 use zstd::stream::raw::Decoder;

@@ -9,14 +9,16 @@
 //!
 //! Structs in this file should be keep in sync with `eden/fs/model/{Tree, TreeEntry}.h`.
 
-use crate::raw::CBytes;
+use std::convert::TryFrom;
+
 use anyhow::format_err;
 use anyhow::Result;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest::List;
-use std::convert::TryFrom;
 use types::PathComponentBuf;
+
+use crate::raw::CBytes;
 
 #[repr(u8)]
 pub enum TreeEntryType {

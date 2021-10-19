@@ -5,16 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#[cfg(feature = "python2")]
-use libc::c_char;
-use libc::c_int;
-#[cfg(feature = "python3")]
-use libc::wchar_t;
-
-#[cfg(feature = "python3")]
-use python3_sys as ffi;
-#[cfg(feature = "python2")]
-use python27_sys as ffi;
+use std::ffi::CString;
 
 use ffi::PyEval_InitThreads;
 use ffi::PyGILState_Ensure;
@@ -28,7 +19,15 @@ use ffi::Py_Initialize;
 use ffi::Py_IsInitialized;
 use ffi::Py_Main;
 use ffi::Py_SetProgramName;
-use std::ffi::CString;
+#[cfg(feature = "python2")]
+use libc::c_char;
+use libc::c_int;
+#[cfg(feature = "python3")]
+use libc::wchar_t;
+#[cfg(feature = "python3")]
+use python3_sys as ffi;
+#[cfg(feature = "python2")]
+use python27_sys as ffi;
 
 #[cfg(feature = "python2")]
 type PyChar = c_char;

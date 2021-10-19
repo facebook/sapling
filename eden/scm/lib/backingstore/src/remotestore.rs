@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use revisionstore::HgIdDataStore;
 use revisionstore::HgIdMutableDeltaStore;
@@ -16,7 +18,6 @@ use revisionstore::RemoteDataStore;
 use revisionstore::RemoteHistoryStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
-use std::sync::Arc;
 
 // TODO: Once we have EdenAPI production ready, remove this.
 pub struct FakeRemoteStore;

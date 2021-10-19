@@ -5,17 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::fmt::Debug;
+use std::hash::Hash;
+use std::pin::Pin;
+
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::task::Context;
 use futures::task::Poll;
 use futures::Stream;
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::pin::Pin;
 
 /// Resolve a stream of `I`s (inputs) into a stream of `O`s (outputs).
 ///
@@ -233,13 +234,15 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use futures::stream;
-    use futures::stream::StreamExt;
     use std::sync::Arc;
     use std::sync::Mutex;
+
+    use futures::stream;
+    use futures::stream::StreamExt;
     use tokio::time::sleep;
     use tokio::time::Duration;
+
+    use super::*;
 
     type I = usize;
     type O = String;

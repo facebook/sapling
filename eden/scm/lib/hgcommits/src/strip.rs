@@ -5,19 +5,20 @@
  * GNU General Public License version 2.
  */
 
+use std::fs;
+use std::path::Path;
+
+use dag::errors::NotFoundError;
+// TODO: Consider migrating to async, or get rid of strip in tests.
+use dag::nameset::SyncNameSetQuery;
+use dag::DagAlgorithm;
+use dag::Set;
+use dag::Vertex;
+
 use crate::AppendCommits;
 use crate::HgCommit;
 use crate::ReadCommitText;
 use crate::Result;
-use dag::errors::NotFoundError;
-use dag::DagAlgorithm;
-use dag::Set;
-use dag::Vertex;
-use std::fs;
-use std::path::Path;
-
-// TODO: Consider migrating to async, or get rid of strip in tests.
-use dag::nameset::SyncNameSetQuery;
 
 #[async_trait::async_trait]
 pub trait StripCommits {

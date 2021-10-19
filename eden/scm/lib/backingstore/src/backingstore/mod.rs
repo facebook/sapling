@@ -12,7 +12,6 @@ use std::path::Path;
 
 use anyhow::anyhow;
 use anyhow::Result;
-
 use manifest::List;
 use revisionstore::scmstore::file::FileAuxData;
 use types::Key;

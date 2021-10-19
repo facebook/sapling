@@ -7,6 +7,20 @@
 
 //! Rotation support for a set of [`Log`]s.
 
+use std::fmt;
+use std::fs;
+use std::io;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::SeqCst;
+
+use minibytes::Bytes;
+use once_cell::sync::OnceCell;
+use tracing::debug;
+use tracing::debug_span;
+use tracing::trace;
+
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::lock::ScopedDirLock;
@@ -18,18 +32,6 @@ use crate::log::Log;
 use crate::log::{self};
 use crate::repair::OpenOptionsRepair;
 use crate::utils;
-use minibytes::Bytes;
-use once_cell::sync::OnceCell;
-use std::fmt;
-use std::fs;
-use std::io;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::SeqCst;
-use tracing::debug;
-use tracing::debug_span;
-use tracing::trace;
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
 /// exceed size or count limits.
@@ -917,9 +919,10 @@ fn guess_latest(mut ids: Vec<u8>) -> u8 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use log::IndexOutput;
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn test_open() {

@@ -9,7 +9,6 @@ use std::ops::BitOr;
 
 use anyhow::anyhow;
 use anyhow::Result;
-
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 
 use crate::scmstore::tree::types::LazyTree;

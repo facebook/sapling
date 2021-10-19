@@ -11,7 +11,6 @@ use std::collections::HashMap;
 use quickcheck::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-
 use types::HgId;
 
 use crate::wire::ToApi;
@@ -132,7 +131,6 @@ impl Arbitrary for WireCloneData {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(WireCloneData, WireFlatSegment);

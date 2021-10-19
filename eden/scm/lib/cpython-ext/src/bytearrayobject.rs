@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::mem;
+use std::os::raw::c_int;
+
 use cpython::PyObject as RustPyObject;
 use cpython::Python as RustPythonGILGuard;
 use ffi::PyByteArray_Size;
@@ -19,8 +22,6 @@ use ffi::_PyObject_New;
 use python3_sys as ffi;
 #[cfg(feature = "python2")]
 use python27_sys as ffi;
-use std::mem;
-use std::os::raw::c_int;
 
 // From Python bytearrayobject.h. Must match the C definition.
 #[cfg(feature = "python2")]

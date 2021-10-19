@@ -13,7 +13,6 @@
 //! a pure Rust progress bar implementation in the future.
 
 use anyhow::Result;
-
 pub use null::NullProgressFactory;
 
 pub mod null;

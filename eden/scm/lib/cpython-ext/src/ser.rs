@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::PyErr as Error;
+use std::marker::PhantomData;
+
 use cpython::PyBytes;
 use cpython::PyDict;
 use cpython::PyObject;
@@ -16,7 +17,8 @@ use cpython::PythonObject;
 use cpython::ToPyObject;
 use serde::ser;
 use serde::Serialize;
-use std::marker::PhantomData;
+
+use crate::PyErr as Error;
 
 /// Serialize into Python object.
 pub fn to_object<T>(py: Python, value: &T) -> PyResult<PyObject>

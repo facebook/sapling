@@ -11,7 +11,6 @@ use std::sync::Arc;
 
 use anyhow::format_err;
 use anyhow::Result;
-
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use types::Key;
@@ -370,14 +369,12 @@ impl<'a> MetadataStoreBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::collections::HashMap;
 
     use tempfile::TempDir;
-
     use types::testutil::*;
 
+    use super::*;
     use crate::testutil::make_config;
     use crate::testutil::FakeHgIdRemoteStore;
 
@@ -655,12 +652,11 @@ mod tests {
 
     #[cfg(all(fbcode_build, target_os = "linux"))]
     mod fbcode_tests {
-        use super::*;
-
         use memcache::MockMemcache;
+        use once_cell::sync::Lazy;
         use progress::null::NullProgressFactory;
 
-        use once_cell::sync::Lazy;
+        use super::*;
 
         static MOCK: Lazy<MockMemcache> = Lazy::new(|| MockMemcache::new());
 

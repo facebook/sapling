@@ -6,6 +6,7 @@
  */
 
 use std::env;
+
 use types::RepoPath;
 
 pub struct MissingInjection {

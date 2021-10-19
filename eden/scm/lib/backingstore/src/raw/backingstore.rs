@@ -7,16 +7,19 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
+use std::convert::TryInto;
+use std::slice;
+use std::str;
+use std::vec::Vec;
+
 use anyhow::ensure;
 use anyhow::Error;
 use anyhow::Result;
 use libc::c_char;
 use libc::c_void;
 use libc::size_t;
-use std::convert::TryInto;
-use std::slice;
-use std::str;
-use std::vec::Vec;
+use manifest::List;
+use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;
 use types::Key;
 
 use crate::backingstore::BackingStore;
@@ -25,9 +28,6 @@ use crate::raw::CFallible;
 use crate::raw::FileAuxData;
 use crate::raw::Request;
 use crate::raw::Tree;
-
-use manifest::List;
-use revisionstore::scmstore::FileAuxData as ScmStoreFileAuxData;
 
 fn stringpiece_to_slice<'a, T, U>(ptr: *const T, length: size_t) -> Result<&'a [U]> {
     ensure!(!ptr.is_null(), "string ptr is null");

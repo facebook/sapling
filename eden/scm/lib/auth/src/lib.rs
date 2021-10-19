@@ -12,12 +12,11 @@ use std::str;
 
 use anyhow::Error;
 use anyhow::Result;
+use configmodel::Config;
+use configmodel::Text;
 use indexmap::IndexMap;
 use thiserror::Error;
 use url::Url;
-
-use configmodel::Config;
-use configmodel::Text;
 use util::path::expand_path;
 
 pub mod x509;
@@ -259,10 +258,10 @@ fn strip_scheme_and_user(url: &Url) -> String {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use configparser::config::ConfigSet;
     use configparser::config::Options;
+
+    use super::*;
 
     #[test]
     fn test_auth_groups() {

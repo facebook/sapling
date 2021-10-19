@@ -25,12 +25,14 @@
 //! of variant-length binary key, some escaping is needed to avoid the prefix conflict. The
 //! escaping logic might be implemented as key read/write functions.
 
+use std::io::Write;
+
+use vlqencoding::VLQDecodeAt;
+use vlqencoding::VLQEncode;
+
 use crate::errors::ErrorKind;
 use crate::traits::Resize;
 use crate::Result;
-use std::io::Write;
-use vlqencoding::VLQDecodeAt;
-use vlqencoding::VLQEncode;
 
 /// Integer that maps to a key (`[u8]`).
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, Copy, Default)]
@@ -131,12 +133,12 @@ impl VariantKey {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use rand::distributions::Alphanumeric;
     use rand::thread_rng;
     use rand::Rng;
     use rand::RngCore;
+
+    use super::*;
 
     #[test]
     fn test_variant_key_round_trip() {

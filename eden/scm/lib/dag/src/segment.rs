@@ -9,29 +9,30 @@
 //!
 //! Segmented DAG. See [`IdDag`] for the main structure.
 
-use crate::errors::bug;
-use crate::id::Id;
-use crate::IdSpan;
-use crate::Level;
-use crate::Result;
+use std::fmt::Debug;
+use std::fmt::Formatter;
+use std::fmt::{self};
+use std::io::Cursor;
+
 use bitflags::bitflags;
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
+pub use dag_types::segment::FlatSegment;
+pub use dag_types::segment::PreparedFlatSegments;
 use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
-use std::fmt::Debug;
-use std::fmt::Formatter;
-use std::fmt::{self};
-use std::io::Cursor;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQDecodeAt;
 use vlqencoding::VLQEncode;
 
-pub use dag_types::segment::FlatSegment;
-pub use dag_types::segment::PreparedFlatSegments;
+use crate::errors::bug;
+use crate::id::Id;
+use crate::IdSpan;
+use crate::Level;
+use crate::Result;
 
 /// [`Segment`] represents a range of [`Id`]s in an [`IdDag`] graph.
 /// It provides methods to access properties of the segments, including the range itself,
@@ -239,8 +240,9 @@ pub(crate) fn hex(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use quickcheck::quickcheck;
+
+    use super::*;
 
     #[test]
     fn test_segment_roundtrip() {

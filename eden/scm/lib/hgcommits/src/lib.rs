@@ -9,6 +9,8 @@
 //!
 //! Commits stored in HG format and backed by efficient `dag` structures.
 
+use std::io;
+
 use dag::errors::NotFoundError;
 use dag::CloneData;
 use dag::Vertex;
@@ -17,7 +19,6 @@ use futures::stream::BoxStream;
 use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
-use std::io;
 
 #[async_trait::async_trait]
 pub trait ReadCommitText: Sync {
@@ -120,12 +121,11 @@ mod revlog;
 mod strip;
 
 pub use doublewrite::DoubleWriteCommits;
+pub use errors::CommitError as Error;
 pub use git::GitSegmentedCommits;
 pub use hgsha1commits::HgCommits;
 pub use hybrid::HybridCommits;
 pub use memhgcommits::MemHgCommits;
 pub use revlog::RevlogCommits;
 pub use strip::StripCommits;
-
-pub use errors::CommitError as Error;
 pub type Result<T> = std::result::Result<T, Error>;

@@ -13,14 +13,6 @@ use serde_derive::Serialize;
 
 use crate::file::FileContent;
 use crate::file::FileEntry;
-use crate::wire::is_default;
-use crate::wire::ToApi;
-use crate::wire::ToWire;
-use crate::wire::WireKey;
-use crate::wire::WireParents;
-use crate::wire::WireRevisionstoreMetadata;
-use crate::wire::WireToApiConversionError;
-
 pub use crate::file::WireFileAttributes;
 pub use crate::file::WireFileAuxData;
 pub use crate::file::WireFileRequest;
@@ -28,6 +20,13 @@ pub use crate::file::WireFileSpec;
 pub use crate::file::WireHgFilenodeData;
 pub use crate::file::WireUploadHgFilenodeRequest;
 pub use crate::file::WireUploadTokensResponse;
+use crate::wire::is_default;
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireKey;
+use crate::wire::WireParents;
+use crate::wire::WireRevisionstoreMetadata;
+use crate::wire::WireToApiConversionError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct WireFileEntry {
@@ -110,7 +109,6 @@ impl Arbitrary for WireFileEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(

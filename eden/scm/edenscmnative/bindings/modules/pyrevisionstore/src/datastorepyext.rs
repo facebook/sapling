@@ -19,7 +19,6 @@ use cpython::PyTuple;
 use cpython::Python;
 use cpython::PythonObject;
 use cpython::ToPyObject;
-
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;

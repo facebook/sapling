@@ -21,7 +21,6 @@ use cpython::PyObject;
 use cpython::Python;
 use cpython::PythonObject;
 use cpython::PythonObjectWithTypeObject;
-
 use cpython_ext::PyErr;
 use cpython_ext::PyPathBuf;
 use revisionstore::Delta;

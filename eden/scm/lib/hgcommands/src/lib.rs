@@ -10,5 +10,6 @@ mod hgpython;
 mod python;
 mod run;
 
-pub use crate::hgpython::HgPython;
 pub use run::run_command;
+
+pub use crate::hgpython::HgPython;

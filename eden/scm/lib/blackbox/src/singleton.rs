@@ -9,12 +9,14 @@
 //!
 //! Useful for cases where it's inconvenient to pass [`Blackbox`] around.
 
+use std::ops::DerefMut;
+
+use lazy_static::lazy_static;
+use parking_lot::Mutex;
+
 use crate::event::Event;
 use crate::Blackbox;
 use crate::BlackboxOptions;
-use lazy_static::lazy_static;
-use parking_lot::Mutex;
-use std::ops::DerefMut;
 
 lazy_static! {
     pub static ref SINGLETON: Mutex<Blackbox> =
@@ -60,9 +62,10 @@ pub fn sync() {
 
 #[cfg(test)]
 mod tests {
+    use tempfile::tempdir;
+
     use super::*;
     use crate::blackbox::tests::all_entries;
-    use tempfile::tempdir;
 
     #[test]
     fn test_buffered_writes() {

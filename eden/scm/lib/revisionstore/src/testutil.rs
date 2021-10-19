@@ -27,6 +27,8 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use futures::prelude::*;
+#[cfg(test)]
+pub use lfs_mocks::*;
 use minibytes::Bytes;
 use types::Key;
 use types::NodeInfo;
@@ -45,9 +47,6 @@ use crate::localstore::LocalStore;
 use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::file::LazyFile;
 use crate::types::StoreKey;
-
-#[cfg(test)]
-pub use lfs_mocks::*;
 
 pub fn delta(data: &str, base: Option<Key>, key: Key) -> Delta {
     Delta {
@@ -398,7 +397,8 @@ pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
 
 #[cfg(test)]
 mod lfs_mocks {
-    use super::*;
+    use std::convert::TryInto;
+
     use lfs_protocol::ObjectAction;
     use lfs_protocol::ObjectError;
     use lfs_protocol::ObjectStatus;
@@ -410,8 +410,9 @@ mod lfs_mocks {
     use lfs_protocol::Transfer;
     use mockito::mock;
     use mockito::Mock;
-    use std::convert::TryInto;
     use types::Sha256;
+
+    use super::*;
 
     pub struct TestBlob {
         pub oid: &'static str,

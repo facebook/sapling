@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::EagerRepo;
+use std::collections::HashSet;
+use std::num::NonZeroU64;
+use std::sync::Arc;
+
 use configmodel::Config;
 use configmodel::ConfigExt;
 use dag::ops::DagAlgorithm;
@@ -64,11 +67,10 @@ use http::StatusCode;
 use http::Version;
 use minibytes::Bytes;
 use nonblocking::non_blocking_result;
-use std::collections::HashSet;
-use std::num::NonZeroU64;
-use std::sync::Arc;
 use tracing::debug;
 use tracing::trace;
+
+use crate::EagerRepo;
 
 #[async_trait::async_trait]
 impl EdenApi for EagerRepo {

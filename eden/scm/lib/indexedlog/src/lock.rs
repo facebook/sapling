@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::IoResultExt;
-use fs2::FileExt;
 use std::fs::File;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+
+use fs2::FileExt;
+
+use crate::errors::IoResultExt;
 
 /// RAII style file locking.
 pub struct ScopedFileLock<'a> {
@@ -78,14 +80,16 @@ impl Drop for ScopedDirLock {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs::OpenOptions;
     use std::io::Read;
     use std::io::Seek;
     use std::io::SeekFrom;
     use std::io::Write;
     use std::thread;
+
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn test_file_lock() {

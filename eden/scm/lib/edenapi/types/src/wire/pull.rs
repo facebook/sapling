@@ -8,7 +8,6 @@
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use type_macros::auto_wire;
-
 use types::HgId;
 
 #[auto_wire]
@@ -33,7 +32,6 @@ impl Arbitrary for PullFastForwardRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(WirePullFastForwardRequest);

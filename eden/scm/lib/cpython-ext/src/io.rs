@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::error::ResultPyErrExt;
-use crate::none::PyNone;
-use cpython::*;
 use std::cell::RefCell;
 use std::io;
+
+use cpython::*;
+
+use crate::error::ResultPyErrExt;
+use crate::none::PyNone;
 
 /// Wrap a PyObject into a Rust object that implements Rust Read / Write traits.
 pub fn wrap_pyio(pyio: PyObject) -> WrappedIO {

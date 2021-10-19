@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
@@ -13,9 +18,6 @@ use crate::segment::SegmentFlags;
 use crate::spanset::Span;
 use crate::Level;
 use crate::Result;
-use serde::Deserialize;
-use serde::Serialize;
-use std::fmt;
 
 mod in_process_store;
 
@@ -23,7 +25,6 @@ mod in_process_store;
 pub(crate) mod indexedlog_store;
 
 pub(crate) use in_process_store::InProcessStore;
-
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub(crate) use indexedlog_store::IndexedLogStore;
 
@@ -213,10 +214,12 @@ enum StoreId {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::ops::Deref;
+
     use itertools::Itertools;
     use once_cell::sync::Lazy;
-    use std::ops::Deref;
+
+    use super::*;
 
     fn nid(id: u64) -> Id {
         Group::NON_MASTER.min_id() + id

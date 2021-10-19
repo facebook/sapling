@@ -236,12 +236,14 @@ impl_signed_primitive!(i8, u8);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use quickcheck::quickcheck;
     use std::io::Cursor;
     use std::io::Seek;
     use std::io::SeekFrom;
     use std::io::{self};
+
+    use quickcheck::quickcheck;
+
+    use super::*;
 
     macro_rules! check_round_trip {
         ($N: expr) => {{

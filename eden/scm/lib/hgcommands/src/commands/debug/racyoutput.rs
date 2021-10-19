@@ -5,20 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use super::ConfigSet;
-use super::Result;
-use super::IO;
-use cliparser::define_flags;
-use progress_model::IoSample;
-use progress_model::IoTimeSeries;
-use progress_model::ProgressBar;
-use progress_model::Registry;
 use std::io::Write;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
+
+use cliparser::define_flags;
+use progress_model::IoSample;
+use progress_model::IoTimeSeries;
+use progress_model::ProgressBar;
+use progress_model::Registry;
+
+use super::ConfigSet;
+use super::Result;
+use super::IO;
 
 define_flags! {
     pub struct DebugRacyOutputOpts {

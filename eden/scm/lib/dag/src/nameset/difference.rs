@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::fmt;
+
+use futures::StreamExt;
+
 use super::hints::Flags;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
@@ -13,9 +18,6 @@ use super::NameSet;
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::VertexName;
-use futures::StreamExt;
-use std::any::Any;
-use std::fmt;
 
 /// Subset of `lhs` that does not overlap with `rhs`.
 ///
@@ -132,9 +134,10 @@ impl Iter {
 
 #[cfg(test)]
 mod tests {
+    use nonblocking::non_blocking as nb;
+
     use super::super::tests::*;
     use super::*;
-    use nonblocking::non_blocking as nb;
 
     fn difference(a: &[u8], b: &[u8]) -> DifferenceSet {
         let a = NameSet::from_query(VecQuery::from_bytes(a));

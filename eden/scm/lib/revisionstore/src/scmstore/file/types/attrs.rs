@@ -10,10 +10,9 @@ use std::ops::BitOr;
 use std::ops::Not;
 use std::ops::Sub;
 
+use edenapi_types::FileAttributes as EdenApiFileAttributes;
 use serde::Deserialize;
 use serde::Serialize;
-
-use edenapi_types::FileAttributes as EdenApiFileAttributes;
 
 use crate::scmstore::attrs::StoreAttrs;
 

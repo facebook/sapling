@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::utils::get_prefix_bounds;
+use std::borrow::Cow;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 #[cfg(feature = "python")]
 use cpython::*;
@@ -15,10 +17,9 @@ use cpython_ext::Bytes;
 use cpython_ext::PyNone;
 #[cfg(feature = "python")]
 use cpython_ext::Str;
-use std::borrow::Cow;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
 use thiserror::Error;
+
+use crate::utils::get_prefix_bounds;
 
 #[derive(Debug, Error)]
 pub enum ParseError {

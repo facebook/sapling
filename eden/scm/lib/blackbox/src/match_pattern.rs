@@ -7,8 +7,9 @@
 
 //! Pattern matching for JSON value.
 
-use serde_json::Value;
 use std::collections::HashMap;
+
+use serde_json::Value;
 
 /// Test if a JSON value matches the given pattern.
 ///

@@ -13,6 +13,12 @@ pub mod resultutil;
 pub mod types;
 pub mod vecutil;
 
+use std::slice;
+
+use anyhow::Error;
+use libc::size_t;
+use thiserror::Error;
+
 pub use crate::opaque::ApiKey;
 pub use crate::opaque::EdenApiError;
 pub use crate::opaque::EdenApiServerError;
@@ -29,12 +35,6 @@ pub use crate::types::Key;
 pub use crate::types::Parents;
 pub use crate::types::Sha1;
 pub use crate::types::Sha256;
-
-use std::slice;
-
-use anyhow::Error;
-use libc::size_t;
-use thiserror::Error;
 
 #[derive(Debug, Error)]
 #[error("null ptr")]

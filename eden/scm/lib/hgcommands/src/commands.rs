@@ -32,12 +32,11 @@ commands! {
 }
 
 pub use anyhow::Result;
+use clidispatch::command::CommandTable;
 pub use clidispatch::io::IO;
 pub use clidispatch::repo::Repo;
 pub use cliparser::define_flags;
 pub use configparser::config::ConfigSet;
-
-use clidispatch::command::CommandTable;
 
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.

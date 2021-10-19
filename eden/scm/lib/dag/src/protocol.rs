@@ -16,6 +16,16 @@
 //! - Id -> Name: Id -> RequestLocationToName -> ResponseIdNamePair -> Name
 //! - Name -> Id: Name -> RequestNameToLocation -> ResponseIdNamePair -> Id
 
+use std::cell::RefCell;
+use std::fmt;
+use std::thread_local;
+
+use futures::stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::id::VertexName;
 use crate::iddag::FirstAncestorConstraint;
 use crate::iddag::IdDag;
@@ -27,14 +37,6 @@ use crate::Id;
 use crate::IdMap;
 use crate::IdSet;
 use crate::Result;
-use futures::stream;
-use futures::stream::StreamExt;
-use futures::stream::TryStreamExt;
-use serde::Deserialize;
-use serde::Serialize;
-use std::cell::RefCell;
-use std::fmt;
-use std::thread_local;
 
 // Request and Response structures -------------------------------------------
 

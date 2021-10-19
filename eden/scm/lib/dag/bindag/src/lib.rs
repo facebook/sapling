@@ -7,6 +7,7 @@
 
 use std::ops::Deref;
 use std::ops::Range;
+
 use vlqencoding::VLQDecode;
 
 mod gca;

@@ -203,6 +203,7 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> io::Result<()> {
 #[cfg(windows)]
 fn windows_remove_mmap_file(path: &Path) -> io::Result<()> {
     use std::os::windows::ffi::OsStrExt;
+
     use winapi::shared::minwindef::FALSE;
     use winapi::um::fileapi::CreateFileW;
     use winapi::um::fileapi::OPEN_EXISTING;
@@ -389,12 +390,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::fs::File;
     use std::io::Result;
 
     use tempfile::TempDir;
+
+    use super::*;
 
     #[cfg(windows)]
     mod windows {

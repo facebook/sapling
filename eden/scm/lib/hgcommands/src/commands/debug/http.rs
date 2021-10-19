@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use async_runtime::block_unless_interrupted as block_on;
+
 use super::NoOpts;
 use super::Repo;
 use super::Result;
 use super::IO;
-use async_runtime::block_unless_interrupted as block_on;
 
 pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     let client = edenapi::Builder::from_config(repo.config())?.build()?;

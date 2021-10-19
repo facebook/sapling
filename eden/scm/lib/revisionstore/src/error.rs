@@ -8,12 +8,11 @@
 use std::time::Duration;
 
 use anyhow::Error;
-use thiserror::Error;
-use url::Url;
-
 use http::status::StatusCode;
 use http_client::HttpClientError;
 use http_client::Method;
+use thiserror::Error;
+use url::Url;
 
 #[derive(Debug, Error)]
 #[error("Empty Mutable Pack")]

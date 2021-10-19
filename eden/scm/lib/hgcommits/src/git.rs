@@ -5,14 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::AppendCommits;
-use crate::DescribeBackend;
-use crate::HgCommit;
-use crate::ParentlessHgCommit;
-use crate::ReadCommitText;
-use crate::Result;
-use crate::StreamCommitText;
-use crate::StripCommits;
+use std::io;
+use std::path::Path;
+use std::path::PathBuf;
+
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::Set;
@@ -24,9 +20,15 @@ use gitdag::GitDag;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::Mutex;
-use std::io;
-use std::path::Path;
-use std::path::PathBuf;
+
+use crate::AppendCommits;
+use crate::DescribeBackend;
+use crate::HgCommit;
+use crate::ParentlessHgCommit;
+use crate::ReadCommitText;
+use crate::Result;
+use crate::StreamCommitText;
+use crate::StripCommits;
 
 /// Git Commits with segments index.
 ///

@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::Bytes;
 use cpython::*;
+
+use crate::Bytes;
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Default, Hash, Ord)]
 pub struct Str(crate::Bytes);

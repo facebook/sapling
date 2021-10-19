@@ -223,11 +223,13 @@ impl<'a, K: 'a, V: 'a> Iterator for IterMut<'a, K, V> {
 
 #[cfg(test)]
 mod tests {
-    use crate::vecmap::Iter;
-    use crate::vecmap::VecMap;
-    use quickcheck::quickcheck;
     use std::collections::BTreeMap;
     use std::collections::Bound::*;
+
+    use quickcheck::quickcheck;
+
+    use crate::vecmap::Iter;
+    use crate::vecmap::VecMap;
 
     #[test]
     fn insert_get_remove() {

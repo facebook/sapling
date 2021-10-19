@@ -38,6 +38,21 @@ pub mod token;
 pub mod tree;
 pub mod wire;
 
+use bytes::Bytes;
+// re-export CloneData
+pub use dag_types::CloneData;
+pub use dag_types::FlatSegment;
+pub use dag_types::Location as CommitLocation;
+pub use dag_types::PreparedFlatSegments;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+use thiserror::Error;
+pub use types::hgid::HgId;
+pub use types::key::Key;
+pub use types::nodeinfo::NodeInfo;
+pub use types::parents::Parents;
+pub use types::path::RepoPathBuf;
+
 pub use crate::anyid::AnyId;
 pub use crate::anyid::BonsaiChangesetId;
 pub use crate::anyid::LookupRequest;
@@ -117,24 +132,6 @@ pub use crate::tree::UploadTreeResponse;
 pub use crate::wire::ToApi;
 pub use crate::wire::ToWire;
 pub use crate::wire::WireToApiConversionError;
-
-// re-export CloneData
-pub use dag_types::CloneData;
-pub use dag_types::FlatSegment;
-pub use dag_types::Location as CommitLocation;
-pub use dag_types::PreparedFlatSegments;
-
-pub use types::nodeinfo::NodeInfo;
-
-#[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
-use thiserror::Error;
-
-use bytes::Bytes;
-pub use types::hgid::HgId;
-pub use types::key::Key;
-pub use types::parents::Parents;
-pub use types::path::RepoPathBuf;
 
 #[derive(Debug, Error)]
 #[error("Invalid hash: {expected} (expected) != {computed} (computed)")]

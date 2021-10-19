@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::StaticBox;
+use std::collections::HashSet;
+
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
-use std::collections::HashSet;
+
+use crate::StaticBox;
 
 /// Intern a string.
 fn intern(s: &str) -> &'static str {

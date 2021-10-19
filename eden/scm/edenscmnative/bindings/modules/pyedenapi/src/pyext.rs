@@ -5,17 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
-use cpython::*;
-use futures::prelude::*;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use async_runtime::block_unless_interrupted;
+use cpython::*;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
@@ -57,6 +55,7 @@ use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use edenapi_types::UploadTreeResponse;
+use futures::prelude::*;
 use futures::stream;
 use progress::ProgressBar;
 use progress::ProgressFactory;

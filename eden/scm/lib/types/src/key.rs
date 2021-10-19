@@ -58,13 +58,13 @@ impl Arbitrary for Key {
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod mocks {
+    use lazy_static::lazy_static;
+
     use super::Key;
     use crate::hgid::mocks::ONES;
     use crate::hgid::mocks::THREES;
     use crate::hgid::mocks::TWOS;
     use crate::testutil::*;
-
-    use lazy_static::lazy_static;
 
     lazy_static! {
         pub static ref FOO_KEY: Key = Key::new(repo_path_buf("foo"), ONES);
@@ -75,9 +75,9 @@ pub mod mocks {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use mocks::*;
+
+    use super::*;
 
     #[test]
     fn display_key() {

@@ -17,6 +17,9 @@ use crate::tree::TreeChildEntry;
 use crate::tree::TreeChildFileEntry;
 use crate::tree::TreeEntry;
 use crate::tree::TreeRequest;
+pub use crate::tree::WireUploadTreeEntry;
+pub use crate::tree::WireUploadTreeRequest;
+pub use crate::tree::WireUploadTreeResponse;
 use crate::wire::is_default;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
@@ -27,10 +30,6 @@ use crate::wire::WireKey;
 use crate::wire::WireParents;
 use crate::wire::WireToApiConversionError;
 use crate::EdenApiServerError;
-
-pub use crate::tree::WireUploadTreeEntry;
-pub use crate::tree::WireUploadTreeRequest;
-pub use crate::tree::WireUploadTreeResponse;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct WireTreeEntry {
@@ -326,7 +325,6 @@ impl Arbitrary for WireTreeRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(

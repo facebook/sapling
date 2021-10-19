@@ -5,16 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::strip;
-use crate::AppendCommits;
-use crate::DescribeBackend;
-use crate::GraphNode;
-use crate::HgCommit;
-use crate::ParentlessHgCommit;
-use crate::ReadCommitText;
-use crate::Result;
-use crate::StreamCommitText;
-use crate::StripCommits;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::io;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
+
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::ops::DagAddHeads;
@@ -27,15 +25,19 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
 use parking_lot::RwLock;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::io;
-use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::Arc;
 use zstore::Id20;
 use zstore::Zstore;
+
+use crate::strip;
+use crate::AppendCommits;
+use crate::DescribeBackend;
+use crate::GraphNode;
+use crate::HgCommit;
+use crate::ParentlessHgCommit;
+use crate::ReadCommitText;
+use crate::Result;
+use crate::StreamCommitText;
+use crate::StripCommits;
 
 /// Commits using the HG SHA1 hash function. Stored on disk.
 pub struct HgCommits {

@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors;
-use anyhow::Result;
-use configparser::config::ConfigSet;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+
+use anyhow::Result;
+use configparser::config::ConfigSet;
+
+use crate::errors;
 
 pub struct Repo {
     path: PathBuf,

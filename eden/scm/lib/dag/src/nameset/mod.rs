@@ -9,17 +9,6 @@
 //!
 //! See [`NameSet`] for the main structure.
 
-use crate::ops::DagAlgorithm;
-use crate::ops::IdConvert;
-use crate::ops::IdMapSnapshot;
-use crate::Id;
-use crate::IdSet;
-use crate::Result;
-use crate::VertexName;
-use futures::future::BoxFuture;
-use futures::Stream;
-use futures::StreamExt;
-use nonblocking::non_blocking;
 use std::any::Any;
 use std::cmp;
 use std::fmt;
@@ -30,6 +19,19 @@ use std::ops::Deref;
 use std::ops::Sub;
 use std::pin::Pin;
 use std::sync::Arc;
+
+use futures::future::BoxFuture;
+use futures::Stream;
+use futures::StreamExt;
+use nonblocking::non_blocking;
+
+use crate::ops::DagAlgorithm;
+use crate::ops::IdConvert;
+use crate::ops::IdMapSnapshot;
+use crate::Id;
+use crate::IdSet;
+use crate::Result;
+use crate::VertexName;
 
 pub mod difference;
 pub mod hints;
@@ -741,9 +743,10 @@ fn pick<T>(order: cmp::Ordering, left: T, right: T) -> T {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use nonblocking::non_blocking_result as r;
+
     use super::*;
     use crate::Id;
-    use nonblocking::non_blocking_result as r;
 
     pub(crate) fn nb<F, R>(future: F) -> R
     where

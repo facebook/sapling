@@ -11,12 +11,11 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
-use parking_lot::Mutex;
-use regex::Regex;
-
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use edenapi::Builder;
+use parking_lot::Mutex;
+use regex::Regex;
 
 use crate::contentstore::check_cache_buster;
 use crate::fetch_logger::FetchLogger;

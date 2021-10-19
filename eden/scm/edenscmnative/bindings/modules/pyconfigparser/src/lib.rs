@@ -10,14 +10,13 @@
 use std::cell::RefCell;
 use std::convert::TryInto;
 
-use cpython::*;
-
 use configparser::config::ConfigSet;
 use configparser::config::Options;
 use configparser::config::SupersetVerification;
 use configparser::convert::parse_list;
 use configparser::hg::ConfigSetHgExt;
 use configparser::hg::OptionsHgExt;
+use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;

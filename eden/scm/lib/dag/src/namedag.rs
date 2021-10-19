@@ -9,6 +9,24 @@
 //!
 //! Combination of IdMap and IdDag.
 
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::env::var;
+use std::fmt;
+use std::io;
+use std::ops::Deref;
+use std::sync::Arc;
+
+use dag_types::FlatSegment;
+use futures::future::join_all;
+use futures::future::BoxFuture;
+use futures::StreamExt;
+use futures::TryStreamExt;
+use nonblocking::non_blocking_result;
+use parking_lot::Mutex;
+use parking_lot::RwLock;
+
 use crate::clone::CloneData;
 use crate::errors::programming;
 use crate::errors::DagError;
@@ -53,22 +71,6 @@ use crate::IdSet;
 use crate::Level;
 use crate::Result;
 use crate::VerLink;
-use dag_types::FlatSegment;
-use futures::future::join_all;
-use futures::future::BoxFuture;
-use futures::StreamExt;
-use futures::TryStreamExt;
-use nonblocking::non_blocking_result;
-use parking_lot::Mutex;
-use parking_lot::RwLock;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::env::var;
-use std::fmt;
-use std::io;
-use std::ops::Deref;
-use std::sync::Arc;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
 mod indexedlog_namedag;

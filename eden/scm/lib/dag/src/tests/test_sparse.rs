@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
+use futures::TryStreamExt;
+
 use super::ProtocolMonitor;
 use super::TestDag;
 use crate::ops::DagAddHeads;
@@ -16,8 +20,6 @@ use crate::ops::IdConvert;
 use crate::Group;
 use crate::Id;
 use crate::VertexName;
-use futures::TryStreamExt;
-use std::sync::Arc;
 
 #[tokio::test]
 async fn test_sparse_dag() {

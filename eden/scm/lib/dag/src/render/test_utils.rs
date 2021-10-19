@@ -8,17 +8,17 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use crate::namedag::MemNameDag;
-use crate::nameset::SyncNameSetQuery;
-use crate::ops::ImportAscii;
-use crate::DagAlgorithm;
-use crate::VertexName;
+use nonblocking::non_blocking_result;
 use unicode_width::UnicodeWidthStr;
 
 use super::render::Ancestor;
 use super::render::Renderer;
 use super::test_fixtures::TestFixture;
-use nonblocking::non_blocking_result;
+use crate::namedag::MemNameDag;
+use crate::nameset::SyncNameSetQuery;
+use crate::ops::ImportAscii;
+use crate::DagAlgorithm;
+use crate::VertexName;
 
 pub(crate) fn render_string(
     fixture: &TestFixture,

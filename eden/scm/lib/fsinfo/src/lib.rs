@@ -56,8 +56,6 @@ impl fmt::Display for FsType {
 
 #[cfg(windows)]
 mod windows {
-    use super::*;
-
     use std::os::windows::ffi::OsStrExt;
     use std::path::PathBuf;
     use std::ptr::null_mut;
@@ -82,6 +80,8 @@ mod windows {
     use winapi::um::winnt::IO_REPARSE_TAG_GVFS;
     use winapi::um::winnt::MAXIMUM_REPARSE_DATA_BUFFER_SIZE;
     use winapi::um::winnt::REPARSE_GUID_DATA_BUFFER;
+
+    use super::*;
 
     struct WinFileHandle {
         handle: HANDLE,
@@ -234,11 +234,11 @@ mod windows {
 
 #[cfg(unix)]
 mod unix {
-    use super::*;
-
     use std::ffi::CString;
     use std::mem::zeroed;
     use std::os::unix::ffi::OsStrExt;
+
+    use super::*;
 
     pub fn get_statfs(path: &Path) -> Result<libc::statfs> {
         let cstr = CString::new(path.as_os_str().as_bytes())?;
@@ -253,10 +253,10 @@ mod unix {
 
 #[cfg(target_os = "linux")]
 mod linux {
-    use super::*;
-
     use std::collections::HashMap;
     use std::os::linux::fs::MetadataExt;
+
+    use super::*;
 
     /// These filesystem types are not in libc yet
     const BTRFS_SUPER_MAGIC: i64 = 0x9123683e;
@@ -353,9 +353,9 @@ mod linux {
 
 #[cfg(target_os = "macos")]
 mod macos {
-    use super::*;
-
     use std::ffi::CStr;
+
+    use super::*;
 
     impl<'a> From<&'a str> for FsType {
         fn from(value: &'a str) -> Self {

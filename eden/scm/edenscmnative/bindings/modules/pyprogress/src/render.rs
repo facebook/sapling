@@ -8,7 +8,6 @@
 //! This module exposes Rust's progress rendering to Python.
 
 use cpython::*;
-
 use progress_model::Registry;
 
 pub(crate) fn simple(_py: Python) -> PyResult<String> {

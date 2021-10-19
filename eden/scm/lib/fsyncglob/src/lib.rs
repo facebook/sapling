@@ -9,13 +9,14 @@
 //!
 //! This is a standalone crate to help reducing compile time of `hgcommands`.
 
-use glob::Pattern;
 use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::time::SystemTime;
+
+use glob::Pattern;
 use tracing::debug;
 use tracing::trace;
 use tracing::warn;
@@ -116,9 +117,11 @@ fn try_fsync_if_newer_than(path: &Path, newer_than: SystemTime) -> io::Result<bo
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs;
+
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn test_patterns() {

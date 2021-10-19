@@ -12,11 +12,10 @@ use std::io::stdout;
 
 use anyhow::Result;
 use futures::prelude::*;
-use structopt::StructOpt;
-use url::Url;
-
 use http_client::AsyncResponse;
 use http_client::Request;
+use structopt::StructOpt;
+use url::Url;
 
 const CERT_ENV_VAR: &str = "CERT";
 const KEY_ENV_VAR: &str = "KEY";

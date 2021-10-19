@@ -5,11 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::ops::DagAlgorithm;
-use crate::ops::IdConvert;
-use crate::Id;
-use crate::VerLink;
-use bitflags::bitflags;
 use std::cmp;
 use std::fmt;
 use std::sync::atomic::AtomicU32;
@@ -18,6 +13,13 @@ use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::atomic::Ordering::Release;
 use std::sync::Arc;
+
+use bitflags::bitflags;
+
+use crate::ops::DagAlgorithm;
+use crate::ops::IdConvert;
+use crate::Id;
+use crate::VerLink;
 
 bitflags! {
     pub struct Flags: u32 {

@@ -5,6 +5,21 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+use std::fs::File;
+use std::fs::{self};
+use std::io::Cursor;
+use std::io::Read;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{self};
+
+use byteorder::BigEndian;
+use byteorder::ReadBytesExt;
+use fs2::FileExt;
+use indexedlog::log;
+
 use super::IdMapWrite;
 use crate::errors::bug;
 use crate::errors::programming;
@@ -18,19 +33,6 @@ use crate::ops::PrefixLookup;
 use crate::ops::TryClone;
 use crate::Result;
 use crate::VerLink;
-use byteorder::BigEndian;
-use byteorder::ReadBytesExt;
-use fs2::FileExt;
-use indexedlog::log;
-use std::fmt;
-use std::fs::File;
-use std::fs::{self};
-use std::io::Cursor;
-use std::io::Read;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::{self};
 
 /// Bi-directional mapping between an integer id and a name (`[u8]`).
 ///

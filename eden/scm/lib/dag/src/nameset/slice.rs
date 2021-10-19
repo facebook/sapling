@@ -5,6 +5,22 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::collections::HashSet;
+use std::fmt;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::Acquire;
+use std::sync::atomic::Ordering::Release;
+use std::sync::Arc;
+
+use futures::lock::Mutex;
+use futures::StreamExt;
+use indexmap::IndexSet;
+use tracing::debug;
+use tracing::instrument;
+use tracing::trace;
+use tracing::Level;
+
 use super::hints::Flags;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
@@ -13,20 +29,6 @@ use super::NameSet;
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::VertexName;
-use futures::lock::Mutex;
-use futures::StreamExt;
-use indexmap::IndexSet;
-use std::any::Any;
-use std::collections::HashSet;
-use std::fmt;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering::Acquire;
-use std::sync::atomic::Ordering::Release;
-use std::sync::Arc;
-use tracing::debug;
-use tracing::instrument;
-use tracing::trace;
-use tracing::Level;
 
 /// Slice of a set.
 #[derive(Clone)]
@@ -339,9 +341,10 @@ impl fmt::Debug for SliceSet {
 #[cfg(test)]
 #[allow(clippy::redundant_clone)]
 mod tests {
+    use nonblocking::non_blocking_result as r;
+
     use super::super::tests::*;
     use super::*;
-    use nonblocking::non_blocking_result as r;
 
     #[test]
     fn test_basic() -> Result<()> {

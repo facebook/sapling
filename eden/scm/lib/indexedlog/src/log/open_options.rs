@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
+use std::fmt::Debug;
+use std::fmt::{self};
+use std::ops::Range;
+
+use tracing::debug_span;
+
 use crate::errors::ResultExt;
 use crate::index::Index;
 use crate::lock::ScopedDirLock;
@@ -12,12 +19,6 @@ use crate::log::GenericPath;
 use crate::log::Log;
 use crate::log::LogMetadata;
 use crate::log::PRIMARY_START_OFFSET;
-use std::borrow::Cow;
-use std::fmt::Debug;
-use std::fmt::{self};
-use std::ops::Range;
-
-use tracing::debug_span;
 
 const INDEX_FILE_PREFIX: &str = "index2-";
 const META_PREFIX: &str = "2-";

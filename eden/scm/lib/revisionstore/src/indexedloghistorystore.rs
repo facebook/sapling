@@ -14,14 +14,13 @@ use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use parking_lot::RwLock;
-use sha1::Digest;
-use sha1::Sha1;
-
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use indexedlog::log::IndexOutput;
 use minibytes::Bytes;
+use parking_lot::RwLock;
+use sha1::Digest;
+use sha1::Sha1;
 use types::hgid::ReadHgIdExt;
 use types::hgid::WriteHgIdExt;
 use types::HgId;
@@ -295,16 +294,14 @@ impl ToKeys for IndexedLogHgIdHistoryStore {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::fs::remove_file;
 
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
-
     use types::testutil::*;
 
+    use super::*;
     use crate::historypack::tests::get_nodes;
 
     #[test]

@@ -9,7 +9,6 @@ use std::ptr;
 use std::sync::Arc;
 
 use anyhow::Error;
-
 use edenapi::EdenApi;
 
 use crate::EdenApiServerError;

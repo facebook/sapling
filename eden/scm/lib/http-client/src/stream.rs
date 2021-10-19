@@ -213,12 +213,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use anyhow::anyhow;
     use anyhow::Result;
     use serde::Deserialize;
     use serde::Serialize;
+
+    use super::*;
 
     #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
     struct TestItem(String);

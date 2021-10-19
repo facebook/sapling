@@ -95,13 +95,12 @@ use anyhow::Error;
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
+use lz4_pyframe::decompress;
 use memmap::Mmap;
 use memmap::MmapOptions;
 use minibytes::Bytes;
-use thiserror::Error;
-
-use lz4_pyframe::decompress;
 use mpatch::mpatch::get_full_text;
+use thiserror::Error;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -510,15 +509,13 @@ impl<'a> Iterator for DataPackIterator<'a> {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-
     use std::rc::Rc;
 
     use quickcheck::quickcheck;
     use tempfile::TempDir;
-
     use types::testutil::*;
 
+    use super::*;
     use crate::datastore::Delta;
     use crate::datastore::HgIdMutableDeltaStore;
     use crate::datastore::Metadata;

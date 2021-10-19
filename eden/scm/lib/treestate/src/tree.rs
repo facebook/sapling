@@ -7,6 +7,15 @@
 
 //! Directory State Tree.
 
+use std::cell::Cell;
+use std::collections::Bound;
+use std::io::Cursor;
+use std::io::Read;
+use std::io::Write;
+
+use anyhow::Result;
+use types::RepoPath;
+
 use crate::filestate::FileState;
 use crate::filestate::FileStateV2;
 use crate::filestate::StateFlags;
@@ -16,14 +25,6 @@ use crate::store::Store;
 use crate::store::StoreView;
 use crate::vecmap::VecMap;
 use crate::vecstack::VecStack;
-use anyhow::Result;
-use std::cell::Cell;
-use std::collections::Bound;
-use std::io::Cursor;
-use std::io::Read;
-use std::io::Write;
-
-use types::RepoPath;
 
 /// A node entry is an entry in a directory, either a file or another directory.
 #[derive(Debug)]

@@ -7,21 +7,19 @@
 
 mod filestore;
 
-pub use filestore::FileStore;
+use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use chrono;
+use clidispatch::repo::Repo;
+pub use filestore::FileStore;
 use parking_lot::Mutex;
 use rand::distributions::Alphanumeric;
 use rand::thread_rng;
 use rand::Rng;
 use serde::Deserialize;
 use serde::Serialize;
-
-use clidispatch::repo::Repo;
-
-use std::sync::Arc;
-use std::time::Duration;
 
 /// Logger logs runtime information for a single hg command invocation.
 pub struct Logger {

@@ -689,8 +689,9 @@ impl quickcheck::Arbitrary for PathComponentBuf {
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod mocks {
-    use super::*;
     use lazy_static::lazy_static;
+
+    use super::*;
 
     lazy_static! {
         pub static ref FOO_PATH: RepoPathBuf =
@@ -704,10 +705,9 @@ pub mod mocks {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::quickcheck;
 
+    use super::*;
     use crate::testutil::path_component;
     use crate::testutil::path_component_buf;
     use crate::testutil::repo_path;

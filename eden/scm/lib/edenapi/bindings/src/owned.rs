@@ -8,11 +8,13 @@
 //! These types contain pointers that were allocated in Rust, and must be freed
 //! by Rust code. An `extern "C"` _free function is provided for each type.
 
-use crate::EdenApiServerError;
-use crate::TreeEntry;
+use std::sync::Arc;
+
 use anyhow::Error;
 use edenapi::EdenApi;
-use std::sync::Arc;
+
+use crate::EdenApiServerError;
+use crate::TreeEntry;
 
 type Client = Arc<dyn EdenApi>;
 

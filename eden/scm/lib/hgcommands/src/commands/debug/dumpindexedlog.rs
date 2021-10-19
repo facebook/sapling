@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Write;
+use std::path::Path;
+
 use super::ConfigSet;
 use super::DebugArgsOpts;
 use super::Result;
 use super::IO;
-use std::io::Write;
-use std::path::Path;
 
 pub fn run(opts: DebugArgsOpts, io: &IO, _config: ConfigSet) -> Result<u8> {
     let mut ferr = io.error();

@@ -18,8 +18,6 @@ use anyhow::format_err;
 use anyhow::Error;
 use bytes::Bytes;
 use cpython::*;
-use parking_lot::RwLock;
-
 use cpython_ext::pyset_add;
 use cpython_ext::pyset_new;
 use cpython_ext::ExtractInner;
@@ -33,6 +31,7 @@ use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
+use parking_lot::RwLock;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::TreeMatcher;

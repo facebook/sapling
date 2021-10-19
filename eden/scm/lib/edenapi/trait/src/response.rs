@@ -12,7 +12,6 @@ use http::header;
 use http::HeaderMap;
 use http::StatusCode;
 use http::Version;
-
 use http_client::AsyncResponse as AsyncHttpResponse;
 use http_client::Response as HttpResponse;
 use http_client::Stats;

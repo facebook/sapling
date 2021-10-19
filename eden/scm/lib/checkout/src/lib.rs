@@ -5,6 +5,20 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::fmt;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::SystemTime;
+
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
@@ -26,19 +40,6 @@ use revisionstore::scmstore::FileStore;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
-use std::collections::HashMap;
-use std::fmt;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::BufRead;
-use std::io::BufReader;
-use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::SystemTime;
 use tracing::debug;
 use tracing::warn;
 use treestate::filestate::StateFlags;
@@ -831,7 +832,10 @@ impl AsRef<RepoPath> for UpdateMetaAction {
 // todo - consider moving some of this code to vfs / separate test create
 // todo parallel execution for the test
 mod test {
-    use super::*;
+    use std::collections::HashMap;
+    use std::fs::create_dir;
+    use std::path::Path;
+
     use anyhow::ensure;
     use anyhow::Context;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
@@ -840,13 +844,12 @@ mod test {
     use pathmatcher::AlwaysMatcher;
     use quickcheck::Arbitrary;
     use quickcheck::Gen;
-    use std::collections::HashMap;
-    use std::fs::create_dir;
-    use std::path::Path;
     use tempfile::TempDir;
     use types::testutil::generate_repo_paths;
     use walkdir::DirEntry;
     use walkdir::WalkDir;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_basic_checkout() -> Result<()> {

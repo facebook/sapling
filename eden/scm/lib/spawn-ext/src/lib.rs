@@ -64,12 +64,14 @@ impl CommandExt for Command {
 
 #[cfg(windows)]
 mod windows {
-    use super::*;
     use std::os::windows::process::CommandExt;
+
     use winapi::um::handleapi::SetHandleInformation;
     use winapi::um::winbase::CREATE_NEW_PROCESS_GROUP;
     use winapi::um::winbase::CREATE_NO_WINDOW;
     use winapi::um::winbase::HANDLE_FLAG_INHERIT;
+
+    use super::*;
 
     // A larger value like 8192 adds visible overhead (ex. >5ms).
     // At first we had 2048, however it wasn't enough in some cases
@@ -116,8 +118,9 @@ mod windows {
 
 #[cfg(unix)]
 mod unix {
-    use super::*;
     use std::os::unix::process::CommandExt;
+
+    use super::*;
 
     // Linux by default has max fd limited to 1024.
     // 2048 is practically more than enough with about 2ms overhead.

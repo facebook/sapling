@@ -5,17 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use crate::token::UploadTokenMetadata;
-use crate::wire::ToApi;
-use crate::wire::ToWire;
-use crate::wire::WireToApiConversionError;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::token::UploadTokenMetadata;
 pub use crate::token::WireFileContentTokenMetadata;
 pub use crate::token::WireUploadToken;
 pub use crate::token::WireUploadTokenData;
 pub use crate::token::WireUploadTokenSignature;
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireToApiConversionError;
 
 /// Token metadata. Could be different for different token types.
 /// A signed token guarantee the metadata has been verified.
@@ -55,7 +55,6 @@ impl ToApi for WireUploadTokenMetadata {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(WireUploadToken);

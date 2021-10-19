@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::iter;
+use std::num::NonZeroU64;
+
 use anyhow::Result;
 use bytes::Bytes;
 use dag_types::Location;
@@ -14,8 +17,6 @@ use quickcheck::Arbitrary;
 use quickcheck::Gen;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-use std::iter;
-use std::num::NonZeroU64;
 use type_macros::auto_wire;
 use types::hgid::HgId;
 use types::Parents;

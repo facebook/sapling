@@ -15,7 +15,6 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
-
 pub use rust::PyProgressFactory;
 
 mod model;

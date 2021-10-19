@@ -7,12 +7,11 @@
 
 use std::io::Write;
 
+use edenapi_types::ContentId;
+use edenapi_types::Sha1;
 use minibytes::Bytes;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-
-use edenapi_types::ContentId;
-use edenapi_types::Sha1;
 use types::Key;
 use types::Sha256;
 

@@ -115,9 +115,10 @@ impl NodeMap {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use quickcheck::quickcheck;
     use tempfile::TempDir;
+
+    use super::*;
 
     quickcheck! {
         fn test_roundtrip(pairs: Vec<(Node, Node)>) -> bool {

@@ -9,9 +9,10 @@
 //!
 //! This is edenscm application specific. It's not a general purposed library.
 
-use serde_json::Value;
 // use std::borrow::Cow;
 use std::collections::BTreeMap as Map;
+
+use serde_json::Value;
 use tracing_collector::model::IndexMap;
 use tracing_collector::model::TreeSpan;
 use tracing_collector::model::TreeSpans;

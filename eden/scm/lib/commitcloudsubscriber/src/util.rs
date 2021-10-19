@@ -5,14 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::error::*;
-use crate::subscriber::Subscription;
-use anyhow::bail;
-use anyhow::Result;
-use filetime::FileTime;
-use ini::Ini;
-use log::error;
-use log::info;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs;
@@ -22,6 +14,16 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::str;
 use std::time::SystemTime;
+
+use anyhow::bail;
+use anyhow::Result;
+use filetime::FileTime;
+use ini::Ini;
+use log::error;
+use log::info;
+
+use crate::error::*;
+use crate::subscriber::Subscription;
 
 static JOINED_DIR: &str = ".commitcloud";
 static JOINED: &str = "joined";

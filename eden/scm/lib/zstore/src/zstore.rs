@@ -9,6 +9,11 @@
 //!
 //! See [Zstore] for the main structure.
 
+use std::borrow::Cow;
+use std::fmt;
+use std::path::Path;
+use std::path::PathBuf;
+
 use indexedlog::log as ilog;
 use indexedlog::DefaultOpenOptions;
 use lazy_static::lazy_static;
@@ -19,10 +24,6 @@ use serde::Deserialize;
 use serde::Serialize;
 use sha1::Digest;
 use sha1::Sha1;
-use std::borrow::Cow;
-use std::fmt;
-use std::path::Path;
-use std::path::PathBuf;
 use tracing::debug_span;
 use tracing::info_span;
 use tracing::trace_span;
@@ -610,9 +611,10 @@ struct Delta<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use quickcheck::quickcheck;
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_simple_case() {

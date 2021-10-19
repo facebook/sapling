@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
+
 use cpython::*;
 use cpython_ext::PyNone;
-use std::io;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "fail"].join(".");

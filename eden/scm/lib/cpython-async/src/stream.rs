@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
+
 use cpython_ext::cpython::*;
 use cpython_ext::AnyhowResultExt;
 use cpython_ext::ResultPyErrExt;
@@ -12,7 +14,6 @@ use cpython_ext::Str;
 use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
 use futures::Stream;
-use std::cell::RefCell;
 
 /// `TStream` is a thin wrapper of `Stream` from async Rust to Python.
 ///
@@ -183,8 +184,9 @@ mod pytypes {
 #[cfg(test)]
 #[cfg(not(all(fbcode_build, feature = "python2")))]
 mod tests {
-    use super::*;
     use futures::stream::StreamExt;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_stream_from_python() {

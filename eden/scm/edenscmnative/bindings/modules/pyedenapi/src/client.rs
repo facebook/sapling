@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
-use cpython::*;
-
 use async_runtime::block_unless_interrupted;
+use cpython::*;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
@@ -53,7 +53,6 @@ use pyrevisionstore::edenapifilestore;
 use pyrevisionstore::edenapitreestore;
 use revisionstore::EdenApiFileStore;
 use revisionstore::EdenApiTreeStore;
-use std::num::NonZeroU64;
 use types::HgId;
 use types::RepoPathBuf;
 

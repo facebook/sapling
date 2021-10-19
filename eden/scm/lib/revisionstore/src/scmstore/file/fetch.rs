@@ -12,16 +12,15 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use futures::StreamExt;
-use parking_lot::RwLock;
-use tracing::field;
-use tracing::instrument;
-
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
 use edenapi_types::FileEntry;
 use edenapi_types::FileSpec;
+use futures::StreamExt;
+use parking_lot::RwLock;
+use tracing::field;
+use tracing::instrument;
 use types::Key;
 use types::Sha256;
 

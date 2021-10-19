@@ -5,6 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::fmt;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::MutexGuard;
+
+use indexmap::IndexSet;
+use nonblocking::non_blocking_result;
+
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
 use super::AsyncNameSetQuery;
@@ -18,13 +27,6 @@ use crate::Id;
 use crate::IdSet;
 use crate::Result;
 use crate::VertexName;
-use indexmap::IndexSet;
-use nonblocking::non_blocking_result;
-use std::any::Any;
-use std::fmt;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::sync::MutexGuard;
 
 /// A set backed by a lazy iterator of Ids.
 pub struct IdLazySet {
@@ -354,17 +356,19 @@ impl AsyncNameSetQuery for IdLazySet {
 #[cfg(all(test, feature = "indexedlog-backend"))]
 #[allow(clippy::redundant_clone)]
 pub(crate) mod tests {
+    use std::collections::HashSet;
+    use std::convert::TryInto;
+    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::Ordering::AcqRel;
+
+    use nonblocking::non_blocking_result as r;
+
     use super::super::tests::*;
     use super::super::NameSet;
     use super::*;
     use crate::ops::PrefixLookup;
     use crate::tests::dummy_dag::DummyDag;
     use crate::VerLink;
-    use nonblocking::non_blocking_result as r;
-    use std::collections::HashSet;
-    use std::convert::TryInto;
-    use std::sync::atomic::AtomicU64;
-    use std::sync::atomic::Ordering::AcqRel;
 
     pub fn lazy_set(a: &[u64]) -> IdLazySet {
         let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();

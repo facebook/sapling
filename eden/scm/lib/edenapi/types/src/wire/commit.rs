@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::num::NonZeroU64;
+
+use dag_types::Location;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-use std::num::NonZeroU64;
-
-use dag_types::Location;
 use types::HgId;
 
 use crate::commit::BonsaiChangesetContent;
@@ -21,17 +21,6 @@ use crate::commit::CommitHashLookupResponse;
 use crate::commit::CommitHashToLocationRequestBatch;
 use crate::commit::CommitHashToLocationResponse;
 use crate::commit::EphemeralPrepareResponse;
-use crate::wire::is_default;
-use crate::wire::ToApi;
-use crate::wire::ToWire;
-use crate::wire::WireFileType;
-use crate::wire::WireHgId;
-use crate::wire::WireParents;
-use crate::wire::WireRepoPathBuf;
-use crate::wire::WireResult;
-use crate::wire::WireToApiConversionError;
-use crate::wire::WireUploadToken;
-
 pub use crate::commit::WireBonsaiExtra;
 pub use crate::commit::WireCommitGraphEntry;
 pub use crate::commit::WireCommitGraphRequest;
@@ -47,6 +36,16 @@ pub use crate::commit::WireHgMutationEntryContent;
 pub use crate::commit::WireUploadBonsaiChangesetRequest;
 pub use crate::commit::WireUploadHgChangeset;
 pub use crate::commit::WireUploadHgChangesetsRequest;
+use crate::wire::is_default;
+use crate::wire::ToApi;
+use crate::wire::ToWire;
+use crate::wire::WireFileType;
+use crate::wire::WireHgId;
+use crate::wire::WireParents;
+use crate::wire::WireRepoPathBuf;
+use crate::wire::WireResult;
+use crate::wire::WireToApiConversionError;
+use crate::wire::WireUploadToken;
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireCommitLocation {
@@ -456,7 +455,6 @@ impl Arbitrary for WireEphemeralPrepareResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(

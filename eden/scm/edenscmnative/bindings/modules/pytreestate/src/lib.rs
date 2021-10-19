@@ -24,15 +24,6 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use anyhow::Error;
-use cpython::*;
-use cpython_ext::AnyhowResultExt;
-use cpython_ext::PyNone;
-use cpython_ext::PyPath;
-use cpython_ext::PyPathBuf;
-use cpython_ext::ResultPyErrExt;
-use parking_lot::Mutex;
-
 use ::treestate::errors::ErrorKind;
 use ::treestate::filestate::FileState;
 use ::treestate::filestate::FileStateV2;
@@ -42,6 +33,14 @@ use ::treestate::tree::KeyRef;
 use ::treestate::tree::VisitorResult;
 use ::treestate::treedirstate::TreeDirstate;
 use ::treestate::treestate::TreeState;
+use anyhow::Error;
+use cpython::*;
+use cpython_ext::AnyhowResultExt;
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::PyPathBuf;
+use cpython_ext::ResultPyErrExt;
+use parking_lot::Mutex;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 

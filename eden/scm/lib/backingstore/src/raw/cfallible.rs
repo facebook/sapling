@@ -14,9 +14,10 @@
 //! Consumer of this struct needs to ensure the returned error string freed with
 //! `rust_cfallible_free_error`.
 
+use std::ffi::CString;
+
 use anyhow::Result;
 use libc::c_char;
-use std::ffi::CString;
 
 /// A `repr(C)` struct that can be consumed by C++ code. User of this struct should check
 /// `is_error` field to see if there is an error.

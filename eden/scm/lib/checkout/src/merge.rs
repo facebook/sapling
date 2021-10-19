@@ -5,20 +5,22 @@
  * GNU General Public License version 2.
  */
 
-use crate::actions::Action;
-use crate::actions::ActionMap;
-use crate::actions::UpdateAction;
-use crate::conflict::Conflict;
-use crate::conflict::ConflictState;
+use std::collections::HashSet;
+use std::fmt;
+
 use anyhow::bail;
 use anyhow::Result;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
 use pathmatcher::AlwaysMatcher;
-use std::collections::HashSet;
-use std::fmt;
 use types::RepoPathBuf;
+
+use crate::actions::Action;
+use crate::actions::ActionMap;
+use crate::actions::UpdateAction;
+use crate::conflict::Conflict;
+use crate::conflict::ConflictState;
 
 /// Merge operation settings
 pub struct Merge {}

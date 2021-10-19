@@ -7,13 +7,12 @@
 
 use minibench::bench;
 use minibench::elapsed;
-use rand::ChaChaRng;
-use rand::RngCore;
-
 use radixbuf::key::FixedKey;
 use radixbuf::key::KeyId;
 use radixbuf::radix::radix_insert;
 use radixbuf::radix::radix_lookup;
+use rand::ChaChaRng;
+use rand::RngCore;
 
 const N: usize = 204800;
 

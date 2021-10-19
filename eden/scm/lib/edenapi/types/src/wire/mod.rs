@@ -63,7 +63,22 @@ pub(crate) mod tests;
 pub mod token;
 pub mod tree;
 
+use std::convert::Infallible;
+use std::fmt;
+use std::num::NonZeroU64;
+
 use dag_types::id::Id as DagId;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+use revisionstore_types::Metadata as RevisionstoreMetadata;
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
+use thiserror::Error;
+use types::path::ParseError as RepoPathParseError;
+use types::HgId;
+use types::Key;
+use types::Parents;
+use types::RepoPathBuf;
 
 pub use crate::wire::anyid::WireAnyId;
 pub use crate::wire::anyid::WireLookupRequest;
@@ -119,24 +134,6 @@ pub use crate::wire::tree::WireTreeRequest;
 pub use crate::wire::tree::WireUploadTreeEntry;
 pub use crate::wire::tree::WireUploadTreeRequest;
 pub use crate::wire::tree::WireUploadTreeResponse;
-
-use std::convert::Infallible;
-use std::fmt;
-use std::num::NonZeroU64;
-
-#[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
-use serde_derive::Deserialize;
-use serde_derive::Serialize;
-use thiserror::Error;
-
-use revisionstore_types::Metadata as RevisionstoreMetadata;
-use types::path::ParseError as RepoPathParseError;
-use types::HgId;
-use types::Key;
-use types::Parents;
-use types::RepoPathBuf;
-
 use crate::EdenApiServerErrorKind;
 
 #[derive(Copy, Clone, Debug, Error)]
@@ -574,7 +571,6 @@ impl Arbitrary for WireDagId {
 #[cfg(test)]
 pub mod local_tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(

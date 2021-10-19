@@ -33,7 +33,6 @@ mod verlink;
 
 pub use dag_types::clone;
 pub use dag_types::id;
-
 pub use dag_types::CloneData;
 pub use dag_types::Group;
 pub use dag_types::Id;

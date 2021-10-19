@@ -9,9 +9,6 @@
 //!
 //! See [`HgTime`] and [`HgTime::parse`] for main features.
 
-use chrono::prelude::*;
-use chrono::Duration;
-use chrono::LocalResult;
 use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::ops::Add;
@@ -21,6 +18,10 @@ use std::ops::Sub;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
+
+use chrono::prelude::*;
+use chrono::Duration;
+use chrono::LocalResult;
 
 /// A simple time structure that matches hg's time representation.
 ///

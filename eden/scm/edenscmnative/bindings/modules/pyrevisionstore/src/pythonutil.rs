@@ -20,12 +20,10 @@ use cpython::Python;
 use cpython::PythonObject;
 use cpython::PythonObjectWithCheckedDowncast;
 use cpython::ToPyObject;
-
 use cpython_ext::ExtractInner;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
-
 use revisionstore::datastore::Delta;
 use revisionstore::datastore::Metadata;
 use revisionstore::LegacyStore;

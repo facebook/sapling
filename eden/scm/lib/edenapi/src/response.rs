@@ -6,15 +6,13 @@
  */
 
 use anyhow::Context;
-use futures::prelude::*;
-
 use async_runtime::block_unless_interrupted;
+pub use edenapi_trait::Response;
+pub use edenapi_trait::ResponseMeta;
+use futures::prelude::*;
 use http_client::Stats;
 
 use crate::errors::EdenApiError;
-
-pub use edenapi_trait::Response;
-pub use edenapi_trait::ResponseMeta;
 
 /// Non-async version of `Response`.
 pub struct BlockingResponse<T> {

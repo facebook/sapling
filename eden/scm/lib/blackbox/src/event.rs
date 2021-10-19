@@ -13,14 +13,16 @@
 //! This module assumes that all events are known here. There are no external
 //! types of events that are outside this module.
 
-use super::ToValue;
+use std::collections::BTreeMap;
+use std::fmt;
+
 use anyhow::Result;
 use serde_alt::serde_alt;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use serde_json::Value;
-use std::collections::BTreeMap;
-use std::fmt;
+
+use super::ToValue;
 
 // Most serde attributes are used extensively to reduce the space usage.
 //

@@ -18,7 +18,6 @@ use minibytes::Bytes;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use tracing::info_span;
-
 use types::Key;
 use types::NodeInfo;
 
@@ -60,12 +59,12 @@ pub(crate) struct McHist {
 
 #[cfg(not(all(fbcode_build, target_os = "linux")))]
 mod dummy {
-    use super::*;
-
     use std::iter::empty;
 
     use configparser::config::ConfigSet;
     use progress::ProgressFactory;
+
+    use super::*;
 
     /// Dummy memcache client for when Mercurial is compiled outside of fbcode.
     pub struct MemcacheStore;
@@ -96,11 +95,11 @@ mod dummy {
     }
 }
 
-#[cfg(all(fbcode_build, target_os = "linux"))]
-pub use crate::facebook::MemcacheStore;
-
 #[cfg(not(all(fbcode_build, target_os = "linux")))]
 pub use dummy::MemcacheStore;
+
+#[cfg(all(fbcode_build, target_os = "linux"))]
+pub use crate::facebook::MemcacheStore;
 
 impl HgIdDataStore for MemcacheStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {

@@ -25,6 +25,10 @@ mod str;
 #[cfg(not(all(fbcode_build, feature = "python2")))]
 mod tests;
 
+pub use bytes::Bytes;
+// Re-export
+pub use cpython;
+
 pub use crate::bytearrayobject::boxed_slice_to_pyobj;
 pub use crate::bytearrayobject::vec_to_pyobj;
 pub use crate::bytesobject::allocate_pybytes;
@@ -47,7 +51,3 @@ pub use crate::pybuf::SimplePyBuf;
 pub use crate::pyset::pyset_add;
 pub use crate::pyset::pyset_new;
 pub use crate::str::Str;
-pub use bytes::Bytes;
-
-// Re-export
-pub use cpython;

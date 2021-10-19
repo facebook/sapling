@@ -15,7 +15,6 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use cpython::*;
-
 use cpython_ext::AnyhowResultExt;
 use cpython_ext::PyNone;
 use progress::ProgressBar;

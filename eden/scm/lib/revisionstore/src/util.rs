@@ -14,12 +14,11 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use configparser::config::ConfigSet;
+use edenapi::Stats;
 use hgtime::HgTime;
 use thiserror::Error;
 use tracing::Span;
-
-use configparser::config::ConfigSet;
-use edenapi::Stats;
 use util::path::create_dir;
 use util::path::create_shared_dir;
 

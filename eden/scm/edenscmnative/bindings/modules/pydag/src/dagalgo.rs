@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::Names;
+use std::sync::Arc;
+
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use dag::DagAlgorithm;
 use dag::Vertex;
-use std::sync::Arc;
+
+use crate::Names;
 
 py_class!(pub class dagalgo |py| {
     data dag: Arc<dyn DagAlgorithm + Send + Sync + 'static>;

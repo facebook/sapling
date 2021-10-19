@@ -35,9 +35,9 @@ pub fn run_background(mut command: Command) -> Result<Child> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use tempdir::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_basic() {

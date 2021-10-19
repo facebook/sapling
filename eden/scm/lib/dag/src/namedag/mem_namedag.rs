@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{self};
+use std::sync::Arc;
+
 use super::AbstractNameDag;
 use crate::iddag::IdDag;
 use crate::iddagstore::InProcessStore;
@@ -14,9 +18,6 @@ use crate::ops::Open;
 use crate::ops::Persist;
 use crate::Id;
 use crate::Result;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::{self};
-use std::sync::Arc;
 
 /// In-memory version of [`NameDag`].
 ///

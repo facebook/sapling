@@ -11,7 +11,6 @@ use std::slice::Iter;
 use std::vec::IntoIter;
 
 use anyhow::Result;
-
 use types::Key;
 
 use crate::localstore::LocalStore;

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use maplit::hashmap;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -24,6 +23,7 @@ use curl::easy::HttpVersion;
 use curl::easy::List;
 use curl::{self};
 use http::header;
+use maplit::hashmap;
 use once_cell::sync::Lazy;
 use openssl::pkcs12::Pkcs12;
 use openssl::pkey::PKey;
@@ -855,8 +855,6 @@ fn pem_to_pkcs12(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::sync::atomic::Ordering::Acquire;
     use std::sync::Arc;
 
@@ -869,6 +867,8 @@ mod tests {
     use mockito::mock;
     use mockito::Matcher;
     use serde_json::json;
+
+    use super::*;
 
     #[test]
     fn test_get() -> Result<()> {

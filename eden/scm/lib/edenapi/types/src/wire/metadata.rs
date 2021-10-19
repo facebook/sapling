@@ -10,6 +10,10 @@ use quickcheck::Arbitrary;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
+pub use crate::metadata::WireDirectoryMetadata;
+pub use crate::metadata::WireDirectoryMetadataRequest;
+pub use crate::metadata::WireFileMetadata;
+pub use crate::metadata::WireFileMetadataRequest;
 use crate::AnyFileContentId;
 use crate::ContentId;
 use crate::FileType;
@@ -19,11 +23,6 @@ use crate::Sha256;
 use crate::ToApi;
 use crate::ToWire;
 use crate::WireToApiConversionError;
-
-pub use crate::metadata::WireDirectoryMetadata;
-pub use crate::metadata::WireDirectoryMetadataRequest;
-pub use crate::metadata::WireFileMetadata;
-pub use crate::metadata::WireFileMetadataRequest;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WireFileType {
@@ -183,7 +182,6 @@ impl Arbitrary for WireAnyFileContentId {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(

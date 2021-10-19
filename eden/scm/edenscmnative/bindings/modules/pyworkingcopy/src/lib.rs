@@ -11,7 +11,6 @@ use std::cell::RefCell;
 
 use anyhow::Error;
 use cpython::*;
-
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use pypathmatcher::UnsafePythonMatcher;

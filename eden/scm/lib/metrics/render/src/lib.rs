@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+use std::env;
+use std::sync::Weak;
+use std::thread;
+use std::time::Duration;
+use std::time::Instant;
+
 use metrics::Counter;
 use metrics::Registry;
 use once_cell::sync::Lazy;
@@ -12,12 +19,6 @@ use progress_model::IoSample;
 use progress_model::IoTimeSeries;
 use progress_model::Registry as ProgressRegistry;
 use progress_model::TimeSeriesMode;
-use std::collections::HashSet;
-use std::env;
-use std::sync::Weak;
-use std::thread;
-use std::time::Duration;
-use std::time::Instant;
 use tracing::error;
 
 /// Initializes metrics reporting while guard is not dropped.

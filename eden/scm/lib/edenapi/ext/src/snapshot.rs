@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::util::calc_contentid;
-
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
@@ -25,6 +23,8 @@ use edenapi_types::UploadSnapshotResponse;
 use futures::StreamExt;
 use futures::TryStreamExt;
 use minibytes::Bytes;
+
+use crate::util::calc_contentid;
 
 pub async fn upload_snapshot(
     api: &(impl EdenApi + ?Sized),

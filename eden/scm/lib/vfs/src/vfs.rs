@@ -8,38 +8,34 @@
 use std::fs::create_dir_all;
 use std::fs::remove_dir;
 use std::fs::remove_dir_all;
+#[cfg(unix)]
+use std::fs::set_permissions;
 use std::fs::symlink_metadata;
 use std::fs::File;
+use std::fs::Metadata;
+use std::fs::OpenOptions;
+#[cfg(unix)]
+use std::fs::Permissions;
 use std::io::ErrorKind;
 use std::io::Write;
 use std::io::{self};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
-
-use std::fs::Metadata;
-use std::fs::OpenOptions;
-
-#[cfg(unix)]
-use std::fs::set_permissions;
-#[cfg(unix)]
-use std::fs::Permissions;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
-
 use fsinfo::fstype;
 use fsinfo::FsType;
+use minibytes::Bytes;
 use types::RepoPath;
 use util::path::remove_file;
 
 use crate::pathauditor::PathAuditor;
-
-use minibytes::Bytes;
 
 #[derive(Clone)]
 pub struct VFS {
@@ -338,8 +334,9 @@ impl VFS {
 #[cfg(unix)]
 #[cfg(test)]
 mod unix_tests {
-    use super::*;
     use std::fs;
+
+    use super::*;
 
     #[test]
     fn test_symlink_overwrite() {

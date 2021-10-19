@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use super::capture_pattern;
-use super::json;
-use super::match_pattern;
-use crate::event::Event;
+use std::cell::Cell;
+use std::collections::BTreeSet;
+use std::fs;
+use std::io::Cursor;
+use std::io::Write;
+use std::path::Path;
+use std::time::SystemTime;
+
 use anyhow::Result;
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
@@ -19,13 +23,11 @@ use indexedlog::rotate::RotateLog;
 use indexedlog::rotate::RotateLowLevelExt;
 use lazy_static::lazy_static;
 use serde_json::Value;
-use std::cell::Cell;
-use std::collections::BTreeSet;
-use std::fs;
-use std::io::Cursor;
-use std::io::Write;
-use std::path::Path;
-use std::time::SystemTime;
+
+use super::capture_pattern;
+use super::json;
+use super::match_pattern;
+use crate::event::Event;
 
 /// Local, rotated log consists of events tagged with "Invocation ID" and
 /// timestamps.
@@ -541,9 +543,10 @@ fn new_session_id() -> u64 {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::*;
     use serde_json::json;
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn test_query_by_session_ids() {

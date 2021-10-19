@@ -320,11 +320,13 @@ impl Matcher for GitignoreMatcher {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::fs::create_dir_all;
     use std::fs::File;
     use std::io::Write;
+
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn test_split_path() {

@@ -298,8 +298,6 @@ impl HttpClient {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::collections::HashSet;
 
     use anyhow::Result;
@@ -307,6 +305,7 @@ mod tests {
     use mockito::mock;
     use url::Url;
 
+    use super::*;
     use crate::receiver::testutil::TestReceiver;
     use crate::Method;
     use crate::RequestContext;

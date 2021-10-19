@@ -5,10 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::define_flags;
-use super::Repo;
-use super::Result;
-use super::IO;
+use std::str::FromStr;
+
 use clidispatch::errors;
 use revisionstore::CorruptionPolicy;
 use revisionstore::DataPackStore;
@@ -19,10 +17,14 @@ use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use revisionstore::StoreType;
 use revisionstore::UnionHgIdDataStore;
-use std::str::FromStr;
 use types::HgId;
 use types::Key;
 use types::RepoPathBuf;
+
+use super::define_flags;
+use super::Repo;
+use super::Result;
+use super::IO;
 
 define_flags! {
     pub struct DebugstoreOpts {

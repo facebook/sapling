@@ -5,18 +5,20 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::fmt;
+use std::sync::Arc;
+
+use futures::lock::Mutex;
+use futures::lock::MutexGuard;
+use futures::StreamExt;
+use indexmap::IndexSet;
+
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use crate::Result;
 use crate::VertexName;
-use futures::lock::Mutex;
-use futures::lock::MutexGuard;
-use futures::StreamExt;
-use indexmap::IndexSet;
-use std::any::Any;
-use std::fmt;
-use std::sync::Arc;
 
 /// A set backed by a lazy iterator of names.
 pub struct LazySet {
@@ -223,9 +225,10 @@ impl AsyncNameSetQuery for LazySet {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::super::tests::*;
     use super::*;
-    use std::collections::HashSet;
 
     fn lazy_set(a: &[u8]) -> LazySet {
         LazySet::from_iter(

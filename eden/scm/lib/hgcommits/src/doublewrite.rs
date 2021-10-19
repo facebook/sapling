@@ -5,6 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::io;
+use std::path::Path;
+
+use dag::delegate;
+use dag::Set;
+use dag::Vertex;
+use futures::stream::BoxStream;
+use minibytes::Bytes;
+
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
@@ -15,13 +24,6 @@ use crate::Result;
 use crate::RevlogCommits;
 use crate::StreamCommitText;
 use crate::StripCommits;
-use dag::delegate;
-use dag::Set;
-use dag::Vertex;
-use futures::stream::BoxStream;
-use minibytes::Bytes;
-use std::io;
-use std::path::Path;
 
 /// Segmented Changelog + Revlog.
 ///

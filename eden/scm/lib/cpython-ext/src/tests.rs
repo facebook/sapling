@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::fmt::Debug;
+
 use cpython::PyClone;
 use cpython::Python;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 use serde_cbor::Value;
-use std::collections::HashMap;
-use std::fmt::Debug;
 
 #[test]
 fn test_serde_basic_types() {

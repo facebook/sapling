@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use super::ConfigSet;
-use super::Result;
-use super::IO;
+use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
+
 use anyhow::Context;
 use async_runtime::block_on;
 use async_runtime::block_unless_interrupted;
@@ -21,9 +22,10 @@ use dag::CloneData;
 use dag::VertexName;
 use progress_model::ProgressBar;
 use progress_model::Registry;
-use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
+
+use super::ConfigSet;
+use super::Result;
+use super::IO;
 
 define_flags! {
     pub struct StatusOpts {

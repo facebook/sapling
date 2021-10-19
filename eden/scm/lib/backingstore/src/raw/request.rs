@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
 use std::slice;
+
+use anyhow::Result;
 use types::Key;
 
 use crate::utils::key_from_path_node_slice;

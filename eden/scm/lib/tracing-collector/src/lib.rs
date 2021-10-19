@@ -11,10 +11,10 @@
 #![allow(dead_code)]
 
 pub mod model;
-pub use model::TracingData;
-
-use parking_lot::Mutex;
 use std::sync::Arc;
+
+pub use model::TracingData;
+use parking_lot::Mutex;
 use tracing::span::Attributes;
 use tracing::span::Record;
 use tracing::subscriber::SetGlobalDefaultError;
@@ -156,8 +156,9 @@ impl Subscriber for TracingCollector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tracing::instrument;
+
+    use super::*;
 
     #[instrument]
     fn fib(x: u32) -> u32 {

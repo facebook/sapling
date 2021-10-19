@@ -10,7 +10,6 @@
 use std::sync::Arc;
 
 use cpython::*;
-
 use cpython_ext::PyNone;
 use progress_model::CacheStats as CacheStatsModel;
 use progress_model::ProgressBar as ProgressBarModel;

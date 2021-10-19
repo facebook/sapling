@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use nonblocking::non_blocking_result as r;
+use tempfile::tempdir;
+pub use test_dag::TestDag;
+
 use crate::id::Group;
 use crate::id::VertexName;
 use crate::nameset::SyncNameSetQuery;
@@ -18,9 +22,6 @@ use crate::IdSet;
 use crate::NameDag;
 use crate::NameSet;
 use crate::Result;
-use nonblocking::non_blocking_result as r;
-use tempfile::tempdir;
-pub use test_dag::TestDag;
 
 mod test_dag;
 
@@ -32,6 +33,9 @@ mod test_sparse;
 
 #[cfg(test)]
 pub mod dummy_dag;
+
+#[cfg(test)]
+pub(crate) use test_dag::ProtocolMonitor;
 
 #[cfg(test)]
 use crate::iddag::FirstAncestorConstraint;
@@ -49,8 +53,6 @@ use crate::protocol::RequestNameToLocation;
 use crate::render::render_segment_dag;
 #[cfg(test)]
 use crate::Id;
-#[cfg(test)]
-pub(crate) use test_dag::ProtocolMonitor;
 
 // Example from segmented-changelog.pdf
 // - DAG1: page 10

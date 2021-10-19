@@ -174,11 +174,11 @@ fn parse_valid_date_range(cert: &[u8]) -> Result<(DateTime<Utc>, DateTime<Utc>),
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use anyhow::Result;
     use chrono::offset::TimeZone;
     use once_cell::sync::Lazy;
+
+    use super::*;
 
     const CERT_1: &[u8] = include_bytes!("test_certs/cert1.pem");
     const CERT_2: &[u8] = include_bytes!("test_certs/cert2.pem");

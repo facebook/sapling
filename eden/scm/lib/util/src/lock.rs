@@ -35,9 +35,10 @@ impl Drop for PathLock {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::sync::mpsc::channel;
     use std::thread;
+
+    use super::*;
 
     #[test]
     fn test_path_lock() -> io::Result<()> {

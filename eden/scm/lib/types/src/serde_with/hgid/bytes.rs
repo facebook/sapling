@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::HgId;
 use serde::de::Error;
 use serde::Deserializer;
 use serde::Serializer;
+
+use crate::HgId;
 
 /// Serde `serialize_with` function to serialize `HgId` as bytes.
 pub fn serialize<S>(id: &HgId, serializer: S) -> Result<S::Ok, S::Error>

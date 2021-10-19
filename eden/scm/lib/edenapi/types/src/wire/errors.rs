@@ -100,7 +100,6 @@ impl quickcheck::Arbitrary for WireError {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::wire::tests::auto_wire_tests;
 
     auto_wire_tests!(WireError);

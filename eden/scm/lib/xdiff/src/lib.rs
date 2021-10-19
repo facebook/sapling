@@ -13,6 +13,7 @@ use std::ops::Range;
 use std::os::raw::c_char;
 use std::os::raw::c_int;
 use std::os::raw::c_void;
+
 use xdiff_sys as ffi;
 
 /// An individual difference between two texts. Consists of two

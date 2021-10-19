@@ -5,17 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use crate::UpdateFlag;
-use crate::VFS;
+use std::thread;
+use std::thread::JoinHandle;
+
 use anyhow::Result;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use crossbeam::channel::{self};
 use minibytes::Bytes;
-use std::thread;
-use std::thread::JoinHandle;
 use tokio::sync::oneshot;
 use types::RepoPathBuf;
+
+use crate::UpdateFlag;
+use crate::VFS;
 
 pub struct AsyncVfsWriter {
     sender: Option<Sender<WorkItem>>,

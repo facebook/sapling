@@ -680,10 +680,12 @@ impl SupersetVerification {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::io::Write;
+
+    use tempdir::TempDir;
+
     use super::*;
     use crate::convert::ByteCount;
-    use std::io::Write;
-    use tempdir::TempDir;
 
     #[test]
     fn test_empty() {

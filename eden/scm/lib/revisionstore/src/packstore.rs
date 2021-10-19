@@ -22,7 +22,6 @@ use std::time::Instant;
 
 use anyhow::Result;
 use parking_lot::Mutex;
-
 use types::Key;
 use types::NodeInfo;
 
@@ -702,8 +701,6 @@ impl HgIdMutableHistoryStore for MutableHistoryPackStore {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::fs::OpenOptions;
     use std::fs::{self};
 
@@ -711,9 +708,9 @@ mod tests {
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::TempDir;
-
     use types::testutil::*;
 
+    use super::*;
     use crate::datapack::tests::make_datapack;
     use crate::historypack::tests::get_nodes;
     use crate::historypack::tests::make_historypack;

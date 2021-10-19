@@ -5,17 +5,19 @@
  * GNU General Public License version 2.
  */
 
-use crate::io::IO;
-use crate::repo::Repo;
+use std::collections::BTreeMap;
+use std::convert::TryFrom;
+use std::convert::TryInto;
+use std::ops::Deref;
+
 use anyhow::Result;
 use cliparser::parser::Flag;
 use cliparser::parser::ParseOutput;
 use cliparser::parser::StructFlags;
 use configparser::config::ConfigSet;
-use std::collections::BTreeMap;
-use std::convert::TryFrom;
-use std::convert::TryInto;
-use std::ops::Deref;
+
+use crate::io::IO;
+use crate::repo::Repo;
 
 pub enum CommandFunc {
     NoRepo(Box<dyn Fn(ParseOutput, &IO, ConfigSet) -> Result<u8>>),

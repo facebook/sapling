@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::MapDagError;
+use std::collections::BTreeMap;
+use std::ops::Deref;
+use std::path::Path;
+
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::Dag;
@@ -13,9 +16,8 @@ use dag::Set;
 use dag::Vertex;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
-use std::collections::BTreeMap;
-use std::ops::Deref;
-use std::path::Path;
+
+use crate::errors::MapDagError;
 
 /// `GitDag` maintains segmented changelog as an index on the Git commit graph.
 ///

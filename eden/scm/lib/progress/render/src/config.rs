@@ -9,6 +9,7 @@
 
 use std::borrow::Cow;
 use std::time::Duration;
+
 use unicode_width::UnicodeWidthChar;
 use unicode_width::UnicodeWidthStr;
 

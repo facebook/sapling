@@ -7,6 +7,8 @@
 
 //! Python bindings for native blackbox logging.
 
+use std::ops::Deref;
+
 use blackbox::event::Event;
 use blackbox::init;
 use blackbox::log;
@@ -19,7 +21,6 @@ use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
-use std::ops::Deref;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "blackbox"].join(".");

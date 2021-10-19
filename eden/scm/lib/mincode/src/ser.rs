@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::Error;
-use crate::Result;
+use std::io::Write;
+
 use byteorder::NetworkEndian;
 use byteorder::WriteBytesExt;
 use serde::ser::SerializeMap;
@@ -16,8 +16,10 @@ use serde::ser::SerializeStructVariant;
 use serde::ser::SerializeTuple;
 use serde::ser::SerializeTupleStruct;
 use serde::ser::SerializeTupleVariant;
-use std::io::Write;
 use vlqencoding::VLQEncode;
+
+use crate::Error;
+use crate::Result;
 
 pub struct Serializer<W> {
     writer: W,

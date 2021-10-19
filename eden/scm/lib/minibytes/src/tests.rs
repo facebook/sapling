@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use quickcheck::quickcheck;
+
 use crate::Bytes;
 use crate::Text;
-use quickcheck::quickcheck;
 
 quickcheck! {
     fn test_shallow_clone(v: Vec<u8>) -> bool {

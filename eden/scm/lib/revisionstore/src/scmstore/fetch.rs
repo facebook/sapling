@@ -13,7 +13,6 @@ use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use tracing::instrument;
-
 use types::Key;
 
 use crate::scmstore::attrs::StoreAttrs;

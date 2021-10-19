@@ -13,10 +13,9 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use thiserror::Error;
-
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
+use thiserror::Error;
 use types::path::ParseError;
 use types::RepoPath;
 use types::RepoPathBuf;
@@ -175,16 +174,15 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::fs::create_dir_all;
     use std::fs::OpenOptions;
     use std::path::PathBuf;
 
-    use tempfile::tempdir;
-
     use pathmatcher::AlwaysMatcher;
     use pathmatcher::NeverMatcher;
+    use tempfile::tempdir;
+
+    use super::*;
 
     fn create_directory(
         directories: &std::vec::Vec<&str>,

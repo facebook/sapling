@@ -13,7 +13,6 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use anyhow::Result;
-
 use types::RepoPath;
 
 /// Limits the set of files to be operated on.

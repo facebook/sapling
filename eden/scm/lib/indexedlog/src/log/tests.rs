@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use super::*;
-use quickcheck::quickcheck;
 use std::cell::RefCell;
 #[cfg(not(windows))]
 use std::io::Read;
 #[cfg(not(windows))]
 use std::ops::Range;
+
+use quickcheck::quickcheck;
 use tempfile::tempdir;
+
+use super::*;
 
 #[derive(Debug)]
 struct DummyError(&'static str);

@@ -5,6 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::future::Future;
+
+use futures::future::BoxFuture;
+use futures::FutureExt;
+use futures::StreamExt;
+use futures::TryStreamExt;
+
 use crate::namedag::MemNameDag;
 use crate::nameset::hints::Hints;
 use crate::ops::DagAddHeads;
@@ -13,13 +22,6 @@ use crate::DagAlgorithm;
 use crate::NameSet;
 use crate::Result;
 use crate::VertexName;
-use futures::future::BoxFuture;
-use futures::FutureExt;
-use futures::StreamExt;
-use futures::TryStreamExt;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::future::Future;
 
 /// Re-create the graph so it looks better when rendered.
 ///

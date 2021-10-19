@@ -9,7 +9,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Result;
-
 use indexedlog::log::IndexDef;
 use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
@@ -235,9 +234,9 @@ impl StoreOpenOptions {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use tempfile::TempDir;
+
+    use super::*;
 
     #[test]
     fn test_local() -> Result<()> {

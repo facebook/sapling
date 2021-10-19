@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use dag::ops::IdConvert;
 use dag::Id;
 use dag::Vertex;
-use std::sync::Arc;
 
 // Mercurial's special case. -1 maps to (b"\0" * 20)
 pub(crate) const NULL_NODE: [u8; 20] = [0u8; 20];

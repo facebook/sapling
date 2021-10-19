@@ -5,14 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::commands;
-use crate::python::py_finalize;
-use crate::python::py_init_threads;
-use crate::python::py_initialize;
-use crate::python::py_is_initialized;
-use crate::python::py_main;
-use crate::python::py_set_argv;
-use crate::python::py_set_program_name;
+use std::env;
+use std::ffi::CString;
+use std::ffi::OsString;
+
 use clidispatch::io::IO;
 use cpython::*;
 use cpython_ext::format_py_error;
@@ -22,11 +18,17 @@ use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use cpython_ext::WrappedIO;
 use encoding::osstring_to_local_cstring;
-use std::env;
-use std::ffi::CString;
-use std::ffi::OsString;
 use tracing::debug_span;
 use tracing::info_span;
+
+use crate::commands;
+use crate::python::py_finalize;
+use crate::python::py_init_threads;
+use crate::python::py_initialize;
+use crate::python::py_is_initialized;
+use crate::python::py_main;
+use crate::python::py_set_argv;
+use crate::python::py_set_program_name;
 
 const HGPYENTRYPOINT_MOD: &str = "edenscm";
 pub struct HgPython {

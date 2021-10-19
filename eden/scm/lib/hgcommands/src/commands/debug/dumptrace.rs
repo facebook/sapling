@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use super::define_flags;
-use super::Repo;
-use super::Result;
-use super::IO;
 use blackbox::event::Event;
 use blackbox::json;
 use blackbox::SessionId;
 use clidispatch::errors;
+
+use super::define_flags;
+use super::Repo;
+use super::Result;
+use super::IO;
 
 define_flags! {
     pub struct DumpTraceOpts {

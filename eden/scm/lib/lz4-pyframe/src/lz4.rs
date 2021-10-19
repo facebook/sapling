@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::Result;
+use std::io::Cursor;
+
 use byteorder::LittleEndian;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
@@ -20,8 +21,9 @@ use lz4_sys::LZ4_createStreamDecode;
 use lz4_sys::LZ4_decompress_safe_continue;
 use lz4_sys::LZ4_freeStream;
 use lz4_sys::LZ4_freeStreamDecode;
-use std::io::Cursor;
 use thiserror::Error;
+
+use crate::Result;
 
 const HEADER_LEN: usize = 4;
 
@@ -257,9 +259,9 @@ fn check_error(result: i32) -> Result<i32> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::quickcheck;
+
+    use super::*;
 
     fn check_roundtrip<T: AsRef<[u8]>>(data: T) -> (Vec<u8>, bool) {
         let data = data.as_ref();

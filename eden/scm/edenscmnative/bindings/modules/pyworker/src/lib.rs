@@ -20,16 +20,15 @@ use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
 use cpython::*;
-use crossbeam::channel::bounded;
-use crossbeam::channel::Receiver;
-use crossbeam::channel::Sender;
-
 use cpython_ext::ExtractInner;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
+use crossbeam::channel::bounded;
+use crossbeam::channel::Receiver;
+use crossbeam::channel::Sender;
 use pyrevisionstore::contentstore;
 use pyrevisionstore::filescmstore;
 use revisionstore::datastore::RemoteDataStore;
@@ -354,8 +353,6 @@ py_class!(class removerworker |py| {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::collections::HashSet;
     use std::fs::create_dir_all;
     use std::fs::metadata;
@@ -376,14 +373,15 @@ mod tests {
     use minibytes::Bytes;
     use quickcheck::quickcheck;
     use quickcheck::TestResult;
-    use tempfile::TempDir;
-
     use revisionstore::datastore::Delta;
     use revisionstore::datastore::HgIdMutableDeltaStore;
     use revisionstore::testutil::make_config;
     use revisionstore::ContentStore;
+    use tempfile::TempDir;
     use types::testutil::key;
     use types::RepoPath;
+
+    use super::*;
 
     #[test]
     fn test_update_basic() -> Result<()> {

@@ -5,10 +5,6 @@
  * GNU General Public License version 2.
  */
 
-pub use indexmap::IndexMap;
-pub use indexmap::IndexSet;
-use serde::Deserialize;
-use serde::Serialize;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
@@ -19,6 +15,11 @@ use std::ops::DerefMut;
 use std::rc::Rc;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::{self};
+
+pub use indexmap::IndexMap;
+pub use indexmap::IndexSet;
+use serde::Deserialize;
+use serde::Serialize;
 use tracing::callsite::Identifier;
 
 /// Collected tracing data.

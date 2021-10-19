@@ -9,9 +9,8 @@ use std::ops::BitOr;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use tracing::instrument;
-
 use minibytes::Bytes;
+use tracing::instrument;
 
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;

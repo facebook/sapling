@@ -5,6 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::fmt;
+
+use futures::StreamExt;
+
 use super::hints::Flags;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
@@ -13,9 +18,6 @@ use super::NameSet;
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::VertexName;
-use futures::StreamExt;
-use std::any::Any;
-use std::fmt;
 
 /// Union of 2 sets.
 ///
@@ -130,9 +132,10 @@ impl fmt::Debug for UnionSet {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::super::tests::*;
     use super::*;
-    use std::collections::HashSet;
 
     fn union(a: &[u8], b: &[u8]) -> UnionSet {
         let a = NameSet::from_query(VecQuery::from_bytes(a));

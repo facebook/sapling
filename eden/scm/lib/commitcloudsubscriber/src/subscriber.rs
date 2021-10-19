@@ -5,21 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::action::CloudSyncTrigger;
-use crate::config::CommitCloudConfig;
-use crate::error::*;
-use crate::receiver::CommandName::CommitCloudCancelSubscriptions;
-use crate::receiver::CommandName::CommitCloudRestartSubscriptions;
-use crate::receiver::CommandName::CommitCloudStartSubscriptions;
-use crate::receiver::CommandName::{self};
-use crate::util;
-use anyhow::bail;
-use anyhow::Result;
-use eventsource::reqwest::Client;
-use log::error;
-use log::info;
-use reqwest::Url;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str;
@@ -30,6 +15,23 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use std::time::SystemTime;
+
+use anyhow::bail;
+use anyhow::Result;
+use eventsource::reqwest::Client;
+use log::error;
+use log::info;
+use reqwest::Url;
+use serde::Deserialize;
+
+use crate::action::CloudSyncTrigger;
+use crate::config::CommitCloudConfig;
+use crate::error::*;
+use crate::receiver::CommandName::CommitCloudCancelSubscriptions;
+use crate::receiver::CommandName::CommitCloudRestartSubscriptions;
+use crate::receiver::CommandName::CommitCloudStartSubscriptions;
+use crate::receiver::CommandName::{self};
+use crate::util;
 
 #[allow(unused_macros)]
 macro_rules! tinfo {

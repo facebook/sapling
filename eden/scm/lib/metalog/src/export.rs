@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::io::Write;
+use std::path::Path;
+
+use git2::Repository;
+
 use crate::metalog::load_root;
 use crate::metalog::SerId20;
 use crate::MetaLog;
 use crate::Result;
-use git2::Repository;
-use std::collections::HashMap;
-use std::io::Write;
-use std::path::Path;
 
 impl MetaLog {
     /// Export metalog to a git repo for investigation.

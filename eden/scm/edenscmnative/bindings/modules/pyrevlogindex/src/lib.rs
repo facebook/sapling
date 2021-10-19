@@ -7,13 +7,14 @@
 
 #![allow(non_camel_case_types)]
 
+use std::cell::RefCell;
+use std::path::Path;
+
 use ::revlogindex::RevlogIndex;
 use cpython::*;
 use cpython_ext::PyNone;
 use cpython_ext::ResultPyErrExt;
 use pydag::Spans;
-use std::cell::RefCell;
-use std::path::Path;
 
 // XXX: The revlogindex is a temporary solution before migrating to
 // segmented changelog. It is here to experiment breaking changes with

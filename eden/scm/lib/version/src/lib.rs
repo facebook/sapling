@@ -12,7 +12,7 @@ use self::version as imp;
 
 #[cfg(not(feature = "generated"))]
 mod fallback;
+pub use imp::*;
+
 #[cfg(not(feature = "generated"))]
 use self::fallback as imp;
-
-pub use imp::*;

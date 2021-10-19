@@ -9,13 +9,9 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
-use log::warn;
-use tracing::event;
-use tracing::instrument;
-use tracing::Level;
-
 use configparser::config::ConfigSet;
 use edenapi::Builder as EdenApiBuilder;
+use log::warn;
 use manifest::List;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
@@ -31,6 +27,9 @@ use revisionstore::MemcacheStore;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
+use tracing::event;
+use tracing::instrument;
+use tracing::Level;
 use types::HgId;
 use types::Key;
 use types::RepoPath;

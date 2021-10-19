@@ -11,11 +11,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::bail;
-use anyhow::Result;
-
 use ::types::Key;
 use ::types::RepoPathBuf;
+use anyhow::bail;
+use anyhow::Result;
 use minibytes::Bytes;
 use tracing::field;
 

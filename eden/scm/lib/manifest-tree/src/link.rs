@@ -15,11 +15,10 @@ use anyhow::bail;
 use anyhow::format_err;
 use anyhow::Context;
 use anyhow::Result;
-use once_cell::sync::OnceCell;
-
 use manifest::File;
 use manifest::FileMetadata;
 use manifest::FsNodeMetadata;
+use once_cell::sync::OnceCell;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::Matcher;
 use types::HgId;
@@ -357,11 +356,10 @@ impl PartialOrd for DirLink {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use manifest::testutil::*;
     use types::testutil::*;
 
+    use super::*;
     use crate::testutil::*;
 
     #[test]

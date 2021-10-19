@@ -130,9 +130,9 @@ pub fn generate_repo_paths(count: usize, qc_gen: &mut Gen) -> Vec<RepoPathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use quickcheck::Gen;
+
+    use super::*;
 
     #[test]
     fn test_generate_repo_paths() {

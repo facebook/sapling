@@ -5,15 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::strip;
-use crate::AppendCommits;
-use crate::DescribeBackend;
-use crate::HgCommit;
-use crate::ParentlessHgCommit;
-use crate::ReadCommitText;
-use crate::Result;
-use crate::StreamCommitText;
-use crate::StripCommits;
+use std::fs;
+use std::io;
+use std::path::Path;
+use std::path::PathBuf;
+
 use dag::delegate;
 use dag::errors::NotFoundError;
 use dag::nonblocking::non_blocking_result;
@@ -25,11 +21,17 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
 use revlogindex::RevlogIndex;
-use std::fs;
-use std::io;
-use std::path::Path;
-use std::path::PathBuf;
 use zstore::Id20;
+
+use crate::strip;
+use crate::AppendCommits;
+use crate::DescribeBackend;
+use crate::HgCommit;
+use crate::ParentlessHgCommit;
+use crate::ReadCommitText;
+use crate::Result;
+use crate::StreamCommitText;
+use crate::StripCommits;
 
 /// HG commits stored on disk using the revlog format.
 pub struct RevlogCommits {

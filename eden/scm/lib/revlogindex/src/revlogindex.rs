@@ -5,13 +5,24 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::corruption;
-use crate::errors::unsupported;
-use crate::errors::CorruptionError;
-use crate::nodemap;
-use crate::Error;
-use crate::NodeRevMap;
-use crate::Result;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::convert::TryFrom;
+use std::fs;
+use std::fs::File;
+use std::io;
+use std::io::Read;
+use std::io::Seek;
+use std::io::Write;
+use std::marker::PhantomData;
+use std::mem;
+use std::ops::Deref;
+use std::path::Path;
+use std::path::PathBuf;
+use std::slice;
+use std::sync::Arc;
+
 use bit_vec::BitVec;
 use byteorder::ReadBytesExt;
 use byteorder::BE;
@@ -19,6 +30,8 @@ use dag::errors::DagError;
 use dag::errors::NotFoundError;
 use dag::nameset::hints::Flags;
 use dag::nameset::meta::MetaSet;
+// Revset is non-lazy. Sync APIs can be used.
+use dag::nameset::SyncNameSetQuery;
 use dag::ops::CheckIntegrity;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
@@ -40,28 +53,16 @@ use minibytes::Bytes;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
-use std::collections::BTreeMap;
-use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::convert::TryFrom;
-use std::fs;
-use std::fs::File;
-use std::io;
-use std::io::Read;
-use std::io::Seek;
-use std::io::Write;
-use std::marker::PhantomData;
-use std::mem;
-use std::ops::Deref;
-use std::path::Path;
-use std::path::PathBuf;
-use std::slice;
-use std::sync::Arc;
 use util::path::atomic_write_symlink;
 use util::path::remove_file;
 
-// Revset is non-lazy. Sync APIs can be used.
-use dag::nameset::SyncNameSetQuery;
+use crate::errors::corruption;
+use crate::errors::unsupported;
+use crate::errors::CorruptionError;
+use crate::nodemap;
+use crate::Error;
+use crate::NodeRevMap;
+use crate::Result;
 
 const REVIDX_OCTOPUS_MERGE: u16 = 1 << 12;
 
@@ -1902,12 +1903,14 @@ fn find_bytes_in_bytes(bytes: &[u8], to_find: &[u8]) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use anyhow::Result;
-    use nonblocking::non_blocking_result as r;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering::SeqCst;
+
+    use anyhow::Result;
+    use nonblocking::non_blocking_result as r;
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn test_simple_3_commits() -> Result<()> {

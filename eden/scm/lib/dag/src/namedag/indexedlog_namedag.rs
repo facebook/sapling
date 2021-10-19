@@ -5,6 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use indexedlog::multi;
+use indexedlog::DefaultOpenOptions;
+
 use super::AbstractNameDag;
 use crate::errors::bug;
 use crate::iddag::IdDag;
@@ -16,11 +23,6 @@ use crate::ops::Persist;
 use crate::ops::TryClone;
 use crate::Group;
 use crate::Result;
-use indexedlog::multi;
-use indexedlog::DefaultOpenOptions;
-use std::path::Path;
-use std::path::PathBuf;
-use std::sync::Arc;
 
 /// A DAG that uses VertexName instead of ids as vertexes.
 ///

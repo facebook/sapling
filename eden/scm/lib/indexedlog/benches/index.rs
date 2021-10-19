@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use indexedlog::index::InsertKey;
 use indexedlog::index::InsertValue;
 use indexedlog::index::OpenOptions;
@@ -15,7 +17,6 @@ use minibench::Measure;
 use rand_chacha::rand_core::RngCore;
 use rand_chacha::rand_core::SeedableRng;
 use rand_chacha::ChaChaRng;
-use std::sync::Arc;
 use tempfile::tempdir;
 
 const N: usize = 204800;

@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::HgId;
 use serde::Serializer;
+
+use crate::HgId;
 
 /// Serde `serialize_with` function to serialize `HgId` as hex string.
 pub fn serialize<S>(id: &HgId, serializer: S) -> Result<S::Ok, S::Error>

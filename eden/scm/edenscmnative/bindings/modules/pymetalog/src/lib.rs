@@ -7,6 +7,10 @@
 
 #![allow(non_camel_case_types)]
 
+use std::cell::RefCell;
+use std::path::Path;
+use std::time::SystemTime;
+
 use ::metalog::CommitOptions;
 use ::metalog::Id20;
 use ::metalog::MetaLog;
@@ -18,9 +22,6 @@ use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
-use std::cell::RefCell;
-use std::path::Path;
-use std::time::SystemTime;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "metalog"].join(".");

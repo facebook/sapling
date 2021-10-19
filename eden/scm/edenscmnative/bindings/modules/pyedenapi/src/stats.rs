@@ -6,7 +6,6 @@
  */
 
 use cpython::*;
-
 use edenapi::Stats;
 
 py_class!(pub class stats |py| {

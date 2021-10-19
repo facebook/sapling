@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use futures::Future;
-use once_cell::sync::Lazy;
-use once_cell::sync::OnceCell;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::sync::RwLock;
+
+use futures::Future;
+use once_cell::sync::Lazy;
+use once_cell::sync::OnceCell;
 
 pub struct Counter {
     name: &'static str,

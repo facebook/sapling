@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::RuntimeCallsite;
-use crate::StaticBox;
+use std::collections::HashMap;
+
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
-use std::collections::HashMap;
 use tracing::metadata::Kind;
 use tracing::Level;
+
+use crate::RuntimeCallsite;
+use crate::StaticBox;
 
 /// Information needed to create a callsite.
 ///

@@ -22,17 +22,15 @@ use std::ffi::CString;
 use std::ffi::OsStr;
 use std::path::Path;
 
-use types::RepoPath;
-
-#[cfg(unix)]
-use unix as sys;
-#[cfg(windows)]
-use windows as sys;
-
 pub use sys::local_bytes_to_osstring;
 pub use sys::local_bytes_to_path;
 pub use sys::osstring_to_local_bytes;
 pub use sys::path_to_local_bytes;
+use types::RepoPath;
+#[cfg(unix)]
+use unix as sys;
+#[cfg(windows)]
+use windows as sys;
 
 /// Convert a `Path` to a `CString` of local bytes
 /// This function panics on failure.
@@ -80,9 +78,10 @@ pub fn repo_path_to_local_bytes(path: &RepoPath) -> &[u8] {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::ffi::OsString;
     use std::io::Result;
+
+    use super::*;
 
     #[test]
     fn test_ascii7bit_roundtrip() {

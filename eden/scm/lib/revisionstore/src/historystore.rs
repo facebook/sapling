@@ -9,7 +9,6 @@ use std::ops::Deref;
 use std::path::PathBuf;
 
 use anyhow::Result;
-
 use edenapi_types::HistoryEntry;
 use types::Key;
 use types::NodeInfo;

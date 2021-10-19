@@ -5,11 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use cpython::*;
-use cpython_ext::PyNone;
-use cpython_ext::PyPath;
-use cpython_ext::ResultPyErrExt;
-use spawn_ext::CommandExt;
 use std::cell::RefCell;
 use std::fs;
 use std::io;
@@ -17,6 +12,12 @@ use std::process::Child as RustChild;
 use std::process::Command as RustCommand;
 use std::process::ExitStatus as RustExitStatus;
 use std::process::Stdio as RustStdio;
+
+use cpython::*;
+use cpython_ext::PyNone;
+use cpython_ext::PyPath;
+use cpython_ext::ResultPyErrExt;
+use spawn_ext::CommandExt;
 
 py_class!(class Command |py| {
     data inner: RefCell<RustCommand>;

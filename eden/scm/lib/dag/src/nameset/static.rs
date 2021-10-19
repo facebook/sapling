@@ -5,15 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::fmt;
+
+use indexmap::IndexSet;
+
 use super::hints::Flags;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
 use super::Hints;
 use crate::Result;
 use crate::VertexName;
-use indexmap::IndexSet;
-use std::any::Any;
-use std::fmt;
 
 /// A set backed by a concrete ordered set.
 pub struct StaticSet(pub(crate) IndexSet<VertexName>, Hints);
@@ -96,9 +98,10 @@ impl fmt::Debug for StaticSet {
 #[cfg(not(fbcode_build))]
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::super::tests::*;
     use super::*;
-    use std::collections::HashSet;
 
     fn static_set(a: &[u8]) -> StaticSet {
         StaticSet::from_names(a.iter().map(|&b| to_name(b)))

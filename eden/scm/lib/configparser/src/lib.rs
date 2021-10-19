@@ -78,9 +78,7 @@ pub use configmodel::error;
 pub use configmodel::Config;
 pub use configmodel::Error;
 pub use configmodel::Result;
-
 pub use error::Errors;
-
 // Re-export
 pub use minibytes::Text;
 

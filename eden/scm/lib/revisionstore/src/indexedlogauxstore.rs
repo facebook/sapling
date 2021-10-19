@@ -14,9 +14,6 @@ use anyhow::bail;
 use anyhow::Result;
 use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
-use minibytes::Bytes;
-use parking_lot::RwLock;
-
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use edenapi_types::ContentId;
@@ -24,6 +21,8 @@ use edenapi_types::FileAuxData;
 use edenapi_types::Sha1;
 use edenapi_types::Sha256;
 use indexedlog::log::IndexOutput;
+use minibytes::Bytes;
+use parking_lot::RwLock;
 use types::hgid::ReadHgIdExt;
 use types::HgId;
 use vlqencoding::VLQDecode;
@@ -205,16 +204,14 @@ impl AuxStore {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::fs::remove_file;
     use std::str::FromStr;
     use std::sync::Arc;
 
     use tempfile::TempDir;
-
     use types::testutil::*;
 
+    use super::*;
     use crate::scmstore::FileAttributes;
     use crate::scmstore::FileStore;
     use crate::testutil::*;

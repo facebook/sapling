@@ -15,10 +15,11 @@ pub use bindgen::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::os::raw::c_char;
     use std::os::raw::c_int;
     use std::os::raw::c_void;
+
+    use super::*;
 
     #[test]
     fn test_xdl_diff_vendored() {

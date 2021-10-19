@@ -14,13 +14,12 @@ use std::sync::Arc;
 
 use anyhow::bail;
 use anyhow::Result;
+use edenapi_types::FileEntry;
+use edenapi_types::TreeEntry;
 use minibytes::Bytes;
 use regex::Regex;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
-
-use edenapi_types::FileEntry;
-use edenapi_types::TreeEntry;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -311,11 +310,11 @@ impl RemoteDataStore for ReportingRemoteDataStore {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::io::Cursor;
 
     use types::testutil::*;
+
+    use super::*;
 
     fn roundtrip_meta_serialize(meta: &Metadata) {
         let mut buf = vec![];

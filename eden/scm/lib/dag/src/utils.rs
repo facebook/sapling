@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::Result;
-use crate::Vertex;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Mutex;
+
+use crate::Result;
+use crate::Vertex;
 
 /// Pre-process a parent function that might have cycles.
 /// Return a new parent function that won't have cycles.

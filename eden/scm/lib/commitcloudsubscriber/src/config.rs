@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use serde::Deserialize;
 use std::path::PathBuf;
+
+use serde::Deserialize;
 
 mod defaults {
     use std::path::PathBuf;

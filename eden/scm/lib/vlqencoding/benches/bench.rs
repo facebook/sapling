@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::io::Cursor;
+
 use minibench::bench;
 use minibench::elapsed;
-use std::io::Cursor;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQDecodeAt;
 use vlqencoding::VLQEncode;

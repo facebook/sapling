@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
+
 use types::RepoPath;
 use types::RepoPathBuf;
 

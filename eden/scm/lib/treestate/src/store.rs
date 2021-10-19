@@ -7,10 +7,12 @@
 
 //! Trait defining an append-only storage system.
 
-use crate::errors::ErrorKind;
+use std::borrow::Cow;
+
 use anyhow::bail;
 use anyhow::Result;
-use std::borrow::Cow;
+
+use crate::errors::ErrorKind;
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash)]
 pub struct BlockId(pub u64);
@@ -61,12 +63,13 @@ impl StoreView for NullStore {
 
 #[cfg(test)]
 pub mod tests {
+    use std::borrow::Cow;
+    use std::collections::HashMap;
+
     use super::*;
     use crate::store::BlockId;
     use crate::store::Store;
     use crate::store::StoreView;
-    use std::borrow::Cow;
-    use std::collections::HashMap;
 
     /// Define a Store to be used in tests.  This doesn't store the data on disk, but rather
     /// keeps it in memory in a hash map.

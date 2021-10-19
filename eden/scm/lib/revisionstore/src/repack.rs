@@ -20,7 +20,6 @@ use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use minibytes::Bytes;
 use thiserror::Error;
-
 use types::Key;
 
 use crate::datapack::DataPack;
@@ -493,21 +492,19 @@ pub fn repack(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashMap;
+    use std::fs::set_permissions;
+    use std::fs::File;
+    use std::fs::OpenOptions;
+    use std::io::Write;
 
     use minibytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
-    use std::fs::File;
     use tempfile::TempDir;
-
     use types::testutil::*;
 
-    use std::collections::HashMap;
-    use std::fs::set_permissions;
-    use std::fs::OpenOptions;
-    use std::io::Write;
-
+    use super::*;
     use crate::datapack::tests::make_datapack;
     use crate::datastore::Delta;
     use crate::historypack::tests::get_nodes;

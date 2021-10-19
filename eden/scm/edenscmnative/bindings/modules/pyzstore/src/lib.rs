@@ -7,13 +7,14 @@
 
 #![allow(non_camel_case_types)]
 
+use std::cell::RefCell;
+
 use ::zstore::Id20;
 use ::zstore::Repair;
 use ::zstore::Zstore;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
-use std::cell::RefCell;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "zstore"].join(".");

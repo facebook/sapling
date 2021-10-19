@@ -11,8 +11,6 @@
 
 use std::convert::TryFrom;
 
-use libc::size_t;
-
 use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::metadata::ContentId as ApiContentId;
@@ -20,6 +18,7 @@ use edenapi_types::metadata::Sha1 as ApiSha1;
 use edenapi_types::metadata::Sha256 as ApiSha256;
 use edenapi_types::FileType as ApiFileType;
 use edenapi_types::TreeAttributes as ApiTreeAttributes;
+use libc::size_t;
 use types::HgId as ApiHgId;
 use types::Key as ApiKey;
 use types::Parents as ApiParents;

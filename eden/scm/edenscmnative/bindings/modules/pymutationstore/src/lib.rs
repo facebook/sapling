@@ -10,6 +10,9 @@
 use std::cell::RefCell;
 use std::io::Cursor;
 
+use ::mutationstore::DagFlags;
+use ::mutationstore::MutationStore;
+use ::mutationstore::Repair;
 use anyhow::Error;
 use async_runtime::block_on;
 use byteorder::ReadBytesExt;
@@ -19,13 +22,9 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
-use thiserror::Error;
-
-use ::mutationstore::DagFlags;
-use ::mutationstore::MutationStore;
-use ::mutationstore::Repair;
 use pydag::dagalgo::dagalgo;
 use pydag::Names;
+use thiserror::Error;
 use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::VLQDecode;

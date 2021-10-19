@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
+use std::fmt;
+use std::sync::Arc;
+
+use nonblocking::non_blocking_result;
+
 use super::hints::Flags;
 use super::AsyncNameSetQuery;
 use super::BoxVertexStream;
@@ -18,10 +24,6 @@ use crate::IdSetIter;
 use crate::IdSpan;
 use crate::Result;
 use crate::VertexName;
-use nonblocking::non_blocking_result;
-use std::any::Any;
-use std::fmt;
-use std::sync::Arc;
 
 /// A set backed by [`IdSet`] + [`IdMap`].
 /// Efficient for DAG calculation.
@@ -266,14 +268,16 @@ impl AsyncNameSetQuery for IdStaticSet {
 #[cfg(test)]
 #[allow(clippy::redundant_clone)]
 pub(crate) mod tests {
+    use std::ops::Deref;
+
+    use nonblocking::non_blocking_result as r;
+
     use super::super::tests::*;
     use super::super::NameSet;
     use super::*;
     use crate::tests::build_segments;
     use crate::DagAlgorithm;
     use crate::NameDag;
-    use nonblocking::non_blocking_result as r;
-    use std::ops::Deref;
 
     /// Test with a predefined DAG.
     pub(crate) fn with_dag<R, F: Fn(&NameDag) -> R>(func: F) -> R {

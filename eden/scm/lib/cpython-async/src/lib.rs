@@ -18,12 +18,11 @@
 mod future;
 mod stream;
 
-pub use future::future as PyFuture;
-pub use stream::TStream;
-
 // Re-export.
 pub use anyhow;
 pub use async_runtime;
 pub use cpython_ext;
 pub use cpython_ext::cpython;
+pub use future::future as PyFuture;
 pub use futures;
+pub use stream::TStream;

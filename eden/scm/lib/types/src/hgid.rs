@@ -5,22 +5,20 @@
  * GNU General Public License version 2.
  */
 
+#[cfg(any(test, feature = "for-tests"))]
+use std::collections::HashSet;
 use std::io::Read;
 use std::io::Write;
 use std::io::{self};
 
-use crate::hash::AbstractHashType;
-use crate::hash::HashTypeInfo;
-
-use crate::parents::Parents;
+#[cfg(any(test, feature = "for-tests"))]
+use rand::RngCore;
 use sha1::Digest;
 use sha1::Sha1;
 
-#[cfg(any(test, feature = "for-tests"))]
-use rand::RngCore;
-
-#[cfg(any(test, feature = "for-tests"))]
-use std::collections::HashSet;
+use crate::hash::AbstractHashType;
+use crate::hash::HashTypeInfo;
+use crate::parents::Parents;
 
 /// A 20-byte identifier, often a hash. Nodes are used to uniquely identify
 /// commits, file versions, and many other things.
@@ -212,11 +210,11 @@ pub mod mocks {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use quickcheck::quickcheck;
     use serde::Deserialize;
     use serde::Serialize;
 
-    use quickcheck::quickcheck;
+    use super::*;
 
     #[test]
     fn test_incorrect_length() {

@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use libc::c_void;
 use std::cmp;
 use std::ffi::CStr;
 use std::io;
 
+use libc::c_void;
 use zstd_sys::ZSTD_DCtx_setMaxWindowSize;
 use zstd_sys::ZSTD_compressBound;
 use zstd_sys::ZSTD_compress_advanced;
@@ -163,11 +163,12 @@ pub fn apply(base: &[u8], delta: &[u8]) -> io::Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use quickcheck::quickcheck;
     use rand::RngCore;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
+
+    use super::*;
 
     fn check_round_trip(base: &[u8], data: &[u8]) -> bool {
         let delta = diff(base, data).expect("delta");
