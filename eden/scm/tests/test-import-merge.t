@@ -3,7 +3,7 @@
   $ configure modernclient
 
   $ tipparents() {
-  > hg parents --template "{node|short} {desc|firstline}\n" -r tip
+  > hg parents --template "{node|short} {desc|firstline}\n" -r .
   > }
 
 Test import and merge diffs
@@ -51,8 +51,7 @@ Test without --exact and diff.p1 == workingdir.p1
   $ tipparents
   540395c44225 changea
   102a90ea7b4a addb
-  $ hg debugstrip --no-backup tip
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg hide -q -r .
 
 Test without --exact and diff.p1 != workingdir.p1
 
@@ -64,8 +63,7 @@ Test without --exact and diff.p1 != workingdir.p1
   (use --exact to import the patch as a merge)
   $ tipparents
   890ecaa90481 addc
-  $ hg debugstrip --no-backup tip
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg hide -q -r .
 
 Test with --exact
 
@@ -75,40 +73,32 @@ Test with --exact
   $ tipparents
   540395c44225 changea
   102a90ea7b4a addb
-  $ hg debugstrip --no-backup tip
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg hide -q -r .
 
 Test with --bypass and diff.p1 == workingdir.p1
 
   $ hg up 'desc(changea)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg import --bypass ../merge.diff
+  $ hg import --bypass ../merge.diff -m 'merge-bypass1'
   applying ../merge.diff
+  $ hg up -q 'desc("merge-bypass1")'
   $ tipparents
   540395c44225 changea
   102a90ea7b4a addb
-  $ hg debugstrip --no-backup tip
+  $ hg hide -q -r .
 
 Test with --bypass and diff.p1 != workingdir.p1
 
   $ hg up 'desc(addc)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg import --bypass ../merge.diff
+  $ hg import --bypass ../merge.diff -m 'merge-bypass2'
   applying ../merge.diff
   warning: import the patch as a normal revision
   (use --exact to import the patch as a merge)
+  $ hg up -q 'desc("merge-bypass2")'
   $ tipparents
   890ecaa90481 addc
-  $ hg debugstrip --no-backup tip
-
-Test with --bypass and --exact
-
-  $ hg import --bypass --exact ../merge.diff
-  applying ../merge.diff
-  $ tipparents
-  540395c44225 changea
-  102a90ea7b4a addb
-  $ hg debugstrip --no-backup tip
+  $ hg hide -q -r .
 
   $ cd ..
 
