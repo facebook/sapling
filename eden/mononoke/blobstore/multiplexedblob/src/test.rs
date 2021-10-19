@@ -6,9 +6,11 @@
  */
 
 use std::{
+    cmp,
     collections::{HashMap, VecDeque},
     fmt,
     future::Future,
+    num::NonZeroUsize,
     pin::Pin,
     sync::{Arc, Mutex},
     time::{Duration, Instant, SystemTime},
@@ -347,17 +349,31 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::test]
 async fn base(fb: FacebookInit) {
-    let bs0 = Arc::new(Tickable::new());
-    let bs1 = Arc::new(Tickable::new());
+    for count in 1..4 {
+        let regular_stores = (0..count)
+            .map(|id| (BlobstoreId::new(id), Arc::new(Tickable::new())))
+            .collect();
+        do_base(fb, regular_stores).await;
+    }
+}
+
+async fn do_base(
+    fb: FacebookInit,
+    regular_stores: Vec<(BlobstoreId, Arc<Tickable<(BlobstoreBytes, u64)>>)>,
+) {
     let log = Arc::new(LogHandler::new());
+    let dyn_stores = regular_stores
+        .clone()
+        .into_iter()
+        .map(|(id, store)| (id, store as Arc<dyn BlobstorePutOps>))
+        .collect();
+
+    let min_successful = cmp::max(1, regular_stores.len() - 1);
     let bs = MultiplexedBlobstoreBase::new(
         MultiplexId::new(1),
-        vec![
-            (BlobstoreId::new(0), bs0.clone()),
-            (BlobstoreId::new(1), bs1.clone()),
-        ],
+        dyn_stores,
         vec![],
-        nonzero!(1usize),
+        NonZeroUsize::new(min_successful).unwrap(),
         log.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -365,7 +381,7 @@ async fn base(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx);
 
-    // succeed as soon as first blobstore succeeded
+    // succeed as soon as first min_successful blobstores succeed
     {
         let v0 = make_value("v0");
         let k0 = "k0";
@@ -375,29 +391,44 @@ async fn base(fb: FacebookInit) {
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
-        bs0.tick(None);
+        for (_id, store) in regular_stores[0..min_successful].iter() {
+            store.tick(None)
+        }
         put_fut.await.unwrap();
-        assert_eq!(bs0.get_bytes(k0), Some(v0.clone()));
-        assert!(bs1.storage.with(|s| s.is_empty()));
-        bs1.tick(Some("bs1 failed"));
-        assert!(
-            log.log
-                .with(|log| log == &vec![(BlobstoreId::new(0), k0.to_owned())])
-        );
+        for (_id, store) in regular_stores[0..min_successful].iter() {
+            assert_eq!(store.get_bytes(k0), Some(v0.clone()))
+        }
+        for (id, store) in regular_stores[min_successful..].iter() {
+            assert_eq!(store.get_bytes(k0), None);
+            store.tick(Some(format!("store {} failed", id).as_str()));
+        }
+        if regular_stores.len() == 1 {
+            assert_eq!(log.log.with(|log| log.len()), 0);
+        } else {
+            assert_eq!(log.log.with(|log| log.len()), min_successful);
+            for (id, _store) in regular_stores[0..min_successful].iter() {
+                assert!(log.log.with(|log| log.contains(&(*id, k0.to_owned()))));
+            }
+        }
 
-        // should succeed as it is stored in bs1
+        // should succeed as it is stored in at least one store
         let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
-        bs0.tick(None);
-        bs1.tick(None);
+        for (_id, store) in regular_stores.iter() {
+            store.tick(None);
+        }
         assert_eq!(get_fut.await.unwrap(), Some(v0.into()));
-        assert!(bs1.storage.with(|s| s.is_empty()));
+        for (_id, store) in regular_stores[min_successful..].iter() {
+            assert!(store.storage.with(|s| s.is_empty()));
+        }
 
         log.clear();
     }
 
+    let bs0 = regular_stores[0].1.clone();
+
     // wait for second if first one failed
-    {
+    if regular_stores.len() > 1 {
         let v1 = make_value("v1");
         let k1 = "k1";
 
@@ -408,27 +439,31 @@ async fn base(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(Some("case 2: bs0 failed"));
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
-        bs1.tick(None);
+        for (_id, store) in regular_stores[1..].iter() {
+            store.tick(None);
+        }
         put_fut.await.unwrap();
         assert_eq!(bs0.get_bytes(k1), None);
-        assert_eq!(bs1.get_bytes(k1), Some(v1.clone()));
-        assert!(
-            log.log
-                .with(|log| log == &vec![(BlobstoreId::new(1), k1.to_owned())])
-        );
+        assert_eq!(log.log.with(|log| log.len()), regular_stores.len() - 1);
+        for (id, store) in regular_stores[1..].iter() {
+            assert_eq!(store.get_bytes(k1), Some(v1.clone()));
+            assert!(log.log.with(|log| log.contains(&(*id, k1.to_owned()))));
+        }
 
         let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
-        bs1.tick(None);
+        for (_id, store) in regular_stores[1..].iter() {
+            store.tick(None);
+        }
         assert_eq!(get_fut.await.unwrap(), Some(v1.into()));
         assert_eq!(bs0.get_bytes(k1), None);
 
         log.clear();
     }
 
-    // both fail => whole put fail
+    // all fail => whole put fail
     {
         let v2 = make_value("v2");
         let k2 = "k2";
@@ -438,9 +473,9 @@ async fn base(fb: FacebookInit) {
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
-        bs0.tick(Some("case 3: bs0 failed"));
-        assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
-        bs1.tick(Some("case 3: bs1 failed"));
+        for (id, store) in regular_stores.iter() {
+            store.tick(Some(format!("case 3: bs{} failed", id).as_str()));
+        }
         assert!(put_fut.await.is_err());
     }
 
@@ -451,9 +486,11 @@ async fn base(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(Some("case 4: bs0 failed"));
-        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
-        bs1.tick(None);
+        for (_id, store) in regular_stores[1..].iter() {
+            assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+            store.tick(None);
+        }
         assert!(get_fut.await.is_err());
     }
 
@@ -464,13 +501,15 @@ async fn base(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
-        assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
-        bs1.tick(None);
+        for (_id, store) in regular_stores[1..].iter() {
+            assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+            store.tick(None);
+        }
         assert_eq!(get_fut.await.unwrap(), None);
     }
 
-    // both put succeed
+    // all put succeed
     {
         let v4 = make_value("v4");
         let k4 = "k4";
@@ -481,14 +520,20 @@ async fn base(fb: FacebookInit) {
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
-        bs0.tick(None);
-        put_fut.await.unwrap();
-        assert_eq!(bs0.get_bytes(k4), Some(v4.clone()));
-        bs1.tick(None);
-        while log.log.with(|log| log.len() != 2) {
-            tokio::task::yield_now().await;
+        for (_id, store) in regular_stores.iter() {
+            store.tick(None);
         }
-        assert_eq!(bs1.get_bytes(k4), Some(v4.clone()));
+        put_fut.await.unwrap();
+        if regular_stores.len() == 1 {
+            assert_eq!(log.log.with(|log| log.len()), 0);
+        } else {
+            while log.log.with(|log| log.len() != regular_stores.len()) {
+                tokio::task::yield_now().await;
+            }
+        }
+        for (_id, store) in regular_stores.iter() {
+            assert_eq!(store.get_bytes(k4), Some(v4.clone()));
+        }
     }
 }
 
