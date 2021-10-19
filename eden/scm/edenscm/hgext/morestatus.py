@@ -12,6 +12,7 @@ the state of the repo
 import math
 import os
 
+from edenscm.hgext.rebase import rebaseruntime
 from edenscm.mercurial import (
     commands,
     hbisect,
@@ -82,6 +83,18 @@ def helpmessage(ui, continuecmd, abortcmd):
 
 def rebasemsg(repo, ui):
     helpmessage(ui, "hg rebase --continue", "hg rebase --abort")
+
+    rbsrt = rebaseruntime(repo, ui, None, {})
+    rbsrt.restorestatus()
+    for (src, dest) in rbsrt.destmap.items():
+        if dest == rbsrt.originalwd:
+            ui.warn(
+                prefixlines(
+                    f"\nCurrently rebasing {repo[src]}: {repo[src].shortdescription()}"
+                )
+            )
+            break
+
 
 
 def histeditmsg(repo, ui):

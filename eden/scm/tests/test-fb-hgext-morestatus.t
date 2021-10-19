@@ -143,6 +143,8 @@ Test rebase state
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
+  # 
+  # Currently rebasing 2977a57ce863: remove content
 
 Test status in rebase state with resolved files
   $ hg resolve --mark a
@@ -156,6 +158,8 @@ Test status in rebase state with resolved files
   # No unresolved merge conflicts.
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
+  # 
+  # Currently rebasing 2977a57ce863: remove content
 
 Test hg status is normal after rebase abort
   $ hg rebase --abort -q
@@ -173,6 +177,8 @@ Test rebase with an interrupted update:
   # The repository is in an unfinished *rebase* state.
   # To continue:                hg rebase --continue
   # To abort:                   hg rebase --abort
+  # 
+  # Currently rebasing 2977a57ce863: remove content
   $ hg rebase --abort -q
   rebase aborted
 
