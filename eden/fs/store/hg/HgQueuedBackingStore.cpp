@@ -71,8 +71,7 @@ HgQueuedBackingStore::HgQueuedBackingStore(
     std::unique_ptr<HgBackingStore> backingStore,
     std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<StructuredLogger> structuredLogger,
-    std::unique_ptr<BackingStoreLogger> logger,
-    uint8_t numberThreads)
+    std::unique_ptr<BackingStoreLogger> logger)
     : localStore_(std::move(localStore)),
       stats_(std::move(stats)),
       config_(config),
@@ -81,8 +80,15 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       traceBus_{TraceBus<HgImportTraceEvent>::create("hg", kTraceBusCapacity)} {
+  uint8_t numberThreads =
+      config_->getEdenConfig()->numBackingstoreThreads.getValue();
+  if (!numberThreads) {
+    XLOG(WARN)
+        << "HgQueuedBackingStore configured to use 0 threads. Invalid, using one thread instead";
+    numberThreads = 1;
+  }
   threads_.reserve(numberThreads);
-  for (int i = 0; i < numberThreads; i++) {
+  for (uint16_t i = 0; i < numberThreads; i++) {
     threads_.emplace_back(&HgQueuedBackingStore::processRequest, this);
   }
 }

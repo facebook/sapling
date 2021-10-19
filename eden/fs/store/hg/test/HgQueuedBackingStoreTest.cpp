@@ -72,8 +72,7 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
         std::move(backingStore),
         edenConfig,
         std::make_shared<NullStructuredLogger>(),
-        std::make_unique<BackingStoreLogger>(),
-        1);
+        std::make_unique<BackingStoreLogger>());
   }
 };
 

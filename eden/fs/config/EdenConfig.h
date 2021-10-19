@@ -514,6 +514,16 @@ class EdenConfig : private ConfigSettingManager {
       1,
       this};
 
+  // [backingstore]
+
+  /**
+   * Number of threads that will pull backingstore requests off the queue.
+   */
+  ConfigSetting<uint8_t> numBackingstoreThreads{
+      "backingstore:num-servicing-threads",
+      32,
+      this};
+
   // [telemetry]
 
   /**

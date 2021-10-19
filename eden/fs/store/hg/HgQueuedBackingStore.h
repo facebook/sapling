@@ -32,8 +32,6 @@ class EdenStats;
 class HgImportRequest;
 class StructuredLogger;
 
-constexpr uint8_t kNumberHgQueueWorker = 32;
-
 struct HgImportTraceEvent : TraceEventBase {
   enum EventType : uint8_t {
     QUEUE,
@@ -103,8 +101,7 @@ class HgQueuedBackingStore final : public BackingStore {
       std::unique_ptr<HgBackingStore> backingStore,
       std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<StructuredLogger> structuredLogger,
-      std::unique_ptr<BackingStoreLogger> logger,
-      uint8_t numberThreads = kNumberHgQueueWorker);
+      std::unique_ptr<BackingStoreLogger> logger);
 
   ~HgQueuedBackingStore() override;
 
