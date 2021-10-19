@@ -18,6 +18,7 @@ use super::IdDagStore;
 use super::StoreId;
 use crate::errors::bug;
 use crate::id::{Group, Id};
+use crate::iddagstore::SegmentWithWrongHead;
 use crate::ops::Persist;
 use crate::segment::Segment;
 use crate::spanset::Span;
@@ -199,16 +200,16 @@ impl IdDagStore for InProcessStore {
     fn iter_master_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
-    ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>> {
         let range = (Group::MASTER, parent_span.low)..=(Group::MASTER, parent_span.high);
         let iter =
             self.parent_index
                 .range(range)
                 .flat_map(move |((_group, parent_id), store_ids)| {
                     let parent_id = *parent_id;
-                    store_ids
-                        .iter()
-                        .map(move |store_id| Ok((parent_id, self.get_segment(&store_id))))
+                    store_ids.iter().map(move |store_id| {
+                        Ok((parent_id, SegmentWithWrongHead(self.get_segment(store_id))))
+                    })
                 });
         Ok(Box::new(iter))
     }
@@ -216,14 +217,14 @@ impl IdDagStore for InProcessStore {
     fn iter_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
-    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
-        let get_iter = |group: Group| -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<SegmentWithWrongHead>> + 'a>> {
+        let get_iter = |group: Group| -> Result<Box<dyn Iterator<Item = Result<_>> + 'a>> {
             match self.parent_index.get(&(group, parent)) {
                 None => Ok(Box::new(iter::empty())),
                 Some(children) => {
                     let iter = children
                         .iter()
-                        .map(move |store_id| Ok(self.get_segment(store_id)));
+                        .map(move |store_id| Ok(SegmentWithWrongHead(self.get_segment(store_id))));
                     Ok(Box::new(iter))
                 }
             }

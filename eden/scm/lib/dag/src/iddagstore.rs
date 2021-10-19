@@ -12,6 +12,7 @@ use crate::spanset::Span;
 use crate::Level;
 use crate::Result;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 mod in_process_store;
 
@@ -86,7 +87,7 @@ pub trait IdDagStore: Send + Sync + 'static {
     fn iter_master_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
-    ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>>;
+    ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>>;
 
     /// Iterate through flat segments that have the given parent.
     ///
@@ -95,7 +96,7 @@ pub trait IdDagStore: Send + Sync + 'static {
     fn iter_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
-    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
+    ) -> Result<Box<dyn Iterator<Item = Result<SegmentWithWrongHead>> + 'a>>;
 
     /// Remove all non master Group identifiers from the DAG.
     fn remove_non_master(&mut self) -> Result<()>;
@@ -175,6 +176,28 @@ pub trait IdDagStore: Send + Sync + 'static {
         );
 
         Ok(Some(merged))
+    }
+}
+
+/// Wrapper for `Segment` that prevents access to `high`.
+#[derive(Eq, PartialEq)]
+pub struct SegmentWithWrongHead(Segment);
+
+impl fmt::Debug for SegmentWithWrongHead {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl SegmentWithWrongHead {
+    pub(crate) fn low(&self) -> Result<Id> {
+        self.0.low()
+    }
+    pub(crate) fn parent_count(&self) -> Result<usize> {
+        self.0.parent_count()
+    }
+    pub(crate) fn parents(&self) -> Result<Vec<Id>> {
+        self.0.parents()
     }
 }
 
@@ -459,10 +482,13 @@ mod tests {
             .unwrap();
         // LEVEL0_HEAD5 is not in answer because it was merged into MERGED_LEVEL0_HEAD5
         // and MERGED_LEVEL0_HEAD5 no longer has parent 2.
-        let expected = segments_to_owned(&[&LEVEL0_HEAD9]);
-        answer.sort_by_key(|s| s.head().unwrap());
+        let expected = segments_to_owned(&[&LEVEL0_HEAD9])
+            .into_iter()
+            .map(SegmentWithWrongHead)
+            .collect::<Vec<_>>();
+        answer.sort_by_key(|s| s.low().unwrap());
         assert_eq!(answer, expected);
-        answer2.sort_by_key(|s| s.head().unwrap());
+        answer2.sort_by_key(|s| s.low().unwrap());
         assert_eq!(answer2, expected);
 
         let mut answer = store
@@ -488,8 +514,8 @@ mod tests {
                 .unwrap()
                 .collect::<Result<Vec<_>>>()
                 .unwrap();
-            list.sort_unstable_by_key(|seg| seg.high().unwrap());
-            list
+            list.sort_unstable_by_key(|seg| seg.low().unwrap());
+            list.into_iter().map(|s| s.0).collect()
         };
 
         let answer = lookup(Id(2));

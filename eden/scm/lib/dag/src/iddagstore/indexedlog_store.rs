@@ -9,6 +9,7 @@ use super::IdDagStore;
 use crate::errors::bug;
 use crate::errors::programming;
 use crate::id::{Group, Id};
+use crate::iddagstore::SegmentWithWrongHead;
 use crate::ops::Persist;
 use crate::segment::describe_segment_bytes;
 use crate::segment::hex;
@@ -228,12 +229,12 @@ impl IdDagStore for IndexedLogStore {
     fn iter_master_flat_segments_with_parent_span<'a>(
         &'a self,
         parent_span: Span,
-    ) -> Result<Box<dyn Iterator<Item = Result<(Id, Segment)>> + 'a>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<(Id, SegmentWithWrongHead)>> + 'a>> {
         let low = index_parent_key(Group::MASTER, parent_span.low);
         let high = index_parent_key(Group::MASTER, parent_span.high);
         let range = &low[..]..=&high[..];
         let range_iter = self.log.lookup_range(Self::INDEX_PARENT, range)?;
-        let mut result: Vec<(Id, Segment)> = Vec::new();
+        let mut result: Vec<(Id, SegmentWithWrongHead)> = Vec::new();
         for entry in range_iter {
             let (key, segments) = entry?;
             let parent_id = {
@@ -241,7 +242,10 @@ impl IdDagStore for IndexedLogStore {
                 Id(u64::from_be_bytes(bytes))
             };
             for segment in segments {
-                result.push((parent_id, self.segment_from_slice(segment?)));
+                result.push((
+                    parent_id,
+                    SegmentWithWrongHead(self.segment_from_slice(segment?)),
+                ));
             }
         }
         Ok(Box::new(result.into_iter().map(Ok)))
@@ -250,24 +254,23 @@ impl IdDagStore for IndexedLogStore {
     fn iter_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
-    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<SegmentWithWrongHead>> + 'a>> {
         let get_iter = |group: Group| -> Result<_> {
             let key = index_parent_key(group, parent);
             let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
             let iter = iter.map(move |result| {
                 match result {
-                    Ok(bytes) => Ok(self.segment_from_slice(bytes)),
+                    Ok(bytes) => Ok(SegmentWithWrongHead(self.segment_from_slice(bytes))),
                     Err(err) => Err(err.into()),
                 }
             });
             Ok(iter)
         };
-        let iter: Box<dyn Iterator<Item = Result<Segment>> + 'a> =
-            if parent.group() == Group::MASTER {
-                Box::new(get_iter(Group::MASTER)?.chain(get_iter(Group::NON_MASTER)?))
-            } else {
-                Box::new(get_iter(Group::NON_MASTER)?)
-            };
+        let iter: Box<dyn Iterator<Item = Result<_>> + 'a> = if parent.group() == Group::MASTER {
+            Box::new(get_iter(Group::MASTER)?.chain(get_iter(Group::NON_MASTER)?))
+        } else {
+            Box::new(get_iter(Group::NON_MASTER)?)
+        };
         Ok(iter)
     }
 
@@ -686,7 +689,7 @@ mod tests {
         Ok(())
     }
 
-    fn dbg_iter<'a>(iter: Box<dyn Iterator<Item = Result<Segment>> + 'a>) -> String {
+    fn dbg_iter<'a, T: std::fmt::Debug>(iter: Box<dyn Iterator<Item = Result<T>> + 'a>) -> String {
         let v = iter.map(|s| s.unwrap()).collect::<Vec<_>>();
         dbg(v)
     }

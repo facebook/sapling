@@ -105,6 +105,10 @@ impl Segment {
         self.high()
     }
 
+    pub(crate) fn low(&self) -> Result<Id> {
+        Ok(self.span()?.low)
+    }
+
     pub(crate) fn level(&self) -> Result<Level> {
         match self.0.get(Self::OFFSET_LEVEL) {
             Some(level) => Ok(*level),
