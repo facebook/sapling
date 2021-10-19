@@ -41,6 +41,7 @@ impl SourceControlServiceImpl {
             exists: path.exists().await?,
             file_exists: path.is_file().await?,
             tree_exists: path.is_tree().await?,
+            ..Default::default()
         })
     }
 
@@ -58,6 +59,7 @@ impl SourceControlServiceImpl {
                 exists: false,
                 r#type: None,
                 info: None,
+                ..Default::default()
             },
             PathEntry::Tree(tree) => {
                 let summary = tree.summary().await?;
@@ -70,11 +72,13 @@ impl SourceControlServiceImpl {
                     child_dirs_count: summary.child_dirs_count as i64,
                     descendant_files_count: summary.descendant_files_count as i64,
                     descendant_files_total_size: summary.descendant_files_total_size as i64,
+                    ..Default::default()
                 };
                 thrift::CommitPathInfoResponse {
                     exists: true,
                     r#type: Some(thrift::EntryType::TREE),
                     info: Some(thrift::EntryInfo::tree(tree_info)),
+                    ..Default::default()
                 }
             }
             PathEntry::File(file, file_type) => {
@@ -84,11 +88,13 @@ impl SourceControlServiceImpl {
                     file_size: metadata.total_size as i64,
                     content_sha1: metadata.sha1.as_ref().to_vec(),
                     content_sha256: metadata.sha256.as_ref().to_vec(),
+                    ..Default::default()
                 };
                 thrift::CommitPathInfoResponse {
                     exists: true,
                     r#type: Some(file_type.into_response()),
                     info: Some(thrift::EntryInfo::file(file_info)),
+                    ..Default::default()
                 }
             }
         };
@@ -121,6 +127,7 @@ impl SourceControlServiceImpl {
                             exists: false,
                             r#type: None,
                             info: None,
+                            ..Default::default()
                         };
                         return Result::<_, errors::ServiceError>::Ok((
                             context_path,
@@ -135,6 +142,7 @@ impl SourceControlServiceImpl {
                             info: Some(thrift::EntryInfo::tree(
                                 (*tree.id(), summary).into_response(),
                             )),
+                            ..Default::default()
                         };
                         return Result::<_, errors::ServiceError>::Ok((context_path, tree_elem));
                     }
@@ -144,6 +152,7 @@ impl SourceControlServiceImpl {
                             exists: true,
                             r#type: Some(file_type.into_response()),
                             info: Some(thrift::EntryInfo::file(metadata.into_response())),
+                            ..Default::default()
                         };
                         return Result::<_, errors::ServiceError>::Ok((context_path, file_elem));
                     }
@@ -154,7 +163,10 @@ impl SourceControlServiceImpl {
             .try_collect::<BTreeMap<_, _>>()
             .await?;
 
-        Ok(thrift::CommitMultiplePathInfoResponse { path_info: result })
+        Ok(thrift::CommitMultiplePathInfoResponse {
+            path_info: result,
+            ..Default::default()
+        })
     }
 
     pub(crate) async fn commit_path_blame(
@@ -285,6 +297,7 @@ impl SourceControlServiceImpl {
                     origin_line: (blame_line.origin_offset + 1) as i32,
                     title_index: None,
                     message_index: None,
+                    ..Default::default()
                 };
                 if option_include_contents {
                     if let Some(content_line) = content_iter.next() {
@@ -312,6 +325,7 @@ impl SourceControlServiceImpl {
             .map(|date| thrift::DateTime {
                 timestamp: date.timestamp(),
                 tz: date.offset().local_minus_utc(),
+                ..Default::default()
             })
             .collect();
         let blame = thrift::BlameCompact {
@@ -322,10 +336,12 @@ impl SourceControlServiceImpl {
             dates,
             titles,
             messages,
+            ..Default::default()
         };
 
         Ok(thrift::CommitPathBlameResponse {
             blame: thrift::Blame::blame_compact(blame),
+            ..Default::default()
         })
     }
 
@@ -405,6 +421,9 @@ impl SourceControlServiceImpl {
         )
         .await?;
 
-        Ok(thrift::CommitPathHistoryResponse { history })
+        Ok(thrift::CommitPathHistoryResponse {
+            history,
+            ..Default::default()
+        })
     }
 }

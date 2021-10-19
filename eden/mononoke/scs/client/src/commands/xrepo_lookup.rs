@@ -176,11 +176,13 @@ pub(super) async fn run(
     let commit = thrift::CommitSpecifier {
         repo: source_repo,
         id,
+        ..Default::default()
     };
     let params = thrift::CommitLookupXRepoParams {
         other_repo: target_repo,
         identity_schemes: get_request_schemes(&matches),
         candidate_selection_hint: hint,
+        ..Default::default()
     };
     let response = connection.commit_lookup_xrepo(&commit, &params).await?;
     let ids = match &response.ids {
@@ -202,5 +204,6 @@ fn get_repo_specifier(matches: &ArgMatches, arg_name: &str) -> Option<thrift::Re
         .value_of(arg_name)
         .map(|name| thrift::RepoSpecifier {
             name: name.to_string(),
+            ..Default::default()
         })
 }

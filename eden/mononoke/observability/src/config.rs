@@ -79,6 +79,7 @@ impl TryFrom<CfgrScubaObservabilityConfig> for ScubaObservabilityConfig {
             verbose_sessions,
             verbose_unixnames,
             verbose_source_hostnames,
+            ..
         } = value;
         let regexes = verbose_source_hostnames
             .into_iter()
@@ -100,6 +101,7 @@ impl TryFrom<CfgrObservabilityConfig> for ObservabilityConfig {
         let CfgrObservabilityConfig {
             slog_config,
             scuba_config,
+            ..
         } = value;
 
         Ok(Self {

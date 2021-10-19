@@ -349,8 +349,10 @@ mod test {
             target: ThriftTarget {
                 repo_id: 0,
                 bookmark: "book".to_string(),
+                ..Default::default()
             },
             target_location: vec![],
+            ..Default::default()
         };
         q.enqueue(ctx.clone(), params).await?;
 
@@ -387,8 +389,10 @@ mod test {
             target: ThriftTarget {
                 repo_id: 0,
                 bookmark: "book".to_string(),
+                ..Default::default()
             },
             target_location: vec![],
+            ..Default::default()
         };
         q.enqueue(ctx.clone(), params).await?;
 

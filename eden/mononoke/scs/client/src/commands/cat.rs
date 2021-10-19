@@ -73,14 +73,23 @@ pub(super) async fn run(
     let repo = get_repo_specifier(matches).expect("repository is required");
     let commit_id = get_commit_id(matches)?;
     let id = resolve_commit_id(&connection, &repo, &commit_id).await?;
-    let commit = thrift::CommitSpecifier { repo, id };
+    let commit = thrift::CommitSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    };
     let path = get_path(matches).expect("path is required");
-    let file = thrift::FileSpecifier::by_commit_path(thrift::CommitPathSpecifier { commit, path });
+    let file = thrift::FileSpecifier::by_commit_path(thrift::CommitPathSpecifier {
+        commit,
+        path,
+        ..Default::default()
+    });
 
     // Request the first chunk of the file.
     let params = thrift::FileContentChunkParams {
         offset: 0,
         size: CHUNK_SIZE,
+        ..Default::default()
     };
     let response = connection.file_content_chunk(&file, &params).await?;
     let output = Box::new(CatOutput {
@@ -95,6 +104,7 @@ pub(super) async fn run(
                 let params = thrift::FileContentChunkParams {
                     offset,
                     size: CHUNK_SIZE,
+                    ..Default::default()
                 };
                 connection
                     .file_content_chunk(&file, &params)

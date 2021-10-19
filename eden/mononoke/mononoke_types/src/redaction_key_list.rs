@@ -21,7 +21,10 @@ pub struct RedactionKeyList {
 
 impl RedactionKeyList {
     fn into_thrift(self) -> thrift::RedactionKeyList {
-        thrift::RedactionKeyList { keys: self.keys }
+        thrift::RedactionKeyList {
+            keys: self.keys,
+            ..Default::default()
+        }
     }
 
     fn from_thrift(t: thrift::RedactionKeyList) -> Result<Self> {

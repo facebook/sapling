@@ -136,9 +136,14 @@ async fn commit_info(
 ) -> Result<RenderStream, Error> {
     let commit_id = get_commit_id(matches)?;
     let id = resolve_commit_id(&connection, &repo, &commit_id).await?;
-    let commit = thrift::CommitSpecifier { repo, id };
+    let commit = thrift::CommitSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    };
     let params = thrift::CommitInfoParams {
         identity_schemes: get_request_schemes(&matches),
+        ..Default::default()
     };
     let response = connection.commit_info(&commit, &params).await?;
 
@@ -159,12 +164,19 @@ async fn path_info(
 ) -> Result<RenderStream, Error> {
     let commit_id = get_commit_id(matches)?;
     let id = resolve_commit_id(&connection, &repo, &commit_id).await?;
-    let commit = thrift::CommitSpecifier { repo, id };
+    let commit = thrift::CommitSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    };
     let commit_path = thrift::CommitPathSpecifier {
         commit,
         path: path.clone(),
+        ..Default::default()
     };
-    let params = thrift::CommitPathInfoParams {};
+    let params = thrift::CommitPathInfoParams {
+        ..Default::default()
+    };
     let response = connection.commit_path_info(&commit_path, &params).await?;
     if response.exists {
         match (response.r#type, response.info) {
@@ -191,8 +203,15 @@ async fn multiple_path_info(
 ) -> Result<RenderStream, Error> {
     let commit_id = get_commit_id(matches)?;
     let id = resolve_commit_id(&connection, &repo, &commit_id).await?;
-    let commit = thrift::CommitSpecifier { repo, id };
-    let params = thrift::CommitMultiplePathInfoParams { paths };
+    let commit = thrift::CommitSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    };
+    let params = thrift::CommitMultiplePathInfoParams {
+        paths,
+        ..Default::default()
+    };
     let response = connection
         .commit_multiple_path_info(&commit, &params)
         .await?;

@@ -147,6 +147,7 @@ pub mod types {
             ::std::result::Result::Ok(fb303_status::from(p.read_i32()?))
         }
     }
+
 }
 
 #[doc(hidden)]

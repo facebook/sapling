@@ -166,10 +166,15 @@ async fn fetch_link_target(
     repo: thrift::RepoSpecifier,
     id: Vec<u8>,
 ) -> Option<String> {
-    let file = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier { repo, id });
+    let file = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    });
     let params = thrift::FileContentChunkParams {
         offset: 0,
         size: MAX_LINK_NAME_LEN,
+        ..Default::default()
     };
     match connection.file_content_chunk(&file, &params).await {
         Ok(response) => Some(String::from_utf8_lossy(&response.data).into_owned()),
@@ -249,14 +254,20 @@ pub(super) async fn run(
     let commit = thrift::CommitSpecifier {
         repo: repo.clone(),
         id,
+        ..Default::default()
     };
     let path = get_path(matches).unwrap_or_else(|| String::new());
-    let tree = thrift::TreeSpecifier::by_commit_path(thrift::CommitPathSpecifier { commit, path });
+    let tree = thrift::TreeSpecifier::by_commit_path(thrift::CommitPathSpecifier {
+        commit,
+        path,
+        ..Default::default()
+    });
 
     // Request the first chunk of the directory listing.
     let params = thrift::TreeListParams {
         offset: 0,
         limit: CHUNK_SIZE,
+        ..Default::default()
     };
     let response = connection.tree_list(&tree, &params).await?;
     let count = response.count;
@@ -270,6 +281,7 @@ pub(super) async fn run(
                     let params = thrift::TreeListParams {
                         offset,
                         limit: CHUNK_SIZE,
+                        ..Default::default()
                     };
                     connection.tree_list(&tree, &params)
                 }

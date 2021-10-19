@@ -76,6 +76,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
         service_identity,
         allow_non_fast_forward_move,
         pushvars,
+        ..Default::default()
     };
     connection.repo_move_bookmark(&repo, &params).await?;
     Ok(stream::empty().boxed())

@@ -79,10 +79,12 @@ pub(super) async fn run(
     let commit = thrift::CommitSpecifier {
         repo,
         id: ids[0].clone(),
+        ..Default::default()
     };
     let params = thrift::CommitCommonBaseWithParams {
         other_commit_id: ids[1].clone(),
         identity_schemes: get_request_schemes(&matches),
+        ..Default::default()
     };
     let response = connection.commit_common_base_with(&commit, &params).await?;
     let ids = match &response.ids {

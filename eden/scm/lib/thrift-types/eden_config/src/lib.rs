@@ -13,18 +13,32 @@ pub mod types {
     #![allow(clippy::redundant_closure)]
 
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct ConfigValue {
         #[serde(default)]
         pub parsedValue: ::std::string::String,
         #[serde(default)]
         pub source: crate::types::ConfigSource,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct EdenConfigData {
         #[serde(default)]
         pub values: ::std::collections::BTreeMap<::std::string::String, crate::types::ConfigValue>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
     #[doc = "ConfigSource identifies the point of origin of a config setting.\nIt is ordered from low to high precedence. Higher precedence\nconfiguration values over-ride lower precedence values. A config\nsetting of CommandLine takes precedence over all other settings."]
@@ -271,7 +285,18 @@ pub mod types {
             Self {
                 parsedValue: ::std::default::Default::default(),
                 source: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::ConfigValue {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("ConfigValue")
+                .field("parsedValue", &self.parsedValue)
+                .field("source", &self.source)
+                .finish()
         }
     }
 
@@ -325,6 +350,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 parsedValue: field_parsedValue.unwrap_or_default(),
                 source: field_source.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -334,7 +360,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 values: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::EdenConfigData {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("EdenConfigData")
+                .field("values", &self.values)
+                .finish()
         }
     }
 
@@ -381,10 +417,20 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 values: field_values.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
 
+
+    mod dot_dot {
+        #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub struct OtherFields(pub(crate) ());
+
+        pub(super) fn default_for_serde_deserialize() -> OtherFields {
+            OtherFields(())
+        }
+    }
 }
 
 /// Error return types.

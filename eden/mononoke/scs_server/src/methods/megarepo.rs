@@ -115,7 +115,9 @@ impl SourceControlServiceImpl {
             .into());
         }
 
-        Ok(thrift::MegarepoAddConfigResponse {})
+        Ok(thrift::MegarepoAddConfigResponse {
+            ..Default::default()
+        })
     }
 
     pub(crate) async fn megarepo_add_sync_target(

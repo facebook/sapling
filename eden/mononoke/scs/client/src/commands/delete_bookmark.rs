@@ -60,6 +60,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
         old_target,
         service_identity,
         pushvars,
+        ..Default::default()
     };
     connection.repo_delete_bookmark(&repo, &params).await?;
     Ok(stream::empty().boxed())

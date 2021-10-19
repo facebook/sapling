@@ -307,7 +307,7 @@ macro_rules! impl_async_svc_method_types {
                 let thrift_token = $token_thrift_type {
                     target,
                     id: id.0 as i64
-                };
+                ,..Default::default()};
                 Self(thrift_token)
             }
 
@@ -402,11 +402,11 @@ macro_rules! impl_async_svc_method_types {
             fn thrift_result_into_poll_response(
                 thrift_result: Self::ThriftResult,
             ) -> Self::PollResponse {
-                $poll_response_type { result: Some(thrift_result) }
+                $poll_response_type { result: Some(thrift_result) ,..Default::default()}
             }
 
             fn empty_poll_response() -> Self::PollResponse {
-                $poll_response_type { result: None }
+                $poll_response_type { result: None ,..Default::default()}
             }
         }
 

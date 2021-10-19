@@ -63,13 +63,20 @@ pub mod types {
     #[doc = "A representation of the system-dependent dirent::d_type field.\nThe bits and their interpretation is system dependent.\nThis value is u8 on all systems that implement it.  We\nuse i16 to pass this through thrift, which doesn't have unsigned\nnumbers"]
     pub type OsDtype = ::std::primitive::i16;
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct EdenError {
         #[serde(default)]
         pub message: ::std::string::String,
         pub errorCode: ::std::option::Option<::std::primitive::i32>,
         #[serde(default)]
         pub errorType: crate::types::EdenErrorType,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
     impl ::fbthrift::ExceptionInfo for EdenError {
@@ -89,10 +96,17 @@ pub mod types {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct NoValueForKeyError {
         #[serde(default)]
         pub key: ::std::string::String,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
     impl ::fbthrift::ExceptionInfo for NoValueForKeyError {
@@ -112,7 +126,7 @@ pub mod types {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Information about the running edenfs daemon."]
     pub struct DaemonInfo {
         #[serde(default)]
@@ -124,16 +138,30 @@ pub mod types {
         pub status: ::std::option::Option<fb303_core::types::fb303_status>,
         #[doc = "The uptime of the edenfs daemon\nSame data from /proc/pid/stat"]
         pub uptime: ::std::option::Option<::std::primitive::f32>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Information about the privhelper process"]
     pub struct PrivHelperInfo {
         #[serde(default)]
         pub connected: ::std::primitive::bool,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct MountInfo {
         #[serde(default)]
         pub mountPoint: crate::types::PathString,
@@ -142,9 +170,16 @@ pub mod types {
         #[serde(default)]
         pub state: crate::types::MountState,
         pub backingRepoPath: ::std::option::Option<crate::types::PathString>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct MountArgument {
         #[serde(default)]
         pub mountPoint: crate::types::PathString,
@@ -152,39 +187,60 @@ pub mod types {
         pub edenClientPath: crate::types::PathString,
         #[serde(default)]
         pub readOnly: ::std::primitive::bool,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Debug, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub enum SHA1Result {
         sha1(crate::types::BinaryHash),
         error(crate::types::EdenError),
         UnknownField(::std::primitive::i32),
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Effectively a `struct timespec`"]
     pub struct TimeSpec {
         #[serde(default)]
         pub seconds: ::std::primitive::i64,
         #[serde(default)]
         pub nanoSeconds: ::std::primitive::i64,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Information about filesystem entries that can be retrieved solely\nfrom the tree structure, without having to fetch the actual child\nobjects from source control."]
     pub struct EntryInformation {
         #[serde(default)]
         pub dtype: crate::types::Dtype,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Debug, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub enum EntryInformationOrError {
         info(crate::types::EntryInformation),
         error(crate::types::EdenError),
         UnknownField(::std::primitive::i32),
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Subset of stat() data returned from getFileInformation())"]
     pub struct FileInformation {
         #[serde(default)]
@@ -193,9 +249,16 @@ pub mod types {
         pub mtime: crate::types::TimeSpec,
         #[serde(default)]
         pub mode: ::std::primitive::i32,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Debug, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Holds information about a file, or an error in retrieving that info.\nThe most likely error will be ENOENT, implying that the file doesn't exist."]
     pub enum FileInformationOrError {
         info(crate::types::FileInformation),
@@ -203,7 +266,7 @@ pub mod types {
         UnknownField(::std::primitive::i32),
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "reference a point in time in the journal.\nThis can be used to reason about a point in time in a given mount point.\nThe mountGeneration value is opaque to the client."]
     pub struct JournalPosition {
         #[serde(default)]
@@ -215,9 +278,16 @@ pub mod types {
         #[serde(default)]
         #[doc = "Records the snapshot hash at the appropriate point in the journal"]
         pub snapshotHash: crate::types::ThriftRootId,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Holds information about a set of paths that changed between two points.\nfromPosition, toPosition define the time window.\npaths holds the list of paths that changed in that window.\n\nThis type is quasi-deprecated. It has multiple API problems and should be\nrethought when we have a chance to make a breaking change."]
     pub struct FileDelta {
         #[serde(default)]
@@ -241,26 +311,47 @@ pub mod types {
         #[serde(default)]
         #[doc = "Contains the list of commit transitions in this range. If only files\nhave been changed, the list has one entry. Otherwise, it has size N + 1,\nwhere N is the number of checkout operations.\n\nThis list's items may not be unique: [A, B, A] is a common sequence,\nand [A, B, C] has a different meaning than [A, C, B].\n\nSubsumes fromPosition.snapshotHash and toPosition.snapshotHash."]
         pub snapshotTransitions: ::std::vec::Vec<crate::types::ThriftRootId>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct DebugGetRawJournalParams {
         #[serde(default)]
         pub mountPoint: crate::types::PathString,
         pub limit: ::std::option::Option<::std::primitive::i32>,
         #[serde(default)]
         pub fromSequenceNumber: ::std::primitive::i32,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct DebugPathChangeInfo {
         #[serde(default)]
         pub existedBefore: ::std::primitive::bool,
         #[serde(default)]
         pub existedAfter: ::std::primitive::bool,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "A fairly direct modeling of the underlying JournalDelta data structure."]
     pub struct DebugJournalDelta {
         #[serde(default)]
@@ -271,24 +362,45 @@ pub mod types {
         pub changedPaths: ::std::collections::BTreeMap<crate::types::PathString, crate::types::DebugPathChangeInfo>,
         #[serde(default)]
         pub uncleanPaths: ::std::collections::BTreeSet<crate::types::PathString>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct DebugGetRawJournalResponse {
         #[serde(default)]
         pub allDeltas: ::std::vec::Vec<crate::types::DebugJournalDelta>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct ScmStatus {
         #[serde(default)]
         pub entries: ::std::collections::BTreeMap<crate::types::PathString, crate::types::ScmFileStatus>,
         #[serde(default)]
         #[doc = "A map of { path -> error message }\n\nIf any errors occured while computing the diff they will be reported here.\nThe results listed in the entries field may not be accurate for any paths\nlisted in this error field.\n\nThis map will be empty if no errors occurred."]
         pub errors: ::std::collections::BTreeMap<crate::types::PathString, ::std::string::String>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Details about conflicts or errors that occurred during a checkout operation"]
     pub struct CheckoutConflict {
         #[serde(default)]
@@ -298,17 +410,31 @@ pub mod types {
         pub r#type: crate::types::ConflictType,
         #[serde(default)]
         pub message: ::std::string::String,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct ScmBlobMetadata {
         #[serde(default)]
         pub size: ::std::primitive::i64,
         #[serde(default)]
         pub contentsSha1: crate::types::BinaryHash,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct ScmTreeEntry {
         #[serde(default)]
         pub name: ::std::vec::Vec<::std::primitive::u8>,
@@ -316,9 +442,16 @@ pub mod types {
         pub mode: ::std::primitive::i32,
         #[serde(default)]
         pub id: crate::types::BinaryHash,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct TreeInodeEntryDebugInfo {
         #[serde(default)]
         #[doc = "The entry name.  This is just a PathComponent, not the full path"]
@@ -340,22 +473,43 @@ pub mod types {
         pub hash: crate::types::BinaryHash,
         #[doc = "Size of the file in bytes. It won't be set for directories."]
         pub fileSize: ::std::option::Option<::std::primitive::i64>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct GetFetchedFilesResult {
         #[serde(default)]
         pub fetchedFilePaths: ::std::collections::BTreeMap<::std::string::String, ::std::collections::BTreeSet<crate::types::PathString>>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct WorkingDirectoryParents {
         #[serde(default)]
         pub parent1: crate::types::ThriftRootId,
         pub parent2: ::std::option::Option<crate::types::ThriftRootId>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct TreeInodeDebugInfo {
         #[serde(default)]
         pub inodeNumber: ::std::primitive::i64,
@@ -369,9 +523,16 @@ pub mod types {
         pub entries: ::std::vec::Vec<crate::types::TreeInodeEntryDebugInfo>,
         #[serde(default)]
         pub refcount: ::std::primitive::i64,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct InodePathDebugInfo {
         #[serde(default)]
         pub path: crate::types::PathString,
@@ -379,28 +540,56 @@ pub mod types {
         pub loaded: ::std::primitive::bool,
         #[serde(default)]
         pub linked: ::std::primitive::bool,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct ActivityRecorderResult {
         #[serde(default)]
         pub unique: ::std::primitive::i64,
         pub path: ::std::option::Option<crate::types::PathString>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct ListActivityRecordingsResult {
         #[serde(default)]
         pub recordings: ::std::vec::Vec<crate::types::ActivityRecorderResult>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct SetLogLevelResult {
         #[serde(default)]
         pub categoryCreated: ::std::primitive::bool,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct JournalInfo {
         #[serde(default)]
         pub entryCount: ::std::primitive::i64,
@@ -408,9 +597,16 @@ pub mod types {
         pub memoryUsage: ::std::primitive::i64,
         #[serde(default)]
         pub durationSeconds: ::std::primitive::i64,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Struct to store Information about inodes in a mount point."]
     pub struct MountInodeInfo {
         #[serde(default)]
@@ -419,9 +615,16 @@ pub mod types {
         pub loadedFileCount: ::std::primitive::i64,
         #[serde(default)]
         pub loadedTreeCount: ::std::primitive::i64,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct CacheStats {
         #[serde(default)]
         pub entryCount: ::std::primitive::i64,
@@ -435,9 +638,16 @@ pub mod types {
         pub evictionCount: ::std::primitive::i64,
         #[serde(default)]
         pub dropCount: ::std::primitive::i64,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Struct to store fb303 counters from ServiceData.getCounters() and inode\ninformation of all the mount points."]
     pub struct InternalStats {
         #[doc = "fbf303 counter of inodes unloaded by periodic job.\nPopulated if STATS_COUNTERS is set."]
@@ -458,9 +668,16 @@ pub mod types {
         pub mountPointJournalInfo: ::std::option::Option<::std::collections::BTreeMap<crate::types::PathString, crate::types::JournalInfo>>,
         #[doc = "Statistics about the in-memory tree cache.\nPopulated if STATS_CACHE_STATS is set."]
         pub treeCacheStats: ::std::option::Option<crate::types::CacheStats>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct FuseCall {
         #[serde(default)]
         pub opcode: ::std::primitive::i32,
@@ -477,9 +694,16 @@ pub mod types {
         #[serde(default)]
         pub opcodeName: ::std::string::String,
         pub processName: ::std::option::Option<::std::string::String>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct NfsCall {
         #[serde(default)]
         pub xid: ::std::primitive::i32,
@@ -487,21 +711,42 @@ pub mod types {
         pub procNumber: ::std::primitive::i32,
         #[serde(default)]
         pub procName: ::std::string::String,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct GetConfigParams {
         #[serde(default)]
         pub reload: eden_config::types::ConfigReloadBehavior,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct GetStatInfoParams {
         #[serde(default)]
         pub statsMask: ::std::primitive::i64,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct PredictiveFetch {
         pub numTopDirectories: ::std::option::Option<::std::primitive::i32>,
         pub user: ::std::option::Option<::std::string::String>,
@@ -509,9 +754,16 @@ pub mod types {
         pub os: ::std::option::Option<::std::string::String>,
         pub startTime: ::std::option::Option<crate::types::unsigned64>,
         pub endTime: ::std::option::Option<crate::types::unsigned64>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "Params for globFiles()."]
     pub struct GlobParams {
         #[serde(default)]
@@ -537,9 +789,16 @@ pub mod types {
         pub predictiveGlob: ::std::option::Option<crate::types::PredictiveFetch>,
         #[serde(default)]
         pub listOnlyFiles: ::std::primitive::bool,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct Glob {
         #[serde(default)]
         #[doc = "matchingFiles can contain duplicate values and is not guaranteed to be\nsorted. However, no duplicates may have the same originCommits (note this\nis not true should the input GlobParams contain duplicate revisions) ."]
@@ -549,9 +808,16 @@ pub mod types {
         #[serde(default)]
         #[doc = "Currently these are the commit hash for the commit to which this file\nbelongs. But should eden move away from commit hashes this may become\nthe tree hash of the root tree to which this file belongs."]
         pub originHashes: ::std::vec::Vec<::std::vec::Vec<::std::primitive::u8>>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct AccessCounts {
         #[serde(default)]
         pub fsChannelTotal: ::std::primitive::i64,
@@ -567,25 +833,46 @@ pub mod types {
         pub fsChannelMemoryCacheImports: ::std::primitive::i64,
         #[serde(default)]
         pub fsChannelDiskCacheImports: ::std::primitive::i64,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct MountAccesses {
         #[serde(default)]
         pub accessCountsByPid: ::std::collections::BTreeMap<crate::types::pid_t, crate::types::AccessCounts>,
         #[serde(default)]
         pub fetchCountsByPid: ::std::collections::BTreeMap<crate::types::pid_t, ::std::primitive::i64>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct GetAccessCountsResult {
         #[serde(default)]
         pub cmdsByPid: ::std::collections::BTreeMap<crate::types::pid_t, ::std::vec::Vec<::std::primitive::u8>>,
         #[serde(default)]
         pub accessesByMount: ::std::collections::BTreeMap<crate::types::PathString, crate::types::MountAccesses>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct TracePoint {
         #[serde(default)]
         pub timestamp: ::std::primitive::i64,
@@ -599,9 +886,16 @@ pub mod types {
         pub name: ::std::string::String,
         #[serde(default)]
         pub event: crate::types::TracePointEvent,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct FaultDefinition {
         #[serde(default)]
         pub keyClass: ::std::string::String,
@@ -615,33 +909,61 @@ pub mod types {
         pub delayMilliseconds: ::std::primitive::i64,
         pub errorType: ::std::option::Option<::std::string::String>,
         pub errorMessage: ::std::option::Option<::std::string::String>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct RemoveFaultArg {
         #[serde(default)]
         pub keyClass: ::std::string::String,
         #[serde(default)]
         pub keyValueRegex: ::std::string::String,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct UnblockFaultArg {
         pub keyClass: ::std::option::Option<::std::string::String>,
         pub keyValueRegex: ::std::option::Option<::std::string::String>,
         pub errorType: ::std::option::Option<::std::string::String>,
         pub errorMessage: ::std::option::Option<::std::string::String>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct GetScmStatusResult {
         #[serde(default)]
         pub status: crate::types::ScmStatus,
         #[serde(default)]
         pub version: ::std::string::String,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct GetScmStatusParams {
         #[serde(default)]
         #[doc = "The Eden checkout to query"]
@@ -652,9 +974,16 @@ pub mod types {
         #[serde(default)]
         #[doc = "Whether ignored files should be reported in the results.\n\nSome special source-control related files (e.g., inside the .hg or .git\ndirectory) will never be reported even when listIgnored is true."]
         pub listIgnored: ::std::primitive::bool,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct SetPathObjectIdParams {
         #[serde(default)]
         pub mountPoint: crate::types::PathString,
@@ -667,24 +996,52 @@ pub mod types {
         pub r#type: crate::types::ObjectType,
         #[serde(default)]
         pub mode: crate::types::CheckoutMode,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct SetPathObjectIdResult {
         #[serde(default)]
         pub conflicts: ::std::vec::Vec<crate::types::CheckoutConflict>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct CheckOutRevisionParams {
         #[doc = "The hg root manifest that corresponds to the commit (if known).\n\nWhen a commit is newly created, EdenFS won't know the commit\nto root-manifest mapping for the commit, and won't be able to find\nout from the import helper until the import helper re-opens the\nrepo.  To speed this up, Mercurial clients may optionally provide\nthe hash of the root manifest directly, so that EdenFS doesn't\nneed to look it up."]
         pub hgRootManifest: ::std::option::Option<crate::types::BinaryHash>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct ResetParentCommitsParams {
         #[doc = "The hg root manifest that corresponds to the commit (if known).\n\nWhen a commit is newly created, EdenFS won't know the commit\nto root-manifest mapping for the commit, and won't be able to find\nout from the import helper until the import helper re-opens the\nrepo.  To speed this up, Mercurial clients may optionally provide\nthe hash of the root manifest directly, so that EdenFS doesn't\nneed to look it up."]
         pub hgRootManifest: ::std::option::Option<crate::types::BinaryHash>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
     #[doc = "A customizable type to be returned with an EdenError, helpful for catching\nand having custom client logic to handle specfic error cases"]
@@ -1810,7 +2167,19 @@ pub mod types {
                 message: ::std::default::Default::default(),
                 errorCode: ::std::option::Option::None,
                 errorType: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::EdenError {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("EdenError")
+                .field("message", &self.message)
+                .field("errorCode", &self.errorCode)
+                .field("errorType", &self.errorType)
+                .finish()
         }
     }
 
@@ -1873,6 +2242,7 @@ pub mod types {
                 message: field_message.unwrap_or_default(),
                 errorCode: field_errorCode,
                 errorType: field_errorType.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -1882,7 +2252,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 key: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::NoValueForKeyError {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("NoValueForKeyError")
+                .field("key", &self.key)
+                .finish()
         }
     }
 
@@ -1929,6 +2309,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 key: field_key.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -1941,7 +2322,20 @@ pub mod types {
                 commandLine: ::std::default::Default::default(),
                 status: ::std::option::Option::None,
                 uptime: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::DaemonInfo {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("DaemonInfo")
+                .field("pid", &self.pid)
+                .field("commandLine", &self.commandLine)
+                .field("status", &self.status)
+                .field("uptime", &self.uptime)
+                .finish()
         }
     }
 
@@ -2013,6 +2407,7 @@ pub mod types {
                 commandLine: field_commandLine.unwrap_or_default(),
                 status: field_status,
                 uptime: field_uptime,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2022,7 +2417,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 connected: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::PrivHelperInfo {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("PrivHelperInfo")
+                .field("connected", &self.connected)
+                .finish()
         }
     }
 
@@ -2069,6 +2474,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 connected: field_connected.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2081,7 +2487,20 @@ pub mod types {
                 edenClientPath: ::std::default::Default::default(),
                 state: ::std::default::Default::default(),
                 backingRepoPath: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::MountInfo {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("MountInfo")
+                .field("mountPoint", &self.mountPoint)
+                .field("edenClientPath", &self.edenClientPath)
+                .field("state", &self.state)
+                .field("backingRepoPath", &self.backingRepoPath)
+                .finish()
         }
     }
 
@@ -2151,6 +2570,7 @@ pub mod types {
                 edenClientPath: field_edenClientPath.unwrap_or_default(),
                 state: field_state.unwrap_or_default(),
                 backingRepoPath: field_backingRepoPath,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2162,7 +2582,19 @@ pub mod types {
                 mountPoint: ::std::default::Default::default(),
                 edenClientPath: ::std::default::Default::default(),
                 readOnly: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::MountArgument {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("MountArgument")
+                .field("mountPoint", &self.mountPoint)
+                .field("edenClientPath", &self.edenClientPath)
+                .field("readOnly", &self.readOnly)
+                .finish()
         }
     }
 
@@ -2223,6 +2655,7 @@ pub mod types {
                 mountPoint: field_mountPoint.unwrap_or_default(),
                 edenClientPath: field_edenClientPath.unwrap_or_default(),
                 readOnly: field_readOnly.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2310,7 +2743,18 @@ pub mod types {
             Self {
                 seconds: ::std::default::Default::default(),
                 nanoSeconds: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::TimeSpec {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("TimeSpec")
+                .field("seconds", &self.seconds)
+                .field("nanoSeconds", &self.nanoSeconds)
+                .finish()
         }
     }
 
@@ -2364,6 +2808,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 seconds: field_seconds.unwrap_or_default(),
                 nanoSeconds: field_nanoSeconds.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2373,7 +2818,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 dtype: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::EntryInformation {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("EntryInformation")
+                .field("dtype", &self.dtype)
+                .finish()
         }
     }
 
@@ -2420,6 +2875,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 dtype: field_dtype.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2508,7 +2964,19 @@ pub mod types {
                 size: ::std::default::Default::default(),
                 mtime: ::std::default::Default::default(),
                 mode: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::FileInformation {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("FileInformation")
+                .field("size", &self.size)
+                .field("mtime", &self.mtime)
+                .field("mode", &self.mode)
+                .finish()
         }
     }
 
@@ -2569,6 +3037,7 @@ pub mod types {
                 size: field_size.unwrap_or_default(),
                 mtime: field_mtime.unwrap_or_default(),
                 mode: field_mode.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2657,7 +3126,19 @@ pub mod types {
                 mountGeneration: ::std::default::Default::default(),
                 sequenceNumber: ::std::default::Default::default(),
                 snapshotHash: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::JournalPosition {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("JournalPosition")
+                .field("mountGeneration", &self.mountGeneration)
+                .field("sequenceNumber", &self.sequenceNumber)
+                .field("snapshotHash", &self.snapshotHash)
+                .finish()
         }
     }
 
@@ -2718,6 +3199,7 @@ pub mod types {
                 mountGeneration: field_mountGeneration.unwrap_or_default(),
                 sequenceNumber: field_sequenceNumber.unwrap_or_default(),
                 snapshotHash: field_snapshotHash.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2733,7 +3215,23 @@ pub mod types {
                 removedPaths: ::std::default::Default::default(),
                 uncleanPaths: ::std::default::Default::default(),
                 snapshotTransitions: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::FileDelta {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("FileDelta")
+                .field("fromPosition", &self.fromPosition)
+                .field("toPosition", &self.toPosition)
+                .field("changedPaths", &self.changedPaths)
+                .field("createdPaths", &self.createdPaths)
+                .field("removedPaths", &self.removedPaths)
+                .field("uncleanPaths", &self.uncleanPaths)
+                .field("snapshotTransitions", &self.snapshotTransitions)
+                .finish()
         }
     }
 
@@ -2822,6 +3320,7 @@ pub mod types {
                 removedPaths: field_removedPaths.unwrap_or_default(),
                 uncleanPaths: field_uncleanPaths.unwrap_or_default(),
                 snapshotTransitions: field_snapshotTransitions.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2833,7 +3332,19 @@ pub mod types {
                 mountPoint: ::std::default::Default::default(),
                 limit: ::std::option::Option::None,
                 fromSequenceNumber: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::DebugGetRawJournalParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("DebugGetRawJournalParams")
+                .field("mountPoint", &self.mountPoint)
+                .field("limit", &self.limit)
+                .field("fromSequenceNumber", &self.fromSequenceNumber)
+                .finish()
         }
     }
 
@@ -2896,6 +3407,7 @@ pub mod types {
                 mountPoint: field_mountPoint.unwrap_or_default(),
                 limit: field_limit,
                 fromSequenceNumber: field_fromSequenceNumber.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2906,7 +3418,18 @@ pub mod types {
             Self {
                 existedBefore: ::std::default::Default::default(),
                 existedAfter: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::DebugPathChangeInfo {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("DebugPathChangeInfo")
+                .field("existedBefore", &self.existedBefore)
+                .field("existedAfter", &self.existedAfter)
+                .finish()
         }
     }
 
@@ -2960,6 +3483,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 existedBefore: field_existedBefore.unwrap_or_default(),
                 existedAfter: field_existedAfter.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -2972,7 +3496,20 @@ pub mod types {
                 toPosition: ::std::default::Default::default(),
                 changedPaths: ::std::default::Default::default(),
                 uncleanPaths: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::DebugJournalDelta {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("DebugJournalDelta")
+                .field("fromPosition", &self.fromPosition)
+                .field("toPosition", &self.toPosition)
+                .field("changedPaths", &self.changedPaths)
+                .field("uncleanPaths", &self.uncleanPaths)
+                .finish()
         }
     }
 
@@ -3040,6 +3577,7 @@ pub mod types {
                 toPosition: field_toPosition.unwrap_or_default(),
                 changedPaths: field_changedPaths.unwrap_or_default(),
                 uncleanPaths: field_uncleanPaths.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3049,7 +3587,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 allDeltas: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::DebugGetRawJournalResponse {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("DebugGetRawJournalResponse")
+                .field("allDeltas", &self.allDeltas)
+                .finish()
         }
     }
 
@@ -3096,6 +3644,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 allDeltas: field_allDeltas.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3106,7 +3655,18 @@ pub mod types {
             Self {
                 entries: ::std::default::Default::default(),
                 errors: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::ScmStatus {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("ScmStatus")
+                .field("entries", &self.entries)
+                .field("errors", &self.errors)
+                .finish()
         }
     }
 
@@ -3160,6 +3720,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 entries: field_entries.unwrap_or_default(),
                 errors: field_errors.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3171,7 +3732,19 @@ pub mod types {
                 path: ::std::default::Default::default(),
                 r#type: ::std::default::Default::default(),
                 message: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::CheckoutConflict {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("CheckoutConflict")
+                .field("path", &self.path)
+                .field("r#type", &self.r#type)
+                .field("message", &self.message)
+                .finish()
         }
     }
 
@@ -3232,6 +3805,7 @@ pub mod types {
                 path: field_path.unwrap_or_default(),
                 r#type: field_type.unwrap_or_default(),
                 message: field_message.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3242,7 +3816,18 @@ pub mod types {
             Self {
                 size: ::std::default::Default::default(),
                 contentsSha1: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::ScmBlobMetadata {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("ScmBlobMetadata")
+                .field("size", &self.size)
+                .field("contentsSha1", &self.contentsSha1)
+                .finish()
         }
     }
 
@@ -3296,6 +3881,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 size: field_size.unwrap_or_default(),
                 contentsSha1: field_contentsSha1.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3307,7 +3893,19 @@ pub mod types {
                 name: ::std::default::Default::default(),
                 mode: ::std::default::Default::default(),
                 id: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::ScmTreeEntry {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("ScmTreeEntry")
+                .field("name", &self.name)
+                .field("mode", &self.mode)
+                .field("id", &self.id)
+                .finish()
         }
     }
 
@@ -3368,6 +3966,7 @@ pub mod types {
                 name: field_name.unwrap_or_default(),
                 mode: field_mode.unwrap_or_default(),
                 id: field_id.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3383,7 +3982,23 @@ pub mod types {
                 materialized: ::std::default::Default::default(),
                 hash: ::std::default::Default::default(),
                 fileSize: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::TreeInodeEntryDebugInfo {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("TreeInodeEntryDebugInfo")
+                .field("name", &self.name)
+                .field("inodeNumber", &self.inodeNumber)
+                .field("mode", &self.mode)
+                .field("loaded", &self.loaded)
+                .field("materialized", &self.materialized)
+                .field("hash", &self.hash)
+                .field("fileSize", &self.fileSize)
+                .finish()
         }
     }
 
@@ -3474,6 +4089,7 @@ pub mod types {
                 materialized: field_materialized.unwrap_or_default(),
                 hash: field_hash.unwrap_or_default(),
                 fileSize: field_fileSize,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3483,7 +4099,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 fetchedFilePaths: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::GetFetchedFilesResult {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("GetFetchedFilesResult")
+                .field("fetchedFilePaths", &self.fetchedFilePaths)
+                .finish()
         }
     }
 
@@ -3530,6 +4156,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 fetchedFilePaths: field_fetchedFilePaths.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3540,7 +4167,18 @@ pub mod types {
             Self {
                 parent1: ::std::default::Default::default(),
                 parent2: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::WorkingDirectoryParents {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("WorkingDirectoryParents")
+                .field("parent1", &self.parent1)
+                .field("parent2", &self.parent2)
+                .finish()
         }
     }
 
@@ -3596,6 +4234,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 parent1: field_parent1.unwrap_or_default(),
                 parent2: field_parent2,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3610,7 +4249,22 @@ pub mod types {
                 treeHash: ::std::default::Default::default(),
                 entries: ::std::default::Default::default(),
                 refcount: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::TreeInodeDebugInfo {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("TreeInodeDebugInfo")
+                .field("inodeNumber", &self.inodeNumber)
+                .field("path", &self.path)
+                .field("materialized", &self.materialized)
+                .field("treeHash", &self.treeHash)
+                .field("entries", &self.entries)
+                .field("refcount", &self.refcount)
+                .finish()
         }
     }
 
@@ -3692,6 +4346,7 @@ pub mod types {
                 treeHash: field_treeHash.unwrap_or_default(),
                 entries: field_entries.unwrap_or_default(),
                 refcount: field_refcount.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3703,7 +4358,19 @@ pub mod types {
                 path: ::std::default::Default::default(),
                 loaded: ::std::default::Default::default(),
                 linked: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::InodePathDebugInfo {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("InodePathDebugInfo")
+                .field("path", &self.path)
+                .field("loaded", &self.loaded)
+                .field("linked", &self.linked)
+                .finish()
         }
     }
 
@@ -3764,6 +4431,7 @@ pub mod types {
                 path: field_path.unwrap_or_default(),
                 loaded: field_loaded.unwrap_or_default(),
                 linked: field_linked.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3774,7 +4442,18 @@ pub mod types {
             Self {
                 unique: ::std::default::Default::default(),
                 path: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::ActivityRecorderResult {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("ActivityRecorderResult")
+                .field("unique", &self.unique)
+                .field("path", &self.path)
+                .finish()
         }
     }
 
@@ -3830,6 +4509,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 unique: field_unique.unwrap_or_default(),
                 path: field_path,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3839,7 +4519,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 recordings: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::ListActivityRecordingsResult {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("ListActivityRecordingsResult")
+                .field("recordings", &self.recordings)
+                .finish()
         }
     }
 
@@ -3886,6 +4576,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 recordings: field_recordings.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3895,7 +4586,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 categoryCreated: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::SetLogLevelResult {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("SetLogLevelResult")
+                .field("categoryCreated", &self.categoryCreated)
+                .finish()
         }
     }
 
@@ -3942,6 +4643,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 categoryCreated: field_categoryCreated.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -3953,7 +4655,19 @@ pub mod types {
                 entryCount: ::std::default::Default::default(),
                 memoryUsage: ::std::default::Default::default(),
                 durationSeconds: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::JournalInfo {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("JournalInfo")
+                .field("entryCount", &self.entryCount)
+                .field("memoryUsage", &self.memoryUsage)
+                .field("durationSeconds", &self.durationSeconds)
+                .finish()
         }
     }
 
@@ -4014,6 +4728,7 @@ pub mod types {
                 entryCount: field_entryCount.unwrap_or_default(),
                 memoryUsage: field_memoryUsage.unwrap_or_default(),
                 durationSeconds: field_durationSeconds.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4025,7 +4740,19 @@ pub mod types {
                 unloadedInodeCount: ::std::default::Default::default(),
                 loadedFileCount: ::std::default::Default::default(),
                 loadedTreeCount: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::MountInodeInfo {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("MountInodeInfo")
+                .field("unloadedInodeCount", &self.unloadedInodeCount)
+                .field("loadedFileCount", &self.loadedFileCount)
+                .field("loadedTreeCount", &self.loadedTreeCount)
+                .finish()
         }
     }
 
@@ -4086,6 +4813,7 @@ pub mod types {
                 unloadedInodeCount: field_unloadedInodeCount.unwrap_or_default(),
                 loadedFileCount: field_loadedFileCount.unwrap_or_default(),
                 loadedTreeCount: field_loadedTreeCount.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4100,7 +4828,22 @@ pub mod types {
                 missCount: ::std::default::Default::default(),
                 evictionCount: ::std::default::Default::default(),
                 dropCount: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::CacheStats {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("CacheStats")
+                .field("entryCount", &self.entryCount)
+                .field("totalSizeInBytes", &self.totalSizeInBytes)
+                .field("hitCount", &self.hitCount)
+                .field("missCount", &self.missCount)
+                .field("evictionCount", &self.evictionCount)
+                .field("dropCount", &self.dropCount)
+                .finish()
         }
     }
 
@@ -4182,6 +4925,7 @@ pub mod types {
                 missCount: field_missCount.unwrap_or_default(),
                 evictionCount: field_evictionCount.unwrap_or_default(),
                 dropCount: field_dropCount.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4199,7 +4943,25 @@ pub mod types {
                 blobCacheStats: ::std::option::Option::None,
                 mountPointJournalInfo: ::std::option::Option::None,
                 treeCacheStats: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::InternalStats {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("InternalStats")
+                .field("periodicUnloadCount", &self.periodicUnloadCount)
+                .field("counters", &self.counters)
+                .field("mountPointInfo", &self.mountPointInfo)
+                .field("smaps", &self.smaps)
+                .field("privateBytes", &self.privateBytes)
+                .field("vmRSSBytes", &self.vmRSSBytes)
+                .field("blobCacheStats", &self.blobCacheStats)
+                .field("mountPointJournalInfo", &self.mountPointJournalInfo)
+                .field("treeCacheStats", &self.treeCacheStats)
+                .finish()
         }
     }
 
@@ -4320,6 +5082,7 @@ pub mod types {
                 blobCacheStats: field_blobCacheStats,
                 mountPointJournalInfo: field_mountPointJournalInfo,
                 treeCacheStats: field_treeCacheStats,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4336,7 +5099,24 @@ pub mod types {
                 pid: ::std::default::Default::default(),
                 opcodeName: ::std::default::Default::default(),
                 processName: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::FuseCall {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("FuseCall")
+                .field("opcode", &self.opcode)
+                .field("unique", &self.unique)
+                .field("nodeid", &self.nodeid)
+                .field("uid", &self.uid)
+                .field("gid", &self.gid)
+                .field("pid", &self.pid)
+                .field("opcodeName", &self.opcodeName)
+                .field("processName", &self.processName)
+                .finish()
         }
     }
 
@@ -4434,6 +5214,7 @@ pub mod types {
                 pid: field_pid.unwrap_or_default(),
                 opcodeName: field_opcodeName.unwrap_or_default(),
                 processName: field_processName,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4445,7 +5226,19 @@ pub mod types {
                 xid: ::std::default::Default::default(),
                 procNumber: ::std::default::Default::default(),
                 procName: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::NfsCall {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("NfsCall")
+                .field("xid", &self.xid)
+                .field("procNumber", &self.procNumber)
+                .field("procName", &self.procName)
+                .finish()
         }
     }
 
@@ -4506,6 +5299,7 @@ pub mod types {
                 xid: field_xid.unwrap_or_default(),
                 procNumber: field_procNumber.unwrap_or_default(),
                 procName: field_procName.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4515,7 +5309,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 reload: eden_config::types::ConfigReloadBehavior::AutoReload,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::GetConfigParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("GetConfigParams")
+                .field("reload", &self.reload)
+                .finish()
         }
     }
 
@@ -4562,6 +5366,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 reload: field_reload.unwrap_or_else(|| eden_config::types::ConfigReloadBehavior::AutoReload),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4571,7 +5376,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 statsMask: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::GetStatInfoParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("GetStatInfoParams")
+                .field("statsMask", &self.statsMask)
+                .finish()
         }
     }
 
@@ -4618,6 +5433,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 statsMask: field_statsMask.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4632,7 +5448,22 @@ pub mod types {
                 os: ::std::option::Option::None,
                 startTime: ::std::option::Option::None,
                 endTime: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::PredictiveFetch {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("PredictiveFetch")
+                .field("numTopDirectories", &self.numTopDirectories)
+                .field("user", &self.user)
+                .field("repo", &self.repo)
+                .field("os", &self.os)
+                .field("startTime", &self.startTime)
+                .field("endTime", &self.endTime)
+                .finish()
         }
     }
 
@@ -4726,6 +5557,7 @@ pub mod types {
                 os: field_os,
                 startTime: field_startTime,
                 endTime: field_endTime,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4746,7 +5578,28 @@ pub mod types {
                 background: false,
                 predictiveGlob: ::std::option::Option::None,
                 listOnlyFiles: false,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::GlobParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("GlobParams")
+                .field("mountPoint", &self.mountPoint)
+                .field("globs", &self.globs)
+                .field("includeDotfiles", &self.includeDotfiles)
+                .field("prefetchFiles", &self.prefetchFiles)
+                .field("suppressFileList", &self.suppressFileList)
+                .field("wantDtype", &self.wantDtype)
+                .field("revisions", &self.revisions)
+                .field("prefetchMetadata", &self.prefetchMetadata)
+                .field("searchRoot", &self.searchRoot)
+                .field("background", &self.background)
+                .field("predictiveGlob", &self.predictiveGlob)
+                .field("listOnlyFiles", &self.listOnlyFiles)
+                .finish()
         }
     }
 
@@ -4872,6 +5725,7 @@ pub mod types {
                 background: field_background.unwrap_or_else(|| false),
                 predictiveGlob: field_predictiveGlob,
                 listOnlyFiles: field_listOnlyFiles.unwrap_or_else(|| false),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4883,7 +5737,19 @@ pub mod types {
                 matchingFiles: ::std::default::Default::default(),
                 dtypes: ::std::default::Default::default(),
                 originHashes: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::Glob {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("Glob")
+                .field("matchingFiles", &self.matchingFiles)
+                .field("dtypes", &self.dtypes)
+                .field("originHashes", &self.originHashes)
+                .finish()
         }
     }
 
@@ -4944,6 +5810,7 @@ pub mod types {
                 matchingFiles: field_matchingFiles.unwrap_or_default(),
                 dtypes: field_dtypes.unwrap_or_default(),
                 originHashes: field_originHashes.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -4959,7 +5826,23 @@ pub mod types {
                 fsChannelDurationNs: ::std::default::Default::default(),
                 fsChannelMemoryCacheImports: ::std::default::Default::default(),
                 fsChannelDiskCacheImports: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::AccessCounts {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("AccessCounts")
+                .field("fsChannelTotal", &self.fsChannelTotal)
+                .field("fsChannelReads", &self.fsChannelReads)
+                .field("fsChannelWrites", &self.fsChannelWrites)
+                .field("fsChannelBackingStoreImports", &self.fsChannelBackingStoreImports)
+                .field("fsChannelDurationNs", &self.fsChannelDurationNs)
+                .field("fsChannelMemoryCacheImports", &self.fsChannelMemoryCacheImports)
+                .field("fsChannelDiskCacheImports", &self.fsChannelDiskCacheImports)
+                .finish()
         }
     }
 
@@ -5048,6 +5931,7 @@ pub mod types {
                 fsChannelDurationNs: field_fsChannelDurationNs.unwrap_or_default(),
                 fsChannelMemoryCacheImports: field_fsChannelMemoryCacheImports.unwrap_or_default(),
                 fsChannelDiskCacheImports: field_fsChannelDiskCacheImports.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5058,7 +5942,18 @@ pub mod types {
             Self {
                 accessCountsByPid: ::std::default::Default::default(),
                 fetchCountsByPid: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::MountAccesses {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("MountAccesses")
+                .field("accessCountsByPid", &self.accessCountsByPid)
+                .field("fetchCountsByPid", &self.fetchCountsByPid)
+                .finish()
         }
     }
 
@@ -5112,6 +6007,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 accessCountsByPid: field_accessCountsByPid.unwrap_or_default(),
                 fetchCountsByPid: field_fetchCountsByPid.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5122,7 +6018,18 @@ pub mod types {
             Self {
                 cmdsByPid: ::std::default::Default::default(),
                 accessesByMount: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::GetAccessCountsResult {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("GetAccessCountsResult")
+                .field("cmdsByPid", &self.cmdsByPid)
+                .field("accessesByMount", &self.accessesByMount)
+                .finish()
         }
     }
 
@@ -5176,6 +6083,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 cmdsByPid: field_cmdsByPid.unwrap_or_default(),
                 accessesByMount: field_accessesByMount.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5190,7 +6098,22 @@ pub mod types {
                 parentBlockId: ::std::default::Default::default(),
                 name: ::std::string::String::new(),
                 event: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::TracePoint {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("TracePoint")
+                .field("timestamp", &self.timestamp)
+                .field("traceId", &self.traceId)
+                .field("blockId", &self.blockId)
+                .field("parentBlockId", &self.parentBlockId)
+                .field("name", &self.name)
+                .field("event", &self.event)
+                .finish()
         }
     }
 
@@ -5272,6 +6195,7 @@ pub mod types {
                 parentBlockId: field_parentBlockId.unwrap_or_default(),
                 name: field_name.unwrap_or_else(|| ::std::string::String::new()),
                 event: field_event.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5287,7 +6211,23 @@ pub mod types {
                 delayMilliseconds: ::std::default::Default::default(),
                 errorType: ::std::option::Option::None,
                 errorMessage: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::FaultDefinition {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("FaultDefinition")
+                .field("keyClass", &self.keyClass)
+                .field("keyValueRegex", &self.keyValueRegex)
+                .field("count", &self.count)
+                .field("block", &self.block)
+                .field("delayMilliseconds", &self.delayMilliseconds)
+                .field("errorType", &self.errorType)
+                .field("errorMessage", &self.errorMessage)
+                .finish()
         }
     }
 
@@ -5380,6 +6320,7 @@ pub mod types {
                 delayMilliseconds: field_delayMilliseconds.unwrap_or_default(),
                 errorType: field_errorType,
                 errorMessage: field_errorMessage,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5390,7 +6331,18 @@ pub mod types {
             Self {
                 keyClass: ::std::default::Default::default(),
                 keyValueRegex: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::RemoveFaultArg {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("RemoveFaultArg")
+                .field("keyClass", &self.keyClass)
+                .field("keyValueRegex", &self.keyValueRegex)
+                .finish()
         }
     }
 
@@ -5444,6 +6396,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 keyClass: field_keyClass.unwrap_or_default(),
                 keyValueRegex: field_keyValueRegex.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5456,7 +6409,20 @@ pub mod types {
                 keyValueRegex: ::std::option::Option::None,
                 errorType: ::std::option::Option::None,
                 errorMessage: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::UnblockFaultArg {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("UnblockFaultArg")
+                .field("keyClass", &self.keyClass)
+                .field("keyValueRegex", &self.keyValueRegex)
+                .field("errorType", &self.errorType)
+                .field("errorMessage", &self.errorMessage)
+                .finish()
         }
     }
 
@@ -5532,6 +6498,7 @@ pub mod types {
                 keyValueRegex: field_keyValueRegex,
                 errorType: field_errorType,
                 errorMessage: field_errorMessage,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5542,7 +6509,18 @@ pub mod types {
             Self {
                 status: ::std::default::Default::default(),
                 version: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::GetScmStatusResult {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("GetScmStatusResult")
+                .field("status", &self.status)
+                .field("version", &self.version)
+                .finish()
         }
     }
 
@@ -5596,6 +6574,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 status: field_status.unwrap_or_default(),
                 version: field_version.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5607,7 +6586,19 @@ pub mod types {
                 mountPoint: ::std::default::Default::default(),
                 commit: ::std::default::Default::default(),
                 listIgnored: false,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::GetScmStatusParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("GetScmStatusParams")
+                .field("mountPoint", &self.mountPoint)
+                .field("commit", &self.commit)
+                .field("listIgnored", &self.listIgnored)
+                .finish()
         }
     }
 
@@ -5668,6 +6659,7 @@ pub mod types {
                 mountPoint: field_mountPoint.unwrap_or_default(),
                 commit: field_commit.unwrap_or_default(),
                 listIgnored: field_listIgnored.unwrap_or_else(|| false),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5681,7 +6673,21 @@ pub mod types {
                 objectId: ::std::default::Default::default(),
                 r#type: ::std::default::Default::default(),
                 mode: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::SetPathObjectIdParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("SetPathObjectIdParams")
+                .field("mountPoint", &self.mountPoint)
+                .field("path", &self.path)
+                .field("objectId", &self.objectId)
+                .field("r#type", &self.r#type)
+                .field("mode", &self.mode)
+                .finish()
         }
     }
 
@@ -5756,6 +6762,7 @@ pub mod types {
                 objectId: field_objectId.unwrap_or_default(),
                 r#type: field_type.unwrap_or_default(),
                 mode: field_mode.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5765,7 +6772,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 conflicts: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::SetPathObjectIdResult {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("SetPathObjectIdResult")
+                .field("conflicts", &self.conflicts)
+                .finish()
         }
     }
 
@@ -5812,6 +6829,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 conflicts: field_conflicts.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5821,7 +6839,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 hgRootManifest: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::CheckOutRevisionParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("CheckOutRevisionParams")
+                .field("hgRootManifest", &self.hgRootManifest)
+                .finish()
         }
     }
 
@@ -5870,6 +6898,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 hgRootManifest: field_hgRootManifest,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -5879,7 +6908,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 hgRootManifest: ::std::option::Option::None,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::ResetParentCommitsParams {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("ResetParentCommitsParams")
+                .field("hgRootManifest", &self.hgRootManifest)
+                .finish()
         }
     }
 
@@ -5928,10 +6967,20 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 hgRootManifest: field_hgRootManifest,
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
 
+
+    mod dot_dot {
+        #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub struct OtherFields(pub(crate) ());
+
+        pub(super) fn default_for_serde_deserialize() -> OtherFields {
+            OtherFields(())
+        }
+    }
 }
 
 #[doc(hidden)]

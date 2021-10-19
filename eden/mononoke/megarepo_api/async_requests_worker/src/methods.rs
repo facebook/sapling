@@ -40,7 +40,10 @@ async fn megarepo_sync_changeset(
         .await?
         .as_ref()
         .into();
-    Ok(thrift::MegarepoSyncChangesetResponse { cs_id })
+    Ok(thrift::MegarepoSyncChangesetResponse {
+        cs_id,
+        ..Default::default()
+    })
 }
 
 async fn megarepo_add_sync_target(
@@ -59,7 +62,10 @@ async fn megarepo_add_sync_target(
         .await?
         .as_ref()
         .into();
-    Ok(thrift::MegarepoAddTargetResponse { cs_id })
+    Ok(thrift::MegarepoAddTargetResponse {
+        cs_id,
+        ..Default::default()
+    })
 }
 
 async fn megarepo_add_branching_sync_target(
@@ -77,7 +83,10 @@ async fn megarepo_add_branching_sync_target(
         .await?
         .as_ref()
         .into();
-    Ok(thrift::MegarepoAddBranchingTargetResponse { cs_id })
+    Ok(thrift::MegarepoAddBranchingTargetResponse {
+        cs_id,
+        ..Default::default()
+    })
 }
 
 async fn megarepo_change_target_config(
@@ -104,7 +113,10 @@ async fn megarepo_change_target_config(
         .await?
         .as_ref()
         .into();
-    Ok(thrift::MegarepoChangeTargetConfigResponse { cs_id })
+    Ok(thrift::MegarepoChangeTargetConfigResponse {
+        cs_id,
+        ..Default::default()
+    })
 }
 
 /// Given the request params dispatches the request to the right processing

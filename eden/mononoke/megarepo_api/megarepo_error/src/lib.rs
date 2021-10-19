@@ -122,6 +122,7 @@ impl From<MegarepoError> for scs_thrift::MegarepoAsynchronousRequestError {
             MegarepoError::RequestError(e) => Self::request_error(scs_thrift::RequestErrorStruct {
                 kind: scs_thrift::RequestErrorKind::INVALID_REQUEST,
                 reason: format!("{}", e),
+                ..Default::default()
             }),
             MegarepoError::InternalError(error) => {
                 let reason = error.to_string();
@@ -142,6 +143,7 @@ impl From<MegarepoError> for scs_thrift::MegarepoAsynchronousRequestError {
                     reason,
                     backtrace,
                     source_chain,
+                    ..Default::default()
                 })
             }
         }

@@ -52,6 +52,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
         target: id,
         service_identity,
         pushvars,
+        ..Default::default()
     };
     connection.repo_create_bookmark(&repo, &params).await?;
     Ok(stream::empty().boxed())

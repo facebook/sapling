@@ -157,7 +157,11 @@ pub(super) async fn run(
     let ids = resolve_commit_ids(&connection, &repo, &commit_ids).await?;
     let id = ids[0].clone();
     let descendants_of = ids.get(1).cloned();
-    let commit = thrift::CommitSpecifier { repo, id };
+    let commit = thrift::CommitSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    };
     let path = get_path(matches);
 
     let limit = matches
@@ -175,7 +179,11 @@ pub(super) async fn run(
 
     let response = match path {
         Some(path) => {
-            let commit_and_path = thrift::CommitPathSpecifier { commit, path };
+            let commit_and_path = thrift::CommitPathSpecifier {
+                commit,
+                path,
+                ..Default::default()
+            };
             let params = thrift::CommitPathHistoryParams {
                 format: thrift::HistoryFormat::COMMIT_INFO,
                 limit,
@@ -186,6 +194,7 @@ pub(super) async fn run(
                 follow_history_across_deletions,
                 descendants_of,
                 exclude_changeset_and_ancestors: None,
+                ..Default::default()
             };
             connection
                 .commit_path_history(&commit_and_path, &params)
@@ -202,6 +211,7 @@ pub(super) async fn run(
                 identity_schemes: get_request_schemes(matches),
                 descendants_of,
                 exclude_changeset_and_ancestors: None,
+                ..Default::default()
             };
             connection.commit_history(&commit, &params).await?.history
         }

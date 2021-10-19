@@ -49,7 +49,9 @@ pub(super) async fn run(
     _matches: &ArgMatches<'_>,
     connection: Connection,
 ) -> Result<RenderStream, Error> {
-    let params = thrift::ListReposParams {};
+    let params = thrift::ListReposParams {
+        ..Default::default()
+    };
     let repos = connection.list_repos(&params).await?;
     let output = Box::new(ReposOutput {
         repos: repos.into_iter().map(|repo| repo.name).collect(),

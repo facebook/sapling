@@ -154,6 +154,7 @@ impl FileUnode {
             file_type: self.file_type.into_thrift(),
             path_hash: self.path_hash.into_thrift(),
             linknode: self.linknode.into_thrift(),
+            ..Default::default()
         }
     }
 
@@ -268,6 +269,7 @@ impl ManifestUnode {
             parents,
             subentries,
             linknode: self.linknode.into_thrift(),
+            ..Default::default()
         }
     }
 

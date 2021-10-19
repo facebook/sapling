@@ -87,7 +87,10 @@ impl BonsaiChangesetMut {
                 .into_iter()
                 .map(|(f, c)| (f.into_thrift(), c.into_thrift()))
                 .collect(),
-            snapshot_state: self.is_snapshot.then(|| thrift::SnapshotState {}),
+            snapshot_state: self.is_snapshot.then(|| thrift::SnapshotState {
+                ..Default::default()
+            }),
+            ..Default::default()
         }
     }
 

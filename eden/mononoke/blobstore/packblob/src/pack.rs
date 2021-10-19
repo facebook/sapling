@@ -60,6 +60,7 @@ impl SingleCompressed {
         // Wrap in thrift encoding
         PackEnvelope(StorageEnvelope {
             storage: StorageFormat::Single(self.value),
+            ..Default::default()
         })
         .into()
     }
@@ -95,7 +96,11 @@ impl EmptyPack {
 
         let mut dictionaries = HashMap::new();
         dictionaries.insert(key.clone(), dictionary);
-        let entries = vec![PackedEntry { key, data }];
+        let entries = vec![PackedEntry {
+            key,
+            data,
+            ..Default::default()
+        }];
         Ok(Pack {
             zstd_level,
             dictionaries,
@@ -133,9 +138,17 @@ impl Pack {
         // at the expense of requiring the decompressor to find blob before it can
         // decompress the resulting blob
         let dictionary = EncoderDictionary::copy(blob.as_bytes(), self.zstd_level);
-        let data = PackedValue::ZstdFromDict(ZstdFromDictValue { dict_key, zstd });
+        let data = PackedValue::ZstdFromDict(ZstdFromDictValue {
+            dict_key,
+            zstd,
+            ..Default::default()
+        });
         self.dictionaries.insert(key.clone(), dictionary);
-        self.entries.push(PackedEntry { key, data });
+        self.entries.push(PackedEntry {
+            key,
+            data,
+            ..Default::default()
+        });
         Ok(())
     }
 
@@ -184,6 +197,7 @@ impl Pack {
         let pack = PackedFormat {
             key: pack_key.clone(),
             entries: self.entries,
+            ..Default::default()
         };
 
         // Wrap in thrift encoding and return as bytes
@@ -192,6 +206,7 @@ impl Pack {
             link_keys,
             PackEnvelope(StorageEnvelope {
                 storage: StorageFormat::Packed(pack),
+                ..Default::default()
             })
             .into(),
         ))
@@ -263,6 +278,7 @@ pub(crate) fn decode_pack(
     let PackedFormat {
         key: pack_key,
         entries: pack_entries,
+        ..
     } = packed;
 
     let mut entry_map = HashMap::new();
@@ -428,6 +444,7 @@ mod tests {
             ZstdFromDictValue {
                 dict_key: base_key,
                 zstd: diff,
+                ..Default::default()
             },
             &dicts,
         )?;

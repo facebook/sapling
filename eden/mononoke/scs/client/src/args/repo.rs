@@ -30,5 +30,6 @@ pub(crate) fn get_repo_specifier(matches: &ArgMatches) -> Option<thrift::RepoSpe
         .value_of(ARG_REPO)
         .map(|name| thrift::RepoSpecifier {
             name: name.to_string(),
+            ..Default::default()
         })
 }

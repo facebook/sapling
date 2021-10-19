@@ -108,10 +108,15 @@ async fn export_tree(
     destination: PathBuf,
 ) -> Result<Vec<ExportItem>, Error> {
     tokio::fs::create_dir(&destination).await?;
-    let tree = thrift::TreeSpecifier::by_id(thrift::TreeIdSpecifier { repo, id });
+    let tree = thrift::TreeSpecifier::by_id(thrift::TreeIdSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    });
     let params = thrift::TreeListParams {
         offset: 0,
         limit: TREE_CHUNK_SIZE,
+        ..Default::default()
     };
     let response = connection.tree_list(&tree, &params).await?;
     let count = response.count;
@@ -129,6 +134,7 @@ async fn export_tree(
                             let params = thrift::TreeListParams {
                                 offset,
                                 limit: TREE_CHUNK_SIZE,
+                                ..Default::default()
                             };
                             let response = connection.tree_list(&tree, &params).await?;
                             Ok::<_, Error>(export_tree_chunk(path, destination, response))
@@ -152,13 +158,18 @@ async fn export_file(
     type_: thrift::EntryType,
     bytes_written: &Arc<AtomicU64>,
 ) -> Result<(), Error> {
-    let file = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier { repo, id });
+    let file = thrift::FileSpecifier::by_id(thrift::FileIdSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    });
     let mut responses = stream::iter((0..size).step_by(FILE_CHUNK_SIZE as usize))
         .map({
             move |offset| {
                 let params = thrift::FileContentChunkParams {
                     offset: offset as i64,
                     size: FILE_CHUNK_SIZE,
+                    ..Default::default()
                 };
                 connection.file_content_chunk(&file, &params)
             }
@@ -296,14 +307,18 @@ pub(super) async fn run(
     let commit = thrift::CommitSpecifier {
         repo: repo.clone(),
         id,
+        ..Default::default()
     };
     let path = get_path(matches).expect("path is required");
     let commit_path = thrift::CommitPathSpecifier {
         commit,
         path: path.clone(),
+        ..Default::default()
     };
 
-    let params = thrift::CommitPathInfoParams {};
+    let params = thrift::CommitPathInfoParams {
+        ..Default::default()
+    };
     let response = connection.commit_path_info(&commit_path, &params).await?;
 
     if !response.exists {

@@ -61,6 +61,7 @@ impl SourceControlServiceImpl {
                     offset: params.offset,
                     file_size: metadata.total_size as i64,
                     data: Vec::from(data.as_ref()),
+                    ..Default::default()
                 })
             }
             (_repo, None) => Err(errors::file_not_found(file.description()).into()),
@@ -92,6 +93,9 @@ impl SourceControlServiceImpl {
             .await?
             .into_response();
 
-        Ok(thrift::FileDiffResponse { diff })
+        Ok(thrift::FileDiffResponse {
+            diff,
+            ..Default::default()
+        })
     }
 }

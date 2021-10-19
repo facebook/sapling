@@ -248,6 +248,7 @@ impl Blame {
         let thrift::Blame {
             ranges: ranges_t,
             paths: paths_t,
+            ..
         } = blame_t;
         let paths = paths_t
             .into_iter()
@@ -263,6 +264,7 @@ impl Blame {
                         csid: csid_t,
                         path: path_index,
                         origin_offset,
+                        ..
                     } = range_t;
                     let csid = ChangesetId::from_thrift(csid_t)?;
                     let path = paths
@@ -310,10 +312,15 @@ impl Blame {
                     csid: csid.into_thrift(),
                     path: thrift::BlamePath(index),
                     origin_offset: origin_offset as i32,
+                    ..Default::default()
                 }
             })
             .collect();
-        thrift::Blame { ranges, paths }
+        thrift::Blame {
+            ranges,
+            paths,
+            ..Default::default()
+        }
     }
 
     pub fn ranges(&self) -> &Vec<BlameRange> {

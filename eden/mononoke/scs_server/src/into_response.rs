@@ -75,6 +75,7 @@ impl IntoResponse<thrift::TreeEntry> for (String, TreeEntry) {
                     child_dirs_count: summary.child_dirs_count as i64,
                     descendant_files_count: summary.descendant_files_count as i64,
                     descendant_files_total_size: summary.descendant_files_total_size as i64,
+                    ..Default::default()
                 };
                 (thrift::EntryType::TREE, thrift::EntryInfo::tree(info))
             }
@@ -84,6 +85,7 @@ impl IntoResponse<thrift::TreeEntry> for (String, TreeEntry) {
                     file_size: file.size() as i64,
                     content_sha1: file.content_sha1().as_ref().to_vec(),
                     content_sha256: file.content_sha256().as_ref().to_vec(),
+                    ..Default::default()
                 };
                 (
                     file.file_type().into_response(),
@@ -91,7 +93,12 @@ impl IntoResponse<thrift::TreeEntry> for (String, TreeEntry) {
                 )
             }
         };
-        thrift::TreeEntry { name, r#type, info }
+        thrift::TreeEntry {
+            name,
+            r#type,
+            info,
+            ..Default::default()
+        }
     }
 }
 
@@ -102,6 +109,7 @@ impl IntoResponse<thrift::FileInfo> for FileMetadata {
             file_size: self.total_size as i64,
             content_sha1: self.sha1.as_ref().to_vec(),
             content_sha256: self.sha256.as_ref().to_vec(),
+            ..Default::default()
         }
     }
 }
@@ -118,6 +126,7 @@ impl IntoResponse<thrift::TreeInfo> for (TreeId, TreeSummary) {
             child_dirs_count: summary.child_dirs_count as i64,
             descendant_files_count: summary.descendant_files_count as i64,
             descendant_files_total_size: summary.descendant_files_total_size as i64,
+            ..Default::default()
         }
     }
 }
@@ -127,6 +136,7 @@ impl IntoResponse<thrift::Diff> for UnifiedDiff {
         thrift::Diff::raw_diff(thrift::RawDiff {
             raw_diff: Some(self.raw_diff),
             is_binary: self.is_binary,
+            ..Default::default()
         })
     }
 }
@@ -136,6 +146,7 @@ impl IntoResponse<thrift::Diff> for HeaderlessUnifiedDiff {
         thrift::Diff::raw_diff(thrift::RawDiff {
             raw_diff: Some(self.raw_diff),
             is_binary: self.is_binary,
+            ..Default::default()
         })
     }
 }
@@ -158,6 +169,7 @@ impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContentCon
                 path: self.path().to_string(),
                 r#type: type_.into_response(),
                 info: meta.into_response(),
+                ..Default::default()
             }))
         } else {
             Ok(None)
@@ -177,6 +189,7 @@ impl AsyncIntoResponse<Option<thrift::TreePathInfo>> for ChangesetPathContentCon
             Ok(Some(thrift::TreePathInfo {
                 path: self.path().to_string(),
                 info: summary.into_response(),
+                ..Default::default()
             }))
         } else {
             Ok(None)
@@ -231,6 +244,7 @@ impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
             parents,
             extra: extra.into_iter().collect(),
             generation: generation.value() as i64,
+            ..Default::default()
         })
     }
 }
@@ -335,13 +349,18 @@ impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
             .map(|rebase| {
                 let old_ids = try_get(&old_id_map, rebase.id_old);
                 let new_ids = try_get(&new_id_map, rebase.id_new);
-                thrift::PushrebaseRebasedCommit { old_ids, new_ids }
+                thrift::PushrebaseRebasedCommit {
+                    old_ids,
+                    new_ids,
+                    ..Default::default()
+                }
             })
             .collect();
 
         Ok(thrift::PushrebaseOutcome {
             head,
             rebased_commits,
+            ..Default::default()
         })
     }
 }

@@ -127,8 +127,10 @@ impl FilenodeInfo {
             copyfrom: self.copyfrom.map(|copyfrom| thrift::FilenodeCopyFrom {
                 path: copyfrom.0.into_thrift(),
                 filenode: copyfrom.1.into_nodehash().into_thrift(),
+                ..Default::default()
             }),
             linknode: self.linknode.into_nodehash().into_thrift(),
+            ..Default::default()
         }
     }
 }

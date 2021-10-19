@@ -64,6 +64,7 @@ pub fn load_repo_configs(
         repos,
         storage,
         repo_definitions,
+        ..
     } = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
     let repo_definitions = repo_definitions.repo_definitions;
     let repo_configs = repos;
@@ -146,6 +147,7 @@ fn parse_with_repo_definition(
         readonly,
         needs_backup: _,
         external_repo_id: _,
+        ..
     } = repo_definition;
 
     let named_repo_config_name = repo_config

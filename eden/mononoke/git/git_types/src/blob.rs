@@ -65,6 +65,7 @@ impl Into<thrift::BlobHandle> for BlobHandle {
                 .try_into()
                 .expect("Blob size must fit in a i64 for Thrift serialization"),
             file_type: self.file_type.into_thrift(),
+            ..Default::default()
         }
     }
 }

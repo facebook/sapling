@@ -110,6 +110,7 @@ impl Fsnode {
         thrift::Fsnode {
             subentries,
             summary,
+            ..Default::default()
         }
     }
 
@@ -228,6 +229,7 @@ impl FsnodeFile {
             size: self.size as i64,
             content_sha1: self.content_sha1.into_thrift(),
             content_sha256: self.content_sha256.into_thrift(),
+            ..Default::default()
         }
     }
 }
@@ -261,6 +263,7 @@ impl FsnodeDirectory {
         thrift::FsnodeDirectory {
             id: self.id.into_thrift(),
             summary: self.summary.into_thrift(),
+            ..Default::default()
         }
     }
 }
@@ -305,6 +308,7 @@ impl FsnodeSummary {
             child_dirs_count: self.child_dirs_count as i64,
             descendant_files_count: self.descendant_files_count as i64,
             descendant_files_total_size: self.descendant_files_total_size as i64,
+            ..Default::default()
         }
     }
 }

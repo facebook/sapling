@@ -208,6 +208,7 @@ impl ChangesetInfo {
             committer_date: self.committer_date.map(|dt| dt.into_thrift()),
             message: self.message.into_thrift(),
             extra: self.extra,
+            ..Default::default()
         }
     }
 

@@ -140,6 +140,7 @@ fn repo_list_bookmarks(
                     limit,
                     after,
                     identity_schemes: identity_schemes.clone(),
+                    ..Default::default()
                 };
                 let response = connection.repo_list_bookmarks(&repo, &params).await?;
                 let bookmarks = response
@@ -186,6 +187,7 @@ fn commit_list_descendant_bookmarks(
                     limit: source_control::consts::COMMIT_LIST_DESCENDANT_BOOKMARKS_MAX_LIMIT,
                     after,
                     identity_schemes: identity_schemes.clone(),
+                    ..Default::default()
                 };
                 let response = connection
                     .commit_list_descendant_bookmarks(&commit, &params)
@@ -226,7 +228,11 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
     let bookmarks = match get_commit_ids(matches)?.first() {
         Some(commit_id) => {
             let id = resolve_commit_id(&connection, &repo, &commit_id).await?;
-            let commit = thrift::CommitSpecifier { repo, id };
+            let commit = thrift::CommitSpecifier {
+                repo,
+                id,
+                ..Default::default()
+            };
             commit_list_descendant_bookmarks(
                 &connection,
                 commit,

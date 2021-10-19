@@ -340,6 +340,7 @@ async fn try_resolve_bookmark(
         identity_schemes: Some(thrift::CommitIdentityScheme::BONSAI)
             .into_iter()
             .collect(),
+        ..Default::default()
     };
     let response = conn.repo_resolve_bookmark(&repo, &params).await?;
     Ok(response
@@ -367,6 +368,7 @@ async fn try_resolve_hg_commit_id(
                     .collect(),
                 prefix_scheme: thrift::CommitIdentityScheme::HG,
                 prefix: value.as_ref().into(),
+                ..Default::default()
             },
         )
         .await?;
@@ -403,6 +405,7 @@ async fn try_resolve_bonsai_id(
                     .collect(),
                 prefix_scheme: thrift::CommitIdentityScheme::BONSAI,
                 prefix: value.as_ref().into(),
+                ..Default::default()
             },
         )
         .await?;
@@ -433,10 +436,12 @@ async fn try_resolve_git_sha1(
         identity_schemes: Some(thrift::CommitIdentityScheme::BONSAI)
             .into_iter()
             .collect(),
+        ..Default::default()
     };
     let commit = thrift::CommitSpecifier {
         repo: repo.clone(),
         id: thrift::CommitId::git(id.to_vec()),
+        ..Default::default()
     };
     let response = conn.commit_lookup(&commit, &params).await?;
     Ok(response
@@ -456,10 +461,12 @@ async fn try_resolve_globalrev(
                 identity_schemes: Some(thrift::CommitIdentityScheme::BONSAI)
                     .into_iter()
                     .collect(),
+                ..Default::default()
             };
             let commit = thrift::CommitSpecifier {
                 repo: repo.clone(),
                 id: thrift::CommitId::globalrev(globalrev),
+                ..Default::default()
             };
             let response = conn.commit_lookup(&commit, &params).await?;
             Ok(response
@@ -482,10 +489,12 @@ async fn try_resolve_svnrev(
                 identity_schemes: Some(thrift::CommitIdentityScheme::BONSAI)
                     .into_iter()
                     .collect(),
+                ..Default::default()
             };
             let commit = thrift::CommitSpecifier {
                 repo: repo.clone(),
                 id: thrift::CommitId::svnrev(globalrev),
+                ..Default::default()
             };
             let response = conn.commit_lookup(&commit, &params).await?;
             Ok(response

@@ -48,6 +48,7 @@ async fn make_file_diff_request(
         paths,
         format: thrift::DiffFormat::RAW_DIFF,
         context: 3,
+        ..Default::default()
     };
 
     let response = connection.commit_file_diffs(&commit, &params).await?;

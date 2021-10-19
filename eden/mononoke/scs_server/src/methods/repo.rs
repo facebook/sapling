@@ -54,11 +54,13 @@ impl SourceControlServiceImpl {
                 Ok(thrift::RepoResolveBookmarkResponse {
                     exists: true,
                     ids: Some(ids),
+                    ..Default::default()
                 })
             }
             None => Ok(thrift::RepoResolveBookmarkResponse {
                 exists: false,
                 ids: None,
+                ..Default::default()
             }),
         }
     }
@@ -94,6 +96,7 @@ impl SourceControlServiceImpl {
                         params.prefix_scheme => thrift::CommitId::bonsai(cs_id.as_ref().into())
                     }),
                     resolved_type: ResponseType::RESOLVED,
+                    ..Default::default()
                 })
             }
             Single(ChangesetSpecifier::Hg(cs_id)) if same_request_response_schemes => {
@@ -102,6 +105,7 @@ impl SourceControlServiceImpl {
                         params.prefix_scheme => thrift::CommitId::hg(cs_id.as_ref().into())
                     }),
                     resolved_type: ResponseType::RESOLVED,
+                    ..Default::default()
                 })
             }
             Single(cs_id) => match &repo.changeset(cs_id).await? {
@@ -112,6 +116,7 @@ impl SourceControlServiceImpl {
                 Some(cs) => Ok(Response {
                     ids: Some(map_commit_identity(&cs, &params.identity_schemes).await?),
                     resolved_type: ResponseType::RESOLVED,
+                    ..Default::default()
                 }),
             },
             NoMatch => Ok(Response {
@@ -174,6 +179,7 @@ impl SourceControlServiceImpl {
         Ok(thrift::RepoListBookmarksResponse {
             bookmarks,
             continue_after,
+            ..Default::default()
         })
     }
 
@@ -346,7 +352,10 @@ impl SourceControlServiceImpl {
             )
             .await?;
         let ids = map_commit_identity(&changeset, &params.identity_schemes).await?;
-        Ok(thrift::RepoCreateCommitResponse { ids })
+        Ok(thrift::RepoCreateCommitResponse {
+            ids,
+            ..Default::default()
+        })
     }
 
     /// Build stacks for the given list of heads.
@@ -444,6 +453,7 @@ impl SourceControlServiceImpl {
                     draft_commits,
                     public_parents,
                     leftover_heads,
+                    ..Default::default()
                 })
             }
             _ => Err(
@@ -472,7 +482,9 @@ impl SourceControlServiceImpl {
 
         repo.create_bookmark(&params.bookmark, changeset.id(), pushvars.as_ref())
             .await?;
-        Ok(thrift::RepoCreateBookmarkResponse {})
+        Ok(thrift::RepoCreateBookmarkResponse {
+            ..Default::default()
+        })
     }
 
     pub(crate) async fn repo_move_bookmark(
@@ -511,7 +523,9 @@ impl SourceControlServiceImpl {
             pushvars.as_ref(),
         )
         .await?;
-        Ok(thrift::RepoMoveBookmarkResponse {})
+        Ok(thrift::RepoMoveBookmarkResponse {
+            ..Default::default()
+        })
     }
 
     pub(crate) async fn repo_delete_bookmark(
@@ -538,7 +552,9 @@ impl SourceControlServiceImpl {
 
         repo.delete_bookmark(&params.bookmark, old_changeset_id, pushvars.as_ref())
             .await?;
-        Ok(thrift::RepoDeleteBookmarkResponse {})
+        Ok(thrift::RepoDeleteBookmarkResponse {
+            ..Default::default()
+        })
     }
 
     pub(crate) async fn repo_land_stack(
@@ -575,7 +591,10 @@ impl SourceControlServiceImpl {
             ))
             .await?;
 
-        Ok(thrift::RepoLandStackResponse { pushrebase_outcome })
+        Ok(thrift::RepoLandStackResponse {
+            pushrebase_outcome,
+            ..Default::default()
+        })
     }
 
     pub(crate) async fn repo_list_hg_manifest(
@@ -632,8 +651,10 @@ impl SourceControlServiceImpl {
                                         file_size: metadata.total_size as i64,
                                         content_sha1: metadata.sha1.as_ref().to_vec(),
                                         content_sha256: metadata.sha256.as_ref().to_vec(),
+                                        ..Default::default()
                                     },
                                 ),
+                                ..Default::default()
                             }
                         }
                         Entry::Tree(child_id) => thrift::HgManifestEntry {
@@ -641,7 +662,9 @@ impl SourceControlServiceImpl {
                             r#type: thrift::EntryType::TREE,
                             info: thrift::HgManifestEntryInfo::tree(thrift::HgManifestTreeInfo {
                                 hg_manifest_id: child_id.as_bytes().to_vec(),
+                                ..Default::default()
                             }),
+                            ..Default::default()
                         },
                     };
 
@@ -652,6 +675,9 @@ impl SourceControlServiceImpl {
             .try_collect()
             .await?;
 
-        Ok(thrift::RepoListHgManifestResponse { entries })
+        Ok(thrift::RepoListHgManifestResponse {
+            entries,
+            ..Default::default()
+        })
     }
 }

@@ -70,9 +70,14 @@ pub(super) async fn run(
     let repo = get_repo_specifier(matches).expect("repository is required");
     let commit_id = get_commit_id(matches)?;
     let id = resolve_commit_id(&connection, &repo, &commit_id).await?;
-    let commit = thrift::CommitSpecifier { repo, id };
+    let commit = thrift::CommitSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    };
     let params = thrift::CommitLookupParams {
         identity_schemes: get_request_schemes(&matches),
+        ..Default::default()
     };
     let response = connection.commit_lookup(&commit, &params).await?;
     let ids = match &response.ids {

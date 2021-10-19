@@ -352,6 +352,7 @@ mod test {
         let target = Target {
             repo_id: 0,
             bookmark: "book".to_string(),
+            ..Default::default()
         };
 
         let source_csid = ONES_CSID;

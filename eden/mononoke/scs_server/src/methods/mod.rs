@@ -33,7 +33,10 @@ impl SourceControlServiceImpl {
         repo_names.sort();
         let rsp = repo_names
             .into_iter()
-            .map(|repo_name| thrift::Repo { name: repo_name })
+            .map(|repo_name| thrift::Repo {
+                name: repo_name,
+                ..Default::default()
+            })
             .collect();
         Ok(rsp)
     }

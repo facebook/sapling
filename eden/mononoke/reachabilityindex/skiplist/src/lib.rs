@@ -63,7 +63,11 @@ impl SkiplistNodeType {
         ) -> skiplist_thrift::CommitAndGenerationNumber {
             let cs_id = cs_id.into_thrift();
             let gen = skiplist_thrift::GenerationNum(gen_num.value() as i64);
-            skiplist_thrift::CommitAndGenerationNumber { cs_id, gen }
+            skiplist_thrift::CommitAndGenerationNumber {
+                cs_id,
+                gen,
+                ..Default::default()
+            }
         }
 
         fn encode_vec_to_thrift(
@@ -78,17 +82,26 @@ impl SkiplistNodeType {
         match self {
             SkiplistNodeType::SingleEdge((cs_id, gen)) => {
                 let edges = vec![encode_edge_to_thrift(*cs_id, *gen)];
-                let skip_edges = skiplist_thrift::SkipEdges { edges };
+                let skip_edges = skiplist_thrift::SkipEdges {
+                    edges,
+                    ..Default::default()
+                };
                 skiplist_thrift::SkiplistNodeType::SkipEdges(skip_edges)
             }
             SkiplistNodeType::SkipEdges(edges) => {
                 let edges = encode_vec_to_thrift(edges.clone());
-                let skip_edges = skiplist_thrift::SkipEdges { edges };
+                let skip_edges = skiplist_thrift::SkipEdges {
+                    edges,
+                    ..Default::default()
+                };
                 skiplist_thrift::SkiplistNodeType::SkipEdges(skip_edges)
             }
             SkiplistNodeType::ParentEdges(parent_edges) => {
                 let edges = encode_vec_to_thrift(parent_edges.clone());
-                let parent_edges = skiplist_thrift::ParentEdges { edges };
+                let parent_edges = skiplist_thrift::ParentEdges {
+                    edges,
+                    ..Default::default()
+                };
                 skiplist_thrift::SkiplistNodeType::ParentEdges(parent_edges)
             }
         }

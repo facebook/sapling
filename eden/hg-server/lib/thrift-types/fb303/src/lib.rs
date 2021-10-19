@@ -16,19 +16,33 @@ pub mod types {
     #[doc = "For migration to open source fb303_core."]
     pub type fb_status = fb303_core::types::fb303_status;
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     #[doc = "DEPRECATED! This will be removed soon.\n\nStructure for holding counters information."]
     pub struct CountersInformation {
         #[serde(default)]
         pub data: ::std::collections::BTreeMap<::std::string::String, ::std::primitive::i64>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct CpuProfileOptions {
         #[serde(default)]
         pub durationSecs: ::std::primitive::i32,
         #[serde(default)]
         pub selective: ::std::primitive::bool,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
 
@@ -36,7 +50,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 data: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::CountersInformation {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("CountersInformation")
+                .field("data", &self.data)
+                .finish()
         }
     }
 
@@ -83,6 +107,7 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 data: field_data.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -93,7 +118,18 @@ pub mod types {
             Self {
                 durationSecs: ::std::default::Default::default(),
                 selective: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::CpuProfileOptions {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("CpuProfileOptions")
+                .field("durationSecs", &self.durationSecs)
+                .field("selective", &self.selective)
+                .finish()
         }
     }
 
@@ -147,10 +183,20 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 durationSecs: field_durationSecs.unwrap_or_default(),
                 selective: field_selective.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
 
+
+    mod dot_dot {
+        #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub struct OtherFields(pub(crate) ());
+
+        pub(super) fn default_for_serde_deserialize() -> OtherFields {
+            OtherFields(())
+        }
+    }
 }
 
 #[doc(hidden)]

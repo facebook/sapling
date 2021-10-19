@@ -33,20 +33,26 @@ impl From<thrift::InternalError> for ServiceError {
 impl ServiceError {
     pub fn context(self, context: &str) -> Self {
         match self {
-            Self::Request(thrift::RequestError { kind, reason }) => {
+            Self::Request(thrift::RequestError { kind, reason, .. }) => {
                 let reason = format!("{}: {}", context, reason);
-                Self::Request(thrift::RequestError { kind, reason })
+                Self::Request(thrift::RequestError {
+                    kind,
+                    reason,
+                    ..Default::default()
+                })
             }
             Self::Internal(thrift::InternalError {
                 reason,
                 backtrace,
                 source_chain,
+                ..
             }) => {
                 let reason = format!("{}: {}", context, reason);
                 Self::Internal(thrift::InternalError {
                     reason,
                     backtrace,
                     source_chain,
+                    ..Default::default()
                 })
             }
         }
@@ -83,6 +89,7 @@ impl From<MegarepoError> for ServiceError {
             MegarepoError::RequestError(e) => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::INVALID_REQUEST,
                 reason: format!("{}", e),
+                ..Default::default()
             }),
             MegarepoError::InternalError(error) => {
                 let reason = error.to_string();
@@ -103,6 +110,7 @@ impl From<MegarepoError> for ServiceError {
                     reason,
                     backtrace,
                     source_chain,
+                    ..Default::default()
                 })
             }
         }
@@ -115,30 +123,36 @@ impl From<MononokeError> for ServiceError {
             MononokeError::InvalidRequest(reason) => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::INVALID_REQUEST,
                 reason,
+                ..Default::default()
             }),
             error @ MononokeError::PermissionDenied { .. } => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::PERMISSION_DENIED,
                 reason: error.to_string(),
+                ..Default::default()
             }),
             error @ MononokeError::ServicePermissionDenied { .. } => {
                 Self::Request(thrift::RequestError {
                     kind: thrift::RequestErrorKind::PERMISSION_DENIED,
                     reason: error.to_string(),
+                    ..Default::default()
                 })
             }
             error @ MononokeError::ServiceRestricted { .. } => {
                 Self::Request(thrift::RequestError {
                     kind: thrift::RequestErrorKind::PERMISSION_DENIED,
                     reason: error.to_string(),
+                    ..Default::default()
                 })
             }
             error @ MononokeError::NotAvailable(_) => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::NOT_AVAILABLE,
                 reason: error.to_string(),
+                ..Default::default()
             }),
             error @ MononokeError::HookFailure(_) => Self::Request(thrift::RequestError {
                 kind: thrift::RequestErrorKind::INVALID_REQUEST,
                 reason: error.to_string(),
+                ..Default::default()
             }),
             MononokeError::InternalError(error) => {
                 let reason = error.to_string();
@@ -158,6 +172,7 @@ impl From<MononokeError> for ServiceError {
                     reason,
                     backtrace,
                     source_chain,
+                    ..Default::default()
                 })
             }
         }
@@ -226,6 +241,7 @@ pub(crate) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::INVALID_REQUEST,
         reason: reason.to_string(),
+        ..Default::default()
     }
 }
 
@@ -234,6 +250,7 @@ pub(crate) fn internal_error(error: impl ToString) -> thrift::InternalError {
         reason: error.to_string(),
         backtrace: None,
         source_chain: Vec::new(),
+        ..Default::default()
     }
 }
 
@@ -241,6 +258,7 @@ pub(crate) fn repo_not_found(repo: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::REPO_NOT_FOUND,
         reason: format!("repo not found ({})", repo),
+        ..Default::default()
     }
 }
 
@@ -248,6 +266,7 @@ pub(crate) fn commit_not_found(commit: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::COMMIT_NOT_FOUND,
         reason: format!("commit not found ({})", commit),
+        ..Default::default()
     }
 }
 
@@ -255,6 +274,7 @@ pub(crate) fn file_not_found(file: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::FILE_NOT_FOUND,
         reason: format!("file not found ({})", file),
+        ..Default::default()
     }
 }
 
@@ -262,6 +282,7 @@ pub(crate) fn tree_not_found(tree: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::TREE_NOT_FOUND,
         reason: format!("tree not found ({})", tree),
+        ..Default::default()
     }
 }
 
@@ -272,6 +293,7 @@ pub(crate) fn limit_too_low(limit: usize) -> thrift::RequestError {
             "the limit param value of {} is not enough for the method to make any progress",
             limit,
         ),
+        ..Default::default()
     }
 }
 
@@ -283,6 +305,7 @@ pub(crate) fn diff_input_too_big(total_size: u64) -> thrift::RequestError {
             thrift::consts::COMMIT_FILE_DIFFS_SIZE_LIMIT,
             total_size,
         ),
+        ..Default::default()
     }
 }
 
@@ -294,6 +317,7 @@ pub(crate) fn diff_input_too_many_paths(path_count: usize) -> thrift::RequestErr
             thrift::consts::COMMIT_FILE_DIFFS_PATH_COUNT_LIMIT,
             path_count,
         ),
+        ..Default::default()
     }
 }
 
@@ -301,5 +325,6 @@ pub(crate) fn not_available(reason: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::NOT_AVAILABLE,
         reason,
+        ..Default::default()
     }
 }

@@ -26,8 +26,12 @@ impl RepoChangeset {
     fn into_thrift(self) -> thrift::CommitSpecifier {
         let RepoChangeset(name, cs_id) = self;
         thrift::CommitSpecifier {
-            repo: thrift::RepoSpecifier { name },
+            repo: thrift::RepoSpecifier {
+                name,
+                ..Default::default()
+            },
             id: thrift::CommitId::bonsai(cs_id.as_ref().to_vec()),
+            ..Default::default()
         }
     }
 }
@@ -210,7 +214,11 @@ impl RepoChangesetsPushrebaseHistory {
             .chain(self.changesets.into_iter())
             .map(|rc| rc.into_thrift())
             .collect();
-        thrift::CommitLookupPushrebaseHistoryResponse { history, origin }
+        thrift::CommitLookupPushrebaseHistoryResponse {
+            history,
+            origin,
+            ..Default::default()
+        }
     }
 }
 

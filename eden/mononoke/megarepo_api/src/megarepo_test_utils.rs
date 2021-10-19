@@ -64,6 +64,7 @@ impl MegarepoTest {
         Target {
             repo_id: self.repo_id().id() as i64,
             bookmark,
+            ..Default::default()
         }
     }
 
@@ -161,6 +162,7 @@ impl SyncTargetConfigBuilder {
             target: self.target,
             sources: self.sources,
             version: self.version,
+            ..Default::default()
         }
     }
 }
@@ -269,7 +271,9 @@ impl SourceVersionBuilder {
                 default_prefix,
                 linkfiles: self.linkfiles,
                 overrides,
+                ..Default::default()
             },
+            ..Default::default()
         };
         self.config_builder.add_source(source);
         Ok(self.config_builder)

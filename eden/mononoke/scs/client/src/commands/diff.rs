@@ -109,6 +109,7 @@ pub(super) async fn run(
         .map(|id| thrift::CommitSpecifier {
             repo: repo.clone(),
             id,
+            ..Default::default()
         })
         .collect();
     let (other_commit, base_commit) = if commits.len() == 1 {
@@ -122,6 +123,7 @@ pub(super) async fn run(
         identity_schemes,
         paths,
         compare_items: btreeset! {thrift::CommitCompareItem::FILES},
+        ..Default::default()
     };
     let response = connection.commit_compare(&base_commit, &params).await?;
 
@@ -148,6 +150,7 @@ pub(super) async fn run(
                 other_path: diff_file.other_file.as_ref().map(|f| f.path.clone()),
                 copy_info: diff_file.copy_info,
                 generate_placeholder_diff: Some(placeholder_only),
+                ..Default::default()
             },
             (diff_file
                 .base_file

@@ -56,6 +56,7 @@ mod verification_tests {
             target: Target {
                 repo_id: 1,
                 bookmark: s("target"),
+                ..Default::default()
             },
             version: s("version"),
             sources: vec![
@@ -77,7 +78,9 @@ mod verification_tests {
                                 s("copiedfile"),
                             ]
                         },
+                        ..Default::default()
                     },
+                    ..Default::default()
                 },
                 Source {
                     name: s("name2"),
@@ -93,9 +96,12 @@ mod verification_tests {
                             s("deleted") => vec![],
                             s("multiplied2") => vec![s("multiplied2_1"), s("multiplied2_2")],
                         },
+                        ..Default::default()
                     },
+                    ..Default::default()
                 },
             ],
+            ..Default::default()
         }
     }
 

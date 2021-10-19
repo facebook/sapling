@@ -118,6 +118,7 @@ pub(super) async fn run(matches: &ArgMatches<'_>, connection: Connection) -> Res
         old_identity_schemes: Some(btreeset! { thrift::CommitIdentityScheme::BONSAI }),
         service_identity,
         pushvars,
+        ..Default::default()
     };
     let response = connection.repo_land_stack(&repo, &params).await?;
     let head = map_commit_ids(response.pushrebase_outcome.head.values());

@@ -51,6 +51,7 @@ impl SourceControlServiceImpl {
             let response = thrift::TreeListResponse {
                 entries,
                 count: (summary.child_files_count + summary.child_dirs_count) as i64,
+                ..Default::default()
             };
             Ok(response)
         } else {
@@ -58,6 +59,7 @@ impl SourceControlServiceImpl {
             Ok(thrift::TreeListResponse {
                 entries: Vec::new(),
                 count: 0,
+                ..Default::default()
             })
         }
     }

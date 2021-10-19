@@ -122,6 +122,7 @@ impl HgManifestEnvelope {
             p2: inner.p2.map(HgNodeHash::into_thrift),
             computed_node_id: inner.computed_node_id.into_thrift(),
             contents: Some(inner.contents.to_vec()),
+            ..Default::default()
         }
     }
 
@@ -190,6 +191,7 @@ mod test {
             computed_node_id: thrift::HgNodeHash(thrift::Sha1(vec![1; 20].into())),
             // contents must be present
             contents: None,
+            ..Default::default()
         };
 
         HgManifestEnvelope::from_thrift(thrift_me.clone())

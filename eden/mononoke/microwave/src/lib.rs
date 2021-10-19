@@ -61,8 +61,10 @@ impl Snapshot {
                 copyfrom: info.copyfrom.map(|copyfrom| thrift::CopyInfoSnapshot {
                     path: Some(copyfrom.0.into_thrift()),
                     filenode: Some(copyfrom.1.into_nodehash().into_thrift()),
+                    ..Default::default()
                 }),
                 linknode: Some(info.linknode.into_nodehash().into_thrift()),
+                ..Default::default()
             };
 
             v.push(t);
@@ -85,6 +87,7 @@ impl Snapshot {
                 // succeed because the generation number is >= 0, but also not so large that it
                 // cannot fit in a i64.
                 gen: Some(gen.try_into().unwrap()),
+                ..Default::default()
             };
 
             v.push(t);
@@ -98,6 +101,7 @@ impl Snapshot {
             snapshot: thrift::RepoSnapshot {
                 filenodes: Some(filenodes),
                 changesets: Some(changesets),
+                ..Default::default()
             },
         }
     }
@@ -205,6 +209,7 @@ fn reheat_filenodes(
                 p2,
                 copyfrom,
                 linknode,
+                ..
             } = t;
 
             let path = path.ok_or(Error::msg("path missing"))?;
@@ -213,7 +218,7 @@ fn reheat_filenodes(
 
             let copyfrom = copyfrom
                 .map(|t| {
-                    let thrift::CopyInfoSnapshot { path, filenode } = t;
+                    let thrift::CopyInfoSnapshot { path, filenode, .. } = t;
                     let path = path.ok_or(Error::msg("copy info path missing"))?;
                     let filenode = filenode.ok_or(Error::msg("copy info filenode missing"))?;
                     Result::<_, Error>::Ok((
@@ -250,6 +255,7 @@ fn reheat_changesets(
                 cs_id,
                 parents,
                 gen,
+                ..
             } = c;
 
             let cs_id = cs_id.ok_or(Error::msg("cs_id missing"))?;

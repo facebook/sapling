@@ -105,6 +105,7 @@ impl DateTime {
         thrift::DateTime {
             timestamp_secs: self.timestamp_secs(),
             tz_offset_secs: self.tz_offset_secs(),
+            ..Default::default()
         }
     }
 }
@@ -249,21 +250,25 @@ mod test {
         DateTime::from_thrift(thrift::DateTime {
             timestamp_secs: 0,
             tz_offset_secs: 86_400,
+            ..Default::default()
         })
         .expect_err("unexpected OK - tz_offset_secs out of bounds");
         DateTime::from_thrift(thrift::DateTime {
             timestamp_secs: 0,
             tz_offset_secs: -86_400,
+            ..Default::default()
         })
         .expect_err("unexpected OK - tz_offset_secs out of bounds");
         DateTime::from_thrift(thrift::DateTime {
             timestamp_secs: i64::min_value(),
             tz_offset_secs: 0,
+            ..Default::default()
         })
         .expect_err("unexpected OK - timestamp_secs out of bounds");
         DateTime::from_thrift(thrift::DateTime {
             timestamp_secs: i64::max_value(),
             tz_offset_secs: 0,
+            ..Default::default()
         })
         .expect_err("unexpected OK - timestamp_secs out of bounds");
     }

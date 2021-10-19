@@ -107,6 +107,7 @@ mod tests {
                 message: error_msg.to_string(),
                 errorCode: Some(255),
                 errorType: eden::EdenErrorType::CHECKOUT_IN_PROGRESS,
+                ..Default::default()
             })
             .into();
 

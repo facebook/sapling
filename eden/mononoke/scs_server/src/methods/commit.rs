@@ -105,12 +105,14 @@ async fn into_compare_path(
             base_file,
             other_file,
             copy_info,
+            ..Default::default()
         }));
     }
     if let Some((other_tree, base_tree)) = tree {
         return Ok(CommitComparePath::Tree(thrift::CommitCompareTree {
             base_tree,
             other_tree,
+            ..Default::default()
         }));
     }
     Err(errors::internal_error("programming error, diff is neither tree nor file").into())
@@ -138,6 +140,7 @@ impl SourceControlServiceImpl {
             } else {
                 None
             },
+            ..Default::default()
         })
     }
 
@@ -158,11 +161,13 @@ impl SourceControlServiceImpl {
                 Ok(thrift::CommitLookupResponse {
                     exists: true,
                     ids: Some(ids),
+                    ..Default::default()
                 })
             }
             None => Ok(thrift::CommitLookupResponse {
                 exists: false,
                 ids: None,
+                ..Default::default()
             }),
         }
     }
@@ -303,12 +308,16 @@ impl SourceControlServiceImpl {
                         base_path: base_path.map(|p| p.path().to_string()),
                         other_path: other_path.map(|p| p.path().to_string()),
                         diff: diff.into_response(),
+                        ..Default::default()
                     });
                 r
             },
         ))
         .await?;
-        Ok(thrift::CommitFileDiffsResponse { path_diffs })
+        Ok(thrift::CommitFileDiffsResponse {
+            path_diffs,
+            ..Default::default()
+        })
     }
 
     /// Get commit info.
@@ -415,6 +424,7 @@ impl SourceControlServiceImpl {
             diff_files,
             diff_trees,
             other_commit_ids,
+            ..Default::default()
         })
     }
 
@@ -452,7 +462,10 @@ impl SourceControlServiceImpl {
             .map_ok(|path| path.to_string())
             .try_collect()
             .await?;
-        Ok(thrift::CommitFindFilesResponse { files })
+        Ok(thrift::CommitFindFilesResponse {
+            files,
+            ..Default::default()
+        })
     }
 
     /// Returns the history of a commit
@@ -530,7 +543,10 @@ impl SourceControlServiceImpl {
         )
         .await?;
 
-        Ok(thrift::CommitHistoryResponse { history })
+        Ok(thrift::CommitHistoryResponse {
+            history,
+            ..Default::default()
+        })
     }
 
     pub(crate) async fn commit_list_descendant_bookmarks(
@@ -615,6 +631,7 @@ impl SourceControlServiceImpl {
         Ok(thrift::CommitListDescendantBookmarksResponse {
             bookmarks,
             continue_after,
+            ..Default::default()
         })
     }
 
@@ -645,11 +662,13 @@ impl SourceControlServiceImpl {
                 Ok(thrift::CommitLookupResponse {
                     exists: true,
                     ids: Some(ids),
+                    ..Default::default()
                 })
             }
             None => Ok(thrift::CommitLookupResponse {
                 exists: false,
                 ids: None,
+                ..Default::default()
             }),
         }
     }

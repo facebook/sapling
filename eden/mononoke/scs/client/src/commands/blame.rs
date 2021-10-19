@@ -176,11 +176,16 @@ pub(super) async fn run(
     let commit_id = get_commit_id(matches)?;
     let id = resolve_commit_id(&connection, &repo, &commit_id).await?;
 
-    let mut commit = thrift::CommitSpecifier { repo, id };
+    let mut commit = thrift::CommitSpecifier {
+        repo,
+        id,
+        ..Default::default()
+    };
 
     if matches.is_present(ARG_PARENT) {
         let params = thrift::CommitInfoParams {
             identity_schemes: btreeset! { thrift::CommitIdentityScheme::BONSAI },
+            ..Default::default()
         };
         let response = connection.commit_info(&commit, &params).await?;
         commit.id.clone_from(
@@ -194,7 +199,11 @@ pub(super) async fn run(
         );
     }
     let path = get_path(matches).expect("path is required");
-    let commit_and_path = thrift::CommitPathSpecifier { commit, path };
+    let commit_and_path = thrift::CommitPathSpecifier {
+        commit,
+        path,
+        ..Default::default()
+    };
 
     let identity_schemes = get_request_schemes(&matches);
 
@@ -205,6 +214,7 @@ pub(super) async fn run(
             thrift::BlameFormatOption::INCLUDE_CONTENTS,
             thrift::BlameFormatOption::INCLUDE_TITLE,
         }),
+        ..Default::default()
     };
     let response = connection
         .commit_path_blame(&commit_and_path, &params)

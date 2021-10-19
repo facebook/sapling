@@ -225,7 +225,11 @@ async fn run_fallback_status(
                 .await
                 .unwrap_or_else(|_| "".to_owned());
 
-            Ok(GetScmStatusResult { status, version })
+            Ok(GetScmStatusResult {
+                status,
+                version,
+                ..Default::default()
+            })
         }
         Err(error) => Err(error.into()),
     }
@@ -243,6 +247,7 @@ async fn get_status_helper(
             mountPoint: eden_root.as_bytes().to_vec(),
             commit: commit.to_vec(),
             listIgnored: ignored,
+            ..Default::default()
         })
         .await;
 
@@ -822,6 +827,7 @@ mod test {
         let status = ScmStatus {
             entries: test_case.entries,
             errors: test_case.errors,
+            ..Default::default()
         };
 
         let relativizer = HgStatusPathRelativizer::new(

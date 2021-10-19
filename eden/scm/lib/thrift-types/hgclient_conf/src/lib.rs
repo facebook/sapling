@@ -13,15 +13,22 @@ pub mod types {
     #![allow(clippy::redundant_closure)]
 
 
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct TimeShard {
         #[serde(default)]
         pub start: ::std::string::String,
         #[serde(default)]
         pub end: ::std::string::String,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, Debug, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub enum Condition {
         not_condition(::std::boxed::Box<crate::types::Condition>),
         and_condition(::std::vec::Vec<crate::types::Condition>),
@@ -39,18 +46,32 @@ pub mod types {
         UnknownField(::std::primitive::i32),
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct Hotfix {
         #[serde(default)]
         pub config: ::std::string::String,
         #[serde(default)]
         pub condition: crate::types::Condition,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
-    #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
+    #[derive(Clone, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct ClientConfig {
         #[serde(default)]
         pub hotfixes: ::std::vec::Vec<crate::types::Hotfix>,
+        // This field forces `..Default::default()` when instantiating this
+        // struct, to make code future-proof against new fields added later to
+        // the definition in Thrift. If you don't want this, add the annotation
+        // `(rust.exhaustive)` to the Thrift struct to eliminate this field.
+        #[doc(hidden)]
+        #[serde(skip, default = "self::dot_dot::default_for_serde_deserialize")]
+        pub _dot_dot_Default_default: self::dot_dot::OtherFields,
     }
 
     impl ::std::default::Default for self::TimeShard {
@@ -58,7 +79,18 @@ pub mod types {
             Self {
                 start: ::std::default::Default::default(),
                 end: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::TimeShard {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("TimeShard")
+                .field("start", &self.start)
+                .field("end", &self.end)
+                .finish()
         }
     }
 
@@ -112,6 +144,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 start: field_start.unwrap_or_default(),
                 end: field_end.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -309,7 +342,18 @@ pub mod types {
             Self {
                 config: ::std::default::Default::default(),
                 condition: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::Hotfix {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("Hotfix")
+                .field("config", &self.config)
+                .field("condition", &self.condition)
+                .finish()
         }
     }
 
@@ -363,6 +407,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 config: field_config.unwrap_or_default(),
                 condition: field_condition.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
@@ -372,7 +417,17 @@ pub mod types {
         fn default() -> Self {
             Self {
                 hotfixes: ::std::default::Default::default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             }
+        }
+    }
+
+    impl ::std::fmt::Debug for self::ClientConfig {
+        fn fmt(&self, formatter: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            formatter
+                .debug_struct("ClientConfig")
+                .field("hotfixes", &self.hotfixes)
+                .finish()
         }
     }
 
@@ -419,10 +474,20 @@ pub mod types {
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
                 hotfixes: field_hotfixes.unwrap_or_default(),
+                _dot_dot_Default_default: self::dot_dot::OtherFields(()),
             })
         }
     }
 
+
+    mod dot_dot {
+        #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub struct OtherFields(pub(crate) ());
+
+        pub(super) fn default_for_serde_deserialize() -> OtherFields {
+            OtherFields(())
+        }
+    }
 }
 
 /// Error return types.
