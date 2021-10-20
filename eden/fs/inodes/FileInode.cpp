@@ -554,7 +554,9 @@ folly::Future<bool> FileInode::isSameAsSlow(
         } else {
           return try_.value() == expectedBlobSha1;
         }
-      });
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<bool> FileInode::isSameAs(
@@ -592,7 +594,9 @@ folly::Future<bool> FileInode::isSameAs(
     return makeFuture(result.value());
   }
 
-  auto f1 = getSha1(fetchContext);
+  auto f1 = getSha1(fetchContext)
+                .semi()
+                .via(&folly::QueuedImmediateExecutor::instance());
   auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID, fetchContext);
   return folly::collectUnsafe(f1, f2).thenTry(
       [](folly::Try<std::tuple<Hash20, Hash20>>&& try_) {
@@ -663,8 +667,10 @@ Future<string> FileInode::getxattr(
     return makeFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  return getSha1(context).thenValue(
-      [](Hash20 hash) { return hash.toString(); });
+  return getSha1(context)
+      .thenValue([](Hash20 hash) { return hash.toString(); })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 #else
 
@@ -678,7 +684,7 @@ AbsolutePath FileInode::getMaterializedFilePath() {
 }
 #endif
 
-Future<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
+ImmediateFuture<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
   auto state = LockedState{this};
 
   logAccess(fetchContext);
@@ -686,11 +692,12 @@ Future<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
-      return getObjectStore()->getBlobSha1(
-          state->nonMaterializedState->hash, fetchContext);
+      return getObjectStore()
+          ->getBlobSha1(state->nonMaterializedState->hash, fetchContext)
+          .semi();
     case State::MATERIALIZED_IN_OVERLAY:
 #ifdef _WIN32
-      return folly::makeFutureWith(
+      return makeImmediateFutureWith(
           [this] { return getFileSha1(getMaterializedFilePath()); });
 #else
       return getOverlayFileAccess(state)->getSha1(*this);

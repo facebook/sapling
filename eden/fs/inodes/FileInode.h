@@ -177,7 +177,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   folly::Future<std::vector<std::string>> listxattr() override;
 #endif
 
-  folly::Future<Hash20> getSha1(ObjectFetchContext& fetchContext);
+  ImmediateFuture<Hash20> getSha1(ObjectFetchContext& fetchContext);
 
   /**
    * Check to see if the file has the same contents as the specified blob

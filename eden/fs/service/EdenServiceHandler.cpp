@@ -561,17 +561,17 @@ Future<Hash20> EdenServiceHandler::getSHA1ForPath(
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
   return edenMount->getInode(relativePath, fetchContext)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([&fetchContext](const InodePtr& inode) {
         auto fileInode = inode.asFilePtr();
         if (fileInode->getType() != dtype_t::Regular) {
           // We intentionally want to refuse to compute the SHA1 of symlinks
-          return makeFuture<Hash20>(
+          return makeImmediateFuture<Hash20>(
               InodeError(EINVAL, fileInode, "file is a symlink"));
         }
         return fileInode->getSha1(fetchContext);
-      });
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 void EdenServiceHandler::getBindMounts(
