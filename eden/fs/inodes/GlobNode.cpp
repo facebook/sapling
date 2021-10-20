@@ -309,18 +309,19 @@ Future<folly::Unit> GlobNode::evaluateImpl(
     GlobNode::ResultList& globResult,
     const RootId& originRootId) const {
   vector<std::pair<PathComponentPiece, GlobNode*>> recurse;
-  vector<Future<folly::Unit>> futures;
+  vector<ImmediateFuture<folly::Unit>> futures;
 
   if (!recursiveChildren_.empty()) {
     futures.emplace_back(evaluateRecursiveComponentImpl(
-        store,
-        context,
-        rootPath,
-        RelativePathPiece{""},
-        root,
-        fileBlobsToPrefetch,
-        globResult,
-        originRootId));
+                             store,
+                             context,
+                             rootPath,
+                             RelativePathPiece{""},
+                             root,
+                             fileBlobsToPrefetch,
+                             globResult,
+                             originRootId)
+                             .semi());
   }
 
   auto recurseIfNecessary =
@@ -350,9 +351,7 @@ Future<folly::Unit> GlobNode::evaluateImpl(
                               globResult,
                               originRootId)
                           .semi();
-                    })
-                    .semi()
-                    .via(&folly::QueuedImmediateExecutor::instance()));
+                    }));
           }
         }
       };
@@ -421,22 +420,22 @@ Future<folly::Unit> GlobNode::evaluateImpl(
                                        globResult,
                                        originRootId)
                                    .semi();
-                             })
-                             .semi()
-                             .via(&folly::QueuedImmediateExecutor::instance()));
+                             }));
   }
 
   // Note: we use collectAll() rather than collect() here to make sure that
   // we have really finished all computation before we return a result.
   // Our caller may destroy us after we return, so we can't let errors propagate
   // back to the caller early while some processing may still be occurring.
-  return folly::collectAllUnsafe(futures).thenValue(
-      [](vector<folly::Try<folly::Unit>>&& results) {
+  return collectAll(std::move(futures))
+      .thenValue([](vector<folly::Try<folly::Unit>>&& results) {
         for (auto& result : results) {
           result.throwUnlessValue();
         }
         return folly::unit;
-      });
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<folly::Unit> GlobNode::evaluate(
@@ -524,7 +523,7 @@ Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
     GlobNode::ResultList& globResult,
     const RootId& originRootId) const {
   vector<RelativePath> subDirNames;
-  vector<Future<folly::Unit>> futures;
+  vector<ImmediateFuture<folly::Unit>> futures;
   {
     const auto& contents = root.lockContents();
     for (auto& entry : root.iterate(contents)) {
@@ -569,9 +568,7 @@ Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
                                globResult,
                                originRootId)
                         .semi();
-                  })
-                  .semi()
-                  .via(&folly::QueuedImmediateExecutor::instance()));
+                  }));
         }
       }
     }
@@ -601,23 +598,23 @@ Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
                          globResult,
                          originRootId)
                   .semi();
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance()));
+            }));
   }
 
   // Note: we use collectAll() rather than collect() here to make sure that
   // we have really finished all computation before we return a result.
   // Our caller may destroy us after we return, so we can't let errors propagate
   // back to the caller early while some processing may still be occurring.
-  return folly::collectAllUnsafe(futures).thenValue(
-      [](vector<folly::Try<folly::Unit>>&& results) {
+  return collectAll(std::move(futures))
+      .thenValue([](vector<folly::Try<folly::Unit>>&& results) {
         for (auto& result : results) {
           // Rethrow the exception if any of the results failed
           result.throwUnlessValue();
         }
         return folly::unit;
-      });
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 void GlobNode::debugDump() const {
