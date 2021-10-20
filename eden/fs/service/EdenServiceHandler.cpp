@@ -1353,14 +1353,16 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
                    fileBlobsToPrefetch,
                    globResults,
                    &originRootId](std::shared_ptr<const Tree>&& tree) mutable {
-                    return globRoot->evaluate(
-                        edenMount->getObjectStore(),
-                        fetchContext,
-                        RelativePathPiece(),
-                        std::move(tree),
-                        fileBlobsToPrefetch.get(),
-                        *globResults,
-                        originRootId);
+                    return globRoot
+                        ->evaluate(
+                            edenMount->getObjectStore(),
+                            fetchContext,
+                            RelativePathPiece(),
+                            std::move(tree),
+                            fileBlobsToPrefetch.get(),
+                            *globResults,
+                            originRootId)
+                        .semi();
                   }));
     }
   } else {
@@ -1374,16 +1376,14 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
                         fileBlobsToPrefetch,
                         globResults,
                         &originRootId](InodePtr inode) mutable {
-              return globRoot
-                  ->evaluate(
-                      edenMount->getObjectStore(),
-                      fetchContext,
-                      RelativePathPiece(),
-                      inode.asTreePtr(),
-                      fileBlobsToPrefetch.get(),
-                      *globResults,
-                      originRootId)
-                  .semi();
+              return globRoot->evaluate(
+                  edenMount->getObjectStore(),
+                  fetchContext,
+                  RelativePathPiece(),
+                  inode.asTreePtr(),
+                  fileBlobsToPrefetch.get(),
+                  *globResults,
+                  originRootId);
             })
             .semi()
             .via(&folly::QueuedImmediateExecutor::instance()));

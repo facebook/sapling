@@ -10,7 +10,6 @@
 #include <iostream>
 #include "eden/fs/inodes/TreeInode.h"
 
-using folly::Future;
 using folly::StringPiece;
 using std::string;
 using std::unique_ptr;
@@ -300,7 +299,7 @@ void GlobNode::parse(StringPiece pattern) {
 }
 
 template <typename ROOT>
-Future<folly::Unit> GlobNode::evaluateImpl(
+ImmediateFuture<folly::Unit> GlobNode::evaluateImpl(
     const ObjectStore* store,
     ObjectFetchContext& context,
     RelativePathPiece rootPath,
@@ -313,15 +312,14 @@ Future<folly::Unit> GlobNode::evaluateImpl(
 
   if (!recursiveChildren_.empty()) {
     futures.emplace_back(evaluateRecursiveComponentImpl(
-                             store,
-                             context,
-                             rootPath,
-                             RelativePathPiece{""},
-                             root,
-                             fileBlobsToPrefetch,
-                             globResult,
-                             originRootId)
-                             .semi());
+        store,
+        context,
+        rootPath,
+        RelativePathPiece{""},
+        root,
+        fileBlobsToPrefetch,
+        globResult,
+        originRootId));
   }
 
   auto recurseIfNecessary =
@@ -341,16 +339,14 @@ Future<folly::Unit> GlobNode::evaluateImpl(
                                 &globResult,
                                 &originRootId](
                                    std::shared_ptr<const Tree> dir) mutable {
-                      return innerNode
-                          ->evaluateImpl(
-                              store,
-                              context,
-                              candidateName,
-                              TreeRoot(std::move(dir)),
-                              fileBlobsToPrefetch,
-                              globResult,
-                              originRootId)
-                          .semi();
+                      return innerNode->evaluateImpl(
+                          store,
+                          context,
+                          candidateName,
+                          TreeRoot(std::move(dir)),
+                          fileBlobsToPrefetch,
+                          globResult,
+                          originRootId);
                     }));
           }
         }
@@ -410,16 +406,14 @@ Future<folly::Unit> GlobNode::evaluateImpl(
                                          fileBlobsToPrefetch,
                                          &globResult,
                                          &originRootId](TreeInodePtr dir) {
-                               return node
-                                   ->evaluateImpl(
-                                       store,
-                                       context,
-                                       candidateName,
-                                       TreeInodePtrRoot(std::move(dir)),
-                                       fileBlobsToPrefetch,
-                                       globResult,
-                                       originRootId)
-                                   .semi();
+                               return node->evaluateImpl(
+                                   store,
+                                   context,
+                                   candidateName,
+                                   TreeInodePtrRoot(std::move(dir)),
+                                   fileBlobsToPrefetch,
+                                   globResult,
+                                   originRootId);
                              }));
   }
 
@@ -433,12 +427,10 @@ Future<folly::Unit> GlobNode::evaluateImpl(
           result.throwUnlessValue();
         }
         return folly::unit;
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+      });
 }
 
-folly::Future<folly::Unit> GlobNode::evaluate(
+ImmediateFuture<folly::Unit> GlobNode::evaluate(
     const ObjectStore* store,
     ObjectFetchContext& context,
     RelativePathPiece rootPath,
@@ -456,7 +448,7 @@ folly::Future<folly::Unit> GlobNode::evaluate(
       originRootId);
 }
 
-folly::Future<folly::Unit> GlobNode::evaluate(
+ImmediateFuture<folly::Unit> GlobNode::evaluate(
     const ObjectStore* store,
     ObjectFetchContext& context,
     RelativePathPiece rootPath,
@@ -513,7 +505,7 @@ GlobNode* GlobNode::lookupToken(
 }
 
 template <typename ROOT>
-Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
+ImmediateFuture<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
     const ObjectStore* store,
     ObjectFetchContext& context,
     RelativePathPiece rootPath,
@@ -559,15 +551,14 @@ Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
                               &globResult,
                               &originRootId](std::shared_ptr<const Tree> tree) {
                     return evaluateRecursiveComponentImpl(
-                               store,
-                               context,
-                               rootPath,
-                               candidateName,
-                               TreeRoot(std::move(tree)),
-                               fileBlobsToPrefetch,
-                               globResult,
-                               originRootId)
-                        .semi();
+                        store,
+                        context,
+                        rootPath,
+                        candidateName,
+                        TreeRoot(std::move(tree)),
+                        fileBlobsToPrefetch,
+                        globResult,
+                        originRootId);
                   }));
         }
       }
@@ -589,15 +580,14 @@ Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
                         &globResult,
                         &originRootId](TreeInodePtr dir) {
               return evaluateRecursiveComponentImpl(
-                         store,
-                         context,
-                         rootPath,
-                         candidateName,
-                         TreeInodePtrRoot(std::move(dir)),
-                         fileBlobsToPrefetch,
-                         globResult,
-                         originRootId)
-                  .semi();
+                  store,
+                  context,
+                  rootPath,
+                  candidateName,
+                  TreeInodePtrRoot(std::move(dir)),
+                  fileBlobsToPrefetch,
+                  globResult,
+                  originRootId);
             }));
   }
 
@@ -612,9 +602,7 @@ Future<folly::Unit> GlobNode::evaluateRecursiveComponentImpl(
           result.throwUnlessValue();
         }
         return folly::unit;
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+      });
 }
 
 void GlobNode::debugDump() const {

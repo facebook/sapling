@@ -6,7 +6,6 @@
  */
 
 #pragma once
-#include <folly/futures/Future.h>
 #include <ostream>
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/model/Hash.h"
@@ -90,12 +89,12 @@ class GlobNode {
    *
    * The results are appended to the globResult list which the caller is
    * responsible for ensuring that its lifetime will exceed the lifetime of the
-   * returned Future.
+   * returned ImmediateFuture.
    *
    * When fileBlobsToPrefetch is non-null, the Hash of the globbed files will
    * be appended to it.
    */
-  folly::Future<folly::Unit> evaluate(
+  ImmediateFuture<folly::Unit> evaluate(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
@@ -109,7 +108,7 @@ class GlobNode {
    *
    * See the documention for the overload above.
    */
-  folly::Future<folly::Unit> evaluate(
+  ImmediateFuture<folly::Unit> evaluate(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
@@ -150,7 +149,7 @@ class GlobNode {
   // The difference is because a pattern like "**/foo" must be recursively
   // matched against all the children of the inode.
   template <typename ROOT>
-  folly::Future<folly::Unit> evaluateRecursiveComponentImpl(
+  ImmediateFuture<folly::Unit> evaluateRecursiveComponentImpl(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
@@ -161,7 +160,7 @@ class GlobNode {
       const RootId& originRootId) const;
 
   template <typename ROOT>
-  folly::Future<folly::Unit> evaluateImpl(
+  ImmediateFuture<folly::Unit> evaluateImpl(
       const ObjectStore* store,
       ObjectFetchContext& context,
       RelativePathPiece rootPath,

@@ -55,7 +55,9 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
         std::vector<GlobResult> result;
         std::swap(result, *globResults->wlock());
         return result;
-      });
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
   ;
 }
 
