@@ -346,3 +346,11 @@ So, this information is expected to be preserved on the client1.
   summary:     New files Dir2
   
 
+
+Check both ways to specify a commit to back up work - even though we're going through a compat alias
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud backup c8b3ca487837
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+  commitcloud: nothing to upload
+  $ EDENSCM_LOG="edenapi::client=info" hgedenapi cloud backup -r c8b3ca487837
+   INFO edenapi::client: Requesting lookup for 1 item(s)
+  commitcloud: nothing to upload

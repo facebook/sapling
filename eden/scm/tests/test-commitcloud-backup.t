@@ -340,3 +340,9 @@ Remote check still succeeds
 Local check should recover the file
   $ hg cloud check -r .
   73e861ba66d5dc1998052f3ae2cf8cf7924ed863 backed up
+
+Check both ways to specify a commit to back up work
+  $ hg cloud backup 73e861ba66d5dc1998052f3ae2cf8cf7924ed863
+  nothing to back up
+  $ hg cloud backup -r 73e861ba66d5dc1998052f3ae2cf8cf7924ed863
+  nothing to back up

@@ -860,14 +860,15 @@ def cloudbackup(ui, repo, *revs, **opts):
 
     If no revision is specified, backs up all visible commits.
     """
+    revs = revs + tuple(opts.get("rev", ()))
     if ui.configbool("commitcloud", "usehttpupload"):
-        return cloudupload(ui, repo, *revs, **opts)
+        opts["rev"] = revs
+        return cloudupload(ui, repo, **opts)
 
     repo.ignoreautobackup = True
 
     force = opts.get("force")
     inbackground = opts.get("background")
-    revs = revs + tuple(opts.get("rev", ()))
     if revs:
         if inbackground:
             raise error.Abort("'--background' cannot be used with specific revisions")
