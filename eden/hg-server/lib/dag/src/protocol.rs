@@ -16,6 +16,7 @@
 //! - Id -> Name: Id -> RequestLocationToName -> ResponseIdNamePair -> Name
 //! - Name -> Id: Name -> RequestNameToLocation -> ResponseIdNamePair -> Id
 
+#[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::errors::NotFoundError;
 use crate::id::VertexName;
 use crate::iddag::{FirstAncestorConstraint, IdDag};

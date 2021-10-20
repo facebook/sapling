@@ -206,6 +206,7 @@ struct Containers {
     containers: Vec<ApfsContainer>,
 }
 
+#[cfg(target_os = "macos")]
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct PartitionInfo {
