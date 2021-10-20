@@ -7,34 +7,31 @@
 
 //! Mercurial-specific config postprocessing
 
+use anyhow::anyhow;
 use std::cmp::Eq;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::env;
+use std::fs;
 use std::fs::read_to_string;
-use std::fs::Permissions;
-use std::fs::{self};
 use std::hash::Hash;
 use std::io;
 use std::io::Error as IOError;
 use std::io::ErrorKind;
 use std::io::Write;
 use std::iter::FromIterator;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use filetime::set_file_mtime;
 use filetime::FileTime;
 use minibytes::Text;
-use tempfile::NamedTempFile;
+use tempfile::tempfile_in;
 use util::path::expand_path;
 use util::run_background;
 
@@ -382,10 +379,15 @@ impl ConfigSetHgExt for ConfigSet {
             // Regen inline
             let res = generate_dynamicconfig(repo_path, repo_name, None, user_name);
             if let Err(e) = res {
-                match e.downcast_ref::<IOError>() {
-                    Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => {}
-                    _ => return Err(e),
-                };
+                let is_perm_error = e
+                    .chain()
+                    .any(|cause| match cause.downcast_ref::<IOError>() {
+                        Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => true,
+                        _ => false,
+                    });
+                if !is_perm_error {
+                    return Err(e);
+                }
             }
         }
 
@@ -580,18 +582,15 @@ pub fn generate_dynamicconfig(
     // Resolve sharedpath
     let config_dir = get_config_dir(Some(repo_path))?;
 
-
-    let mut tmp = match NamedTempFile::new_in(&config_dir) {
-        Err(_) => {
-            // Exit early since we won't be able to write the config.
-            return Err(IOError::new(
-                ErrorKind::PermissionDenied,
-                format!("no write access to {:?}", config_dir),
-            )
-            .into());
-        }
-        Ok(f) => f,
-    };
+    // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
+    // the config.
+    if tempfile_in(&config_dir).is_err() {
+        return Err(IOError::new(
+            ErrorKind::PermissionDenied,
+            format!("no write access to {:?}", config_dir),
+        )
+        .into());
+    }
 
     let hgrc_path = config_dir.join("hgrc.dynamic");
 
@@ -623,15 +622,11 @@ pub fn generate_dynamicconfig(
     if hgrc_path.exists() && read_to_string(&hgrc_path).unwrap_or_default() == config_str {
         set_file_mtime(hgrc_path, FileTime::now())?;
     } else {
-        // Atomically rename file to avoid race conditions.
-
-        #[cfg(unix)]
-        tmp.as_file_mut()
-            .set_permissions(Permissions::from_mode(util::file::apply_umask(0o666)))?;
-
-        tmp.write_all(config_str.as_bytes())?;
-        tmp.as_file().sync_all()?;
-        tmp.persist(hgrc_path).map_err(|err| err.error)?;
+        util::file::atomic_write(hgrc_path, 0o664, |f| {
+            f.write_all(config_str.as_bytes())?;
+            f.sync_all()?;
+            Ok(())
+        })?;
     }
 
     Ok(())
