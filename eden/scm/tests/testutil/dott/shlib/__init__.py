@@ -417,7 +417,6 @@ def newclientrepo(name=None, server=None, *bookmarks):
     for bookmark in bookmarks:
         hgexcept("pull", "-q", "-B", bookmark)
     hg("up", "-q", "tip")
-    rm(os.path.join(path, ".hg", "blackbox*"))
 
 
 def drawdag(*args, **kwargs):
