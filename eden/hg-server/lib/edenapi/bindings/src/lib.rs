@@ -6,7 +6,6 @@
  */
 
 pub mod client;
-mod init;
 pub mod opaque;
 pub mod owned;
 pub mod resultutil;
