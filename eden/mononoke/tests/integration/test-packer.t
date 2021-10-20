@@ -52,11 +52,11 @@
   > repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a
   > EOF
 
-# Check logging for individually packed keys
+# Check logging for individually packed keys (last 3 digits of the compressed size are matched by glob because they can change on zstd crate updates)
   $ jq -r '.int * .normal | [ .blobstore_id, .blobstore_key, .uncompressed_size, .compressed_size ] | @csv' < pack-individually.json | sort | uniq
-  0,"repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd",107626,43634
-  0,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a",107640,43644
-  0,"repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09",107636,43640
+  0,"repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd",107626,43??? (glob)
+  0,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a",107640,43??? (glob)
+  0,"repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09",107636,43??? (glob)
 
 # Get the space consumed by the recompressed files, and see hardlink count of 1 (individual files)
   $ stat -c '%s %h %N' $TESTTMP/blobstore/0/blobs/blob-repo0000.content.blake2.* | sort -n
@@ -77,10 +77,10 @@
   > repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a
   > EOF
 
-# Check logging for packed keys
+# Check logging for packed keys (last 3 digits of the compressed size are matched by glob because they can change on zstd crate updates)
   $ jq -r '.int * .normal | [ .blobstore_id, .blobstore_key, .pack_key, .uncompressed_size, .compressed_size ] | @csv' < packed.json | sort | uniq
   0,"repo0000.content.blake2.4caa3d2f7430890df6f5deb3b652fcc88769e3323c0b7676e9771d172a521bbd","multiblob-ceaffcf37138026deff00f82a0a42640e26a3fa50ec51ae26df9294e10174299.pack",107626,22
-  0,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a","multiblob-ceaffcf37138026deff00f82a0a42640e26a3fa50ec51ae26df9294e10174299.pack",107640,41464
+  0,"repo0000.content.blake2.7f4c8284eea7351488400d6fdf82e1c262a81e20d4abd8ee469841d19b60c94a","multiblob-ceaffcf37138026deff00f82a0a42640e26a3fa50ec51ae26df9294e10174299.pack",107640,41??? (glob)
   0,"repo0000.content.blake2.ca629f1bf107b9986c1dcb16aa8aa45bc31ac0a56871c322a6cd16025b0afd09","multiblob-ceaffcf37138026deff00f82a0a42640e26a3fa50ec51ae26df9294e10174299.pack",107636,26
 
 # Get the space consumed by the packed files, and see hardlink count of 3, showing that they're in one pack
