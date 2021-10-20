@@ -10,7 +10,9 @@ use async_trait::async_trait;
 use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
-use gotham_ext::{error::HttpError, response::TryIntoResponse};
+use gotham_ext::{
+    error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
+};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::iter::FromIterator;
@@ -141,6 +143,8 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
         &params.repo,
         EdenApiMethod::CommitHashToLocation,
     ));
+
+    ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(100_u64));
 
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
