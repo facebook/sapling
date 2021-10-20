@@ -47,11 +47,15 @@ impl FileStore {
     }
 
     pub(crate) fn save(&self, e: &Entry) -> Result<()> {
-        util::file::atomic_write(self.dir.join(&e.id).with_extension(JSON_EXT), 0o644, |f| {
-            serde_json::to_writer_pretty(f, e)?;
-            // NB: we don't fsync so incomplete or empty JSON files are possible.
-            Ok(())
-        })?;
+        util::file::atomic_write(
+            self.dir.join(&e.id).with_extension(JSON_EXT),
+            0o644,
+            false, // NB: we don't fsync so incomplete or empty JSON files are possible.
+            |f| {
+                serde_json::to_writer_pretty(f, e)?;
+                Ok(())
+            },
+        )?;
         Ok(())
     }
 

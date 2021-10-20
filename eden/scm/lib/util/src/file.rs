@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{fs::File, io, path::Path};
+use std::{fs, fs::File, io, path::Path};
 #[cfg(unix)]
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 
@@ -27,9 +27,10 @@ pub fn apply_umask(mode: u32) -> u32 {
 
 /// Create a temp file and then rename it into the specified path to
 /// achieve atomicity. The temp file is created in the same directory
-/// as path to ensure the rename is not cross filesystem. The file is
-/// not automatically fsynced. mode_perms is required but does nothing
-/// on windows.
+/// as path to ensure the rename is not cross filesystem. If fysnc is
+/// true, the file will be fsynced before and after renaming, and the
+/// directory will by fsynced after renaming. mode_perms is required
+/// but does nothing on windows.
 ///
 /// The renamed file is returned. Any further data written to the file
 /// will not be atomic since the file is already visibile to readers.
@@ -39,6 +40,7 @@ pub fn apply_umask(mode: u32) -> u32 {
 pub fn atomic_write<P: AsRef<Path>>(
     path: P,
     #[allow(dead_code)] mode_perms: u32,
+    fsync: bool,
     op: impl FnOnce(&mut File) -> io::Result<()>,
 ) -> io::Result<File> {
     let dir = match path.as_ref().parent() {
@@ -54,11 +56,30 @@ pub fn atomic_write<P: AsRef<Path>>(
 
     op(f)?;
 
+    if fsync {
+        f.sync_data()?;
+    }
+
     let max_retries = if cfg!(windows) { 5u16 } else { 0 };
     let mut retry = 0;
     loop {
         match temp.persist(&path) {
-            Ok(f) => break Ok(f),
+            Ok(persisted) => {
+                if fsync {
+                    persisted.sync_all()?;
+
+                    // Also sync the directory on Unix.
+                    // Windows does not support syncing a directory.
+                    #[cfg(unix)]
+                    {
+                        if let Ok(opened) = fs::OpenOptions::new().read(true).open(dir) {
+                            let _ = opened.sync_all();
+                        }
+                    }
+                }
+
+                break Ok(persisted);
+            }
             Err(e) => {
                 if retry == max_retries || e.error.kind() != io::ErrorKind::PermissionDenied {
                     break Err(e.error);
@@ -95,7 +116,7 @@ mod tests {
         let td = tempdir()?;
 
         let foo_path = td.path().join("foo");
-        atomic_write(&foo_path, 0o640, |f| {
+        atomic_write(&foo_path, 0o640, false, |f| {
             f.write_all(b"sushi")?;
             Ok(())
         })?;

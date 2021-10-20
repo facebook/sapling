@@ -156,37 +156,17 @@ pub fn atomic_write(
 /// Use a plain file. Do not use symlinks.
 pub fn atomic_write_plain(path: &Path, content: &[u8], fsync: bool) -> crate::Result<()> {
     let result: crate::Result<_> = {
-        let fsync = fsync || get_global_fsync();
-
-        let persisted = util::file::atomic_write(
+        util::file::atomic_write(
             path,
             CHMOD_FILE.load(atomic::Ordering::SeqCst) as u32,
+            fsync || get_global_fsync(),
             |file| {
                 file.write_all(content)?;
-
-                if fsync {
-                    file.sync_data()?;
-                }
-
                 Ok(())
             },
         )
         .context(path, "atomic_write error")?;
 
-        if fsync {
-            persisted.sync_all().context(path, "cannot fsync")?;
-
-            // Also sync the directory on Unix.
-            // Windows does not support syncing a directory.
-            #[cfg(unix)]
-            {
-                if let Some(dir) = path.parent() {
-                    if let Ok(opened) = fs::OpenOptions::new().read(true).open(dir) {
-                        let _ = opened.sync_all();
-                    }
-                }
-            }
-        }
         Ok(())
     };
     result.context(|| {

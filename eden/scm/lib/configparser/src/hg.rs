@@ -622,9 +622,8 @@ pub fn generate_dynamicconfig(
     if hgrc_path.exists() && read_to_string(&hgrc_path).unwrap_or_default() == config_str {
         set_file_mtime(hgrc_path, FileTime::now())?;
     } else {
-        util::file::atomic_write(hgrc_path, 0o664, |f| {
+        util::file::atomic_write(hgrc_path, 0o664, true, |f| {
             f.write_all(config_str.as_bytes())?;
-            f.sync_all()?;
             Ok(())
         })?;
     }
