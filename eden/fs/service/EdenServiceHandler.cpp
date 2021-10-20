@@ -520,14 +520,14 @@ void EdenServiceHandler::getSHA1(
     unique_ptr<vector<string>> paths) {
   TraceBlock block("getSHA1");
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
-  vector<Future<Hash20>> futures;
+  vector<ImmediateFuture<Hash20>> futures;
   auto mountPath = AbsolutePathPiece{*mountPoint};
   for (const auto& path : *paths) {
     futures.emplace_back(
         getSHA1ForPathDefensively(mountPath, path, helper->getFetchContext()));
   }
 
-  auto results = folly::collectAll(std::move(futures)).get();
+  auto results = collectAll(std::move(futures)).get();
   for (auto& result : results) {
     out.emplace_back();
     SHA1Result& sha1Result = out.back();
@@ -539,20 +539,20 @@ void EdenServiceHandler::getSHA1(
   }
 }
 
-Future<Hash20> EdenServiceHandler::getSHA1ForPathDefensively(
+ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPathDefensively(
     AbsolutePathPiece mountPoint,
     StringPiece path,
     ObjectFetchContext& fetchContext) noexcept {
-  return folly::makeFutureWith(
+  return makeImmediateFutureWith(
       [&] { return getSHA1ForPath(mountPoint, path, fetchContext); });
 }
 
-Future<Hash20> EdenServiceHandler::getSHA1ForPath(
+ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
     AbsolutePathPiece mountPoint,
     StringPiece path,
     ObjectFetchContext& fetchContext) {
   if (path.empty()) {
-    return makeFuture<Hash20>(newEdenError(
+    return ImmediateFuture<Hash20>(newEdenError(
         EINVAL,
         EdenErrorType::ARGUMENT_ERROR,
         "path cannot be the empty string"));
@@ -569,9 +569,7 @@ Future<Hash20> EdenServiceHandler::getSHA1ForPath(
               InodeError(EINVAL, fileInode, "file is a symlink"));
         }
         return fileInode->getSha1(fetchContext);
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+      });
 }
 
 void EdenServiceHandler::getBindMounts(

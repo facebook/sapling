@@ -29,6 +29,8 @@ class ObjectFetchContext;
 #ifdef EDEN_HAVE_USAGE_SERVICE
 class EdenFSSmartPlatformServiceEndpoint;
 #endif
+template <typename T>
+class ImmediateFuture;
 
 extern const char* const kServiceName;
 
@@ -289,12 +291,12 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   std::optional<pid_t> getAndRegisterClientPid();
 
  private:
-  folly::Future<Hash20> getSHA1ForPath(
+  ImmediateFuture<Hash20> getSHA1ForPath(
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext);
 
-  folly::Future<Hash20> getSHA1ForPathDefensively(
+  ImmediateFuture<Hash20> getSHA1ForPathDefensively(
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext) noexcept;
