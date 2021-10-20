@@ -105,10 +105,14 @@ inline Hash20 hash20FromThrift(folly::StringPiece commitID) {
   }
 }
 
+/**
+ * A RootId codec suitable for BackingStores that use 20-byte hashes for
+ * RootIds, like Git and Hg.
+ */
 class HashRootIdCodec : public RootIdCodec {
  public:
   RootId parseRootId(folly::StringPiece piece) override {
-    return RootId{hashFromThrift(piece).toString()};
+    return RootId{hash20FromThrift(piece).toString()};
   }
   std::string renderRootId(const RootId& rootId) override {
     return folly::unhexlify(rootId.value());
