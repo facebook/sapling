@@ -1936,7 +1936,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
   }
 
   void fillBlobSizes(ObjectFetchContext& fetchContext) {
-    std::vector<folly::Future<folly::Unit>> futures;
+    std::vector<ImmediateFuture<folly::Unit>> futures;
     futures.reserve(requestedSizes_.size());
     for (auto& request : requestedSizes_) {
       futures.push_back(mount_->getObjectStore()
@@ -1948,7 +1948,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
                                   .fileSize_ref() = blobSize;
                             }));
     }
-    folly::collectAll(futures).get();
+    collectAll(std::move(futures)).get();
   }
 
  private:

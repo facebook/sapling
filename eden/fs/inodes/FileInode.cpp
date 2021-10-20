@@ -757,18 +757,16 @@ ImmediateFuture<struct stat> FileInode::stat(ObjectFetchContext& context) {
         state->nonMaterializedState->hash, context);
     state.unlock();
 
-    return std::move(sizeFut)
-        .thenValue(
-            [self = inodePtrFromThis(), st](const uint64_t size) mutable {
-              if (auto lockedState = LockedState{self};
-                  !lockedState->isMaterialized()) {
-                lockedState->nonMaterializedState->size = size;
-              }
-              st.st_size = size;
-              updateBlockCount(st);
-              return st;
-            })
-        .semi();
+    return std::move(sizeFut).thenValue(
+        [self = inodePtrFromThis(), st](const uint64_t size) mutable {
+          if (auto lockedState = LockedState{self};
+              !lockedState->isMaterialized()) {
+            lockedState->nonMaterializedState->size = size;
+          }
+          st.st_size = size;
+          updateBlockCount(st);
+          return st;
+        });
   }
 }
 

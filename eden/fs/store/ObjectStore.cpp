@@ -322,11 +322,12 @@ ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
       .semi();
 }
 
-Future<uint64_t> ObjectStore::getBlobSize(
+ImmediateFuture<uint64_t> ObjectStore::getBlobSize(
     const ObjectId& id,
     ObjectFetchContext& context) const {
   return getBlobMetadata(id, context)
-      .thenValue([](const BlobMetadata& metadata) { return metadata.size; });
+      .thenValue([](const BlobMetadata& metadata) { return metadata.size; })
+      .semi();
 }
 
 } // namespace facebook::eden

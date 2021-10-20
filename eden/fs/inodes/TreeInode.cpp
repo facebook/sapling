@@ -1968,7 +1968,11 @@ std::vector<FileMetadata> TreeInode::readdir() {
         ret.emplace_back(
             std::move(winName),
             false,
-            getMount()->getObjectStore()->getBlobSize(hash.value(), *context));
+            getMount()
+                ->getObjectStore()
+                ->getBlobSize(hash.value(), *context)
+                .semi()
+                .via(&folly::QueuedImmediateExecutor::instance()));
         continue;
       }
     }

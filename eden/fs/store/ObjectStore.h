@@ -179,7 +179,7 @@ class ObjectStore : public IObjectStore,
   /**
    * Returns the size of the contents of the blob with the given ID.
    */
-  folly::Future<uint64_t> getBlobSize(
+  ImmediateFuture<uint64_t> getBlobSize(
       const ObjectId& id,
       ObjectFetchContext& context) const;
 
