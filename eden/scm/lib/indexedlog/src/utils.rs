@@ -157,43 +157,22 @@ pub fn atomic_write(
 pub fn atomic_write_plain(path: &Path, content: &[u8], fsync: bool) -> crate::Result<()> {
     let result: crate::Result<_> = {
         let fsync = fsync || get_global_fsync();
-        let dir = path.parent().expect("path has a parent");
-        let mut file =
-            tempfile::NamedTempFile::new_in(dir).context(&dir, "cannot create tempfile")?;
-        file.as_file_mut()
-            .write_all(content)
-            .context(&file.path(), "cannot write to tempfile")?;
-        if fsync {
-            file.as_file_mut()
-                .sync_data()
-                .context(&file.path(), "cannot fdatasync")?;
-        }
-        // fix_perm issues are not fatal
-        let _ = fix_perm_file(file.as_file(), false);
-        let retry_limit = if cfg!(windows) { 5u16 } else { 0 };
-        let mut retry = 0;
-        let persisted = loop {
-            match file.persist(path) {
-                Ok(f) => break f,
-                Err(e) => {
-                    if retry < retry_limit && e.error.kind() == io::ErrorKind::PermissionDenied {
-                        // Windows - rename can fail with "Access Denied" randomly.
-                        // Retry a few times.
-                        tracing::info!(
-                            name = "atomic_write rename failed with EPERM. Will retry.",
-                            retry = retry,
-                            path = AsRef::<str>::as_ref(&path.display().to_string()),
-                        );
-                        std::thread::sleep(std::time::Duration::from_millis(1 << retry));
-                        retry += 1;
-                        file = e.file;
-                        continue;
-                    } else {
-                        return Err(crate::Error::wrap(Box::new(e), "cannot persist"));
-                    }
+
+        let persisted = util::file::atomic_write(
+            path,
+            CHMOD_FILE.load(atomic::Ordering::SeqCst) as u32,
+            |file| {
+                file.write_all(content)?;
+
+                if fsync {
+                    file.sync_data()?;
                 }
-            }
-        };
+
+                Ok(())
+            },
+        )
+        .context(path, "atomic_write error")?;
+
         if fsync {
             persisted.sync_all().context(path, "cannot fsync")?;
 
