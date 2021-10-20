@@ -115,7 +115,7 @@ sh % "hg commit -m ' '"
 sh % "hg tip -T '{node}\\n'" == "e7df5eeeca3300b311991dbe19748d533edb2e8a"
 sh % "hg export -o ../empty-log.diff ."
 sh % "hg update -q -C '.^1'"
-sh % "hg debugstrip -q tip"
+sh % "hg hide -q -r tip"
 sh % "'HGEDITOR=cat' hg import --exact ../empty-log.diff" == "applying ../empty-log.diff"
 sh % "hg tip -T '{node}\\n'" == "e7df5eeeca3300b311991dbe19748d533edb2e8a"
 
