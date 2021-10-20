@@ -156,7 +156,7 @@ pub fn atomic_write(
 /// Use a plain file. Do not use symlinks.
 pub fn atomic_write_plain(path: &Path, content: &[u8], fsync: bool) -> crate::Result<()> {
     let result: crate::Result<_> = {
-        util::file::atomic_write(
+        atomicfile::atomic_write(
             path,
             CHMOD_FILE.load(atomic::Ordering::SeqCst) as u32,
             fsync || get_global_fsync(),

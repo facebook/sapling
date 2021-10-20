@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+atomicfile = { path = "../atomicfile" }
 dirs = "2.0"
 fs2 = "0.4"
 libc = "0.2.98"
