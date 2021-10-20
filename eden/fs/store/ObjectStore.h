@@ -230,11 +230,11 @@ class ObjectStore : public IObjectStore,
   /**
    * Get metadata about a Blob.
    *
-   * This returns a Future object that will produce the BlobMetadata when it is
-   * ready.  It may result in a std::domain_error if the specified blob does
-   * not exist, or possibly other exceptions on error.
+   * This returns an ImmediateFuture object that will produce the BlobMetadata
+   * when it is ready.  It may result in a std::domain_error if the specified
+   * blob does not exist, or possibly other exceptions on error.
    */
-  folly::Future<BlobMetadata> getBlobMetadata(
+  ImmediateFuture<BlobMetadata> getBlobMetadata(
       const ObjectId& id,
       ObjectFetchContext& context) const;
 

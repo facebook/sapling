@@ -239,7 +239,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
       });
 }
 
-Future<BlobMetadata> ObjectStore::getBlobMetadata(
+ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     const ObjectId& id,
     ObjectFetchContext& context) const {
   // Check in-memory cache
@@ -262,8 +262,8 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
   auto self = shared_from_this();
 
   // Check local store
-  return localStore_->getBlobMetadata(id).thenValue(
-      [self, id, &context](std::optional<BlobMetadata>&& metadata) {
+  return localStore_->getBlobMetadata(id)
+      .thenValue([self, id, &context](std::optional<BlobMetadata>&& metadata) {
         if (metadata) {
           self->stats_->getObjectStoreStatsForCurrentThread()
               .getBlobMetadataFromLocalStore.addValue(1);
@@ -311,23 +311,22 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
 
               throw std::domain_error(fmt::format("blob {} not fonud", id));
             });
-      });
+      })
+      .semi();
 }
 
 ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
     const ObjectId& id,
     ObjectFetchContext& context) const {
   return getBlobMetadata(id, context)
-      .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; })
-      .semi();
+      .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; });
 }
 
 ImmediateFuture<uint64_t> ObjectStore::getBlobSize(
     const ObjectId& id,
     ObjectFetchContext& context) const {
   return getBlobMetadata(id, context)
-      .thenValue([](const BlobMetadata& metadata) { return metadata.size; })
-      .semi();
+      .thenValue([](const BlobMetadata& metadata) { return metadata.size; });
 }
 
 } // namespace facebook::eden
