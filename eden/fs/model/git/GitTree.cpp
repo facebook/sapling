@@ -86,10 +86,10 @@ std::unique_ptr<Tree> deserializeGitTree(
       throw std::domain_error(fmt::format(
           "Gitlinks are not currently supported: {:o} in object {}",
           mode,
-          hash.toString()));
+          hash));
     } else {
-      throw invalid_argument(fmt::format(
-          "Unrecognized mode: {:o} in object {}", mode, hash.toString()));
+      throw invalid_argument(
+          fmt::format("Unrecognized mode: {:o} in object {}", mode, hash));
     }
 
     entries.emplace_back(

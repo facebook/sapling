@@ -72,7 +72,7 @@ const char* GitBackingStore::getPath() const {
 }
 
 RootId GitBackingStore::parseRootId(folly::StringPiece rootId) {
-  return RootId{hashFromThrift(rootId).toString()};
+  return RootId{hash20FromThrift(rootId).toString()};
 }
 
 std::string GitBackingStore::renderRootId(const RootId& rootId) {

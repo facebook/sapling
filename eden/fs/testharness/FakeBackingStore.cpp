@@ -68,11 +68,7 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
         if (treeIter == data->trees.end()) {
           return makeFuture<unique_ptr<Tree>>(
               std::domain_error(folly::to<std::string>(
-                  "tree ",
-                  hash->toString(),
-                  " for commit ",
-                  commitID,
-                  " not found")));
+                  "tree ", *hash, " for commit ", commitID, " not found")));
         }
 
         return treeIter->second->getFuture();
@@ -92,7 +88,7 @@ SemiFuture<BackingStore::GetTreeRes> FakeBackingStore::getTree(
     //
     // Delayed errors can be triggered by calling putTree() with a StoredObject
     // and then calling triggerError() later on that object.
-    throw std::domain_error("tree " + id.toString() + " not found");
+    throw std::domain_error(fmt::format("tree {} not found", id));
   }
 
   return it->second->getFuture().thenValue([](std::unique_ptr<Tree> tree) {
@@ -109,7 +105,7 @@ SemiFuture<BackingStore::GetBlobRes> FakeBackingStore::getBlob(
   auto it = data->blobs.find(id);
   if (it == data->blobs.end()) {
     // Throw immediately, for the same reasons mentioned in getTree()
-    throw std::domain_error("blob " + id.toString() + " not found");
+    throw std::domain_error(fmt::format("blob {} not found", id));
   }
 
   return it->second->getFuture().thenValue([](std::unique_ptr<Blob> blob) {
@@ -137,7 +133,7 @@ StoredBlob* FakeBackingStore::putBlob(
   auto ret = maybePutBlob(hash, contents);
   if (!ret.second) {
     throw std::domain_error(
-        fmt::format("blob with hash {} already exists", hash.toString()));
+        fmt::format("blob with hash {} already exists", hash));
   }
   return ret.first;
 }
@@ -285,7 +281,7 @@ StoredTree* FakeBackingStore::putTreeImpl(
   auto ret = maybePutTreeImpl(hash, std::move(sortedEntries));
   if (!ret.second) {
     throw std::domain_error(
-        fmt::format("tree with hash {} already exists", hash.toString()));
+        fmt::format("tree with hash {} already exists", hash));
   }
   return ret.first;
 }
@@ -340,7 +336,7 @@ StoredTree* FakeBackingStore::getStoredTree(ObjectId hash) {
   auto data = data_.rlock();
   auto it = data->trees.find(hash);
   if (it == data->trees.end()) {
-    throw std::domain_error("stored tree " + hash.toString() + " not found");
+    throw std::domain_error(fmt::format("stored tree {} not found", hash));
   }
   return it->second.get();
 }
@@ -349,7 +345,7 @@ StoredBlob* FakeBackingStore::getStoredBlob(ObjectId hash) {
   auto data = data_.rlock();
   auto it = data->blobs.find(hash);
   if (it == data->blobs.end()) {
-    throw std::domain_error("stored blob " + hash.toString() + " not found");
+    throw std::domain_error(fmt::format("stored blob {} not found", hash));
   }
   return it->second.get();
 }

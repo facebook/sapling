@@ -232,9 +232,8 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getRootTree(
             if (!result.isValid()) {
               return importTreeManifest(commitId, prefetchMetadata)
                   .thenValue([this, commitId](std::unique_ptr<Tree> rootTree) {
-                    XLOG(DBG1)
-                        << "imported mercurial commit " << commitId.toString()
-                        << " as tree " << rootTree->getHash().toString();
+                    XLOG(DBG1) << "imported mercurial commit " << commitId
+                               << " as tree " << rootTree->getHash();
 
                     localStore_->put(
                         KeySpace::HgCommitToTreeFamily,
@@ -598,10 +597,9 @@ folly::Future<folly::Unit> HgBackingStore::importTreeManifestForRoot(
             return importTreeManifestImpl(manifestId, prefetchMetadata)
                 .thenValue([this, commitId, manifestId](
                                std::unique_ptr<Tree> rootTree) {
-                  XLOG(DBG3)
-                      << "imported mercurial commit " << commitId.toString()
-                      << " with manifest " << manifestId.toString()
-                      << " as tree " << rootTree->getHash().toString();
+                  XLOG(DBG3) << "imported mercurial commit " << commitId
+                             << " with manifest " << manifestId << " as tree "
+                             << rootTree->getHash();
 
                   localStore_->put(
                       KeySpace::HgCommitToTreeFamily,
@@ -618,12 +616,12 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
              importThreadPool_.get(),
              [commitId] {
                return getThreadLocalImporter().resolveManifestNode(
-                   commitId.toString());
+                   commitId.asHexString());
              })
       .via(serverThreadPool_)
       .thenValue([this, commitId, prefetchMetadata](auto manifestNode) {
-        XLOG(DBG2) << "revision " << commitId.toString()
-                   << " has manifest node " << manifestNode;
+        XLOG(DBG2) << "revision " << commitId << " has manifest node "
+                   << manifestNode;
         return importTreeManifestImpl(manifestNode, prefetchMetadata);
       });
 }

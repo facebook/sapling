@@ -112,7 +112,7 @@ void HgQueuedBackingStore::processBlobImportRequests(
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::BLOB, blobImport->proxyHash));
 
-    XLOGF(DBG4, "Processing blob request for {}", blobImport->hash.toString());
+    XLOGF(DBG4, "Processing blob request for {}", blobImport->hash);
   }
 
   backingStore_->getDatapackStore().getBlobBatch(requests);
@@ -164,7 +164,7 @@ void HgQueuedBackingStore::processTreeImportRequests(
     traceBus_->publish(HgImportTraceEvent::start(
         request->getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
 
-    XLOGF(DBG4, "Processing tree request for {}", treeImport->hash.toString());
+    XLOGF(DBG4, "Processing tree request for {}", treeImport->hash);
   }
 
   backingStore_->getTreeBatch(requests, prefetchMetadata);
@@ -243,7 +243,7 @@ void HgQueuedBackingStore::processRequest() {
 RootId HgQueuedBackingStore::parseRootId(folly::StringPiece rootId) {
   // rootId can be 20-byte binary or 40-byte hex. Canonicalize, unconditionally
   // returning 40-byte hex.
-  return RootId{hashFromThrift(rootId).toString()};
+  return RootId{hash20FromThrift(rootId).toString()};
 }
 
 std::string HgQueuedBackingStore::renderRootId(const RootId& rootId) {

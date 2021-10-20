@@ -64,7 +64,7 @@ ImmediateFuture<std::shared_ptr<const Tree>> FakeObjectStore::getTree(
   auto iter = trees_.find(id);
   if (iter == trees_.end()) {
     return makeImmediateFuture<std::shared_ptr<const Tree>>(
-        std::domain_error("tree " + id.toString() + " not found"));
+        std::domain_error(fmt::format("tree {} not found", id)));
   }
   return make_shared<const Tree>(iter->second);
 }
@@ -76,7 +76,7 @@ Future<std::shared_ptr<const Blob>> FakeObjectStore::getBlob(
   auto iter = blobs_.find(id);
   if (iter == blobs_.end()) {
     return makeFuture<shared_ptr<const Blob>>(
-        std::domain_error("blob " + id.toString() + " not found"));
+        std::domain_error(fmt::format("blob {} not found", id)));
   }
   return makeFuture(make_shared<Blob>(iter->second));
 }

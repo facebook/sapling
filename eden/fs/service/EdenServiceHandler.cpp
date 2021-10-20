@@ -1757,10 +1757,7 @@ void EdenServiceHandler::debugGetScmTree(
 
   if (!tree) {
     throw newEdenError(
-        ENOENT,
-        EdenErrorType::POSIX_ERROR,
-        "no tree found for id ",
-        id.toString());
+        ENOENT, EdenErrorType::POSIX_ERROR, "no tree found for id ", id);
   }
 
   for (const auto& entry : tree->getTreeEntries()) {
@@ -1795,10 +1792,7 @@ void EdenServiceHandler::debugGetScmBlob(
 
   if (!blob) {
     throw newEdenError(
-        ENOENT,
-        EdenErrorType::POSIX_ERROR,
-        "no blob found for id ",
-        id.toString());
+        ENOENT, EdenErrorType::POSIX_ERROR, "no blob found for id ", id);
   }
   auto dataBuf = blob->getContents().cloneCoalescedAsValue();
   data.assign(reinterpret_cast<const char*>(dataBuf.data()), dataBuf.length());
@@ -1832,7 +1826,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
         ENOENT,
         EdenErrorType::POSIX_ERROR,
         "no blob metadata found for id ",
-        id.toString());
+        id);
   }
   result.size_ref() = metadata->size;
   result.contentsSha1_ref() = thriftHash20(metadata->sha1);

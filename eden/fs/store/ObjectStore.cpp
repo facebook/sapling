@@ -182,8 +182,7 @@ ImmediateFuture<shared_ptr<const Tree>> ObjectStore::getTree(
           // TODO: Perhaps we should do some short-term negative
           // caching?
           XLOG(DBG2) << "unable to find tree " << id;
-          throw std::domain_error(
-              folly::to<string>("tree ", id.toString(), " not found"));
+          throw std::domain_error(fmt::format("tree {} not found", id));
         }
 
         // promote to shared_ptr so we can store in the cache and return
@@ -224,8 +223,7 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
         if (!result.blob) {
           // TODO: Perhaps we should do some short-term negative caching?
           XLOG(DBG2) << "unable to find blob " << id;
-          throw std::domain_error(
-              folly::to<string>("blob ", id.toString(), " not found"));
+          throw std::domain_error(fmt::format("blob {} not found", id));
         }
         // Quick check in-memory cache first, before doing expensive
         // calculations. If metadata is present in cache, it most certainly
@@ -311,8 +309,7 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
                 return makeFuture(metadata);
               }
 
-              throw std::domain_error(
-                  folly::to<string>("blob ", id.toString(), " not found"));
+              throw std::domain_error(fmt::format("blob {} not fonud", id));
             });
       });
 }

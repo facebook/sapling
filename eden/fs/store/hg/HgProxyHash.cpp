@@ -52,8 +52,8 @@ HgProxyHash HgProxyHash::load(
   // Read the path name and file rev hash
   auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenObjectId);
   if (!infoResult.isValid()) {
-    XLOG(ERR) << "received unknown mercurial proxy hash "
-              << edenObjectId.toString() << " in " << context;
+    XLOG(ERR) << "received unknown mercurial proxy hash " << edenObjectId
+              << " in " << context;
     // Fall through and let infoResult.extractValue() throw
   }
 
@@ -95,8 +95,8 @@ HgProxyHash::HgProxyHash(
     StoreResult& infoResult,
     StringPiece context) {
   if (!infoResult.isValid()) {
-    XLOG(ERR) << "received unknown mercurial proxy hash "
-              << edenBlobHash.toString() << " in " << context;
+    XLOG(ERR) << "received unknown mercurial proxy hash " << edenBlobHash
+              << " in " << context;
     // Fall through and let infoResult.extractValue() throw
   }
 
@@ -176,7 +176,7 @@ void HgProxyHash::validate(ObjectId edenBlobHash) {
   if (infoBytes.size() < Hash20::RAW_SIZE + sizeof(uint32_t)) {
     auto msg = folly::to<string>(
         "mercurial blob info data for ",
-        edenBlobHash.toString(),
+        edenBlobHash,
         " is too short (",
         infoBytes.size(),
         " bytes)");
@@ -195,7 +195,7 @@ void HgProxyHash::validate(ObjectId edenBlobHash) {
   if (infoBytes.size() != pathLength) {
     auto msg = folly::to<string>(
         "mercurial blob info data for ",
-        edenBlobHash.toString(),
+        edenBlobHash,
         " has inconsistent path length");
     XLOG(ERR) << msg;
     throw std::length_error(msg);

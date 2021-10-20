@@ -69,7 +69,7 @@ TEST(GitTree, testDeserialize) {
 
   auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
   EXPECT_EQ(11, tree->getTreeEntries().size());
-  EXPECT_EQ(treeHash, ObjectId::sha1(StringPiece{gitTreeObject}).toString())
+  EXPECT_EQ(treeHash, Hash20::sha1(StringPiece{gitTreeObject}).toString())
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
@@ -140,7 +140,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
 
   auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
   EXPECT_EQ(5, tree->getTreeEntries().size());
-  EXPECT_EQ(treeHash, ObjectId::sha1(StringPiece{gitTreeObject}).toString())
+  EXPECT_EQ(treeHash, Hash20::sha1(StringPiece{gitTreeObject}).toString())
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.

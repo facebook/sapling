@@ -77,7 +77,7 @@ std::string TreeEntry::toLogString() const {
   }
 
   return folly::to<std::string>(
-      "(", name_, ", ", hash_.toString(), ", ", fileTypeChar, ")");
+      "(", name_, ", ", hash_, ", ", fileTypeChar, ")");
 }
 
 std::ostream& operator<<(std::ostream& os, TreeEntryType type) {

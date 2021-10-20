@@ -8,6 +8,7 @@
 #pragma once
 
 #include <boost/operators.hpp>
+#include <fmt/format.h>
 #include <folly/Range.h>
 #include <stdint.h>
 #include <array>
@@ -67,8 +68,12 @@ class ObjectId : boost::totally_ordered<ObjectId> {
   }
   folly::MutableByteRange mutableBytes();
 
-  /** @return 40-character [lowercase] hex representation of this hash. */
-  std::string toString() const;
+  /** @return [lowercase] hex representation of this ObjectId. */
+  std::string toLogString() const {
+    return asHexString();
+  }
+
+  std::string asHexString() const;
 
   /** @return 20-character bytes of this hash. */
   std::string toByteString() const;
@@ -153,3 +158,12 @@ struct hash<facebook::eden::ObjectId> {
   }
 };
 } // namespace std
+
+namespace fmt {
+template <>
+struct formatter<facebook::eden::ObjectId> : formatter<std::string> {
+  auto format(const facebook::eden::ObjectId& id, format_context& ctx) {
+    return formatter<std::string>::format(id.toLogString(), ctx);
+  }
+};
+} // namespace fmt

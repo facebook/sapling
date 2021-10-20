@@ -25,7 +25,7 @@ folly::MutableByteRange ObjectId::mutableBytes() {
   return folly::MutableByteRange{bytes_.data(), bytes_.size()};
 }
 
-std::string ObjectId::toString() const {
+std::string ObjectId::asHexString() const {
   std::string result;
   folly::hexlify(bytes_, result);
   return result;
@@ -67,12 +67,12 @@ void ObjectId::throwInvalidArgument(const char* message, size_t number) {
 }
 
 std::ostream& operator<<(std::ostream& os, const ObjectId& hash) {
-  os << hash.toString();
+  os << hash.toLogString();
   return os;
 }
 
 void toAppend(const ObjectId& hash, std::string* result) {
-  folly::toAppend(hash.toString(), result);
+  folly::toAppend(hash.toLogString(), result);
 }
 
 } // namespace facebook::eden

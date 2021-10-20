@@ -15,7 +15,7 @@
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 
-using facebook::eden::ObjectId;
+using namespace facebook::eden;
 using folly::IOBuf;
 using folly::StringPiece;
 using std::string;
@@ -29,7 +29,7 @@ TEST(GitBlob, testDeserializeUnmanaged) {
   string contents("{\n  \"breakConfig\": true\n}\n");
   auto gitBlobObjectStr = folly::to<string>(string("blob 26\x00", 8), contents);
   folly::ByteRange gitBlobObject = folly::StringPiece{gitBlobObjectStr};
-  EXPECT_EQ(blobHash, ObjectId::sha1(gitBlobObject).toString())
+  EXPECT_EQ(blobHash, Hash20::sha1(gitBlobObject).toString())
       << "SHA-1 of contents should match key";
 
   IOBuf buf(IOBuf::WRAP_BUFFER, gitBlobObject);

@@ -2023,9 +2023,11 @@ Future<Unit> TreeInode::diff(
 
     XLOG(DBG7) << "diff() on directory " << getLogPath() << " (" << getNodeId()
                << ", "
-               << (contents->isMaterialized() ? "materialized"
-                                              : contents->treeHash->toString())
-               << ") vs " << (tree ? tree->getHash().toString() : "null tree");
+               << (contents->isMaterialized()
+                       ? "materialized"
+                       : contents->treeHash->toLogString())
+               << ") vs "
+               << (tree ? tree->getHash().toLogString() : "null tree");
 
     // Check to see if we can short-circuit the diff operation if we have the
     // same hash as the tree we are being compared to.
@@ -2519,8 +2521,9 @@ Future<Unit> TreeInode::checkout(
     std::shared_ptr<const Tree> fromTree,
     std::shared_ptr<const Tree> toTree) {
   XLOG(DBG4) << "checkout: starting update of " << getLogPath() << ": "
-             << (fromTree ? fromTree->getHash().toString() : "<none>")
-             << " --> " << (toTree ? toTree->getHash().toString() : "<none>");
+             << (fromTree ? fromTree->getHash().toLogString() : "<none>")
+             << " --> "
+             << (toTree ? toTree->getHash().toLogString() : "<none>");
 
   vector<unique_ptr<CheckoutAction>> actions;
   vector<IncompleteInodeLoad> pendingLoads;
@@ -3261,8 +3264,9 @@ void TreeInode::saveOverlayPostCheckout(
 
     XLOG(DBG4) << "saveOverlayPostCheckout(" << getLogPath() << ", " << tree
                << "): deleteSelf=" << deleteSelf << ", oldHash="
-               << (oldHash ? oldHash.value().toString() : "none") << " newHash="
-               << (contents->treeHash ? contents->treeHash.value().toString()
+               << (oldHash ? oldHash.value().toLogString() : "none")
+               << " newHash="
+               << (contents->treeHash ? contents->treeHash.value().toLogString()
                                       : "none")
                << " isMaterialized=" << isMaterialized;
 

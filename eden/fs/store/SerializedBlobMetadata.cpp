@@ -37,7 +37,7 @@ BlobMetadata SerializedBlobMetadata::parse(
   if (bytes.size() != SIZE) {
     throw std::invalid_argument(fmt::format(
         "Blob metadata for {} had unexpected size {}. Could not deserialize.",
-        blobID.toString(),
+        blobID,
         bytes.size()));
   }
 
