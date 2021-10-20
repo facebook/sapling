@@ -560,10 +560,18 @@ void processBothPresent(
                                    entryPath = currentPath + scmEntry.getName(),
                                    &scmEntry,
                                    &wdEntry] {
-              auto scmFuture = context->store->getBlobSha1(
-                  scmEntry.getHash(), context->getFetchContext());
-              auto wdFuture = context->store->getBlobSha1(
-                  wdEntry.getHash(), context->getFetchContext());
+              auto scmFuture =
+                  context->store
+                      ->getBlobSha1(
+                          scmEntry.getHash(), context->getFetchContext())
+                      .semi()
+                      .via(&folly::QueuedImmediateExecutor::instance());
+              auto wdFuture =
+                  context->store
+                      ->getBlobSha1(
+                          wdEntry.getHash(), context->getFetchContext())
+                      .semi()
+                      .via(&folly::QueuedImmediateExecutor::instance());
               return collectSafe(scmFuture, wdFuture)
                   .thenValue([entryPath = entryPath.copy(),
                               context](const std::tuple<Hash20, Hash20>& info) {

@@ -249,10 +249,15 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
         currentBlobHash_{currentBlobHash} {}
 
   folly::Future<folly::Unit> run() override {
-    auto f1 = context_->store->getBlobSha1(
-        scmEntry_.getHash(), context_->getFetchContext());
-    auto f2 = context_->store->getBlobSha1(
-        currentBlobHash_, context_->getFetchContext());
+    auto f1 =
+        context_->store
+            ->getBlobSha1(scmEntry_.getHash(), context_->getFetchContext())
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
+    auto f2 = context_->store
+                  ->getBlobSha1(currentBlobHash_, context_->getFetchContext())
+                  .semi()
+                  .via(&folly::QueuedImmediateExecutor::instance());
     return collectSafe(f1, f2).thenValue(
         [this](const std::tuple<Hash20, Hash20>& info) {
           const auto& [info1, info2] = info;

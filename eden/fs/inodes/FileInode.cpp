@@ -597,7 +597,11 @@ folly::Future<bool> FileInode::isSameAs(
   auto f1 = getSha1(fetchContext)
                 .semi()
                 .via(&folly::QueuedImmediateExecutor::instance());
-  auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID, fetchContext);
+  auto f2 = getMount()
+                ->getObjectStore()
+                ->getBlobSha1(blobID, fetchContext)
+                .semi()
+                .via(&folly::QueuedImmediateExecutor::instance());
   return folly::collectUnsafe(f1, f2).thenTry(
       [](folly::Try<std::tuple<Hash20, Hash20>>&& try_) {
         if (try_.hasException()) {
@@ -692,9 +696,8 @@ ImmediateFuture<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
     case State::BLOB_NOT_LOADING:
     case State::BLOB_LOADING:
       // If a file is not materialized, it should have a hash value.
-      return getObjectStore()
-          ->getBlobSha1(state->nonMaterializedState->hash, fetchContext)
-          .semi();
+      return getObjectStore()->getBlobSha1(
+          state->nonMaterializedState->hash, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
 #ifdef _WIN32
       return makeImmediateFutureWith(
@@ -1084,7 +1087,7 @@ void FileInode::materializeNow(
       state->nonMaterializedState->hash, *context);
   std::optional<Hash20> blobSha1;
   if (blobSha1Future.isReady()) {
-    blobSha1 = blobSha1Future.value();
+    blobSha1 = std::move(blobSha1Future).get();
   }
 
   getOverlayFileAccess(state)->createFile(getNodeId(), *blob, blobSha1);

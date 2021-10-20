@@ -314,11 +314,12 @@ Future<BlobMetadata> ObjectStore::getBlobMetadata(
       });
 }
 
-Future<Hash20> ObjectStore::getBlobSha1(
+ImmediateFuture<Hash20> ObjectStore::getBlobSha1(
     const ObjectId& id,
     ObjectFetchContext& context) const {
   return getBlobMetadata(id, context)
-      .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; });
+      .thenValue([](const BlobMetadata& metadata) { return metadata.sha1; })
+      .semi();
 }
 
 Future<uint64_t> ObjectStore::getBlobSize(
