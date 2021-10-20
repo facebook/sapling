@@ -14,7 +14,6 @@
 use anyhow::*;
 use serde::*;
 use sha2::{Digest, Sha256};
-use std::ffi::{CStr, CString};
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};

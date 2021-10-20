@@ -10,13 +10,11 @@ use crate::treecontentstore::TreeContentStore;
 use crate::utils::key_from_path_node_slice;
 use anyhow::Result;
 use edenapi::{Builder as EdenApiBuilder, EdenApi};
-use log::warn;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
-use progress::null::NullProgressFactory;
 use revisionstore::{
     ContentStore, ContentStoreBuilder, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore,
-    LocalStore, MemcacheStore, RemoteDataStore, StoreKey, StoreResult,
+    LocalStore, RemoteDataStore, StoreKey, StoreResult,
 };
 use std::path::Path;
 use std::sync::Arc;
