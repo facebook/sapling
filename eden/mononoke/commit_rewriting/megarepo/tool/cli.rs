@@ -30,6 +30,8 @@ pub const COMMIT_DATE_RFC3339: &str = "commit-date-rfc3339";
 pub const COMMIT_HASH: &str = "commit-hash";
 pub const COMMIT_HASH_CORRECT_HISTORY: &str = "commit-hash-correct-history";
 pub const COMMIT_MESSAGE: &str = "commit-message";
+pub const DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO: &str =
+    "delete-no-longer-bound-files-from-large-repo";
 pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
 pub const DIFF_MAPPING_VERSIONS: &str = "diff-mapping-versions";
 pub const DRY_RUN: &str = "dry-run";
@@ -54,6 +56,7 @@ pub const ORIGIN_REPO: &str = "origin-repo";
 pub const PARENTS: &str = "parents";
 pub const PATH_REGEX: &str = "path-regex";
 pub const PATH: &str = "path";
+pub const PATH_PREFIX: &str = "path-prefix";
 pub const PATHS_FILE: &str = "paths-file";
 pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
 pub const PRE_MERGE_DELETE: &str = "pre-merge-delete";
@@ -670,6 +673,29 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(true),
         );
 
+    let delete_no_longer_bound_files_from_large_repo = SubCommand::with_name(DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO)
+        .about("
+        Right after small and large are bound usually a majority of small repo files map to a single folder \
+        in large repo (let's call it DIR). Later these files from small repo might be bound to a another files in large repo \
+        however files in DIR might still exist in large repo. \
+        This command allows us to delete these files from DIR. It does so by finding all files in DIR and its subfolders \
+        that do not remap to a small repo and then deleting them. \
+        Note: if there are files in DIR that were never part of a bind, they will be deleted.
+        ")
+        .arg(
+            Arg::with_name(COMMIT_HASH)
+                .long(COMMIT_HASH)
+                .required(true)
+                .takes_value(true)
+                .help("hg/bonsai changeset id or bookmark"),
+        )
+        .arg(
+            Arg::with_name(PATH_PREFIX)
+                .long(PATH_PREFIX)
+                .required(true)
+                .takes_value(true)
+                .help("path prefix where to search for files to delete from"),
+        );
 
     args::MononokeAppBuilder::new("megarepo preparation tool")
         .with_advanced_args_hidden()
@@ -695,4 +721,7 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(backfill_noop_mapping)
         .subcommand(sync_commit_and_ancestors)
         .subcommand(diff_mapping_versions)
+        .subcommand(add_light_resulting_commit_args(
+            delete_no_longer_bound_files_from_large_repo,
+        ))
 }

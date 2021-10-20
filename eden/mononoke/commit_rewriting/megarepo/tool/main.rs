@@ -24,20 +24,24 @@ use cross_repo_sync::{
     create_commit_syncer_lease, find_toposorted_unsynced_ancestors,
     types::{Source, Target},
     validation::verify_working_copy_with_version_fast_path,
-    CandidateSelectionHint, CommitSyncContext, CommitSyncer,
+    CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer,
 };
+use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
+use fsnodes::RootFsnodeId;
 use futures::{
     compat::Future01CompatExt,
     future::{try_join, try_join_all},
     Stream, StreamExt, TryStreamExt,
 };
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use manifest::{Entry, ManifestOps, PathOrPrefix};
 use metaconfig_types::RepoConfig;
 use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{MPath, RepositoryId};
+use mononoke_types::{ChangesetId, FileChange, MPath, RepositoryId};
 use movers::get_small_to_large_mover;
+use movers::Mover;
 use regex::Regex;
 use slog::{info, warn};
 #[cfg(fbcode_build)]
@@ -67,13 +71,14 @@ use crate::cli::{
     BACKFILL_NOOP_MAPPING, BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2,
     CATCHUP_DELETE_HEAD, CATCHUP_VALIDATE_COMMAND, CHANGESET, CHECK_PUSH_REDIRECTION_PREREQS,
     CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, COMMIT_HASH_CORRECT_HISTORY,
-    DELETION_CHUNK_SIZE, DIFF_MAPPING_VERSIONS, DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT,
-    GRADUAL_DELETE, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK, HISTORY_FIXUP_DELETE,
-    INPUT_FILE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME,
-    MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH,
-    PATHS_FILE, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER, SECOND_PARENT,
-    SELECT_PARENTS_AUTOMATICALLY, SOURCE_CHANGESET, SYNC_COMMIT_AND_ANCESTORS, SYNC_DIAMOND_MERGE,
-    TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
+    DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO, DELETION_CHUNK_SIZE, DIFF_MAPPING_VERSIONS,
+    DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_DELETE, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS,
+    HEAD_BOOKMARK, HISTORY_FIXUP_DELETE, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT,
+    MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT,
+    MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH, PATHS_FILE, PATH_PREFIX, PATH_REGEX,
+    PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER, SECOND_PARENT, SELECT_PARENTS_AUTOMATICALLY,
+    SOURCE_CHANGESET, SYNC_COMMIT_AND_ANCESTORS, SYNC_DIAMOND_MERGE, TARGET_CHANGESET,
+    TO_MERGE_CS_ID, VERSION, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -1120,6 +1125,95 @@ fn get_and_verify_repo_config<'a>(
     })
 }
 
+async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
+    ctx: CoreContext,
+    matches: &MononokeMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
+    let large_repo = commit_syncer.get_large_repo();
+    if commit_syncer.get_source_repo().get_repoid() != large_repo.get_repoid() {
+        return Err(format_err!("source repo must be large!"));
+    }
+
+    let cs_id = sub_m
+        .value_of(COMMIT_HASH)
+        .ok_or_else(|| format_err!("{} not specified", COMMIT_HASH))?;
+    let cs_id = helpers::csid_resolve(&ctx, commit_syncer.get_source_repo(), cs_id).await?;
+
+    // Find all files under a given path
+    let prefix = sub_m.value_of(PATH_PREFIX).context("prefix is not set")?;
+    let root_fsnode_id = RootFsnodeId::derive(&ctx, large_repo, cs_id).await?;
+    let entries = root_fsnode_id
+        .fsnode_id()
+        .find_entries(
+            ctx.clone(),
+            large_repo.get_blobstore(),
+            vec![PathOrPrefix::Prefix(Some(MPath::new(prefix)?))],
+        )
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    // Now find which files does not remap to a small repo - these files we want to delete
+    let mover = find_mover_for_commit(&ctx, &commit_syncer, cs_id).await?;
+
+    let mut to_delete = vec![];
+    for (path, entry) in entries {
+        if let Entry::Leaf(_) = entry {
+            let path = path.unwrap();
+            if mover(&path)?.is_none() {
+                to_delete.push(path);
+            }
+        }
+    }
+
+    if to_delete.is_empty() {
+        info!(ctx.logger(), "nothing to delete, exiting");
+        return Ok(());
+    }
+    info!(ctx.logger(), "need to delete {} paths", to_delete.len());
+
+    let resulting_changeset_args = cs_args_from_matches(sub_m).compat().await?;
+    let deletion_cs_id = create_and_save_bonsai(
+        &ctx,
+        &large_repo,
+        vec![cs_id],
+        to_delete
+            .into_iter()
+            .map(|file| (file, FileChange::Deletion))
+            .collect(),
+        resulting_changeset_args,
+    )
+    .await?;
+
+    info!(ctx.logger(), "created changeset {}", deletion_cs_id);
+
+    Ok(())
+}
+
+async fn find_mover_for_commit(
+    ctx: &CoreContext,
+    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    cs_id: ChangesetId,
+) -> Result<Mover, Error> {
+    let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(&ctx, cs_id).await?;
+
+    let sync_outcome = maybe_sync_outcome.context("source commit was not remapped yet")?;
+    use CommitSyncOutcome::*;
+    let mover = match sync_outcome {
+        NotSyncCandidate => {
+            return Err(format_err!(
+                "commit is a not sync candidate, can't get a mover for this commit"
+            ));
+        }
+        RewrittenAs(_, version) | EquivalentWorkingCopyAncestor(_, version) => {
+            commit_syncer.get_mover_by_version(&version).await?
+        }
+    };
+
+    Ok(mover)
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = setup_app();
@@ -1170,6 +1264,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
             (HISTORY_FIXUP_DELETE, Some(sub_m)) => {
                 run_history_fixup_delete(ctx, &matches, sub_m).await
+            }
+            (DELETE_NO_LONGER_BOUND_FILES_FROM_LARGE_REPO, Some(sub_m)) => {
+                run_delete_no_longer_bound_files_from_large_repo(ctx, &matches, sub_m).await
             }
             _ => bail!("oh no, wrong arguments provided!"),
         }
