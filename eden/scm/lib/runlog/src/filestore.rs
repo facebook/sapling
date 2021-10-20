@@ -10,7 +10,6 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
-use std::thread::sleep;
 use std::time::Duration;
 use std::time::SystemTime;
 
@@ -48,29 +47,11 @@ impl FileStore {
     }
 
     pub(crate) fn save(&self, e: &Entry) -> Result<()> {
-        // Retry a few times since renaming file fails on windows if
-        // destination path exists and is open.
-        let mut retries = 3;
-        loop {
-            let res = self.save_attempt(e);
-            if retries == 0 || res.is_ok() {
-                break res;
-            }
-            retries -= 1;
-            sleep(Duration::from_millis(5));
-        }
-    }
-
-    fn save_attempt(&self, e: &Entry) -> Result<()> {
-        // Write to temp file and rename to avoid incomplete writes.
-        let tmp = tempfile::NamedTempFile::new_in(&self.dir)?;
-
-        serde_json::to_writer_pretty(&tmp, e)?;
-
-        // NB: we don't fsync so incomplete or empty JSON files are possible.
-
-        tmp.persist(self.dir.join(&e.id).with_extension(JSON_EXT))?;
-
+        util::file::atomic_write(self.dir.join(&e.id).with_extension(JSON_EXT), 0o644, |f| {
+            serde_json::to_writer_pretty(f, e)?;
+            // NB: we don't fsync so incomplete or empty JSON files are possible.
+            Ok(())
+        })?;
         Ok(())
     }
 
@@ -157,16 +138,19 @@ fn is_locked<P: AsRef<Path>>(path: P) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
+    use std::os::unix::prelude::MetadataExt;
+
     use tempfile::tempdir;
 
     use super::*;
 
     #[test]
-    fn test_save() {
-        let td = tempdir().unwrap();
+    fn test_save() -> Result<()> {
+        let td = tempdir()?;
 
         let fs_dir = td.path().join("banana");
-        let fs = FileStore::new(fs_dir.clone(), "some_id").unwrap();
+        let fs = FileStore::new(fs_dir.clone(), "some_id")?;
         // Make sure FileStore creates directory automatically.
         assert!(fs_dir.exists());
 
@@ -176,63 +160,71 @@ mod tests {
             let f = fs::File::open(fs_dir.join(&e.id).with_extension(JSON_EXT)).unwrap();
             let got: Entry = serde_json::from_reader(&f).unwrap();
             assert_eq!(&got, e);
+
+            #[cfg(unix)]
+            assert_eq!(0o644, 0o777 & f.metadata().unwrap().mode());
         };
 
         // Can create new entry.
-        fs.save(&entry).unwrap();
+        fs.save(&entry)?;
         assert_entry(&entry);
 
         // Can update existing entry.
         entry.pid = 1234;
-        fs.save(&entry).unwrap();
+        fs.save(&entry)?;
         assert_entry(&entry);
+
+        Ok(())
     }
 
     #[test]
-    fn test_cleanup() {
-        let td = tempdir().unwrap();
+    fn test_cleanup() -> Result<()> {
+        let td = tempdir()?;
         let e = Entry::new(vec!["foo".to_string()]);
         let entry_path = td.path().join(&e.id).with_extension(JSON_EXT);
 
         {
-            let fs = FileStore::new(td.path().into(), &e.id).unwrap();
-            fs.save(&e).unwrap();
+            let fs = FileStore::new(td.path().into(), &e.id)?;
+            fs.save(&e)?;
 
             // Still locked, don't clean up.
-            FileStore::cleanup(&td, Duration::ZERO).unwrap();
+            FileStore::cleanup(&td, Duration::ZERO)?;
             assert!(entry_path.exists());
         }
 
         // No longer locked since file store is closed, but haven't met threshold.
-        FileStore::cleanup(&td, Duration::from_secs(3600)).unwrap();
+        FileStore::cleanup(&td, Duration::from_secs(3600))?;
         assert!(entry_path.exists());
 
         // Met threshold - delete.
-        FileStore::cleanup(&td, Duration::ZERO).unwrap();
+        FileStore::cleanup(&td, Duration::ZERO)?;
         assert!(!entry_path.exists());
+
+        Ok(())
     }
 
     #[test]
-    fn test_iter() {
-        let td = tempdir().unwrap();
+    fn test_iter() -> Result<()> {
+        let td = tempdir()?;
 
         let a = Entry::new(vec!["a".to_string()]);
-        let a_fs = FileStore::new(td.path().into(), &a.id).unwrap();
-        a_fs.save(&a).unwrap();
+        let a_fs = FileStore::new(td.path().into(), &a.id)?;
+        a_fs.save(&a)?;
 
 
         let b = Entry::new(vec!["b".to_string()]);
         {
-            let b_fs = FileStore::new(td.path().into(), &b.id).unwrap();
-            b_fs.save(&b).unwrap();
+            let b_fs = FileStore::new(td.path().into(), &b.id)?;
+            b_fs.save(&b)?;
         }
 
-        let mut got: Vec<(Entry, bool)> = FileStore::entry_iter(td.path())
-            .unwrap()
+        let mut got: Vec<(Entry, bool)> = FileStore::entry_iter(td.path())?
             .map(Result::unwrap)
             .collect();
         got.sort_by(|a, b| a.0.command[0].cmp(&b.0.command[0]));
 
-        assert_eq!(vec![(a, true), (b, false)], got)
+        assert_eq!(vec![(a, true), (b, false)], got);
+
+        Ok(())
     }
 }
