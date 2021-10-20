@@ -31,21 +31,27 @@ impl BackingStore {
         let config = configparser::hg::load::<String, String>(Some(&hg), None)?;
 
         let store_path = hg.join("store");
-        let mut blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
         let treestore = ContentStoreBuilder::new(&config)
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
 
+        #[cfg(debug_assertions)]
+        let blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
+
         // Memcache takes 30s to initialize on debug builds slowing down tests significantly, let's
         // not even try to initialize it then.
         #[cfg(not(debug_assertions))]
-        match MemcacheStore::new(&config, NullProgressFactory::arc()) {
-            Ok(memcache) => {
-                // XXX: Add the memcachestore for the treestore.
-                blobstore = blobstore.memcachestore(Arc::new(memcache));
+        let blobstore = {
+            let mut blobstore = ContentStoreBuilder::new(&config).local_path(&store_path);
+            match MemcacheStore::new(&config, NullProgressFactory::arc()) {
+                Ok(memcache) => {
+                    // XXX: Add the memcachestore for the treestore.
+                    blobstore = blobstore.memcachestore(Arc::new(memcache));
+                }
+                Err(e) => warn!("couldn't initialize Memcache: {}", e),
             }
-            Err(e) => warn!("couldn't initialize Memcache: {}", e),
-        }
+            blobstore
+        };
 
         let (blobstore, treestore) = match config.get_opt::<String>("remotefilelog", "reponame")? {
             Some(repo) if use_edenapi => {
