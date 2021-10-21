@@ -13,7 +13,7 @@ use blobrepo_hg::{save_bonsai_changeset_object, BlobRepoHg, ChangesetHandle};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bookmarks::Freshness;
 use bytes::Bytes;
-use changesets::{ChangesetInsert, Changesets, ChangesetsArc};
+use changesets::{ChangesetInsert, Changesets};
 use context::{CoreContext, SessionClass};
 use edenapi_types::{AnyId, UploadToken};
 use ephemeral_blobstore::{Bubble, BubbleId, RepoEphemeralBlobstore};
@@ -95,11 +95,7 @@ impl HgRepoContext {
 
     /// Load bubble from id
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
-        Ok(self
-            .repo()
-            .ephemeral_blobstore()
-            .open_bubble(bubble_id)
-            .await?)
+        Ok(self.repo.open_bubble(bubble_id).await?)
     }
 
     /// Get blobstore. If bubble id is present, this is the ephemeral blobstore
@@ -110,6 +106,7 @@ impl HgRepoContext {
         let main_blobstore = self.blob_repo().blobstore().clone();
         Ok(match bubble_id {
             Some(id) => self
+                .repo
                 .open_bubble(id)
                 .await?
                 .wrap_repo_blobstore(main_blobstore),
@@ -304,16 +301,6 @@ impl HgRepoContext {
             .map_err(MononokeError::from)
     }
 
-    async fn changesets(
-        &self,
-        bubble_id: Option<BubbleId>,
-    ) -> Result<Arc<dyn Changesets>, MononokeError> {
-        Ok(match bubble_id {
-            Some(id) => Arc::new(self.open_bubble(id).await?.changesets(self.blob_repo())),
-            None => self.blob_repo().changesets_arc(),
-        })
-    }
-
     /// Look up by bonsai changeset
     pub async fn changeset_exists_by_bonsai(
         &self,
@@ -321,9 +308,8 @@ impl HgRepoContext {
         bubble_id: Option<BubbleId>,
     ) -> Result<bool, MononokeError> {
         Ok(self
-            .changesets(bubble_id)
-            .await?
-            .exists(self.ctx(), changeset_id)
+            .repo
+            .changeset_exists_by_bonsai(changeset_id, bubble_id)
             .await?)
     }
 

@@ -21,6 +21,7 @@ pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix};
 use cacheblob::{InProcessLease, LeaseOps};
 use changeset_info::ChangesetInfo;
+use changesets::{Changesets, ChangesetsArc};
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncer_lease, types::Target, CandidateSelectionHint, CommitSyncContext,
@@ -28,6 +29,7 @@ use cross_repo_sync::{
 };
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use ephemeral_blobstore::RepoEphemeralBlobstore;
+use ephemeral_blobstore::{Bubble, BubbleId};
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::Stream01CompatExt;
@@ -838,6 +840,37 @@ impl RepoContext {
         self.blob_repo()
             .get_derived_data_config()
             .is_enabled(MappedHgChangesetId::NAME)
+    }
+
+    /// Load bubble from id
+    pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
+        Ok(self
+            .repo
+            .ephemeral_blobstore()
+            .open_bubble(bubble_id)
+            .await?)
+    }
+
+    async fn changesets(
+        &self,
+        bubble_id: Option<BubbleId>,
+    ) -> Result<Arc<dyn Changesets>, MononokeError> {
+        Ok(match bubble_id {
+            Some(id) => Arc::new(self.open_bubble(id).await?.changesets(self.blob_repo())),
+            None => self.blob_repo().changesets_arc(),
+        })
+    }
+
+    pub async fn changeset_exists_by_bonsai(
+        &self,
+        changeset_id: ChangesetId,
+        bubble_id: Option<BubbleId>,
+    ) -> Result<bool, MononokeError> {
+        Ok(self
+            .changesets(bubble_id)
+            .await?
+            .exists(&self.ctx, changeset_id)
+            .await?)
     }
 
     /// Look up a changeset specifier to find the canonical bonsai changeset
