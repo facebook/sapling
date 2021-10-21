@@ -1053,6 +1053,15 @@ class TopCmd(Subcmd):
         return top.start(args)
 
 
+@subcmd("minitop", "Simple monitoring of EdenFS accesses by process.")
+class MinitopCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        print_stderr(
+            "This is not implemented for python edenfsctl. Use `top` subcommand instead."
+        )
+        return 1
+
+
 @subcmd("fsck", "Perform a filesystem check for EdenFS")
 class FsckCmd(Subcmd):
     EXIT_OK = 0

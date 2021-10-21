@@ -19,6 +19,7 @@ use util::path::expand_path;
 mod config;
 mod debug;
 mod gc;
+mod minitop;
 mod pid;
 mod status;
 mod top;
@@ -82,6 +83,7 @@ pub enum TopLevelSubcommand {
     Config(crate::config::ConfigCmd),
     Debug(crate::debug::DebugCmd),
     // Top(crate::top::TopCmd),
+    Minitop(crate::minitop::MinitopCmd),
 }
 
 #[async_trait]
@@ -96,6 +98,7 @@ impl Subcommand for TopLevelSubcommand {
             Config(cmd) => cmd,
             Debug(cmd) => cmd,
             // Top(cmd) => cmd,
+            Minitop(cmd) => cmd,
         };
         sc.run(instance).await
     }
