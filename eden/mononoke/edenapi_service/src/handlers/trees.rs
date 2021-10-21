@@ -8,6 +8,7 @@
 use anyhow::{Context, Error};
 use async_trait::async_trait;
 use bytes::Bytes;
+use context::PerfCounterType;
 use futures::{stream, Future, FutureExt, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -54,6 +55,9 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     let repo = get_repo(&sctx, &rctx, &params.repo, Metric::TotalManifests).await?;
     let request = parse_wire_request::<WireTreeRequest>(state).await?;
+    repo.ctx()
+        .perf_counters()
+        .add_to_counter(PerfCounterType::EdenapiTrees, request.keys.len() as i64);
 
     // Sample trivial requests
     if request.keys.len() == 1 && !request.attributes.child_metadata {
