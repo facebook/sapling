@@ -798,7 +798,26 @@ class localrepository(object):
             self.fileslog.commitpending()
 
         if "changelog" in self.__dict__ and self.changelog.isvertexlazy():
-            self.changelog.inner.flushcommitdata()
+            # Errors are not fatal. We lost some caches downloaded from the
+            # server triggered by `hg log` or something, but that's okay - we
+            # just re-download next time.
+            #
+            # This might raise "bug: cannot persist with re-assigned ids
+            # unresolved" in rare cases where a commit hash has two ids
+            # (incorrectly): one non-master id and one master id (lazy, not
+            # existed locally). Then iterating a revset like `::master` (via
+            # `hg log`) triggers resolving the lazy master id. Ideally we
+            # figure out why that happened (crash + doctor? missing checks
+            # in lazy pull paths? race? server reports commits that should
+            # exist as missing?). But for now let's just silent the error
+            # as a stopgap solution for commands like `hg log`.
+            #
+            # Note: For write commands like `commit`, or `pull`, they go
+            # through transaction, which does not silent errors.
+            try:
+                self.changelog.inner.flushcommitdata()
+            except Exception:
+                pass
 
     def _loadextensions(self):
         extensions.loadall(self.ui)
