@@ -213,6 +213,17 @@ impl DerivationContext {
         self.manager.config()
     }
 
+    /// Mapping key prefix for a particular derived data type.
+    pub fn mapping_key_prefix<Derivable>(&self) -> &str
+    where
+        Derivable: BonsaiDerivable,
+    {
+        self.config()
+            .mapping_key_prefixes
+            .get(Derivable::NAME)
+            .map_or("", String::as_str)
+    }
+
     pub(crate) fn needs_rederive<Derivable>(&self, csid: ChangesetId) -> bool
     where
         Derivable: BonsaiDerivable,

@@ -383,6 +383,7 @@ impl Convert for RawDerivedDataTypesConfig {
 
     fn convert(self) -> Result<Self::Output> {
         let types = self.types.into_iter().collect();
+        let mapping_key_prefixes = self.mapping_key_prefixes.into_iter().collect();
         let unode_version = match self.unode_version {
             None => UnodeVersion::default(),
             Some(1) => UnodeVersion::V1,
@@ -398,6 +399,7 @@ impl Convert for RawDerivedDataTypesConfig {
         };
         Ok(DerivedDataTypesConfig {
             types,
+            mapping_key_prefixes,
             unode_version,
             blame_filesize_limit,
             hg_set_committer_extra: self.hg_set_committer_extra.unwrap_or(false),

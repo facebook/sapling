@@ -34,12 +34,14 @@ setup configuration
   $ blobimport repo-hg/.hg repo
 
 enable some more derived data types for normal usage and backfilling
+add a mapping key prefix to skeleton manifests to test these work
   $ ENABLED_DERIVED_DATA='["hgchangesets", "filenodes", "unodes", "fsnodes"]' \
   >   setup_mononoke_config
   $ cd "$TESTTMP"
   $ cat >> mononoke-config/repos/repo/server.toml <<CONFIG
   > [derived_data_config.backfilling]
   > types=["blame", "skeleton_manifests", "unodes"]
+  > mapping_key_prefixes={"skeleton_manifests"="xyz."}
   > blame_version=2
   > CONFIG
 
@@ -95,3 +97,6 @@ They should be derived for types that don't support gaps
   Derived: 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66
   $ mononoke_admin --log-level ERROR derived-data exists --backfill blame $G
   Derived: da6d6ff8b30c472a08a1252ccb81dd4a0f9f3212af2e631a6a9a6b78ad78f6f4
+
+Skeleton manifest blob keys should have their prefix
+  $ mononoke_admin --log-level ERROR blobstore-fetch derived_root_skeletonmanifest.xyz.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd --raw-blob $TESTTMP/skmf-root

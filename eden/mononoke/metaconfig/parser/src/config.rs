@@ -1408,6 +1408,7 @@ mod test {
                             String::from("unodes"),
                             String::from("blame"),
                         },
+                        mapping_key_prefixes: hashmap! {},
                         unode_version: UnodeVersion::V2,
                         blame_filesize_limit: Some(101),
                         hg_set_committer_extra: false,

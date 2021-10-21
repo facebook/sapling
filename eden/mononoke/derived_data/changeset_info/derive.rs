@@ -17,8 +17,10 @@ use mononoke_types::{BonsaiChangeset, ChangesetId};
 
 use crate::ChangesetInfo;
 
-fn format_key(changeset_id: ChangesetId) -> String {
-    format!("changeset_info.blake2.{}", changeset_id)
+fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+    let root_prefix = "changeset_info.blake2.";
+    let key_prefix = derivation_ctx.mapping_key_prefix::<ChangesetInfo>();
+    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
 }
 
 #[async_trait]
@@ -59,7 +61,7 @@ impl BonsaiDerivable for ChangesetInfo {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<()> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         derivation_ctx.blobstore().put(ctx, key, self.into()).await
     }
 
@@ -68,7 +70,7 @@ impl BonsaiDerivable for ChangesetInfo {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         Ok(derivation_ctx
             .blobstore()
             .get(ctx, &key)

@@ -257,6 +257,16 @@ pub struct DerivedDataTypesConfig {
     /// The configured types.
     pub types: HashSet<String>,
 
+    /// Key prefixes for mappings.  These are used to generate unique
+    /// mapping keys when rederiving existing derived data types.
+    ///
+    /// Key prefixes only apply to derived data types where the mapping
+    /// is stored in the blobstore.
+    ///
+    /// The prefix is applied to the commit hash part of the key, i.e.
+    /// `derived_root_fsnode.HASH` becomes `derived_root_fsnode.PREFIXHASH`.
+    pub mapping_key_prefixes: HashMap<String, String>,
+
     /// What unode version should be used. Default: V1.
     pub unode_version: UnodeVersion,
 

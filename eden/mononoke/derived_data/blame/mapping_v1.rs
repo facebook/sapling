@@ -26,8 +26,10 @@ impl From<ChangesetId> for BlameRoot {
     }
 }
 
-fn format_key(changeset_id: ChangesetId) -> String {
-    format!("derived_rootblame.v1.{}", changeset_id)
+fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+    let root_prefix = "derived_rootblame.v1.";
+    let key_prefix = derivation_ctx.mapping_key_prefix::<BlameRoot>();
+    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
 }
 
 #[async_trait]
@@ -61,7 +63,7 @@ impl BonsaiDerivable for BlameRoot {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<()> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         derivation_ctx
             .blobstore()
             .put(ctx, key, BlobstoreBytes::empty())
@@ -73,7 +75,7 @@ impl BonsaiDerivable for BlameRoot {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         match derivation_ctx.blobstore().get(ctx, &key).await? {
             Some(_) => Ok(Some(BlameRoot(changeset_id))),
             None => Ok(None),

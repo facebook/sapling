@@ -58,8 +58,10 @@ impl From<RootSkeletonManifestId> for BlobstoreBytes {
     }
 }
 
-fn format_key(changeset_id: ChangesetId) -> String {
-    format!("derived_root_skeletonmanifest.{}", changeset_id)
+fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+    let root_prefix = "derived_root_skeletonmanifest.";
+    let key_prefix = derivation_ctx.mapping_key_prefix::<RootSkeletonManifestId>();
+    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
 }
 
 #[async_trait]
@@ -108,7 +110,7 @@ impl BonsaiDerivable for RootSkeletonManifestId {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<()> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         derivation_ctx.blobstore().put(ctx, key, self.into()).await
     }
 
@@ -117,7 +119,7 @@ impl BonsaiDerivable for RootSkeletonManifestId {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         Ok(derivation_ctx
             .blobstore()
             .get(ctx, &key)

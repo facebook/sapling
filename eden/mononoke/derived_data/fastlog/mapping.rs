@@ -48,8 +48,10 @@ impl From<ChangesetId> for RootFastlog {
     }
 }
 
-fn format_key(changeset_id: ChangesetId) -> String {
-    format!("derived_rootfastlog.{}", changeset_id)
+fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+    let root_prefix = "derived_rootfastlog.";
+    let key_prefix = derivation_ctx.mapping_key_prefix::<RootFastlog>();
+    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
 }
 
 #[async_trait]
@@ -107,7 +109,7 @@ impl BonsaiDerivable for RootFastlog {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<()> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         derivation_ctx
             .blobstore()
             .put(ctx, key, BlobstoreBytes::empty())
@@ -119,7 +121,7 @@ impl BonsaiDerivable for RootFastlog {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         match derivation_ctx.blobstore().get(ctx, &key).await? {
             Some(_) => Ok(Some(RootFastlog(changeset_id))),
             None => Ok(None),

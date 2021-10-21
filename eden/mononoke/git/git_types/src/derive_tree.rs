@@ -25,8 +25,10 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
 use crate::errors::ErrorKind;
 use crate::{BlobHandle, Tree, TreeBuilder, TreeHandle};
 
-fn format_key(cs_id: ChangesetId) -> String {
-    format!("git.derived_root.{}", cs_id)
+fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
+    let root_prefix = "git.derived_root.";
+    let key_prefix = derivation_ctx.mapping_key_prefix::<TreeHandle>();
+    format!("{}{}{}", root_prefix, key_prefix, changeset_id)
 }
 
 #[async_trait]
@@ -55,7 +57,7 @@ impl BonsaiDerivable for TreeHandle {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<()> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         derivation_ctx.blobstore().put(ctx, key, self.into()).await
     }
 
@@ -64,7 +66,7 @@ impl BonsaiDerivable for TreeHandle {
         derivation_ctx: &DerivationContext,
         changeset_id: ChangesetId,
     ) -> Result<Option<Self>> {
-        let key = format_key(changeset_id);
+        let key = format_key(derivation_ctx, changeset_id);
         Ok(derivation_ctx
             .blobstore()
             .get(ctx, &key)
