@@ -41,7 +41,6 @@ impl DerivationAssigner for BubbleAssigner {
 }
 
 impl DerivedDataManager {
-    #[allow(dead_code)]
     pub fn for_bubble(
         self,
         bubble: Bubble,

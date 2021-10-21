@@ -68,6 +68,16 @@ impl From<GitSha1> for ChangesetSpecifier {
     }
 }
 
+impl ChangesetSpecifier {
+    pub fn bubble_id(&self) -> Option<BubbleId> {
+        use ChangesetSpecifier::*;
+        match self {
+            EphemeralBonsai(_, bubble_id) => Some(*bubble_id),
+            Bonsai(_) | Hg(_) | Globalrev(_) | GitSha1(_) | Svnrev(_) => None,
+        }
+    }
+}
+
 /// A prefix of canonical ID for a changeset (Bonsai).
 pub type ChangesetIdPrefix = mononoke_types::ChangesetIdPrefix;
 

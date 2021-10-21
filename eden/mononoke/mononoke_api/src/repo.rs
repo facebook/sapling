@@ -986,10 +986,15 @@ impl RepoContext {
         &self,
         specifier: impl Into<ChangesetSpecifier>,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
+        let specifier = specifier.into();
+        let bubble = match specifier.bubble_id() {
+            Some(id) => Some(self.open_bubble(id).await?),
+            None => None,
+        };
         let changeset = self
             .resolve_specifier(specifier.into())
             .await?
-            .map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
+            .map(|cs_id| ChangesetContext::new_with_bubble(self.clone(), cs_id, bubble));
         Ok(changeset)
     }
 
