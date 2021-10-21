@@ -38,6 +38,12 @@ fn fallback() -> Result<()> {
     // skip arg0
     cmd.args(std::env::args().skip(1));
 
+    // Users have PYTHONHOME and PYTHONPATH variables
+    // that break the python version of edenfsctl since it will fail to
+    // import modules. So, let's strip the PYTHONHOME and PYTHONPATH variables.
+    cmd.env_remove("PYTHONHOME");
+    cmd.env_remove("PYTHONPATH");
+
     #[cfg(windows)]
     {
         // Windows doesn't have exec, so we have to open a subprocess
