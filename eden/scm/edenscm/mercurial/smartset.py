@@ -598,15 +598,7 @@ class idset(abstractsmartset):
             # Filter by the fullreposet to remove invalid revs.
             cl = repo.changelog
             dag = cl.dag
-            if dag is not None:
-                allspans = cl.torevs(dag.all())
-            else:
-                # legacy revlog
-                repolen = len(repo)
-                if repolen == 0:
-                    allspans = dagmod.spans([])
-                else:
-                    allspans = dagmod.spans.unsaferange(0, repolen - 1)
+            allspans = cl.torevs(dag.all())
             spans = spans & allspans
         # Convert from Rust to Python object.
         s = idset(spans, repo=repo)
@@ -764,9 +756,6 @@ class nameset(abstractsmartset):
         """
         cl = repo.changelog
         dag = cl.dag
-        if dag is None:
-            # legacy revlog, cannot use nameset
-            return idset.range(repo, start, end, ascending=ascending)
         if start > end:
             spans = dagmod.spans([])
         else:
