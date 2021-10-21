@@ -574,7 +574,7 @@ impl EagerRepo {
 ///
 /// If the config does not specify eagerepo-based `EdenApi`, return `Ok(None)`.
 pub fn edenapi_from_config(config: &dyn Config) -> edenapi::Result<Option<Arc<dyn EdenApi>>> {
-    for (section, name) in [("paths", "default"), ("edenapi", "url")].iter() {
+    for (section, name) in [("paths", "default"), ("edenapi", "url")] {
         if let Ok(value) = config.get_or_default::<String>(section, name) {
             if let Some(path) = EagerRepo::url_to_dir(&value) {
                 let repo =

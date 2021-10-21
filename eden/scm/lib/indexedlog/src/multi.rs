@@ -893,11 +893,9 @@ MultiMeta is valid"#
             for (mlog, logs, j) in [
                 (&mut mlog_new, &mut logs_new, 0u8),
                 (&mut mlog_old, &mut logs_old, 1u8),
-            ]
-            .iter_mut()
-            {
+            ] {
                 let lock = mlog.lock().unwrap();
-                logs[0].append(&[i as u8, *j]).unwrap();
+                logs[0].append(&[i as u8, j]).unwrap();
                 logs[0].sync().unwrap();
                 mlog.write_meta(&lock).unwrap();
             }

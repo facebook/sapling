@@ -188,9 +188,7 @@ fn needs_morestatus_extension(hg_dir: &Path, p2: &[u8; 20]) -> bool {
         PathBuf::from("rebasestate"),
         PathBuf::from("unshelverebasestate"),
         PathBuf::from("updatestate"),
-    ]
-    .iter()
-    {
+    ] {
         if hg_dir.join(path).is_file() {
             return true;
         }

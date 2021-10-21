@@ -40,7 +40,7 @@ fn main() {
 
     // Test the size, and generation speed, and ancestor calcuation speed
     // with some different segment sizes.
-    for &segment_size in [4, 8, 10, 12, 14, 16, 18, 20, 22, 24, 32, 64, 128].iter() {
+    for segment_size in [4, 8, 10, 12, 14, 16, 18, 20, 22, 24, 32, 64, 128] {
         let dag_dir = tempdir().unwrap();
         let mut dag = IdDag::open(&dag_dir.path()).unwrap();
         dag.set_new_segment_size(segment_size);

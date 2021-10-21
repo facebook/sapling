@@ -275,8 +275,8 @@ async fn get_hg_in_range<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
         bcs_id: bonsai::THREES_CSID,
     };
 
-    for entry in [entry1, entry2, entry3].iter() {
-        assert_eq!(true, mapping.add(&ctx, entry.clone()).await.unwrap());
+    for entry in [entry1, entry2, entry3] {
+        assert_eq!(true, mapping.add(&ctx, entry).await.unwrap());
     }
 
     assert!(

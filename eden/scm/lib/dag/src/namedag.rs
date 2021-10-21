@@ -2042,14 +2042,12 @@ where
         for (nodes, group) in [
             (master_heads, Group::MASTER),
             (non_master_heads, Group::NON_MASTER),
-        ]
-        .iter()
-        {
+        ] {
             for node in nodes.iter() {
                 // Important: do not call self.map.assign_head. It does not trigger
                 // remote protocol properly.
                 outcome.merge(
-                    self.assign_head(node.clone(), parent_names_func, *group)
+                    self.assign_head(node.clone(), parent_names_func, group)
                         .await?,
                 );
             }

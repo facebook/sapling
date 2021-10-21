@@ -261,7 +261,7 @@ impl HgTime {
             let mut default_format = String::new();
             let mut date_with_defaults = date.clone();
             let mut use_now = false;
-            for part in ["S", "M", "HI", "d", "mb", "Yy"].iter() {
+            for part in ["S", "M", "HI", "d", "mb", "Yy"] {
                 if part
                     .chars()
                     .any(|ch| naive_format.contains(&format!("%{}", ch)))

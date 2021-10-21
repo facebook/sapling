@@ -327,7 +327,7 @@ fn test_index_manual() {
     // - Index key: Reference and Owned.
     // - Index lag_threshold: 0, 10, 20, ....
     // - Entries: Mixed on-disk and in-memory ones.
-    for lag in [0u64, 10, 20, 50, 1000].iter().cloned() {
+    for lag in [0u64, 10, 20, 50, 1000] {
         let dir = tempdir().unwrap();
         let mut log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
         let entries: [&[u8]; 7] = [b"1", b"", b"2345", b"", b"78", b"3456", b"35"];
@@ -360,7 +360,7 @@ fn test_index_manual() {
 
         // Delete prefix.
         log.append(b"=3").unwrap();
-        for key in [b"34", b"35"].iter() {
+        for key in [b"34", b"35"] {
             assert!(log.lookup(0, key).unwrap().into_vec().unwrap().is_empty());
         }
         assert_eq!(log.lookup(0, b"56").unwrap().into_vec().unwrap(), [b"3456"]);
@@ -376,7 +376,7 @@ fn test_index_manual() {
                 log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
             }
         }
-        for key in [b"34", b"56", b"78"].iter() {
+        for key in [b"34", b"56", b"78"] {
             assert!(log.lookup(0, key).unwrap().into_vec().unwrap().is_empty());
         }
         assert_eq!(log.lookup(1, b"345").unwrap().count(), 0);
@@ -1002,7 +1002,7 @@ fn test_repair_and_delete_content() {
         let log = open()?;
         let log_len = log.iter().collect::<Result<Vec<_>, _>>()?.len();
         let mut index_len = 0;
-        for key in [b"x", b"y", b"z"].iter() {
+        for key in [b"x", b"y", b"z"] {
             let iter = log.lookup(0, key)?;
             index_len += iter.into_vec()?.len();
         }

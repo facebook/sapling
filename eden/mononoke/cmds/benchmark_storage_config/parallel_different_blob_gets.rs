@@ -25,15 +25,15 @@ pub fn benchmark(
 ) {
     let mut group = c.benchmark_group("parallel_different_blob_gets");
 
-    for size in [128, 16 * KB, 512 * KB, 8 * MB].iter() {
-        for concurrency in [4, 16, 256].iter() {
-            group.throughput(Throughput::Bytes(*size as u64 * *concurrency as u64));
+    for size in [128, 16 * KB, 512 * KB, 8 * MB] {
+        for concurrency in [4, 16, 256] {
+            group.throughput(Throughput::Bytes(size as u64 * concurrency as u64));
             group.bench_with_input(
                 BenchmarkId::from_parameter(format!("{} x{}", size, concurrency)),
-                size,
+                &size,
                 |b, &size| {
                     let keys: Vec<_> = repeat(())
-                        .take(*concurrency)
+                        .take(concurrency)
                         .map(|()| {
                             let mut block = vec![0; size];
                             thread_rng().fill(&mut block as &mut [u8]);

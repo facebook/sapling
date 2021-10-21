@@ -309,7 +309,7 @@ mod tests {
     #[test]
     fn test_zig_zag() {
         let mut c = Cursor::new(vec![]);
-        for &(i, u) in [
+        for (i, u) in [
             (0, 0),
             (-1, 1),
             (1, 2),
@@ -317,9 +317,7 @@ mod tests {
             (-127, 253),
             (127, 254),
             (-128i8, 255u8),
-        ]
-        .iter()
-        {
+        ] {
             c.seek(SeekFrom::Start(0)).expect("seek");
             c.write_vlq(i).expect("write");
             c.seek(SeekFrom::Start(0)).expect("seek");

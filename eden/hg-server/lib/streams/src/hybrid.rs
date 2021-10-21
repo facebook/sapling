@@ -298,7 +298,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hybrid_stream() {
-        for &buffer_size in [0, 1, 2, 10].iter() {
+        for buffer_size in [0, 1, 2, 10] {
             let input = stream::iter(vec![0, 1, 3, 5, 10].into_iter().map(Ok));
             let resolver = Resolver::default();
             resolver.cached.lock().unwrap().insert(1, "one".to_string());
@@ -315,7 +315,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hybrid_stream_retry() {
-        for &retry_limit in [0, 3].iter() {
+        for retry_limit in [0, 3] {
             let input = stream::iter(vec![0, 404, 1, 2].into_iter().map(Ok));
             let resolver = Resolver::default();
             let mut stream = HybridStream::new(Box::pin(input), resolver, 3, retry_limit);

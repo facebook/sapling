@@ -4443,7 +4443,7 @@ Disk[410]: Root { radix: Disk[402] }
         let mut variant_keys = Vec::new();
         for base_key in keys.iter() {
             // One byte appended
-            for b in [0x00, 0x77, 0xff].iter().cloned() {
+            for b in [0x00, 0x77, 0xff] {
                 let mut key = base_key.to_vec();
                 key.push(b);
                 variant_keys.push(key);

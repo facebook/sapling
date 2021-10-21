@@ -164,9 +164,7 @@ async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
         "d7542c9db7f4c77dab4b315edd328edf1514952f", // 1: branch 1 near bottom
         "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5", // 2: branch 2
         "15c40d0abc36d47fb51c8eaec51ac7aad31f669c", // 3: base
-    ]
-    .iter()
-    {
+    ] {
         let changeset = repo
             .changeset(HgChangesetId::from_str(hg_hash)?)
             .await
@@ -190,20 +188,18 @@ async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
         (3, 1, true),
         (3, 2, true),
         (3, 3, true),
-    ]
-    .iter()
-    {
+    ] {
         assert_eq!(
-            changesets[*index]
+            changesets[index]
                 .as_ref()
                 .unwrap()
-                .is_ancestor_of(changesets[*base_index].as_ref().unwrap().id())
+                .is_ancestor_of(changesets[base_index].as_ref().unwrap().id())
                 .await?,
-            *is_ancestor_of,
+            is_ancestor_of,
             "changesets[{}].is_ancestor_of(changesets[{}].id()) == {}",
-            *index,
-            *base_index,
-            *is_ancestor_of
+            index,
+            base_index,
+            is_ancestor_of
         );
     }
     Ok(())

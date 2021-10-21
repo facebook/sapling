@@ -1359,7 +1359,7 @@ mod tests {
             .max_log_count(3)
             .open(&dir)
             .unwrap();
-        for &i in [1, 2].iter() {
+        for i in [1, 2] {
             rotate.append(vec![b'a'; 101]).unwrap();
             assert_eq!(rotate.sync().unwrap(), i); // trigger rotate
         }

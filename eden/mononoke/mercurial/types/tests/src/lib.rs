@@ -408,9 +408,9 @@ quickcheck! {
 fn test_hashes_are_unique() -> Result<(), Error> {
     let mut h = HashSet::new();
 
-    for content_id in [ONES_CTID, TWOS_CTID].iter() {
-        for p1 in [Some(ONES_FNID), Some(TWOS_FNID), None].iter() {
-            for p2 in [Some(THREES_FNID), Some(FOURS_FNID), None].iter() {
+    for content_id in [ONES_CTID, TWOS_CTID] {
+        for p1 in [Some(ONES_FNID), Some(TWOS_FNID), None] {
+            for p2 in [Some(THREES_FNID), Some(FOURS_FNID), None] {
                 let path1 = RepoPath::file("path")?
                     .into_mpath()
                     .ok_or(Error::msg("path1"))?;
@@ -423,11 +423,11 @@ fn test_hashes_are_unique() -> Result<(), Error> {
                     .into_mpath()
                     .ok_or(Error::msg("path3"))?;
 
-                for copy_path in [path1, path2, path3].iter() {
-                    for copy_parent in [ONES_FNID, TWOS_FNID, THREES_FNID].iter() {
+                for copy_path in [path1, path2, path3] {
+                    for copy_parent in [ONES_FNID, TWOS_FNID, THREES_FNID] {
                         let copy_info = Some((copy_path.clone(), copy_parent.clone()));
 
-                        let ptr = FileNodeIdPointer::new(&content_id, &copy_info, p1, p2);
+                        let ptr = FileNodeIdPointer::new(&content_id, &copy_info, &p1, &p2);
                         assert!(!h.contains(&ptr), "Duplicate entry: {:?}", ptr);
                         h.insert(ptr);
 
@@ -435,13 +435,13 @@ fn test_hashes_are_unique() -> Result<(), Error> {
                             continue;
                         }
 
-                        let ptr = FileNodeIdPointer::new(&content_id, &copy_info, p2, p1);
+                        let ptr = FileNodeIdPointer::new(&content_id, &copy_info, &p2, &p1);
                         assert!(!h.contains(&ptr), "Duplicate entry: {:?}", ptr);
                         h.insert(ptr);
                     }
                 }
 
-                let ptr = FileNodeIdPointer::new(&content_id, &None, p1, p2);
+                let ptr = FileNodeIdPointer::new(&content_id, &None, &p1, &p2);
                 assert!(!h.contains(&ptr), "Duplicate entry: {:?}", ptr);
                 h.insert(ptr);
 
@@ -449,7 +449,7 @@ fn test_hashes_are_unique() -> Result<(), Error> {
                     continue;
                 }
 
-                let ptr = FileNodeIdPointer::new(&content_id, &None, p2, p1);
+                let ptr = FileNodeIdPointer::new(&content_id, &None, &p2, &p1);
                 assert!(!h.contains(&ptr), "Duplicate entry: {:?}", ptr);
                 h.insert(ptr);
             }

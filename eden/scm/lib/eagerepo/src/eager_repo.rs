@@ -119,7 +119,7 @@ impl EagerRepo {
         let master_heads = {
             let books = self.get_bookmarks_map()?;
             let mut heads = Vec::new();
-            for &name in ["master", "main"].iter() {
+            for name in ["master", "main"] {
                 if let Some(id) = books.get(name) {
                     heads.push(Vertex::copy_from(id.as_ref()));
                     break;

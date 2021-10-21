@@ -615,7 +615,7 @@ mod tests {
         let dir = TempDir::new("mutationstore")?;
         let mut ms = MutationStore::open(dir.path())?;
 
-        for (pred, succ) in [("A", "B"), ("B", "C"), ("C", "A")].iter() {
+        for (pred, succ) in [("A", "B"), ("B", "C"), ("C", "A")] {
             add(&mut ms, pred, succ)?;
         }
         ms.flush()?;
@@ -648,12 +648,12 @@ mod tests {
         let dir = TempDir::new("mutationstore")?;
         let mut ms = MutationStore::open(dir.path())?;
 
-        for (pred, succ) in [("P", "E"), ("E", "X")].iter() {
+        for (pred, succ) in [("P", "E"), ("E", "X")] {
             add(&mut ms, pred, succ)?;
         }
         ms.flush()?;
 
-        for (pred, succ) in [("P", "Q"), ("X", "Y")].iter() {
+        for (pred, succ) in [("P", "Q"), ("X", "Y")] {
             add(&mut ms, pred, succ)?;
         }
 
@@ -702,7 +702,7 @@ mod tests {
         //  \|/   # X -> Y
         // X Y Z  # Y, Z are public; X, B, E, C are draft
 
-        for (pred, succ) in [("B", "D"), ("D", "E"), ("C", "F"), ("X", "Y")].iter() {
+        for (pred, succ) in [("B", "D"), ("D", "E"), ("C", "F"), ("X", "Y")] {
             add(&mut ms, pred, succ)?;
         }
         let public = Set::from_static_names(vec![v("Y"), v("Z")]);

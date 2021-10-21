@@ -463,9 +463,7 @@ mod tests {
             b"a\0b\0c\0",
             b"hex:a\0b\0c\0",
             b"\0\0\0\0\0\0",
-        ]
-        .iter()
-        {
+        ] {
             check_atomic_read_write(data);
         }
     }

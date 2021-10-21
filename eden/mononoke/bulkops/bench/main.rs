@@ -39,12 +39,12 @@ pub fn bench_stream<'a, F, S, O, E>(
     E: std::fmt::Debug,
 {
     let mut group = c.benchmark_group(group);
-    for num_to_load in [100000].iter() {
-        group.throughput(Throughput::Elements(*num_to_load));
-        for step in [MAX_FETCH_STEP].iter() {
+    for num_to_load in [100000] {
+        group.throughput(Throughput::Elements(num_to_load));
+        for step in [MAX_FETCH_STEP] {
             group.bench_with_input(
                 BenchmarkId::from_parameter(step),
-                num_to_load,
+                &num_to_load,
                 |b, &num_to_load| {
                     let test = || async {
                         let mut loaded: u64 = 0;

@@ -24,9 +24,9 @@ pub fn benchmark(
 ) {
     let mut group = c.benchmark_group("single_puts");
 
-    for size in [128, 16 * KB, 512 * KB, 8 * MB].iter() {
-        group.throughput(Throughput::Bytes(*size as u64));
-        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+    for size in [128, 16 * KB, 512 * KB, 8 * MB] {
+        group.throughput(Throughput::Bytes(size as u64));
+        group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
             let mut block = vec![0; size];
             thread_rng().fill(&mut block as &mut [u8]);
 

@@ -109,7 +109,7 @@ impl OptionsHgExt for Options {
 
                 // [alias], [revsetalias], [templatealias] are excluded if they are outside
                 // HGPLAINEXCEPT.
-                for &name in ["alias", "revsetalias", "templatealias"].iter() {
+                for name in ["alias", "revsetalias", "templatealias"] {
                     if !plain_exceptions.contains(name) {
                         section_exclude_list.insert(Text::from(name));
                     }
@@ -464,7 +464,7 @@ impl ConfigSet {
         // no clean way to tell which one it is from.  The value might be
         // tweaked for sysadmin usecases (ex. -n), which are different from
         // SCM's usecases.
-        for name in ["VISUAL", "EDITOR"].iter() {
+        for name in ["VISUAL", "EDITOR"] {
             if let Ok(editor) = env::var(name) {
                 self.set(
                     "ui",

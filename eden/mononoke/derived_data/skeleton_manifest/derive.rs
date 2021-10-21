@@ -700,7 +700,7 @@ mod test {
             .id()
             .load(&ctx, repo.blobstore())
             .await?;
-        for dir in ["dir1", "dir2", "dir3", "dir4", "dir5", "dir6"].iter() {
+        for dir in ["dir1", "dir2", "dir3", "dir4", "dir5", "dir6"] {
             assert_eq!(
                 skeleton_dir(&g_sk_nonwin, dir.as_bytes())?
                     .summary()

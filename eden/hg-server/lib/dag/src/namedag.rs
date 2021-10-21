@@ -1245,12 +1245,10 @@ where
     for (nodes, group) in [
         (master_heads, Group::MASTER),
         (non_master_heads, Group::NON_MASTER),
-    ]
-    .iter()
-    {
+    ] {
         for node in nodes.iter() {
             outcome.merge(
-                map.assign_head(node.clone(), parent_names_func, *group)
+                map.assign_head(node.clone(), parent_names_func, group)
                     .await?,
             );
         }
