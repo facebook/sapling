@@ -6,11 +6,13 @@
  */
 
 use std::collections::{HashMap, HashSet};
+use std::future;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Error, Result};
+use async_recursion::async_recursion;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
@@ -27,8 +29,9 @@ use crate::context::DerivationContext;
 use crate::derivable::{BonsaiDerivable, DerivationDependencies};
 use crate::error::DerivationError;
 
-use super::DerivedDataManager;
+use super::{DerivationAssignment, DerivedDataManager};
 
+#[derive(Clone, Copy)]
 pub enum BatchDeriveOptions {
     Parallel { gap_size: Option<usize> },
     Serial,
@@ -37,6 +40,20 @@ pub enum BatchDeriveOptions {
 pub enum BatchDeriveStats {
     Parallel(Duration),
     Serial(Vec<(ChangesetId, Duration)>),
+}
+
+impl BatchDeriveStats {
+    fn append(self, other: Self) -> anyhow::Result<Self> {
+        use BatchDeriveStats::*;
+        Ok(match (self, other) {
+            (Parallel(d1), Parallel(d2)) => Parallel(d1 + d2),
+            (Serial(mut s1), Serial(mut s2)) => {
+                s1.append(&mut s2);
+                Serial(s1)
+            }
+            _ => anyhow::bail!("Incompatible stats"),
+        })
+    }
 }
 
 /// Trait to allow determination of rederivation.
@@ -55,6 +72,31 @@ pub trait Rederivation: Send + Sync + 'static {
 }
 
 impl DerivedDataManager {
+    #[async_recursion]
+    /// Returns the appropriate manager to derive given changeset, either this
+    /// manager, or some secondary manager in the chain.
+    async fn get_manager(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> anyhow::Result<&DerivedDataManager> {
+        Ok(if let Some(secondary) = &self.inner.secondary {
+            if secondary
+                .assigner
+                .assign(ctx, vec![cs_id])
+                .await?
+                .secondary
+                .is_empty()
+            {
+                self
+            } else {
+                secondary.manager.get_manager(ctx, cs_id).await?
+            }
+        } else {
+            self
+        })
+    }
+
     pub fn derivation_context(
         &self,
         rederivation: Option<Arc<dyn Rederivation>>,
@@ -201,7 +243,7 @@ impl DerivedDataManager {
     }
 
     /// Find ancestors of the target changeset that are underived.
-    async fn find_underived_impl<Derivable>(
+    async fn find_underived_inner<Derivable>(
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
@@ -281,7 +323,7 @@ impl DerivedDataManager {
         Derivable: BonsaiDerivable,
     {
         let (find_underived_stats, mut dag_traversal) = async {
-            self.find_underived_impl::<Derivable>(ctx, target_csid, None, derivation_ctx.as_ref())
+            self.find_underived_inner::<Derivable>(ctx, target_csid, None, derivation_ctx.as_ref())
                 .await
                 .map(TopoSortedDagTraversal::new)
         }
@@ -345,10 +387,26 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
+        self.get_manager(ctx, csid)
+            .await?
+            .count_underived_impl::<Derivable>(ctx, csid, limit, rederivation)
+            .await
+    }
+
+    async fn count_underived_impl<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        limit: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<u64, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
         self.check_enabled::<Derivable>()?;
         let derivation_ctx = self.derivation_context(rederivation);
         let underived = self
-            .find_underived_impl::<Derivable>(ctx, csid, limit, &derivation_ctx)
+            .find_underived_inner::<Derivable>(ctx, csid, limit, &derivation_ctx)
             .await?;
         Ok(underived.len() as u64)
     }
@@ -376,14 +434,45 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
+        self.get_manager(ctx, csid)
+            .await?
+            .find_underived_impl::<Derivable>(ctx, csid, limit, rederivation)
+            .await
+    }
+
+    async fn find_underived_impl<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        limit: Option<u64>,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>>
+    where
+        Derivable: BonsaiDerivable,
+    {
         self.check_enabled::<Derivable>()?;
         let derivation_ctx = self.derivation_context(rederivation);
-        self.find_underived_impl::<Derivable>(ctx, csid, limit, &derivation_ctx)
+        self.find_underived_inner::<Derivable>(ctx, csid, limit, &derivation_ctx)
             .await
     }
 
     /// Derive or retrieve derived data for a changeset.
     pub async fn derive<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Derivable, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        self.get_manager(ctx, csid)
+            .await?
+            .derive_impl::<Derivable>(ctx, csid, rederivation)
+            .await
+    }
+
+    async fn derive_impl<Derivable>(
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
@@ -429,6 +518,7 @@ impl DerivedDataManager {
         Ok(derivation_outcome.derived)
     }
 
+    #[async_recursion]
     /// Backfill derived data for a batch of changesets.
     ///
     /// The provided batch of changesets must be in topological
@@ -449,6 +539,31 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
+        let (csids, secondary_derivation) = if let Some(secondary_data) = &self.inner.secondary {
+            let DerivationAssignment { primary, secondary } =
+                secondary_data.assigner.assign(ctx, csids).await?;
+            (primary, {
+                cloned!(rederivation);
+                async move {
+                    secondary_data
+                        .manager
+                        .backfill_batch::<Derivable>(ctx, secondary, batch_options, rederivation)
+                        .await
+                }
+                .left_future()
+            })
+        } else {
+            (
+                csids,
+                future::ready(Ok(match batch_options {
+                    BatchDeriveOptions::Serial => BatchDeriveStats::Serial(vec![]),
+                    BatchDeriveOptions::Parallel { .. } => {
+                        BatchDeriveStats::Parallel(Duration::ZERO)
+                    }
+                }))
+                .right_future(),
+            )
+        };
         self.check_enabled::<Derivable>()?;
         let mut derivation_ctx = self.derivation_context(rederivation);
 
@@ -609,11 +724,26 @@ impl DerivedDataManager {
             .add_future_stats(&stats)
             .log_with_msg("Flushed mapping", None);
 
-        Ok(batch_stats)
+        Ok(batch_stats.append(secondary_derivation.await?)?)
     }
 
     /// Fetch derived data for a changeset if it has previously been derived.
     pub async fn fetch_derived<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        csid: ChangesetId,
+        rederivation: Option<Arc<dyn Rederivation>>,
+    ) -> Result<Option<Derivable>, DerivationError>
+    where
+        Derivable: BonsaiDerivable,
+    {
+        self.get_manager(ctx, csid)
+            .await?
+            .fetch_derived_impl::<Derivable>(ctx, csid, rederivation)
+            .await
+    }
+
+    async fn fetch_derived_impl<Derivable>(
         &self,
         ctx: &CoreContext,
         csid: ChangesetId,
@@ -628,6 +758,7 @@ impl DerivedDataManager {
         Ok(derived)
     }
 
+    #[async_recursion]
     /// Fetch derived data for a batch of changesets if they have previously
     /// been derived.
     ///
@@ -642,11 +773,28 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
+        let (csids, secondary_derivation) = if let Some(secondary_data) = &self.inner.secondary {
+            let DerivationAssignment { primary, secondary } =
+                secondary_data.assigner.assign(ctx, csids).await?;
+            (primary, {
+                cloned!(rederivation);
+                async move {
+                    secondary_data
+                        .manager
+                        .fetch_derived_batch::<Derivable>(ctx, secondary, rederivation)
+                        .await
+                }
+                .left_future()
+            })
+        } else {
+            (csids, future::ready(Ok(HashMap::new())).right_future())
+        };
         self.check_enabled::<Derivable>()?;
         let derivation_ctx = self.derivation_context(rederivation);
-        let derived = derivation_ctx
+        let mut derived = derivation_ctx
             .fetch_derived_batch::<Derivable>(ctx, csids)
             .await?;
+        derived.extend(secondary_derivation.await?);
         Ok(derived)
     }
 }
