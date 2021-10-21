@@ -322,6 +322,7 @@ def amend(ui, repo, *pats, **opts):
     # 'rebase' is a tristate option: None=auto, True=force, False=disable
     rebase = opts.get("rebase")
     to = opts.get("to")
+    interactive = opts.get("interactive")
 
     if rebase and _histediting(repo):
         # if a histedit is in flight, it's dangerous to remove old commits
@@ -329,10 +330,19 @@ def amend(ui, repo, *pats, **opts):
         raise error.Abort("histedit in progress", hint=hint)
 
     badflags = [flag for flag in ["rebase", "fixup"] if opts.get(flag, None)]
-    if opts.get("interactive") and badflags:
+    if interactive and badflags:
         raise error.Abort(
             _("--interactive and --%s are mutually exclusive") % badflags[0]
         )
+
+    if interactive:
+        with repo.wlock(), repo.lock():
+            # Strip the interactive flag to avoid infinite recursive loop
+            opts.pop("interactive")
+            cmdutil.dorecord(
+                ui, repo, amend, None, False, cmdutil.recordfilter, *pats, **opts
+            )
+            return
 
     fixup = opts.get("fixup")
 
@@ -341,9 +351,6 @@ def amend(ui, repo, *pats, **opts):
         "fixup",
         "addremove",
         "edit",
-        "interactive",
-        "include",
-        "exclude",
         "message",
         "logfile",
         "date",
@@ -353,8 +360,9 @@ def amend(ui, repo, *pats, **opts):
         "template",
     ]
 
-    if to and (any(opts.get(flag, None) for flag in badtoflags) or pats):
-        raise error.Abort(_("--to cannot be used with any other options"))
+    badflags = [flag for flag in badtoflags if opts.get(flag, None)]
+    if to and badflags:
+        raise error.Abort(_(f"--to does not support --{badflags[0]}"))
 
     if fixup:
         ui.warn(
@@ -366,7 +374,7 @@ def amend(ui, repo, *pats, **opts):
         return
 
     if to:
-        amendtocommit(ui, repo, to)
+        amendtocommit(ui, repo, to, pats, opts)
         return
 
     old = repo["."]
@@ -393,23 +401,8 @@ def amend(ui, repo, *pats, **opts):
             commitdate = old.date()
 
     oldbookmarks = old.bookmarks()
-    tr = None
-    wlock = None
-    lock = None
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
-
-        if opts.get("interactive"):
-            # Strip the interactive flag to avoid infinite recursive loop
-            opts.pop("interactive")
-            cmdutil.dorecord(
-                ui, repo, amend, None, False, cmdutil.recordfilter, *pats, **opts
-            )
-            return
-
-        else:
-            node = cmdutil.amend(ui, repo, old, {}, pats, opts)
+    with repo.wlock(), repo.lock():
+        node = cmdutil.amend(ui, repo, old, {}, pats, opts)
 
         if node == old.node():
             ui.status(_("nothing changed\n"))
@@ -479,9 +472,8 @@ def amend(ui, repo, *pats, **opts):
         for bm in oldbookmarks:
             changes.append((bm, node))
 
-        tr = repo.transaction("fixupamend")
-        repo._bookmarks.applychanges(repo, tr, changes)
-        tr.close()
+        with repo.transaction("fixupamend") as tr:
+            repo._bookmarks.applychanges(repo, tr, changes)
 
         if rebase and haschildren:
             noconflictmsg = _(
@@ -495,8 +487,6 @@ def amend(ui, repo, *pats, **opts):
                 restack.restack(ui, repo, rev=revs, noconflict=noconflict)
 
         showtemplate(ui, repo, repo[node], **opts)
-    finally:
-        lockmod.release(wlock, lock, tr)
 
 
 def fixupamend(ui, repo, noconflict=None, noconflictmsg=None):
@@ -519,7 +509,7 @@ def fixupamend(ui, repo, noconflict=None, noconflictmsg=None):
         lockmod.release(wlock, lock, tr)
 
 
-def amendtocommit(ui, repo, commitspec):
+def amendtocommit(ui, repo, commitspec, pats=None, opts=None):
     """amend to a specific commit
 
     This works by patching the working diff on to the specified commit
@@ -550,11 +540,13 @@ def amendtocommit(ui, repo, commitspec):
         # Generate patch from wctx and apply to dest commit.
         mergedctx = mirrorwithmetadata(dest, "amend")
         wctx = repo[None]
+        matcher = scmutil.match(wctx, pats, opts) if pats or opts else None
+
         store = patch.mempatchstore(mergedctx)
         backend = patch.mempatchbackend(ui, mergedctx, store)
         ret = patch.applydiff(
             ui,
-            io.BytesIO(b"".join(list(wctx.diff()))),
+            io.BytesIO(b"".join(list(wctx.diff(match=matcher, opts=opts)))),
             backend,
             store,
         )

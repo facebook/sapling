@@ -559,9 +559,209 @@ Test various error cases.
   $ hg amend --to '::.'
   abort: '::.' must refer to a single changeset
   [255]
-  $ hg amend --to '.' -i
-  abort: --to cannot be used with any other options
+  $ hg amend --to '.' --edit
+  abort: --to does not support --edit
   [255]
-  $ hg amend --to '.' bar
-  abort: --to cannot be used with any other options
-  [255]
+
+
+
+
+Test modifying in interactive mode combined with to
+  $ newrepo
+  $ echo foo > foo
+  $ echo baz > baz
+  $ hg ci -m "one" -Aq
+  $ echo bar > bar
+  $ hg ci -m "two" -Aq
+  $ echo more >> baz
+  $ echo -e "start\n$(cat foo)" > foo
+  $ echo end >> foo
+  $ cat <<EOS | hg amend -i --to "desc(one)" --config ui.interactive=1
+  > n
+  > y
+  > y
+  > n
+  > EOS
+  diff --git a/baz b/baz
+  1 hunks, 1 lines changed
+  examine changes to 'baz'? [Ynesfdaq?] n
+  
+  diff --git a/foo b/foo
+  2 hunks, 2 lines changed
+  examine changes to 'foo'? [Ynesfdaq?] y
+  
+  @@ -1,1 +1,2 @@
+  +start
+   foo
+  record change 2/3 to 'foo'? [Ynesfdaq?] y
+  
+  @@ -1,1 +2,2 @@
+   foo
+  +end
+  record change 3/3 to 'foo'? [Ynesfdaq?] n
+  
+
+
+
+
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two 031e3653e811diff --git a/bar b/bar
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/bar
+  │  @@ -0,0 +1,1 @@
+  │  +bar
+  │
+  o  one 8cb434f5821cdiff --git a/baz b/baz
+     new file mode 100644
+     --- /dev/null
+     +++ b/baz
+     @@ -0,0 +1,1 @@
+     +baz
+     diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,2 @@
+     +start
+     +foo
+  
+
+  $ hg diff
+  diff --git a/baz b/baz
+  --- a/baz
+  +++ b/baz
+  @@ -1,1 +1,2 @@
+   baz
+  +more
+  diff --git a/foo b/foo
+  --- a/foo
+  +++ b/foo
+  @@ -1,2 +1,3 @@
+   start
+   foo
+  +end
+
+
+
+Test adding, renaming, removing files in interactive mode combined with to
+  $ newrepo
+  $ echo bar > bar
+  $ echo qux > qux
+  $ hg ci -m "one" -Aq
+  $ echo foo > foo
+  $ hg ci -m "two" -Aq
+  $ echo baz > baz
+  $ hg add baz
+  $ hg mv bar bar_renamed
+  $ hg rm qux
+  $ cat <<EOS | hg amend -i --to "desc(one)" --config ui.interactive=1
+  > y
+  > y
+  > y
+  > y
+  > EOS
+  diff --git a/bar b/bar_renamed
+  rename from bar
+  rename to bar_renamed
+  examine changes to 'bar' and 'bar_renamed'? [Ynesfdaq?] y
+  
+  diff --git a/baz b/baz
+  new file mode 100644
+  examine changes to 'baz'? [Ynesfdaq?] y
+  
+  @@ -0,0 +1,1 @@
+  +baz
+  record change 1/2 to 'baz'? [Ynesfdaq?] y
+  
+  diff --git a/qux b/qux
+  deleted file mode 100644
+  examine changes to 'qux'? [Ynesfdaq?] y
+  
+
+
+
+
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two f8ebc2414cd5diff --git a/foo b/foo
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/foo
+  │  @@ -0,0 +1,1 @@
+  │  +foo
+  │
+  o  one a3ffb20467b5diff --git a/bar_renamed b/bar_renamed
+     new file mode 100644
+     --- /dev/null
+     +++ b/bar_renamed
+     @@ -0,0 +1,1 @@
+     +bar
+     diff --git a/baz b/baz
+     new file mode 100644
+     --- /dev/null
+     +++ b/baz
+     @@ -0,0 +1,1 @@
+     +baz
+  
+
+
+
+Test combining --include with --to
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ echo bar > bar
+  $ hg ci -m "two" -Aq
+  $ echo baz > baz
+  $ hg add baz
+  $ echo more >> foo
+  $ hg amend --to "desc(one)" --include baz
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two dc26d8aef7a9diff --git a/bar b/bar
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/bar
+  │  @@ -0,0 +1,1 @@
+  │  +bar
+  │
+  o  one 5e6de66c9089diff --git a/baz b/baz
+     new file mode 100644
+     --- /dev/null
+     +++ b/baz
+     @@ -0,0 +1,1 @@
+     +baz
+     diff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,1 @@
+     +foo
+  
+
+
+Test combining --exclude with --to
+  $ newrepo
+  $ echo foo > foo
+  $ hg ci -m "one" -Aq
+  $ echo bar > bar
+  $ hg ci -m "two" -Aq
+  $ echo baz > baz
+  $ hg add baz
+  $ echo more >> foo
+  $ hg amend --to "desc(one)" --exclude baz
+  $ hg log -G -vp -T "{desc} {node|short}"
+  @  two f1b6beb7e0b4diff --git a/bar b/bar
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/bar
+  │  @@ -0,0 +1,1 @@
+  │  +bar
+  │
+  o  one 742bbe955e4bdiff --git a/foo b/foo
+     new file mode 100644
+     --- /dev/null
+     +++ b/foo
+     @@ -0,0 +1,2 @@
+     +foo
+     +more
+  

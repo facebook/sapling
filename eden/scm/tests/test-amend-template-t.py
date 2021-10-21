@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
 
 from __future__ import absolute_import
 
@@ -44,6 +44,6 @@ sh % "hg amend --template '{node|short} ({phase}): {desc}\\n'" == "4a5cb78b8fc9 
 sh % "echo 'good luck'" > "hello.txt"
 
 sh % "hg amend --template '{node|short} ({phase}): {desc}\\n' --to 4a5cb78b8fc9" == r"""
-    abort: --to cannot be used with any other options
+    abort: --to does not support --template
     [255]"""
 sh % "hg commit --amend --template '{node|short} ({phase}): {desc}\\n'" == "1d0c24f9beeb (draft): some commit"
