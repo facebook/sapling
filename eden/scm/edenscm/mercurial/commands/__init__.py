@@ -757,7 +757,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
     else:
         hg.clean(repo, node, show_stats=False)
         repo.dirstate.setbranch(branch)
-        cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
+        cmdutil.revert(ui, repo, rctx, repo.dirstate.parents(), forcecopytracing=True)
 
     if opts.get("no_commit"):
         msg = _("changeset %s backed out, " "don't forget to commit.\n")

@@ -4157,14 +4157,30 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         if not opts.get("dry_run"):
             needdata = ("revert", "add", "undelete")
             _revertprefetch(repo, ctx, *[actions[name][0] for name in needdata])
-            _performrevert(repo, parents, ctx, actions, interactive, tobackup)
+            _performrevert(
+                repo,
+                parents,
+                ctx,
+                actions,
+                interactive,
+                tobackup,
+                forcecopytracing=opts.get("forcecopytracing"),
+            )
 
 
 def _revertprefetch(repo, ctx, *files):
     """Let extension changing the storage layer prefetch content"""
 
 
-def _performrevert(repo, parents, ctx, actions, interactive=False, tobackup=None):
+def _performrevert(
+    repo,
+    parents,
+    ctx,
+    actions,
+    interactive=False,
+    tobackup=None,
+    forcecopytracing=False,
+):
     """function that actually perform all the actions computed for revert
 
     This is an independent function to let extension to plug in and react to
@@ -4292,14 +4308,15 @@ def _performrevert(repo, parents, ctx, actions, interactive=False, tobackup=None
         checkout(f)
         normal(f)
 
-    # When reverting a change, always enable copy tracing so we don't
-    # accidentally lose any data.
-    with repo.ui.configoverride({("experimental", "copytrace"): "on"}):
-        copied = copies.pathcopies(repo[parent], ctx)
+    if forcecopytracing or repo.ui.config("experimental", "copytrace") != "off":
+        # When reverting a change, always enable copy tracing so we don't
+        # accidentally lose any data.
+        with repo.ui.configoverride({("experimental", "copytrace"): "on"}):
+            copied = copies.pathcopies(repo[parent], ctx)
 
-    for f in actions["add"][0] + actions["undelete"][0] + actions["revert"][0]:
-        if f in copied:
-            repo.dirstate.copy(copied[f], f)
+        for f in actions["add"][0] + actions["undelete"][0] + actions["revert"][0]:
+            if f in copied:
+                repo.dirstate.copy(copied[f], f)
 
 
 class command(registrar.command):
