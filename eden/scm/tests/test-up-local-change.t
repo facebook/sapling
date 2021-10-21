@@ -43,7 +43,7 @@
   summary:     1
   
   $ hg --debug up
-    searching for copies back to 1e71731e6fbb
+    searching for copies back to c19d34741b0a
     unmatched files in other:
      b
   resolving manifests
@@ -99,7 +99,7 @@
   summary:     1
   
   $ hg --debug up
-    searching for copies back to 1e71731e6fbb
+    searching for copies back to c19d34741b0a
     unmatched files in other:
      b
   resolving manifests

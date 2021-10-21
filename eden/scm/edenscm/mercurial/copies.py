@@ -22,88 +22,17 @@ from .i18n import _
 
 def _findlimit(repo, a, b):
     """
-    Find the last revision that needs to be checked to ensure that a full
-    transitive closure for file copies can be properly calculated.
-    Generally, this means finding the earliest revision number that's an
-    ancestor of a or b but not both, except when a or b is a direct descendent
-    of the other, in which case we can return the minimum revnum of a and b.
-    None if no such revision exists.
+    Find the earliest revision that's an ancestor of a or b but not both, except
+    in the case where a or b is an ancestor of the other.
     """
-
-    # basic idea:
-    # - mark a and b with different sides
-    # - if a parent's children are all on the same side, the parent is
-    #   on that side, otherwise it is on no side
-    # - walk the graph in topological order with the help of a heap;
-    #   - add unseen parents to side map
-    #   - clear side of any parent that has children on different sides
-    #   - track number of interesting revs that might still be on a side
-    #   - track the lowest interesting rev seen
-    #   - quit when interesting revs is zero
-
-    cl = repo.changelog
-    working = 1 << 63  # pseudo rev for the working directory
     if a is None:
-        a = working
+        a = repo.revs("p1()").first()
     if b is None:
-        b = working
-
-    side = {a: -1, b: 1}
-    visit = [-a, -b]
-    heapq.heapify(visit)
-    interesting = len(visit)
-    hascommonancestor = False
-    limit = working
-
-    while interesting > 0:
-        r = -(heapq.heappop(visit))
-        if r == working:
-            parents = [cl.rev(p) for p in repo.dirstate.parents()]
-        else:
-            parents = cl.parentrevs(r)
-        for p in parents:
-            if p < 0:
-                continue
-            if p not in side:
-                # first time we see p; add it to visit
-                side[p] = side[r]
-                if side[p]:
-                    interesting += 1
-                heapq.heappush(visit, -p)
-            elif side[p] and side[p] != side[r]:
-                # p was interesting but now we know better
-                side[p] = 0
-                interesting -= 1
-                hascommonancestor = True
-        if side[r]:
-            limit = r  # lowest rev visited
-            interesting -= 1
-
-    if not hascommonancestor:
+        b = repo.revs("p1()").first()
+    if a is None or b is None or not repo.revs("ancestor(%d, %d)", a, b):
         return None
 
-    # Consider the following flow (see test-commit-amend.t under issue4405):
-    # 1/ File 'a0' committed
-    # 2/ File renamed from 'a0' to 'a1' in a new commit (call it 'a1')
-    # 3/ Move back to first commit
-    # 4/ Create a new commit via revert to contents of 'a1' (call it 'a1-amend')
-    # 5/ Rename file from 'a1' to 'a2' and commit --amend 'a1-msg'
-    #
-    # During the amend in step five, we will be in this state:
-    #
-    # @  3 temporary amend commit for a1-amend
-    # |
-    # o  2 a1-amend
-    # |
-    # | o  1 a1
-    # |/
-    # o  0 a0
-    #
-    # When _findlimit is called, a and b are revs 3 and 0, so limit will be 2,
-    # yet the filelog has the copy information in rev 1 and we will not look
-    # back far enough unless we also look at the a and b as candidates.
-    # This only occurs when a is a descendent of b or visa-versa.
-    return min(limit, a, b)
+    return repo.revs("only(%d, %d) + only(%d, %d) + %d + %d", a, b, b, a, a, b).min()
 
 
 def _chain(src, dst, a, b):

@@ -172,7 +172,7 @@ Update to link with local change should cause a merge prompt (issue3200):
   $ hg up -Cq 'desc(add)'
   $ echo data > a
   $ HGMERGE= hg up -y --debug
-    searching for copies back to 521a1e40188f
+    searching for copies back to c334dc3be0da
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: c334dc3be0da, local: c334dc3be0da+, remote: 521a1e40188f
