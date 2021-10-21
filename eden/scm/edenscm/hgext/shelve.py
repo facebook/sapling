@@ -841,7 +841,7 @@ def _rebaserestoredcommit(
     repo,
     opts,
     tr,
-    oldtiprev,
+    oldrawheads,
     basename,
     pctx,
     tmpwctx,
@@ -867,6 +867,7 @@ def _rebaserestoredcommit(
         extra["unshelve_time"] = str(time.time())
 
     ui.status(_("rebasing shelved changes\n"))
+
     try:
         # we only want keep to be true if shelve is traditional, since
         # for obs-based shelve, rebase will also be obs-based and
@@ -885,10 +886,9 @@ def _rebaserestoredcommit(
         )
     except error.InterventionRequired:
         tr.close()
+        newrawheads = repo.dageval(lambda: heads(all()))
+        nodestoremove = repo.dageval(lambda: only(newrawheads, oldrawheads))
 
-        nodestoremove = [
-            repo.changelog.node(rev) for rev in range(oldtiprev, len(repo))
-        ]
         shelvedstate.save(
             repo,
             basename,
@@ -929,7 +929,7 @@ def _forgetunknownfiles(repo, shelvectx, addedbefore):
     repo[None].forget(toforget)
 
 
-def _finishunshelve(repo, oldtiprev, tr, activebookmark):
+def _finishunshelve(repo, tr, activebookmark):
     _restoreactivebookmark(repo, activebookmark)
     tr.close()
     return
@@ -1087,7 +1087,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
     try:
         lock = repo.lock()
         tr = repo.transaction("unshelve", report=lambda x: None)
-        oldtiprev = len(repo)
+        oldrawheads = repo.dageval(lambda: heads(all()))
 
         pctx = repo["."]
         tmpwctx = pctx
@@ -1115,7 +1115,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
                 repo,
                 opts,
                 tr,
-                oldtiprev,
+                oldrawheads,
                 basename,
                 pctx,
                 tmpwctx,
@@ -1130,7 +1130,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
         _obsoleteredundantnodes(repo, tr, pctx, shelvectx, tmpwctx)
 
         shelvedstate.clear(repo)
-        _finishunshelve(repo, oldtiprev, tr, activebookmark)
+        _finishunshelve(repo, tr, activebookmark)
         unshelvecleanup(ui, repo, basename, opts)
     finally:
         if tr:
