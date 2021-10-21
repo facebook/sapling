@@ -22,4 +22,4 @@ struct ChangesetEntry {
   2: required mononoke_types_thrift.ChangesetId cs_id;
   3: required list<mononoke_types_thrift.ChangesetId> parents;
   4: required GenerationNum gen;
-}
+} (rust.exhaustive)

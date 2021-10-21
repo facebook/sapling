@@ -634,7 +634,6 @@ impl BlameData {
                         None
                     }
                 }),
-                ..Default::default()
             })
             .collect();
         let csids = self
@@ -650,7 +649,6 @@ impl BlameData {
             csids,
             max_csid_index,
             paths,
-            ..Default::default()
         }
     }
 

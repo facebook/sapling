@@ -182,11 +182,7 @@ impl ChunkedFileContents {
             .into_iter()
             .map(ContentChunkPointer::into_thrift)
             .collect();
-        thrift::ChunkedFileContents {
-            content_id,
-            chunks,
-            ..Default::default()
-        }
+        thrift::ChunkedFileContents { content_id, chunks }
     }
 
     pub fn into_chunks(self) -> Vec<ContentChunkPointer> {
@@ -245,11 +241,7 @@ impl ContentChunkPointer {
         // moment.
         let chunk_id = self.chunk_id.into_thrift();
         let size: i64 = self.size.try_into().unwrap();
-        thrift::ContentChunkPointer {
-            chunk_id,
-            size,
-            ..Default::default()
-        }
+        thrift::ContentChunkPointer { chunk_id, size }
     }
 
     pub fn chunk_id(&self) -> ContentChunkId {

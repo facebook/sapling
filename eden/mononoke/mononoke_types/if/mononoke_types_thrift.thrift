@@ -122,11 +122,11 @@ struct BonsaiChangeset {
   ) file_changes;
   // Changeset is a snapshot iff this field is present
   9: optional SnapshotState snapshot_state;
-}
+} (rust.exhaustive)
 
 struct SnapshotState {
 // Additional state for snapshots (if necessary)
-}
+} (rust.exhaustive)
 
 // DateTime fields do not have a reasonable default value! They must
 // always be required or optional.
@@ -135,12 +135,12 @@ struct DateTime {
   // Timezones can go up to UTC+13 (which would be represented as -46800), so
   // an i16 can't fit them.
   2: required i32 tz_offset_secs;
-}
+} (rust.exhaustive)
 
 struct ContentChunkPointer {
   1: ContentChunkId chunk_id;
   2: i64 size;
-}
+} (rust.exhaustive)
 
 // When a file is chunked, we reprsent it as a list of its chunks, as well as
 // its ContentId.
@@ -151,7 +151,7 @@ struct ChunkedFileContents {
   // have the contents).
   1: ContentId content_id;
   2: list<ContentChunkPointer> chunks;
-}
+} (rust.exhaustive)
 
 union FileContents {
   // Plain uncompressed bytes - WYSIWYG.
@@ -184,7 +184,7 @@ struct ContentMetadata {
   4: optional Sha256 sha256;
   // always object type "blob"
   5: optional GitSha1 git_sha1;
-}
+} (rust.exhaustive)
 
 union RawBundle2 {
   1: binary Bytes;
@@ -206,17 +206,17 @@ struct FileChangeOpt {
   2: optional UntrackedFileChange untracked_change;
   // Present if this is a missing file in a snapshot commit.
   3: optional UntrackedDeletion untracked_deletion;
-}
+} (rust.exhaustive)
 
 struct UntrackedDeletion {
 // Additional state (if necessary)
-}
+} (rust.exhaustive)
 
 struct UntrackedFileChange {
   1: ContentId content_id;
   2: FileType file_type;
   3: i64 size;
-}
+} (rust.exhaustive)
 
 struct FileChange {
   1: required ContentId content_id;
@@ -224,14 +224,14 @@ struct FileChange {
   // size is a u64 stored as an i64
   3: required i64 size;
   4: optional CopyInfo copy_from;
-}
+} (rust.exhaustive)
 
 // This is only used optionally so it is OK to use `required` here.
 struct CopyInfo {
   1: required MPath file;
   // cs_id must match one of the parents specified in BonsaiChangeset
   2: required ChangesetId cs_id;
-}
+} (rust.exhaustive)
 
 struct FileUnode {
   1: list<FileUnodeId> parents;
@@ -239,7 +239,7 @@ struct FileUnode {
   3: FileType file_type;
   4: MPathHash path_hash;
   5: ChangesetId linknode;
-}
+} (rust.exhaustive)
 
 union UnodeEntry {
   1: FileUnodeId File;
@@ -252,14 +252,14 @@ struct ManifestUnode {
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
   3: ChangesetId linknode;
-}
+} (rust.exhaustive)
 
 struct DeletedManifest {
   1: optional ChangesetId linknode;
   2: map<MPathElement, DeletedManifestId> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
-}
+} (rust.exhaustive)
 
 struct FsnodeFile {
   1: ContentId content_id;
@@ -268,12 +268,12 @@ struct FsnodeFile {
   3: i64 size;
   4: Sha1 content_sha1;
   5: Sha256 content_sha256;
-}
+} (rust.exhaustive)
 
 struct FsnodeDirectory {
   1: FsnodeId id;
   2: FsnodeSummary summary;
-}
+} (rust.exhaustive)
 
 struct FsnodeSummary {
   1: Sha1 simple_format_sha1;
@@ -284,7 +284,7 @@ struct FsnodeSummary {
   5: i64 child_dirs_count;
   6: i64 descendant_files_count;
   7: i64 descendant_files_total_size;
-}
+} (rust.exhaustive)
 
 union FsnodeEntry {
   1: FsnodeFile File;
@@ -306,12 +306,12 @@ struct Fsnode {
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
   2: FsnodeSummary summary;
-}
+} (rust.exhaustive)
 
 struct SkeletonManifestDirectory {
   1: SkeletonManifestId id;
   2: SkeletonManifestSummary summary;
-}
+} (rust.exhaustive)
 
 struct SkeletonManifestSummary {
   1: i64 child_files_count;
@@ -326,12 +326,12 @@ struct SkeletonManifestSummary {
   10: bool descendant_non_utf8_filenames;
   11: bool child_invalid_windows_filenames;
   12: bool descendant_invalid_windows_filenames;
-}
+} (rust.exhaustive)
 
 struct SkeletonManifestEntry {
   // Present if this is a directory, absent for a file.
   1: optional SkeletonManifestDirectory directory;
-}
+} (rust.exhaustive)
 
 // Structure-addressed manifest, with metadata useful for traversing manifest
 // trees and determining case conflicts.
@@ -345,7 +345,7 @@ struct SkeletonManifest {
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) subentries;
   2: SkeletonManifestSummary summary;
-}
+} (rust.exhaustive)
 
 // Structure that holds a commit graph, usually a history of a file
 // or a directory hence the name. Semantically it stores list of
@@ -387,7 +387,7 @@ struct SkeletonManifest {
 struct FastlogBatch {
   1: list<CompressedHashAndParents> latest;
   2: list<FastlogBatchId> previous_batches;
-}
+} (rust.exhaustive)
 
 typedef i32 ParentOffset (rust.newtype)
 
@@ -395,7 +395,7 @@ struct CompressedHashAndParents {
   1: ChangesetId cs_id;
   # Offsets can be negative!
   2: list<ParentOffset> parent_offsets;
-}
+} (rust.exhaustive)
 
 typedef i32 BlameChangeset (rust.newtype)
 typedef i32 BlamePath (rust.newtype)
@@ -413,12 +413,12 @@ struct BlameRange {
   3: BlamePath path;
   // offset of this range in the origin file (file that introduced this change)
   4: i32 origin_offset;
-}
+} (rust.exhaustive)
 
 struct Blame {
   1: list<BlameRange> ranges;
   2: list<MPath> paths;
-}
+} (rust.exhaustive)
 
 union BlameMaybeRejected {
   1: Blame Blame (py3.name = "blame");
@@ -509,7 +509,7 @@ struct BlameRangeV2 {
   // Note that this is an index into the list of parents in the bonsai
   // changeset, and *not* an index into csids.
   8: optional i32 parent_index;
-}
+} (rust.exhaustive)
 
 struct BlameDataV2 {
   // A list of ranges that describe when the lines of this file were
@@ -542,7 +542,7 @@ struct BlameDataV2 {
   // for simplicity, this includes all paths the file has ever been located at,
   // even if they are no longer referenced by any of the ranges.
   4: list<MPath> paths;
-}
+} (rust.exhaustive)
 
 union BlameV2 {
   // This version of the file contains full blame information.
@@ -555,4 +555,4 @@ union BlameV2 {
 struct RedactionKeyList {
   // List of keys to be redacted
   1: list<string> keys;
-}
+} (rust.exhaustive)

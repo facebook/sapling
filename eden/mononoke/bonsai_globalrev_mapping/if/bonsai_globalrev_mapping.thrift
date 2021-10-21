@@ -16,4 +16,4 @@ struct BonsaiGlobalrevMappingEntry {
   1: required i32 repo_id;
   2: required mononoke_types_thrift.ChangesetId bcs_id;
   3: required i64 globalrev;
-}
+} (rust.exhaustive)

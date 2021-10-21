@@ -20,20 +20,20 @@ struct FilenodeSnapshot {
   4: optional mercurial_thrift.HgNodeHash p2;
   5: optional CopyInfoSnapshot copyfrom;
   6: optional mercurial_thrift.HgNodeHash linknode;
-}
+} (rust.exhaustive)
 
 struct CopyInfoSnapshot {
   1: optional mononoke_types_thrift.RepoPath path;
   2: optional mercurial_thrift.HgNodeHash filenode;
-}
+} (rust.exhaustive)
 
 struct ChangesetSnapshot {
   1: optional mononoke_types_thrift.ChangesetId cs_id;
   2: optional list<mononoke_types_thrift.ChangesetId> parents;
   3: optional i64 gen;
-}
+} (rust.exhaustive)
 
 struct RepoSnapshot {
   1: optional list<FilenodeSnapshot> filenodes;
   2: optional list<ChangesetSnapshot> changesets;
-}
+} (rust.exhaustive)

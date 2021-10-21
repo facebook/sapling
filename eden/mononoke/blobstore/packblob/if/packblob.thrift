@@ -29,7 +29,7 @@ union SingleValue {
 struct ZstdFromDictValue {
   1: string dict_key;
   2: bytes zstd;
-}
+} (rust.exhaustive)
 
 // Packed values might not take any advantage of delta compression, but its
 // there if the packer decides its most efficient for the blob
@@ -43,7 +43,7 @@ union PackedValue {
 struct PackedEntry {
   1: string key;
   2: PackedValue data;
-}
+} (rust.exhaustive)
 
 struct PackedFormat {
   // The key the PackedFormat is stored under in underlying storage
@@ -61,7 +61,7 @@ struct PackedFormat {
   // All but the first entry should be ZstdFromDict, to maximize compression.
   // We do not expect significant gains from fewer blobs in the underlying store.
   2: list<PackedEntry> entries;
-}
+} (rust.exhaustive)
 
 // Discriminated union with the variant forms, for now we handle single
 // independent values or a list of packed entries.
@@ -77,4 +77,4 @@ union StorageFormat {
 // the union would work.
 struct StorageEnvelope {
   1: StorageFormat storage;
-}
+} (rust.exhaustive)

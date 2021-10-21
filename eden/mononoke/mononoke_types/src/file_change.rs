@@ -73,9 +73,7 @@ impl TrackedFileChange {
             copy_from: self.copy_from.map(|(file, cs_id)| thrift::CopyInfo {
                 file: file.into_thrift(),
                 cs_id: cs_id.into_thrift(),
-                ..Default::default()
             }),
-            ..Default::default()
         }
     }
 
@@ -144,7 +142,6 @@ impl BasicFileChange {
             content_id: self.content_id.into_thrift(),
             file_type: self.file_type.into_thrift(),
             size: self.size as i64,
-            ..Default::default()
         }
     }
 
@@ -238,7 +235,6 @@ impl FileChange {
             change: None,
             untracked_change: None,
             untracked_deletion: None,
-            ..Default::default()
         };
         match self {
             Self::Change(tc) => {
@@ -248,9 +244,7 @@ impl FileChange {
                 fco.untracked_change = Some(uc.into_thrift_untracked());
             }
             Self::UntrackedDeletion => {
-                fco.untracked_deletion = Some(thrift::UntrackedDeletion {
-                    ..Default::default()
-                });
+                fco.untracked_deletion = Some(thrift::UntrackedDeletion {});
             }
             Self::Deletion => {}
         }
@@ -454,7 +448,6 @@ mod test {
             file_type: thrift::FileType::Regular,
             size: 0,
             copy_from: None,
-            ..Default::default()
         };
         TrackedFileChange::from_thrift(thrift_fc, &MPath::new("foo").unwrap())
             .expect_err("unexpected OK - bad content ID");

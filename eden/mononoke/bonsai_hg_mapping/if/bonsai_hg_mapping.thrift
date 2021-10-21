@@ -19,4 +19,4 @@ struct BonsaiHgMappingEntry {
   1: required RepoId repo_id;
   2: required mononoke_types_thrift.ChangesetId bcs_id;
   3: required mercurial_thrift.HgNodeHash hg_cs_id;
-}
+} (rust.exhaustive)

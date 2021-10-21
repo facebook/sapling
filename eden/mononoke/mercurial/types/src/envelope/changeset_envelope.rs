@@ -112,7 +112,6 @@ impl HgChangesetEnvelope {
             p1: inner.p1.map(HgChangesetId::into_thrift),
             p2: inner.p2.map(HgChangesetId::into_thrift),
             contents: Some(inner.contents.to_vec()),
-            ..Default::default()
         }
     }
 
@@ -179,7 +178,6 @@ mod test {
             p2: None,
             // contents must be present
             contents: None,
-            ..Default::default()
         };
 
         HgChangesetEnvelope::from_thrift(thrift_ce.clone())

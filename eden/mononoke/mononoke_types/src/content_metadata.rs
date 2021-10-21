@@ -93,7 +93,6 @@ impl ContentMetadata {
             sha1: Some(self.sha1.into_thrift()),
             git_sha1: Some(self.git_sha1.into_thrift()),
             sha256: Some(self.sha256.into_thrift()),
-            ..Default::default()
         }
     }
 }

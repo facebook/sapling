@@ -151,7 +151,6 @@ impl DeletedManifest {
         thrift::DeletedManifest {
             linknode: self.linknode.map(|linknode| linknode.into_thrift()),
             subentries,
-            ..Default::default()
         }
     }
 

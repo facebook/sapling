@@ -41,7 +41,6 @@ impl ChangesetEntry {
             cs_id: self.cs_id.into_thrift(),
             parents: self.parents.into_iter().map(|p| p.into_thrift()).collect(),
             gen: changeset_entry_thrift::GenerationNum(self.gen as i64),
-            ..Default::default()
         }
     }
 }
@@ -54,7 +53,6 @@ pub fn serialize_cs_entries(cs_entries: Vec<ChangesetEntry>) -> Bytes {
             cs_id: entry.cs_id.into_thrift(),
             parents: entry.parents.into_iter().map(|p| p.into_thrift()).collect(),
             gen: changeset_entry_thrift::GenerationNum(entry.gen as i64),
-            ..Default::default()
         };
         thrift_entries.push(thrift_entry);
     }

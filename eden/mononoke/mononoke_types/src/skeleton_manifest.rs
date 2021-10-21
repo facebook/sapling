@@ -317,7 +317,6 @@ impl SkeletonManifest {
         thrift::SkeletonManifest {
             subentries,
             summary,
-            ..Default::default()
         }
     }
 
@@ -353,10 +352,7 @@ impl SkeletonManifestEntry {
                 Some(skeleton_directory.into_thrift())
             }
         };
-        thrift::SkeletonManifestEntry {
-            directory,
-            ..Default::default()
-        }
+        thrift::SkeletonManifestEntry { directory }
     }
 }
 
@@ -395,7 +391,6 @@ impl SkeletonManifestDirectory {
         thrift::SkeletonManifestDirectory {
             id: self.id.into_thrift(),
             summary: self.summary.into_thrift(),
-            ..Default::default()
         }
     }
 }
@@ -450,7 +445,6 @@ impl SkeletonManifestSummary {
             descendant_non_utf8_filenames: self.descendant_non_utf8_filenames,
             child_invalid_windows_filenames: self.child_invalid_windows_filenames,
             descendant_invalid_windows_filenames: self.descendant_invalid_windows_filenames,
-            ..Default::default()
         }
     }
 }

@@ -26,7 +26,7 @@ struct ChangesetInfo {
   8: map<string, binary> (
     rust.type = "sorted_vector_map::SortedVectorMap",
   ) extra;
-}
+} (rust.exhaustive)
 
 // Commit message is represented by a separate union of formats for the future
 // flexibility reasons.

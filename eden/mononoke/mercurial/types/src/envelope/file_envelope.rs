@@ -151,7 +151,6 @@ impl HgFileEnvelope {
             content_id: Some(inner.content_id.into_thrift()),
             content_size: inner.content_size as i64,
             metadata: Some(inner.metadata.to_vec()),
-            ..Default::default()
         }
     }
 
@@ -220,7 +219,6 @@ mod test {
             content_id: None,
             content_size: 42,
             metadata: Some(vec![].into()),
-            ..Default::default()
         };
 
         HgFileEnvelope::from_thrift(thrift_fe.clone())

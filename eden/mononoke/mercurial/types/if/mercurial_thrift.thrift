@@ -17,7 +17,7 @@ struct HgChangesetEnvelope {
   3: optional HgNodeHash p2;
   // These contents are exactly as they would be serialized by Mercurial.
   4: optional binary contents;
-}
+} (rust.exhaustive)
 
 // Manifest contents are expected to generally be small, so they're stored
 // inline in the envelope. There's also no real dedup possible between native
@@ -33,7 +33,7 @@ struct HgManifestEnvelope {
   4: required HgNodeHash computed_node_id;
   // These contents are exactly as they would be serialized by Mercurial.
   5: optional binary contents;
-}
+} (rust.exhaustive)
 
 struct HgFileEnvelope {
   1: required HgNodeHash node_id;
@@ -44,4 +44,4 @@ struct HgFileEnvelope {
   // the metadata
   5: required i64 content_size;
   6: optional binary metadata;
-}
+} (rust.exhaustive)

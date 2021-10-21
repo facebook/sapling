@@ -65,7 +65,6 @@ impl BonsaiHgMappingEntry {
             repo_id: bonsai_hg_mapping_entry_thrift::RepoId(self.repo_id.id()),
             hg_cs_id: self.hg_cs_id.into_nodehash().into_thrift(),
             bcs_id: self.bcs_id.into_thrift(),
-            ..Default::default()
         }
     }
 

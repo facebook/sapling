@@ -57,7 +57,6 @@ impl Into<thrift::TreeHandle> for TreeHandle {
         thrift::TreeHandle {
             oid: self.oid.into_thrift(),
             size: size.try_into().expect("Tree size must fit in a i64"),
-            ..Default::default()
         }
     }
 }
@@ -174,7 +173,6 @@ impl Into<thrift::Tree> for Tree {
         thrift::Tree {
             handle: handle.into(),
             members,
-            ..Default::default()
         }
     }
 }

@@ -141,7 +141,6 @@ impl MemcacheEntity for BonsaiGlobalrevMappingEntry {
                 .id()
                 .try_into()
                 .expect("Globalrevs must fit within a i64"),
-            ..Default::default()
         };
         compact_protocol::serialize(&entry)
     }
@@ -151,7 +150,6 @@ impl MemcacheEntity for BonsaiGlobalrevMappingEntry {
             repo_id,
             bcs_id,
             globalrev,
-            ..
         } = compact_protocol::deserialize(bytes).map_err(|_| ())?;
 
         let repo_id = RepositoryId::new(repo_id);

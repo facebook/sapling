@@ -120,7 +120,6 @@ impl MemcacheEntity for BonsaiSvnrevMappingEntry {
                 .id()
                 .try_into()
                 .expect("Svnrevs must fit within a i64"),
-            ..Default::default()
         };
         compact_protocol::serialize(&entry)
     }
@@ -130,7 +129,6 @@ impl MemcacheEntity for BonsaiSvnrevMappingEntry {
             repo_id,
             bcs_id,
             svnrev,
-            ..
         } = compact_protocol::deserialize(bytes).map_err(|_| ())?;
 
         let repo_id = RepositoryId::new(repo_id);

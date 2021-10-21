@@ -187,7 +187,6 @@ impl FastlogBatch {
                 thrift::CompressedHashAndParents {
                     cs_id: cs_id.into_thrift(),
                     parent_offsets,
-                    ..Default::default()
                 }
             })
             .collect();
@@ -200,7 +199,6 @@ impl FastlogBatch {
         thrift::FastlogBatch {
             latest: latest_thrift,
             previous_batches,
-            ..Default::default()
         }
     }
 

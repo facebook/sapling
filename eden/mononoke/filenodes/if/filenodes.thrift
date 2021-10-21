@@ -27,9 +27,9 @@ struct FilenodeInfo {
   4: optional mercurial_thrift.HgNodeHash p2;
   5: optional FilenodeCopyFrom copyfrom;
   6: required mercurial_thrift.HgNodeHash linknode;
-}
+} (rust.exhaustive)
 
 struct FilenodeCopyFrom {
   1: required mononoke_types_thrift.RepoPath path;
   2: required mercurial_thrift.HgNodeHash filenode;
-}
+} (rust.exhaustive)

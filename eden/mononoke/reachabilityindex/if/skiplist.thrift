@@ -12,7 +12,7 @@ struct SkiplistEntry {
   2: mononoke_types_thrift.ChangesetId cs_id;
   3: GenerationNum gen;
   4: SkiplistNodeType node_type;
-}
+} (rust.exhaustive)
 
 typedef i32 RepoId (rust.newtype)
 
@@ -22,15 +22,15 @@ typedef i64 GenerationNum (rust.newtype)
 struct CommitAndGenerationNumber {
   1: mononoke_types_thrift.ChangesetId cs_id;
   2: GenerationNum gen;
-}
+} (rust.exhaustive)
 
 struct SkipEdges {
   1: list<CommitAndGenerationNumber> edges;
-}
+} (rust.exhaustive)
 
 struct ParentEdges {
   1: list<CommitAndGenerationNumber> edges;
-}
+} (rust.exhaustive)
 
 union SkiplistNodeType {
   1: SkipEdges SkipEdges;
