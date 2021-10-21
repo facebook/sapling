@@ -17,7 +17,7 @@ use live_commit_sync_config::{
 use std::{sync::Arc, thread, time::Duration};
 
 macro_rules! is_error_kind {
-    ($result_expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
+    ($result_expression:expr, $( $pattern:pat_param )|+ $( if $guard: expr )?) => {
         match $result_expression {
             Ok(_) => false,
             Err(e) => match e.downcast_ref::<ErrorKind>() {
