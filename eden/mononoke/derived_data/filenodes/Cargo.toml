@@ -4,7 +4,7 @@
 name = "derived_data_filenodes"
 version = "0.1.0"
 authors = ["Facebook"]
-edition = "2018"
+edition = "2021"
 license = "GPLv2+"
 
 [lib]

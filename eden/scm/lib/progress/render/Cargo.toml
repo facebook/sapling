@@ -2,7 +2,7 @@
 [package]
 name = "progress-render"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 progress-model = { path = "../model" }

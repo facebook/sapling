@@ -3,7 +3,7 @@
 name = "async-runtime"
 version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

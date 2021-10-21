@@ -4,7 +4,7 @@
 name = "type_map"
 version = "0.1.0"
 authors = ["Facebook"]
-edition = "2018"
+edition = "2021"
 license = "GPLv2+"
 
 [patch.crates-io]

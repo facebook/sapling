@@ -2,7 +2,7 @@
 [package]
 name = "commitcloudsubscriber"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 description = '''
     Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events)
     The workflow is the following:
