@@ -145,6 +145,7 @@ py_class!(class Condition |py| {
                 while self.owner(py).get().is_some() {
                     let guard = ForceSend(mutex_release.lock().unwrap());
                     py.allow_threads(|| {
+                        let guard = guard; // capture ForceSend into closure
                         let _guard = cond_release.wait(guard.0).unwrap();
                         // Drop _guard to release the lock before acquiring
                         // Python GIL Otherwise this might deadlock with other
@@ -219,6 +220,7 @@ py_class!(class Condition |py| {
         {
             let guard = ForceSend(mutex_notify.lock().unwrap());
             py.allow_threads(|| {
+                let guard = guard; // capture ForceSend into closure
                 // Allow other threads to run "notify", or "acquire". Blocking.
                 let _guard = match timeout {
                     None => cond_notify.wait(guard.0).unwrap(),
@@ -234,6 +236,7 @@ py_class!(class Condition |py| {
         while self.owner(py).get().is_some() {
             let guard = ForceSend(mutex_release.lock().unwrap());
             py.allow_threads(|| {
+                let guard = guard; // capture ForceSend into closure
                 let _guard = cond_release.wait(guard.0).unwrap();
             });
         }

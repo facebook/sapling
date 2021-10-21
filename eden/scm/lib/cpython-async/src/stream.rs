@@ -161,9 +161,12 @@ mod pytypes {
             // Its 'Send' requirement is just to disallow passing 'py'.
             struct ForceSend<T>(T);
             unsafe impl<T> Send for ForceSend<T> {}
-            let mut iter = ForceSend(self.iter(py).borrow_mut());
+            let iter = ForceSend(self.iter(py).borrow_mut());
             // py.allow_threads is needed because iter.next might take Python GIL.
-            let next = py.allow_threads(|| iter.0.next());
+            let next = py.allow_threads(|| {
+                let mut iter = iter; // capture ForceSend into closure
+                iter.0.next()
+            });
             match next {
                 None => Ok(None),
                 Some(result) => {
