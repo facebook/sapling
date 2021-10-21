@@ -212,6 +212,7 @@ impl CommitIdExt for thrift::CommitId {
     fn scheme(&self) -> thrift::CommitIdentityScheme {
         match self {
             thrift::CommitId::bonsai(_) => thrift::CommitIdentityScheme::BONSAI,
+            thrift::CommitId::ephemeral_bonsai(_) => thrift::CommitIdentityScheme::EPHEMERAL_BONSAI,
             thrift::CommitId::hg(_) => thrift::CommitIdentityScheme::HG,
             thrift::CommitId::git(_) => thrift::CommitIdentityScheme::GIT,
             thrift::CommitId::globalrev(_) => thrift::CommitIdentityScheme::GLOBALREV,
@@ -226,6 +227,11 @@ impl CommitIdExt for thrift::CommitId {
     fn to_string(&self) -> String {
         match self {
             thrift::CommitId::bonsai(id) => hex_string(&id).expect("hex_string should never fail"),
+            thrift::CommitId::ephemeral_bonsai(ephemeral) => format!(
+                "{} (bubble {})",
+                hex_string(&ephemeral.bonsai_id).expect("hex_string should never fail"),
+                ephemeral.bubble_id
+            ),
             thrift::CommitId::hg(id) => hex_string(&id).expect("hex_string should never fail"),
             thrift::CommitId::git(id) => hex_string(&id).expect("hex_string should never fail"),
             thrift::CommitId::globalrev(rev) => rev.to_string(),

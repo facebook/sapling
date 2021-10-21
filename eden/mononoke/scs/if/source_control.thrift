@@ -49,6 +49,17 @@ enum CommitIdentityScheme {
 
   /// Commits identified by integer svn revision number.
   SVNREV = 5,
+
+  /// 32-byte hash of Mononoke's bonsai changeset, plus a 64-bit bubble
+  EPHEMERAL_BONSAI = 6,
+}
+
+/// A commit stored in an ephemeral bubble
+struct EphemeralBonsai {
+  1: binary bonsai_id;
+
+  /// Needs to be positive.
+  2: i64 bubble_id;
 }
 
 /// A unique identifier for a commit.
@@ -75,6 +86,9 @@ union CommitId {
 
   /// Commit identified by svn revision number.
   5: i64 svnrev;
+
+  /// Bonsai commit stored in an ephemeral bubble
+  6: EphemeralBonsai ephemeral_bonsai;
 }
 
 /// Specified a commit within a repo.
