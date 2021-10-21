@@ -141,7 +141,7 @@ streaming_clone = { version = "0.1.0", path = "repo_client/streaming_clone" }
 tempfile = "3.2"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
-toml = "=0.5.7"
+toml = "=0.5.8"
 
 [patch.crates-io]
 curl-sys = { git = "https://github.com/mzr/curl-rust", rev = "97694cf73ea9309d9e8ed067ec0c05367841d405" }
@@ -160,7 +160,7 @@ rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee5
 shellexpand = { git = "https://github.com/fanzeyi/shellexpand.git", rev = "179447a3f8fccd765acfd2eed15a54c716c49cfe" }
 slog-syslog = { git = "https://github.com/slog-rs/syslog", rev = "c783ed8221a8f781b088e11dbf1a31ce40392cb1" }
 tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
-toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }
+toml = { git = "https://github.com/fbsource/toml", branch = "dotted-table-0.5.8" }
 
 [workspace]
 members = [
