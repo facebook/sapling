@@ -746,7 +746,6 @@ mod test {
         let target = Target {
             repo_id: repo_id.id() as i64,
             bookmark: "target".to_string(),
-            ..Default::default()
         };
 
         let removed_source = SourceName::new("removed_source");

@@ -143,7 +143,6 @@ impl Default for ServerConfig {
             disable_compression: false,
             disable_compression_identities: vec![],
             enforce_authentication: false,
-            ..Default::default()
         };
 
         Self {

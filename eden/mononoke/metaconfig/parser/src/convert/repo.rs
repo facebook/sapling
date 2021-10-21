@@ -44,7 +44,6 @@ pub(crate) fn convert_wireproto_logging_config(
         storage_config: wireproto_storage_config,
         remote_arg_size_threshold,
         local_path,
-        ..
     } = raw;
 
     let storage_config_and_threshold = match (wireproto_storage_config, remote_arg_size_threshold) {

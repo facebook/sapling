@@ -633,7 +633,6 @@ pub fn set_test_generations(
             put_generation,
             mark_generation,
             delete_generation,
-            ..Default::default()
         })
         .expect("Invalid input config somehow"),
         ModificationTime::UnixTimestamp(mod_time),

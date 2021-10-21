@@ -30,7 +30,6 @@ impl Default for FastReplayConfig {
                 max_concurrency: 50,
                 scuba_sampling_target: 1,
                 skipped_repos: BTreeSet::default(),
-                ..Default::default()
             },
         }
     }

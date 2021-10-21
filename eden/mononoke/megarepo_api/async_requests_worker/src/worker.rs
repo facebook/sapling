@@ -349,7 +349,6 @@ mod test {
             target: ThriftTarget {
                 repo_id: 0,
                 bookmark: "book".to_string(),
-                ..Default::default()
             },
             target_location: vec![],
             ..Default::default()
@@ -389,7 +388,6 @@ mod test {
             target: ThriftTarget {
                 repo_id: 0,
                 bookmark: "book".to_string(),
-                ..Default::default()
             },
             target_location: vec![],
             ..Default::default()

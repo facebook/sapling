@@ -95,7 +95,6 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
 
     let repo_definitions = RawRepoDefinitions {
         repo_definitions: repo_definitions_map,
-        ..Default::default()
     };
 
     let mut repos = HashMap::new();
@@ -131,7 +130,6 @@ fn read_raw_configs_toml(config_path: &Path) -> Result<RawRepoConfigs> {
         repos,
         storage,
         repo_definitions,
-        ..Default::default()
     })
 }
 
