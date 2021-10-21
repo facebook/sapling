@@ -35,7 +35,7 @@ pub async fn derive_filenodes(
         prepare_filenodes_for_cs(ctx, derivation_ctx, bcs).await?;
     if !non_roots.is_empty() {
         if let FilenodeResult::Disabled = derivation_ctx
-            .filenodes()
+            .filenodes()?
             .add_filenodes(ctx, non_roots)
             .await?
         {

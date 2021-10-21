@@ -57,6 +57,8 @@ impl DerivedDataManager {
                             changesets: changesets.clone(),
                             repo_blobstore: bubble
                                 .wrap_repo_blobstore(self.inner.repo_blobstore.clone()),
+                            filenodes: None,
+                            bonsai_hg_mapping: None,
                             ..self.inner.as_ref().clone()
                         }),
                     },

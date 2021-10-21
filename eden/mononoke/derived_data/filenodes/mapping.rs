@@ -112,7 +112,7 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         bonsais: Vec<BonsaiChangeset>,
         _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>> {
-        let filenodes = derivation_ctx.filenodes();
+        let filenodes = derivation_ctx.filenodes()?;
         let prepared = derive_filenodes_in_batch(ctx, derivation_ctx, bonsais).await?;
         let mut res = HashMap::with_capacity(prepared.len());
         for (cs_id, public_filenode, non_roots) in prepared.into_iter() {
@@ -150,7 +150,7 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         };
 
         match derivation_ctx
-            .filenodes()
+            .filenodes()?
             .add_filenodes(ctx, vec![root_filenode.into()])
             .await?
         {
@@ -198,7 +198,7 @@ async fn fetch_root_filenode(
     // If hg changeset is not generated, then root filenode can't possible be generated
     // Check it and return None if hg changeset is not generated
     let maybe_hg_cs_id = derivation_ctx
-        .bonsai_hg_mapping()
+        .bonsai_hg_mapping()?
         .get_hg_from_bonsai(ctx, derivation_ctx.repo_id(), cs_id)
         .await?;
     let hg_cs_id = if let Some(hg_cs_id) = maybe_hg_cs_id {
@@ -224,7 +224,7 @@ async fn fetch_root_filenode(
         })))
     } else {
         let filenode_res = derivation_ctx
-            .filenodes()
+            .filenodes()?
             .get_filenode(ctx, &RepoPath::RootPath, HgFileNodeId::new(mf_id))
             .await?;
 

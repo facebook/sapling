@@ -58,7 +58,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
         changeset_id: ChangesetId,
     ) -> Result<()> {
         derivation_ctx
-            .bonsai_hg_mapping()
+            .bonsai_hg_mapping()?
             .add(
                 ctx,
                 BonsaiHgMappingEntry {
@@ -89,7 +89,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
         changeset_ids: &[ChangesetId],
     ) -> Result<HashMap<ChangesetId, Self>> {
         Ok(derivation_ctx
-            .bonsai_hg_mapping()
+            .bonsai_hg_mapping()?
             .get(ctx, derivation_ctx.repo_id(), changeset_ids.to_vec().into())
             .await?
             .into_iter()

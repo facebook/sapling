@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::{Context, Result};
 use std::sync::Arc;
 
 use bonsai_hg_mapping::BonsaiHgMapping;
@@ -39,8 +40,8 @@ pub struct DerivedDataManagerInner {
     repo_id: RepositoryId,
     repo_name: String,
     changesets: Arc<dyn Changesets>,
-    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-    filenodes: Arc<dyn Filenodes>,
+    bonsai_hg_mapping: Option<Arc<dyn BonsaiHgMapping>>,
+    filenodes: Option<Arc<dyn Filenodes>>,
     repo_blobstore: RepoBlobstore,
     lease: DerivedDataLease,
     scuba: MononokeScubaSampleBuilder,
@@ -64,11 +65,8 @@ pub struct DerivationAssignment {
 pub trait DerivationAssigner: Send + Sync {
     /// How to split derivation between primary and secondary managers. If not possible
     /// to split, this function should error.
-    async fn assign(
-        &self,
-        ctx: &CoreContext,
-        cs: Vec<ChangesetId>,
-    ) -> anyhow::Result<DerivationAssignment>;
+    async fn assign(&self, ctx: &CoreContext, cs: Vec<ChangesetId>)
+        -> Result<DerivationAssignment>;
 }
 
 #[derive(Clone)]
@@ -96,8 +94,8 @@ impl DerivedDataManager {
                 repo_name,
                 config,
                 changesets,
-                bonsai_hg_mapping,
-                filenodes,
+                bonsai_hg_mapping: Some(bonsai_hg_mapping),
+                filenodes: Some(filenodes),
                 repo_blobstore,
                 lease,
                 scuba,
@@ -143,7 +141,7 @@ impl DerivedDataManager {
     ) -> Self {
         Self {
             inner: Arc::new(DerivedDataManagerInner {
-                bonsai_hg_mapping,
+                bonsai_hg_mapping: Some(bonsai_hg_mapping),
                 ..self.inner.as_ref().clone()
             }),
         }
@@ -153,7 +151,7 @@ impl DerivedDataManager {
     pub fn with_replaced_filenodes(&self, filenodes: Arc<dyn Filenodes>) -> Self {
         Self {
             inner: Arc::new(DerivedDataManagerInner {
-                filenodes,
+                filenodes: Some(filenodes),
                 ..self.inner.as_ref().clone()
             }),
         }
@@ -196,11 +194,14 @@ impl DerivedDataManager {
         &self.inner.config
     }
 
-    pub fn bonsai_hg_mapping(&self) -> &dyn BonsaiHgMapping {
-        self.inner.bonsai_hg_mapping.as_ref()
+    pub fn bonsai_hg_mapping(&self) -> Result<&dyn BonsaiHgMapping> {
+        self.inner
+            .bonsai_hg_mapping
+            .as_deref()
+            .context("Missing BonsaiHgMapping")
     }
 
-    pub fn filenodes(&self) -> &dyn Filenodes {
-        self.inner.filenodes.as_ref()
+    pub fn filenodes(&self) -> Result<&dyn Filenodes> {
+        self.inner.filenodes.as_deref().context("Missing filenodes")
     }
 }

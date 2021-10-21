@@ -200,11 +200,11 @@ impl DerivationContext {
         }
     }
 
-    pub fn bonsai_hg_mapping(&self) -> &dyn BonsaiHgMapping {
+    pub fn bonsai_hg_mapping(&self) -> Result<&dyn BonsaiHgMapping> {
         self.manager.bonsai_hg_mapping()
     }
 
-    pub fn filenodes(&self) -> &dyn Filenodes {
+    pub fn filenodes(&self) -> Result<&dyn Filenodes> {
         self.manager.filenodes()
     }
 
