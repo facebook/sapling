@@ -315,10 +315,7 @@ class shelvedstate(object):
 
     def removenodes(self, ui, repo):
         """Cleanup temporary nodes from the repo"""
-        if self.obsshelve:
-            _hidenodes(repo, self.nodestoremove)
-        else:
-            repair.strip(ui, repo, self.nodestoremove, backup=False, topic="shelve")
+        _hidenodes(repo, self.nodestoremove)
 
 
 def cleanupoldbackups(repo):
@@ -773,11 +770,10 @@ def unshelvecontinue(ui, repo, state, opts):
         try:
             # if shelve is obs-based, we want rebase to be able
             # to create markers to already-obsoleted commits
-            _repo = repo if state.obsshelve else repo
             with ui.configoverride(
                 {("experimental", "rebaseskipobsolete"): "off"}, "unshelve"
             ):
-                rebase.rebase(ui, _repo, **{"continue": True})
+                rebase.rebase(ui, repo, **{"continue": True})
         except Exception:
             repo.localvfs.rename("rebasestate", "unshelverebasestate")
             raise
@@ -827,20 +823,16 @@ def _commitworkingcopychanges(ui, repo, opts, tmpwctx):
     return tmpwctx, addedbefore
 
 
-def _unshelverestorecommit(ui, repo, basename, obsshelve):
+def _unshelverestorecommit(ui, repo, basename):
     """Recreate commit in the repository during the unshelve"""
     with ui.configoverride({("ui", "quiet"): True}):
-        if obsshelve:
-            md = shelvedfile(repo, basename, "oshelve").readobsshelveinfo()
-            shelvenode = nodemod.bin(md["node"])
-            try:
-                shelvectx = repo[shelvenode]
-            except error.RepoLookupError:
-                m = _("shelved node %s not found in repo")
-                raise error.Abort(m % md["node"])
-        else:
-            shelvedfile(repo, basename, "hg").applybundle()
-            shelvectx = repo["tip"]
+        md = shelvedfile(repo, basename, "oshelve").readobsshelveinfo()
+        shelvenode = nodemod.bin(md["node"])
+        try:
+            shelvectx = repo[shelvenode]
+        except error.RepoLookupError:
+            m = _("shelved node %s not found in repo")
+            raise error.Abort(m % md["node"])
     return repo, shelvectx
 
 
@@ -856,7 +848,6 @@ def _rebaserestoredcommit(
     shelvectx,
     branchtorestore,
     activebookmark,
-    obsshelve,
 ):
     """Rebase restored commit from its original location to a destination"""
     # If the shelve is not immediately on top of the commit
@@ -887,9 +878,9 @@ def _rebaserestoredcommit(
             **{
                 "rev": [shelvectx.hex()],
                 "dest": str(tmpwctx.hex()),
-                "keep": not obsshelve,
+                "keep": False,
                 "tool": opts.get("tool", ""),
-                "extrafn": extrafn if obsshelve else None,
+                "extrafn": extrafn,
             }
         )
     except error.InterventionRequired:
@@ -907,7 +898,6 @@ def _rebaserestoredcommit(
             branchtorestore,
             opts.get("keep"),
             activebookmark,
-            obsshelve,
         )
 
         repo.localvfs.rename("rebasestate", "unshelverebasestate")
@@ -939,17 +929,10 @@ def _forgetunknownfiles(repo, shelvectx, addedbefore):
     repo[None].forget(toforget)
 
 
-def _finishunshelve(repo, oldtiprev, tr, activebookmark, obsshelve):
+def _finishunshelve(repo, oldtiprev, tr, activebookmark):
     _restoreactivebookmark(repo, activebookmark)
-    if obsshelve:
-        tr.close()
-        return
-    # The transaction aborting will strip all the commits for us,
-    # but it doesn't update the inmemory structures, so addchangegroup
-    # hooks still fire and try to operate on the missing commits.
-    # Clean up manually to prevent this.
-    repo.changelog.strip(oldtiprev, tr)
-    _aborttransaction(repo)
+    tr.close()
+    return
 
 
 def _checkunshelveuntrackedproblems(ui, repo, shelvectx):
@@ -1100,15 +1083,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
         raise error.Abort(_("shelved change '%s' not found") % basename)
 
     lock = tr = None
-    obsshelve = True
     obsshelvedfile = shelvedfile(repo, basename, "oshelve")
-    if not obsshelvedfile.exists():
-        # although we can unshelve a obs-based shelve technically,
-        # this particular shelve was created using a traditional way
-        obsshelve = False
-        ui.note(
-            _("falling back to traditional unshelve since " "shelve was traditional")
-        )
     try:
         lock = repo.lock()
         tr = repo.transaction("unshelve", report=lambda x: None)
@@ -1124,7 +1099,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
 
         activebookmark = _backupactivebookmark(repo)
         tmpwctx, addedbefore = _commitworkingcopychanges(ui, repo, opts, tmpwctx)
-        repo, shelvectx = _unshelverestorecommit(ui, repo, basename, obsshelve)
+        repo, shelvectx = _unshelverestorecommit(ui, repo, basename)
         _checkunshelveuntrackedproblems(ui, repo, shelvectx)
         branchtorestore = ""
         if shelvectx.branch() != shelvectx.p1().branch():
@@ -1147,17 +1122,15 @@ def _dounshelve(ui, repo, *shelved, **opts):
                 shelvectx,
                 branchtorestore,
                 activebookmark,
-                obsshelve,
             )
             mergefiles(ui, repo, pctx, shelvectx)
             restorebranch(ui, repo, branchtorestore)
             _forgetunknownfiles(repo, shelvectx, addedbefore)
 
-        if obsshelve:
-            _obsoleteredundantnodes(repo, tr, pctx, shelvectx, tmpwctx)
+        _obsoleteredundantnodes(repo, tr, pctx, shelvectx, tmpwctx)
 
         shelvedstate.clear(repo)
-        _finishunshelve(repo, oldtiprev, tr, activebookmark, obsshelve)
+        _finishunshelve(repo, oldtiprev, tr, activebookmark)
         unshelvecleanup(ui, repo, basename, opts)
     finally:
         if tr:
