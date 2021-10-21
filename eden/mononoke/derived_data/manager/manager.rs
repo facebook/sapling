@@ -10,14 +10,16 @@ use std::sync::Arc;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
+use context::CoreContext;
 use filenodes::Filenodes;
 use metaconfig_types::DerivedDataTypesConfig;
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use repo_blobstore::RepoBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::lease::DerivedDataLease;
 
+pub mod bubble;
 pub mod derive;
 pub mod logging;
 pub mod util;
@@ -43,6 +45,36 @@ pub struct DerivedDataManagerInner {
     lease: DerivedDataLease,
     scuba: MononokeScubaSampleBuilder,
     config: DerivedDataTypesConfig,
+    /// If a (primary) manager has a secondary manager, that means some of the
+    /// changesets should be derived using the primary manager, and some the secondary,
+    /// in that order. For example, bubble managers are secondary, as all the data in
+    /// the persistent blobstore must be derived BEFORE deriving data in the bubble.
+    secondary: Option<SecondaryManagerData>,
+}
+
+pub struct DerivationAssignment {
+    /// Changesets that should be derived by the primary manager
+    pub primary: Vec<ChangesetId>,
+    /// Changesets that should be derived by the secondary manager, after the first
+    /// part of derivation is done.
+    pub secondary: Vec<ChangesetId>,
+}
+
+#[async_trait::async_trait]
+pub trait DerivationAssigner: Send + Sync {
+    /// How to split derivation between primary and secondary managers. If not possible
+    /// to split, this function should error.
+    async fn assign(
+        &self,
+        ctx: &CoreContext,
+        cs: Vec<ChangesetId>,
+    ) -> anyhow::Result<DerivationAssignment>;
+}
+
+#[derive(Clone)]
+pub(crate) struct SecondaryManagerData {
+    manager: DerivedDataManager,
+    assigner: Arc<dyn DerivationAssigner>,
 }
 
 impl DerivedDataManager {
@@ -69,6 +101,7 @@ impl DerivedDataManager {
                 repo_blobstore,
                 lease,
                 scuba,
+                secondary: None,
             }),
         }
     }

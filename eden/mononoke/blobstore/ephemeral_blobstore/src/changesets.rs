@@ -19,7 +19,7 @@ use mononoke_types::{
 };
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
-use sql::queries;
+use sql::{queries, Connection};
 use sql_ext::SqlConnections;
 
 use std::sync::Arc;
@@ -33,7 +33,7 @@ use crate::bubble::BubbleId;
 // at the blobstore.
 #[derive(Derivative, Clone)]
 #[derivative(Debug)]
-pub(crate) struct EphemeralChangesets {
+pub struct EphemeralChangesets {
     repo_id: RepositoryId,
     bubble_id: BubbleId,
     repo_blobstore: RepoBlobstore,
@@ -81,19 +81,40 @@ impl EphemeralChangesets {
         }
     }
 
-    async fn fetch_gens(
+    async fn fetch_gens_with_connection(
+        &self,
+        cs_ids: &[ChangesetId],
+        connection: &Connection,
+    ) -> Result<Vec<(ChangesetId, u64)>> {
+        Ok(SelectChangesets::query(connection, &self.repo_id, &self.bubble_id, &cs_ids).await?)
+    }
+
+    pub async fn fetch_gens(
         &self,
         cs_ids: &[ChangesetId],
     ) -> Result<SortedVectorMap<ChangesetId, u64>> {
-        Ok(SelectChangesets::query(
-            &self.connections.read_connection,
-            &self.repo_id,
-            &self.bubble_id,
-            &cs_ids,
-        )
-        .await?
-        .into_iter()
-        .collect())
+        let mut gens: SortedVectorMap<_, _> = self
+            .fetch_gens_with_connection(cs_ids, &self.connections.read_connection)
+            .await?
+            .into_iter()
+            .collect();
+        if gens.len() != cs_ids.len() {
+            let missing: Vec<_> = cs_ids
+                .iter()
+                .cloned()
+                .filter(|id| !gens.contains_key(id))
+                .collect();
+            let mut extra = self
+                .fetch_gens_with_connection(
+                    missing.as_slice(),
+                    &self.connections.read_master_connection,
+                )
+                .await?
+                .into_iter()
+                .collect();
+            gens.append(&mut extra);
+        }
+        Ok(gens)
     }
 
     async fn get_ephemeral(

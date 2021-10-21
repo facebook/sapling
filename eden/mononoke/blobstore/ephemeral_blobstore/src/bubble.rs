@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreIsPresent};
-use changesets::{Changesets, ChangesetsArc};
+use changesets::ChangesetsArc;
 use context::CoreContext;
 use derivative::Derivative;
 use mononoke_types::repo::{EPH_ID_PREFIX, EPH_ID_SUFFIX};
@@ -182,9 +182,9 @@ impl Bubble {
     pub fn changesets(
         &self,
         container: impl ChangesetsArc + RepoIdentityRef + RepoBlobstoreRef,
-    ) -> Arc<dyn Changesets> {
+    ) -> EphemeralChangesets {
         let repo_blobstore = self.wrap_repo_blobstore(container.repo_blobstore().clone());
-        Arc::new(self.changesets_with_blobstore(repo_blobstore, container))
+        self.changesets_with_blobstore(repo_blobstore, container)
     }
 
     pub fn repo_view(
