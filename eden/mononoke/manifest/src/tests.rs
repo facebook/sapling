@@ -1221,6 +1221,7 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
             ctx.clone(),
             blobstore.clone(),
             mf1,
+            blobstore.clone(),
             |diff| {
                 let path = match &diff {
                     Diff::Added(path, ..) | Diff::Removed(path, ..) | Diff::Changed(path, ..) => {

@@ -486,7 +486,7 @@ impl ChangesetContext {
     /// `diff_items` what to include in the output (files, dirs or both)
     pub async fn diff(
         &self,
-        other: ChangesetId,
+        other: &ChangesetContext,
         include_copies_renames: bool,
         path_restrictions: Option<Vec<MononokePath>>,
         diff_items: BTreeSet<ChangesetDiffItem>,
@@ -501,7 +501,6 @@ impl ChangesetContext {
                     .any(|path_restriction| is_related_to(path, path_restriction.as_mpath()))
             })
         }
-        let other = ChangesetContext::new(self.repo.clone(), other);
 
         // map from from_path to to_paths (there may be multiple copies
         // for each from_path, so this maps to a vector of paths)
@@ -553,7 +552,7 @@ impl ChangesetContext {
                 .fsnode_id()
                 .find_entries(
                     self.ctx().clone(),
-                    self.repo().blob_repo().get_blobstore(),
+                    other.repo().blob_repo().get_blobstore(),
                     to_paths.into_iter().cloned(),
                 )
                 .try_filter_map(|(maybe_to_path, _entry)| async move { Ok(maybe_to_path) })
@@ -613,6 +612,7 @@ impl ChangesetContext {
                 self.ctx().clone(),
                 self.repo().blob_repo().get_blobstore(),
                 self_manifest_root.fsnode_id().clone(),
+                self.repo().blob_repo().get_blobstore(),
                 Some,
                 {
                     cloned!(path_restrictions);

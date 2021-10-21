@@ -10,7 +10,7 @@ use std::convert::TryFrom;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use blobstore::Loadable;
 use bytes::Bytes;
 use cacheblob::InProcessLease;
@@ -928,7 +928,7 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
         .ok_or(anyhow!("commit not found"))?;
     let diff = commit_with_move_ctx
         .diff(
-            root,
+            &repo.changeset(root).await?.context("commit not found")?,
             true, /* include_copies_renames */
             None, /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
@@ -976,7 +976,7 @@ async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
         .ok_or(anyhow!("commit not found"))?;
     let diff = commit_with_copies_ctx
         .diff(
-            root,
+            &repo.changeset(root).await?.context("commit not found")?,
             true, /* include_copies_renames */
             None, /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
@@ -1031,7 +1031,7 @@ async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
         .ok_or(anyhow!("commit not found"))?;
     let diff = commit_with_moves_ctx
         .diff(
-            root,
+            &repo.changeset(root).await?.context("commit not found")?,
             true, /* include_copies_renames */
             None, /* path_restrictions */
             btreeset! {ChangesetDiffItem::FILES},
@@ -1084,12 +1084,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
         .expect("other changeset exists");
 
     let diff: Vec<_> = cs
-        .diff(
-            other_cs.id(),
-            false,
-            None,
-            btreeset! {ChangesetDiffItem::TREES},
-        )
+        .diff(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
         .await?;
     assert_eq!(diff.len(), 5);
     match diff.get(0) {
@@ -1112,12 +1107,7 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
 
     // Added
     let diff: Vec<_> = cs
-        .diff(
-            other_cs.id(),
-            false,
-            None,
-            btreeset! {ChangesetDiffItem::TREES},
-        )
+        .diff(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
         .await?;
     assert_eq!(diff.len(), 4);
     match diff.get(0) {

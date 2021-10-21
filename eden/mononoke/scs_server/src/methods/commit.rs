@@ -401,7 +401,7 @@ impl SourceControlServiceImpl {
         };
         let diff = base_changeset
             .diff(
-                other_changeset.id(),
+                &other_changeset,
                 !params.skip_copies_renames,
                 paths,
                 diff_items,

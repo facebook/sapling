@@ -262,7 +262,7 @@ where
             Error,
         >,
     > {
-        self.filtered_diff(ctx, store, other, Some, |_| true)
+        self.filtered_diff(ctx, store.clone(), other, store, Some, |_| true)
     }
 
     /// Do a diff, but with knobs to filter_map output and prune some subtrees.
@@ -274,6 +274,7 @@ where
         ctx: CoreContext,
         store: Store,
         other: Self,
+        other_store: Store,
         output_filter: FilterMap,
         recurse_pruner: RecursePruner,
     ) -> BoxStream<'static, Result<Out, Error>>
@@ -295,7 +296,7 @@ where
             256,
             Some(Diff::Changed(None, self.clone(), other)),
             move |input| {
-                cloned!(ctx, output_filter, recurse_pruner, store);
+                cloned!(ctx, output_filter, recurse_pruner, store, other_store);
                 async move {
                     borrowed!(ctx);
                     let mut output = OutputHolder::new(output_filter);
@@ -303,9 +304,11 @@ where
 
                     match input {
                         Diff::Changed(path, left, right) => {
-                            let (left_mf, right_mf) =
-                                future::try_join(left.load(ctx, &store), right.load(ctx, &store))
-                                    .await?;
+                            let (left_mf, right_mf) = future::try_join(
+                                left.load(ctx, &store),
+                                right.load(ctx, &other_store),
+                            )
+                            .await?;
 
                             for (name, left) in left_mf.list() {
                                 let path = Some(MPath::join_opt_element(path.as_ref(), &name));
@@ -351,7 +354,7 @@ where
                             Ok((output.into_output(), recurse.into_diffs()))
                         }
                         Diff::Added(path, tree) => {
-                            let manifest = tree.load(ctx, &store).await?;
+                            let manifest = tree.load(ctx, &other_store).await?;
                             for (name, entry) in manifest.list() {
                                 let path = Some(MPath::join_opt_element(path.as_ref(), &name));
                                 match entry {
