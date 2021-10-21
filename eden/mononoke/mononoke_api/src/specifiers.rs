@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use ephemeral_blobstore::BubbleId;
 use std::convert::From;
 use std::fmt;
 
@@ -30,6 +31,7 @@ pub type Svnrev = mononoke_types::Svnrev;
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub enum ChangesetSpecifier {
     Bonsai(ChangesetId),
+    EphemeralBonsai(ChangesetId, BubbleId),
     Hg(HgChangesetId),
     Globalrev(Globalrev),
     GitSha1(GitSha1),
@@ -161,6 +163,9 @@ impl fmt::Display for ChangesetSpecifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ChangesetSpecifier::Bonsai(cs_id) => write!(f, "changeset {}", cs_id),
+            ChangesetSpecifier::EphemeralBonsai(cs_id, bubble_id) => {
+                write!(f, "ephemeral changeset {} in bubble {}", cs_id, bubble_id)
+            }
             ChangesetSpecifier::Hg(hg_cs_id) => write!(f, "hg changeset {}", hg_cs_id),
             ChangesetSpecifier::Globalrev(rev) => write!(f, "globalrev {}", rev.id()),
             ChangesetSpecifier::GitSha1(git_sha1) => write!(f, "git sha1 {}", git_sha1),

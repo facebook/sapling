@@ -7,6 +7,7 @@
 
 //! Ephemeral Blobstore Bubbles
 
+use std::convert::TryFrom;
 use std::fmt;
 use std::num::NonZeroU64;
 use std::sync::Arc;
@@ -34,7 +35,7 @@ use crate::handle::EphemeralHandle;
 use crate::view::EphemeralRepoView;
 
 /// Ephemeral Blobstore Bubble ID.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BubbleId(NonZeroU64);
 
 impl fmt::Display for BubbleId {
@@ -84,6 +85,18 @@ impl FromValue for BubbleId {
 impl OptionalTryFromRowField for BubbleId {
     fn try_from_opt(field: RowField) -> Result<Option<Self>, MysqlError> {
         opt_try_from_rowfield(field)
+    }
+}
+
+impl TryFrom<i64> for BubbleId {
+    type Error = ();
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        u64::try_from(value)
+            .ok()
+            .and_then(NonZeroU64::new)
+            .map(BubbleId::new)
+            .ok_or(())
     }
 }
 

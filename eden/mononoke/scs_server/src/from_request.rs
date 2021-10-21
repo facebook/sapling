@@ -13,6 +13,7 @@ use std::str::FromStr;
 
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, TimeZone};
+use ephemeral_blobstore::BubbleId;
 use faster_hex::hex_string;
 use mononoke_api::specifiers::{GitSha1, Globalrev, Svnrev};
 use mononoke_api::{
@@ -129,7 +130,21 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                 })?);
                 Ok(ChangesetSpecifier::Svnrev(rev))
             }
-            _ => Err(errors::invalid_request(format!(
+            thrift::CommitId::ephemeral_bonsai(ephemeral) => {
+                let cs_id = ChangesetId::from_bytes(&ephemeral.bonsai_id).map_err(|e| {
+                    errors::invalid_request(format!(
+                        "invalid commit id (scheme={} {}): {}",
+                        commit.scheme(),
+                        commit.to_string(),
+                        e
+                    ))
+                })?;
+                let bubble_id = BubbleId::try_from(ephemeral.bubble_id).map_err(|_| {
+                    errors::invalid_request(format!("invalid bubble id {}", ephemeral.bubble_id))
+                })?;
+                Ok(ChangesetSpecifier::EphemeralBonsai(cs_id, bubble_id))
+            }
+            thrift::CommitId::UnknownField(_) => Err(errors::invalid_request(format!(
                 "unsupported commit identity scheme ({})",
                 commit.scheme()
             ))),

@@ -880,16 +880,14 @@ impl RepoContext {
         specifier: ChangesetSpecifier,
     ) -> Result<Option<ChangesetId>, MononokeError> {
         let id = match specifier {
-            ChangesetSpecifier::Bonsai(cs_id) => {
-                let exists = self
-                    .blob_repo()
-                    .changeset_exists_by_bonsai(self.ctx.clone(), cs_id)
-                    .await?;
-                match exists {
-                    true => Some(cs_id),
-                    false => None,
-                }
-            }
+            ChangesetSpecifier::Bonsai(cs_id) => self
+                .changeset_exists_by_bonsai(cs_id, None)
+                .await?
+                .then(|| cs_id),
+            ChangesetSpecifier::EphemeralBonsai(cs_id, bubble_id) => self
+                .changeset_exists_by_bonsai(cs_id, Some(bubble_id))
+                .await?
+                .then(|| cs_id),
             ChangesetSpecifier::Hg(hg_cs_id) => {
                 self.blob_repo()
                     .get_bonsai_from_hg(self.ctx.clone(), hg_cs_id)
