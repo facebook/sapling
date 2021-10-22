@@ -115,7 +115,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
         }
 
         let batch_len = bonsais.len();
-        let stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::ChangeDelete)?;
+        let stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::ChangeDelete.into())?;
 
         let unode_version = derivation_ctx.config().unode_version;
         for stack in stacks {

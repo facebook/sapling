@@ -27,11 +27,26 @@ pub enum FileConflicts {
     AnyChange,
 }
 
+pub struct SplitOptions {
+    pub file_conflicts: FileConflicts,
+    // Commits with copy info shouldn't be stacked with any other commit
+    pub copy_info: bool,
+}
+
+impl From<FileConflicts> for SplitOptions {
+    fn from(fc: FileConflicts) -> Self {
+        Self {
+            file_conflicts: fc,
+            copy_info: false,
+        }
+    }
+}
+
 pub async fn split_batch_in_linear_stacks(
     ctx: &CoreContext,
     blobstore: &impl Blobstore,
     batch: Vec<ChangesetId>,
-    file_conflicts: FileConflicts,
+    split_opts: SplitOptions,
 ) -> Result<Vec<LinearStack>, Error> {
     let bonsais = stream::iter(
         batch
@@ -41,7 +56,7 @@ pub async fn split_batch_in_linear_stacks(
     .buffered(100)
     .try_collect::<Vec<_>>()
     .await?;
-    split_bonsais_in_linear_stacks(&bonsais, file_conflicts)
+    split_bonsais_in_linear_stacks(&bonsais, split_opts)
 }
 
 /// We follow a few rules when splitting a batch in the stacks:
@@ -52,7 +67,7 @@ pub async fn split_batch_in_linear_stacks(
 ///    to different stacks
 pub fn split_bonsais_in_linear_stacks(
     bonsais: &[BonsaiChangeset],
-    file_conflicts: FileConflicts,
+    split_opts: SplitOptions,
 ) -> Result<Vec<LinearStack>, Error> {
     let start_bcs = match bonsais.first() {
         Some(val) => val,
@@ -66,7 +81,7 @@ pub fn split_bonsais_in_linear_stacks(
     cur_linear_stack.push(start_bcs);
 
     for (prev_bcs, bcs) in bonsais.iter().tuple_windows() {
-        if !cur_linear_stack.can_be_in_same_linear_stack(prev_bcs, bcs, file_conflicts) {
+        if !cur_linear_stack.can_be_in_same_linear_stack(prev_bcs, bcs, &split_opts) {
             linear_stacks.push(cur_linear_stack);
             cur_linear_stack = LinearStack::new(bcs.parents().collect::<Vec<_>>());
         }
@@ -129,11 +144,17 @@ impl LinearStack {
         &self,
         prev: &BonsaiChangeset,
         next: &BonsaiChangeset,
-        file_conflicts: FileConflicts,
+        split_opts: &SplitOptions,
     ) -> bool {
         // Each merge should go in a separate stack
         if prev.is_merge() || next.is_merge() {
             return false;
+        }
+
+        if split_opts.copy_info {
+            if has_copy_info(prev) || has_copy_info(next) {
+                return false;
+            }
         }
 
         // The next commit should be stacked on top of the previous one
@@ -145,7 +166,11 @@ impl LinearStack {
         // There must be no file conflicts when adding the new changes.
         if let Some(cur_file_changes) = self.get_last_file_changes() {
             let new_file_changes = next.file_changes().collect();
-            if has_file_conflict(cur_file_changes, new_file_changes, file_conflicts) {
+            if has_file_conflict(
+                cur_file_changes,
+                new_file_changes,
+                split_opts.file_conflicts,
+            ) {
                 return false;
             }
         }
@@ -158,6 +183,22 @@ impl LinearStack {
             .last()
             .map(|item| &item.combined_file_changes)
     }
+}
+
+fn has_copy_info(cs: &BonsaiChangeset) -> bool {
+    for (_, fc) in cs.file_changes() {
+        use FileChange::*;
+        match fc {
+            Change(fc) => {
+                if fc.copy_from().is_some() {
+                    return true;
+                }
+            }
+            UntrackedChange(_) | Deletion | UntrackedDeletion => {}
+        }
+    }
+
+    return false;
 }
 
 /// Returns true if:
@@ -254,7 +295,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![root],
-            FileConflicts::ChangeDelete,
+            FileConflicts::ChangeDelete.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -272,7 +313,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![second],
-            FileConflicts::ChangeDelete,
+            FileConflicts::ChangeDelete.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -290,7 +331,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![root, second],
-            FileConflicts::ChangeDelete,
+            FileConflicts::ChangeDelete.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -355,7 +396,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![p1, merge],
-            FileConflicts::ChangeDelete,
+            FileConflicts::ChangeDelete.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -379,7 +420,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![p1, p2],
-            FileConflicts::ChangeDelete,
+            FileConflicts::ChangeDelete.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -424,7 +465,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![root, child],
-            FileConflicts::ChangeDelete,
+            FileConflicts::ChangeDelete.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -466,7 +507,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![root, child],
-            FileConflicts::ChangeDelete,
+            FileConflicts::ChangeDelete.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -508,7 +549,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![root, child],
-            FileConflicts::ChangeDelete,
+            FileConflicts::ChangeDelete.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -530,7 +571,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![root, child],
-            FileConflicts::AnyChange,
+            FileConflicts::AnyChange.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -577,7 +618,7 @@ mod test {
             &ctx,
             repo.blobstore(),
             vec![root, second, third],
-            FileConflicts::ChangeDelete,
+            FileConflicts::ChangeDelete.into(),
         )
         .await?;
         assert_linear_stacks(
@@ -600,6 +641,62 @@ mod test {
                     vec![second],
                     vec![btreemap! {
                         "dir" => None,
+                    }],
+                ),
+            ],
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_split_batch_in_linear_stacks_copy_info(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = test_repo_factory::build_empty()?;
+
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir", "content1")
+            .commit()
+            .await?;
+        let second = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file_with_copy_info("copiedfile", "content1", (root, "dir"))
+            .commit()
+            .await?;
+        let third = CreateCommitContext::new(&ctx, &repo, vec![second])
+            .add_file("dir2", "content2")
+            .commit()
+            .await?;
+
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            repo.blobstore(),
+            vec![root, second, third],
+            SplitOptions {
+                file_conflicts: FileConflicts::ChangeDelete,
+                copy_info: true,
+            },
+        )
+        .await?;
+        assert_linear_stacks(
+            &ctx,
+            &repo,
+            linear_stacks,
+            vec![
+                (
+                    vec![],
+                    vec![btreemap! {"dir" => Some(("content1".to_string(), FileType::Regular))}],
+                ),
+                (
+                    vec![root],
+                    vec![btreemap! {
+                        "copiedfile" => Some(("content1".to_string(), FileType::Regular))
+                    }],
+                ),
+                (
+                    vec![second],
+                    vec![btreemap! {
+                        "dir2" => Some(("content2".to_string(), FileType::Regular))
                     }],
                 ),
             ],

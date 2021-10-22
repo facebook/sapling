@@ -60,7 +60,7 @@ pub async fn derive_fsnode_in_batch(
         ctx,
         derivation_ctx.blobstore(),
         batch,
-        FileConflicts::ChangeDelete,
+        FileConflicts::ChangeDelete.into(),
     )
     .await?;
     let mut res: HashMap<ChangesetId, RootFsnodeId> = HashMap::new();
