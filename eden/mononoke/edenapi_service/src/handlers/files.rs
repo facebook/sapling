@@ -68,6 +68,15 @@ impl EdenApiHandler for FilesHandler {
     const API_METHOD: EdenApiMethod = EdenApiMethod::Files;
     const ENDPOINT: &'static str = "/files";
 
+    fn sampling_rate(request: &Self::Request) -> NonZeroU64 {
+        // Sample trivial requests
+        if request.keys.len() + request.reqs.len() == 1 {
+            nonzero_ext::nonzero!(100u64)
+        } else {
+            nonzero_ext::nonzero!(1u64)
+        }
+    }
+
     async fn handler(
         repo: HgRepoContext,
         _path: Self::PathExtractor,
