@@ -90,7 +90,7 @@ fn generate_thrift_subcrates(thrift_units: &[ThriftUnit]) -> io::Result<()> {
 [package]
 name = "{}"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 anyhow = "1"

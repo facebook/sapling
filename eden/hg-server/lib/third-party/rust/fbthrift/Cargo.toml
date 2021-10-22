@@ -1,6 +1,6 @@
 [package]
 name = "fbthrift_eden_oss"
-edition = "2018"
+edition = "2021"
 version = "0.0.0"
 include = ["lib.rs"]
 

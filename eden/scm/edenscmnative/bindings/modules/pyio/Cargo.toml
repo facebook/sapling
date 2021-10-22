@@ -1,7 +1,7 @@
 [package]
 name = "pyio"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 clidispatch = { path = "../../../../lib/clidispatch", default-features = false }
