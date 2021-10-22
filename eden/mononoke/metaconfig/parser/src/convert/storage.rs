@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::path::PathBuf;
 use std::time::Duration;

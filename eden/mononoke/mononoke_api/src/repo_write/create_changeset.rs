@@ -6,7 +6,6 @@
  */
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::iter::FromIterator;
 
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset};

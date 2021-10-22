@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryFrom;
 use std::fs::read_to_string;
 use std::fs::OpenOptions;
 use std::io::ErrorKind;

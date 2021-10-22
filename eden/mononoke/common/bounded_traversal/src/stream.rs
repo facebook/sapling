@@ -15,7 +15,6 @@ use std::{
     collections::{HashMap, VecDeque},
     future::Future,
     hash::Hash,
-    iter::FromIterator,
     task::Poll,
 };
 

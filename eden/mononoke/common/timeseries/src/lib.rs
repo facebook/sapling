@@ -6,7 +6,6 @@
  */
 
 use anyhow::Error;
-use std::convert::TryInto;
 use std::time::{Duration, Instant};
 
 #[derive(thiserror::Error, Debug)]

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
 use std::env;
 use std::path::Path;
 use std::sync::atomic::Ordering::SeqCst;

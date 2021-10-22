@@ -9,7 +9,6 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryInto,
     path::Path,
     str,
 };

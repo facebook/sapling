@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;

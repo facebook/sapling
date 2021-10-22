@@ -8,7 +8,6 @@
 use anyhow::{Context, Error};
 use serde::Deserialize;
 use std::collections::BTreeSet;
-use std::convert::TryFrom;
 use std::num::NonZeroU64;
 
 use fastreplay_structs::FastReplayConfig as RawFastReplayConfig;

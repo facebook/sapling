@@ -16,7 +16,6 @@ use mononoke_api::{ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeErro
 use source_control as thrift;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
-use std::convert::TryFrom;
 
 use crate::commit_id::map_commit_identities;
 use crate::errors;

@@ -76,7 +76,6 @@ use revset::RangeNodeStream;
 use slog::info;
 use std::cmp::{max, Ordering};
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
 use tunables::tunables;

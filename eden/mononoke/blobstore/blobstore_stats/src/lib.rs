@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::AsRef;
 use std::time::Duration;
 
 use anyhow::Error;

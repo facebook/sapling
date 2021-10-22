@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 

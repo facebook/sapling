@@ -42,7 +42,6 @@ use slog::{debug, info};
 use sorted_vector_map::SortedVectorMap;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
-use std::convert::TryInto;
 use std::path::Path;
 use tokio::task;
 

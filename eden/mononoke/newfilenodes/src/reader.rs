@@ -18,7 +18,6 @@ use scopeguard;
 use sql::{queries, Connection};
 use stats::prelude::*;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::time::Duration;
 use thiserror::Error as DeriveError;

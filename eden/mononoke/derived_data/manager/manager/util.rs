@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
-
 use anyhow::Result;
 use context::{CoreContext, SessionClass};
 use mononoke_types::ChangesetId;

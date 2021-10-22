@@ -10,7 +10,6 @@ use futures::stream::TryStreamExt;
 use futures_ext::{stream::StreamTimeoutError, FbStreamExt, FbTryStreamExt};
 use http::{HeaderMap, HeaderValue, Method, Response};
 use hyper::Body;
-use std::convert::TryInto;
 use std::time::Duration;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;

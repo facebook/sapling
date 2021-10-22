@@ -8,7 +8,6 @@
 //! Display information about a commit, directory, or file.
 
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::io::Write;
 
 use anyhow::{bail, Error};

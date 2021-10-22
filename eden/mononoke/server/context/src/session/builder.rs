@@ -10,7 +10,6 @@ use fbinit::FacebookInit;
 use rate_limiting::BoxRateLimiter;
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use sshrelay::Metadata;
-use std::convert::TryInto;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 

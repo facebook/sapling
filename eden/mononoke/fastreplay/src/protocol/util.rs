@@ -6,7 +6,6 @@
  */
 
 use anyhow::Error;
-use std::iter::{FromIterator, Iterator};
 use std::str::FromStr;
 
 fn exclude_empty<'a>(e: &'a str) -> Option<&'a str> {

@@ -7,7 +7,6 @@
 
 use anyhow::Result;
 use bytes::BytesMut;
-use std::convert::TryInto;
 
 use crate::errors::ErrorKind;
 use crate::incremental_hash::AdvisorySize;

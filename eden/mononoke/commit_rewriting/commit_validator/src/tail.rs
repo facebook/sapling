@@ -17,7 +17,6 @@ use futures::{
 use mononoke_types::RepositoryId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
-use std::iter::Iterator;
 use std::sync::Arc;
 use std::time::Duration;
 

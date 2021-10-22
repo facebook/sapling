@@ -27,7 +27,6 @@ use revset::AncestorsNodeStream;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info};
 use std::collections::HashSet;
-use std::iter::IntoIterator;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::task;

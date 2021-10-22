@@ -1078,7 +1078,7 @@ impl Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{collections::HashSet, iter::FromIterator, mem::size_of};
+    use std::{collections::HashSet, mem::size_of};
     use strum::{EnumCount, IntoEnumIterator};
 
     #[test]

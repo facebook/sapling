@@ -40,7 +40,6 @@ mod test {
     use revset_test_helper::single_changeset_id;
     use skiplist::SkiplistIndex;
     use std::collections::HashSet;
-    use std::iter::Iterator;
     use std::sync::Arc;
 
     #[derive(Clone, Copy, Debug)]

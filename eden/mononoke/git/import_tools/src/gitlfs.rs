@@ -20,7 +20,6 @@ use hyper_openssl::HttpsConnector;
 use mononoke_types::hash;
 use rand::{thread_rng, Rng};
 use slog::{error, warn};
-use std::convert::TryInto;
 use std::str;
 use std::sync::Arc;
 use tokio::sync::Semaphore;

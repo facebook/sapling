@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::convert::TryInto;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;

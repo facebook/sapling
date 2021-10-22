@@ -8,7 +8,6 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     io::Write,
-    iter::FromIterator,
     path::{Path, PathBuf},
 };
 

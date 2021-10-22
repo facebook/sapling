@@ -15,7 +15,6 @@ use gotham_ext::{
 };
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::iter::FromIterator;
 use std::num::NonZeroU64;
 
 use blobstore::Loadable;

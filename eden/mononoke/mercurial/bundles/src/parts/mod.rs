@@ -32,9 +32,9 @@ use mercurial_types::{
 };
 use mononoke_types::DateTime;
 use phases::Phase;
+use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
-use std::{collections::HashMap, convert::TryInto};
 
 pub type FilenodeEntry = (HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>);
 

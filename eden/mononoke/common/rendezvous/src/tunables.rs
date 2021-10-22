@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{AcquireError, OwnedSemaphorePermit, Semaphore};

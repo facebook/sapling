@@ -15,8 +15,6 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
-use std::iter::Iterator;
 use std::sync::Arc;
 use thiserror::Error;
 

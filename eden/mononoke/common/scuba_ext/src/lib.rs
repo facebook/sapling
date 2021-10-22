@@ -17,7 +17,6 @@ use scuba::{builder::ServerData, ScubaSample, ScubaSampleBuilder};
 pub use scuba::{Sampling, ScubaValue};
 use sshrelay::{Metadata, Preamble};
 use std::collections::hash_map::Entry;
-use std::convert::TryInto;
 use std::io::Error as IoError;
 use std::num::NonZeroU64;
 use std::path::Path;

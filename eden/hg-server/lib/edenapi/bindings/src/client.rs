@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{convert::TryInto, path::PathBuf};
+use std::path::PathBuf;
 
 use anyhow::Error;
 use libc::size_t;

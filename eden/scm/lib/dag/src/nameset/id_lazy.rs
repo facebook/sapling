@@ -357,7 +357,6 @@ impl AsyncNameSetQuery for IdLazySet {
 #[allow(clippy::redundant_clone)]
 pub(crate) mod tests {
     use std::collections::HashSet;
-    use std::convert::TryInto;
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering::AcqRel;
 

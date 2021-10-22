@@ -12,7 +12,6 @@
 ///! Utiltities for handling data in bulk.
 use std::cmp::{max, min};
 use std::collections::HashMap;
-use std::iter::Iterator;
 use std::sync::Arc;
 
 use anyhow::{bail, Error, Result};

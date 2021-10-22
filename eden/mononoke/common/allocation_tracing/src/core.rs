@@ -8,7 +8,6 @@
 use anyhow::Error;
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::UnsafeCell;
-use std::convert::TryInto;
 use std::mem;
 use std::thread_local;
 

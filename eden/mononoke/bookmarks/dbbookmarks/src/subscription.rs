@@ -16,7 +16,6 @@ use slog::warn;
 use sql::queries;
 use stats::prelude::*;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::time::{Duration, Instant};
 use tunables::tunables;
 

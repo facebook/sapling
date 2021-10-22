@@ -7,7 +7,6 @@
 
 use abomonation_derive::Abomonation;
 use anyhow::Error;
-use std::convert::TryInto;
 
 use filenodes::{FilenodeInfo, FilenodeInfoCached};
 

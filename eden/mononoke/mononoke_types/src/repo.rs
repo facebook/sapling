@@ -11,7 +11,6 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use serde_derive::Serialize;
 use sql::mysql;
-use std::default::Default;
 use std::fmt;
 use std::str::FromStr;
 

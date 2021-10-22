@@ -17,7 +17,6 @@ use eden::{GetScmStatusParams, GetScmStatusResult, ScmFileStatus, ScmStatus};
 use fbthrift_socket::SocketTransport;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::default::Default;
 use std::fs::read_link;
 use std::fs::symlink_metadata;
 use std::fs::File;

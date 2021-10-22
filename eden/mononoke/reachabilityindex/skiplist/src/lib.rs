@@ -9,7 +9,6 @@ use reloader::{Loader, Reloader};
 use std::cmp::min;
 #[deny(warnings)]
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
 use std::num::NonZeroI64;
 use std::sync::Arc;
 
@@ -1143,7 +1142,6 @@ mod test {
     use futures_util::future::{FutureExt, TryFutureExt};
     use revset::AncestorsNodeStream;
     use std::collections::HashSet;
-    use std::iter::FromIterator;
 
     use super::*;
     use fixtures::{

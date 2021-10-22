@@ -75,7 +75,7 @@ impl BonsaiDerivable for ChangesetInfo {
             .blobstore()
             .get(ctx, &key)
             .await?
-            .map(std::convert::TryInto::try_into)
+            .map(TryInto::try_into)
             .transpose()?)
     }
 }

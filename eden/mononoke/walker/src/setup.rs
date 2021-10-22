@@ -51,7 +51,6 @@ use sql_ext::facebook::MysqlOptions;
 use std::{
     borrow::Borrow,
     collections::{HashMap, HashSet},
-    iter::FromIterator,
     num::{NonZeroU32, NonZeroU64},
     str::FromStr,
     sync::Arc,

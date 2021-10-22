@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{convert::TryFrom, fmt};
+use std::fmt;
 
 use anyhow::Error;
 use regex::Regex;
@@ -192,7 +192,6 @@ impl fmt::Display for LuaPattern {
 mod tests {
     // All tests represent something that went wrong in translation during manual testing
     use super::*;
-    use std::convert::TryInto;
 
     #[test]
     fn test_literal() {

@@ -17,7 +17,6 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RawBundle2Id, Timestamp};
 use slog::info;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::time::Duration;
 use tokio::process::Command;
 

@@ -281,13 +281,13 @@ impl IndexedLogHgIdDataStore {
     }
 }
 
-impl std::convert::From<crate::memcache::McData> for Entry {
+impl From<crate::memcache::McData> for Entry {
     fn from(v: crate::memcache::McData) -> Self {
         Entry::new(v.key, v.data, v.metadata)
     }
 }
 
-impl std::convert::TryFrom<Entry> for crate::memcache::McData {
+impl TryFrom<Entry> for crate::memcache::McData {
     type Error = anyhow::Error;
 
     fn try_from(mut v: Entry) -> Result<Self, Self::Error> {
@@ -302,7 +302,7 @@ impl std::convert::TryFrom<Entry> for crate::memcache::McData {
 }
 
 // TODO(meyer): Remove these infallible conversions, replace with fallible or inherent in LazyFile.
-impl std::convert::From<TreeEntry> for Entry {
+impl From<TreeEntry> for Entry {
     fn from(v: TreeEntry) -> Self {
         Entry::new(
             v.key().clone(),
@@ -313,7 +313,7 @@ impl std::convert::From<TreeEntry> for Entry {
     }
 }
 
-impl std::convert::From<FileEntry> for Entry {
+impl From<FileEntry> for Entry {
     fn from(v: FileEntry) -> Self {
         Entry::new(
             v.key().clone(),

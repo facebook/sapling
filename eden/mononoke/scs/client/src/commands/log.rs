@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::io::Write;
 
 use anyhow::{bail, format_err, Error};

@@ -6,7 +6,6 @@
  */
 
 use std::collections::HashMap;
-use std::default::Default;
 use std::fs::read_link;
 use std::fs::symlink_metadata;
 use std::fs::File;

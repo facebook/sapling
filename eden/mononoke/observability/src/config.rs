@@ -16,7 +16,6 @@ use regex::Regex;
 use serde::de::{Deserializer, Error as _};
 use serde::Deserialize;
 use slog::Level;
-use std::convert::{TryFrom, TryInto};
 use std::sync::RwLock;
 
 fn cfgr_to_slog_level(level: CfgrLoggingLevel) -> Result<Level, Error> {

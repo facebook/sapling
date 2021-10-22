@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
-
 use anyhow::{format_err, Result};
 use cpython::{
     PyBytes, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject, ToPyObject,

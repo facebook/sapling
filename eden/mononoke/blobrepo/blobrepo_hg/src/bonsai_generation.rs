@@ -23,7 +23,6 @@ use mononoke_types::{
 };
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
-use std::iter::FromIterator;
 
 use crate::errors::*;
 use crate::BlobRepo;

@@ -21,7 +21,6 @@ use mononoke_types::RepositoryId;
 use slog::{info, o, Logger};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use std::borrow::Borrow;
-use std::convert::TryInto;
 use std::io::SeekFrom;
 use std::path::{Path, PathBuf};
 use streaming_clone::SqlStreamingChunksFetcher;

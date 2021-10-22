@@ -7,10 +7,8 @@
 
 //! Provides the c-bindings for `crate::backingstore`.
 
-use std::convert::TryInto;
 use std::slice;
 use std::str;
-use std::vec::Vec;
 
 use anyhow::ensure;
 use anyhow::Error;

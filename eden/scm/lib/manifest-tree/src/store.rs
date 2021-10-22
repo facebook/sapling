@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryFrom;
 use std::str::from_utf8;
 use std::str::FromStr;
 use std::sync::Arc;

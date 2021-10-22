@@ -15,7 +15,6 @@ use hyper::{service::Service, Body};
 use sha1::{Digest, Sha1};
 use slog::{debug, error, trace, Logger};
 use sshrelay::Metadata;
-use std::convert::TryInto;
 use std::io::Cursor;
 use std::marker::PhantomData;
 use std::str::FromStr;

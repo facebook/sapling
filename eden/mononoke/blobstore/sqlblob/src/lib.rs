@@ -44,7 +44,6 @@ use sql_ext::{
 };
 use std::{
     collections::HashMap,
-    convert::TryInto,
     fmt,
     future::Future,
     num::NonZeroUsize,

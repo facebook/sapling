@@ -25,7 +25,7 @@ use mononoke_types::{
 };
 use sorted_vector_map::SortedVectorMap;
 use std::sync::Arc;
-use std::{collections::BTreeMap, collections::HashSet, iter::FromIterator};
+use std::{collections::BTreeMap, collections::HashSet};
 use tokio::sync::Mutex;
 use unodes::RootUnodeManifestId;
 

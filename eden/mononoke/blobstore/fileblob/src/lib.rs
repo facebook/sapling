@@ -8,7 +8,6 @@
 #![deny(warnings)]
 
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use std::fs::create_dir_all;
 use std::ops::RangeBounds;
 use std::path::{Path, PathBuf};

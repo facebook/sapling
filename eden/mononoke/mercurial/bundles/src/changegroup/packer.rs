@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::From;
-
 use futures_old::{try_ready, Async, Poll, Stream};
 
 use anyhow::{Error, Result};

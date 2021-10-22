@@ -9,8 +9,6 @@
 
 use anyhow::{ensure, Error, Result};
 use libc::{c_char, c_void, size_t};
-use std::convert::TryInto;
-use std::vec::Vec;
 use std::{slice, str};
 use types::Key;
 

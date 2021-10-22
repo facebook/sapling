@@ -19,7 +19,6 @@ use std::io;
 use std::io::Error as IOError;
 use std::io::ErrorKind;
 use std::io::Write;
-use std::iter::FromIterator;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;

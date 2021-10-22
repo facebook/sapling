@@ -46,7 +46,7 @@ use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use sql_ext::{SqlConnections, TransactionResult};
-use std::{convert::TryFrom, sync::Arc, time::Instant};
+use std::{sync::Arc, time::Instant};
 use synced_commit_mapping::SyncedCommitMapping;
 use thiserror::Error;
 

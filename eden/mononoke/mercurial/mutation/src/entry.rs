@@ -6,7 +6,6 @@
  */
 
 use std::collections::{hash_map, HashMap, HashSet};
-use std::convert::TryFrom;
 use std::io::Read;
 
 use anyhow::{anyhow, Error, Result};

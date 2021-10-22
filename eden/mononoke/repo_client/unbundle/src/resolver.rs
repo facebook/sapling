@@ -36,7 +36,6 @@ use pushrebase::HgReplayData;
 use rate_limiting::RateLimitBody;
 use slog::{debug, trace};
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
 use std::fmt::Display;
 use std::sync::{Arc, Mutex};
 use topo_sort::sort_topological;

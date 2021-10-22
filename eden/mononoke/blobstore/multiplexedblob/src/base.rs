@@ -27,11 +27,9 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use std::{
     borrow::Borrow,
     collections::{hash_map::RandomState, HashMap, HashSet},
-    convert::TryInto,
     fmt,
     future::Future,
     hash::Hasher,
-    iter::{FromIterator, Iterator},
     num::{NonZeroU64, NonZeroUsize},
     sync::{
         atomic::{AtomicUsize, Ordering},

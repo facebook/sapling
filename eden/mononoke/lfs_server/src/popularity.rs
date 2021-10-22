@@ -8,7 +8,6 @@
 use anyhow::Error;
 use fbinit::FacebookInit;
 use stats::prelude::*;
-use std::convert::TryInto;
 use std::time::Duration;
 use time_window_counter::{BoxGlobalTimeWindowCounter, GlobalTimeWindowCounterBuilder};
 use tokio::time::{self};

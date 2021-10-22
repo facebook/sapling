@@ -73,7 +73,6 @@ use serde_json::{self, json};
 use slog::{debug, error, info, o};
 use stats::prelude::*;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::convert::TryInto;
 use std::fmt::Write;
 use std::mem;
 use std::num::NonZeroU64;

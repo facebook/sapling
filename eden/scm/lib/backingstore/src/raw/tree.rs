@@ -9,8 +9,6 @@
 //!
 //! Structs in this file should be keep in sync with `eden/fs/model/{Tree, TreeEntry}.h`.
 
-use std::convert::TryFrom;
-
 use anyhow::format_err;
 use anyhow::Result;
 use manifest::FileType;

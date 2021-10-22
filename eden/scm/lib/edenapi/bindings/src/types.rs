@@ -9,8 +9,6 @@
 //! allocated in C / C++ and must be freed accordingly, or do not need to be freed
 //! at all (no heap allocations).
 
-use std::convert::TryFrom;
-
 use anyhow::Error;
 use anyhow::Result;
 use edenapi_types::metadata::ContentId as ApiContentId;

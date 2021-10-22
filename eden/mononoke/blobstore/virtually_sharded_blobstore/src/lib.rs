@@ -18,8 +18,6 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType, SessionClass};
 use mononoke_types::BlobstoreBytes;
 use stats::prelude::*;
-use std::convert::AsRef;
-use std::convert::TryInto;
 use std::fmt;
 use std::hash::Hasher;
 use std::num::NonZeroU64;

@@ -15,7 +15,7 @@ use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{HgChangesetId, HgFileNodeId, NULL_HASH};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepoPath};
-use std::{collections::HashMap, convert::TryFrom};
+use std::collections::HashMap;
 
 use crate::derive::{derive_filenodes, derive_filenodes_in_batch};
 

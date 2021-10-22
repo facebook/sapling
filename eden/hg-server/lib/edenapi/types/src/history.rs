@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::iter::FromIterator;
-
 use serde_derive::{Deserialize, Serialize};
 
 use types::{hgid::HgId, key::Key, nodeinfo::NodeInfo, parents::Parents, path::RepoPathBuf};

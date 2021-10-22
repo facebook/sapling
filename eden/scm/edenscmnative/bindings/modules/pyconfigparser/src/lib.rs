@@ -8,7 +8,6 @@
 #![allow(non_camel_case_types)]
 
 use std::cell::RefCell;
-use std::convert::TryInto;
 
 use configparser::config::ConfigSet;
 use configparser::config::Options;

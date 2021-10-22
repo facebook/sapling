@@ -29,7 +29,6 @@ use sql::mysql_async::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
     fmt,
     sync::Arc,
 };

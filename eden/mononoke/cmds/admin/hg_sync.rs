@@ -22,7 +22,6 @@ use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, Logger};
-use std::convert::TryInto;
 
 use crate::common::{
     format_bookmark_log_entry, print_bonsai_changeset, LATEST_REPLAYED_REQUEST_KEY,

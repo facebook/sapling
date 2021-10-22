@@ -14,7 +14,6 @@ use anyhow::Error;
 use cliparser::alias::{expand_aliases, find_command_name};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
-use std::convert::TryInto;
 use std::sync::atomic::Ordering::SeqCst;
 use std::{env, path::Path};
 

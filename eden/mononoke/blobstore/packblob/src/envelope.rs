@@ -17,7 +17,7 @@ use fbthrift::{
 };
 use mononoke_types::BlobstoreBytes;
 use packblob_thrift::{StorageEnvelope, StorageFormat};
-use std::{convert::TryFrom, mem::size_of};
+use std::mem::size_of;
 
 enum HeaderType {
     PackBlobCompactFormat,

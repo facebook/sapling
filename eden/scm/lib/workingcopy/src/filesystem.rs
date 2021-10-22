@@ -6,8 +6,6 @@
  */
 
 use std::collections::HashSet;
-use std::convert::TryFrom;
-use std::convert::TryInto;
 use std::fs::Metadata;
 use std::path::PathBuf;
 use std::sync::Arc;

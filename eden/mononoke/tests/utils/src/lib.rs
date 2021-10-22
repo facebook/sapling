@@ -28,7 +28,6 @@ use mononoke_types::{
 };
 use std::{
     collections::{BTreeMap, HashMap},
-    convert::TryInto,
     str::FromStr,
 };
 

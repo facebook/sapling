@@ -14,7 +14,7 @@ use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use sql_construct::SqlConstruct;
-use std::{iter::FromIterator, sync::Mutex};
+use std::sync::Mutex;
 
 // In-memory "blob store"
 ///

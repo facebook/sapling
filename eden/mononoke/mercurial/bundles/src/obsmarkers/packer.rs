@@ -17,7 +17,6 @@ use futures_old::stream::iter_result;
 use futures_old::Stream;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
-use std::convert::TryFrom;
 
 const VERSION: u8 = 1;
 

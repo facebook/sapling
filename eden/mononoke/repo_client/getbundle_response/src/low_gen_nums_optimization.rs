@@ -17,8 +17,6 @@ use mononoke_types::{ChangesetId, Generation};
 use reachabilityindex::LeastCommonAncestorsHint;
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryInto,
-    iter::FromIterator,
     sync::Arc,
 };
 use tunables::tunables;

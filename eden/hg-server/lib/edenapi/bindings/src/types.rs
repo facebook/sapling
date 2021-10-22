@@ -9,8 +9,6 @@
 //! allocated in C / C++ and must be freed accordingly, or do not need to be freed
 //! at all (no heap allocations).
 
-use std::convert::TryFrom;
-
 use libc::size_t;
 
 use anyhow::{Error, Result};

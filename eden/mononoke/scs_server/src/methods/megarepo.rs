@@ -16,7 +16,7 @@ use megarepo_config::SyncTargetConfig;
 use mononoke_types::RepositoryId;
 use slog::warn;
 use source_control as thrift;
-use std::{collections::HashSet, convert::TryInto, time::Duration};
+use std::{collections::HashSet, time::Duration};
 
 use crate::errors;
 use crate::source_control_impl::SourceControlServiceImpl;

@@ -6,8 +6,6 @@
  */
 
 use std::collections::{hash_map, HashMap, HashSet};
-use std::default::Default;
-use std::iter::{Extend, FromIterator};
 use std::sync::Arc;
 
 use anyhow::Error;

@@ -8,7 +8,6 @@
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
-    convert::TryInto,
     fs::File,
     io::{Cursor, ErrorKind, Read, Write},
     iter, mem,

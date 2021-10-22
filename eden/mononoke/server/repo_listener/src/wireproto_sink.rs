@@ -10,7 +10,6 @@ use futures::sink::Sink;
 use futures::task::{Context, Poll};
 use pin_project::pin_project;
 use sshrelay::{IoStream, SshMsg};
-use std::convert::TryInto;
 use std::pin::Pin;
 
 #[pin_project]

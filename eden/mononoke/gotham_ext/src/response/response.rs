@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
-
 use anyhow::{Context, Error};
 use bytes::Bytes;
 use futures::{

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::Into;
-
 use ::manifest::{Entry, Manifest};
 use mononoke_types::MPathElement;
 

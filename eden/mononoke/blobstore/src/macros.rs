@@ -14,8 +14,6 @@ macro_rules! impl_blobstore_conversions {
             fn try_from(
                 bytes: $crate::private::BlobstoreBytes,
             ) -> Result<Self, $crate::private::Error> {
-                use std::convert::TryInto;
-
                 let t: $thrift_ty =
                     $crate::private::compact_protocol::deserialize(bytes.as_bytes().as_ref())?;
                 t.try_into()
@@ -36,8 +34,6 @@ macro_rules! impl_blobstore_conversions {
             fn try_from(
                 blob: $crate::private::BlobstoreGetData,
             ) -> Result<Self, $crate::private::Error> {
-                use std::convert::TryInto;
-
                 blob.into_bytes().try_into()
             }
         }
@@ -88,8 +84,6 @@ macro_rules! impl_loadable_storable {
                 ctx: &'a $crate::private::CoreContext,
                 blobstore: &'a B,
             ) -> Result<Self::Value, $crate::private::LoadableError> {
-                use std::convert::TryInto;
-
                 let id = *self;
                 let bytes = blobstore.get(ctx, &id.blobstore_key()).await?;
                 match bytes {

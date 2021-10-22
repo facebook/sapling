@@ -8,7 +8,6 @@
 //! Arguments for Commit IDs and Commit Identity Schemes
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
-use std::convert::TryInto;
 use std::fmt;
 use std::num::NonZeroU64;
 

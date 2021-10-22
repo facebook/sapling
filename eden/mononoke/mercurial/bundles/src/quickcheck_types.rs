@@ -8,7 +8,6 @@
 //! Quickcheck support for a few types that don't have support upstream,
 //! and for a few other test types.
 
-use std::convert::From;
 use std::iter;
 #[cfg(test)]
 use std::vec::IntoIter;

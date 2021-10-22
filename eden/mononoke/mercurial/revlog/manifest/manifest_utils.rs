@@ -7,7 +7,6 @@
 
 use std::collections::{HashSet, VecDeque};
 use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
 
 use anyhow::Error;
 use futures::future::Future;

@@ -30,7 +30,6 @@ use serde_derive::{Deserialize, Serialize};
 use std::{
     collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet, HashMap},
     hash::{Hash, Hasher},
-    iter::FromIterator,
     sync::Arc,
 };
 

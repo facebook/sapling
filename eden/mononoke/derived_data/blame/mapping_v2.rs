@@ -14,7 +14,6 @@ use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use metaconfig_types::BlameVersion;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use std::collections::HashMap;
-use std::convert::TryInto;
 use unodes::RootUnodeManifestId;
 
 use crate::batch_v2::derive_blame_v2_in_batch;

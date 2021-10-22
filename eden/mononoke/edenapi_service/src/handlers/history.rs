@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryFrom;
-
 use anyhow::{Context, Error};
 use async_trait::async_trait;
 use futures::{

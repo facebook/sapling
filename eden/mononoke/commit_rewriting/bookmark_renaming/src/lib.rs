@@ -13,7 +13,6 @@ use bookmarks::BookmarkName;
 use metaconfig_types::{CommitSyncConfig, CommitSyncDirection};
 use mononoke_types::RepositoryId;
 use std::collections::HashSet;
-use std::iter::Iterator;
 use std::sync::Arc;
 use thiserror::Error;
 

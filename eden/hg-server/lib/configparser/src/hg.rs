@@ -13,7 +13,6 @@ use std::env;
 use std::fs::{self, read_to_string};
 use std::hash::Hash;
 use std::io::{Error as IOError, ErrorKind};
-use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};

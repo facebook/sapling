@@ -41,7 +41,6 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::convert::TryInto;
 use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Duration;

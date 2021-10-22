@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryFrom;
-
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use context::CoreContext;
@@ -147,7 +145,6 @@ fn deny_unacceptable_patterns<'a, 'b>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::convert::TryInto;
 
     fn setup_patterns() -> (Vec<LuaPattern>, Vec<LuaPattern>) {
         let all: Vec<LuaPattern> = vec!["all".try_into().unwrap()];

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
 use std::path::PathBuf;
 use std::sync::Arc;
 

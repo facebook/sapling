@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryFrom;
-use std::convert::TryInto;
 use std::pin::Pin;
 
 use curl::easy::Easy2;

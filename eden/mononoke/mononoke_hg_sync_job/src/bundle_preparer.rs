@@ -37,7 +37,6 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use slog::{info, warn};
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::sync::Arc;
 use tempfile::NamedTempFile;
 

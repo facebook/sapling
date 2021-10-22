@@ -7,7 +7,6 @@
 
 #![deny(warnings)]
 
-use std::convert::{TryFrom, TryInto};
 use std::str::FromStr;
 use std::time::Duration;
 

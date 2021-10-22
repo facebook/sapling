@@ -19,8 +19,6 @@ use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 use std::collections::{BTreeMap, HashSet};
-use std::convert::AsRef;
-use std::convert::TryInto;
 use std::sync::Arc;
 
 mod errors;

@@ -16,7 +16,6 @@ use futures::{compat::Future01CompatExt, stream::TryStreamExt, Future};
 use mononoke_types::RawBundle2Id;
 use mutable_counters::MutableCounters;
 use slog::{info, Logger};
-use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::time::Duration;

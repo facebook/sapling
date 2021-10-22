@@ -25,7 +25,7 @@
 /// Mercurial pull to find commits that need to be sent to a client.
 use std::collections::hash_set::IntoIter;
 use std::collections::{BTreeMap, HashSet};
-use std::iter::{self, FromIterator};
+use std::iter;
 use std::sync::Arc;
 
 use anyhow::Error;

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
 use std::fs::File;
 use std::fs::{self};
 use std::io::Cursor;

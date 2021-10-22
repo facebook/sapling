@@ -7,7 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
-use std::{cell::RefCell, collections::HashSet, convert::TryInto, iter::FromIterator};
+use std::{cell::RefCell, collections::HashSet};
 
 use cpython::*;
 

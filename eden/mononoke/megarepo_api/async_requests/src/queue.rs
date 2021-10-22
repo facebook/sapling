@@ -22,8 +22,6 @@ use requests_table::{
 };
 pub use requests_table::{ClaimedBy, RequestId, RowId};
 use sql_construct::SqlConstruct;
-use std::convert::TryFrom;
-use std::convert::TryInto;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

@@ -17,7 +17,6 @@ use context::CoreContext;
 use fbthrift::compact_protocol;
 use std::{
     collections::{HashMap, VecDeque},
-    convert::TryFrom,
     str::FromStr,
 };
 use thiserror::Error;

@@ -5,14 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    collections::HashSet,
-    convert::{TryFrom, TryInto},
-    fs::Metadata,
-    path::PathBuf,
-    sync::Arc,
-    time::SystemTime,
-};
+use std::{collections::HashSet, fs::Metadata, path::PathBuf, sync::Arc, time::SystemTime};
 
 use anyhow::{Error, Result};
 use parking_lot::Mutex;

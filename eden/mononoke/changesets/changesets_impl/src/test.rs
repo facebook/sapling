@@ -20,7 +20,7 @@ use mononoke_types_mocks::changesetid::*;
 use mononoke_types_mocks::repo::*;
 use rendezvous::RendezVousOptions;
 use sql_construct::SqlConstruct;
-use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc};
+use std::{collections::HashSet, str::FromStr, sync::Arc};
 
 use crate::sql::SqlChangesetsError;
 

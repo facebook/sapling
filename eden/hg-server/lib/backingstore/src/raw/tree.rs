@@ -12,7 +12,6 @@
 use crate::raw::CBytes;
 use anyhow::{format_err, Result};
 use manifest::{FileType, FsNodeMetadata, List};
-use std::convert::TryFrom;
 use types::PathComponentBuf;
 
 #[repr(u8)]

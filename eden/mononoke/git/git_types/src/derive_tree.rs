@@ -14,7 +14,6 @@ use futures::{
     stream::{FuturesUnordered, TryStreamExt},
 };
 use manifest::derive_manifest;
-use std::convert::TryInto;
 
 use blobstore::{Blobstore, Storable};
 use derived_data::impl_bonsai_derived_via_manager;

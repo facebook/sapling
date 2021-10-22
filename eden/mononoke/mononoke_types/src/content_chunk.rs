@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
 use std::fmt::{self, Debug};
 
 use anyhow::{bail, Context, Result};

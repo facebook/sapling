@@ -188,7 +188,6 @@ impl<'a> BookmarkEntry<'a> {
 mod tests {
     use super::*;
     use std::collections::HashSet;
-    use std::iter::FromIterator;
     use std::str::FromStr;
     use tempfile::TempDir;
 

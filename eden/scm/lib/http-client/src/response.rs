@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryFrom;
 use std::io::Cursor;
 use std::pin::Pin;
 

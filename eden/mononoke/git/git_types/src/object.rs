@@ -8,7 +8,6 @@
 use digest::Digest;
 use mononoke_types::hash::RichGitSha1;
 use sha1::Sha1;
-use std::convert::TryInto;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub enum ObjectKind {

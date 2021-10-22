@@ -9,7 +9,6 @@
 
 #![allow(non_camel_case_types)]
 
-use std::convert::TryInto;
 use std::fs::read_dir;
 use std::io::Write;
 use std::path::Path;

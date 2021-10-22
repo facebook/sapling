@@ -8,7 +8,6 @@
 use anyhow::{anyhow, Error};
 use slog::debug;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::iter::FromIterator;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 

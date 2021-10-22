@@ -6,7 +6,7 @@
  */
 
 use std::collections::BTreeMap;
-use std::convert::{identity, TryFrom};
+use std::convert::identity;
 
 use blobstore::Loadable;
 use borrowed::borrowed;

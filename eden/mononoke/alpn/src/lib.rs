@@ -6,7 +6,6 @@
  */
 
 use anyhow::{Context, Error};
-use std::convert::TryInto;
 
 pub const H2_ALPN: &str = "h2";
 pub const HGCLI_ALPN: &str = "hgcli";

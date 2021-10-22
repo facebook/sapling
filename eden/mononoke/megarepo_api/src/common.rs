@@ -34,7 +34,7 @@ use mutable_renames::{MutableRenameEntry, MutableRenames};
 use reachabilityindex::LeastCommonAncestorsHint;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::{BTreeMap, HashMap};
-use std::{convert::TryInto, sync::Arc};
+use std::sync::Arc;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
 

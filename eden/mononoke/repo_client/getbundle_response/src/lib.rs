@@ -57,7 +57,6 @@ use slog::{debug, info, o};
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryInto,
     sync::Arc,
 };
 use tunables::tunables;

@@ -397,8 +397,6 @@ pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
 
 #[cfg(test)]
 mod lfs_mocks {
-    use std::convert::TryInto;
-
     use lfs_protocol::ObjectAction;
     use lfs_protocol::ObjectError;
     use lfs_protocol::ObjectStatus;

@@ -26,7 +26,6 @@ use serde::Deserialize;
 use slog::debug;
 use stats::prelude::*;
 use std::collections::HashMap;
-use std::iter::FromIterator;
 use std::num::NonZeroU16;
 use std::time::Instant;
 use time_ext::DurationExt;

@@ -19,7 +19,6 @@ use serde_derive::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     hash::{Hash, Hasher},
-    iter::FromIterator,
 };
 
 pub trait Manifest: Sized + 'static {

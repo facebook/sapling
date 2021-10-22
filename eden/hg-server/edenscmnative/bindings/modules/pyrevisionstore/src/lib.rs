@@ -10,7 +10,6 @@
 #![allow(non_camel_case_types)]
 
 use std::{
-    convert::TryInto,
     fs::read_dir,
     path::{Path, PathBuf},
     str::FromStr,

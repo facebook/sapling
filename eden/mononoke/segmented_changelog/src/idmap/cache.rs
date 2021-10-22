@@ -6,7 +6,6 @@
  */
 
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
 use std::sync::Arc;
 
 use abomonation_derive::Abomonation;

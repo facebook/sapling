@@ -32,14 +32,7 @@
 //! component. Writing it in terms of `RepoPathBuf` would probably be less readable that
 //! writing it in terms of `String`.
 
-use std::{
-    borrow::{Borrow, ToOwned},
-    cmp::Ordering,
-    convert::AsRef,
-    fmt,
-    ops::Deref,
-    str::Utf8Error,
-};
+use std::{borrow::Borrow, cmp::Ordering, fmt, ops::Deref, str::Utf8Error};
 
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;

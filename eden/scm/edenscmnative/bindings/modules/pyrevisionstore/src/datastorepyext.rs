@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
-
 use anyhow::format_err;
 use anyhow::Result;
 use cpython::PyBytes;

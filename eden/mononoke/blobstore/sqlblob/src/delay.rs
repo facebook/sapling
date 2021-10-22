@@ -7,7 +7,6 @@
 
 use std::{
     cmp::min,
-    convert::TryInto,
     num::NonZeroUsize,
     time::{Duration, Instant},
 };

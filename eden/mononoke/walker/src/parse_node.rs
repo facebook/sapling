@@ -17,7 +17,7 @@ use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     FileUnodeId, MPath, ManifestUnodeId,
 };
-use std::{iter::FromIterator, str::FromStr};
+use std::str::FromStr;
 use strum::IntoEnumIterator;
 
 const NODE_SEP: &str = ":";

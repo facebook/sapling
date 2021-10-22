@@ -35,7 +35,6 @@ use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use requests_table::LongRunningRequestsQueue;
 use slog::{info, o, warn};
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::future::Future;
 use std::hash::Hash;
 use std::sync::Arc;

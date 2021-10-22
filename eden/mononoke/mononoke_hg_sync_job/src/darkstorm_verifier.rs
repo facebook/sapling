@@ -68,7 +68,6 @@ mod test {
     use fbinit::FacebookInit;
     use futures::{stream, TryFutureExt, TryStreamExt};
     use memblob::Memblob;
-    use std::convert::TryInto;
 
     #[fbinit::test]
     async fn test_upload(fb: FacebookInit) -> Result<(), anyhow::Error> {

@@ -8,7 +8,6 @@
 use anyhow::{Error, Result};
 use edenapi_types::WireHistoryEntry;
 use mononoke_types::MPath;
-use std::convert::TryFrom;
 use types::{Parents, RepoPathBuf as ClientRepoPathBuf};
 
 use crate::blobnode::HgParents;

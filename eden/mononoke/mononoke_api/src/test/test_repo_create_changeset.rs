@@ -6,7 +6,6 @@
  */
 
 use std::collections::BTreeMap;
-use std::convert::TryFrom;
 
 use anyhow::Error;
 use assert_matches::assert_matches;

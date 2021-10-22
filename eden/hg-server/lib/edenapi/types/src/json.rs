@@ -19,7 +19,6 @@
 //! representation used in production. (For examples, hashes are
 //! represented as hexadecimal strings rather than as byte arrays.)
 
-use std::convert::TryFrom;
 use std::str::FromStr;
 
 use anyhow::{ensure, Context, Result};

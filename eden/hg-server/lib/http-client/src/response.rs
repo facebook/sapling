@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryFrom;
 use std::pin::Pin;
 
 use futures::prelude::*;

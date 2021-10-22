@@ -8,7 +8,6 @@
 //! Helper library for rendering commit info
 
 use std::collections::{BTreeMap, HashSet};
-use std::convert::TryFrom;
 use std::io::Write;
 
 use anyhow::Error;

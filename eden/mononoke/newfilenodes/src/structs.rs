@@ -11,7 +11,6 @@ use filenodes::FilenodeInfo;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::RepoPath;
 use path_hash::PathBytes;
-use std::convert::TryInto;
 
 use crate::local_cache::{CachePool, Cacheable};
 

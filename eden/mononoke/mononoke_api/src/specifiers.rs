@@ -6,7 +6,6 @@
  */
 
 use ephemeral_blobstore::BubbleId;
-use std::convert::From;
 use std::fmt;
 
 /// A changeset ID.  This is the canonical ID for a changeset.

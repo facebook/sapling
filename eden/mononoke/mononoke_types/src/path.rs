@@ -8,10 +8,9 @@
 use ascii::AsciiString;
 use std::cmp;
 use std::collections::HashMap;
-use std::convert::{From, TryFrom, TryInto};
 use std::fmt::{self, Display};
 use std::io::{self, Write};
-use std::iter::{once, FromIterator, Once};
+use std::iter::{once, Once};
 use std::slice::Iter;
 
 use anyhow::{bail, Context as _, Error, Result};

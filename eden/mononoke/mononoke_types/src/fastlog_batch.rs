@@ -19,7 +19,6 @@ use fbthrift::compact_protocol;
 use futures::future::{try_join_all, BoxFuture, FutureExt};
 use itertools::Itertools;
 use std::collections::VecDeque;
-use std::iter::FromIterator;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParentOffset(i32);

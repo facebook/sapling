@@ -52,7 +52,7 @@ macro_rules! _define_flags_impl {
             }
         }
 
-        impl ::std::convert::TryFrom<$crate::parser::ParseOutput> for $name {
+        impl TryFrom<$crate::parser::ParseOutput> for $name {
             type Error = ::anyhow::Error;
 
             fn try_from(out: $crate::parser::ParseOutput) -> ::anyhow::Result<Self> {
@@ -308,7 +308,6 @@ mod tests {
     }
 
     use crate::parser::{Flag, ParseOptions, StructFlags, Value};
-    use std::convert::TryFrom;
 
     #[test]
     fn test_struct_flags() {

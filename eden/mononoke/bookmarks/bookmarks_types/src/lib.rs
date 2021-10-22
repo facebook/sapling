@@ -15,7 +15,6 @@ use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
-use std::convert::TryFrom;
 use std::fmt;
 use std::ops::{Bound, Range, RangeBounds, RangeFrom, RangeFull};
 use std::str::FromStr;

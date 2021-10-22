@@ -29,7 +29,6 @@ use sql::{queries, Connection};
 pub use sql_construct::SqlConstruct;
 pub use sql_ext::SqlConnections;
 use stats::prelude::*;
-use std::iter::IntoIterator;
 use std::sync::Arc;
 use uuid::Uuid;
 

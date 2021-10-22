@@ -19,7 +19,6 @@ use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
 use metaconfig_types::PackFormat;
 use mononoke_types::BlobstoreBytes;
-use std::convert::TryInto;
 
 #[derive(Clone, Debug, Default)]
 pub struct PackOptions {

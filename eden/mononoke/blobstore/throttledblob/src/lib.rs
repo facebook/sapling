@@ -16,7 +16,6 @@ use governor::{
 };
 use nonzero_ext::nonzero;
 use std::{
-    convert::TryInto,
     fmt,
     num::{NonZeroU32, NonZeroUsize},
     time::Duration,

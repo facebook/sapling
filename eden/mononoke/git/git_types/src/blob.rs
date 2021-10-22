@@ -6,7 +6,6 @@
  */
 
 use anyhow::Error;
-use std::convert::{TryFrom, TryInto};
 
 use mononoke_types::{hash::RichGitSha1, ContentMetadata, FileType};
 

@@ -9,7 +9,6 @@
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::convert::TryInto;
 use std::ops::RangeBounds;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;

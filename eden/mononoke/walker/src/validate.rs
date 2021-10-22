@@ -52,8 +52,6 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     hash::Hash,
-    iter::FromIterator,
-    result::Result,
     str::FromStr,
     time::Instant,
 };

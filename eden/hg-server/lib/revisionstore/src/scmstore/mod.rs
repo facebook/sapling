@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{cmp::PartialEq, fmt, sync::Arc};
+use std::{fmt, sync::Arc};
 
 use anyhow::Error;
 use futures::{

@@ -15,7 +15,6 @@ use futures::{
 use maplit::hashset;
 use std::borrow::Borrow;
 use std::collections::{HashSet, VecDeque};
-use std::iter::FromIterator;
 
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};

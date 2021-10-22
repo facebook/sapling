@@ -22,7 +22,6 @@ use futures_old::Future;
 use mercurial_types::HgChangesetId;
 use mononoke_repo::MononokeRepo;
 use std::collections::HashMap;
-use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tunables::tunables;

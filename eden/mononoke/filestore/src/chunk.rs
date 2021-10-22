@@ -12,7 +12,6 @@ use futures::{
     stream::{BoxStream, Stream, StreamExt, TryStreamExt},
     task::{Context, Poll},
 };
-use std::convert::TryFrom;
 use std::fmt::{self, Debug};
 use std::pin::Pin;
 

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;

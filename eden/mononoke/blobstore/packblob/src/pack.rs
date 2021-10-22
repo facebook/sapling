@@ -371,7 +371,6 @@ mod tests {
     use bytes::Bytes;
     use rand::{Rng, RngCore, SeedableRng};
     use rand_xorshift::XorShiftRng;
-    use std::convert::TryInto;
 
     #[test]
     fn decode_independent_zstd_test() -> Result<()> {

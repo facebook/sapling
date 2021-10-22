@@ -19,7 +19,6 @@ use fbthrift::compact_protocol;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, Globalrev, RepositoryId};
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
 
 use bonsai_globalrev_mapping_thrift as thrift;
 

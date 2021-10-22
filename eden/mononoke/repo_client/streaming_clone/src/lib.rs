@@ -7,8 +7,6 @@
 
 #![deny(warnings)]
 
-use std::vec::Vec;
-
 use anyhow::Error;
 use bytes::Bytes;
 use futures::future::{BoxFuture, FutureExt};

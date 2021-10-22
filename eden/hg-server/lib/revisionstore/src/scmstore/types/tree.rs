@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryFrom;
-
 use anyhow::Error;
 
 use edenapi_types::TreeEntry as EdenApiTreeEntry;

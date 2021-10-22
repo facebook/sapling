@@ -8,10 +8,8 @@
 use anyhow::Error;
 use std::cmp::{self, Ordering};
 use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display};
 use std::io::{self, Write};
-use std::iter::Iterator;
 
 use ::manifest::Entry;
 use mononoke_types::{hash::RichGitSha1, MPathElement};

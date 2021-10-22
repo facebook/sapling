@@ -19,7 +19,6 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use sql::{queries, Connection};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
-use std::convert::TryInto;
 use std::sync::Arc;
 use std::time::Duration;
 

@@ -6,10 +6,8 @@
  */
 
 use std::collections::HashMap;
-use std::convert::From;
 use std::fmt::Debug;
 use std::io::{BufRead, BufReader, Cursor};
-use std::iter::Iterator;
 use std::str::FromStr;
 
 use anyhow::Result;

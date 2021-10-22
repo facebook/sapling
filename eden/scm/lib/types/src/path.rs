@@ -33,9 +33,7 @@
 //! writing it in terms of `String`.
 
 use std::borrow::Borrow;
-use std::borrow::ToOwned;
 use std::cmp::Ordering;
-use std::convert::AsRef;
 use std::fmt;
 use std::ops::Deref;
 use std::str::Utf8Error;

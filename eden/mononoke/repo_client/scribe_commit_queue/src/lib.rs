@@ -11,7 +11,6 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, Generation, RepositoryId};
 use permission_checker::MononokeIdentitySet;
 use scribe_ext::Scribe;
 use serde_derive::Serialize;
-use std::convert::TryInto;
 
 #[derive(Serialize)]
 pub struct CommitInfo<'a> {

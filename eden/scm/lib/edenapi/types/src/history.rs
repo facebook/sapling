@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::iter::FromIterator;
-
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use types::hgid::HgId;

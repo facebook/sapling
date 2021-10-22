@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::{TryFrom, TryInto};
-
 use anyhow::{format_err, Context, Error, Result};
 use blobstore::BlobstoreGetData;
 use derived_data_thrift as thrift;

@@ -9,8 +9,6 @@
 //!
 //! See [`HgTime`] and [`HgTime::parse`] for main features.
 
-use std::convert::TryFrom;
-use std::convert::TryInto;
 use std::ops::Add;
 use std::ops::Range;
 use std::ops::RangeInclusive;

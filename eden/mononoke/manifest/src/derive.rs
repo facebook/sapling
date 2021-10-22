@@ -20,7 +20,6 @@ use std::{
     fmt,
     future::Future,
     hash::Hash,
-    iter::FromIterator,
     sync::Arc,
 };
 

@@ -17,7 +17,7 @@ use mononoke_types::{
 };
 use rand::{seq::SliceRandom, Rng};
 use rand_distr::{Binomial, Uniform};
-use std::{collections::BTreeMap, convert::TryFrom};
+use std::collections::BTreeMap;
 
 #[derive(Clone, Copy)]
 pub struct GenSettings {

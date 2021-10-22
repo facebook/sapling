@@ -14,7 +14,6 @@ use futures_old::Poll;
 use mononoke_types::{ChangesetId, Generation};
 use std::collections::hash_set::IntoIter;
 use std::collections::HashSet;
-use std::iter::IntoIterator;
 use std::mem::replace;
 use std::sync::Arc;
 

@@ -16,7 +16,7 @@ use futures::{
     future::{Future, TryFutureExt},
     stream::{self, Stream, TryStreamExt},
 };
-use std::{borrow::Borrow, convert::TryInto};
+use std::borrow::Borrow;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;

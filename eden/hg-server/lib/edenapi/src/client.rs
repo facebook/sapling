@@ -8,7 +8,6 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::{create_dir_all, File};
-use std::iter::FromIterator;
 
 use anyhow::{format_err, Context};
 use async_trait::async_trait;

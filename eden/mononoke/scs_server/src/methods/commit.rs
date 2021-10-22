@@ -6,7 +6,6 @@
  */
 
 use std::collections::{BTreeSet, HashMap};
-use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 
 use context::CoreContext;

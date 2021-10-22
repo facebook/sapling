@@ -13,7 +13,6 @@ use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::{BasicFileChange, MPath};
 use regex::Regex;
-use std::convert::TryInto;
 
 #[derive(Default)]
 pub struct LimitFilesizeBuilder {

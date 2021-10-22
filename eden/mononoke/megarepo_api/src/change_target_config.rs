@@ -33,7 +33,6 @@ use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, FileChange, MPat
 use mutable_renames::MutableRenames;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::{BTreeMap, HashSet};
-use std::convert::TryInto;
 use std::sync::Arc;
 
 /// Structure representing changes needed to be applied onto target to change its

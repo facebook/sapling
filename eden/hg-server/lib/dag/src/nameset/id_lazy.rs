@@ -356,7 +356,6 @@ pub(crate) mod tests {
     use crate::VerLink;
     use nonblocking::non_blocking_result as r;
     use std::collections::HashSet;
-    use std::convert::TryInto;
     use std::sync::atomic::{AtomicU64, Ordering::AcqRel};
 
     pub fn lazy_set(a: &[u64]) -> IdLazySet {

@@ -12,7 +12,6 @@ use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
-use std::cmp::{Eq, Ord, PartialEq, PartialOrd};
 use std::hash::Hash;
 
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

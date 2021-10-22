@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryFrom;
-
 use futures::channel::oneshot;
 use thiserror::Error;
 

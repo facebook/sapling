@@ -20,7 +20,6 @@ use futures::{
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash};
 use mononoke_types::{BlobstoreBytes, ChangesetId, RepoPath, RepositoryId};
 use slog::info;
-use std::convert::TryInto;
 use std::path::{Path, PathBuf};
 use tokio::{
     fs::File,

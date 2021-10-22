@@ -39,8 +39,8 @@ use mutable_counters::SqlMutableCounters;
 use pushrebase::{do_pushrebase_bonsai, FAILUPUSHREBASE_EXTRA};
 use slog::{info, warn, Logger};
 use sorted_vector_map::sorted_vector_map;
+use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::{collections::BTreeMap, convert::TryInto};
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
     SyncedCommitMappingEntry,
