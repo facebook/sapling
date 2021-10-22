@@ -308,7 +308,18 @@ pub(crate) async fn derive_from_parents(
         )
         .await?
     };
-    let hg_cs_id = generate_hg_changeset(ctx, blobstore, bonsai, parents, options).await?;
+
+    let parent_manifests = parents.iter().map(|p| p.manifestid()).collect();
+    let manifest_id = get_manifest_from_bonsai(
+        ctx.clone(),
+        blobstore.clone(),
+        bonsai.clone(),
+        parent_manifests,
+    )
+    .await?;
+
+    let hg_cs_id =
+        generate_hg_changeset(ctx, blobstore, bonsai, manifest_id, parents, options).await?;
     Ok(MappedHgChangesetId(hg_cs_id))
 }
 
@@ -316,11 +327,11 @@ async fn generate_hg_changeset(
     ctx: &CoreContext,
     blobstore: &Arc<dyn Blobstore>,
     bcs: BonsaiChangeset,
+    manifest_id: HgManifestId,
     parents: Vec<HgBlobChangeset>,
     options: &HgChangesetDeriveOptions,
 ) -> Result<HgChangesetId, Error> {
     let start_timestamp = Instant::now();
-    let parent_manifests = parents.iter().map(|p| p.manifestid()).collect();
 
     // NOTE: We're special-casing the first 2 parents here, since that's all Mercurial
     // supports. Producing the Manifest (in get_manifest_from_bonsai) will consider all
@@ -345,13 +356,6 @@ async fn generate_hg_changeset(
     // Keep a record of any parents for now (i.e. > 2 parents). We'll store those in extras.
     let step_parents = parents;
 
-    let manifest_id = get_manifest_from_bonsai(
-        ctx.clone(),
-        blobstore.clone(),
-        bcs.clone(),
-        parent_manifests,
-    )
-    .await?;
     let files = compute_changed_files(
         ctx.clone(),
         blobstore.clone(),
