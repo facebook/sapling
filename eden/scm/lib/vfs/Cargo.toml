@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 crossbeam = "0.8"
-dashmap = { version = "4.0.2", features = ["serde"] }
+dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
 fsinfo = { path = "../fsinfo" }
 libc = "0.2.98"
 minibytes = { path = "../minibytes" }

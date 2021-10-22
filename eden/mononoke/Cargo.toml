@@ -103,7 +103,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 cmdlib = { version = "0.1.0", path = "cmdlib" }
 context = { version = "0.1.0", path = "server/context" }
 criterion = "=0.3.1"
-dashmap = { version = "4.0.2", features = ["serde"] }
+dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
 derive_more = "0.99.3"
 derived_data = { version = "0.1.0", path = "derived_data" }
 environment = { version = "0.1.0", path = "cmdlib/environment" }
