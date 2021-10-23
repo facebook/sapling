@@ -168,7 +168,7 @@ def getbundlechunks(orig, repo, source, heads=None, bundlecaps=None, **kwargs):
                 if head not in nodestobundle:
                     newbundlefile = downloadbundle(repo, head)
                     bundlepath = "bundle:%s+%s" % (repo.root, newbundlefile)
-                    bundlerepo = hg.repository(repo.ui, bundlepath)
+                    bundlerepo = hg.repository(repo.baseui, bundlepath)
 
                     allbundlestocleanup.append((bundlerepo, newbundlefile))
                     bundlerevs = set(bundlerepo.revs("bundle()"))
@@ -654,7 +654,7 @@ def storebundle(op, params, bundlefile, iscrossbackendsync=False):
     bundle = None
     try:  # guards bundle
         bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
-        bundle = hg.repository(op.repo.ui, bundlepath)
+        bundle = hg.repository(op.repo.baseui, bundlepath)
 
         bookmark = params.get("bookmark")
         create = params.get("create")
