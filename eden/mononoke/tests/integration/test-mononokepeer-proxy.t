@@ -39,8 +39,6 @@ check if we can talk to mononoke through proxy
   $ cat >> .hg/hgrc <<EOF
   > [auth_proxy]
   > http_proxy=http://localhost:$PROXY_PORT
-  > [http]
-  > verbose=1
   > EOF
 
 pull from mononoke and log data
