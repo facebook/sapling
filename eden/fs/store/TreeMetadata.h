@@ -67,12 +67,25 @@ class TreeMetadata {
   }
 
  private:
-  size_t getSerializedSize() const;
-
   size_t getNumberOfEntries() const;
 
-  static constexpr size_t ENTRY_SIZE =
-      Hash20::RAW_SIZE + SerializedBlobMetadata::SIZE; // fix: hash size
+  folly::IOBuf serializeV1() const;
+
+  folly::IOBuf serializeV2(size_t serialized_size) const;
+
+  static TreeMetadata deserializeV1(
+      const folly::StringPiece data,
+      uint32_t numberOfEntries);
+
+  static TreeMetadata deserializeV2(
+      const folly::StringPiece data,
+      uint32_t numberOfEntries);
+
+  static constexpr size_t ENTRY_SIZE_V1 =
+      Hash20::RAW_SIZE + SerializedBlobMetadata::SIZE;
+
+  static constexpr uint32_t SERIALIZED_V2_MARKER = 1u << 31;
+  static constexpr uint32_t V2_VERSION = 2u;
 
   EntryMetadata entryMetadata_;
 };

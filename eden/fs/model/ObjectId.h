@@ -68,6 +68,13 @@ class ObjectId : boost::totally_ordered<ObjectId> {
     return folly::ByteRange{folly::StringPiece{bytes_}};
   }
 
+  /**
+   * Returns size of this ObjectId
+   */
+  size_t size() const {
+    return bytes_.size();
+  }
+
   /** @return [lowercase] hex representation of this ObjectId. */
   std::string toLogString() const {
     return asHexString();

@@ -55,6 +55,42 @@ TEST_P(LocalStoreTest, testReadAndWriteTreeMetadata) {
   EXPECT_EQ(childBlobMetadata.size, outEntryMetadata.second.size);
 }
 
+TEST_P(LocalStoreTest, testReadAndWriteTreeMetadataV2) {
+  ObjectId hash{"3a8f8eb91101860fd8484154885838bf322964d0aabb"};
+  ObjectId childHash("8e073e366ed82de6465d1209d3f07da7eebabb93ddee");
+
+  StringPiece childContents("blah\n");
+  auto childSha1 = Hash20::sha1(folly::ByteRange{childContents});
+  auto size = childContents.size();
+
+  auto childBlobMetadata = BlobMetadata{childSha1, size};
+  TreeMetadata::HashIndexedEntryMetadata entryMetadata = {
+      std::make_pair(childHash, childBlobMetadata)};
+  auto treeMetadata = TreeMetadata{entryMetadata};
+  auto serializedMetadata = treeMetadata.serialize();
+  serializedMetadata.coalesce();
+
+  store_->put(
+      KeySpace::TreeMetaDataFamily,
+      hash.getBytes(),
+      folly::ByteRange(serializedMetadata.data(), serializedMetadata.length()));
+
+  auto outResult = store_->get(KeySpace::TreeMetaDataFamily, hash);
+  ASSERT_TRUE(outResult.isValid());
+
+  auto outTreeMetadata = TreeMetadata::deserialize(outResult);
+  auto outTreeEntryMetadata =
+      std::get<TreeMetadata::HashIndexedEntryMetadata>(treeMetadata.entries());
+
+  EXPECT_EQ(outTreeEntryMetadata.size(), outTreeEntryMetadata.size());
+
+  auto outEntryMetadata = outTreeEntryMetadata.front();
+
+  EXPECT_EQ(childHash, outEntryMetadata.first);
+  EXPECT_EQ(childBlobMetadata.sha1, outEntryMetadata.second.sha1);
+  EXPECT_EQ(childBlobMetadata.size, outEntryMetadata.second.size);
+}
+
 TEST_P(LocalStoreTest, testDeserializeEmptyMetadata) {
   StoreResult emptyResult{""};
   EXPECT_THROW(TreeMetadata::deserialize(emptyResult), std::invalid_argument);
