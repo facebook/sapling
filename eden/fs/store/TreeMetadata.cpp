@@ -52,7 +52,7 @@ IOBuf TreeMetadata::serialize() const {
         "Identifiers for entries are not hashes, can not serialize.");
   }
   for (auto& [hash, metadata] : *hashIndexedEntries) {
-    appender.push(hash.getBytes());
+    appender.push(hash.getBytes()); // todo - support var length object id
     SerializedBlobMetadata serializedMetadata(metadata);
     appender.push(serializedMetadata.slice());
   }
@@ -78,9 +78,10 @@ TreeMetadata TreeMetadata::deserialize(const StoreResult& result) {
   HashIndexedEntryMetadata entryMetadata;
   entryMetadata.reserve(numberOfEntries);
   for (uint32_t i = 0; i < numberOfEntries; ++i) {
-    auto temp = ByteRange{StringPiece{data, 0, ObjectId::RAW_SIZE}};
+    auto temp = ByteRange{StringPiece{
+        data, 0, Hash20::RAW_SIZE}}; // todo - support full object id format
     auto hash = ObjectId{temp};
-    data.advance(ObjectId::RAW_SIZE);
+    data.advance(Hash20::RAW_SIZE);
 
     auto serializedMetadata =
         ByteRange{StringPiece{data, 0, SerializedBlobMetadata::SIZE}};

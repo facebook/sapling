@@ -69,5 +69,5 @@ TEST(TreeEntry, testEntrySize) {
   auto totalSize = sizeofSize + getEntryIndirectBytesSize;
 
   EXPECT_LE(
-      name.length() + ObjectId::RAW_SIZE + sizeof(TreeEntryType), totalSize);
+      name.length() + Hash20::RAW_SIZE + sizeof(TreeEntryType), totalSize);
 }

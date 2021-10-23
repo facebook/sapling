@@ -154,7 +154,7 @@ ObjectId HgProxyHash::sha1() const noexcept {
   if (value_.empty()) {
     // The SHA-1 of an empty HgProxyHash, (kZeroHash, "").
     // The correctness of this value is asserted in tests.
-    constexpr ObjectId emptyProxyHash{
+    const ObjectId emptyProxyHash{
         folly::StringPiece{"d3399b7262fb56cb9ed053d68db9291c410839c4"}};
     return emptyProxyHash;
   } else {

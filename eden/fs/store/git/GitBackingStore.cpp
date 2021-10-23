@@ -203,10 +203,9 @@ git_oid GitBackingStore::root2Oid(const RootId& rootId) {
 
 git_oid GitBackingStore::hash2Oid(const ObjectId& hash) {
   git_oid oid;
-  static_assert(
-      ObjectId::RAW_SIZE == GIT_OID_RAWSZ,
-      "git hash size and eden hash size do not match");
-  memcpy(oid.id, hash.getBytes().data(), GIT_OID_RAWSZ);
+  auto bytes = hash.getBytes();
+  CHECK_EQ(bytes.size(), GIT_OID_RAWSZ);
+  memcpy(oid.id, bytes.data(), GIT_OID_RAWSZ);
   return oid;
 }
 

@@ -9,6 +9,7 @@
 
 #include <boost/operators.hpp>
 #include <fmt/format.h>
+#include <folly/FBString.h>
 #include <folly/Range.h>
 #include <stdint.h>
 #include <array>
@@ -22,29 +23,26 @@ namespace facebook::eden {
 
 /**
    Identifier of objects in local store.
-   Currently same as Hash20, but will get changed later to support use cases
-   where Hash20 is not enough.
+   This identifier is a variable length string.
 */
 class ObjectId : boost::totally_ordered<ObjectId> {
  public:
-  enum { RAW_SIZE = 20 };
-  using Storage = std::array<uint8_t, RAW_SIZE>;
+  // fbstring has more SSO space (23 bytes!) than std::string and thus can hold
+  // 20-byte hashes inline.
+  using Storage = folly::fbstring;
 
   /**
-   * Create a 0-initialized hash
+   * Create an empty object id
    */
-  constexpr ObjectId() noexcept : bytes_{} {}
+  ObjectId() noexcept : bytes_{} {}
 
-  explicit constexpr ObjectId(const Storage& bytes) : bytes_{bytes} {}
-
-  explicit constexpr ObjectId(folly::ByteRange bytes)
+  explicit ObjectId(folly::ByteRange bytes)
       : bytes_{constructFromByteRange(bytes)} {}
 
   /**
    * @param hex is a string of 40 hexadecimal characters.
    */
-  explicit constexpr ObjectId(folly::StringPiece hex)
-      : bytes_{constructFromHex(hex)} {}
+  explicit ObjectId(folly::StringPiece hex) : bytes_{constructFromHex(hex)} {}
 
   /**
    * Compute the SHA1 hash of an IOBuf chain.
@@ -63,10 +61,12 @@ class ObjectId : boost::totally_ordered<ObjectId> {
    */
   static ObjectId sha1(folly::ByteRange data);
 
-  constexpr folly::ByteRange getBytes() const {
-    return folly::ByteRange{bytes_.data(), bytes_.size()};
+  /**
+   * Returns bytes content of the ObjectId
+   */
+  folly::ByteRange getBytes() const {
+    return folly::ByteRange{folly::StringPiece{bytes_}};
   }
-  folly::MutableByteRange mutableBytes();
 
   /** @return [lowercase] hex representation of this ObjectId. */
   std::string toLogString() const {
@@ -75,8 +75,8 @@ class ObjectId : boost::totally_ordered<ObjectId> {
 
   std::string asHexString() const;
 
-  /** @return 20-character bytes of this hash. */
-  std::string toByteString() const;
+  /** @return bytes of this ObjectId. */
+  std::string asString() const;
 
   size_t getHashCode() const noexcept;
 
@@ -84,39 +84,27 @@ class ObjectId : boost::totally_ordered<ObjectId> {
   bool operator<(const ObjectId&) const;
 
  private:
-  static constexpr Storage constructFromByteRange(folly::ByteRange bytes) {
-    if (bytes.size() != RAW_SIZE) {
-      throwInvalidArgument(
-          "incorrect data size for Hash constructor from bytes: ",
-          bytes.size());
-    }
-    return {
-        bytes.data()[0],  bytes.data()[1],  bytes.data()[2],  bytes.data()[3],
-        bytes.data()[4],  bytes.data()[5],  bytes.data()[6],  bytes.data()[7],
-        bytes.data()[8],  bytes.data()[9],  bytes.data()[10], bytes.data()[11],
-        bytes.data()[12], bytes.data()[13], bytes.data()[14], bytes.data()[15],
-        bytes.data()[16], bytes.data()[17], bytes.data()[18], bytes.data()[19]};
+  static Storage constructFromByteRange(folly::ByteRange bytes) {
+    return Storage{(const char*)bytes.data(), bytes.size()};
   }
-  static constexpr Storage constructFromHex(folly::StringPiece hex) {
-    if (hex.size() != (RAW_SIZE * 2)) {
+  static Storage constructFromHex(folly::StringPiece hex) {
+    if (hex.size() % 2 != 0) {
       throwInvalidArgument(
           "incorrect data size for Hash constructor from string: ", hex.size());
     }
-    return {
-        hexByteAt(hex, 0),  hexByteAt(hex, 1),  hexByteAt(hex, 2),
-        hexByteAt(hex, 3),  hexByteAt(hex, 4),  hexByteAt(hex, 5),
-        hexByteAt(hex, 6),  hexByteAt(hex, 7),  hexByteAt(hex, 8),
-        hexByteAt(hex, 9),  hexByteAt(hex, 10), hexByteAt(hex, 11),
-        hexByteAt(hex, 12), hexByteAt(hex, 13), hexByteAt(hex, 14),
-        hexByteAt(hex, 15), hexByteAt(hex, 16), hexByteAt(hex, 17),
-        hexByteAt(hex, 18), hexByteAt(hex, 19),
-    };
+    folly::fbstring result;
+    auto size = hex.size() / 2;
+    result.reserve(size);
+    for (size_t i = 0; i < size; i++) {
+      result.push_back(hexByteAt(hex, i));
+    }
+    return result;
   }
-  static constexpr uint8_t hexByteAt(folly::StringPiece hex, size_t index) {
+  static constexpr char hexByteAt(folly::StringPiece hex, size_t index) {
     return (nibbleToHex(hex.data()[index * 2]) * 16) +
         nibbleToHex(hex.data()[(index * 2) + 1]);
   }
-  static constexpr uint8_t nibbleToHex(char c) {
+  static constexpr char nibbleToHex(char c) {
     if ('0' <= c && c <= '9') {
       return c - '0';
     } else if ('a' <= c && c <= 'f') {

@@ -269,7 +269,7 @@ ObjectId FakeBackingStore::computeTreeHash(
         ByteRange(reinterpret_cast<const uint8_t*>(&mode), sizeof(mode)));
   }
 
-  ObjectId::Storage computedHashBytes;
+  Hash20::Storage computedHashBytes;
   digest.hash_final(folly::MutableByteRange{
       computedHashBytes.data(), computedHashBytes.size()});
   return ObjectId{computedHashBytes};

@@ -210,7 +210,7 @@ TEST(GitTree, testBadDeserialize) {
   a.write<uint8_t>(0);
   a.push(StringPiece("100694 apm-rest-api.md"));
   a.write<uint8_t>(0);
-  a.push(ObjectId("a3c8e5c25e5523322f0ea490173dbdc1d844aefb").getBytes());
+  a.push(Hash20("a3c8e5c25e5523322f0ea490173dbdc1d844aefb").getBytes());
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 
   // Trailing nul byte
@@ -220,7 +220,7 @@ TEST(GitTree, testBadDeserialize) {
   a.write<uint8_t>(0);
   a.push(StringPiece("100644 apm-rest-api.md"));
   a.write<uint8_t>(0);
-  a.push(ObjectId("a3c8e5c25e5523322f0ea490173dbdc1d844aefb").getBytes());
+  a.push(Hash20("a3c8e5c25e5523322f0ea490173dbdc1d844aefb").getBytes());
   a.write<uint8_t>(0);
   EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 }

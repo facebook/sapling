@@ -319,7 +319,7 @@ overlay::OverlayEntry Overlay::serializeOverlayEntry(const DirEntry& ent) {
   entry.mode_ref() = ent.getInitialMode();
   entry.inodeNumber_ref() = ent.getInodeNumber().get();
   if (!ent.isMaterialized()) {
-    entry.hash_ref() = ent.getHash().toByteString();
+    entry.hash_ref() = ent.getHash().asString();
   }
 
   return entry;

@@ -68,7 +68,7 @@ std::unique_ptr<Tree> deserializeGitTree(
     auto name = cursor.readTerminatedString();
 
     // Extract the hash.
-    ObjectId::Storage hashBytes;
+    Hash20::Storage hashBytes;
     cursor.pull(hashBytes.data(), hashBytes.size());
 
     // Determine the individual fields from the mode.
@@ -178,7 +178,9 @@ void GitTreeSerializer::addEntry(const TreeEntry& entry) {
   appender_.printf("%o ", mode);
   appender_.push(entry.getName().stringPiece());
   appender_.write<uint8_t>(0);
-  appender_.push(entry.getHash().getBytes());
+  auto bytes = entry.getHash().getBytes();
+  CHECK_EQ(bytes.size(), Hash20::RAW_SIZE);
+  appender_.push(bytes);
 }
 
 folly::IOBuf GitTreeSerializer::finalize() {

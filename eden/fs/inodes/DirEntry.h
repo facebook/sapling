@@ -233,7 +233,7 @@ class DirEntry {
   };
 };
 
-static_assert(sizeof(DirEntry) == 32, "DirEntry is four words");
+static_assert(sizeof(DirEntry) == 40, "DirEntry is five words");
 
 /**
  * Represents a directory in the overlay.

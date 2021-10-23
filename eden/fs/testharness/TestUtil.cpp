@@ -14,7 +14,7 @@
 namespace facebook {
 namespace eden {
 ObjectId makeTestHash(folly::StringPiece value) {
-  constexpr size_t ASCII_SIZE = 2 * ObjectId::RAW_SIZE;
+  constexpr size_t ASCII_SIZE = 2 * Hash20::RAW_SIZE;
   if (value.size() > ASCII_SIZE) {
     throw std::invalid_argument(value.toString() + " is too big for Hash");
   }

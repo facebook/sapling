@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/model/ObjectId.h"
+#include "eden/fs/model/Hash.h"
 
 #include <folly/Conv.h>
 #include <folly/Format.h>
@@ -21,25 +22,20 @@ using folly::ssl::OpenSSLHash;
 
 namespace facebook::eden {
 
-folly::MutableByteRange ObjectId::mutableBytes() {
-  return folly::MutableByteRange{bytes_.data(), bytes_.size()};
-}
-
 std::string ObjectId::asHexString() const {
+  auto bytes = getBytes();
   std::string result;
-  folly::hexlify(bytes_, result);
+  folly::hexlify(bytes, result);
   return result;
 }
 
-std::string ObjectId::toByteString() const {
-  return std::string(reinterpret_cast<const char*>(bytes_.data()), RAW_SIZE);
+std::string ObjectId::asString() const {
+  auto bytes = getBytes();
+  return std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
 
 size_t ObjectId::getHashCode() const noexcept {
-  static_assert(sizeof(size_t) <= RAW_SIZE, "crazy size_t type");
-  size_t result;
-  memcpy(&result, bytes_.data(), sizeof(size_t));
-  return result;
+  return std::hash<folly::fbstring>{}(bytes_);
 }
 
 bool ObjectId::operator==(const ObjectId& otherHash) const {
@@ -51,13 +47,13 @@ bool ObjectId::operator<(const ObjectId& otherHash) const {
 }
 
 ObjectId ObjectId::sha1(const folly::IOBuf& buf) {
-  Storage hashBytes;
+  Hash20::Storage hashBytes;
   OpenSSLHash::sha1(range(hashBytes), buf);
   return ObjectId{hashBytes};
 }
 
 ObjectId ObjectId::sha1(ByteRange data) {
-  Storage hashBytes;
+  Hash20::Storage hashBytes;
   OpenSSLHash::sha1(range(hashBytes), data);
   return ObjectId{hashBytes};
 }

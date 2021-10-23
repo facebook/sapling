@@ -72,7 +72,7 @@ class TreeMetadata {
   size_t getNumberOfEntries() const;
 
   static constexpr size_t ENTRY_SIZE =
-      ObjectId::RAW_SIZE + SerializedBlobMetadata::SIZE;
+      Hash20::RAW_SIZE + SerializedBlobMetadata::SIZE; // fix: hash size
 
   EntryMetadata entryMetadata_;
 };
