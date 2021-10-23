@@ -1447,19 +1447,7 @@ def prepushrebasehooks(op, params, bundle, bundlefile):
     packpaths = ":".join(op.records[treepackrecords])
     prelockrebaseargs["hook_packpaths"] = packpaths
 
-    if op.records[treepackrecords]:
-        # If we received trees, force python hooks to operate in treeonly mode
-        # so they load only trees.
-        repo = op.repo
-        with repo.baseui.configoverride(
-            {("treemanifest", "treeonly"): True}
-        ), util.environoverride("HG_HOOK_BUNDLEPATH", bundlefile), util.environoverride(
-            "HG_HOOK_PACKPATHS", packpaths
-        ):
-            brepo = hg.repository(repo.ui, repo.root)
-            brepo.hook("prepushrebase", throw=True, **prelockrebaseargs)
-    else:
-        op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
+    op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
 
     revs = list(bundle.revs("bundle()"))
     changegroup.checkrevs(bundle, revs)
