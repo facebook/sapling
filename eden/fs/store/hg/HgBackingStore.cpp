@@ -94,7 +94,7 @@ Importer& getThreadLocalImporter() {
 }
 
 ObjectId hashFromRootId(const RootId& root) {
-  return hashFromThrift(root.value());
+  return hashFromHexThrift(root.value());
 }
 
 /**

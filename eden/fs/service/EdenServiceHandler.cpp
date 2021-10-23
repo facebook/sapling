@@ -1740,7 +1740,7 @@ void EdenServiceHandler::debugGetScmTree(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
-  auto id = hashFromThrift(*idStr);
+  auto id = hashFromHexThrift(*idStr);
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenServiceHandler::debugGetScmTree");
@@ -1775,7 +1775,7 @@ void EdenServiceHandler::debugGetScmBlob(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
-  auto id = hashFromThrift(*idStr);
+  auto id = hashFromHexThrift(*idStr);
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenServiceHandler::debugGetScmBlob");
@@ -1804,7 +1804,7 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
-  auto id = hashFromThrift(*idStr);
+  auto id = hashFromHexThrift(*idStr);
 
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenServiceHandler::debugGetScmBlobMetadata");

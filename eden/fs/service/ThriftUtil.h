@@ -60,25 +60,10 @@ inline std::string thriftHash20(const std::optional<Hash20>& hash) {
 /**
  * Convert thrift BinaryHash data type into a ObjectId.
  *
- * This allows the input to be either a 20-byte binary string, or a 40-byte
- * hexadecimal string.
+ * Input should be hex string.
  */
-inline ObjectId hashFromThrift(folly::StringPiece commitID) {
-  if (commitID.size() == ObjectId::RAW_SIZE) {
-    // This looks like 20 bytes of binary data.
-    return ObjectId(folly::ByteRange(folly::StringPiece(commitID)));
-  } else if (commitID.size() == 2 * ObjectId::RAW_SIZE) {
-    // This looks like 40 bytes of hexadecimal data.
-    return ObjectId(commitID);
-  } else {
-    throw newEdenError(
-        EINVAL,
-        EdenErrorType::ARGUMENT_ERROR,
-        "expected argument to be a 20-byte binary hash or "
-        "40-byte hexadecimal hash; got \"",
-        commitID,
-        "\"");
-  }
+inline ObjectId hashFromHexThrift(folly::StringPiece commitID) {
+  return ObjectId(commitID);
 }
 
 /**

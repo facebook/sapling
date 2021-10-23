@@ -193,9 +193,9 @@ void InodeMap::initializeFromTakeover(
         PathComponentPiece{*entry.name_ref()},
         *entry.isUnlinked_ref(),
         *entry.mode_ref(),
-        entry.hash_ref()->empty()
-            ? std::nullopt
-            : std::optional<ObjectId>{hashFromThrift(*entry.hash_ref())},
+        entry.hash_ref()->empty() ? std::nullopt
+                                  : std::optional<ObjectId>{folly::ByteRange{
+                                        folly::StringPiece{*entry.hash_ref()}}},
         folly::to<uint32_t>(*entry.numFsReferences_ref()));
   }
 
