@@ -86,7 +86,7 @@ impl HgIdHistoryStore for EdenApiHistoryStore {
 
 impl LocalStore for EdenApiHistoryStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.store.get_missing(keys)
+        Ok(keys.to_vec())
     }
 }
 

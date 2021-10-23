@@ -278,7 +278,7 @@ impl ReportingRemoteDataStore {
 
 impl LocalStore for ReportingRemoteDataStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.store.get_missing(keys)
+        Ok(keys.to_vec())
     }
 }
 

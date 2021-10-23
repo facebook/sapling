@@ -838,13 +838,7 @@ impl HgIdDataStore for PyRemoteDataStore {
 
 impl LocalStore for PyRemoteDataStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.0
-            .inner
-            .read()
-            .datastore
-            .as_ref()
-            .unwrap()
-            .get_missing(keys)
+        Ok(keys.to_vec())
     }
 }
 

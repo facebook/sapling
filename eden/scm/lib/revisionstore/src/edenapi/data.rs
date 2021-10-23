@@ -174,7 +174,7 @@ impl HgIdDataStore for EdenApiDataStore<Tree> {
 
 impl<T: EdenApiStoreKind> LocalStore for EdenApiDataStore<T> {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.store.get_missing(keys)
+        Ok(keys.to_vec())
     }
 }
 
@@ -356,7 +356,6 @@ mod tests {
             .single()?
             .expect("key not found");
         assert_eq!(fetched.aux_data().expect("no aux data found"), expected);
-
 
         // Content shouldn't have been cached
         assert_eq!(cache.get_entry(k.clone())?, None);

@@ -243,7 +243,7 @@ impl HgIdMutableDeltaStore for MemcacheHgIdDataStore {
 
 impl LocalStore for MemcacheHgIdDataStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.store.get_missing(keys)
+        Ok(keys.to_vec())
     }
 }
 
@@ -347,7 +347,7 @@ impl HgIdMutableHistoryStore for MemcacheHgIdHistoryStore {
 
 impl LocalStore for MemcacheHgIdHistoryStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.store.get_missing(keys)
+        Ok(keys.to_vec())
     }
 }
 
