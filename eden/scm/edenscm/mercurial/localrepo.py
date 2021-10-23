@@ -2649,7 +2649,7 @@ class localrepository(object):
                 linkrev = len(self)
                 self.ui.note(_("committing files:\n"))
                 # Prefetch rename data, since _filecommit will look for it.
-                if util.safehasattr(self.fileslog, 'metadatastore'):
+                if util.safehasattr(self.fileslog, "metadatastore"):
                     keys = []
                     for f in added:
                         fctx = ctx[f]
