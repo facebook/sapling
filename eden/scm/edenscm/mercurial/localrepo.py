@@ -429,7 +429,6 @@ class localrepository(object):
         self.nofsauditor = pathutil.pathauditor(self.root, realfs=False, cached=True)
         self.baseui = baseui
         self.ui = baseui.copy()
-        self.ui.copy = baseui.copy  # prevent copying repo configuration
         self.localvfs = vfsmod.vfs(self.path, cacheaudited=True)
         if self.ui.configbool("devel", "all-warnings") or self.ui.configbool(
             "devel", "check-locks"

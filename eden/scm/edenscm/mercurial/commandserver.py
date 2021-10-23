@@ -261,9 +261,7 @@ class server(object):
         uis = [copiedui]
         if self.repo:
             self.repo.baseui = copiedui
-            # clone ui without using ui.copy because this is protected
-            repoui = self.repoui.__class__(self.repoui)
-            repoui.copy = copiedui.copy  # type: ignore , redo copy protection
+            repoui = self.repoui.copy()
             uis.append(repoui)
             self.repo.ui = self.repo.dirstate._ui = repoui
             self.repo.invalidateall()
