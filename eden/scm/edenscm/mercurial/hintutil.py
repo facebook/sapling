@@ -40,6 +40,10 @@ hinttable = {
     "old-version": lambda: _(
         "WARNING! You are running an old version of Mercurial. Please upgrade your installation."
     ),
+    "date-revset": lambda ds, top: _(
+        'date("%s") performs a slow scan. Consider bsearch(date(">%s"),%s) instead.'
+    )
+    % (ds, ds, top),
 }
 messages = []
 triggered = set()

@@ -969,6 +969,10 @@ def date(repo, subset, x):
     # i18n: "date" is a keyword
     ds = getstring(x, _("date requires a string"))
     dm = util.matchdate(ds)
+    # suggest bsearch if the scan is probably going to be slow
+    # 86400: within a day, like date("2020-2-2")
+    if dm.end[0] - dm.start[0] <= 86400 and (subset.fastlen() or 0) > 10000:
+        hintutil.triggershow(repo.ui, "date-revset", ds, bookmarks.mainbookmark(repo))
     return subset.prefetch("text").filter(
         lambda x: dm(repo[x].date()[0]), condrepr=("<date %r>", ds)
     )
