@@ -69,18 +69,6 @@ def show(ui):
     """Show all triggered hint messages"""
     if ui.plain("hint"):
         return
-    acked = ui.configlist("hint", "ack")
-    if acked == ["*"]:
-
-        def isacked(name):
-            return True
-
-    else:
-        acked = set(acked)
-
-        def isacked(name):
-            return name in acked or ui.configbool("hint", "ack-%s" % name)
-
     names = []
     if util.mainio.is_pager_active():
         # For stream pager, people expect hints to be at the end, not in a
@@ -91,10 +79,10 @@ def show(ui):
     else:
         write = ui.write_err
     for name, msg in messages:
-        if not isacked(name):
+        if not isacked(ui, name):
             write("%s\n" % msg.rstrip(), notice=_("hint[%s]") % name)
             names.append(name)
-    if names and not isacked("hint-ack"):
+    if names and not isacked(ui, "hint-ack"):
         msg = _("use 'hg hint --ack %s' to silence these hints\n") % " ".join(names)
         write(msg, notice=_("hint[%s]") % "hint-ack")
     messages[:] = []
@@ -119,3 +107,11 @@ def clear():
     """Clear all triggered hints"""
     triggered.clear()
     del messages[:]
+
+
+def isacked(ui, name):
+    acked = ui.configlist("hint", "ack")
+    if "*" in acked:
+        return True
+    else:
+        return name in acked or ui.configbool("hint", "ack-%s" % name)
