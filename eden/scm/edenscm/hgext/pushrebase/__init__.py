@@ -1386,7 +1386,7 @@ def _createpackstore(ui, packpath):
 
 
 def _createbundlerepo(op, bundlepath):
-    bundle = hg.repository(op.repo.ui, bundlepath)
+    bundle = hg.repository(op.repo.baseui, bundlepath)
 
     # Create stores for any received pack files
     if op.records[treepackrecords]:
