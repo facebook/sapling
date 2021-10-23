@@ -65,6 +65,19 @@ def trigger(name, *args, **kwargs):
             messages.append((name, msg.rstrip()))
 
 
+def triggershow(ui, name, *args, **kwargs):
+    """Trigger a hint message and show it immediately. Useful for warning
+    things that might be slow before running the slow operation.
+    """
+    assert not isinstance(ui, str)
+    func = hinttable.get(name)
+    if func and name not in triggered and not isacked(ui, name):
+        triggered.add(name)
+        if not ui.plain("hint"):
+            msg = func(*args, **kwargs)
+            ui.write_err("%s\n" % msg.rstrip(), notice=_("hint[%s]") % name)
+
+
 def show(ui):
     """Show all triggered hint messages"""
     if ui.plain("hint"):
