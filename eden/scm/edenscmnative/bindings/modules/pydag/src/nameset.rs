@@ -80,6 +80,17 @@ py_class!(pub class nameset |py| {
         self.iter(py)
     }
 
+    def __getitem__(&self, n: i64) -> PyResult<Option<PyBytes>> {
+        let n = if n < 0 {
+            ((self.__len__(py)? as i64) + n) as u64
+        } else {
+            n as u64
+        };
+        let inner = self.inner(py);
+        let set = inner.skip(n);
+        Ok(block_on(set.first()).map_pyerr(py)?.map(|name| PyBytes::new(py, name.as_ref())))
+    }
+
     def iterrev(&self) -> PyResult<nameiter> {
         let iter = block_on(self.inner(py).clone().iter_rev()).map_pyerr(py)?;
         let iter: RefCell<BoxVertexStream> = RefCell::new(iter);
