@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::env;
 use std::fs::File;
 use std::io;
@@ -633,6 +634,12 @@ fn setup_http(config: &ConfigSet, global_opts: &HgGlobalOpts) {
         unix_socket_path: config
             .get_nonempty_opt("auth_proxy", "unix_socket_path")
             .expect("Can't get auth_proxy.unix_socket_path config"),
+        unix_socket_domains: HashSet::from_iter(
+            config
+                .get_or("auth_proxy", "unix_socket_domains", Vec::new)
+                .unwrap_or_else(|_| vec![])
+                .into_iter(),
+        ),
     };
     hg_http::set_global_config(http_config);
 }

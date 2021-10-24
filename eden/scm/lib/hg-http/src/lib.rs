@@ -10,6 +10,7 @@
 //! a topic should be treated. Topics may include monitoring, request setup,
 //! paths, error handling, etc.
 
+use std::collections::HashSet;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 
@@ -55,6 +56,7 @@ pub struct HgHttpConfig {
     pub convert_cert: bool,
     pub client_info: Option<String>,
     pub unix_socket_path: Option<String>,
+    pub unix_socket_domains: HashSet<String>,
 }
 
 /// Set a global configuration that will be applied to all HTTP requests in
@@ -64,12 +66,17 @@ pub fn set_global_config(config: HgHttpConfig) {
         tracing::warn!("--insecure flag specified; server TLS certificate will not be verified");
     }
 
+
     Request::on_new_request(move |req| {
+        if let Some(domain) = req.ctx().url().domain() {
+            if config.unix_socket_domains.contains(domain) {
+                req.set_auth_proxy_socket_path(config.unix_socket_path.clone());
+            }
+        }
         req.set_verify_tls_cert(!config.disable_tls_verification)
             .set_verify_tls_host(!config.disable_tls_verification)
             .set_client_info(&config.client_info)
             .set_verbose(config.verbose)
-            .set_auth_proxy_socket_path(config.unix_socket_path.clone())
             .set_convert_cert(config.convert_cert);
     });
 }
