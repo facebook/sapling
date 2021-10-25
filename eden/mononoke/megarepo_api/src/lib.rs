@@ -30,6 +30,7 @@ use mononoke_api::Mononoke;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_renames::MutableRenames;
 use parking_lot::Mutex;
+use remerge_source::RemergeSource;
 use repo_factory::RepoFactory;
 use repo_identity::{ArcRepoIdentity, RepoIdentity};
 use requests_table::LongRunningRequestsQueue;
@@ -51,6 +52,9 @@ mod change_target_config_test;
 mod common;
 #[cfg(test)]
 mod megarepo_test_utils;
+mod remerge_source;
+#[cfg(test)]
+mod remerge_source_test;
 mod sync_changeset;
 
 /// A cache for AsyncMethodRequestQueue instances
@@ -480,6 +484,34 @@ impl MegarepoApi {
         );
 
         self.call_and_log(ctx, &target, Some(&version), fut, "change_target_config")
+            .await
+    }
+
+    pub async fn remerge_source(
+        &self,
+        ctx: &CoreContext,
+        source_name: String,
+        remerge_cs_id: ChangesetId,
+        message: Option<String>,
+        target: &Target,
+        target_location: ChangesetId,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let mutable_renames = self.mutable_renames(ctx, &target).await?;
+        let remerge_source =
+            RemergeSource::new(&self.megarepo_configs, &self.mononoke, &mutable_renames);
+
+        let source_name = SourceName(source_name);
+
+        let fut = remerge_source.run(
+            ctx,
+            &source_name,
+            remerge_cs_id,
+            message,
+            target,
+            target_location,
+        );
+
+        self.call_and_log(ctx, &target, None, fut, "remerge_source")
             .await
     }
 }

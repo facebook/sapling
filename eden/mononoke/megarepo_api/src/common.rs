@@ -1207,6 +1207,24 @@ pub(crate) async fn find_target_bookmark_and_value(
     find_bookmark_and_value(ctx, target_repo, &target.bookmark).await
 }
 
+pub fn find_source_config<'a, 'b>(
+    source_name: &'a SourceName,
+    target_config: &'b SyncTargetConfig,
+) -> Result<&'b Source, MegarepoError> {
+    let mut maybe_source_config = None;
+    for source in &target_config.sources {
+        if source_name.as_str() == source.source_name {
+            maybe_source_config = Some(source);
+            break;
+        }
+    }
+    let source_config = maybe_source_config.ok_or_else(|| {
+        MegarepoError::request(anyhow!("config for source {} not found", source_name))
+    })?;
+
+    Ok(source_config)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -6,8 +6,8 @@
  */
 
 use crate::common::{
-    find_bookmark_and_value, find_target_bookmark_and_value, find_target_sync_config, MegarepoOp,
-    SourceAndMovedChangesets,
+    find_bookmark_and_value, find_source_config, find_target_bookmark_and_value,
+    find_target_sync_config, MegarepoOp, SourceAndMovedChangesets,
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -20,7 +20,7 @@ use commit_transformation::{
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
 use megarepo_config::{
-    MononokeMegarepoConfigs, Source, SourceMappingRules, SourceRevision, SyncTargetConfig, Target,
+    MononokeMegarepoConfigs, Source, SourceMappingRules, SourceRevision, Target,
 };
 use megarepo_error::MegarepoError;
 use megarepo_mapping::{CommitRemappingState, MegarepoMapping, SourceName};
@@ -282,24 +282,6 @@ impl<'a> SyncChangeset<'a> {
 
         Ok(actual_target_location)
     }
-}
-
-fn find_source_config<'a, 'b>(
-    source_name: &'a SourceName,
-    target_config: &'b SyncTargetConfig,
-) -> Result<&'b Source, MegarepoError> {
-    let mut maybe_source_config = None;
-    for source in &target_config.sources {
-        if source_name.as_str() == source.source_name {
-            maybe_source_config = Some(source);
-            break;
-        }
-    }
-    let source_config = maybe_source_config.ok_or_else(|| {
-        MegarepoError::request(anyhow!("config for source {} not found", source_name))
-    })?;
-
-    Ok(source_config)
 }
 
 // We allow syncing changeset from a source if one of its parents was the latest synced changeset
