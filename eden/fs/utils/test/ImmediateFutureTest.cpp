@@ -405,3 +405,48 @@ TEST(ImmediateFuture, collectAllTupleSemiReady) {
   EXPECT_EQ(std::get<0>(res).value(), 42);
   EXPECT_EQ(std::get<1>(res).value(), 43);
 }
+
+TEST(ImmediateFuture, collectAllSafe) {
+  auto f1 = ImmediateFuture<int>{42};
+  auto f2 = ImmediateFuture<float>{
+      folly::Try<float>{std::logic_error("Test exception")}};
+
+  auto future = collectAllSafe(std::move(f1), std::move(f2));
+  EXPECT_TRUE(future.isReady());
+
+  EXPECT_THROW_RE(std::move(future).get(), std::logic_error, "Test exception");
+}
+
+TEST(ImmediateFuture, collectAllSafeError) {
+  auto [promise1, semiFut1] = folly::makePromiseContract<int>();
+  auto [promise2, semiFut2] = folly::makePromiseContract<int>();
+
+  auto f1 = ImmediateFuture{std::move(semiFut1)};
+  auto f2 = ImmediateFuture{std::move(semiFut2)};
+
+  auto future = collectAllSafe(std::move(f1), std::move(f2))
+                    .semi()
+                    .via(&folly::QueuedImmediateExecutor::instance());
+  EXPECT_FALSE(future.isReady());
+
+  promise1.setException(std::logic_error("Test"));
+  EXPECT_FALSE(future.isReady());
+
+  promise2.setValue(42);
+  EXPECT_TRUE(future.isReady());
+
+  auto res = std::move(future).getTry();
+  EXPECT_THROW_RE(res.value(), std::logic_error, "Test");
+}
+
+TEST(ImmediateFuture, collectAllSafeValid) {
+  auto f1 = ImmediateFuture<int>{42};
+  auto f2 = ImmediateFuture<float>{42.};
+
+  auto future = collectAllSafe(std::move(f1), std::move(f2));
+  EXPECT_TRUE(future.isReady());
+
+  auto res = std::move(future).get();
+  EXPECT_EQ(std::get<int>(res), 42);
+  EXPECT_EQ(std::get<float>(res), 42.);
+}

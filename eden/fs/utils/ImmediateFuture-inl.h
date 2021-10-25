@@ -328,4 +328,14 @@ collectAll(Fs&&... fs) {
   return future;
 }
 
+template <typename... Fs>
+ImmediateFuture<std::tuple<typename folly::remove_cvref_t<Fs>::value_type...>>
+collectAllSafe(Fs&&... fs) {
+  return collectAll(static_cast<Fs&&>(fs)...)
+      .thenValue(
+          [](std::tuple<
+              folly::Try<typename folly::remove_cvref_t<Fs>::value_type>...>&&
+                 res) { return unwrapTryTuple(std::move(res)); });
+}
+
 } // namespace facebook::eden

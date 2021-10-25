@@ -276,6 +276,20 @@ ImmediateFuture<
     std::tuple<folly::Try<typename folly::remove_cvref_t<Fs>::value_type>...>>
 collectAll(Fs&&... fs);
 
+/**
+ * Run all the passed in ImmediateFuture to completion.
+ *
+ * This behaves similarly to the collectAll from above, but unwraps all the
+ * individual folly::Try. In that case, the returned ImmediateFuture will hold
+ * the error.
+ *
+ * Even in the case of errors, the returned ImmediateFuture will only complete
+ * when all the passed in ImmediateFuture have completed.
+ */
+template <typename... Fs>
+ImmediateFuture<std::tuple<typename folly::remove_cvref_t<Fs>::value_type...>>
+collectAllSafe(Fs&&... fs);
+
 } // namespace facebook::eden
 
 #include "eden/fs/utils/ImmediateFuture-inl.h"
