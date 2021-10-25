@@ -22,8 +22,8 @@ class Process {
       std::string* out,
       std::string* err,
       int64_t timeoutMsecs = 0) {
-          return true;
-      }
+    return true;
+  }
 };
 
 } // namespace process

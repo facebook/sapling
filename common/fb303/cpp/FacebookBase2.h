@@ -18,7 +18,8 @@ namespace folly {
 class EventBaseManager;
 }
 
-namespace facebook { namespace fb303 {
+namespace facebook {
+namespace fb303 {
 
 enum ThriftFuncAction {
   FIRST_ACTION = 0,
@@ -32,7 +33,8 @@ enum ThriftFuncAction {
 
 class FacebookBase2 : virtual public cpp2::FacebookServiceSvIf {
   time_t startTime;
-public:
+
+ public:
   explicit FacebookBase2(const char*) {
     startTime = time(nullptr);
   }
@@ -41,7 +43,7 @@ public:
 
   int64_t aliveSince() override {
     // crude implementation because QsfpCache depends on it
-    return (uint64_t) startTime;
+    return (uint64_t)startTime;
   }
 
   int64_t getPid() override {
@@ -54,8 +56,7 @@ public:
       folly::small_vector<int> /*percentiles*/,
       int64_t /*bucketSize*/,
       int64_t /*min*/,
-      int64_t /*max*/) {
-  }
+      int64_t /*max*/) {}
 
   void exportThriftFuncHist(
       const std::string& funcName,
@@ -74,4 +75,5 @@ public:
   }
 };
 
-}}
+} // namespace fb303
+} // namespace facebook

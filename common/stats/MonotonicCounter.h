@@ -14,7 +14,8 @@
 #include <fb303/ExportedStatMapImpl.h>
 #include <folly/Range.h>
 
-namespace facebook { namespace stats {
+namespace facebook {
+namespace stats {
 
 class MonotonicCounter {
  public:
@@ -29,4 +30,5 @@ class MonotonicCounter {
     return kName;
   }
 };
-}}
+} // namespace stats
+} // namespace facebook

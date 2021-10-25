@@ -22,7 +22,6 @@ class NetworkUtil {
       bool disableIpv6 = false) {
     return "";
   }
-
 };
 } // namespace network
 } // namespace facebook

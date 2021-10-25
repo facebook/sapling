@@ -11,6 +11,5 @@
 
 // TODO: actually implement this
 #ifndef VLOG_EVERY_MS
-#define VLOG_EVERY_MS(verboselevel, ms)     \
-  VLOG(verboselevel)
+#define VLOG_EVERY_MS(verboselevel, ms) VLOG(verboselevel)
 #endif
