@@ -8,6 +8,8 @@
 use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobrepo_hg::BlobRepoHg;
+use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use commit_transformation::{
@@ -17,15 +19,19 @@ use commit_transformation::{
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::{stream, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{
+    future::{try_join, try_join_all},
+    stream, StreamExt, TryFutureExt, TryStreamExt,
+};
 use itertools::{EitherOrBoth, Itertools};
-use manifest::{Entry, ManifestOps};
+use manifest::{bonsai_diff, BonsaiDiffFileChange, Entry, ManifestOps};
 use megarepo_config::{
     MononokeMegarepoConfigs, Source, SourceRevision, SyncConfigVersion, SyncTargetConfig, Target,
 };
 use megarepo_error::MegarepoError;
 use megarepo_mapping::{CommitRemappingState, SourceName};
-use mononoke_api::{Mononoke, RepoContext};
+use mercurial_types::HgFileNodeId;
+use mononoke_api::{ChangesetContext, Mononoke, MononokePath, RepoContext};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath,
     RepositoryId,
@@ -33,7 +39,7 @@ use mononoke_types::{
 use mutable_renames::{MutableRenameEntry, MutableRenames};
 use reachabilityindex::LeastCommonAncestorsHint;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 use tunables::tunables;
 use unodes::RootUnodeManifestId;
@@ -61,6 +67,301 @@ pub trait MegarepoOp {
             .map_err(MegarepoError::internal)?
             .ok_or_else(|| MegarepoError::request(anyhow!("repo not found {}", target_repo_id)))?;
         Ok(target_repo)
+    }
+
+    // In this diff we want to apply all file removals and add all the new
+    // file additions from additions_merge commit.
+    // The easiest way to do it is to create a deletion commit on top of
+    // target commit and then merge it with `additions_merge` commit.
+    // The problem is that deletion commit would be a broken commit
+    // on the mainline, which can affect things like bisects.
+    // To avoid having this deletion commit in the main line of development
+    // we do the following:
+    // 1) Produce a merge commit whose parents are additions_merge and deletion commit
+    //
+    //     M1
+    //     | \
+    //    Del  Adds
+    //     |
+    //   Old target
+    //
+    // 2) Use merge commit's manifest to produce a new bonsai commit merge whose parent is not
+    //    a deletion commit.
+    //
+    //     M2
+    //     | \
+    //     |  Adds
+    //     |
+    //    Old target
+    async fn create_final_merge_commit_with_removals(
+        &self,
+        ctx: &CoreContext,
+        repo: &RepoContext,
+        removed: &[(Source, ChangesetId)],
+        message: Option<String>,
+        additions_merge: &Option<ChangesetContext>,
+        old_target_cs: &ChangesetContext,
+        state: &CommitRemappingState,
+        new_version: Option<String>,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let mut all_removed_files = HashSet::new();
+        for (source, source_cs_id) in removed {
+            let paths_in_target_belonging_to_source = self
+                .paths_in_target_belonging_to_source(ctx, source, *source_cs_id)
+                .await?;
+            for path in &paths_in_target_belonging_to_source {
+                if let Some(path) = path.clone().into_mpath() {
+                    all_removed_files.insert(path);
+                }
+            }
+        }
+
+        let maybe_deletion_commit = if !all_removed_files.is_empty() {
+            Some(
+                self.create_deletion_commit(
+                    ctx,
+                    repo,
+                    old_target_cs,
+                    all_removed_files.clone(),
+                    new_version,
+                )
+                .await?,
+            )
+        } else {
+            None
+        };
+
+        let p1 = maybe_deletion_commit.unwrap_or(old_target_cs.id());
+
+        let mut parents = vec![p1];
+        // Verify that none of the files that will be merged in collides
+        // with what's already in the target.
+        if let Some(additions_merge) = additions_merge {
+            self.verify_no_file_conflicts(repo, additions_merge, p1)
+                .await?;
+
+            parents.push(additions_merge.id())
+        }
+
+        let mut bcs = BonsaiChangesetMut {
+            parents,
+            author: "svcscm".to_string(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: message
+                .clone()
+                .unwrap_or("target config change".to_string()),
+            extra: SortedVectorMap::new(),
+            file_changes: SortedVectorMap::new(),
+            is_snapshot: false,
+        };
+        state
+            .save_in_changeset(ctx, repo.blob_repo(), &mut bcs)
+            .await?;
+        let merge = bcs.freeze()?;
+        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo().clone()).await?;
+
+        // We don't want to have deletion commit on our mainline. So we'd like to create a new
+        // merge commit whose parent is not a deletion commit. For that we take the manifest
+        // from the merge commit we already have, and use bonsai_diff function to create a new
+        // merge commit, whose parent is not an old_target changeset, not a deletion commit.
+
+        let mut new_parents = vec![old_target_cs.id()];
+        if let Some(additions_merge) = additions_merge {
+            new_parents.push(additions_merge.id());
+        }
+
+        let result = self
+            .create_new_changeset_using_parents(
+                ctx,
+                repo,
+                merge.get_changeset_id(),
+                new_parents,
+                message,
+            )
+            .await?;
+
+        Ok(result)
+    }
+
+    async fn create_new_changeset_using_parents(
+        &self,
+        ctx: &CoreContext,
+        repo: &RepoContext,
+        merge_commit: ChangesetId,
+        new_parent_commits: Vec<ChangesetId>,
+        message: Option<String>,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let blob_repo = repo.blob_repo();
+        let hg_cs_merge = async {
+            let hg_cs_id = blob_repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), merge_commit)
+                .await?;
+            let hg_cs = hg_cs_id.load(ctx, blob_repo.blobstore()).await?;
+            Ok(hg_cs.manifestid())
+        };
+        let parent_hg_css = try_join_all(new_parent_commits.iter().map(|p| async move {
+            let hg_cs_id = blob_repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), *p)
+                .await?;
+            let hg_cs = hg_cs_id.load(ctx, blob_repo.blobstore()).await?;
+            Result::<_, Error>::Ok(hg_cs.manifestid())
+        }));
+
+        let (hg_cs_merge, parent_hg_css) = try_join(hg_cs_merge, parent_hg_css)
+            .await
+            .map_err(Error::from)?;
+
+        let file_changes = bonsai_diff(
+            ctx.clone(),
+            blob_repo.get_blobstore(),
+            hg_cs_merge,
+            parent_hg_css.into_iter().collect(),
+        )
+        .map_ok(|diff| async move {
+            match diff {
+                BonsaiDiffFileChange::Changed(path, ty, entry_id)
+                | BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
+                    let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
+                    let envelope = file_node_id.load(ctx, blob_repo.blobstore()).await?;
+                    let size = envelope.content_size();
+                    let content_id = envelope.content_id();
+
+                    Ok((path, FileChange::tracked(content_id, ty, size as u64, None)))
+                }
+                BonsaiDiffFileChange::Deleted(path) => Ok((path, FileChange::Deletion)),
+            }
+        })
+        .try_buffer_unordered(100)
+        .try_collect::<std::collections::BTreeMap<_, _>>()
+        .await?;
+
+        let bcs = BonsaiChangesetMut {
+            parents: new_parent_commits,
+            author: "svcscm".to_string(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: message.unwrap_or("target config change".to_string()),
+            extra: SortedVectorMap::new(),
+            file_changes: file_changes.into_iter().collect(),
+            is_snapshot: false,
+        };
+        let merge = bcs.freeze()?;
+        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo().clone()).await?;
+
+        Ok(merge.get_changeset_id())
+    }
+
+    async fn create_deletion_commit(
+        &self,
+        ctx: &CoreContext,
+        repo: &RepoContext,
+        old_target_cs: &ChangesetContext,
+        removed_files: HashSet<MPath>,
+        new_version: Option<String>,
+    ) -> Result<ChangesetId, MegarepoError> {
+        let file_changes = removed_files
+            .into_iter()
+            .map(|path| (path, FileChange::Deletion))
+            .collect();
+        let message = match new_version {
+            Some(new_version) => {
+                format!("Deletion commit for {}", new_version)
+            }
+            None => {
+                format!("Deletion commit")
+            }
+        };
+        let old_target_with_removed_files = BonsaiChangesetMut {
+            parents: vec![old_target_cs.id()],
+            author: "svcscm".to_string(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message,
+            extra: SortedVectorMap::new(),
+            file_changes,
+            is_snapshot: false,
+        };
+        let old_target_with_removed_files = old_target_with_removed_files.freeze()?;
+        save_bonsai_changesets(
+            vec![old_target_with_removed_files.clone()],
+            ctx.clone(),
+            repo.blob_repo().clone(),
+        )
+        .await?;
+
+        Ok(old_target_with_removed_files.get_changeset_id())
+    }
+
+
+    async fn verify_no_file_conflicts(
+        &self,
+        repo: &RepoContext,
+        additions_merge: &ChangesetContext,
+        p1: ChangesetId,
+    ) -> Result<(), MegarepoError> {
+        let p1 = repo
+            .changeset(p1)
+            .await?
+            .ok_or_else(|| anyhow!("p1 commit {} not found", p1))?;
+
+        // First find if any of the files from additions merge conflict
+        // with a file or a directory from the target - if target commit
+        // has these entries then we have a conflict
+        let additions = additions_merge
+            .find_files(None, None)
+            .await?
+            .map_err(MegarepoError::internal)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        p1.paths(additions.clone().into_iter())
+            .await?
+            .map_err(MegarepoError::internal)
+            .try_for_each({
+                async move |path_context| {
+                    Result::<(), _>::Err(MegarepoError::request(anyhow!(
+                        "path {} cannot be added to the target - it's already present",
+                        &path_context.path()
+                    )))
+                }
+            })
+            .await?;
+
+        // Now check if we have a file in target which has the same path
+        // as a directory in additions_merge i.e. detect file-dir conflit
+        // where file is from target and dir from additions_merge
+        let mut addition_prefixes = vec![];
+        for addition in additions {
+            for dir in addition.prefixes() {
+                addition_prefixes.push(dir);
+            }
+        }
+
+        p1.paths(addition_prefixes.into_iter())
+            .await?
+            .map_err(MegarepoError::internal)
+            .try_for_each({
+                |path_context| async move {
+                    // We got file/dir conflict - old target has a file
+                    // with the same path as a directory in merge commit with additions
+                    if path_context.is_file().await? {
+                        // TODO(stash): it would be good to show which file it conflicts with
+                        Result::<(), _>::Err(MegarepoError::request(anyhow!(
+                            "File in target path {} conflicts with newly added files",
+                            &path_context.path()
+                        )))
+                    } else {
+                        Ok(())
+                    }
+                }
+            })
+            .await?;
+
+        Ok(())
     }
 
     async fn create_single_move_commit(
@@ -136,6 +437,46 @@ pub trait MegarepoOp {
             mutable_renames,
         };
         Ok(source_and_moved_changeset)
+    }
+
+    // Return all paths from the given source as seen in target.
+    async fn paths_in_target_belonging_to_source(
+        &self,
+        ctx: &CoreContext,
+        source: &Source,
+        source_changeset_id: ChangesetId,
+    ) -> Result<HashSet<MononokePath>, MegarepoError> {
+        let source_repo = self.find_repo_by_id(ctx, source.repo_id).await?;
+        let mover = &create_source_to_target_multi_mover(source.mapping.clone())?;
+        let source_changeset = source_repo
+            .changeset(source_changeset_id)
+            .await?
+            .ok_or_else(|| MegarepoError::internal(anyhow!("changeset not found")))?;
+        let moved_paths: Vec<_> = source_changeset
+            .find_files(None, None)
+            .await
+            .map_err(MegarepoError::internal)?
+            .map_err(MegarepoError::internal)
+            .and_then(async move |path| {
+                Ok(mover(&path.into_mpath().ok_or_else(|| {
+                    MegarepoError::internal(anyhow!("mpath can't be null"))
+                })?)?)
+            })
+            .try_collect()
+            .await?;
+        let mut all_paths: HashSet<MononokePath> = moved_paths
+            .into_iter()
+            .flatten()
+            .map(|mpath| MononokePath::new(Some(mpath)))
+            .collect();
+        let linkfiles: HashSet<MononokePath> = source
+            .mapping
+            .linkfiles
+            .iter()
+            .map(|(dst, _src)| dst.try_into())
+            .try_collect()?;
+        all_paths.extend(linkfiles.into_iter());
+        Ok(all_paths)
     }
 
     async fn create_mutable_renames(
