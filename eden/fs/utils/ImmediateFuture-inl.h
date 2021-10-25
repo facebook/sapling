@@ -280,4 +280,52 @@ ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
           });
 }
 
+template <typename... Fs>
+ImmediateFuture<
+    std::tuple<folly::Try<typename folly::remove_cvref_t<Fs>::value_type>...>>
+collectAll(Fs&&... fs) {
+  using Result =
+      std::tuple<folly::Try<typename folly::remove_cvref_t<Fs>::value_type>...>;
+  struct Context {
+    ~Context() {
+      p.setValue(std::move(results));
+    }
+    folly::Promise<Result> p;
+    Result results;
+  };
+
+  auto future = [&]() {
+    std::vector<folly::SemiFuture<folly::Unit>> semis;
+
+    auto ctx = std::make_shared<Context>();
+    folly::futures::detail::foreach(
+        [&](auto i, auto&& f) {
+          if (f.isReady()) {
+            std::get<i.value>(ctx->results) = std::move(f).getTry();
+          } else {
+            semis.emplace_back(std::move(f).semi().defer([i, ctx](auto&& t) {
+              std::get<i.value>(ctx->results) = std::move(t);
+            }));
+          }
+        },
+        static_cast<Fs&&>(fs)...);
+
+    if (semis.empty()) {
+      // Since all the ImmediateFuture were ready, the Context hasn't been
+      // copied to any lambdas, and thus will be destroyed once this lambda
+      // returns. This will make the returned SemiFuture ready which the
+      // ImmediateFuture constructor will extract the value from.
+      return ctx->p.getSemiFuture();
+    }
+
+    return folly::collectAll(std::move(semis)).deferValue([ctx](auto&&) {
+      return ctx->p.getSemiFuture();
+    });
+  }();
+
+  // The SemiFuture constructor will extract the immediate value if the future
+  // isReady returns true.
+  return future;
+}
+
 } // namespace facebook::eden

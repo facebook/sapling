@@ -265,6 +265,17 @@ template <typename T>
 ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
     std::vector<ImmediateFuture<T>> futures);
 
+/**
+ * Run all the passed in ImmediateFuture to completion.
+ *
+ * This has the same behavior as the version taking a vector but returning a
+ * tuple of folly::Try.
+ */
+template <typename... Fs>
+ImmediateFuture<
+    std::tuple<folly::Try<typename folly::remove_cvref_t<Fs>::value_type>...>>
+collectAll(Fs&&... fs);
+
 } // namespace facebook::eden
 
 #include "eden/fs/utils/ImmediateFuture-inl.h"
