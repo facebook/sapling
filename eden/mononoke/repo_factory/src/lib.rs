@@ -696,9 +696,11 @@ impl RepoFactory {
         repo_config: &ArcRepoConfig,
         repo_identity: &ArcRepoIdentity,
     ) -> Result<ArcHgMutationStore> {
-        let hg_mutation_store = self
-            .open::<SqlHgMutationStoreBuilder>(&repo_config.storage_config.metadata)
-            .await
+        let sql_factory = self
+            .sql_factory(&repo_config.storage_config.metadata)
+            .await?;
+        let hg_mutation_store = sql_factory
+            .open::<SqlHgMutationStoreBuilder>()
             .context(RepoFactoryError::HgMutationStore)?
             .with_repo_id(repo_identity.id());
         Ok(Arc::new(hg_mutation_store))
