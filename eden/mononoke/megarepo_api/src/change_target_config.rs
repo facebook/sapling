@@ -262,12 +262,12 @@ impl<'a> ChangeTargetConfig<'a> {
             .create_final_merge_commit_with_removals(
                 ctx,
                 &target_repo,
-                &diff,
+                &diff.removed,
                 message,
                 &additions_merge,
                 &old_target_cs,
                 &new_remapping_state,
-                new_config.version,
+                Some(new_config.version),
             )
             .await?;
         let mut scuba = ctx.scuba().clone();
@@ -382,15 +382,15 @@ impl<'a> ChangeTargetConfig<'a> {
         &self,
         ctx: &CoreContext,
         repo: &RepoContext,
-        diff: &SyncTargetConfigChanges,
+        removed: &[(Source, ChangesetId)],
         message: Option<String>,
         additions_merge: &Option<ChangesetContext>,
         old_target_cs: &ChangesetContext,
         state: &CommitRemappingState,
-        new_version: String,
+        new_version: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
         let mut all_removed_files = HashSet::new();
-        for (source, source_cs_id) in &diff.removed {
+        for (source, source_cs_id) in removed {
             let paths_in_target_belonging_to_source = self
                 .paths_in_target_belonging_to_source(ctx, source, *source_cs_id)
                 .await?;
@@ -516,19 +516,27 @@ impl<'a> ChangeTargetConfig<'a> {
         repo: &RepoContext,
         old_target_cs: &ChangesetContext,
         removed_files: HashSet<MPath>,
-        new_version: String,
+        new_version: Option<String>,
     ) -> Result<ChangesetId, MegarepoError> {
         let file_changes = removed_files
             .into_iter()
             .map(|path| (path, FileChange::Deletion))
             .collect();
+        let message = match new_version {
+            Some(new_version) => {
+                format!("Deletion commit for {}", new_version)
+            }
+            None => {
+                format!("Deletion commit")
+            }
+        };
         let old_target_with_removed_files = BonsaiChangesetMut {
             parents: vec![old_target_cs.id()],
             author: "svcscm".to_string(),
             author_date: DateTime::now(),
             committer: None,
             committer_date: None,
-            message: format!("Deletion commit for {}", new_version),
+            message,
             extra: SortedVectorMap::new(),
             file_changes,
             is_snapshot: false,
