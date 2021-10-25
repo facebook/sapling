@@ -570,9 +570,10 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
 }
 
 fn prepare_repos_and_mapping() -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
-    let sqlite_con = SqliteConnection::open_in_memory()?;
-    sqlite_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
-    let mut factory = TestRepoFactory::with_sqlite_connection(sqlite_con)?;
+    let metadata_con = SqliteConnection::open_in_memory()?;
+    metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
+    let hg_mutation_con = SqliteConnection::open_in_memory()?;
+    let mut factory = TestRepoFactory::with_sqlite_connection(metadata_con, hg_mutation_con)?;
     let megarepo = factory.with_id(RepositoryId::new(1)).build()?;
     let small_repo = factory.with_id(RepositoryId::new(0)).build()?;
     let mapping =

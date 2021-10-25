@@ -79,6 +79,7 @@ pub struct TestRepoFactory {
     config: RepoConfig,
     blobstore: Arc<dyn Blobstore>,
     metadata_db: SqlConnectionsWithSchema,
+    hg_mutation_db: SqlConnectionsWithSchema,
     redacted: Option<Arc<RedactedBlobs>>,
     derived_data_lease: Option<Box<dyn Fn() -> Arc<dyn LeaseOps> + Send + Sync>>,
     filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
@@ -127,33 +128,43 @@ where
 impl TestRepoFactory {
     /// Create a new factory for test repositories with default settings.
     pub fn new() -> Result<TestRepoFactory> {
-        let con = SqliteConnection::open_in_memory()?;
-        Self::with_sqlite_connection(con)
+        Self::with_sqlite_connection(
+            SqliteConnection::open_in_memory()?,
+            SqliteConnection::open_in_memory()?,
+        )
     }
 
     /// Create a new factory for test repositories with an existing Sqlite
     /// connection.
-    pub fn with_sqlite_connection(con: SqliteConnection) -> Result<TestRepoFactory> {
-        con.execute_batch(MegarepoMapping::CREATION_QUERY)?;
-        con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
-        con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
-        con.execute_batch(SqlChangesetsBuilder::CREATION_QUERY)?;
-        con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
-        con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
-        con.execute_batch(SqlBonsaiSvnrevMapping::CREATION_QUERY)?;
-        con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
-        con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
-        con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
-        con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
-        con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
-        con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
-        let metadata_db = SqlConnectionsWithSchema::new_single(Connection::with_sqlite(con));
+    pub fn with_sqlite_connection(
+        metadata_con: SqliteConnection,
+        hg_mutation_con: SqliteConnection,
+    ) -> Result<TestRepoFactory> {
+        metadata_con.execute_batch(MegarepoMapping::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlChangesetsBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBonsaiSvnrevMapping::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
+        let metadata_db =
+            SqlConnectionsWithSchema::new_single(Connection::with_sqlite(metadata_con));
+
+        hg_mutation_con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
+        let hg_mutation_db =
+            SqlConnectionsWithSchema::new_single(Connection::with_sqlite(hg_mutation_con));
 
         Ok(TestRepoFactory {
             name: "repo".to_string(),
             config: default_test_repo_config(),
             blobstore: Arc::new(Memblob::default()),
             metadata_db,
+            hg_mutation_db,
             redacted: None,
             derived_data_lease: None,
             filenodes_override: None,
@@ -347,11 +358,11 @@ impl TestRepoFactory {
         Ok(filenodes)
     }
 
-    /// Construct Mercurial Mutation Store using the in-memory metadata
+    /// Construct Mercurial Mutation Store using the in-memory hg_mutation
     /// database.
     pub fn hg_mutation_store(&self, repo_identity: &ArcRepoIdentity) -> Result<ArcHgMutationStore> {
         Ok(Arc::new(
-            SqlHgMutationStoreBuilder::from_sql_connections(self.metadata_db.clone().into())
+            SqlHgMutationStoreBuilder::from_sql_connections(self.hg_mutation_db.clone().into())
                 .with_repo_id(repo_identity.id()),
         ))
     }

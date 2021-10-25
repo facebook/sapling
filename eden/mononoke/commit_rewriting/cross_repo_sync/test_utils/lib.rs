@@ -124,9 +124,10 @@ fn identity_mover(p: &MPath) -> Result<Option<MPath>, Error> {
 pub async fn init_small_large_repo(
     ctx: &CoreContext,
 ) -> Result<(Syncers<SqlSyncedCommitMapping>, CommitSyncConfig), Error> {
-    let sqlite_con = SqliteConnection::open_in_memory()?;
-    sqlite_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
-    let mut factory = TestRepoFactory::with_sqlite_connection(sqlite_con)?;
+    let metadata_con = SqliteConnection::open_in_memory()?;
+    metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
+    let hg_mutation_con = SqliteConnection::open_in_memory()?;
+    let mut factory = TestRepoFactory::with_sqlite_connection(metadata_con, hg_mutation_con)?;
     let megarepo: BlobRepo = factory.with_id(RepositoryId::new(1)).build()?;
     let mapping =
         SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());
