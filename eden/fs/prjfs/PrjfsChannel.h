@@ -36,9 +36,7 @@ class PrjfsChannelInner {
   PrjfsChannelInner(
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
-      ProcessAccessLog& processAccessLog,
-      folly::Duration requestTimeout,
-      Notifications* notifications);
+      ProcessAccessLog& processAccessLog);
 
   ~PrjfsChannelInner() = default;
 
@@ -239,9 +237,6 @@ class PrjfsChannelInner {
   // its lifetime be longer than that of PrjfsChannelInner.
   ProcessAccessLog& processAccessLog_;
 
-  const folly::Duration requestTimeout_;
-  Notifications* const notifications_;
-
   // Set of currently active directory enumerations.
   folly::Synchronized<folly::F14FastMap<Guid, std::shared_ptr<Enumerator>>>
       enumSessions_;
@@ -259,8 +254,6 @@ class PrjfsChannel {
       std::unique_ptr<PrjfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
-      folly::Duration requestTimeout,
-      Notifications* notifications,
       Guid guid);
 
   ~PrjfsChannel();

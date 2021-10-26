@@ -1468,9 +1468,6 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                      EdenDispatcherFactory::makePrjfsDispatcher(this),
                      &getStraceLogger(),
                      serverState_->getProcessNameCache(),
-                     std::chrono::duration_cast<folly::Duration>(
-                         edenConfig->prjfsRequestTimeout.getValue()),
-                     serverState_->getNotifications(),
                      getCheckoutConfig()->getRepoGuid());
                  channel->start(
                      readOnly,

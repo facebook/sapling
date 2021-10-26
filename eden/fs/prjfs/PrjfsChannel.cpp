@@ -156,14 +156,10 @@ HRESULT notification(
 PrjfsChannelInner::PrjfsChannelInner(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
-    ProcessAccessLog& processAccessLog,
-    folly::Duration requestTimeout,
-    Notifications* notifications)
+    ProcessAccessLog& processAccessLog)
     : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
-      processAccessLog_(processAccessLog),
-      requestTimeout_(requestTimeout),
-      notifications_(notifications) {}
+      processAccessLog_(processAccessLog) {}
 
 HRESULT PrjfsChannelInner::startEnumeration(
     std::shared_ptr<PrjfsRequestContext> context,
@@ -172,29 +168,26 @@ HRESULT PrjfsChannelInner::startEnumeration(
   auto guid = Guid(*enumerationId);
   auto path = RelativePath(callbackData->FilePathName);
 
-  auto fut =
-      folly::makeFutureWith([this,
-                             context,
-                             guid = std::move(guid),
-                             path = std::move(path)]() mutable {
-        auto requestWatch =
-            std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
-                nullptr);
-        auto stat = &ChannelThreadStats::openDir;
-        context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+  auto fut = folly::makeFutureWith([this,
+                                    context,
+                                    guid = std::move(guid),
+                                    path = std::move(path)]() mutable {
+    auto requestWatch =
+        std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+    auto stat = &ChannelThreadStats::openDir;
+    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
-        FB_LOGF(getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
-        return dispatcher_->opendir(std::move(path), *context)
-            .thenValue([this,
-                        context = std::move(context),
-                        guid = std::move(guid)](auto&& dirents) {
-              addDirectoryEnumeration(std::move(guid), std::move(dirents));
-              context->sendSuccess();
-            });
-      }).within(requestTimeout_);
+    FB_LOGF(getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
+    return dispatcher_->opendir(std::move(path), *context)
+        .thenValue([this, context = std::move(context), guid = std::move(guid)](
+                       auto&& dirents) {
+          addDirectoryEnumeration(std::move(guid), std::move(dirents));
+          context->sendSuccess();
+        });
+  });
 
-  context->catchErrors(std::move(fut), notifications_)
-      .ensure([context = std::move(context)] {});
+  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
+  });
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -264,7 +257,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
       auto fileInfo = PRJ_FILE_BASIC_INFO();
 
       fileInfo.IsDirectory = entry->isDirectory;
-      fileInfo.FileSize = entry->getSize().get(requestTimeout_);
+      fileInfo.FileSize = entry->getSize().get();
 
       XLOGF(
           DBG6,
@@ -296,8 +289,8 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     return folly::makeFuture(folly::unit);
   });
 
-  context->catchErrors(std::move(fut), notifications_)
-      .ensure([context = std::move(context)] {});
+  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
+  });
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -308,11 +301,8 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
   auto path = RelativePath(callbackData->FilePathName);
   auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
-  auto fut =
-      folly::makeFutureWith([this,
-                             context,
-                             path = std::move(path),
-                             virtualizationContext]() mutable {
+  auto fut = folly::makeFutureWith(
+      [this, context, path = std::move(path), virtualizationContext]() mutable {
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
@@ -356,10 +346,10 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
 
               return folly::makeFuture(folly::unit);
             });
-      }).within(requestTimeout_);
+      });
 
-  context->catchErrors(std::move(fut), notifications_)
-      .ensure([context = std::move(context)] {});
+  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
+  });
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -385,10 +375,10 @@ HRESULT PrjfsChannelInner::queryFileName(
                 context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
               }
             });
-      }).within(requestTimeout_);
+      });
 
-  context->catchErrors(std::move(fut), notifications_)
-      .ensure([context = std::move(context)] {});
+  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
+  });
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -479,15 +469,14 @@ HRESULT PrjfsChannelInner::getFileData(
     const PRJ_CALLBACK_DATA* callbackData,
     UINT64 byteOffset,
     UINT32 length) {
-  auto fut =
-      folly::makeFutureWith([this,
-                             context,
-                             path = RelativePath(callbackData->FilePathName),
-                             virtualizationContext =
-                                 callbackData->NamespaceVirtualizationContext,
-                             dataStreamId = Guid(callbackData->DataStreamId),
-                             byteOffset,
-                             length]() mutable {
+  auto fut = folly::makeFutureWith(
+      [this,
+       context,
+       path = RelativePath(callbackData->FilePathName),
+       virtualizationContext = callbackData->NamespaceVirtualizationContext,
+       dataStreamId = Guid(callbackData->DataStreamId),
+       byteOffset,
+       length]() mutable {
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
@@ -570,10 +559,10 @@ HRESULT PrjfsChannelInner::getFileData(
                 context->sendSuccess();
               }
             });
-      }).within(requestTimeout_);
+      });
 
-  context->catchErrors(std::move(fut), notifications_)
-      .ensure([context = std::move(context)] {});
+  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
+  });
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -816,8 +805,8 @@ HRESULT PrjfsChannelInner::notification(
           });
     });
 
-    context->catchErrors(std::move(fut), notifications_)
-        .ensure([context = std::move(context)] {});
+    context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
+    });
 
     return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   }
@@ -856,8 +845,6 @@ PrjfsChannel::PrjfsChannel(
     std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
-    folly::Duration requestTimeout,
-    Notifications* notifications,
     Guid guid)
     : mountPath_(mountPath),
       mountId_(std::move(guid)),
@@ -866,9 +853,7 @@ PrjfsChannel::PrjfsChannel(
           *prjfsRcuDomain,
           std::move(dispatcher),
           straceLogger,
-          processAccessLog_,
-          requestTimeout,
-          notifications) {}
+          processAccessLog_) {}
 
 PrjfsChannel::~PrjfsChannel() {
   XCHECK(stopPromise_.isFulfilled())
