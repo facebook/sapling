@@ -72,13 +72,67 @@ impl DerivedDataManager {
         derived_data_scuba.log_with_msg(tag, error_str);
     }
 
+    /// Log the start of batch derivation to both the request and derived data
+    /// scuba tables.
+    pub(super) fn log_batch_derivation_start<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        derived_data_scuba: &mut MononokeScubaSampleBuilder,
+        csid_range: Option<(ChangesetId, ChangesetId)>,
+    ) where
+        Derivable: BonsaiDerivable,
+    {
+        if let Some((first, last)) = csid_range {
+            let tag = "Generating derived data batch";
+            ctx.scuba()
+                .clone()
+                .log_with_msg(tag, Some(format!("{} {}-{}", Derivable::NAME, first, last)));
+            derived_data_scuba.log_with_msg(tag, None);
+        }
+    }
+
+    /// Log the end of derivation to both the request and derived data scuba
+    /// tables.
+    pub(super) fn log_batch_derivation_end<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        derived_data_scuba: &mut MononokeScubaSampleBuilder,
+        csid_range: Option<(ChangesetId, ChangesetId)>,
+        stats: &FutureStats,
+        error: Option<&Error>,
+    ) where
+        Derivable: BonsaiDerivable,
+    {
+        if let Some((first, last)) = csid_range {
+            let (tag, error_str) = match error {
+                None => ("Generated derived data batch", None),
+                Some(error) => (
+                    "Failed to generate derived data batch",
+                    Some(format!("{:#}", error)),
+                ),
+            };
+
+            let mut ctx_scuba = ctx.scuba().clone();
+            ctx_scuba.add_future_stats(&stats);
+            if let Some(error_str) = &error_str {
+                ctx_scuba.add("Derive error", error_str.as_str());
+            };
+            ctx_scuba.log_with_msg(tag, Some(format!("{} {}-{}", Derivable::NAME, first, last)));
+
+            ctx.perf_counters().insert_perf_counters(derived_data_scuba);
+
+            derived_data_scuba.add_future_stats(&stats);
+            derived_data_scuba.log_with_msg(tag, error_str);
+        }
+    }
+
     /// Log the insertion of a new derived data mapping to the derived data
     /// scuba table.
     pub(super) fn log_mapping_insertion<Derivable>(
         &self,
         ctx: &CoreContext,
         derived_data_scuba: &mut MononokeScubaSampleBuilder,
-        value: &Derivable,
+        value: Option<&Derivable>,
         stats: &FutureStats,
         error: Option<&Error>,
     ) where
@@ -91,12 +145,14 @@ impl DerivedDataManager {
 
         ctx.perf_counters().insert_perf_counters(derived_data_scuba);
 
-        // Limit how much we log to scuba.
-        let value = format!("{:1000?}", value);
+        if let Some(value) = value {
+            // Limit how much we log to scuba.
+            let value = format!("{:1000?}", value);
+            derived_data_scuba.add("mapping_value", value);
+        }
 
         derived_data_scuba
             .add_future_stats(&stats)
-            .add("mapping_value", value)
             .log_with_msg(tag, error_str);
     }
 

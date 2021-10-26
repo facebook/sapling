@@ -7,7 +7,6 @@
 
 use anyhow::Result;
 use context::{CoreContext, SessionClass};
-use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::derivable::BonsaiDerivable;
@@ -31,16 +30,12 @@ impl DerivedDataManager {
 
     /// Construct a scuba sample builder for logging derivation of this
     /// changeset to the derived data scuba table.
-    pub(super) fn derived_data_scuba<Derivable>(
-        &self,
-        csid: ChangesetId,
-    ) -> MononokeScubaSampleBuilder
+    pub(super) fn derived_data_scuba<Derivable>(&self) -> MononokeScubaSampleBuilder
     where
         Derivable: BonsaiDerivable,
     {
         let mut scuba = self.inner.scuba.clone();
         scuba.add("derived_data", Derivable::NAME);
-        scuba.add("changeset", csid.to_string());
         scuba
     }
 
