@@ -32,6 +32,9 @@ mod test_integrity;
 mod test_sparse;
 
 #[cfg(test)]
+mod test_discontinuous;
+
+#[cfg(test)]
 pub mod dummy_dag;
 
 #[cfg(test)]
