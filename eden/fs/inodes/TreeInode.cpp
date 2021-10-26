@@ -3673,13 +3673,14 @@ folly::Future<struct stat> TreeInode::setattr(
   return result;
 }
 
-folly::Future<std::vector<std::string>> TreeInode::listxattr() {
+ImmediateFuture<std::vector<std::string>> TreeInode::listxattr() {
   return std::vector<std::string>{};
 }
-folly::Future<std::string> TreeInode::getxattr(
+ImmediateFuture<std::string> TreeInode::getxattr(
     folly::StringPiece /*name*/,
     ObjectFetchContext& /*context*/) {
-  return makeFuture<std::string>(InodeError(kENOATTR, inodePtrFromThis()));
+  return makeImmediateFuture<std::string>(
+      InodeError(kENOATTR, inodePtrFromThis()));
 }
 #endif
 

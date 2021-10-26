@@ -171,10 +171,10 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       ObjectFetchContext& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
-  folly::Future<std::string> getxattr(
+  ImmediateFuture<std::string> getxattr(
       folly::StringPiece name,
       ObjectFetchContext& context) override;
-  folly::Future<std::vector<std::string>> listxattr() override;
+  ImmediateFuture<std::vector<std::string>> listxattr() override;
 #endif
 
   ImmediateFuture<Hash20> getSha1(ObjectFetchContext& fetchContext);

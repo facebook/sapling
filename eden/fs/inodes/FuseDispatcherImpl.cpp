@@ -458,13 +458,13 @@ ImmediateFuture<string> FuseDispatcherImpl::getxattr(
     ObjectFetchContext& context) {
   return inodeMap_->lookupInode(ino).thenValue(
       [attrName = name.str(), &context](const InodePtr& inode) {
-        return inode->getxattr(attrName, context).semi();
+        return inode->getxattr(attrName, context);
       });
 }
 
 ImmediateFuture<vector<string>> FuseDispatcherImpl::listxattr(InodeNumber ino) {
   return inodeMap_->lookupInode(ino).thenValue(
-      [](const InodePtr& inode) { return inode->listxattr().semi(); });
+      [](const InodePtr& inode) { return inode->listxattr(); });
 }
 
 ImmediateFuture<struct fuse_kstatfs> FuseDispatcherImpl::statfs(

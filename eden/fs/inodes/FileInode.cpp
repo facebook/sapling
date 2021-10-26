@@ -649,7 +649,7 @@ void FileInode::materializeInParent() {
 }
 
 #ifndef _WIN32
-Future<vector<string>> FileInode::listxattr() {
+ImmediateFuture<vector<string>> FileInode::listxattr() {
   vector<string> attributes;
   // We used to return kXattrSha1 here for regular files, but
   // that caused some annoying behavior with appledouble
@@ -659,18 +659,17 @@ Future<vector<string>> FileInode::listxattr() {
   return attributes;
 }
 
-Future<string> FileInode::getxattr(
+ImmediateFuture<string> FileInode::getxattr(
     StringPiece name,
     ObjectFetchContext& context) {
   // Currently, we only support the xattr for the SHA-1 of a regular file.
   if (name != kXattrSha1) {
-    return makeFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
+    return makeImmediateFuture<string>(
+        InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  return getSha1(context)
-      .thenValue([](Hash20 hash) { return hash.toString(); })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return getSha1(context).thenValue(
+      [](Hash20 hash) { return hash.toString(); });
 }
 #else
 

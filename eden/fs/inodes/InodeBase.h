@@ -152,8 +152,8 @@ class InodeBase {
   FOLLY_NODISCARD folly::Future<folly::Unit> removexattr(
       folly::StringPiece name);
 
-  virtual folly::Future<std::vector<std::string>> listxattr() = 0;
-  virtual folly::Future<std::string> getxattr(
+  virtual ImmediateFuture<std::vector<std::string>> listxattr() = 0;
+  virtual ImmediateFuture<std::string> getxattr(
       folly::StringPiece name,
       ObjectFetchContext& context) = 0;
 
