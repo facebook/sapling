@@ -466,6 +466,8 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
   auto absRepoPath = getPath() + repoPath;
 
   return this->ensureDirectoryExists(repoPath, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([this,
                   target = targetPath.copy(),
                   pathInMountDir = getPath() + repoPath](auto&&) {
@@ -650,8 +652,11 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
   setLastCheckoutTime(EdenTimestamp{clock_->getRealtime()});
   bool isTree = (objectType == facebook::eden::ObjectType::TREE);
 
-  auto getTargetTreeInodeFuture = ensureDirectoryExists(
-      isTree ? path : path.dirname(), ctx->getFetchContext());
+  auto getTargetTreeInodeFuture =
+      ensureDirectoryExists(
+          isTree ? path : path.dirname(), ctx->getFetchContext())
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
 
   auto getRootTreeFuture = isTree
       ? objectStore_->getRootTree(rootId, ctx->getFetchContext())
@@ -1811,7 +1816,7 @@ struct stat EdenMount::initStatData() const {
 }
 
 namespace {
-Future<TreeInodePtr> ensureDirectoryExistsHelper(
+ImmediateFuture<TreeInodePtr> ensureDirectoryExistsHelper(
     TreeInodePtr parent,
     PathComponentPiece childName,
     RelativePathPiece rest,
@@ -1825,13 +1830,9 @@ Future<TreeInodePtr> ensureDirectoryExistsHelper(
     contents.unlock();
 
     if (rest.empty()) {
-      return parent->getOrLoadChildTree(childName, context)
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+      return parent->getOrLoadChildTree(childName, context);
     }
     return parent->getOrLoadChildTree(childName, context)
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance())
         .thenValue([rest = RelativePath{rest}, &context](TreeInodePtr child) {
           auto [nextChildName, nextRest] = splitFirst(rest);
           return ensureDirectoryExistsHelper(
@@ -1859,7 +1860,7 @@ Future<TreeInodePtr> ensureDirectoryExistsHelper(
 }
 } // namespace
 
-Future<TreeInodePtr> EdenMount::ensureDirectoryExists(
+ImmediateFuture<TreeInodePtr> EdenMount::ensureDirectoryExists(
     RelativePathPiece fromRoot,
     ObjectFetchContext& context) {
   if (fromRoot.empty()) {

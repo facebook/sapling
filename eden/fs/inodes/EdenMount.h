@@ -699,7 +699,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * subdirectories until it is. If creating a subdirectory fails, it throws an
    * exception. Returns the TreeInodePtr to the directory.
    */
-  FOLLY_NODISCARD folly::Future<TreeInodePtr> ensureDirectoryExists(
+  FOLLY_NODISCARD ImmediateFuture<TreeInodePtr> ensureDirectoryExists(
       RelativePathPiece fromRoot,
       ObjectFetchContext& context);
 

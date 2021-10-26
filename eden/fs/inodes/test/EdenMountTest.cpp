@@ -570,19 +570,13 @@ TEST(EdenMount, ensureDirectoryExists) {
       .get(0ms);
   EXPECT_NE(nullptr, testMount.getTreeInode("sub/other/stuff/here"));
 
-  auto f1 =
-      edenMount
-          ->ensureDirectoryExists(
-              "sub/file.txt/baz"_relpath, ObjectFetchContext::getNullContext())
-          .wait(0ms);
+  auto f1 = edenMount->ensureDirectoryExists(
+      "sub/file.txt/baz"_relpath, ObjectFetchContext::getNullContext());
   EXPECT_TRUE(f1.isReady());
   EXPECT_THROW(std::move(f1).get(0ms), std::system_error);
 
-  auto f2 =
-      edenMount
-          ->ensureDirectoryExists(
-              "sub/file.txt"_relpath, ObjectFetchContext::getNullContext())
-          .wait(0ms);
+  auto f2 = edenMount->ensureDirectoryExists(
+      "sub/file.txt"_relpath, ObjectFetchContext::getNullContext());
   EXPECT_TRUE(f2.isReady());
   EXPECT_THROW(std::move(f2).get(0ms), std::system_error);
 }
