@@ -653,22 +653,39 @@ impl DerivedDataManager {
         let ctx = self.set_derivation_session_class(ctx.clone());
         borrowed!(ctx);
 
-        if let (Some(first), Some(last)) = (bonsais.first(), bonsais.last()) {
+        let csid_range = if let (Some(first), Some(last)) = (bonsais.first(), bonsais.last()) {
+            let first_csid = first.get_changeset_id();
+            let last_csid = last.get_changeset_id();
             debug!(
                 ctx.logger(),
                 "backfill {} batch from {} to {}",
                 Derivable::NAME,
-                first.get_changeset_id(),
-                last.get_changeset_id()
+                first_csid,
+                last_csid,
             );
-        }
+            Some((first_csid, last_csid))
+        } else {
+            None
+        };
 
         let (batch_stats, derived) = match batch_options {
             BatchDeriveOptions::Parallel { gap_size } => {
                 let (stats, derived) =
                     Derivable::derive_batch(ctx, derivation_ctx, bonsais, gap_size)
                         .try_timed()
-                        .await?;
+                        .await
+                        .with_context(|| {
+                            if let Some((first, last)) = csid_range {
+                                format!(
+                                    "failed to derive {} batch (start:{}, end:{})",
+                                    Derivable::NAME,
+                                    first,
+                                    last
+                                )
+                            } else {
+                                format!("failed to derive empty {} batch", Derivable::NAME)
+                            }
+                        })?;
                 (BatchDeriveStats::Parallel(stats.completion_time), derived)
             }
             BatchDeriveOptions::Serial => {
@@ -682,7 +699,10 @@ impl DerivedDataManager {
                     let (stats, derived) =
                         Derivable::derive_single(ctx, derivation_ctx, bonsai, parents)
                             .try_timed()
-                            .await?;
+                            .await
+                            .with_context(|| {
+                                format!("failed to derive {} for {}", Derivable::NAME, csid)
+                            })?;
                     per_commit_stats.push((csid, stats.completion_time));
                     per_commit_derived.insert(csid, derived);
                 }

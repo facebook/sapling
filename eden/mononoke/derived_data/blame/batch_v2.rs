@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
@@ -48,12 +48,13 @@ pub async fn derive_blame_v2_in_batch(
 
     let mut res = HashMap::new();
     for linear_stack in linear_stacks {
+        let stack_len = linear_stack.file_changes.len();
         if let Some(item) = linear_stack.file_changes.first() {
             debug!(
                 ctx.logger(),
                 "derive blame batch at {} (stack of {} from batch of {})",
                 item.cs_id.to_hex(),
-                linear_stack.file_changes.len(),
+                stack_len,
                 batch_len,
             );
         }
@@ -61,7 +62,8 @@ pub async fn derive_blame_v2_in_batch(
         let new_blames = linear_stack
             .file_changes
             .into_iter()
-            .map(|item| {
+            .enumerate()
+            .map(|(index, item)| {
                 // Clone owning copied to pass into the spawned future.
                 cloned!(ctx, derivation_ctx);
                 async move {
@@ -73,7 +75,17 @@ pub async fn derive_blame_v2_in_batch(
                         let root_manifest = derivation_ctx
                             .derive_dependency::<RootUnodeManifestId>(&ctx, csid)
                             .await?;
-                        derive_blame_v2(&ctx, &derivation_ctx, bonsai, root_manifest).await?;
+                        derive_blame_v2(&ctx, &derivation_ctx, bonsai, root_manifest)
+                            .await
+                            .with_context(|| {
+                                format!(
+                                    concat!(
+                                        "failed to derive blame_v2 for {}, ",
+                                        "index {} in stack of {} from batch of {}"
+                                    ),
+                                    csid, index, stack_len, batch_len
+                                )
+                            })?;
                         Ok::<_, Error>(root_manifest)
                     };
                     let derivation_handle = tokio::spawn(derivation_fut);
