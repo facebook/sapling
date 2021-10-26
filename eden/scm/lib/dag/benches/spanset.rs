@@ -15,7 +15,7 @@ fn main() {
     // 119.times.map{rand(8)+1}.reduce([0]){|a,b|a+[b+a[-1]]}.each_slice(2).map{|x|"#{x*'..='}"}*', '
     #[cfg_attr(rustfmt, rustfmt_skip)]
     let span1 = IdSet::from_spans(vec![
-        0..=6, 8..=10, 12..=13, 19..=20, 25..=30, 35..=43, 51..=52, 60..=67, 75..=81, 89..=93,
+        4..=6, 8..=10, 12..=13, 19..=20, 25..=30, 35..=43, 51..=52, 60..=67, 75..=81, 89..=93,
         94..=97, 105..=111, 116..=121, 129..=135, 136..=144, 146..=147, 155..=157, 164..=172,
         180..=188, 193..=201, 204..=212, 220..=221, 227..=234, 239..=241, 248..=251, 253..=257,
         259..=260, 261..=263, 266..=272, 274..=278, 285..=286, 290..=297, 299..=307, 308..=310,
@@ -59,6 +59,42 @@ fn main() {
         elapsed(|| {
             for _ in 0..N {
                 span1.difference(&span2);
+            }
+        })
+    });
+
+    bench("push_span (low)", || {
+        let mut sets: Vec<_> = (0..N).map(|_| span1.clone()).collect();
+        elapsed(move || {
+            for set in sets.iter_mut() {
+                set.push(Id(0)..=Id(3))
+            }
+        })
+    });
+
+    bench("push_span (middle)", || {
+        let mut sets: Vec<_> = (0..N).map(|_| span1.clone()).collect();
+        elapsed(move || {
+            for set in sets.iter_mut() {
+                set.push(Id(287)..=Id(288))
+            }
+        })
+    });
+
+    bench("push_span (middle, large)", || {
+        let mut sets: Vec<_> = (0..N).map(|_| span1.clone()).collect();
+        elapsed(move || {
+            for set in sets.iter_mut() {
+                set.push(Id(200)..=Id(300))
+            }
+        })
+    });
+
+    bench("push_span (high)", || {
+        let mut sets: Vec<_> = (0..N).map(|_| span1.clone()).collect();
+        elapsed(move || {
+            for set in sets.iter_mut() {
+                set.push(Id(565)..=Id(570))
             }
         })
     });
