@@ -840,7 +840,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 
   folly::Future<TreeInodePtr> createRootInode(const RootId& parentCommit);
 
-  FOLLY_NODISCARD folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
+  FOLLY_NODISCARD ImmediateFuture<folly::Unit> setupDotEden(TreeInodePtr root);
 
   folly::SemiFuture<SerializedInodeMap> shutdownImpl(bool doTakeover);
 

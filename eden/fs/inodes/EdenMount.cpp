@@ -283,7 +283,9 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
         // TODO: It would be nice if the .eden inode was created before
         // allocating inode numbers for the Tree's entries. This would give the
         // .eden directory inode number 2.
-        return setupDotEden(getRootInode());
+        return setupDotEden(getRootInode())
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
       })
       .thenTry([this](auto&& result) {
         if (result.hasException()) {
@@ -314,7 +316,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
 
 #ifndef _WIN32
 namespace {
-Future<Unit> ensureDotEdenSymlink(
+ImmediateFuture<Unit> ensureDotEdenSymlink(
     TreeInodePtr directory,
     PathComponent symlinkName,
     AbsolutePath symlinkTarget) {
@@ -327,9 +329,7 @@ Future<Unit> ensureDotEdenSymlink(
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("ensureDotEdenSymlink");
   return directory->getOrLoadChild(symlinkName, *context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenTryInline([=](Try<InodePtr>&& result) -> Future<Action> {
+      .thenTry([=](Try<InodePtr>&& result) -> ImmediateFuture<Action> {
         if (!result.hasValue()) {
           // If we failed to look up the file this generally means it
           // doesn't exist.
@@ -367,9 +367,10 @@ Future<Unit> ensureDotEdenSymlink(
               }
               // Remove and re-create the symlink with the desired contents.
               return Action::UnlinkThenSymlink;
-            });
+            })
+            .semi();
       })
-      .thenValueInline([=](Action action) -> Future<Unit> {
+      .thenValue([=](Action action) -> ImmediateFuture<Unit> {
         switch (action) {
           case Action::Nothing:
             return folly::unit;
@@ -387,33 +388,31 @@ Future<Unit> ensureDotEdenSymlink(
                       symlinkName,
                       symlinkTarget.stringPiece(),
                       InvalidationRequired::Yes);
-                })
-                .semi()
-                .via(&folly::QueuedImmediateExecutor::instance());
+                });
         }
         EDEN_BUG() << "unexpected action type when configuring .eden directory";
       })
-      .thenError([symlinkName](folly::exception_wrapper&& ew) {
-        // Log the error but don't propagate it up to our caller.
-        // We'll continue mounting the checkout even if we encountered an
-        // error setting up some of these symlinks.  There's not much else
-        // we can try here, and it is better to let the user continue
-        // mounting the checkout so that it isn't completely unusable.
-        XLOG(ERR) << "error setting up .eden/" << symlinkName
-                  << " symlink: " << ew.what();
+      .thenTry([symlinkName](folly::Try<folly::Unit>&& try_) {
+        if (try_.hasException()) {
+          // Log the error but don't propagate it up to our caller.
+          // We'll continue mounting the checkout even if we encountered an
+          // error setting up some of these symlinks.  There's not much else
+          // we can try here, and it is better to let the user continue
+          // mounting the checkout so that it isn't completely unusable.
+          XLOG(ERR) << "error setting up .eden/" << symlinkName
+                    << " symlink: " << try_.exception().what();
+        }
       });
 }
 } // namespace
 #endif
 
-folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
+ImmediateFuture<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
   // Set up the magic .eden dir
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("setupDotEden");
   return root->getOrLoadChildTree(PathComponentPiece{kDotEdenName}, *context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenTryInline([=](Try<TreeInodePtr>&& lookupResult) {
+      .thenTry([=](Try<TreeInodePtr>&& lookupResult) {
         TreeInodePtr dotEdenInode;
         if (lookupResult.hasValue()) {
           dotEdenInode = *lookupResult;
@@ -426,7 +425,7 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
 
         // Make sure all of the symlinks in the .eden directory exist and
         // have the correct contents.
-        std::vector<Future<Unit>> futures;
+        std::vector<ImmediateFuture<Unit>> futures;
 
 #ifndef _WIN32
         futures.emplace_back(ensureDotEdenSymlink(
@@ -447,7 +446,7 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         // Wait until we finish setting up all of the symlinks.
         // Use collectAll() since we want to wait for everything to complete,
         // even if one of them fails early.
-        return folly::collectAllUnsafe(futures).thenValue([=](auto&&) {
+        return collectAll(std::move(futures)).thenValue([=](auto&&) {
           // Set the dotEdenInodeNumber_ as our final step.
           // We do this after all of the ensureDotEdenSymlink() calls have
           // finished, since the TreeInode code will refuse to allow any
