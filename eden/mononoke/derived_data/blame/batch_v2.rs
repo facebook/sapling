@@ -12,7 +12,7 @@ use anyhow::{anyhow, Error, Result};
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_bonsais_in_linear_stacks, FileConflicts};
+use derived_data::batch::{split_bonsais_in_linear_stacks, FileConflicts, SplitOptions};
 use derived_data_manager::DerivationContext;
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use lock_ext::LockExt;
@@ -29,8 +29,15 @@ pub async fn derive_blame_v2_in_batch(
     bonsais: Vec<BonsaiChangeset>,
 ) -> Result<HashMap<ChangesetId, RootBlameV2>, Error> {
     let batch_len = bonsais.len();
-    // We must split on any change as blame data must use the parent file.
-    let linear_stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::AnyChange.into())?;
+    // We must split on any change as blame data must use the parent file, and
+    // must split on copy info as this also affects blame.
+    let linear_stacks = split_bonsais_in_linear_stacks(
+        &bonsais,
+        SplitOptions {
+            file_conflicts: FileConflicts::AnyChange,
+            copy_info: true,
+        },
+    )?;
     let bonsais = Mutex::new(
         bonsais
             .into_iter()
