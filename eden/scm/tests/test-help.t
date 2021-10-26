@@ -953,6 +953,8 @@ Test list of internal help commands
    debugdetectissues
                  various repository integrity and health checks. for automatic
                  remediation, use doctor.
+   debugdiffdirs
+                 print the changed directories between two commits
    debugdifftree
                  diff two trees
    debugdirs     list directories
