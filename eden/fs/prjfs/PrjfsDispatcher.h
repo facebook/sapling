@@ -64,7 +64,7 @@ class PrjfsDispatcher {
   /**
    * Test if a file with the given name exist
    */
-  virtual folly::Future<bool> access(
+  virtual ImmediateFuture<bool> access(
       RelativePath path,
       ObjectFetchContext& context) = 0;
 

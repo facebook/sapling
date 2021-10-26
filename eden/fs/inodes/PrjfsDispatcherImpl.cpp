@@ -107,24 +107,23 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
           });
 }
 
-folly::Future<bool> PrjfsDispatcherImpl::access(
+ImmediateFuture<bool> PrjfsDispatcherImpl::access(
     RelativePath path,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([](const InodePtr) { return true; })
-      .thenError(
-          folly::tag_t<std::system_error>{},
-          [path = std::move(path)](const std::system_error& ex) {
-            if (isEnoent(ex)) {
-              if (path == kDotEdenConfigPath) {
-                return folly::makeFuture(true);
-              }
-              return folly::makeFuture(false);
+      .thenTry([path = std::move(path)](folly::Try<bool> result) {
+        if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
+          if (isEnoent(*exc)) {
+            if (path == kDotEdenConfigPath) {
+              return folly::Try<bool>{true};
+            } else {
+              return folly::Try<bool>{false};
             }
-            return folly::makeFuture<bool>(ex);
-          });
+          }
+        }
+        return result;
+      });
 }
 
 folly::Future<std::string> PrjfsDispatcherImpl::read(

@@ -379,7 +379,9 @@ HRESULT PrjfsChannelInner::queryFileName(
               } else {
                 context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
               }
-            });
+            })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
       });
 
   context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
