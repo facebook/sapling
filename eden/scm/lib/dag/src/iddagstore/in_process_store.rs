@@ -29,6 +29,7 @@ use crate::iddagstore::SegmentWithWrongHead;
 use crate::ops::Persist;
 use crate::segment::Segment;
 use crate::spanset::Span;
+use crate::IdSet;
 use crate::Level;
 use crate::Result;
 
@@ -136,6 +137,11 @@ impl IdDagStore for InProcessStore {
         }
         self.non_master_segments = Vec::new();
         Ok(())
+    }
+
+    fn all_ids_in_groups(&self, groups: &[Group]) -> Result<IdSet> {
+        let _ = groups;
+        unimplemented!()
     }
 
     fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {

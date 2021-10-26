@@ -34,6 +34,7 @@ use crate::segment::hex;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
 use crate::spanset::Span;
+use crate::IdSet;
 use crate::Level;
 use crate::Result;
 
@@ -121,6 +122,11 @@ impl IdDagStore for IndexedLogStore {
         }
         self.log.append(&segment.0)?;
         Ok(())
+    }
+
+    fn all_ids_in_groups(&self, groups: &[Group]) -> Result<IdSet> {
+        let _ = groups;
+        unimplemented!()
     }
 
     fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {

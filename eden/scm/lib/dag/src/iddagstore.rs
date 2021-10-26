@@ -16,6 +16,7 @@ use crate::id::Id;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
 use crate::spanset::Span;
+use crate::IdSet;
 use crate::Level;
 use crate::Result;
 
@@ -56,6 +57,13 @@ pub trait IdDagStore: Send + Sync + 'static {
     }
 
     fn insert_segment(&mut self, segment: Segment) -> Result<()>;
+
+    /// Return all ids from given groups. This is useful to implement the
+    /// `all()` operation.
+    ///
+    /// With discontinuous segments, this might return multiple spans for
+    /// a single group.
+    fn all_ids_in_groups(&self, groups: &[Group]) -> Result<IdSet>;
 
     /// Return the next unused id for segments of the specified level.
     ///
