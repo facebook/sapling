@@ -23,6 +23,8 @@ namespace facebook::eden {
 
 class ObjectFetchContext;
 class EdenStats;
+template <class T>
+class ImmediateFuture;
 
 struct InodeMetadata {
   // To ensure that the OS has a record of the canonical file name, and not
@@ -48,7 +50,7 @@ class PrjfsDispatcher {
   /**
    * Open a directory
    */
-  virtual folly::Future<std::vector<FileMetadata>> opendir(
+  virtual ImmediateFuture<std::vector<FileMetadata>> opendir(
       RelativePath path,
       ObjectFetchContext& context) = 0;
 

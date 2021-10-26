@@ -14,6 +14,7 @@
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Guid.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/StringConv.h"
@@ -183,7 +184,9 @@ HRESULT PrjfsChannelInner::startEnumeration(
                        auto&& dirents) {
           addDirectoryEnumeration(std::move(guid), std::move(dirents));
           context->sendSuccess();
-        });
+        })
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   });
 
   context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {

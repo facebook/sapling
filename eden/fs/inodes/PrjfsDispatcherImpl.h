@@ -17,7 +17,7 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
  public:
   explicit PrjfsDispatcherImpl(EdenMount* mount);
 
-  folly::Future<std::vector<FileMetadata>> opendir(
+  ImmediateFuture<std::vector<FileMetadata>> opendir(
       RelativePath path,
       ObjectFetchContext& context) override;
 

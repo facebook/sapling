@@ -55,16 +55,13 @@ PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
       mount_{mount},
       dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
-folly::Future<std::vector<FileMetadata>> PrjfsDispatcherImpl::opendir(
+ImmediateFuture<std::vector<FileMetadata>> PrjfsDispatcherImpl::opendir(
     RelativePath path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context)
-      .thenValue([](const InodePtr inode) {
-        auto treePtr = inode.asTreePtr();
-        return treePtr->readdir();
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return mount_->getInode(path, context).thenValue([](const InodePtr inode) {
+    auto treePtr = inode.asTreePtr();
+    return treePtr->readdir();
+  });
 }
 
 folly::Future<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
