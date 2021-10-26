@@ -582,23 +582,50 @@ impl SpanSet {
 
     /// Make this [`SpanSet`] contain the specified `span`.
     ///
-    /// The current implementation works best if `span.high` is smaller than
-    /// `min()`.
+    /// The current implementation works best when spans are pushed in
+    /// ascending or descending order.
     pub fn push(&mut self, span: impl Into<Span>) {
         let span = span.into();
         if self.spans.is_empty() {
             self.spans.push_back(span)
         } else {
             let len = self.spans.len();
-            let mut last = &mut self.spans[len - 1];
-            if last.high >= span.high {
-                if last.low <= span.high + 1 {
-                    // Union spans in-place.
-                    last.low = last.low.min(span.low);
-                } else {
-                    self.spans.push_back(span)
+            {
+                // Fast path: pushing to the last span.
+                // 30->22 20->12 last H->L
+                //               span H------>L union [Case 1]
+                //                         H->L new   [Case 2]
+                let mut last = &mut self.spans[len - 1];
+                if last.high >= span.high {
+                    if last.low <= span.high + 1 {
+                        // Union spans in-place [Case 1]
+                        last.low = last.low.min(span.low);
+                    } else {
+                        // New back span [Case 2]
+                        self.spans.push_back(span)
+                    }
+                    return;
                 }
-            } else {
+            }
+            {
+                // Fast path: pushing to the last span.
+                // first      H->L  20->12 10->12
+                // span  H------>L union [Case 3]
+                //       H->L      new   [Case 4]
+                // Fast path: pushing to the first span.
+                let mut first = &mut self.spans[0];
+                if span.low >= first.low {
+                    if span.low <= first.high + 1 {
+                        // Union [Case 3]
+                        first.high = first.high.max(span.high);
+                    } else {
+                        // New front span [Case 4]
+                        self.spans.push_front(span);
+                    }
+                    return;
+                }
+            }
+            {
                 // PERF: There is a better way to do this by bisecting
                 // spans and insert in-place.  For now, this code path is
                 // rarely used.
@@ -1143,6 +1170,24 @@ mod tests {
             set.as_spans(),
             &vec![Span::from(22..=30), Span::from(10..=20)]
         );
+    }
+
+    #[test]
+    fn test_push_brute_force() {
+        // Brute force pushing all spans in 1..=45 range to a SpanSet.
+        let set = SpanSet::from_spans(vec![5..=10, 15..=16, 18..=20, 23..=23, 26..=30, 35..=40]);
+        for low in 1..=45 {
+            for high in low..=45 {
+                let expected = SpanSet::from_spans(
+                    (1..=45)
+                        .filter(|&i| (i >= low && i <= high) || set.contains(Id(i)))
+                        .map(Id),
+                );
+                let mut set = set.clone();
+                set.push(low..=high);
+                assert_eq!(set.as_spans(), expected.as_spans());
+            }
+        }
     }
 
     #[test]
