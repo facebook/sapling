@@ -146,11 +146,14 @@ TEST_P(GlobNodeTest, starTxt) {
 }
 
 // hash of "a"
-const ObjectId AHash{"86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"};
+const ObjectId AHash =
+    ObjectId::fromHex("86f7e437faa5a7fce15d1ddcb9eaeaea377667b8");
 // hash of "b"
-const ObjectId BHash{"e9d71f5ee7c92d6dc9e92ffdad17b8bd49418f98"};
+const ObjectId BHash =
+    ObjectId::fromHex("e9d71f5ee7c92d6dc9e92ffdad17b8bd49418f98");
 // hash of "wat"
-const ObjectId WatHash{"a3bbe1a8f2f025b8b6c5b66937763bb2b9bebdf2"};
+const ObjectId WatHash =
+    ObjectId::fromHex("a3bbe1a8f2f025b8b6c5b66937763bb2b9bebdf2");
 
 TEST_P(GlobNodeTest, matchFilesByExtensionRecursively) {
   auto matches = doGlobIncludeDotFiles("**/*.txt", kZeroRootId);

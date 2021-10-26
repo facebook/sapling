@@ -29,7 +29,7 @@ LocalStoreImplResult makeSqliteLocalStore(FaultInjector*) {
 }
 
 TEST_P(LocalStoreTest, testReadAndWriteBlob) {
-  ObjectId hash{"3a8f8eb91101860fd8484154885838bf322964d0"};
+  ObjectId hash = ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0");
 
   StringPiece contents("{\n  \"breakConfig\": true\n}\n");
   auto buf =
@@ -61,7 +61,7 @@ TEST_P(LocalStoreTest, testReadAndWriteBlob) {
 TEST_P(LocalStoreTest, testReadNonexistent) {
   using namespace std::chrono_literals;
 
-  ObjectId hash("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  ObjectId hash = ObjectId::fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   EXPECT_TRUE(nullptr == store_->getBlob(hash).get(10s));
   auto retrievedMetadata = store_->getBlobMetadata(hash).get(10s);
   EXPECT_FALSE(retrievedMetadata.has_value());
@@ -71,7 +71,7 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
   using folly::unhexlify;
   using std::string;
 
-  ObjectId hash("8e073e366ed82de6465d1209d3f07da7eebabb93");
+  ObjectId hash = ObjectId::fromHex("8e073e366ed82de6465d1209d3f07da7eebabb93");
 
   auto gitTreeObject = folly::to<string>(
       string("tree 424\x00", 9),
@@ -113,12 +113,13 @@ TEST_P(LocalStoreTest, testReadsAndWriteTree) {
       KeySpace::TreeFamily, hash.getBytes(), StringPiece{gitTreeObject});
   auto tree = store_->getTree(hash).get(10s);
   EXPECT_EQ(
-      ObjectId("8e073e366ed82de6465d1209d3f07da7eebabb93"), tree->getHash());
+      ObjectId::fromHex("8e073e366ed82de6465d1209d3f07da7eebabb93"),
+      tree->getHash());
   EXPECT_EQ(11, tree->getTreeEntries().size());
 
   auto readmeEntry = tree->getEntryAt(2);
   EXPECT_EQ(
-      ObjectId("c5f15617ed29cd35964dc197a7960aeaedf2c2d5"),
+      ObjectId::fromHex("c5f15617ed29cd35964dc197a7960aeaedf2c2d5"),
       readmeEntry.getHash());
   EXPECT_EQ("README.md", readmeEntry.getName());
   EXPECT_EQ(false, readmeEntry.isTree());

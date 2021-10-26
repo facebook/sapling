@@ -29,7 +29,7 @@ TEST(GitTree, testDeserialize) {
   // You can verify its contents with:
   // `git cat-file -p 8e073e366ed82de6465d1209d3f07da7eebabb93`.
   string treeHash("8e073e366ed82de6465d1209d3f07da7eebabb93");
-  ObjectId hash(treeHash);
+  ObjectId hash = ObjectId::fromHex(treeHash);
 
   auto gitTreeObject = folly::to<string>(
       string("tree 424\x00", 9),
@@ -75,7 +75,8 @@ TEST(GitTree, testDeserialize) {
   // Ordinary, non-executable file.
   auto babelrc = tree->getEntryAt(0);
   EXPECT_EQ(
-      ObjectId("3a8f8eb91101860fd8484154885838bf322964d0"), babelrc.getHash());
+      ObjectId::fromHex("3a8f8eb91101860fd8484154885838bf322964d0"),
+      babelrc.getHash());
   EXPECT_EQ(".babelrc", babelrc.getName());
   EXPECT_EQ(false, babelrc.isTree());
   EXPECT_EQ(facebook::eden::TreeEntryType::REGULAR_FILE, babelrc.getType());
@@ -84,7 +85,7 @@ TEST(GitTree, testDeserialize) {
   // Executable file.
   auto nuclideStartServer = tree->getEntryAt(4);
   EXPECT_EQ(
-      ObjectId("006babcf5734d028098961c6f4b6b6719656924b"),
+      ObjectId::fromHex("006babcf5734d028098961c6f4b6b6719656924b"),
       nuclideStartServer.getHash());
   EXPECT_EQ("nuclide-start-server", nuclideStartServer.getName());
   EXPECT_EQ(false, nuclideStartServer.isTree());
@@ -101,7 +102,8 @@ TEST(GitTree, testDeserialize) {
   // Directory.
   auto lib = tree->getEntryAt(3);
   EXPECT_EQ(
-      ObjectId("e95798e17f694c227b7a8441cc5c7dae50a187d0"), lib.getHash());
+      ObjectId::fromHex("e95798e17f694c227b7a8441cc5c7dae50a187d0"),
+      lib.getHash());
   EXPECT_EQ("lib", lib.getName());
   EXPECT_EQ(true, lib.isTree());
   EXPECT_EQ(facebook::eden::TreeEntryType::TREE, lib.getType());
@@ -118,7 +120,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
   // You can verify its contents with:
   // `git cat-file -p 013b7865a6da317bc8d82c7225eb93615f1b1eca`.
   string treeHash("013b7865a6da317bc8d82c7225eb93615f1b1eca");
-  ObjectId hash(treeHash);
+  ObjectId hash = ObjectId::fromHex(treeHash);
 
   auto gitTreeObject = folly::to<string>(
       string("tree 223\x00", 9),
@@ -146,7 +148,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
   // Ordinary, non-executable file.
   auto contributing = tree->getEntryAt(4);
   EXPECT_EQ(
-      ObjectId("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
+      ObjectId::fromHex("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
       contributing.getHash());
   EXPECT_EQ("contributing.md", contributing.getName());
   EXPECT_EQ(false, contributing.isTree());
@@ -165,7 +167,7 @@ TEST(GitTree, deserializeEmpty) {
 }
 
 TEST(GitTree, testBadDeserialize) {
-  ObjectId zero("0000000000000000000000000000000000000000");
+  ObjectId zero = ObjectId::fromHex("0000000000000000000000000000000000000000");
   // Partial header
   EXPECT_ANY_THROW(deserializeGitTree(zero, StringPiece("tre")));
   EXPECT_ANY_THROW(deserializeGitTree(zero, StringPiece("tree ")));
@@ -228,23 +230,23 @@ TEST(GitTree, testBadDeserialize) {
 TEST(GitTree, serializeTree) {
   GitTreeSerializer serializer;
   serializer.addEntry(TreeEntry(
-      ObjectId("c66788d87933862e2111a86304b705dd90bbd427"),
+      ObjectId::fromHex("c66788d87933862e2111a86304b705dd90bbd427"),
       PathComponent{"README.md"},
       TreeEntryType::REGULAR_FILE));
   serializer.addEntry(TreeEntry(
-      ObjectId("a3c8e5c25e5523322f0ea490173dbdc1d844aefb"),
+      ObjectId::fromHex("a3c8e5c25e5523322f0ea490173dbdc1d844aefb"),
       PathComponent{"run-tests.sh"},
       TreeEntryType::EXECUTABLE_FILE));
   serializer.addEntry(TreeEntry(
-      ObjectId("de0b8287939193ed239834991be65b96cbfc4508"),
+      ObjectId::fromHex("de0b8287939193ed239834991be65b96cbfc4508"),
       PathComponent{"build-instructions"},
       TreeEntryType::TREE));
   serializer.addEntry(TreeEntry(
-      ObjectId("4576635ff317960be244b1c4adfe2a6eb2eb024d"),
+      ObjectId::fromHex("4576635ff317960be244b1c4adfe2a6eb2eb024d"),
       PathComponent{"contributing-to-packages.md"},
       TreeEntryType::REGULAR_FILE));
   serializer.addEntry(TreeEntry(
-      ObjectId("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
+      ObjectId::fromHex("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
       PathComponent{"contributing.md"},
       TreeEntryType::SYMLINK));
 
@@ -254,7 +256,8 @@ TEST(GitTree, serializeTree) {
   // TODO: T66590035
 #ifndef _WIN32
   // Make sure the tree hash is what we expect
-  EXPECT_EQ(ObjectId("dc2c3be02dd3753c64c8f196a33522905c88c435"), treeHash);
+  EXPECT_EQ(
+      ObjectId::fromHex("dc2c3be02dd3753c64c8f196a33522905c88c435"), treeHash);
 #endif
 
   // Make sure we can deserialize it and get back the expected entries.
@@ -274,7 +277,7 @@ TEST(GitTree, moveSerializer) {
   {
     GitTreeSerializer serializer1;
     serializer1.addEntry(TreeEntry(
-        ObjectId("3b18e512dba79e4c8300dd08aeb37f8e728b8dad"),
+        ObjectId::fromHex("3b18e512dba79e4c8300dd08aeb37f8e728b8dad"),
         PathComponent{"README.md"},
         TreeEntryType::REGULAR_FILE));
 
@@ -282,14 +285,15 @@ TEST(GitTree, moveSerializer) {
   }
 
   serializer2.addEntry(TreeEntry(
-      ObjectId("43b71c903ff52b9885bd36f3866324ef60e27b9b"),
+      ObjectId::fromHex("43b71c903ff52b9885bd36f3866324ef60e27b9b"),
       PathComponent{"eden"},
       TreeEntryType::TREE));
 
   // Make sure the tree hash is what we expect
   auto buf = serializer2.finalize();
   auto treeHash = ObjectId::sha1(buf);
-  EXPECT_EQ(ObjectId("daa1785514e56d64549d8169ec7dc26803d2f7df"), treeHash);
+  EXPECT_EQ(
+      ObjectId::fromHex("daa1785514e56d64549d8169ec7dc26803d2f7df"), treeHash);
 }
 
 string toBinaryHash(string hex) {

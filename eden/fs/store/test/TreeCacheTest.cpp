@@ -16,16 +16,26 @@ using namespace facebook::eden;
 using namespace folly::literals;
 
 namespace {
-const auto hash0 = ObjectId{"0000000000000000000000000000000000000000"_sp};
-const auto hash1 = ObjectId{"0000000000000000000000000000000000000001"_sp};
-const auto hash2 = ObjectId{"0000000000000000000000000000000000000002"_sp};
-const auto hash3 = ObjectId{"0000000000000000000000000000000000000003"_sp};
-const auto hash4 = ObjectId{"0000000000000000000000000000000000000004"_sp};
-const auto hash5 = ObjectId{"0000000000000000000000000000000000000005"_sp};
-const auto hash6 = ObjectId{"0000000000000000000000000000000000000006"_sp};
-const auto hash7 = ObjectId{"0000000000000000000000000000000000000007"_sp};
-const auto hash8 = ObjectId{"0000000000000000000000000000000000000008"_sp};
-const auto hash9 = ObjectId{"0000000000000000000000000000000000000009"_sp};
+const auto hash0 =
+    ObjectId::fromHex("0000000000000000000000000000000000000000");
+const auto hash1 =
+    ObjectId::fromHex("0000000000000000000000000000000000000001");
+const auto hash2 =
+    ObjectId::fromHex("0000000000000000000000000000000000000002");
+const auto hash3 =
+    ObjectId::fromHex("0000000000000000000000000000000000000003");
+const auto hash4 =
+    ObjectId::fromHex("0000000000000000000000000000000000000004");
+const auto hash5 =
+    ObjectId::fromHex("0000000000000000000000000000000000000005");
+const auto hash6 =
+    ObjectId::fromHex("0000000000000000000000000000000000000006");
+const auto hash7 =
+    ObjectId::fromHex("0000000000000000000000000000000000000007");
+const auto hash8 =
+    ObjectId::fromHex("0000000000000000000000000000000000000008");
+const auto hash9 =
+    ObjectId::fromHex("0000000000000000000000000000000000000009");
 
 const auto entry0 =
     TreeEntry{hash0, PathComponent{"a"}, TreeEntryType::REGULAR_FILE};

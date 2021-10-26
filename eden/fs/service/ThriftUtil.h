@@ -58,15 +58,6 @@ inline std::string thriftHash20(const std::optional<Hash20>& hash) {
 }
 
 /**
- * Convert thrift BinaryHash data type into a ObjectId.
- *
- * Input should be hex string.
- */
-inline ObjectId hashFromHexThrift(folly::StringPiece commitID) {
-  return ObjectId(commitID);
-}
-
-/**
  * Convert thrift BinaryHash data type into a Hash20 object.
  *
  * This allows the input to be either a 20-byte binary string, or a 40-byte

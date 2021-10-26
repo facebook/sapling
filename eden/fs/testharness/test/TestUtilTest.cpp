@@ -16,17 +16,20 @@ using namespace facebook::eden;
 
 TEST(TestUtil, makeTestHash) {
   EXPECT_EQ(
-      ObjectId{"0000000000000000000000000000000000000001"}, makeTestHash("1"));
+      ObjectId::fromHex("0000000000000000000000000000000000000001"),
+      makeTestHash("1"));
   EXPECT_EQ(
-      ObjectId{"0000000000000000000000000000000000000022"}, makeTestHash("22"));
+      ObjectId::fromHex("0000000000000000000000000000000000000022"),
+      makeTestHash("22"));
   EXPECT_EQ(
-      ObjectId{"0000000000000000000000000000000000000abc"},
+      ObjectId::fromHex("0000000000000000000000000000000000000abc"),
       makeTestHash("abc"));
   EXPECT_EQ(
-      ObjectId{"123456789abcdef0fedcba9876543210faceb00c"},
+      ObjectId::fromHex("123456789abcdef0fedcba9876543210faceb00c"),
       makeTestHash("123456789abcdef0fedcba9876543210faceb00c"));
   EXPECT_EQ(
-      ObjectId{"0000000000000000000000000000000000000000"}, makeTestHash(""));
+      ObjectId::fromHex("0000000000000000000000000000000000000000"),
+      makeTestHash(""));
   EXPECT_THROW_RE(
       makeTestHash("123456789abcdef0fedcba9876543210faceb00c1"),
       std::invalid_argument,

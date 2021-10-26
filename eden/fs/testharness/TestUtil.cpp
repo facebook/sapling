@@ -24,7 +24,7 @@ ObjectId makeTestHash(folly::StringPiece value) {
       fullValue.data() + fullValue.size() - value.size(),
       value.data(),
       value.size());
-  return ObjectId{folly::StringPiece{folly::range(fullValue)}};
+  return ObjectId::fromHex(fullValue);
 }
 
 Hash20 makeTestHash20(folly::StringPiece value) {

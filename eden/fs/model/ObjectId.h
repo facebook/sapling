@@ -36,13 +36,10 @@ class ObjectId : boost::totally_ordered<ObjectId> {
    */
   ObjectId() noexcept : bytes_{} {}
 
+  explicit ObjectId(Storage fbs) noexcept : bytes_{std::move(fbs)} {}
+
   explicit ObjectId(folly::ByteRange bytes)
       : bytes_{constructFromByteRange(bytes)} {}
-
-  /**
-   * @param hex is a string of 40 hexadecimal characters.
-   */
-  explicit ObjectId(folly::StringPiece hex) : bytes_{constructFromHex(hex)} {}
 
   /**
    * Compute the SHA1 hash of an IOBuf chain.
@@ -89,6 +86,10 @@ class ObjectId : boost::totally_ordered<ObjectId> {
 
   bool operator==(const ObjectId&) const;
   bool operator<(const ObjectId&) const;
+
+  static ObjectId fromHex(folly::StringPiece hex) {
+    return ObjectId{constructFromHex(hex)};
+  }
 
  private:
   static Storage constructFromByteRange(folly::ByteRange bytes) {

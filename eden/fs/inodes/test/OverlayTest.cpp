@@ -220,7 +220,7 @@ TEST_F(OverlayTest, testTimeStampsInOverlayOnMountAndUnmount) {
 }
 
 TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
-  auto hash = ObjectId{"0123456789012345678901234567890123456789"};
+  auto hash = ObjectId::fromHex("0123456789012345678901234567890123456789");
 
   auto overlay = mount_.getEdenMount()->getOverlay();
 
