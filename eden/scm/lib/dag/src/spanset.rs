@@ -626,9 +626,50 @@ impl SpanSet {
                 }
             }
             {
-                // PERF: There is a better way to do this by bisecting
-                // spans and insert in-place.  For now, this code path is
-                // rarely used.
+                // Fast path: modify a span in-place.
+                // higher H1---->L1     cur H2---->L2     lower H3---->L3
+                // safe range        L1-2---------------->H3+2
+                // Exceeding the safe range would cause spans to overlap and this path cannot
+                // handle that.
+                let idx = match self
+                    .spans
+                    .bsearch_by(|probe| (span.high + 1).cmp(&probe.low))
+                {
+                    Ok(idx) => idx,
+                    Err(idx) => idx,
+                };
+                for idx in [idx] {
+                    if let Some(cur) = self.spans.get(idx) {
+                        // Not overlap with span?
+                        if span.high + 1 < cur.low || cur.high + 1 < span.low {
+                            continue;
+                        }
+                        // Might merge with a higher span? (Not in safe range)
+                        if idx > 0 {
+                            if let Some(higher) = self.spans.get(idx - 1) {
+                                if span.high + 1 >= higher.low {
+                                    continue;
+                                }
+                            }
+                        }
+                        // Might merge with a lower span? (Not in safe range)
+                        if let Some(lower) = self.spans.get(idx + 1) {
+                            if lower.high + 1 >= span.low {
+                                continue;
+                            }
+                        }
+                        // Passed all checks. Merge the span.
+                        let mut cur = &mut self.spans[idx];
+                        cur.high = cur.high.max(span.high);
+                        cur.low = cur.low.min(span.low);
+                        return;
+                    }
+                }
+            }
+            {
+                // PERF: There might be a better way to do this by bisecting
+                // spans and insert or delete in-place.  For now, this code
+                // path remains not optimized since it is rarely used.
                 *self = self.union(&SpanSet::from(span))
             }
         }
