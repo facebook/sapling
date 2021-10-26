@@ -209,10 +209,17 @@ def prepare_edenfs_privileges(
     if os.geteuid() == 0:
         return (cmd, env)
 
-    # If the EdenFS binary is installed as setuid root we don't need to use sudo.
-    s = os.stat(daemon_binary)
-    if s.st_uid == 0 and (s.st_mode & stat.S_ISUID):
-        return (cmd, env)
+    privhelper = os.path.join(os.path.dirname(daemon_binary), "edenfs_privhelper")
+    # If the EdenFS privhelper is installed as setuid root we don't need to use
+    # sudo.
+    try:
+        s = os.stat(privhelper)
+        if s.st_uid == 0 and (s.st_mode & stat.S_ISUID):
+            return (cmd, env)
+    except FileNotFoundError:
+        # If the privhelper isn't found, EdenFS would just fail, let it fail
+        # instead of here.
+        return cmd, env
 
     # If we're still here we need to run edenfs under sudo
     sudo_cmd = ["/usr/bin/sudo"]

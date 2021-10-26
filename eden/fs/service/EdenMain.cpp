@@ -161,12 +161,15 @@ std::shared_ptr<IHiveLogger> DefaultEdenMain::getHiveLogger(
 
 int runEdenMain(EdenMain&& main, int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////
-  // Running as root: do not add any new code here.
-  // EdenFS normally starts with root privileges so it can perform mount
-  // operations.  We should be very careful about anything we do here
-  // before we have dropped privileges.  In general do not add any new
-  // code here at the start of main: new initialization logic should
-  // only go after the "Root privileges dropped" comment below.
+  // When running tests or development builds, EdenFS is started with sudo, in
+  // order to execute the privhelper as root. When installed, the privhelper
+  // has suid root and thus EdenFS never runs as root.
+  //
+  // Since this code can be started with root privileges, we should be very
+  // careful about anything we do here before we have dropped privileges.  In
+  // general do not add any new code here at the start of main: new
+  // initialization logic should only go after the "Root privileges dropped"
+  // comment below.
   ////////////////////////////////////////////////////////////////////
 
   // Fork the privhelper process, then drop privileges in the main process.
