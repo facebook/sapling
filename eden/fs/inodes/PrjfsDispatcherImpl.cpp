@@ -145,62 +145,57 @@ ImmediateFuture<std::string> PrjfsDispatcherImpl::read(
 }
 
 namespace {
-folly::Future<TreeInodePtr> createDirInode(
+ImmediateFuture<TreeInodePtr> createDirInode(
     const EdenMount& mount,
     RelativePath path,
     ObjectFetchContext& context) {
   auto treeInodeFut =
-      mount.getInode(path, context)
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance())
-          .thenValue([](const InodePtr inode) { return inode.asTreePtr(); });
+      mount.getInode(path, context).thenValue([](const InodePtr inode) {
+        return inode.asTreePtr();
+      });
   return std::move(treeInodeFut)
-      .thenError(
-          folly::tag_t<std::system_error>{},
-          [path = std::move(path), &mount, &context](
-              const std::system_error& ex) {
-            if (!isEnoent(ex)) {
-              return folly::makeFuture<TreeInodePtr>(ex);
-            }
+      .thenTry([path = std::move(path), &mount, &context](
+                   folly::Try<TreeInodePtr> result) {
+        if (auto* exc = result.tryGetExceptionObject<std::system_error>();
+            exc && isEnoent(*exc)) {
+          mount.getStats()
+              ->getChannelStatsForCurrentThread()
+              .outOfOrderCreate.addValue(1);
+          XLOG(DBG2) << "Out of order directory creation notification for: "
+                     << path;
 
-            mount.getStats()
-                ->getChannelStatsForCurrentThread()
-                .outOfOrderCreate.addValue(1);
-            XLOG(DBG2) << "Out of order directory creation notification for: "
-                       << path;
+          /*
+           * ProjectedFS notifications are asynchronous and sent after the
+           * fact. This means that we can get a notification on a
+           * file/directory before the parent directory notification has been
+           * completed. This should be a very rare event and thus the code
+           * below is pessimistic and will try to create all parent
+           * directories.
+           */
 
-            /*
-             * ProjectedFS notifications are asynchronous and sent after the
-             * fact. This means that we can get a notification on a
-             * file/directory before the parent directory notification has been
-             * completed. This should be a very rare event and thus the code
-             * below is pessimistic and will try to create all parent
-             * directories.
-             */
-
-            auto fut = folly::makeFuture(mount.getRootInode());
-            for (auto parent : path.paths()) {
-              fut = std::move(fut).thenValue(
-                  [parent = parent.copy(), &context](TreeInodePtr treeInode) {
-                    auto basename = parent.basename();
-                    try {
-                      auto inode = treeInode->mkdir(
-                          basename, _S_IFDIR, InvalidationRequired::No);
-                      inode->incFsRefcount();
-                    } catch (const std::system_error& ex) {
-                      if (ex.code().value() != EEXIST) {
-                        throw;
-                      }
+          auto fut = ImmediateFuture{mount.getRootInode()};
+          for (auto parent : path.paths()) {
+            fut = std::move(fut).thenValue(
+                [parent = parent.copy(), &context](TreeInodePtr treeInode) {
+                  auto basename = parent.basename();
+                  try {
+                    auto inode = treeInode->mkdir(
+                        basename, _S_IFDIR, InvalidationRequired::No);
+                    inode->incFsRefcount();
+                  } catch (const std::system_error& ex) {
+                    if (ex.code().value() != EEXIST) {
+                      throw;
                     }
+                  }
 
-                    return treeInode->getOrLoadChildTree(basename, context)
-                        .semi()
-                        .via(&folly::QueuedImmediateExecutor::instance());
-                  });
-            }
+                  return treeInode->getOrLoadChildTree(basename, context);
+                });
+          }
 
-            return fut;
-          });
+          return fut;
+        }
+        return ImmediateFuture<TreeInodePtr>{std::move(result)};
+      });
 }
 
 enum class InodeType : bool {
@@ -213,7 +208,9 @@ folly::Future<folly::Unit> createInode(
     RelativePath path,
     InodeType inodeType,
     ObjectFetchContext& context) {
-  auto treeInodeFut = createDirInode(mount, path.dirname().copy(), context);
+  auto treeInodeFut = createDirInode(mount, path.dirname().copy(), context)
+                          .semi()
+                          .via(&folly::QueuedImmediateExecutor::instance());
   return std::move(treeInodeFut)
       .thenValue(
           [path = std::move(path), inodeType](const TreeInodePtr treeInode) {
@@ -296,9 +293,13 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
     RelativePath newPath,
     ObjectFetchContext& context) {
   auto oldParentInode =
-      createDirInode(*mount_, oldPath.dirname().copy(), context);
+      createDirInode(*mount_, oldPath.dirname().copy(), context)
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
   auto newParentInode =
-      createDirInode(*mount_, newPath.dirname().copy(), context);
+      createDirInode(*mount_, newPath.dirname().copy(), context)
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
 
   return folly::collect(oldParentInode, newParentInode)
       .via(mount_->getServerThreadPool().get())
