@@ -560,26 +560,20 @@ void processBothPresent(
                                    entryPath = currentPath + scmEntry.getName(),
                                    &scmEntry,
                                    &wdEntry] {
-              auto scmFuture =
-                  context->store
-                      ->getBlobSha1(
-                          scmEntry.getHash(), context->getFetchContext())
-                      .semi()
-                      .via(&folly::QueuedImmediateExecutor::instance());
-              auto wdFuture =
-                  context->store
-                      ->getBlobSha1(
-                          wdEntry.getHash(), context->getFetchContext())
-                      .semi()
-                      .via(&folly::QueuedImmediateExecutor::instance());
-              return collectSafe(scmFuture, wdFuture)
+              auto scmFuture = context->store->getBlobSha1(
+                  scmEntry.getHash(), context->getFetchContext());
+              auto wdFuture = context->store->getBlobSha1(
+                  wdEntry.getHash(), context->getFetchContext());
+              return collectAllSafe(scmFuture, wdFuture)
                   .thenValue([entryPath = entryPath.copy(),
                               context](const std::tuple<Hash20, Hash20>& info) {
                     const auto& [scmHash, wdHash] = info;
                     if (scmHash != wdHash) {
                       context->callback->modifiedFile(entryPath);
                     }
-                  });
+                  })
+                  .semi()
+                  .via(&folly::QueuedImmediateExecutor::instance());
             });
         childFutures.add(std::move(entryPath), std::move(compareEntryContents));
       }
@@ -663,13 +657,9 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
     const GitIgnoreStack* ignore,
     bool isIgnored) {
   auto scmTreeFuture =
-      context->store->getTree(scmHash, context->getFetchContext())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+      context->store->getTree(scmHash, context->getFetchContext());
   auto wdTreeFuture =
-      context->store->getTree(wdHash, context->getFetchContext())
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+      context->store->getTree(wdHash, context->getFetchContext());
   // Optimization for the case when both tree objects are immediately ready.
   // We can avoid copying the input path in this case.
   if (scmTreeFuture.isReady() && wdTreeFuture.isReady()) {
@@ -682,15 +672,18 @@ FOLLY_NODISCARD Future<Unit> diffTrees(
         isIgnored);
   }
 
-  return collectSafe(scmTreeFuture, wdTreeFuture)
+  return collectAllSafe(scmTreeFuture, wdTreeFuture)
       .thenValue([context, currentPath = currentPath.copy(), ignore, isIgnored](
                      std::tuple<
                          std::shared_ptr<const Tree>,
                          std::shared_ptr<const Tree>>&& tup) {
         const auto& [scmTree, wdTree] = tup;
         return diffTrees(
-            context, currentPath, *scmTree, *wdTree, ignore, isIgnored);
-      });
+                   context, currentPath, *scmTree, *wdTree, ignore, isIgnored)
+            .semi();
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 FOLLY_NODISCARD Future<Unit> diffAddedTree(

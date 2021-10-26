@@ -19,7 +19,6 @@
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
-#include "eden/fs/utils/Future.h"
 
 using folly::Future;
 using folly::makeFuture;
@@ -249,23 +248,20 @@ class ModifiedBlobDiffEntry : public DeferredDiffEntry {
         currentBlobHash_{currentBlobHash} {}
 
   folly::Future<folly::Unit> run() override {
-    auto f1 =
-        context_->store
-            ->getBlobSha1(scmEntry_.getHash(), context_->getFetchContext())
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
-    auto f2 = context_->store
-                  ->getBlobSha1(currentBlobHash_, context_->getFetchContext())
-                  .semi()
-                  .via(&folly::QueuedImmediateExecutor::instance());
-    return collectSafe(f1, f2).thenValue(
-        [this](const std::tuple<Hash20, Hash20>& info) {
+    auto f1 = context_->store->getBlobSha1(
+        scmEntry_.getHash(), context_->getFetchContext());
+    auto f2 = context_->store->getBlobSha1(
+        currentBlobHash_, context_->getFetchContext());
+    return collectAllSafe(f1, f2)
+        .thenValue([this](const std::tuple<Hash20, Hash20>& info) {
           const auto& [info1, info2] = info;
           if (info1 != info2) {
             XLOG(DBG5) << "modified file: " << getPath();
             context_->callback->modifiedFile(getPath());
           }
-        });
+        })
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 
  private:

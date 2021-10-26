@@ -594,16 +594,10 @@ folly::Future<bool> FileInode::isSameAs(
     return makeFuture(result.value());
   }
 
-  auto f1 = getSha1(fetchContext)
-                .semi()
-                .via(&folly::QueuedImmediateExecutor::instance());
-  auto f2 = getMount()
-                ->getObjectStore()
-                ->getBlobSha1(blobID, fetchContext)
-                .semi()
-                .via(&folly::QueuedImmediateExecutor::instance());
-  return folly::collectUnsafe(f1, f2).thenTry(
-      [](folly::Try<std::tuple<Hash20, Hash20>>&& try_) {
+  auto f1 = getSha1(fetchContext);
+  auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID, fetchContext);
+  return collectAllSafe(f1, f2)
+      .thenTry([](folly::Try<std::tuple<Hash20, Hash20>>&& try_) {
         if (try_.hasException()) {
           XLOG(DBG2) << "Assuming changed: " << try_.exception();
           return false;
@@ -611,7 +605,9 @@ folly::Future<bool> FileInode::isSameAs(
           auto hashes = std::move(try_).value();
           return std::get<0>(hashes) == std::get<1>(hashes);
         }
-      });
+      })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 #ifndef _WIN32
