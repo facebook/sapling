@@ -186,16 +186,16 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * This is more efficient than manually comparing the contents, as it may be
    * able to perform a simple hash check if the file is not materialized.
    */
-  folly::Future<bool> isSameAs(
+  ImmediateFuture<bool> isSameAs(
       const Blob& blob,
       TreeEntryType entryType,
       ObjectFetchContext& fetchContext);
-  folly::Future<bool> isSameAs(
+  ImmediateFuture<bool> isSameAs(
       const ObjectId& blobID,
       const Hash20& blobSha1,
       TreeEntryType entryType,
       ObjectFetchContext& fetchContext);
-  folly::Future<bool> isSameAs(
+  ImmediateFuture<bool> isSameAs(
       const ObjectId& blobID,
       TreeEntryType entryType,
       ObjectFetchContext& fetchContext);
@@ -411,10 +411,10 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   /**
    * Helper function for isSameAs().
    *
-   * This does the initial portion of the check which never requires a Future.
-   * Returns optional<bool> if the check completes immediately, or
-   * std::nullopt if the contents need to be checked against sha1 of file
-   * contents.
+   * This does the initial portion of the check which never requires an
+   * ImmediateFuture.  Returns optional<bool> if the check completes
+   * immediately, or std::nullopt if the contents need to be checked against
+   * sha1 of file contents.
    */
   std::optional<bool> isSameAsFast(
       const ObjectId& blobID,
@@ -423,11 +423,11 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   /**
    * Helper function for isSameAs().
    *
-   * This does the second portion of the check which requires a Future.
-   * Returns Future<bool> that checks the inodes Sha1 against the given
-   * Sha1.
+   * This does the second portion of the check which requires an
+   * ImmediateFuture. Returns ImmediateFuture<bool> that checks the inodes
+   * Sha1 against the given Sha1.
    */
-  folly::Future<bool> isSameAsSlow(
+  ImmediateFuture<bool> isSameAsSlow(
       const Hash20& expectedBlobSha1,
       ObjectFetchContext& fetchContext);
 

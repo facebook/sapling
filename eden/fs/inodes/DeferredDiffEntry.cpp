@@ -225,7 +225,9 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
             XLOG(DBG5) << "modified file: " << getPath();
             context_->callback->modifiedFile(getPath());
           }
-        });
+        })
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 
   const GitIgnoreStack* ignore_{nullptr};

@@ -543,7 +543,7 @@ std::optional<bool> FileInode::isSameAsFast(
   return std::nullopt;
 }
 
-folly::Future<bool> FileInode::isSameAsSlow(
+ImmediateFuture<bool> FileInode::isSameAsSlow(
     const Hash20& expectedBlobSha1,
     ObjectFetchContext& fetchContext) {
   return getSha1(fetchContext)
@@ -554,12 +554,10 @@ folly::Future<bool> FileInode::isSameAsSlow(
         } else {
           return try_.value() == expectedBlobSha1;
         }
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+      });
 }
 
-folly::Future<bool> FileInode::isSameAs(
+ImmediateFuture<bool> FileInode::isSameAs(
     const Blob& blob,
     TreeEntryType entryType,
     ObjectFetchContext& fetchContext) {
@@ -572,7 +570,7 @@ folly::Future<bool> FileInode::isSameAs(
   return isSameAsSlow(blobSha1, fetchContext);
 }
 
-folly::Future<bool> FileInode::isSameAs(
+ImmediateFuture<bool> FileInode::isSameAs(
     const ObjectId& blobID,
     const Hash20& blobSha1,
     TreeEntryType entryType,
@@ -585,19 +583,19 @@ folly::Future<bool> FileInode::isSameAs(
   return isSameAsSlow(blobSha1, fetchContext);
 }
 
-folly::Future<bool> FileInode::isSameAs(
+ImmediateFuture<bool> FileInode::isSameAs(
     const ObjectId& blobID,
     TreeEntryType entryType,
     ObjectFetchContext& fetchContext) {
   auto result = isSameAsFast(blobID, entryType);
   if (result.has_value()) {
-    return makeFuture(result.value());
+    return result.value();
   }
 
   auto f1 = getSha1(fetchContext);
   auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID, fetchContext);
-  return collectAllSafe(f1, f2)
-      .thenTry([](folly::Try<std::tuple<Hash20, Hash20>>&& try_) {
+  return collectAllSafe(f1, f2).thenTry(
+      [](folly::Try<std::tuple<Hash20, Hash20>>&& try_) {
         if (try_.hasException()) {
           XLOG(DBG2) << "Assuming changed: " << try_.exception();
           return false;
@@ -605,9 +603,7 @@ folly::Future<bool> FileInode::isSameAs(
           auto hashes = std::move(try_).value();
           return std::get<0>(hashes) == std::get<1>(hashes);
         }
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+      });
 }
 
 #ifndef _WIN32

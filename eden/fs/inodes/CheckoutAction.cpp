@@ -365,7 +365,9 @@ Future<bool> CheckoutAction::hasConflict() {
                                            : ConflictType::MODIFIED_REMOVED;
           ctx_->addConflict(conflictType, inode_.get());
           return true;
-        });
+        })
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
   }
 
   XDCHECK(!oldScmEntry_) << "Both oldTree_ and oldBlob_ are nullptr, "
