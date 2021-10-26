@@ -21,7 +21,7 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
       RelativePath path,
       ObjectFetchContext& context) override;
 
-  folly::Future<std::optional<LookupResult>> lookup(
+  ImmediateFuture<std::optional<LookupResult>> lookup(
       RelativePath path,
       ObjectFetchContext& context) override;
 

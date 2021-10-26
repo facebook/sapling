@@ -64,7 +64,7 @@ ImmediateFuture<std::vector<FileMetadata>> PrjfsDispatcherImpl::opendir(
   });
 }
 
-folly::Future<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
+ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
     RelativePath path,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context)
@@ -86,24 +86,24 @@ folly::Future<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                       std::move(inodeMetadata), std::move(incFsRefcount)}};
                 });
           })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
-      .thenError(
-          folly::tag_t<std::system_error>{},
-          [path = std::move(path), this](const std::system_error& ex)
-              -> folly::Future<std::optional<LookupResult>> {
-            if (isEnoent(ex)) {
-              if (path == kDotEdenConfigPath) {
-                return folly::makeFuture(LookupResult{
-                    InodeMetadata{
-                        std::move(path), dotEdenConfig_.length(), false},
-                    [] {}});
-              } else {
-                XLOG(DBG6) << path << ": File not found";
-                return folly::makeFuture(std::nullopt);
+      .thenTry(
+          [path = std::move(path),
+           this](folly::Try<std::optional<LookupResult>> result) mutable
+          -> folly::Try<std::optional<LookupResult>> {
+            if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
+              if (isEnoent(*exc)) {
+                if (path == kDotEdenConfigPath) {
+                  return folly::Try{std::optional{LookupResult{
+                      InodeMetadata{
+                          std::move(path), dotEdenConfig_.length(), false},
+                      [] {}}}};
+                } else {
+                  XLOG(DBG6) << path << ": File not found";
+                  return folly::Try<std::optional<LookupResult>>{std::nullopt};
+                }
               }
             }
-            return folly::makeFuture<std::optional<LookupResult>>(ex);
+            return result;
           });
 }
 

@@ -304,52 +304,54 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
   auto path = RelativePath(callbackData->FilePathName);
   auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
-  auto fut = folly::makeFutureWith(
-      [this, context, path = std::move(path), virtualizationContext]() mutable {
-        auto requestWatch =
-            std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
-                nullptr);
-        auto stat = &ChannelThreadStats::lookup;
-        context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+  auto fut = folly::makeFutureWith([this,
+                                    context,
+                                    path = std::move(path),
+                                    virtualizationContext]() mutable {
+    auto requestWatch =
+        std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+    auto stat = &ChannelThreadStats::lookup;
+    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
-        FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
-        return dispatcher_->lookup(std::move(path), *context)
-            .thenValue([context = std::move(context),
-                        virtualizationContext = virtualizationContext](
-                           std::optional<LookupResult>&& optLookupResult) {
-              if (!optLookupResult) {
-                context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
-                return folly::makeFuture(folly::unit);
-              }
-              auto lookupResult = std::move(optLookupResult).value();
+    FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
+    return dispatcher_->lookup(std::move(path), *context)
+        .thenValue([context = std::move(context),
+                    virtualizationContext = virtualizationContext](
+                       std::optional<LookupResult>&& optLookupResult) {
+          if (!optLookupResult) {
+            context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+            return ImmediateFuture{folly::unit};
+          }
+          auto lookupResult = std::move(optLookupResult).value();
 
-              PRJ_PLACEHOLDER_INFO placeholderInfo{};
-              placeholderInfo.FileBasicInfo.IsDirectory =
-                  lookupResult.meta.isDir;
-              placeholderInfo.FileBasicInfo.FileSize = lookupResult.meta.size;
-              auto inodeName = lookupResult.meta.path.wide();
+          PRJ_PLACEHOLDER_INFO placeholderInfo{};
+          placeholderInfo.FileBasicInfo.IsDirectory = lookupResult.meta.isDir;
+          placeholderInfo.FileBasicInfo.FileSize = lookupResult.meta.size;
+          auto inodeName = lookupResult.meta.path.wide();
 
-              HRESULT result = PrjWritePlaceholderInfo(
-                  virtualizationContext,
-                  inodeName.c_str(),
-                  &placeholderInfo,
-                  sizeof(placeholderInfo));
+          HRESULT result = PrjWritePlaceholderInfo(
+              virtualizationContext,
+              inodeName.c_str(),
+              &placeholderInfo,
+              sizeof(placeholderInfo));
 
-              if (FAILED(result)) {
-                return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
-                    result,
-                    fmt::format(
-                        FMT_STRING("Writing placeholder for {}"),
-                        lookupResult.meta.path)));
-              }
+          if (FAILED(result)) {
+            return makeImmediateFuture<folly::Unit>(makeHResultErrorExplicit(
+                result,
+                fmt::format(
+                    FMT_STRING("Writing placeholder for {}"),
+                    lookupResult.meta.path)));
+          }
 
-              context->sendSuccess();
+          context->sendSuccess();
 
-              lookupResult.incFsRefcount();
+          lookupResult.incFsRefcount();
 
-              return folly::makeFuture(folly::unit);
-            });
-      });
+          return ImmediateFuture{folly::unit};
+        })
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
+  });
 
   context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
   });

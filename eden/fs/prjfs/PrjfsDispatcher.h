@@ -57,7 +57,7 @@ class PrjfsDispatcher {
   /**
    * Lookup the specified file and get its attributes.
    */
-  virtual folly::Future<std::optional<LookupResult>> lookup(
+  virtual ImmediateFuture<std::optional<LookupResult>> lookup(
       RelativePath path,
       ObjectFetchContext& context) = 0;
 
