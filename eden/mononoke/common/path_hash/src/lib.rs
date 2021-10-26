@@ -12,8 +12,10 @@ use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
+use std::borrow::Borrow;
+use std::borrow::Cow;
+use std::cmp::{Eq, Ord, PartialEq, PartialOrd};
 use std::hash::Hash;
-
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[derive(mysql::OptTryFromRowField)]
 pub struct PathHashBytes(pub Vec<u8>);
@@ -84,7 +86,7 @@ impl From<PathBytes> for Value {
 
 #[derive(Clone)]
 pub struct PathWithHash<'a> {
-    pub path: &'a RepoPath,
+    pub path: Cow<'a, RepoPath>,
     pub path_bytes: PathBytes,
     pub is_tree: bool,
     pub hash: PathHashBytes,
@@ -92,7 +94,10 @@ pub struct PathWithHash<'a> {
 
 impl<'a> PathWithHash<'a> {
     pub fn from_repo_path(path: &'a RepoPath) -> Self {
-        let (path_bytes, is_tree) = convert_from_repo_path(path);
+        Self::from_repo_path_cow(Cow::Borrowed(path))
+    }
+    pub fn from_repo_path_cow(path: Cow<'a, RepoPath>) -> Self {
+        let (path_bytes, is_tree) = convert_from_repo_path(path.borrow());
 
         let hash = PathHashBytes::new(&path_bytes);
 

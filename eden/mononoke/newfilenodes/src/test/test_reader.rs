@@ -9,7 +9,6 @@ use anyhow::{format_err, Error};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, PreparedFilenode};
-use futures::FutureExt;
 use maplit::hashmap;
 use mercurial_types::HgFileNodeId;
 use mercurial_types_mocks::nodehash::{
@@ -19,7 +18,9 @@ use mononoke_types::{MPath, RepoPath, RepositoryId};
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sql::queries;
 use sql::Connection;
-use tunables::{with_tunables_async, MononokeTunables};
+use std::sync::Arc;
+use tunables::with_tunables;
+use tunables::MononokeTunables;
 
 use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
 use crate::local_cache::{test::HashMapCache, LocalCache};
@@ -31,13 +32,14 @@ use super::util::{build_reader_writer, build_shard};
 async fn check_roundtrip(
     ctx: &CoreContext,
     repo_id: RepositoryId,
-    reader: &FilenodesReader,
+    reader: Arc<FilenodesReader>,
     writer: &FilenodesWriter,
     payload: PreparedFilenode,
 ) -> Result<(), Error> {
     assert_eq!(
         async {
             let res = reader
+                .clone()
                 .get_filenode(&ctx, repo_id, &payload.path, payload.info.filenode)
                 .await?;
             res.do_not_handle_disabled_filenodes()
@@ -71,6 +73,7 @@ async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
 
     let shard = build_shard()?;
     let (reader, writer) = build_reader_writer(vec![shard]);
+    let reader = Arc::new(reader);
 
     let payload = PreparedFilenode {
         path: RepoPath::FilePath(MPath::new(b"test")?),
@@ -83,7 +86,7 @@ async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
         },
     };
 
-    check_roundtrip(&ctx, REPO_ZERO, &reader, &writer, payload).await?;
+    check_roundtrip(&ctx, REPO_ZERO, reader, &writer, payload).await?;
 
     Ok(())
 }
@@ -94,6 +97,7 @@ async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
 
     let shard = build_shard()?;
     let (reader, writer) = build_reader_writer(vec![shard]);
+    let reader = Arc::new(reader);
 
     let from = PreparedFilenode {
         path: RepoPath::FilePath(MPath::new(b"from")?),
@@ -122,7 +126,7 @@ async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
         },
     };
 
-    check_roundtrip(&ctx, REPO_ZERO, &reader, &writer, payload).await?;
+    check_roundtrip(&ctx, REPO_ZERO, reader, &writer, payload).await?;
 
     Ok(())
 }
@@ -133,6 +137,7 @@ async fn test_repo_ids(fb: FacebookInit) -> Result<(), Error> {
 
     let shard = build_shard()?;
     let (reader, writer) = build_reader_writer(vec![shard]);
+    let reader = Arc::new(reader);
 
     let payload = root_first_filenode();
 
@@ -143,7 +148,7 @@ async fn test_repo_ids(fb: FacebookInit) -> Result<(), Error> {
 
     assert_filenode(
         &ctx,
-        &reader,
+        reader.clone(),
         &payload.path,
         payload.info.filenode,
         REPO_ZERO,
@@ -151,14 +156,7 @@ async fn test_repo_ids(fb: FacebookInit) -> Result<(), Error> {
     )
     .await?;
 
-    assert_no_filenode(
-        &ctx,
-        &reader,
-        &payload.path,
-        payload.info.filenode,
-        REPO_ONE,
-    )
-    .await?;
+    assert_no_filenode(&ctx, reader, &payload.path, payload.info.filenode, REPO_ONE).await?;
 
     Ok(())
 }
@@ -214,11 +212,11 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
     // Now, delete the copy info from the replica.
     DeleteCopyInfo::query(&replica).await?;
 
-    let reader = FilenodesReader::new(vec![replica], vec![master]);
+    let reader = Arc::new(FilenodesReader::new(vec![replica], vec![master]));
     let prepared = copied_filenode();
     assert_filenode(
         &ctx,
-        &reader,
+        reader,
         &prepared.path,
         prepared.info.filenode,
         REPO_ZERO,
@@ -268,11 +266,11 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
     // Now, delete the copy info from the replica.
     DeletePaths::query(&replica).await?;
 
-    let reader = FilenodesReader::new(vec![replica], vec![master]);
+    let reader = Arc::new(FilenodesReader::new(vec![replica], vec![master]));
     let prepared = copied_filenode();
     assert_filenode(
         &ctx,
-        &reader,
+        reader,
         &prepared.path,
         prepared.info.filenode,
         REPO_ZERO,
@@ -412,7 +410,7 @@ async fn do_add_filenode(
 
 async fn assert_no_filenode(
     ctx: &CoreContext,
-    reader: &FilenodesReader,
+    reader: Arc<FilenodesReader>,
     path: &RepoPath,
     hash: HgFileNodeId,
     repo_id: RepositoryId,
@@ -425,7 +423,7 @@ async fn assert_no_filenode(
 
 async fn assert_filenode(
     ctx: &CoreContext,
-    reader: &FilenodesReader,
+    reader: Arc<FilenodesReader>,
     path: &RepoPath,
     hash: HgFileNodeId,
     repo_id: RepositoryId,
@@ -442,7 +440,7 @@ async fn assert_filenode(
 
 async fn assert_all_filenodes(
     ctx: &CoreContext,
-    reader: &FilenodesReader,
+    reader: Arc<FilenodesReader>,
     path: &RepoPath,
     repo_id: RepositoryId,
     expected: &Vec<FilenodeInfo>,
@@ -465,14 +463,15 @@ macro_rules! filenodes_tests {
             #[fbinit::test]
             async fn test_simple_filenode_insert_and_get(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
 
                 do_add_filenode(&ctx, &writer, root_first_filenode(), REPO_ZERO).await?;
 
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::root(),
                     ONES_FNID,
                     REPO_ZERO,
@@ -480,9 +479,16 @@ macro_rules! filenodes_tests {
                 )
                 .await?;
 
-                assert_no_filenode(&ctx, &reader, &RepoPath::root(), TWOS_FNID, REPO_ZERO).await?;
+                assert_no_filenode(
+                    &ctx,
+                    reader.clone(),
+                    &RepoPath::root(),
+                    TWOS_FNID,
+                    REPO_ZERO,
+                )
+                .await?;
 
-                assert_no_filenode(&ctx, &reader, &RepoPath::root(), ONES_FNID, REPO_ONE).await?;
+                assert_no_filenode(&ctx, reader, &RepoPath::root(), ONES_FNID, REPO_ONE).await?;
 
                 Ok(())
             }
@@ -513,13 +519,14 @@ macro_rules! filenodes_tests {
             #[fbinit::test]
             async fn test_insert_filenode_with_parent(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
                 do_add_filenode(&ctx, &writer, root_first_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, root_second_filenode(), REPO_ZERO).await?;
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::root(),
                     ONES_FNID,
                     REPO_ZERO,
@@ -528,7 +535,7 @@ macro_rules! filenodes_tests {
                 .await?;
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader,
                     &RepoPath::root(),
                     TWOS_FNID,
                     REPO_ZERO,
@@ -543,14 +550,15 @@ macro_rules! filenodes_tests {
                 fb: FacebookInit,
             ) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
                 do_add_filenode(&ctx, &writer, root_first_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, root_second_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, root_merge_filenode(), REPO_ZERO).await?;
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader,
                     &RepoPath::root(),
                     THREES_FNID,
                     REPO_ZERO,
@@ -563,14 +571,15 @@ macro_rules! filenodes_tests {
             #[fbinit::test]
             async fn test_insert_file_filenode(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
                 do_add_filenode(&ctx, &writer, file_a_first_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, file_b_first_filenode(), REPO_ZERO).await?;
 
                 assert_no_filenode(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::file("non-existent").unwrap(),
                     ONES_FNID,
                     REPO_ZERO,
@@ -578,7 +587,7 @@ macro_rules! filenodes_tests {
                 .await?;
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::file("a").unwrap(),
                     ONES_FNID,
                     REPO_ZERO,
@@ -587,7 +596,7 @@ macro_rules! filenodes_tests {
                 .await?;
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader,
                     &RepoPath::file("b").unwrap(),
                     TWOS_FNID,
                     REPO_ZERO,
@@ -600,14 +609,15 @@ macro_rules! filenodes_tests {
             #[fbinit::test]
             async fn test_insert_different_repo(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
                 do_add_filenode(&ctx, &writer, root_first_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, root_second_filenode(), REPO_ONE).await?;
 
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::root(),
                     ONES_FNID,
                     REPO_ZERO,
@@ -615,11 +625,12 @@ macro_rules! filenodes_tests {
                 )
                 .await?;
 
-                assert_no_filenode(&ctx, &reader, &RepoPath::root(), ONES_FNID, REPO_ONE).await?;
+                assert_no_filenode(&ctx, reader.clone(), &RepoPath::root(), ONES_FNID, REPO_ONE)
+                    .await?;
 
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader,
                     &RepoPath::root(),
                     TWOS_FNID,
                     REPO_ONE,
@@ -634,8 +645,9 @@ macro_rules! filenodes_tests {
                 fb: FacebookInit,
             ) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
 
                 do_add_filenodes(
                     &ctx,
@@ -647,7 +659,7 @@ macro_rules! filenodes_tests {
 
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::root(),
                     ONES_FNID,
                     REPO_ZERO,
@@ -657,7 +669,7 @@ macro_rules! filenodes_tests {
 
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader,
                     &RepoPath::root(),
                     TWOS_FNID,
                     REPO_ZERO,
@@ -670,8 +682,9 @@ macro_rules! filenodes_tests {
             #[fbinit::test]
             async fn insert_copied_file(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
 
                 do_add_filenodes(
                     &ctx,
@@ -682,7 +695,7 @@ macro_rules! filenodes_tests {
                 .await?;
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader,
                     &RepoPath::file("copiedto").unwrap(),
                     TWOS_FNID,
                     REPO_ZERO,
@@ -711,8 +724,9 @@ macro_rules! filenodes_tests {
             #[fbinit::test]
             async fn insert_copied_file_to_different_repo(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
 
                 let copied = PreparedFilenode {
                     path: RepoPath::file("copiedto").unwrap(),
@@ -748,7 +762,7 @@ macro_rules! filenodes_tests {
 
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::file("copiedto").unwrap(),
                     TWOS_FNID,
                     REPO_ZERO,
@@ -758,7 +772,7 @@ macro_rules! filenodes_tests {
 
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader,
                     &RepoPath::file("copiedto").unwrap(),
                     TWOS_FNID,
                     REPO_ONE,
@@ -771,8 +785,9 @@ macro_rules! filenodes_tests {
             #[fbinit::test]
             async fn get_all_filenodes_maybe_stale(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
                 do_add_filenodes(
                     &ctx,
                     &writer,
@@ -800,7 +815,7 @@ macro_rules! filenodes_tests {
 
                 assert_all_filenodes(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::RootPath,
                     REPO_ZERO,
                     &root_filenodes,
@@ -810,7 +825,7 @@ macro_rules! filenodes_tests {
 
                 assert_all_filenodes(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::file("a").unwrap(),
                     REPO_ZERO,
                     &vec![file_a_first_filenode().info],
@@ -820,7 +835,7 @@ macro_rules! filenodes_tests {
 
                 assert_all_filenodes(
                     &ctx,
-                    &reader,
+                    reader,
                     &RepoPath::file("b").unwrap(),
                     REPO_ZERO,
                     &vec![file_b_first_filenode().info],
@@ -833,8 +848,9 @@ macro_rules! filenodes_tests {
             #[fbinit::test]
             async fn get_all_filenodes_maybe_stale_limited(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
                 do_add_filenodes(
                     &ctx,
                     &writer,
@@ -862,7 +878,7 @@ macro_rules! filenodes_tests {
 
                 assert_all_filenodes(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::RootPath,
                     REPO_ZERO,
                     &root_filenodes,
@@ -871,6 +887,7 @@ macro_rules! filenodes_tests {
                 .await?;
 
                 let res = reader
+                    .clone()
                     .get_all_filenodes_for_path(&ctx, REPO_ZERO, &RepoPath::RootPath, Some(1))
                     .await?;
                 let res = res.do_not_handle_disabled_filenodes()?;
@@ -888,15 +905,16 @@ macro_rules! filenodes_tests {
             #[fbinit::test]
             async fn test_mixed_path_insert_and_get(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
-                let (reader, writer) = build_reader_writer($create_db()?);
-                let reader = $enable_caching(reader);
+                let (mut reader, writer) = build_reader_writer($create_db()?);
+                $enable_caching(&mut reader);
+                let reader = Arc::new(reader);
 
                 do_add_filenode(&ctx, &writer, file_a_first_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, dir_a_first_filenode(), REPO_ZERO).await?;
 
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::file("a").unwrap(),
                     ONES_FNID,
                     REPO_ZERO,
@@ -906,7 +924,7 @@ macro_rules! filenodes_tests {
 
                 assert_filenode(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::dir("a").unwrap(),
                     ONES_FNID,
                     REPO_ZERO,
@@ -916,7 +934,7 @@ macro_rules! filenodes_tests {
 
                 assert_all_filenodes(
                     &ctx,
-                    &reader,
+                    reader.clone(),
                     &RepoPath::file("a").unwrap(),
                     REPO_ZERO,
                     &vec![file_a_first_filenode().info],
@@ -926,7 +944,7 @@ macro_rules! filenodes_tests {
 
                 assert_all_filenodes(
                     &ctx,
-                    &reader,
+                    reader,
                     &RepoPath::dir("a").unwrap(),
                     REPO_ZERO,
                     &vec![dir_a_first_filenode().info],
@@ -948,13 +966,10 @@ fn create_sharded() -> Result<Vec<Connection>, Error> {
     (0..16).into_iter().map(|_| build_shard()).collect()
 }
 
-fn no_caching(reader: FilenodesReader) -> FilenodesReader {
-    reader
-}
+fn no_caching(_reader: &mut FilenodesReader) {}
 
-fn with_caching(mut reader: FilenodesReader) -> FilenodesReader {
+fn with_caching(reader: &mut FilenodesReader) {
     reader.local_cache = LocalCache::Test(HashMapCache::new());
-    reader
 }
 
 filenodes_tests!(uncached_unsharded_test, create_unsharded, no_caching);
@@ -964,13 +979,18 @@ filenodes_tests!(cached_unsharded_test, create_unsharded, with_caching);
 filenodes_tests!(cached_sharded_test, create_sharded, with_caching);
 
 #[fbinit::test]
-async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result<(), Error> {
+fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result<(), Error> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()?;
     let ctx = CoreContext::test_mock(fb);
 
-    let (reader, writer) = build_reader_writer(create_sharded()?);
-    let reader = with_caching(reader);
+    let (mut reader, writer) = build_reader_writer(create_sharded()?);
+    with_caching(&mut reader);
+    let reader = Arc::new(reader);
 
-    do_add_filenodes(
+    runtime.block_on(do_add_filenodes(
         &ctx,
         &writer,
         vec![
@@ -979,26 +999,26 @@ async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result
             root_merge_filenode(),
         ],
         REPO_ZERO,
-    )
-    .await?;
+    ))?;
 
-    do_add_filenodes(
+    runtime.block_on(do_add_filenodes(
         &ctx,
         &writer,
         vec![file_a_first_filenode(), file_b_first_filenode()],
         REPO_ZERO,
-    )
-    .await?;
+    ))?;
 
     let tunables = MononokeTunables::default();
     tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-    let res = with_tunables_async(
-        tunables,
-        reader
-            .get_all_filenodes_for_path(&ctx, REPO_ZERO, &RepoPath::RootPath, None)
-            .boxed(),
-    )
-    .await?;
+    let res = with_tunables(tunables, || {
+        runtime.block_on(reader.clone().get_all_filenodes_for_path(
+            &ctx,
+            REPO_ZERO,
+            &RepoPath::RootPath,
+            None,
+        ))
+    })?;
+
 
     if let FilenodeRangeResult::Present(_) = res {
         panic!("expected FilenodeResult::Disabled");
@@ -1010,89 +1030,91 @@ async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result
         root_merge_filenode().info,
     ];
 
-    assert_all_filenodes(
+    runtime.block_on(assert_all_filenodes(
         &ctx,
-        &reader,
+        reader.clone(),
         &RepoPath::RootPath,
         REPO_ZERO,
         &root_filenodes,
         None,
-    )
-    .await?;
+    ))?;
 
     // All filenodes are cached now, even with filenodes_disabled = true
     // all filenodes should be returned
     let tunables = MononokeTunables::default();
     tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-    with_tunables_async(
-        tunables,
-        assert_all_filenodes(
+    with_tunables(tunables, || {
+        runtime.block_on(assert_all_filenodes(
             &ctx,
-            &reader,
+            reader,
             &RepoPath::RootPath,
             REPO_ZERO,
             &root_filenodes,
             None,
-        )
-        .boxed(),
-    )
-    .await?;
-
+        ))
+    })?;
     Ok(())
 }
 
 #[fbinit::test]
-async fn test_get_filenode_with_disabled(fb: FacebookInit) -> Result<(), Error> {
+fn test_get_filenode_with_disabled(fb: FacebookInit) -> Result<(), Error> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()?;
     let ctx = CoreContext::test_mock(fb);
 
-    let (reader, writer) = build_reader_writer(create_sharded()?);
-    let reader = with_caching(reader);
+    let (mut reader, writer) = build_reader_writer(create_sharded()?);
+    with_caching(&mut reader);
+    let reader = Arc::new(reader);
 
-    do_add_filenodes(&ctx, &writer, vec![root_first_filenode()], REPO_ZERO).await?;
+    runtime.block_on(do_add_filenodes(
+        &ctx,
+        &writer,
+        vec![root_first_filenode()],
+        REPO_ZERO,
+    ))?;
 
     let payload_info = root_first_filenode().info;
 
     let tunables = MononokeTunables::default();
     tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-    let res = with_tunables_async(
-        tunables,
-        reader
-            .get_filenode(&ctx, REPO_ZERO, &RepoPath::RootPath, payload_info.filenode)
-            .boxed(),
-    )
-    .await?;
+    let res = with_tunables(tunables, || {
+        runtime.block_on(reader.clone().get_filenode(
+            &ctx,
+            REPO_ZERO,
+            &RepoPath::RootPath,
+            payload_info.filenode,
+        ))
+    })?;
 
     if let FilenodeResult::Present(_) = res {
         panic!("expected FilenodeResult::Disabled");
     }
 
-    assert_filenode(
+    runtime.block_on(assert_filenode(
         &ctx,
-        &reader,
+        reader.clone(),
         &RepoPath::root(),
         ONES_FNID,
         REPO_ZERO,
         root_first_filenode().info,
-    )
-    .await?;
+    ))?;
 
     // The filenode are cached now, even with filenodes_disabled = true
     // all filenodes should be returned
     let tunables = MononokeTunables::default();
     tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
-    with_tunables_async(
-        tunables,
-        assert_filenode(
+    with_tunables(tunables, || {
+        runtime.block_on(assert_filenode(
             &ctx,
-            &reader,
+            reader,
             &RepoPath::root(),
             ONES_FNID,
             REPO_ZERO,
             root_first_filenode().info,
-        )
-        .boxed(),
-    )
-    .await?;
+        ))
+    })?;
     Ok(())
 }
 
@@ -1100,8 +1122,9 @@ async fn test_get_filenode_with_disabled(fb: FacebookInit) -> Result<(), Error> 
 async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
-    let (reader, writer) = build_reader_writer(create_unsharded()?);
-    let reader = with_caching(reader);
+    let (mut reader, writer) = build_reader_writer(create_unsharded()?);
+    with_caching(&mut reader);
+    let reader = Arc::new(reader);
     do_add_filenode(&ctx, &writer, file_a_first_filenode(), REPO_ZERO).await?;
 
     let dir_a_second_filenode = PreparedFilenode {
@@ -1118,7 +1141,7 @@ async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
 
     assert_all_filenodes(
         &ctx,
-        &reader,
+        reader.clone(),
         &RepoPath::file("a")?,
         REPO_ZERO,
         &vec![file_a_first_filenode().info],
@@ -1128,7 +1151,7 @@ async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
 
     assert_all_filenodes(
         &ctx,
-        &reader,
+        reader,
         &RepoPath::dir("a")?,
         REPO_ZERO,
         &vec![dir_a_second_filenode.info],
@@ -1143,8 +1166,9 @@ async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
 async fn test_point_filenode_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
-    let (reader, writer) = build_reader_writer(create_unsharded()?);
-    let reader = with_caching(reader);
+    let (mut reader, writer) = build_reader_writer(create_unsharded()?);
+    with_caching(&mut reader);
+    let reader = Arc::new(reader);
     do_add_filenode(&ctx, &writer, file_a_first_filenode(), REPO_ZERO).await?;
 
     let dir_a_second_filenode = PreparedFilenode {
@@ -1161,7 +1185,7 @@ async fn test_point_filenode_caching(fb: FacebookInit) -> Result<(), Error> {
 
     assert_filenode(
         &ctx,
-        &reader,
+        reader.clone(),
         &RepoPath::file("a")?,
         ONES_FNID,
         REPO_ZERO,
@@ -1171,7 +1195,7 @@ async fn test_point_filenode_caching(fb: FacebookInit) -> Result<(), Error> {
 
     assert_filenode(
         &ctx,
-        &reader,
+        reader,
         &RepoPath::dir("a")?,
         ONES_FNID,
         REPO_ZERO,

@@ -88,6 +88,7 @@ impl Filenodes for NewFilenodes {
     ) -> Result<FilenodeResult<Option<FilenodeInfo>>> {
         let ret = self
             .reader
+            .clone()
             .get_filenode(ctx, self.repo_id, path, filenode_id)
             .await
             .with_context(|| ErrorKind::FailFetchFilenode(filenode_id, path.clone()))?;
@@ -102,6 +103,7 @@ impl Filenodes for NewFilenodes {
     ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>> {
         let ret = self
             .reader
+            .clone()
             .get_all_filenodes_for_path(ctx, self.repo_id, path, limit)
             .await
             .with_context(|| ErrorKind::FailFetchFilenodeRange(path.clone()))?;

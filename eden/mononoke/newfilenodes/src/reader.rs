@@ -14,11 +14,12 @@ use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{RepoPath, RepositoryId};
 use path_hash::{PathBytes, PathHashBytes, PathWithHash};
 use rand::{thread_rng, Rng};
-use scopeguard;
 use sql::{queries, Connection};
 use stats::prelude::*;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error as DeriveError;
 use tokio::time::timeout;
@@ -140,11 +141,10 @@ pub fn history_cache_key(
         value: PhantomData,
     }
 }
-
 pub struct FilenodesReader {
     read_connections: Connections,
     read_master_connections: Connections,
-    shards: Shards,
+    shards: Arc<Shards>,
     pub local_cache: LocalCache,
     pub remote_cache: RemoteCache,
 }
@@ -155,7 +155,7 @@ impl FilenodesReader {
         read_master_connections: Vec<Connection>,
     ) -> Self {
         Self {
-            shards: Shards::new(1000, 1000),
+            shards: Arc::new(Shards::new(1000, 1000)),
             read_connections: Connections::new(read_connections),
             read_master_connections: Connections::new(read_master_connections),
             local_cache: LocalCache::Noop,
@@ -164,7 +164,7 @@ impl FilenodesReader {
     }
 
     pub async fn get_filenode(
-        &self,
+        self: Arc<Self>,
         ctx: &CoreContext,
         repo_id: RepositoryId,
         path: &RepoPath,
@@ -172,101 +172,108 @@ impl FilenodesReader {
     ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error> {
         STATS::gets.add_value(1);
 
-        let pwh = PathWithHash::from_repo_path(&path);
+
+        let pwh = PathWithHash::from_repo_path_cow(Cow::Owned(path.clone()));
         let key = filenode_cache_key(repo_id, &pwh, &filenode);
 
         if let Some(cached) = self.local_cache.get(&key) {
             return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
         }
 
-        let permit = self.shards.acquire_filenodes(&path, filenode).await?;
-        scopeguard::defer! { drop(permit) };
+        let ctx = ctx.clone();
+        self.shards
+            .clone()
+            .with_filenodes(path, filenode, move || {
+                async move {
+                    // Now that we acquired the permit, check our cache again, in case the previous permit
+                    // owner just filed the cache with the filenode we're looking for.
+                    if let Some(cached) = self.local_cache.get(&key) {
+                        return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
+                    }
 
-        // Now that we acquired the permit, check our cache again, in case the previous permit
-        // owner just filed the cache with the filenode we're looking for.
-        if let Some(cached) = self.local_cache.get(&key) {
-            return Ok(FilenodeResult::Present(Some(cached.try_into()?)));
-        }
+                    STATS::get_local_cache_misses.add_value(1);
 
-        STATS::get_local_cache_misses.add_value(1);
+                    if let Some(info) =
+                        enforce_remote_cache_timeout(self.remote_cache.get_filenode(&key)).await
+                    {
+                        self.local_cache.fill(&key, &(&info).into());
+                        return Ok(FilenodeResult::Present(Some(info)));
+                    }
 
-        if let Some(info) = enforce_remote_cache_timeout(self.remote_cache.get_filenode(&key)).await
-        {
-            self.local_cache.fill(&key, &(&info).into());
-            return Ok(FilenodeResult::Present(Some(info)));
-        }
+                    let cache_filler = FilenodeCacheFiller {
+                        local_cache: &self.local_cache,
+                        remote_cache: &self.remote_cache,
+                        key: &key,
+                    };
 
-        let cache_filler = FilenodeCacheFiller {
-            local_cache: &self.local_cache,
-            remote_cache: &self.remote_cache,
-            key: &key,
-        };
+                    match select_filenode_from_sql(
+                        cache_filler,
+                        &self.read_connections,
+                        repo_id,
+                        &pwh,
+                        filenode,
+                        &PerfCounterRecorder {
+                            ctx: &ctx,
+                            counter: PerfCounterType::SqlReadsReplica,
+                        },
+                    )
+                    .await
+                    {
+                        Ok(FilenodeResult::Disabled) => {
+                            return Ok(FilenodeResult::Disabled);
+                        }
+                        Ok(FilenodeResult::Present(Some(res))) => {
+                            return Ok(FilenodeResult::Present(Some(res.try_into()?)));
+                        }
+                        Ok(FilenodeResult::Present(None))
+                        | Err(ErrorKind::FixedCopyInfoMissing(_))
+                        | Err(ErrorKind::PathNotFound(_)) => {
+                            // If the filenode wasn't found, or its copy info was missing, it might be present
+                            // on the master.
+                        }
+                        Err(e) => {
+                            return Err(e.into());
+                        }
+                    }
 
-        match select_filenode_from_sql(
-            cache_filler,
-            &self.read_connections,
-            repo_id,
-            &pwh,
-            filenode,
-            &PerfCounterRecorder {
-                ctx: &ctx,
-                counter: PerfCounterType::SqlReadsReplica,
-            },
-        )
-        .await
-        {
-            Ok(FilenodeResult::Disabled) => {
-                return Ok(FilenodeResult::Disabled);
-            }
-            Ok(FilenodeResult::Present(Some(res))) => {
-                return Ok(FilenodeResult::Present(Some(res.try_into()?)));
-            }
-            Ok(FilenodeResult::Present(None))
-            | Err(ErrorKind::FixedCopyInfoMissing(_))
-            | Err(ErrorKind::PathNotFound(_)) => {
-                // If the filenode wasn't found, or its copy info was missing, it might be present
-                // on the master.
-            }
-            Err(e) => {
-                return Err(e.into());
-            }
-        }
+                    let ratio = tunables().get_filenodes_master_fallback_ratio();
+                    if ratio > 0 {
+                        let mut rng = thread_rng();
+                        let n = rng.gen_range(0..ratio);
+                        if n > 0 {
+                            return Ok(FilenodeResult::Disabled);
+                        }
+                    }
 
-        let ratio = tunables().get_filenodes_master_fallback_ratio();
-        if ratio > 0 {
-            let mut rng = thread_rng();
-            let n = rng.gen_range(0..ratio);
-            if n > 0 {
-                return Ok(FilenodeResult::Disabled);
-            }
-        }
+                    STATS::gets_master.add_value(1);
 
-        STATS::gets_master.add_value(1);
+                    let res = select_filenode_from_sql(
+                        cache_filler,
+                        &self.read_master_connections,
+                        repo_id,
+                        &pwh,
+                        filenode,
+                        &PerfCounterRecorder {
+                            ctx: &ctx,
+                            counter: PerfCounterType::SqlReadsMaster,
+                        },
+                    )
+                    .await?;
 
-        let res = select_filenode_from_sql(
-            cache_filler,
-            &self.read_master_connections,
-            repo_id,
-            &pwh,
-            filenode,
-            &PerfCounterRecorder {
-                ctx: &ctx,
-                counter: PerfCounterType::SqlReadsMaster,
-            },
-        )
-        .await?;
-
-        match res {
-            FilenodeResult::Present(res) => {
-                let res = res.map(|res| res.try_into()).transpose()?;
-                Ok(FilenodeResult::Present(res))
-            }
-            FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
-        }
+                    match res {
+                        FilenodeResult::Present(res) => {
+                            let res = res.map(|res| res.try_into()).transpose()?;
+                            Ok(FilenodeResult::Present(res))
+                        }
+                        FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+                    }
+                }
+            })
+            .await?
     }
 
     pub async fn get_all_filenodes_for_path(
-        &self,
+        self: Arc<Self>,
         ctx: &CoreContext,
         repo_id: RepositoryId,
         path: &RepoPath,
@@ -274,63 +281,70 @@ impl FilenodesReader {
     ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
         STATS::range_gets.add_value(1);
 
-        let pwh = PathWithHash::from_repo_path(&path);
+        let pwh = PathWithHash::from_repo_path_cow(Cow::Owned(path.clone()));
         let key = history_cache_key(repo_id, &pwh, limit);
 
         if let Some(cached) = self.local_cache.get(&key) {
             return convert_cached_filenodes(cached);
         }
+        let ctx = ctx.clone();
+        self.shards
+            .clone()
+            .with_history(path, move || {
+                async move {
+                    // See above for rationale here.
+                    if let Some(cached) = self.local_cache.get(&key) {
+                        return convert_cached_filenodes(cached);
+                    }
 
-        let permit = self.shards.acquire_history(&path).await?;
-        scopeguard::defer! { drop(permit) };
+                    STATS::range_local_cache_misses.add_value(1);
 
-        // See above for rationale here.
-        if let Some(cached) = self.local_cache.get(&key) {
-            return convert_cached_filenodes(cached);
-        }
+                    if let Some(info) =
+                        enforce_remote_cache_timeout(self.remote_cache.get_history(&key)).await
+                    {
+                        let info = info.into_option();
+                        // TODO: We should compress if this is too big.
+                        self.local_cache
+                            .fill(&key, &info.as_ref().map(|info| info.into()));
+                        match info {
+                            Some(info) => {
+                                return Ok(FilenodeRangeResult::Present(info));
+                            }
+                            None => {
+                                return Ok(FilenodeRangeResult::TooBig);
+                            }
+                        }
+                    }
 
-        STATS::range_local_cache_misses.add_value(1);
+                    let cache_filler = HistoryCacheFiller {
+                        local_cache: &self.local_cache,
+                        remote_cache: &self.remote_cache,
+                        key: &key,
+                    };
 
-        if let Some(info) = enforce_remote_cache_timeout(self.remote_cache.get_history(&key)).await
-        {
-            let info = info.into_option();
-            // TODO: We should compress if this is too big.
-            self.local_cache
-                .fill(&key, &info.as_ref().map(|info| info.into()));
-            match info {
-                Some(info) => {
-                    return Ok(FilenodeRangeResult::Present(info));
+                    let res = select_history_from_sql(
+                        &cache_filler,
+                        &self.read_connections,
+                        repo_id,
+                        &pwh,
+                        &PerfCounterRecorder {
+                            ctx: &ctx,
+                            counter: PerfCounterType::SqlReadsReplica,
+                        },
+                        limit,
+                    )
+                    .await?;
+
+                    match res {
+                        FilenodeRangeResult::Present(res) => {
+                            Ok(FilenodeRangeResult::Present(res.try_into()?))
+                        }
+                        FilenodeRangeResult::TooBig => Ok(FilenodeRangeResult::TooBig),
+                        FilenodeRangeResult::Disabled => Ok(FilenodeRangeResult::Disabled),
+                    }
                 }
-                None => {
-                    return Ok(FilenodeRangeResult::TooBig);
-                }
-            }
-        }
-
-        let cache_filler = HistoryCacheFiller {
-            local_cache: &self.local_cache,
-            remote_cache: &self.remote_cache,
-            key: &key,
-        };
-
-        let res = select_history_from_sql(
-            &cache_filler,
-            &self.read_connections,
-            repo_id,
-            &pwh,
-            &PerfCounterRecorder {
-                ctx: &ctx,
-                counter: PerfCounterType::SqlReadsReplica,
-            },
-            limit,
-        )
-        .await?;
-
-        match res {
-            FilenodeRangeResult::Present(res) => Ok(FilenodeRangeResult::Present(res.try_into()?)),
-            FilenodeRangeResult::TooBig => Ok(FilenodeRangeResult::TooBig),
-            FilenodeRangeResult::Disabled => Ok(FilenodeRangeResult::Disabled),
-        }
+            })
+            .await?
     }
 
     pub fn prime_cache(

@@ -13,6 +13,7 @@ use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID, TWOS_CSID, TWOS_FNID
 use mononoke_types::RepoPath;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use path_hash::PathWithHash;
+use std::sync::Arc;
 
 use super::util::{build_reader_writer, build_shard};
 use crate::local_cache::{test::HashMapCache, LocalCache};
@@ -46,6 +47,7 @@ async fn test_filenode_fill(fb: FacebookInit) -> Result<(), Error> {
 
     reader.local_cache = LocalCache::Test(HashMapCache::new());
     reader.remote_cache = make_test_cache();
+    let mut reader = Arc::new(reader);
 
     let path = RepoPath::file("file")?;
     let info = filenode();
@@ -71,14 +73,16 @@ async fn test_filenode_fill(fb: FacebookInit) -> Result<(), Error> {
 
     // A local miss should fill the remote cache:
     reader
+        .clone()
         .get_filenode(&ctx, REPO_ZERO, &path, info.filenode)
         .await?
         .do_not_handle_disabled_filenodes()?;
     wait_for_filenode(&reader.remote_cache, &key).await?;
 
     // A local hit should not fill the remote cache:
-    reader.remote_cache = make_test_cache();
+    Arc::get_mut(&mut reader).unwrap().remote_cache = make_test_cache();
     reader
+        .clone()
         .get_filenode(&ctx, REPO_ZERO, &path, info.filenode)
         .await?
         .do_not_handle_disabled_filenodes()?;
@@ -95,6 +99,7 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
 
     reader.local_cache = LocalCache::Test(HashMapCache::new());
     reader.remote_cache = make_test_cache();
+    let mut reader = Arc::new(reader);
 
     let path = RepoPath::file("file")?;
     let info = filenode();
@@ -115,6 +120,7 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
     let limit = None;
     // A local miss should fill the remote cache:
     reader
+        .clone()
         .get_all_filenodes_for_path(&ctx, REPO_ZERO, &path, limit)
         .await?
         .do_not_handle_disabled_filenodes()?;
@@ -123,8 +129,9 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
     wait_for_history(&reader.remote_cache, &key).await?;
 
     // A local hit should not fill the remote cache:
-    reader.remote_cache = make_test_cache();
+    Arc::get_mut(&mut reader).unwrap().remote_cache = make_test_cache();
     reader
+        .clone()
         .get_all_filenodes_for_path(&ctx, REPO_ZERO, &path, limit)
         .await?
         .do_not_handle_disabled_filenodes()?;
@@ -141,6 +148,7 @@ async fn test_too_big_caching(fb: FacebookInit) -> Result<(), Error> {
 
     reader.local_cache = LocalCache::Test(HashMapCache::new());
     reader.remote_cache = make_test_cache();
+    let reader = Arc::new(reader);
 
     let path = RepoPath::file("file")?;
     let info = filenode();
@@ -167,6 +175,7 @@ async fn test_too_big_caching(fb: FacebookInit) -> Result<(), Error> {
 
     let limit = Some(1);
     reader
+        .clone()
         .get_all_filenodes_for_path(&ctx, REPO_ZERO, &path, limit)
         .await?
         .do_not_handle_disabled_filenodes()?;

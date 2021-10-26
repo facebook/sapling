@@ -26,7 +26,7 @@ fn convert_from_repo_path(path: &RepoPath) -> (Vec<u8>, bool) {
     }
 }
 
-#[derive(Abomonation, Clone)]
+#[derive(Abomonation, Clone, Debug)]
 pub struct CachedFilenode {
     pub filenode: HgFileNodeId,
     pub p1: Option<HgFileNodeId>,
