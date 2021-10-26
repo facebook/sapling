@@ -18,7 +18,7 @@ use thiserror::Error;
 /// Error Fault
 ///
 /// If present, indicates that the fault originated Upstream (Request), Downstream
-/// (Dependency), or Internal to the system in question.  
+/// (Dependency), or Internal to the system in question.
 #[derive(Copy, Clone, Hash, Debug)]
 #[repr(u8)]
 pub enum Fault {
@@ -494,7 +494,7 @@ macro_rules! bail {
         return std::result::Result::Err(anyhow::anyhow!($err).with_metadata($meta));
     };
     (@withmeta $meta:expr, $fmt:expr, $($arg:tt)*) => {
-        return std::result::Result::Err(anyhow::anyhow!($fmt, $($arg)*).with_metadata($meta));
+        return std::result::Result::Err(anyhow::anyhow!($fmt, $($arg)*).with_metadata($meta))
     };
 
     // Metadata munching
@@ -561,7 +561,7 @@ macro_rules! bail {
         return std::result::Result::Err(anyhow::anyhow!($msg));
     };
     ($err:expr $(,)?) => {
-        return std::result::Result::Err(anyhow::anyhow!($err));
+        return std::result::Result::Err(anyhow::anyhow!($err))
     };
     ($fmt:expr, $($arg:tt)*) => {
         return std::result::Result::Err(anyhow::anyhow!($fmt, $($arg)*));
