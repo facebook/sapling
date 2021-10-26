@@ -565,7 +565,9 @@ HRESULT PrjfsChannelInner::getFileData(
               } else {
                 context->sendSuccess();
               }
-            });
+            })
+            .semi()
+            .via(&folly::QueuedImmediateExecutor::instance());
       });
 
   context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {

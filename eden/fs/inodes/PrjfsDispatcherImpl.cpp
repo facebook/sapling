@@ -126,25 +126,22 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::access(
       });
 }
 
-folly::Future<std::string> PrjfsDispatcherImpl::read(
+ImmediateFuture<std::string> PrjfsDispatcherImpl::read(
     RelativePath path,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance())
       .thenValue([&context](const InodePtr inode) {
         auto fileInode = inode.asFilePtr();
-        return fileInode->readAll(context);
+        return fileInode->readAll(context).semi();
       })
-      .thenError(
-          folly::tag_t<std::system_error>{},
-          [path = std::move(path), this](const std::system_error& ex) {
-            if (isEnoent(ex) && path == kDotEdenConfigPath) {
-              return folly::makeFuture<std::string>(
-                  std::string(dotEdenConfig_));
-            }
-            return folly::makeFuture<std::string>(ex);
-          });
+      .thenTry([path = std::move(path), this](folly::Try<std::string> result) {
+        if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
+          if (isEnoent(*exc) && path == kDotEdenConfigPath) {
+            return folly::Try<std::string>{std::string(dotEdenConfig_)};
+          }
+        }
+        return result;
+      });
 }
 
 namespace {

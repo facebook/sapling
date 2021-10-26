@@ -76,7 +76,7 @@ class PrjfsDispatcher {
    * In the future, this will return only what's in between offset and
    * offset+length.
    */
-  virtual folly::Future<std::string> read(
+  virtual ImmediateFuture<std::string> read(
       RelativePath path,
       ObjectFetchContext& context) = 0;
 

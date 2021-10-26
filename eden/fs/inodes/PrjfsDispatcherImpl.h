@@ -28,7 +28,7 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
   ImmediateFuture<bool> access(RelativePath path, ObjectFetchContext& context)
       override;
 
-  folly::Future<std::string> read(
+  ImmediateFuture<std::string> read(
       RelativePath path,
       ObjectFetchContext& context) override;
 
