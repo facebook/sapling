@@ -237,26 +237,23 @@ ImmediateFuture<folly::Unit> createInode(
           });
 }
 
-folly::Future<folly::Unit> removeInode(
+ImmediateFuture<folly::Unit> removeInode(
     const EdenMount& mount,
     RelativePath path,
     InodeType inodeType,
     ObjectFetchContext& context) {
   auto inodeFut = mount.getInode(path.dirname(), context);
-  return std::move(inodeFut)
-      .thenValue(
-          [path = std::move(path), inodeType, &context](const InodePtr inode) {
-            auto treeInodePtr = inode.asTreePtr();
-            if (inodeType == InodeType::Tree) {
-              return treeInodePtr->rmdir(
-                  path.basename(), InvalidationRequired::No, context);
-            } else {
-              return treeInodePtr->unlink(
-                  path.basename(), InvalidationRequired::No, context);
-            }
-          })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return std::move(inodeFut).thenValue(
+      [path = std::move(path), inodeType, &context](const InodePtr inode) {
+        auto treeInodePtr = inode.asTreePtr();
+        if (inodeType == InodeType::Tree) {
+          return treeInodePtr->rmdir(
+              path.basename(), InvalidationRequired::No, context);
+        } else {
+          return treeInodePtr->unlink(
+              path.basename(), InvalidationRequired::No, context);
+        }
+      });
 }
 
 } // namespace
@@ -332,13 +329,17 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
 folly::Future<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
     RelativePath path,
     ObjectFetchContext& context) {
-  return removeInode(*mount_, std::move(path), InodeType::File, context);
+  return removeInode(*mount_, std::move(path), InodeType::File, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
     RelativePath path,
     ObjectFetchContext& context) {
-  return removeInode(*mount_, std::move(path), InodeType::Tree, context);
+  return removeInode(*mount_, std::move(path), InodeType::Tree, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 } // namespace facebook::eden
