@@ -274,6 +274,7 @@ members = [
   "derived_data/fsnodes",
   "derived_data/manager",
   "derived_data/mercurial_derived_data",
+  "derived_data/remote",
   "derived_data/skeleton_manifest",
   "derived_data/test",
   "derived_data/test_utils",
