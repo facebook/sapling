@@ -93,6 +93,8 @@ pub use self::fold::Fold;
 pub use self::fold::FoldDef;
 pub use self::meta::LogMetadata;
 
+use self::fold::FoldState;
+
 // Constants about file names
 pub(crate) const PRIMARY_FILE: &str = "log";
 const PRIMARY_HEADER: &[u8] = b"indexedlog0\0";
@@ -128,6 +130,11 @@ pub struct Log {
     pub(crate) mem_buf: Pin<Box<Vec<u8>>>,
     pub(crate) meta: LogMetadata,
     indexes: Vec<Index>,
+    // On-demand caches of the folds defined by open_options.
+    // disk_folds only includes clean (on-disk) entries.
+    // all_folds includes both clean (on-disk) and dirty (in-memory) entries.
+    disk_folds: Vec<FoldState>,
+    all_folds: Vec<FoldState>,
     // Whether the index and the log is out-of-sync. In which case, index-based reads (lookups)
     // should return errors because it can no longer be trusted.
     // This could be improved to be per index. For now, it's a single state for simplicity. It's
@@ -334,6 +341,7 @@ impl Log {
                 index.clear_dirty();
             }
             self.mem_buf.clear();
+            self.all_folds = self.disk_folds.clone();
             self.update_indexes_for_on_disk_entries()?;
             Ok(())
         })();
@@ -395,6 +403,13 @@ impl Log {
             mem_buf,
             meta: self.meta.clone(),
             indexes,
+            disk_folds: self.disk_folds.clone(),
+            all_folds: if copy_dirty {
+                &self.all_folds
+            } else {
+                &self.disk_folds
+            }
+            .clone(),
             index_corrupted: false,
             open_options: self.open_options.clone(),
         };
@@ -1040,6 +1055,28 @@ impl Log {
         }
 
         Ok(result)
+    }
+
+    /// Return the fold state after calling `accumulate` on all (on-disk and
+    /// in-memory) entries in insertion order.
+    ///
+    /// The fold function is the `fold_id`-th (0-based) `FoldDef` in
+    /// [`OpenOptions`].
+    pub fn fold(&self, fold_id: usize) -> crate::Result<&dyn Fold> {
+        match self.all_folds.get(fold_id) {
+            Some(f) => Ok(f.fold.as_ref()),
+            None => Err(self.fold_out_of_bound(fold_id)),
+        }
+    }
+
+    fn fold_out_of_bound(&self, fold_id: usize) -> crate::Error {
+        let msg = format!(
+            "fold_id {} is out of bound (len={}, dir={:?})",
+            fold_id,
+            self.open_options.fold_defs.len(),
+            &self.dir
+        );
+        crate::Error::programming(msg)
     }
 
     /// Build in-memory index for the newly added entry.

@@ -54,11 +54,48 @@ pub trait Fold: Debug + 'static + Send + Sync {
     fn clone_boxed(&self) -> Box<dyn Fold>;
 }
 
+/// State tracking the progress of a fold function.
+#[derive(Debug)]
+pub(crate) struct FoldState {
+    /// Epoch. Useful to detect non-append-only changes.
+    /// See also `LogMetadata`.
+    pub(crate) epoch: u64,
+
+    /// Offset of the next entry.
+    pub(crate) offset: u64,
+
+    /// The state of the actual fold.
+    pub(crate) fold: Box<dyn Fold>,
+
+    /// How to reset the `fold` state.
+    def: FoldDef,
+}
+
 impl FoldDef {
     /// Create a "fold" definition.
     ///
     /// `create_func` is a function to produce an empty "fold" state.
     pub fn new(name: &'static str, create_fold: fn() -> Box<dyn Fold>) -> Self {
         Self { create_fold, name }
+    }
+
+    pub(crate) fn empty_state(&self) -> FoldState {
+        FoldState {
+            epoch: 0,
+            offset: 0,
+            fold: (self.create_fold)(),
+            def: self.clone(),
+        }
+    }
+}
+
+impl Clone for FoldState {
+    fn clone(&self) -> Self {
+        Self {
+            epoch: self.epoch,
+            offset: self.offset,
+            fold: self.fold.clone_boxed(),
+            def: self.def.clone(),
+        }
     }
 }

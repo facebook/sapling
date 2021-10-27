@@ -14,6 +14,7 @@ use tracing::debug_span;
 
 use super::fold::Fold;
 use super::fold::FoldDef;
+use super::fold::FoldState;
 use crate::errors::ResultExt;
 use crate::index::Index;
 use crate::lock::ScopedDirLock;
@@ -374,12 +375,16 @@ impl OpenOptions {
                 None,
                 self.fsync,
             )?;
+            let disk_folds = self.empty_folds();
+            let all_folds = disk_folds.clone();
             Ok(Log {
                 dir,
                 disk_buf,
                 mem_buf,
                 meta,
                 indexes,
+                disk_folds,
+                all_folds,
                 index_corrupted: false,
                 open_options: self.clone(),
             })
@@ -434,12 +439,16 @@ impl OpenOptions {
             reuse_indexes,
             self.fsync,
         )?;
+        let disk_folds = self.empty_folds();
+        let all_folds = disk_folds.clone();
         let mut log = Log {
             dir: dir.clone(),
             disk_buf,
             mem_buf,
             meta,
             indexes,
+            disk_folds,
+            all_folds,
             index_corrupted: false,
             open_options: self.clone(),
         };
@@ -459,6 +468,10 @@ impl OpenOptions {
             }
         }
         Ok(log)
+    }
+
+    pub(crate) fn empty_folds(&self) -> Vec<FoldState> {
+        self.fold_defs.iter().map(|def| def.empty_state()).collect()
     }
 }
 
