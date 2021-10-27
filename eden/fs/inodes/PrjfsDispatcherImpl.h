@@ -32,28 +32,28 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
       RelativePath path,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> fileCreated(
+  ImmediateFuture<folly::Unit> fileCreated(
       RelativePath relPath,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> dirCreated(
+  ImmediateFuture<folly::Unit> dirCreated(
       RelativePath relPath,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> fileModified(
+  ImmediateFuture<folly::Unit> fileModified(
       RelativePath relPath,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> fileRenamed(
+  ImmediateFuture<folly::Unit> fileRenamed(
       RelativePath oldPath,
       RelativePath newPath,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> fileDeleted(
+  ImmediateFuture<folly::Unit> fileDeleted(
       RelativePath oldPath,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> dirDeleted(
+  ImmediateFuture<folly::Unit> dirDeleted(
       RelativePath oldPath,
       ObjectFetchContext& context) override;
 

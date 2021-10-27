@@ -577,7 +577,7 @@ HRESULT PrjfsChannelInner::getFileData(
 }
 
 namespace {
-typedef folly::Future<folly::Unit> (PrjfsChannelInner::*NotificationHandler)(
+typedef ImmediateFuture<folly::Unit> (PrjfsChannelInner::*NotificationHandler)(
     RelativePath oldPath,
     RelativePath destPath,
     bool isDirectory,
@@ -698,7 +698,7 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
 };
 } // namespace
 
-folly::Future<folly::Unit> PrjfsChannelInner::newFileCreated(
+ImmediateFuture<folly::Unit> PrjfsChannelInner::newFileCreated(
     RelativePath relPath,
     RelativePath /*destPath*/,
     bool isDirectory,
@@ -710,7 +710,7 @@ folly::Future<folly::Unit> PrjfsChannelInner::newFileCreated(
   }
 }
 
-folly::Future<folly::Unit> PrjfsChannelInner::fileOverwritten(
+ImmediateFuture<folly::Unit> PrjfsChannelInner::fileOverwritten(
     RelativePath relPath,
     RelativePath /*destPath*/,
     bool /*isDirectory*/,
@@ -718,7 +718,7 @@ folly::Future<folly::Unit> PrjfsChannelInner::fileOverwritten(
   return dispatcher_->fileModified(std::move(relPath), context);
 }
 
-folly::Future<folly::Unit> PrjfsChannelInner::fileHandleClosedFileModified(
+ImmediateFuture<folly::Unit> PrjfsChannelInner::fileHandleClosedFileModified(
     RelativePath relPath,
     RelativePath /*destPath*/,
     bool /*isDirectory*/,
@@ -726,7 +726,7 @@ folly::Future<folly::Unit> PrjfsChannelInner::fileHandleClosedFileModified(
   return dispatcher_->fileModified(std::move(relPath), context);
 }
 
-folly::Future<folly::Unit> PrjfsChannelInner::fileRenamed(
+ImmediateFuture<folly::Unit> PrjfsChannelInner::fileRenamed(
     RelativePath oldPath,
     RelativePath newPath,
     bool isDirectory,
@@ -745,7 +745,7 @@ folly::Future<folly::Unit> PrjfsChannelInner::fileRenamed(
   }
 }
 
-folly::Future<folly::Unit> PrjfsChannelInner::preRename(
+ImmediateFuture<folly::Unit> PrjfsChannelInner::preRename(
     RelativePath /*oldPath*/,
     RelativePath /*newPath*/,
     bool /*isDirectory*/,
@@ -753,7 +753,7 @@ folly::Future<folly::Unit> PrjfsChannelInner::preRename(
   return folly::unit;
 }
 
-folly::Future<folly::Unit> PrjfsChannelInner::fileHandleClosedFileDeleted(
+ImmediateFuture<folly::Unit> PrjfsChannelInner::fileHandleClosedFileDeleted(
     RelativePath oldPath,
     RelativePath /*destPath*/,
     bool isDirectory,
@@ -765,12 +765,12 @@ folly::Future<folly::Unit> PrjfsChannelInner::fileHandleClosedFileDeleted(
   }
 }
 
-folly::Future<folly::Unit> PrjfsChannelInner::preSetHardlink(
+ImmediateFuture<folly::Unit> PrjfsChannelInner::preSetHardlink(
     RelativePath relPath,
     RelativePath /*newPath*/,
     bool /*isDirectory*/,
     ObjectFetchContext& context) {
-  return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
+  return folly::Try<folly::Unit>(makeHResultErrorExplicit(
       HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
       fmt::format(FMT_STRING("Hardlinks are not supported: {}"), relPath)));
 }
@@ -811,7 +811,9 @@ HRESULT PrjfsChannelInner::notification(
                  std::move(relPath), std::move(destPath), isDirectory, *context)
           .thenValue([context = std::move(context)](auto&&) {
             context->sendNotificationSuccess();
-          });
+          })
+          .semi()
+          .via(&folly::QueuedImmediateExecutor::instance());
     });
 
     context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {

@@ -14,11 +14,6 @@
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace folly {
-template <class T>
-class Future;
-} // namespace folly
-
 namespace facebook::eden {
 
 class ObjectFetchContext;
@@ -83,28 +78,28 @@ class PrjfsDispatcher {
   /**
    * Notification sent when a file was created
    */
-  virtual folly::Future<folly::Unit> fileCreated(
+  virtual ImmediateFuture<folly::Unit> fileCreated(
       RelativePath path,
       ObjectFetchContext& context) = 0;
 
   /**
    * Notification sent when a directory was created
    */
-  virtual folly::Future<folly::Unit> dirCreated(
+  virtual ImmediateFuture<folly::Unit> dirCreated(
       RelativePath path,
       ObjectFetchContext& context) = 0;
 
   /**
    * Notification sent when a file has been modified
    */
-  virtual folly::Future<folly::Unit> fileModified(
+  virtual ImmediateFuture<folly::Unit> fileModified(
       RelativePath relPath,
       ObjectFetchContext& context) = 0;
 
   /**
    * Notification sent when a file is renamed
    */
-  virtual folly::Future<folly::Unit> fileRenamed(
+  virtual ImmediateFuture<folly::Unit> fileRenamed(
       RelativePath oldPath,
       RelativePath newPath,
       ObjectFetchContext& context) = 0;
@@ -112,14 +107,14 @@ class PrjfsDispatcher {
   /**
    * Notification sent when a file was removed
    */
-  virtual folly::Future<folly::Unit> fileDeleted(
+  virtual ImmediateFuture<folly::Unit> fileDeleted(
       RelativePath relPath,
       ObjectFetchContext& context) = 0;
 
   /**
    * Notification sent when a directory was removed
    */
-  virtual folly::Future<folly::Unit> dirDeleted(
+  virtual ImmediateFuture<folly::Unit> dirDeleted(
       RelativePath relPath,
       ObjectFetchContext& context) = 0;
 

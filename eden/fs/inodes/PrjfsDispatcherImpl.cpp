@@ -258,36 +258,29 @@ ImmediateFuture<folly::Unit> removeInode(
 
 } // namespace
 
-folly::Future<folly::Unit> PrjfsDispatcherImpl::fileCreated(
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileCreated(
     RelativePath path,
     ObjectFetchContext& context) {
-  return createInode(*mount_, std::move(path), InodeType::File, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return createInode(*mount_, std::move(path), InodeType::File, context);
 }
 
-folly::Future<folly::Unit> PrjfsDispatcherImpl::dirCreated(
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirCreated(
     RelativePath path,
     ObjectFetchContext& context) {
-  return createInode(*mount_, std::move(path), InodeType::Tree, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return createInode(*mount_, std::move(path), InodeType::Tree, context);
 }
 
-folly::Future<folly::Unit> PrjfsDispatcherImpl::fileModified(
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileModified(
     RelativePath path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context)
-      .thenValue([](const InodePtr inode) {
-        auto fileInode = inode.asFilePtr();
-        fileInode->materialize();
-        return folly::unit;
-      })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return mount_->getInode(path, context).thenValue([](const InodePtr inode) {
+    auto fileInode = inode.asFilePtr();
+    fileInode->materialize();
+    return folly::unit;
+  });
 }
 
-folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
     RelativePath oldPath,
     RelativePath newPath,
     ObjectFetchContext& context) {
@@ -313,33 +306,25 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
             //
             // This should be *extremely* rare, for now let's just let it
             // error out.
-            return oldParentTreePtr
-                ->rename(
-                    oldPath.basename(),
-                    newParentTreePtr,
-                    newPath.basename(),
-                    InvalidationRequired::No,
-                    context)
-                .semi();
-          })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+            return oldParentTreePtr->rename(
+                oldPath.basename(),
+                newParentTreePtr,
+                newPath.basename(),
+                InvalidationRequired::No,
+                context);
+          });
 }
 
-folly::Future<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
     RelativePath path,
     ObjectFetchContext& context) {
-  return removeInode(*mount_, std::move(path), InodeType::File, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return removeInode(*mount_, std::move(path), InodeType::File, context);
 }
 
-folly::Future<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
+ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
     RelativePath path,
     ObjectFetchContext& context) {
-  return removeInode(*mount_, std::move(path), InodeType::Tree, context)
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  return removeInode(*mount_, std::move(path), InodeType::Tree, context);
 }
 
 } // namespace facebook::eden

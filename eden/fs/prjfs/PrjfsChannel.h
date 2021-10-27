@@ -121,7 +121,7 @@ class PrjfsChannelInner {
   /**
    * Notification sent when a file or directory has been created.
    */
-  folly::Future<folly::Unit> newFileCreated(
+  ImmediateFuture<folly::Unit> newFileCreated(
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
@@ -130,7 +130,7 @@ class PrjfsChannelInner {
   /**
    * Notification sent when a file or directory has been replaced.
    */
-  folly::Future<folly::Unit> fileOverwritten(
+  ImmediateFuture<folly::Unit> fileOverwritten(
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
@@ -139,7 +139,7 @@ class PrjfsChannelInner {
   /**
    * Notification sent when a file has been modified.
    */
-  folly::Future<folly::Unit> fileHandleClosedFileModified(
+  ImmediateFuture<folly::Unit> fileHandleClosedFileModified(
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
@@ -148,7 +148,7 @@ class PrjfsChannelInner {
   /**
    * Notification sent when a file or directory has been renamed.
    */
-  folly::Future<folly::Unit> fileRenamed(
+  ImmediateFuture<folly::Unit> fileRenamed(
       RelativePath oldPath,
       RelativePath newPath,
       bool isDirectory,
@@ -161,7 +161,7 @@ class PrjfsChannelInner {
    * exist on disk, the file rename may later fail. The rename is known to have
    * happened only when fileRenamed is called.
    */
-  folly::Future<folly::Unit> preRename(
+  ImmediateFuture<folly::Unit> preRename(
       RelativePath oldPath,
       RelativePath newPath,
       bool isDirectory,
@@ -170,7 +170,7 @@ class PrjfsChannelInner {
   /**
    * Notification sent when a file or directory has been removed.
    */
-  folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+  ImmediateFuture<folly::Unit> fileHandleClosedFileDeleted(
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
@@ -179,7 +179,7 @@ class PrjfsChannelInner {
   /**
    * Notification sent prior to a hardlink being created.
    */
-  folly::Future<folly::Unit> preSetHardlink(
+  ImmediateFuture<folly::Unit> preSetHardlink(
       RelativePath oldPath,
       RelativePath newPath,
       bool isDirectory,
