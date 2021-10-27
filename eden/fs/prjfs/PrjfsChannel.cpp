@@ -169,10 +169,10 @@ HRESULT PrjfsChannelInner::startEnumeration(
   auto guid = Guid(*enumerationId);
   auto path = RelativePath(callbackData->FilePathName);
 
-  auto fut = folly::makeFutureWith([this,
-                                    context,
-                                    guid = std::move(guid),
-                                    path = std::move(path)]() mutable {
+  auto fut = makeImmediateFutureWith([this,
+                                      context,
+                                      guid = std::move(guid),
+                                      path = std::move(path)]() mutable {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
     auto stat = &ChannelThreadStats::openDir;
@@ -184,13 +184,13 @@ HRESULT PrjfsChannelInner::startEnumeration(
                        auto&& dirents) {
           addDirectoryEnumeration(std::move(guid), std::move(dirents));
           context->sendSuccess();
-        })
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+        });
   });
 
-  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
-  });
+  context->catchErrors(std::move(fut))
+      .ensure([context = std::move(context)] {})
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -245,10 +245,10 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     enumerator->restart();
   }
 
-  auto fut = folly::makeFutureWith([this,
-                                    context,
-                                    enumerator = std::move(enumerator),
-                                    buffer = dirEntryBufferHandle] {
+  auto fut = makeImmediateFutureWith([this,
+                                      context,
+                                      enumerator = std::move(enumerator),
+                                      buffer = dirEntryBufferHandle] {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
     auto stat = &ChannelThreadStats::readDir;
@@ -277,11 +277,11 @@ HRESULT PrjfsChannelInner::getEnumerationData(
           // without increment.
           break;
         } else {
-          return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
+          return folly::Try<folly::Unit>{makeHResultErrorExplicit(
               result,
               fmt::format(
                   FMT_STRING("Adding directory entry {}"),
-                  PathComponent(entry->name))));
+                  PathComponent(entry->name)))};
         }
       }
 
@@ -289,11 +289,13 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     }
 
     context->sendEnumerationSuccess(buffer);
-    return folly::makeFuture(folly::unit);
+    return folly::Try{folly::unit};
   });
 
-  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
-  });
+  context->catchErrors(std::move(fut))
+      .ensure([context = std::move(context)] {})
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -304,10 +306,10 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
   auto path = RelativePath(callbackData->FilePathName);
   auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
-  auto fut = folly::makeFutureWith([this,
-                                    context,
-                                    path = std::move(path),
-                                    virtualizationContext]() mutable {
+  auto fut = makeImmediateFutureWith([this,
+                                      context,
+                                      path = std::move(path),
+                                      virtualizationContext]() mutable {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
     auto stat = &ChannelThreadStats::lookup;
@@ -348,13 +350,13 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
           lookupResult.incFsRefcount();
 
           return ImmediateFuture{folly::unit};
-        })
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+        });
   });
 
-  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
-  });
+  context->catchErrors(std::move(fut))
+      .ensure([context = std::move(context)] {})
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -364,28 +366,28 @@ HRESULT PrjfsChannelInner::queryFileName(
     const PRJ_CALLBACK_DATA* callbackData) {
   auto path = RelativePath(callbackData->FilePathName);
 
-  auto fut =
-      folly::makeFutureWith([this, context, path = std::move(path)]() mutable {
-        auto requestWatch =
-            std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
-                nullptr);
-        auto stat = &ChannelThreadStats::access;
-        context->startRequest(dispatcher_->getStats(), stat, requestWatch);
-        FB_LOGF(getStraceLogger(), DBG7, "access({})", path);
-        return dispatcher_->access(std::move(path), *context)
-            .thenValue([context = std::move(context)](bool present) {
-              if (present) {
-                context->sendSuccess();
-              } else {
-                context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
-              }
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
-      });
-
-  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
+  auto fut = makeImmediateFutureWith([this,
+                                      context,
+                                      path = std::move(path)]() mutable {
+    auto requestWatch =
+        std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+    auto stat = &ChannelThreadStats::access;
+    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+    FB_LOGF(getStraceLogger(), DBG7, "access({})", path);
+    return dispatcher_->access(std::move(path), *context)
+        .thenValue([context = std::move(context)](bool present) {
+          if (present) {
+            context->sendSuccess();
+          } else {
+            context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+          }
+        });
   });
+
+  context->catchErrors(std::move(fut))
+      .ensure([context = std::move(context)] {})
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -476,7 +478,7 @@ HRESULT PrjfsChannelInner::getFileData(
     const PRJ_CALLBACK_DATA* callbackData,
     UINT64 byteOffset,
     UINT32 length) {
-  auto fut = folly::makeFutureWith(
+  auto fut = makeImmediateFutureWith(
       [this,
        context,
        path = RelativePath(callbackData->FilePathName),
@@ -565,13 +567,13 @@ HRESULT PrjfsChannelInner::getFileData(
               } else {
                 context->sendSuccess();
               }
-            })
-            .semi()
-            .via(&folly::QueuedImmediateExecutor::instance());
+            });
       });
 
-  context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
-  });
+  context->catchErrors(std::move(fut))
+      .ensure([context = std::move(context)] {})
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -794,14 +796,14 @@ HRESULT PrjfsChannelInner::notification(
     auto relPath = RelativePath(callbackData->FilePathName);
     auto destPath = RelativePath(destinationFileName);
 
-    auto fut = folly::makeFutureWith([this,
-                                      context,
-                                      stat = stat,
-                                      handler = handler,
-                                      renderer = renderer,
-                                      relPath = std::move(relPath),
-                                      destPath = std::move(destPath),
-                                      isDirectory]() mutable {
+    auto fut = makeImmediateFutureWith([this,
+                                        context,
+                                        stat = stat,
+                                        handler = handler,
+                                        renderer = renderer,
+                                        relPath = std::move(relPath),
+                                        destPath = std::move(destPath),
+                                        isDirectory]() mutable {
       auto requestWatch =
           std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
       context->startRequest(dispatcher_->getStats(), stat, requestWatch);
@@ -811,13 +813,13 @@ HRESULT PrjfsChannelInner::notification(
                  std::move(relPath), std::move(destPath), isDirectory, *context)
           .thenValue([context = std::move(context)](auto&&) {
             context->sendNotificationSuccess();
-          })
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+          });
     });
 
-    context->catchErrors(std::move(fut)).ensure([context = std::move(context)] {
-    });
+    context->catchErrors(std::move(fut))
+        .ensure([context = std::move(context)] {})
+        .semi()
+        .via(&folly::QueuedImmediateExecutor::instance());
 
     return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   }

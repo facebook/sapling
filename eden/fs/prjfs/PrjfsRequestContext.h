@@ -10,6 +10,7 @@
 #include <ProjectedFSLib.h> // @manual
 #include "eden/fs/inodes/RequestContext.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
@@ -33,8 +34,8 @@ class PrjfsRequestContext : public RequestContext {
     return clientPid_;
   }
 
-  folly::Future<folly::Unit> catchErrors(folly::Future<folly::Unit>&& fut) {
-    return std::move(fut).thenTryInline([this](folly::Try<folly::Unit>&& try_) {
+  ImmediateFuture<folly::Unit> catchErrors(ImmediateFuture<folly::Unit>&& fut) {
+    return std::move(fut).thenTry([this](folly::Try<folly::Unit>&& try_) {
       SCOPE_EXIT {
         finishRequest();
       };
