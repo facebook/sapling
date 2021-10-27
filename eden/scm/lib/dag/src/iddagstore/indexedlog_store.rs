@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
 use std::fs::File;
 use std::fs::{self};
+use std::io;
 use std::io::Cursor;
 use std::path::Path;
 use std::path::PathBuf;
@@ -20,6 +22,7 @@ use byteorder::ReadBytesExt;
 use byteorder::WriteBytesExt;
 use fs2::FileExt;
 use indexedlog::log;
+use indexedlog::log::Fold;
 use minibytes::Bytes;
 
 use super::IdDagStore;
@@ -46,7 +49,60 @@ pub struct IndexedLogStore {
     next_free_ids_without_dirty: (Id, Id),
 }
 
+/// Fold (accumulator) that tracks IdSet covered in groups.
+/// The state is stored as part in `log`.
+#[derive(Debug, Clone, Default)]
+struct CoveredIdSetFold {
+    id_set_by_group: [IdSet; Group::COUNT],
+}
+
 const MAX_LEVEL_UNKNOWN: u8 = 0;
+
+impl Fold for CoveredIdSetFold {
+    fn load(&mut self, bytes: &[u8]) -> io::Result<()> {
+        self.id_set_by_group = mincode::deserialize(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        Ok(())
+    }
+
+    fn dump(&self) -> io::Result<Vec<u8>> {
+        mincode::serialize(&self.id_set_by_group)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    }
+
+    fn accumulate(&mut self, data: &[u8]) -> indexedlog::Result<()> {
+        // See log_open_options for how other index functions read the entry.
+        if data == IndexedLogStore::MAGIC_CLEAR_NON_MASTER {
+            self.id_set_by_group[Group::NON_MASTER.0] = IdSet::empty();
+            return Ok(());
+        }
+        let data = if data.starts_with(IndexedLogStore::MAGIC_REWRITE_LAST_FLAT) {
+            // See MAGIC_REWRITE_LAST_FLAT for format.
+            let data_start = IndexedLogStore::MAGIC_REWRITE_LAST_FLAT.len() + Segment::OFFSET_DELTA
+                - Segment::OFFSET_LEVEL;
+            &data[data_start..]
+        } else {
+            data
+        };
+        let seg = Segment(Bytes::copy_from_slice(data));
+        let span = match seg.span() {
+            Ok(s) => s,
+            Err(e) => return Err(("cannot parse segment in CoveredIdSetFold", e).into()),
+        };
+        if let Some(set) = self.id_set_by_group.get_mut(span.low.group().0) {
+            set.push(span);
+        }
+        Ok(())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn clone_boxed(&self) -> Box<dyn Fold> {
+        Box::new(self.clone())
+    }
+}
 
 // Required functionality
 impl IdDagStore for IndexedLogStore {
@@ -125,8 +181,17 @@ impl IdDagStore for IndexedLogStore {
     }
 
     fn all_ids_in_groups(&self, groups: &[Group]) -> Result<IdSet> {
-        let _ = groups;
-        unimplemented!()
+        let fold = self
+            .log
+            .fold(Self::FOLD_COVERED_ID_SET)?
+            .as_any()
+            .downcast_ref::<CoveredIdSetFold>()
+            .expect("should downcast to CoveredIdSetFold defined by OpenOptions");
+        let mut result = IdSet::empty();
+        for group in groups {
+            result = result.union(&fold.id_set_by_group[group.0]);
+        }
+        Ok(result)
     }
 
     fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
@@ -413,6 +478,7 @@ pub fn describe_indexedlog_entry(data: &[u8]) -> String {
 impl IndexedLogStore {
     const INDEX_LEVEL_HEAD: usize = 0;
     const INDEX_PARENT: usize = 1;
+    const FOLD_COVERED_ID_SET: usize = 0;
     const KEY_LEVEL_HEAD_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
 
     /// Magic bytes in `Log` that indicates "remove all non-master segments".
@@ -528,6 +594,7 @@ impl IndexedLogStore {
                 }
                 result
             })
+            .fold_def("cover", || Box::new(CoveredIdSetFold::default()))
     }
 
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {

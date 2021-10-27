@@ -33,6 +33,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 indexedlog = { path = "../indexedlog", optional = true }
 indexmap = { version = "1.7.0", features = ["rayon", "serde-1"] }
 itertools = "0.10.1"
+mincode = { path = "../mincode" }
 minibytes = { path = "../minibytes" }
 nonblocking = { path = "../nonblocking" }
 parking_lot = "0.10.2"
@@ -50,7 +51,6 @@ dag-types = { path = "dag-types", features = ["for-tests"] }
 dev-logger = { path = "../dev-logger" }
 fs2 = "0.4"
 indexedlog = { path = "../indexedlog" }
-mincode = { path = "../mincode" }
 minibench = { path = "../minibench" }
 once_cell = "1.8"
 quickcheck = "1.0"

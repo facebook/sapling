@@ -685,9 +685,9 @@ mod tests {
 
     #[test]
     fn test_multi_stores_all_ids_in_groups() {
-        let mut store = InProcessStore::new();
-        test_all_ids_in_groups(&mut store);
-        // Indexedlog store does not implement all_ids_in_groups yet.
+        for_each_empty_store(|store| {
+            test_all_ids_in_groups(store);
+        })
     }
 
     #[test]
