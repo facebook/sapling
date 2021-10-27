@@ -12,6 +12,8 @@ use std::ops::Range;
 
 use tracing::debug_span;
 
+use super::fold::Fold;
+use super::fold::FoldDef;
 use crate::errors::ResultExt;
 use crate::index::Index;
 use crate::lock::ScopedDirLock;
@@ -115,6 +117,7 @@ pub enum ChecksumType {
 #[derive(Clone)]
 pub struct OpenOptions {
     pub(crate) index_defs: Vec<IndexDef>,
+    pub(crate) fold_defs: Vec<FoldDef>,
     pub(crate) create: bool,
     pub(crate) checksum_type: ChecksumType,
     pub(crate) flush_filter: Option<FlushFilterFunc>,
@@ -231,6 +234,7 @@ impl OpenOptions {
         Self {
             create: false,
             index_defs: Vec::new(),
+            fold_defs: Vec::new(),
             checksum_type: ChecksumType::Auto,
             flush_filter: None,
             fsync: false,
@@ -253,6 +257,12 @@ impl OpenOptions {
     /// explicitly.
     pub fn index(mut self, name: &'static str, func: fn(&[u8]) -> Vec<IndexOutput>) -> Self {
         self.index_defs.push(IndexDef::new(name, func));
+        self
+    }
+
+    /// Add a "fold" definition. See [`FoldDef`] and [`Fold`] for details.
+    pub fn fold_def(mut self, name: &'static str, create_fold: fn() -> Box<dyn Fold>) -> Self {
+        self.fold_defs.push(FoldDef::new(name, create_fold));
         self
     }
 
@@ -489,6 +499,11 @@ impl fmt::Debug for OpenOptions {
             f,
             "index_defs: {:?}, ",
             self.index_defs.iter().map(|d| d.name).collect::<Vec<_>>()
+        )?;
+        write!(
+            f,
+            "fold_defs: {:?}, ",
+            self.fold_defs.iter().map(|d| d.name).collect::<Vec<_>>()
         )?;
         write!(f, "fsync: {}, ", self.fsync)?;
         write!(f, "create: {}, ", self.create)?;

@@ -72,6 +72,7 @@ use crate::utils::xxhash;
 use crate::utils::xxhash32;
 use crate::utils::{self};
 
+mod fold;
 mod meta;
 mod open_options;
 mod path;
@@ -88,6 +89,8 @@ pub use open_options::IndexOutput;
 pub use open_options::OpenOptions;
 pub use path::GenericPath;
 
+pub use self::fold::Fold;
+pub use self::fold::FoldDef;
 pub use self::meta::LogMetadata;
 
 // Constants about file names

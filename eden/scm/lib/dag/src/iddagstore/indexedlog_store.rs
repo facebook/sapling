@@ -420,7 +420,8 @@ impl IndexedLogStore {
     /// not conflict with this.
     const MAGIC_CLEAR_NON_MASTER: &'static [u8] = b"CLRNM";
 
-    /// Magic bytes in `Log` that this entry replaces a previous flat segment.
+    /// Magic bytes in `Log` that indicates this entry replaces a previous flat
+    /// segment.
     ///
     /// Format:
     ///
