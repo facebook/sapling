@@ -7,7 +7,6 @@
 
 #include "eden/fs/utils/FileUtils.h"
 #include <fmt/format.h>
-#include <openssl/sha.h>
 #include "folly/FileUtil.h"
 
 #ifdef _WIN32
@@ -209,36 +208,6 @@ folly::Try<void> writeFileAtomic(
   }
 
   return folly::Try<void>{};
-}
-
-Hash20 getFileSha1(AbsolutePathPiece filePath) {
-  auto file = openHandle(filePath, OpenMode::READ).value();
-
-  SHA_CTX ctx;
-  SHA1_Init(&ctx);
-  while (true) {
-    uint8_t buf[8192];
-
-    DWORD bytesRead;
-    if (!ReadFile(file.get(), buf, sizeof(buf), &bytesRead, nullptr)) {
-      throw makeWin32ErrorExplicit(
-          GetLastError(),
-          fmt::format(
-              FMT_STRING("Error while computing SHA1 of {}"), filePath));
-    }
-
-    if (bytesRead == 0) {
-      break;
-    }
-
-    SHA1_Update(&ctx, buf, bytesRead);
-  }
-
-  static_assert(Hash20::RAW_SIZE == SHA_DIGEST_LENGTH);
-  Hash20 sha1;
-  SHA1_Final(sha1.mutableBytes().begin(), &ctx);
-
-  return sha1;
 }
 
 #endif

@@ -6,8 +6,9 @@
  */
 
 #pragma once
-#include "folly/logging/xlog.h"
-#include "folly/portability/Windows.h"
+
+#include <folly/logging/xlog.h>
+#include <folly/portability/Windows.h>
 
 namespace facebook {
 namespace eden {

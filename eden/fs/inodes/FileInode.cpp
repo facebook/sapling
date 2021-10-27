@@ -24,6 +24,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/FileHash.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 

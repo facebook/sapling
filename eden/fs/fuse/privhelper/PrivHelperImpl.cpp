@@ -27,6 +27,7 @@
 #endif // !_WIN32
 
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/fuse/privhelper/PrivHelperFlags.h"
 
 #ifndef _WIN32
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
@@ -50,7 +51,6 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
-DEFINE_int32(privhelper_fd, -1, "The file descriptor number of control socket");
 DEFINE_string(
     privhelper_path,
     "",
@@ -538,6 +538,11 @@ startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
   // We can't use FLAGS_ here because we are called before folly::init() and
   // the args haven't been parsed. We do a very simple iteration here to parse
   // out the options.
+
+  // But at least reference the symbol so it's included in the binary.
+  void* volatile fd_arg = &FLAGS_privhelper_fd;
+  (void)fd_arg;
+
   for (int i = 1; i < argc - 1; ++i) {
     StringPiece arg{argv[i]};
     if (arg == "--privhelper_fd") {

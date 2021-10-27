@@ -11,7 +11,6 @@
 #include <folly/Try.h>
 #include <limits>
 #include <string>
-#include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -34,11 +33,6 @@ FOLLY_NODISCARD folly::Try<void> writeFile(
 FOLLY_NODISCARD folly::Try<void> writeFileAtomic(
     AbsolutePathPiece path,
     folly::ByteRange data);
-
-#ifdef _WIN32
-/** Compute the sha1 of the file */
-Hash20 getFileSha1(AbsolutePathPiece filePath);
-#endif
 
 } // namespace eden
 } // namespace facebook

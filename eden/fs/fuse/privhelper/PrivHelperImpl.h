@@ -11,8 +11,6 @@
 #include <memory>
 #include "eden/fs/utils/PathFuncs.h"
 
-DECLARE_int32(privhelper_fd);
-
 namespace folly {
 class File;
 }

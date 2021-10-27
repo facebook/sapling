@@ -10,7 +10,7 @@
 #include <folly/init/Init.h>
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
-#include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
+#include "eden/fs/fuse/privhelper/PrivHelperFlags.h"
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 #include "eden/fs/utils/UserInfo.h"
 
