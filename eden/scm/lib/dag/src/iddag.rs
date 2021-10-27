@@ -552,25 +552,12 @@ impl<Store: IdDagStore> IdDag<Store> {
 pub trait IdDagAlgorithm: IdDagStore {
     /// Return a [`IdSet`] that covers all ids stored in this [`IdDag`].
     fn all(&self) -> Result<IdSet> {
-        let mut result = IdSet::empty();
-        for &group in Group::ALL.iter().rev() {
-            let next = self.next_free_id(0, group)?;
-            if next > group.min_id() {
-                result.push(group.min_id()..=(next - 1));
-            }
-        }
-        Ok(result)
+        self.all_ids_in_groups(&Group::ALL)
     }
 
     /// Return a [`IdSet`] that covers all ids stored in the master group.
     fn master_group(&self) -> Result<IdSet> {
-        let group = Group::MASTER;
-        let next = self.next_free_id(0, group)?;
-        if next > group.min_id() {
-            Ok((group.min_id()..=(next - 1)).into())
-        } else {
-            Ok(IdSet::empty())
-        }
+        self.all_ids_in_groups(&[Group::MASTER])
     }
 
     /// Return a [`IdSet`] that covers all ids stored in memory, not persisted.
