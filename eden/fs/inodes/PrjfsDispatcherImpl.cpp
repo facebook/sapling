@@ -203,7 +203,7 @@ enum class InodeType : bool {
   File,
 };
 
-folly::Future<folly::Unit> createInode(
+ImmediateFuture<folly::Unit> createInode(
     const EdenMount& mount,
     RelativePath path,
     InodeType inodeType,
@@ -234,9 +234,7 @@ folly::Future<folly::Unit> createInode(
             }
 
             return folly::Try{folly::unit};
-          })
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+          });
 }
 
 folly::Future<folly::Unit> removeInode(
@@ -266,13 +264,17 @@ folly::Future<folly::Unit> removeInode(
 folly::Future<folly::Unit> PrjfsDispatcherImpl::fileCreated(
     RelativePath path,
     ObjectFetchContext& context) {
-  return createInode(*mount_, std::move(path), InodeType::File, context);
+  return createInode(*mount_, std::move(path), InodeType::File, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<folly::Unit> PrjfsDispatcherImpl::dirCreated(
     RelativePath path,
     ObjectFetchContext& context) {
-  return createInode(*mount_, std::move(path), InodeType::Tree, context);
+  return createInode(*mount_, std::move(path), InodeType::Tree, context)
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<folly::Unit> PrjfsDispatcherImpl::fileModified(
