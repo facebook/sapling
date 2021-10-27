@@ -374,6 +374,70 @@ mod tests {
         assert_eq!(&segment, LEVEL0_HEADN2.deref());
     }
 
+    fn test_all_ids_in_groups(store: &mut dyn IdDagStore) {
+        // Helpers
+        const ROOT: SegmentFlags = SegmentFlags::HAS_ROOT;
+        const EMPTY: SegmentFlags = SegmentFlags::empty();
+        let seg = |flags, group: Group, low, high, parents: &[u64]| {
+            Segment::new(
+                flags,
+                0,
+                group.min_id() + low,
+                group.min_id() + high,
+                &parents.iter().copied().map(Id).collect::<Vec<_>>(),
+            )
+        };
+        let all_id_str = |store: &dyn IdDagStore, groups| {
+            format!("{:?}", store.all_ids_in_groups(groups).unwrap())
+        };
+        const M: Group = Group::MASTER;
+        const N: Group = Group::NON_MASTER;
+
+        // Insert some discontinuous segments. Then query all_ids_in_groups.
+        store.insert_segment(seg(ROOT, M, 10, 20, &[])).unwrap();
+        assert_eq!(all_id_str(store, &[M]), "10..=20");
+
+        store.insert_segment(seg(ROOT, M, 30, 40, &[])).unwrap();
+        store.insert_segment(seg(ROOT, M, 50, 60, &[])).unwrap();
+        assert_eq!(all_id_str(store, &[M]), "10..=20 30..=40 50..=60");
+
+        // Insert adjacent segments and check that spans are merged.
+        store.insert_segment(seg(EMPTY, M, 41, 45, &[40])).unwrap();
+        assert_eq!(all_id_str(store, &[M]), "10..=20 30..=45 50..=60");
+
+        store.insert_segment(seg(EMPTY, M, 46, 49, &[45])).unwrap();
+        assert_eq!(all_id_str(store, &[M]), "10..=20 30..=60");
+
+        store.insert_segment(seg(EMPTY, M, 61, 70, &[60])).unwrap();
+        assert_eq!(all_id_str(store, &[M]), "10..=20 30..=70");
+
+        store.insert_segment(seg(ROOT, M, 21, 29, &[])).unwrap();
+        assert_eq!(all_id_str(store, &[M]), "10..=70");
+
+        store.insert_segment(seg(ROOT, M, 0, 5, &[])).unwrap();
+        assert_eq!(all_id_str(store, &[M]), "0..=5 10..=70");
+
+        store.insert_segment(seg(ROOT, M, 6, 9, &[])).unwrap();
+        assert_eq!(all_id_str(store, &[M]), "0..=70");
+
+        // Spans in the non-master group.
+        store.insert_segment(seg(EMPTY, N, 0, 10, &[])).unwrap();
+        store.insert_segment(seg(EMPTY, N, 20, 30, &[])).unwrap();
+        assert_eq!(all_id_str(store, &[N]), "N0..=N10 N20..=N30");
+        store.insert_segment(seg(EMPTY, N, 11, 15, &[])).unwrap();
+        assert_eq!(all_id_str(store, &[N]), "N0..=N15 N20..=N30");
+        store.insert_segment(seg(EMPTY, N, 17, 19, &[])).unwrap();
+        assert_eq!(all_id_str(store, &[N]), "N0..=N15 N17..=N30");
+        store.insert_segment(seg(EMPTY, N, 16, 16, &[])).unwrap();
+        assert_eq!(all_id_str(store, &[M]), "0..=70");
+        assert_eq!(all_id_str(store, &[N]), "N0..=N30");
+        assert_eq!(all_id_str(store, &[M, N]), "0..=70 N0..=N30");
+
+        store.remove_non_master().unwrap();
+        assert_eq!(all_id_str(store, &[N]), "");
+        assert_eq!(all_id_str(store, &[M, N]), "0..=70");
+    }
+
     fn test_next_free_id(store: &dyn IdDagStore) {
         assert_eq!(
             store.next_free_id(0 as Level, Group::MASTER).unwrap(),
@@ -617,6 +681,13 @@ mod tests {
     #[test]
     fn test_multi_stores_find_flat_segment_including_id() {
         for_each_store(|store| test_find_flat_segment_including_id(store));
+    }
+
+    #[test]
+    fn test_multi_stores_all_ids_in_groups() {
+        let mut store = InProcessStore::new();
+        test_all_ids_in_groups(&mut store);
+        // Indexedlog store does not implement all_ids_in_groups yet.
     }
 
     #[test]

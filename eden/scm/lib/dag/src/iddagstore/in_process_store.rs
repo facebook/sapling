@@ -41,6 +41,8 @@ pub struct InProcessStore {
     level_head_index: Vec<BTreeMap<Id, StoreId>>,
     // (child-group, parent) -> serialized Segment
     parent_index: BTreeMap<(Group, Id), BTreeSet<StoreId>>,
+    // IdSet covered by flat segments in specified groups.
+    id_set_by_group: [IdSet; Group::COUNT],
 }
 
 impl IdDagStore for InProcessStore {
@@ -94,6 +96,9 @@ impl IdDagStore for InProcessStore {
 
             // No need to update "parents" index.
 
+            // Update "covered" IdSet.
+            self.id_set_by_group[group.0].push(span);
+
             return Ok(());
         }
 
@@ -115,6 +120,8 @@ impl IdDagStore for InProcessStore {
                     .or_insert_with(BTreeSet::new);
                 children.insert(store_id);
             }
+            // Update "covered" IdSet.
+            self.id_set_by_group[group.0].push(span);
         }
         self.get_head_index_mut(level).insert(high, store_id);
         Ok(())
@@ -136,12 +143,16 @@ impl IdDagStore for InProcessStore {
             children.clear();
         }
         self.non_master_segments = Vec::new();
+        self.id_set_by_group[Group::NON_MASTER.0] = IdSet::empty();
         Ok(())
     }
 
     fn all_ids_in_groups(&self, groups: &[Group]) -> Result<IdSet> {
-        let _ = groups;
-        unimplemented!()
+        let mut result = IdSet::empty();
+        for group in groups {
+            result = result.union(&self.id_set_by_group[group.0]);
+        }
+        Ok(result)
     }
 
     fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
@@ -298,6 +309,7 @@ impl InProcessStore {
             non_master_segments: Vec::new(),
             level_head_index: Vec::new(),
             parent_index: BTreeMap::new(),
+            id_set_by_group: [IdSet::empty(), IdSet::empty()],
         }
     }
 }
