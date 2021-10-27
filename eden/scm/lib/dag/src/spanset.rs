@@ -23,19 +23,23 @@ use std::ops::RangeBounds;
 use std::ops::RangeInclusive;
 
 use dag_types::FlatSegment;
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::bsearch::BinarySearchBy;
 use crate::id::Id;
 
 /// Range `low..=high`. `low` must be <= `high`.
-#[derive(Copy, Clone, Debug, Eq)]
+#[derive(Copy, Clone, Debug, Eq, Serialize, Deserialize)]
 pub struct Span {
+    #[serde(with = "flat_id")]
     pub(crate) low: Id,
+    #[serde(with = "flat_id")]
     pub(crate) high: Id,
 }
 
 /// A set of integer spans.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct SpanSet {
     spans: VecDeque<Span>,
 }
@@ -877,6 +881,36 @@ impl IntoIterator for SpanSet {
 impl AsRef<SpanSet> for SpanSet {
     fn as_ref(&self) -> &SpanSet {
         self
+    }
+}
+
+// `#[serde(transparent)]` on the `Id` struct.
+// This would be easier if `Id` has `#[serde(transparent)]`.
+// But that might be a breaking change now...
+mod flat_id {
+    use serde::de;
+    use serde::de::Visitor;
+    use serde::Deserializer;
+    use serde::Serializer;
+
+    use super::*;
+
+    pub fn serialize<S: Serializer>(id: &Id, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_u64(id.0)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Id, D::Error> {
+        struct IdVisitor;
+        impl<'de> Visitor<'de> for IdVisitor {
+            type Value = Id;
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("u64")
+            }
+            fn visit_u64<E: de::Error>(self, value: u64) -> Result<Self::Value, E> {
+                Ok(Id(value))
+            }
+        }
+        deserializer.deserialize_u64(IdVisitor)
     }
 }
 
