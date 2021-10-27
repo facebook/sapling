@@ -309,6 +309,7 @@ impl Log {
 
             self.mem_buf.write_all(data).infallible()?;
             self.update_indexes_for_in_memory_entry(data, offset, data_offset)?;
+            self.update_fold_for_in_memory_entry(data, offset, data_offset)?;
 
             if let Some(threshold) = self.open_options.auto_sync_threshold {
                 if self.mem_buf.len() as u64 >= threshold {
@@ -644,10 +645,12 @@ impl Log {
             self.indexes = indexes;
             self.meta = meta;
 
-            // Step 4: Update the indexes. Optionally flush them.
+            // Step 4: Update the indexes and folds. Optionally flush them.
             self.update_indexes_for_on_disk_entries()?;
             let lagging_index_ids = self.lagging_index_ids();
             self.flush_lagging_indexes(&lagging_index_ids, &lock)?;
+            self.update_and_flush_disk_folds()?;
+            self.all_folds = self.disk_folds.clone();
 
             // Step 5: Write the updated meta file.
             self.dir.write_meta(&self.meta, self.open_options.fsync)?;
@@ -1094,6 +1097,19 @@ impl Log {
         self.maybe_set_index_error(result)
     }
 
+    /// Similar to `update_indexes_for_in_memory_entry`. But updates `fold` instead.
+    fn update_fold_for_in_memory_entry(
+        &mut self,
+        data: &[u8],
+        offset: u64,
+        data_offset: u64,
+    ) -> crate::Result<()> {
+        for fold_state in self.all_folds.iter_mut() {
+            fold_state.process_entry(data, offset, data_offset + data.len() as u64)?;
+        }
+        Ok(())
+    }
+
     fn update_indexes_for_in_memory_entry_unchecked(
         &mut self,
         data: &[u8],
@@ -1124,6 +1140,25 @@ impl Log {
             }
         }
         Ok(())
+    }
+
+    /// Incrementally update `disk_folds`.
+    ///
+    /// This is done by trying to reuse fold states from disk.
+    /// If the on-disk fold state is outdated, then new fold states will be
+    /// written to disk.
+    fn update_and_flush_disk_folds(&mut self) -> crate::Result<()> {
+        let mut folds = self.open_options.empty_folds();
+        // Temporarily swap so `catch_up_with_log_on_disk_entries` can access `self`.
+        std::mem::swap(&mut self.disk_folds, &mut folds);
+        let result = (|| -> crate::Result<()> {
+            for fold_state in folds.iter_mut() {
+                fold_state.catch_up_with_log_on_disk_entries(self)?;
+            }
+            Ok(())
+        })();
+        self.disk_folds = folds;
+        result
     }
 
     /// Build in-memory index so they cover all entries stored in `self.disk_buf`.

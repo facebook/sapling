@@ -453,6 +453,8 @@ impl OpenOptions {
             open_options: self.clone(),
         };
         log.update_indexes_for_on_disk_entries()?;
+        log.update_and_flush_disk_folds()?;
+        log.all_folds = log.disk_folds.clone();
         let lagging_index_ids = log.lagging_index_ids();
         if !lagging_index_ids.is_empty() {
             // Update indexes.

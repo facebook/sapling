@@ -15,8 +15,10 @@ use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
 
 use crate::errors::IoResultExt;
+use crate::log::Log;
 use crate::utils::atomic_write_plain;
 use crate::utils::xxhash;
+use crate::Error;
 use crate::Result;
 
 /// Definition of a "fold" function.
@@ -152,6 +154,90 @@ impl FoldState {
         .context(path, "cannot prepare FoldState")?;
         atomic_write_plain(path, &data, false)
     }
+
+    /// Ensure the fold state is up-to-date with all on-disk entries.
+    ///
+    /// Read and write to on-disk caches transparently.
+    pub(crate) fn catch_up_with_log_on_disk_entries(&mut self, log: &Log) -> crate::Result<()> {
+        // Already up-to-date?
+        if self.offset == log.disk_buf.len() as u64 && self.epoch == log.meta.epoch {
+            return Ok(());
+        }
+
+        // Load from disk.
+        let opt_path = log
+            .dir
+            .as_opt_path()
+            .map(|p| p.join(format!("fold-{}", self.def.name)));
+        if let Some(path) = &opt_path {
+            if let Err(e) = self.load_from_file(path) {
+                tracing::warn!("cannot load FoldState: {}", e);
+            }
+        }
+
+        // Invalidate if mismatch.
+        if self.offset > log.disk_buf.len() as u64 || self.epoch != log.meta.epoch {
+            self.reset();
+        }
+        self.epoch = log.meta.epoch;
+
+        // Already up-to-date? (after loading from disk).
+        // If so, avoid complexities writing back to disk.
+        // Note mismatch epoch would reset offset to 0 above.
+        if self.offset == log.disk_buf.len() as u64 {
+            return Ok(());
+        }
+
+        // Catch up by processing remaining entries one by one.
+        let mut iter = log.iter();
+        if self.offset > 0 {
+            iter.next_offset = self.offset;
+        }
+        for entry in iter {
+            let entry = entry?;
+            self.fold.accumulate(entry)?;
+        }
+
+        // Set self state as up-to-date, and write to disk.
+        self.offset = log.disk_buf.len() as u64;
+        if let Some(path) = &opt_path {
+            if let Err(e) = self.save_to_file(path) {
+                tracing::warn!("cannot save FoldState: {}", e);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Process the next unprocessed entry.
+    ///
+    /// `offset` is the offset to the given entry.
+    /// `next_offset` is the offset to the next entry.
+    ///
+    /// The given entry must be the next one to be processed. All previous
+    /// entries are already processed and none of the entries after the given
+    /// entry are processed.
+    pub(crate) fn process_entry(
+        &mut self,
+        entry: &[u8],
+        offset: u64,
+        next_offset: u64,
+    ) -> crate::Result<()> {
+        if self.offset != offset {
+            return Err(Error::programming(format!(
+                "FoldState got mismatched offset: {:?} != {:?}",
+                self.offset, offset
+            )));
+        }
+        self.fold.accumulate(entry)?;
+        self.offset = next_offset;
+        Ok(())
+    }
+
+    fn reset(&mut self) {
+        self.offset = 0;
+        self.fold = (self.def.create_fold)();
+    }
 }
 
 #[cfg(test)]
@@ -187,6 +273,35 @@ mod test {
         }
     }
 
+    #[derive(Debug, Default)]
+    struct CountFold(u64);
+
+    impl Fold for CountFold {
+        fn load(&mut self, state_bytes: &[u8]) -> io::Result<()> {
+            let bytes = <[u8; 8]>::try_from(state_bytes).unwrap();
+            let count = u64::from_be_bytes(bytes);
+            self.0 = count;
+            Ok(())
+        }
+
+        fn dump(&self) -> io::Result<Vec<u8>> {
+            Ok(self.0.to_be_bytes().to_vec())
+        }
+
+        fn accumulate(&mut self, _entry: &[u8]) -> Result<()> {
+            self.0 += 1;
+            Ok(())
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+
+        fn clone_boxed(&self) -> Box<dyn Fold> {
+            Box::new(Self(self.0))
+        }
+    }
+
     #[test]
     fn test_fold_state_load_save() {
         let dir = tempdir().unwrap();
@@ -211,5 +326,99 @@ mod test {
         state1.save_to_file(&path).unwrap();
         state2.load_from_file(&path).unwrap();
         assert_eq!(d(&state1), d(&state2));
+    }
+
+    #[test]
+    fn test_fold_on_log() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+
+        // Prepare 2 logs.
+        let opts = crate::log::OpenOptions::new()
+            .fold_def("m", || Box::new(ConcatFold::default()))
+            .fold_def("c", || Box::new(CountFold::default()))
+            .create(true);
+        let mut log1 = opts.open(path).unwrap();
+        let mut log2 = log1.try_clone().unwrap();
+
+        // Helper to read fold results. f1: ConcatFold; f2: CountFold.
+        let f1 = |log: &Log| {
+            log.fold(0)
+                .unwrap()
+                .as_any()
+                .downcast_ref::<ConcatFold>()
+                .unwrap()
+                .0
+                .clone()
+        };
+        let f2 = |log: &Log| {
+            log.fold(1)
+                .unwrap()
+                .as_any()
+                .downcast_ref::<CountFold>()
+                .unwrap()
+                .0
+        };
+
+        // Empty logs.
+        assert_eq!(f1(&log1), b"");
+        assert_eq!(f2(&log2), 0);
+
+        // Different in-memory entries.
+        log1.append(b"ab").unwrap();
+        log1.append(b"cd").unwrap();
+        log2.append(b"e").unwrap();
+        log2.append(b"f").unwrap();
+        assert_eq!(f1(&log1), b"abcd");
+        assert_eq!(f2(&log1), 2);
+        assert_eq!(f1(&log2), b"ef");
+        assert_eq!(f2(&log2), 2);
+
+        // Write to disk. log2 will pick up log1 entries.
+        log1.sync().unwrap();
+        log2.sync().unwrap();
+        assert_eq!(f1(&log1), b"abcd");
+        assert_eq!(f2(&log1), 2);
+        assert_eq!(f1(&log2), b"abcdef");
+        assert_eq!(f2(&log2), 4);
+
+        // With new in-memory entries.
+        log1.append(b"x").unwrap();
+        log2.append(b"y").unwrap();
+        assert_eq!(f1(&log1), b"abcdx");
+        assert_eq!(f2(&log1), 3);
+        assert_eq!(f1(&log2), b"abcdefy");
+        assert_eq!(f2(&log2), 5);
+
+        // Clone with and without pending entries.
+        let log3 = log1.try_clone_without_dirty().unwrap();
+        assert_eq!(f1(&log3), b"abcd");
+        assert_eq!(f2(&log3), 2);
+        let log3 = log1.try_clone().unwrap();
+        assert_eq!(f1(&log3), b"abcdx");
+        assert_eq!(f2(&log3), 3);
+
+        // Write to disk again.
+        log2.sync().unwrap();
+        log1.sync().unwrap();
+        assert_eq!(f1(&log1), b"abcdefyx");
+        assert_eq!(f2(&log1), 6);
+        assert_eq!(f1(&log2), b"abcdefy");
+        assert_eq!(f2(&log2), 5);
+
+        // Sync with read fast path.
+        log2.sync().unwrap();
+        assert_eq!(f1(&log2), b"abcdefyx");
+        assert_eq!(f2(&log2), 6);
+
+        // Corrupted folds are simply ignored instead of causing errors.
+        fs::write(path.join("fold-m"), b"corruptedcontent").unwrap();
+        fs::write(path.join("fold-c"), b"\0\0\0\0\0\0\0\0\0").unwrap();
+        let mut log3 = opts.open(path).unwrap();
+        assert_eq!(f1(&log3), b"abcdefyx");
+        assert_eq!(f2(&log3), 6);
+        log3.sync().unwrap();
+        assert_eq!(f1(&log3), b"abcdefyx");
+        assert_eq!(f2(&log3), 6);
     }
 }
