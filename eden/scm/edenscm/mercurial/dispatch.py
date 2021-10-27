@@ -181,7 +181,6 @@ def _preimportmodules():
         "crecord",
         "dagop",
         "dagparser",
-        "dagutil",
         "destutil",
         "dirstate",
         "dirstateguard",

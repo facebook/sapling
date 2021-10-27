@@ -33,7 +33,6 @@ from typing import (
 )
 
 from . import (
-    dagutil,
     error,
     mdiff,
     mutation,
