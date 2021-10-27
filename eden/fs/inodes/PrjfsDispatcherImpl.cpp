@@ -208,9 +208,7 @@ folly::Future<folly::Unit> createInode(
     RelativePath path,
     InodeType inodeType,
     ObjectFetchContext& context) {
-  auto treeInodeFut = createDirInode(mount, path.dirname().copy(), context)
-                          .semi()
-                          .via(&folly::QueuedImmediateExecutor::instance());
+  auto treeInodeFut = createDirInode(mount, path.dirname().copy(), context);
   return std::move(treeInodeFut)
       .thenValue(
           [path = std::move(path), inodeType](const TreeInodePtr treeInode) {
@@ -226,7 +224,7 @@ folly::Future<folly::Unit> createInode(
                  * This is not an error.
                  */
                 if (ex.code().value() != EEXIST) {
-                  return folly::makeFuture<folly::Unit>(ex);
+                  return folly::Try<folly::Unit>(ex);
                 }
               }
             } else {
@@ -235,8 +233,10 @@ folly::Future<folly::Unit> createInode(
               inode->incFsRefcount();
             }
 
-            return folly::makeFuture(folly::unit);
-          });
+            return folly::Try{folly::unit};
+          })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<folly::Unit> removeInode(
@@ -293,16 +293,11 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
     RelativePath newPath,
     ObjectFetchContext& context) {
   auto oldParentInode =
-      createDirInode(*mount_, oldPath.dirname().copy(), context)
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+      createDirInode(*mount_, oldPath.dirname().copy(), context);
   auto newParentInode =
-      createDirInode(*mount_, newPath.dirname().copy(), context)
-          .semi()
-          .via(&folly::QueuedImmediateExecutor::instance());
+      createDirInode(*mount_, newPath.dirname().copy(), context);
 
-  return folly::collect(oldParentInode, newParentInode)
-      .via(mount_->getServerThreadPool().get())
+  return collectAllSafe(std::move(oldParentInode), std::move(newParentInode))
       .thenValue(
           [oldPath = std::move(oldPath),
            newPath = std::move(newPath),
@@ -327,7 +322,9 @@ folly::Future<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
                     InvalidationRequired::No,
                     context)
                 .semi();
-          });
+          })
+      .semi()
+      .via(&folly::QueuedImmediateExecutor::instance());
 }
 
 folly::Future<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
