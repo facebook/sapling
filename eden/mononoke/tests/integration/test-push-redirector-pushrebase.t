@@ -62,7 +62,6 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
-  devel-warn: applied empty changegroup at: * (glob)
   $ hg book --all
   no bookmarks set
      default/bookprefix/master_bookmark_2 bfcfb674663c
@@ -79,7 +78,6 @@ Delete a bookmark
      default/master_bookmark   ce81c7d38286
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
-  devel-warn: applied empty changegroup at: * (glob)
   $ hg book --all
   no bookmarks set
      default/master_bookmark   819e91b238b7

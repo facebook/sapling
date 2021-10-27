@@ -48,7 +48,6 @@ Try creating again, this should fail
   searching for changes
   no changes found
   adding changesets
-  devel-warn: applied empty changegroup at:* (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
@@ -77,7 +76,6 @@ Try creating again, this should fail
   searching for changes
   no changes found
   adding changesets
-  devel-warn: applied empty changegroup at: * (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
@@ -164,7 +162,6 @@ Clone it again to make sure saved streaming chunks are valid
   searching for changes
   no changes found
   adding changesets
-  devel-warn: applied empty changegroup at: * (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files

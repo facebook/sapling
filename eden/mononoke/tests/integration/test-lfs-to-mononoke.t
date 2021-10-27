@@ -49,7 +49,6 @@ Create a new client repository. Enable LFS there.
 
 Update in the client repo
   $ hgmn pull -q
-  devel-warn: applied empty changegroup at* (glob)
   $ hgmn update -r master_bookmark -q
 
 Perform LFS push

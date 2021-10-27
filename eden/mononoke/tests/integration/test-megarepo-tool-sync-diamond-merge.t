@@ -79,7 +79,6 @@ Create marker commits, so that we don't have to add $WITH_MERGE_C1 and $MEGAREPO
 (as it's not correct: $WITH_MERGE_C1 is supposed to be preserved)
   $ cd "$TESTTMP/with_merge_hg"
   $ REPONAME=with_merge_mon hgmn pull -q
-  devel-warn:* (glob)
   $ REPONAME=with_merge_mon hgmn up -q with_merge_master
   $ hgmn ci -m "marker commit" --config ui.allowemptycommit=True
   $ REPONAME=with_merge_mon hgmn push -r . --to with_merge_master -q
@@ -105,7 +104,6 @@ Preserve commits from with_merge
 Do a test pull
   $ cd "$TESTTMP"/meg_hg
   $ REPONAME=meg_mon hgmn pull -q
-  devel-warn:* (glob)
   $ REPONAME=meg_mon hgmn up -q master_bookmark
   $ ls
   arvr-legacy

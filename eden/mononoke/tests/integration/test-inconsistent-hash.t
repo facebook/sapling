@@ -46,7 +46,6 @@
   > EOF
 
   $ hgmn pull -q
-  devel-warn: applied empty changegroup at* (glob)
   $ hgmn update -r master_bookmark -q
 
 # 4. Make a commit with corrupted file node, Change file node text

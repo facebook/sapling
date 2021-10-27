@@ -36,7 +36,6 @@ Create a new client repository. Enable EdenAPI there.
   $ setup_hg_client
   $ setup_hg_edenapi
   $ hgmn pull -q -B master_bookmark
-  devel-warn: applied empty changegroup at: * (glob)
   $ hgmn up -q master_bookmark
   $ cat smallfile
   s

@@ -71,6 +71,5 @@ Check synced commit in backup repo
   $ MONONOKE_DIRECT_PEER=True
   $ REPONAME=backup
   $ hgmn pull -q
-  devel-warn: applied empty changegroup * (glob)
   $ hgmn log -r master_bookmark -T '{node}\n'
   9fdce596be1b7052b777aa0bf7c5e87b00397a6f

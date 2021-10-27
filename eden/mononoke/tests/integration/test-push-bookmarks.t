@@ -236,7 +236,6 @@ Delete the bookmark
   [1]
   $ cd ../repo-pull
   $ hgmn pull -q
-  devel-warn: applied empty changegroup * (glob)
   $ hg book --remote
      default/ffonly_bookmark   a075b5221b92
      default/master_bookmark   a075b5221b92

@@ -56,7 +56,6 @@
 
 # get smallfile
   $ hgmn pull -q
-  devel-warn: applied empty changegroup at* (glob)
   $ hgmn update -r master_bookmark -q
 
 # 6. Hg push from hg client repo.

@@ -57,7 +57,6 @@ Now clone with tag, make sure that streaming clone was used
   searching for changes
   no changes found
   adding changesets
-  devel-warn: applied empty changegroup at:* (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files

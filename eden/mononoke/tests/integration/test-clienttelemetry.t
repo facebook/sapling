@@ -46,18 +46,15 @@ set up the local repo
   searching for changes
   no changes found
   adding changesets
-  devel-warn: applied empty changegroup at: * (_processchangegroup) (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
   $ hgmn pull -q
-  devel-warn: applied empty changegroup at: * (_processchangegroup) (glob)
   $ hgmn pull --config clienttelemetry.announceremotehostname=False
   pulling from ssh://user@dummy/repo
   searching for changes
   no changes found
   adding changesets
-  devel-warn: applied empty changegroup at: * (_processchangegroup) (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files

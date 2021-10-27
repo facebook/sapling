@@ -47,7 +47,6 @@ Clone the repository, then enable LFS
   > EOF
 
   $ hgmn pull -q
-  devel-warn: applied empty changegroup at: * (glob)
   $ hgmn update -r master_bookmark -q
 
 Submit a large file

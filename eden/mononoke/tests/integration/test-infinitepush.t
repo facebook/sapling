@@ -388,7 +388,6 @@ Check phases on another side (for pull command and pull -r)
   pulling from ssh://user@dummy/repo
   no changes found
   adding changesets
-  devel-warn: applied empty changegroup at: * (_processchangegroup) (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
@@ -408,7 +407,6 @@ Check phases on another side (for pull command and pull -r)
   searching for changes
   no changes found
   adding changesets
-  devel-warn: applied empty changegroup at: * (_processchangegroup) (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files
@@ -487,7 +485,6 @@ Check phases on another side (for pull command and pull -r)
   pulling from ssh://user@dummy/repo
   no changes found
   adding changesets
-  devel-warn: applied empty changegroup at: * (_processchangegroup) (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files

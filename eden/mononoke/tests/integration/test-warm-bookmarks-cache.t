@@ -28,7 +28,6 @@ Setup repository
 
   $ cd "$TESTTMP/repo2"
   $ hgmn pull -q
-  devel-warn: applied empty changegroup at: * (glob)
   $ hg log -r "master_bookmark" -T '{desc}\n'
   C
 
@@ -54,6 +53,5 @@ Setup repository
   2
 
   $ hgmn pull -q
-  devel-warn: applied empty changegroup at: * (glob)
   $ grep "Fetching bookmarks from Warm bookmarks cache" "$SCUBA_LOGGING_PATH" | wc -l
   3

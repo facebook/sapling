@@ -284,8 +284,7 @@ Do the invisible merge by gradually merging TOMERGES into master
   Merged as (bonsai): 9e0bfdd3a6cd0a41697e67f00baf3d060e0e7660f7e2b0e2be34c3f5c5691984
   Merged as (hg): 005686fbc230dc0be4e1cc2fabf46d87bbb19001
   file count is: 6
-  $ REPONAME=fbs-mon hgmn pull -q |& grep -v 'devel-warn'
-  [1]
+  $ REPONAME=fbs-mon hgmn pull -q
   $ hg log -r "$MASTER_BEFORE_MERGES::master_bookmark" -T "{phase} {desc|firstline}\n"
   public fbsource commit 1
   public merge execution

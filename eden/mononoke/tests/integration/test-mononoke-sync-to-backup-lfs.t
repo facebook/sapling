@@ -55,7 +55,6 @@ Create a new client repository. Enable LFS there.
 
 Update in the client repo
   $ hgmn pull -q
-  devel-warn: applied empty changegroup at* (glob)
   $ hgmn update -r master_bookmark -q
 
 Perform LFS push
@@ -85,7 +84,6 @@ Check LFS is not in backup
   searching for changes
   no changes found
   adding changesets
-  * applied empty changegroup * (glob)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 0 files

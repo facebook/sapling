@@ -370,10 +370,6 @@ class cg1unpacker(object):
                 )
             self.progress = None
 
-            if not cgnodes:
-                repo.ui.develwarn(
-                    "applied empty changegroup", config="warn-empty-changegroup"
-                )
             clend = len(cl)
             changesets = clend - clstart
 
