@@ -70,7 +70,6 @@ Move backward
   searching for changes
   no changes found
   updating bookmark master_bookmark
-  [1]
 
 Sync it to another client
   $ cd $TESTTMP/repo-hg

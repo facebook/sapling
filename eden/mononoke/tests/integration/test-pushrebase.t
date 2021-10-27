@@ -185,7 +185,6 @@ Push with no new commits
   searching for changes
   no changes found
   updating bookmark master_bookmark
-  [1]
   $ log -r "."
   @  5 [public;rev=12;59e5396444cf] default/master_bookmark
   │
@@ -298,7 +297,6 @@ Test creating a bookmark on a public commit
   searching for changes
   no changes found
   exporting bookmark master_bookmark_2
-  [1]
   $ log -r "20::"
   @    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
   ├─╮
@@ -331,7 +329,6 @@ Test a non-forward push
   searching for changes
   no changes found
   updating bookmark master_bookmark_2
-  [1]
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
   ├─╮

@@ -42,14 +42,12 @@ Push another commit, check that the globalrev is incrementing
 
 Check that we create a new bookmark that is a descendant of the globalrev bookmark
   $ hgmn push -q -r '.^' --to other_bookmark --create
-  [1]
   $ hgmn bookmarks --remote
      default/master_bookmark   7a3a1e2e51f5
      default/other_bookmark    2fa5be0dd895
 
 Check that we update bookmark to a descendant of the globalrev bookmark
   $ hgmn push -q -r . --to other_bookmark --force
-  [1]
   $ hgmn bookmarks --remote
      default/master_bookmark   7a3a1e2e51f5
      default/other_bookmark    7a3a1e2e51f5

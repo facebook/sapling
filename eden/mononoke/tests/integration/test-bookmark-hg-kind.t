@@ -111,7 +111,6 @@ Exercise the limit (5 bookmarks should be allowed, this was our limit)
   $ cd ../repo-push
   $ hgmn push ssh://user@dummy/repo -r . --to "more/1" --create >/dev/null 2>&1
   $ hgmn push ssh://user@dummy/repo -r . --to "more/2" --create >/dev/null 2>&1
-  [1]
   $ hgmn bookmarks --list-remote "*"
      master_bookmark           ac82d8b1f7c418c61a493ed229ffaa981bda8e90
      more/1                    b2d646f64a9978717516887968786c6b7a33edf9

@@ -57,7 +57,6 @@ to the small repo
   searching for changes
   no changes found
   exporting bookmark test_bookmark
-  [1]
 
 Force pushrebase to the small repo with one commit succeeds, and does not get
 blocked by deny_files

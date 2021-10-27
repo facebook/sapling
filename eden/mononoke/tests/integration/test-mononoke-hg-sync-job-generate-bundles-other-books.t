@@ -66,7 +66,6 @@ Bookmark move
   searching for changes
   no changes found
   updating bookmark newbook
-  [1]
 
 Delete a bookmark
   $ hgmn push --delete newbook

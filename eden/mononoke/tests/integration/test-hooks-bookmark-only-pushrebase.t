@@ -73,7 +73,6 @@ fast-forward the bookmark
   searching for changes
   no changes found
   updating bookmark main
-  [1]
 
 fast-forward the bookmark over a commit that fails the hook
   $ hg up -q $D
@@ -101,7 +100,6 @@ bypass the hook, the push will now work
   searching for changes
   no changes found
   updating bookmark main
-  [1]
 
 attempt a non-fast-forward move, it should fail
   $ hg up -q $F
@@ -164,7 +162,6 @@ bypass the hook too, and it should work
   searching for changes
   no changes found
   updating bookmark main
-  [1]
 
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
 fails the hook
@@ -193,7 +190,6 @@ bypass the hook, and it should work
   searching for changes
   no changes found
   updating bookmark main
-  [1]
 
 pushing another bookmark to the same commit shouldn't require running that hook
   $ hg up -q $X
@@ -202,14 +198,12 @@ pushing another bookmark to the same commit shouldn't require running that hook
   searching for changes
   no changes found
   exporting bookmark other
-  [1]
   $ hg up -q $Z
   $ hgmn push -r . --to other
   pushing rev e3295448b1ef to destination ssh://user@dummy/repo bookmark other
   searching for changes
   no changes found
   updating bookmark other
-  [1]
 
 but pushing to another commit will run the hook
   $ hg up -q $C
@@ -237,7 +231,6 @@ bypassing that also works
   searching for changes
   no changes found
   updating bookmark other
-  [1]
 
 we can now extend that bookmark further without a bypass needed
   $ hg up -q $D
@@ -246,7 +239,6 @@ we can now extend that bookmark further without a bypass needed
   searching for changes
   no changes found
   updating bookmark other
-  [1]
 
 create a new bookmark at this location - it should fail because of the hook
   $ hgmn push -r . --to created --create
@@ -273,7 +265,6 @@ bypass the hook to allow the creation
   searching for changes
   no changes found
   exporting bookmark created
-  [1]
 
 we can, however, create a bookmark at the same location as main
   $ hgmn push -r $Z --to main-copy --create
@@ -281,4 +272,3 @@ we can, however, create a bookmark at the same location as main
   searching for changes
   no changes found
   exporting bookmark main-copy
-  [1]

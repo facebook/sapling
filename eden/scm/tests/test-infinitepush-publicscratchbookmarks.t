@@ -41,7 +41,6 @@ be accepted.
   searching for changes
   no changes found
   exporting bookmark real-public
-  [1]
 
 Attempt to push a draft commit to a scratch bookmark.  This should still work.
 

@@ -152,7 +152,6 @@ Try non fastforward moves (backwards and across branches)
   searching for changes
   no changes found
   updating bookmark withbook
-  [1]
   $ cd ../repo-pull
   $ hgmn pull -q
   $ hg book --remote
@@ -161,7 +160,6 @@ Try non fastforward moves (backwards and across branches)
 
 Try non fastfoward moves on regex bookmark
   $ hgmn push -r a075b5221b92 --to ffonly_bookmark --create -q
-  [1]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to ffonly_bookmark
   pushing rev 0e7ec5675652 to destination ssh://user@dummy/repo bookmark ffonly_bookmark
   searching for changes

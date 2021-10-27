@@ -59,7 +59,6 @@ Push to Mononoke
   $ hgmn push -r . --to master_bookmark -q
 
   $ hgmn push -r .^ --to master_bookmark -q --non-forward-move --pushvar NON_FAST_FORWARD=true
-  [1]
 
 Check that new entry was added to the sync database. 3 pushes and 1 blobimport
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from bookmarks_update_log";
@@ -302,7 +301,6 @@ Test bookmark deletion sync
   $ cd $TESTTMP/client-push
   $ hgmn -q up master_bookmark
   $ hgmn -q push --rev . --to book_to_delete --create
-  [1]
   $ hg log -r master_bookmark
   commit:      6f24f1b38581
   bookmark:    default/book_to_delete

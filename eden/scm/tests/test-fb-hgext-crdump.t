@@ -102,7 +102,6 @@ Test obsolete markers
 Add a master bookmark and verify it becomes the remote branch
 - The [1] exit code is because no commits are pushed
   $ hg push -q -r releasebranch --to master --create
-  [1]
 
 Test basic dump of two commits
 

@@ -199,7 +199,11 @@ push to Mononoke
   sending batch command
   searching for changes
   local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
-  all remote heads known locally
+  sampling from both directions (2 of 2)
+  sampling undecided commits (4 of 4)
+  query 2; still undecided: 4, sample size is: 4
+  sending known command
+  2 total queries in 0.0000s
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command

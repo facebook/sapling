@@ -61,7 +61,6 @@ Push commit to ancestor bookmark, should work
   searching for changes
   no changes found
   exporting bookmark ancestor
-  [1]
 
 Now try to pushrebase "ancestor" bookmark, should fail
   $ touch file

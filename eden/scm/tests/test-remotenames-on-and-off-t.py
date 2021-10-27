@@ -53,8 +53,7 @@ sh % "hg push --to bar --create" == r"""
     pushing rev cb9a9f314b8b to destination $TESTTMP/off bookmark bar
     searching for changes
     no changes found
-    exporting bookmark bar
-    [1]"""
+    exporting bookmark bar"""
 
 sh % "hg pull --rebase" == r"""
     pulling from $TESTTMP/off

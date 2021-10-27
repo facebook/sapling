@@ -30,6 +30,8 @@ Push:
   TRACE edenscm::mercurial::eagerpeer: known 178c10ffbc2f92d5407c14478ae9d9dea81f232e: False
   DEBUG edenscm::mercurial::eagerpeer: heads = []
   searching for changes
+  DEBUG eagerepo::api: commit_known 748104bd5058bf2c386d074d8dcf2704855380f6
+  TRACE edenscm::mercurial::eagerpeer: known 748104bd5058bf2c386d074d8dcf2704855380f6: False
   DEBUG eagerepo::api: bookmarks master
   DEBUG edenscm::mercurial::eagerpeer: listkeyspatterns(bookmarks, ['master']) = sortdict()
   TRACE edenscm::mercurial::eagerpeer: adding   blob 005d992c5dcf32993668f7cede29d296c494a5d9

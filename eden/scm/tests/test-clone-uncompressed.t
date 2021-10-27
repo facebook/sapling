@@ -71,7 +71,7 @@ Clone with background file closing enabled
   sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
-  all remote heads known locally
+  all local heads known remotely
   no changes found
   sending getbundle command
   bundle2-input-bundle: with-transaction

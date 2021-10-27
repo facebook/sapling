@@ -926,12 +926,16 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         repo, other, force, revs=[node], bookmarks=(opargs["to"],), opargs=opargs
     )
 
-    result = not pushop.cgresult
+    result = int(not pushop.cgresult)
     if pushop.bkresult is not None:
         if pushop.bkresult == 2:
             result = 2
         elif not result and pushop.bkresult:
             result = 2
+    # Fixing up the exit code. If a bookmark is changed or created,
+    # use exit code 0 (success) instead of 1 (success, no change).
+    if result == 1 and (pushop.outbookmarks or pushop.create):
+        result = 0
 
     return result
 

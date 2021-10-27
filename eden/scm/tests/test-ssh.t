@@ -364,7 +364,7 @@ debug output
   sending batch command
   searching for changes
   local heads: 2; remote heads: 2 (explicit: 0); initial common: 2
-  all remote heads known locally
+  all local heads known remotely
   no changes found
   sending getbundle command
   bundle2-input-bundle: with-transaction

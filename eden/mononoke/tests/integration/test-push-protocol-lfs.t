@@ -56,7 +56,7 @@ Create new commits
   sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
-  all remote heads known locally
+  1 total queries in 0.0000s
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command

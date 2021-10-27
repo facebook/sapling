@@ -551,7 +551,6 @@ Test pushing bookmark with no new commit
   searching for changes
   no changes found
   updating bookmark stable
-  [1]
   $ hg log -r stable -R ../server
   commit:      fb983dc509b6
   bookmark:    stable

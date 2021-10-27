@@ -142,7 +142,6 @@ Valid push, with pushrebase enabled
   searching for changes
   no changes found
   exporting bookmark plain/456
-  [1]
 
 Invalid push, with pushrebase disabled
   $ hgmn push ssh://user@dummy/repo -r . --to "infinitepush2/123" --create

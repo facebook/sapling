@@ -168,13 +168,11 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
   searching for changes
   no changes found
   updating bookmark @
-  [1]
   $ hg push --to @ -r headb
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
   searching for changes
   no changes found
   updating bookmark @
-  [1]
 
 Test that local must have rev of remote to push --to without --non-forward-move
 

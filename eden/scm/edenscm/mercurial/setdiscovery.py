@@ -328,16 +328,12 @@ def _findcommonheadsnew(
 
     # fast paths
 
-    if len(commonremoteheads) == len(remoteheads):
-        ui.debug("all remote heads known locally\n")
-        # TODO: Consider returning [] as the 3rd return value here.
-        return remoteheads, False, remoteheads
-
     if commonsample.issuperset(set(localheads) - {nullid}):
         ui.note(_("all local heads known remotely\n"))
         # TODO: Check how 'remoteheads' is used at upper layers, and if we
         # can avoid listing all heads remotely (which can be expensive).
-        return localheads, True, remoteheads
+        anyincoming = bool(set(remoteheads) - set(localheads))
+        return localheads, anyincoming, remoteheads
 
     # slow path: full blown discovery
 
@@ -407,4 +403,5 @@ def _findcommonheadsnew(
             ui.warn(_("warning: repository is unrelated\n"))
         return [], True, remoteheads
 
-    return sorted(commonheads), True, remoteheads
+    anyincoming = bool(remoteonlyheads)
+    return sorted(commonheads), anyincoming, remoteheads

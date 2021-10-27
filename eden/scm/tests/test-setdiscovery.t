@@ -61,7 +61,12 @@ Small superset:
   query 1; heads
   searching for changes
   local heads: 3; remote heads: 2 (explicit: 0); initial common: 2
-  all remote heads known locally
+  sampling from both directions (4 of 4)
+  sampling undecided commits (6 of 6)
+  progress: searching: checking 6 commits, 0 left 2 queries
+  query 2; still undecided: 6, sample size is: 6
+  progress: searching (end)
+  2 total queries in 0.0000s
   common heads: 01241442b3c2 b5714e113bc0
   remote is subset
   
@@ -70,7 +75,12 @@ Small superset:
   query 1; heads
   searching for changes
   local heads: 1; remote heads: 2 (explicit: 0); initial common: 2
-  all remote heads known locally
+  sampling from both directions (2 of 2)
+  sampling undecided commits (2 of 2)
+  progress: searching: checking 2 commits, 0 left 2 queries
+  query 2; still undecided: 2, sample size is: 2
+  progress: searching (end)
+  2 total queries in 0.0000s
   common heads: 01241442b3c2 b5714e113bc0
   remote is subset
 
@@ -437,7 +447,18 @@ The graph looks like:
   query 1; heads
   searching for changes
   local heads: 261; remote heads: 1 (explicit: 0); initial common: 1
-  all remote heads known locally
+  sampling from both directions (200 of 520)
+  progress: searching: checking 200 commits, 741 left 2 queries
+  query 2; still undecided: 941, sample size is: 200
+  sampling from both directions (200 of 270)
+  progress: searching: checking 200 commits, 257 left 3 queries
+  query 3; still undecided: 457, sample size is: 200
+  sampling from both directions (60 of 60)
+  sampling undecided commits (84 of 84)
+  progress: searching: checking 84 commits, 0 left 4 queries
+  query 4; still undecided: 84, sample size is: 84
+  progress: searching (end)
+  4 total queries in 0.0000s
   common heads: 513314ca8b3a
   remote is subset
   $ hg -R a debugdiscovery b --debug --verbose --config progress.debug=true --rev tip
@@ -445,7 +466,7 @@ The graph looks like:
   query 1; heads
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
-  all remote heads known locally
+  all local heads known remotely
   common heads: 513314ca8b3a
   remote is subset
 

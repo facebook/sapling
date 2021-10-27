@@ -120,7 +120,6 @@ Test pushing a new bookmark
   searching for changes
   no changes found
   exporting bookmark newbook
-  [1]
   $ hg -R server book
    * master                    98d6f1036c3b
      newbook                   98d6f1036c3b
@@ -145,7 +144,6 @@ Test doing a non-fastforward bookmark move
   searching for changes
   no changes found
   updating bookmark newbook
-  [1]
   $ hg -R server log -G -T '"{desc}" {bookmarks}'
   o  "client's commit" master newbook
   │

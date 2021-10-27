@@ -155,8 +155,8 @@ the server supports our custom getfiles method.
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 2 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 589},
-                        write : { bytes : 1454}}}}
+                        read : { bytes : 592},
+                        write : { bytes : 1513}}}}
 
   $ cd ../master
   $ hg log -l 1 -r 'desc(a)' --style compact

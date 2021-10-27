@@ -234,7 +234,12 @@ bundle single branch
   query 1; heads
   searching for changes
   local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
-  all remote heads known locally
+  sampling from both directions (1 of 1)
+  sampling undecided commits (1 of 1)
+  progress: searching: checking 1 commits, 0 left 2 queries
+  query 2; still undecided: 1, sample size is: 1
+  progress: searching (end)
+  2 total queries in 0.0000s
   2 changesets found
   list of changesets:
   1a38c1b849e8b70c756d2d80b0b9a3ac0b7ea11a

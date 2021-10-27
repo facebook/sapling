@@ -72,7 +72,11 @@ Do infinitepush (aka commit cloud) push
   sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
-  all remote heads known locally
+  sampling from both directions (1 of 1)
+  sampling undecided commits (1 of 1)
+  query 2; still undecided: 1, sample size is: 1
+  sending known command
+  2 total queries in 0.0000s
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command
@@ -139,7 +143,7 @@ check unhydrated infinitepush pulls
   sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 2); initial common: 1
-  all remote heads known locally
+  all local heads known remotely
   sending getbundle command
   bundle2-input-bundle: 1 params with-transaction
   bundle2-input-part: "changegroup" (params: 1 mandatory) supported
@@ -220,7 +224,7 @@ check hydrated infinitepush pulls
   sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 2); initial common: 1
-  all remote heads known locally
+  all local heads known remotely
   sending getbundle command
   bundle2-input-bundle: 1 params with-transaction
   bundle2-input-part: "changegroup" (params: 1 mandatory) supported
@@ -300,7 +304,7 @@ check unhydrated infinitepush pulls if special config option is passed
   sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 2); initial common: 1
-  all remote heads known locally
+  all local heads known remotely
   sending getbundle command
   bundle2-input-bundle: 1 params with-transaction
   bundle2-input-part: "changegroup" (params: 1 mandatory) supported

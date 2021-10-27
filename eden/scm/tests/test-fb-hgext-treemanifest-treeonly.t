@@ -505,8 +505,6 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
   $ hg push -r . --config extensions.pushrebase=! -f
   pushing to ssh://user@dummy/master
   searching for changes
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
-  1 trees fetched over 0.00s
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -545,8 +543,7 @@ Test pushing from a treeonly client to a treeonly server *with* pushrebase
   $ hg push --to master
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: pushing 5 changesets:
-  remote:     098a163f13ea  modify subdir/x
+  remote: pushing 4 changesets:
   remote:     41bd8aa2aeb7  add y
   remote:     77ec7ac93315  hybrid flat+tree commit
   remote:     06f5aa20a0d4  modify y

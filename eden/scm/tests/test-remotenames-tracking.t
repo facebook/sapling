@@ -148,7 +148,6 @@ Test renaming a remote and tracking
   searching for changes
   no changes found
   updating bookmark a
-  [1]
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c remote/a remote/b
   │
