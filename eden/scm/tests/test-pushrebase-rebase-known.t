@@ -62,13 +62,20 @@ Rebase C (draft) to b2 (B) when the server already knows C:
   $ hg push -r $C --to b2
   pushing rev dc0947a82db8 to destination ssh://user@dummy/server bookmark b2
   searching for changes
-  no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files
   updating bookmark b2
-
-BUG: The above push did not rebase C to b2:
+  remote: pushing 1 changeset:
+  remote:     dc0947a82db8  C
+  remote: 2 new changesets from the server will be downloaded
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log -Gr ::b2 -T '{desc}\n'
   @  C
+  │
+  o  B
   │
   o  A
   

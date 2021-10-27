@@ -266,6 +266,7 @@ Do the invisible merge by gradually merging TOMERGES into master
   >  REPOID=$FBS_REPOID mononoke_admin --log-level=ERROR bookmarks set master_bookmark $HGMERGE
   >  flush_mononoke_bookmarks
   >  echo "intermediate" >> fbcode/fbcodefile_fbsource
+  >  REPONAME=fbs-mon hgmn debugmakepublic -r .
   >  REPONAME=fbs-mon hgmn ci -qm "intermediate commit between gradual merge commits"
   >  REPONAME=fbs-mon hgmn push -q --to master_bookmark
   > done

@@ -322,6 +322,7 @@ class pushoperation(object):
         bookmarks=(),
         pushvars=None,
         extras=None,
+        forcedmissing=None,
     ):
         # repo we push from
         self.repo = repo
@@ -384,6 +385,8 @@ class pushoperation(object):
         self.pushvars = pushvars
         # extra information
         self.extras = extras or {}
+        # consider those nodes as missing
+        self.forcedmissing = forcedmissing or []
 
     @util.propertycache
     def futureheads(self):
@@ -638,6 +641,11 @@ def _pushdiscoverychangeset(pushop):
         commoninc=commoninc,
         force=pushop.force,
     )
+    if pushop.forcedmissing:
+        missing = set(outgoing.missing)
+        for n in pushop.forcedmissing:
+            if n not in missing:
+                outgoing.missing.append(n)
     pushop.outgoing = outgoing
     pushop.remoteheads = remoteheads
     pushop.incoming = inc

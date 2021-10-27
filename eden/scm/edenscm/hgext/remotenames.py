@@ -145,9 +145,19 @@ def expushop(
     revs=None,
     bookmarks=(),
     pushvars=None,
+    forcedmissing=None,
     **kwargs
 ):
-    orig(pushop, repo, remote, force, revs, bookmarks, pushvars)
+    orig(
+        pushop,
+        repo,
+        remote,
+        force,
+        revs,
+        bookmarks,
+        pushvars,
+        forcedmissing=forcedmissing,
+    )
 
     for flag in ["to", "delete", "create", "allowanon", "nonforwardmove"]:
         setattr(pushop, flag, kwargs.pop(flag, None))
@@ -921,6 +931,15 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             "use another bookmark name"
         )
         raise error.Abort(msg, hint=hint)
+
+    # Force "rev % onto" drafts to be missing for pushrebase use-case.
+    onto = ui.config("experimental", "server-rebase-onto")
+    fullonto = "%s/%s" % (repo.ui.paths.getname(dest), onto)
+    if onto and not opts.get("create") and fullonto in repo:
+        opargs["forcedmissing"] = list(
+            repo.nodes("draft() & only(%n, %s)", node, fullonto)
+        )
+
     # NB: despite the name, 'revs' doesn't work if it's a numeric rev
     pushop = exchange.push(
         repo, other, force, revs=[node], bookmarks=(opargs["to"],), opargs=opargs
