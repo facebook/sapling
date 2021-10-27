@@ -7,11 +7,12 @@
 
 #pragma once
 
+#include <folly/futures/FutureSplitter.h>
 #include <optional>
 #include <string>
 #include <vector>
 #include "eden/fs/model/Hash.h"
-#include "folly/futures/Future.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 
 namespace facebook {
 namespace eden {
@@ -28,30 +29,26 @@ struct FileMetadata {
   //
   bool isDirectory{false};
 
-  folly::Future<size_t> getSize() {
-    if (cachedSize_) {
-      return *cachedSize_;
-    }
-
-    return std::move(sizeFuture_).thenValue([this](size_t size) {
-      cachedSize_ = size;
-      return size;
-    });
+  folly::Future<uint64_t> getSize() {
+    return sizeFuture_.getFuture();
   }
 
   FileMetadata(
       std::wstring&& name,
       bool isDir,
-      folly::Future<size_t> sizeFuture)
+      ImmediateFuture<uint64_t> sizeFuture)
       : name(std::move(name)),
         isDirectory(isDir),
-        sizeFuture_(std::move(sizeFuture)) {}
+        // In the case where the future isn't ready yet, we want to start
+        // driving it immediately, thus convert it to a Future.
+        sizeFuture_(std::move(sizeFuture)
+                        .semi()
+                        .via(&folly::QueuedImmediateExecutor::instance())) {}
 
   FileMetadata() = delete;
 
  private:
-  folly::Future<size_t> sizeFuture_;
-  std::optional<size_t> cachedSize_;
+  folly::FutureSplitter<uint64_t> sizeFuture_;
 };
 
 class Enumerator {

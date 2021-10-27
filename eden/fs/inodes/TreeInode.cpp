@@ -1968,16 +1968,12 @@ std::vector<FileMetadata> TreeInode::readdir() {
         ret.emplace_back(
             std::move(winName),
             false,
-            getMount()
-                ->getObjectStore()
-                ->getBlobSize(hash.value(), *context)
-                .semi()
-                .via(&folly::QueuedImmediateExecutor::instance()));
+            getMount()->getObjectStore()->getBlobSize(hash.value(), *context));
         continue;
       }
     }
 
-    ret.emplace_back(std::move(winName), isDir, folly::Future<size_t>(0));
+    ret.emplace_back(std::move(winName), isDir, ImmediateFuture<uint64_t>(0));
   }
 
   return ret;
