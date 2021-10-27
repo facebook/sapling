@@ -96,6 +96,15 @@ where
 
                 // Maintain heads and roots. This can only be calculated from flat segments.
                 if level == 0 {
+                    let previous_head = heads.iter().rev().next().cloned();
+                    if let Some(head) = previous_head {
+                        if span.low <= head {
+                            add_problem(format!(
+                                "overlapped segments: {:?} with previous head {:?}",
+                                span, head
+                            ));
+                        }
+                    }
                     for p in &parents {
                         heads.remove(p);
                     }
