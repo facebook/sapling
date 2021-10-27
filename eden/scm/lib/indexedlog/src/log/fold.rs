@@ -7,8 +7,16 @@
 
 use std::any::Any;
 use std::fmt::Debug;
+use std::fs;
 use std::io;
+use std::path::Path;
 
+use vlqencoding::VLQDecode;
+use vlqencoding::VLQEncode;
+
+use crate::errors::IoResultExt;
+use crate::utils::atomic_write_plain;
+use crate::utils::xxhash;
 use crate::Result;
 
 /// Definition of a "fold" function.
@@ -97,5 +105,111 @@ impl Clone for FoldState {
             fold: self.fold.clone_boxed(),
             def: self.def.clone(),
         }
+    }
+}
+
+impl FoldState {
+    pub(crate) fn load_from_file(&mut self, path: &Path) -> crate::Result<()> {
+        (|| -> io::Result<()> {
+            let data = fs::read(path)?;
+            let checksum = match data.get(0..8) {
+                Some(h) => u64::from_be_bytes(<[u8; 8]>::try_from(h).unwrap()),
+                None => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!("corrupted FoldState (no checksum): {:?}", data),
+                    ));
+                }
+            };
+            if xxhash(&data[8..]) != checksum {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("corrupted FoldState (wrong checksum): {:?}", data),
+                ));
+            }
+            let mut reader = &data[8..];
+            let epoch = reader.read_vlq()?;
+            let offset = reader.read_vlq()?;
+            self.fold.load(reader)?;
+            self.epoch = epoch;
+            self.offset = offset;
+            Ok(())
+        })()
+        .context(path, "cannot read FoldState")
+    }
+
+    pub(crate) fn save_to_file(&self, path: &Path) -> crate::Result<()> {
+        let data = (|| -> io::Result<Vec<u8>> {
+            let mut body = Vec::new();
+            body.write_vlq(self.epoch)?;
+            body.write_vlq(self.offset)?;
+            body.extend_from_slice(&self.fold.dump()?);
+            let checksum = xxhash(&body);
+            let mut data: Vec<u8> = checksum.to_be_bytes().to_vec();
+            data.extend_from_slice(&body);
+            Ok(data)
+        })()
+        .context(path, "cannot prepare FoldState")?;
+        atomic_write_plain(path, &data, false)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[derive(Debug, Default)]
+    struct ConcatFold(Vec<u8>);
+
+    impl Fold for ConcatFold {
+        fn load(&mut self, state_bytes: &[u8]) -> io::Result<()> {
+            self.0 = state_bytes.to_vec();
+            Ok(())
+        }
+
+        fn dump(&self) -> io::Result<Vec<u8>> {
+            Ok(self.0.clone())
+        }
+
+        fn accumulate(&mut self, entry: &[u8]) -> Result<()> {
+            self.0.extend_from_slice(entry);
+            Ok(())
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+
+        fn clone_boxed(&self) -> Box<dyn Fold> {
+            Box::new(Self(self.0.clone()))
+        }
+    }
+
+    #[test]
+    fn test_fold_state_load_save() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("foo");
+        let def = FoldDef::new("foo", || Box::new(ConcatFold::default()));
+        let d = |v: &FoldState| format!("{:?}", v);
+
+        let mut state1 = def.empty_state();
+        let mut state2 = def.empty_state();
+
+        // Check empty state round-trip.
+        state1.save_to_file(&path).unwrap();
+        state2.load_from_file(&path).unwrap();
+        assert_eq!(d(&state1), d(&state2));
+
+        // Check some state round-trip.
+        state1.epoch = 10;
+        state1.offset = 20;
+        state1.fold.accumulate(b"abc").unwrap();
+        state1.fold.accumulate(b"def").unwrap();
+        state2.fold.accumulate(b"ghi").unwrap();
+        state1.save_to_file(&path).unwrap();
+        state2.load_from_file(&path).unwrap();
+        assert_eq!(d(&state1), d(&state2));
     }
 }
