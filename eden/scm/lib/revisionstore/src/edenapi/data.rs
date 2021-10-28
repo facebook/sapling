@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_runtime::block_on;
+use async_runtime::spawn_blocking;
 use futures::prelude::*;
 use progress::Unit;
 use tracing::field;
@@ -60,9 +61,21 @@ impl RemoteDataStore for EdenApiDataStore<File> {
                 Unit::Named("files"),
             )?;
 
-            let mut response = File::prefetch_files(client, repo, hgidkeys).await?;
-            while let Some(entry) = response.entries.try_next().await? {
-                self.store.add_file(&entry)?;
+            let response = File::prefetch_files(client, repo, hgidkeys).await?;
+            // store.add_file() may compress the data before writing it to the store. This can slow
+            // things down enough that we don't pull responses off the queue fast enough and
+            // edenapi starts queueing all the responses in memory. Let's write to the store in
+            // parallel, so we have at least a few threads doing decompression for us.
+            let mut entries = response
+                .entries
+                .map(|entry| {
+                    let store = self.store.clone();
+                    spawn_blocking(move || entry.map(|e| store.add_file(&e)))
+                })
+                .buffer_unordered(4);
+
+            while let Some(result) = entries.try_next().await? {
+                let _ = result??;
                 prog.increment(1)?;
             }
             // Explicitly force the result type here, since otherwise it can't infer the error
