@@ -33,6 +33,7 @@ pub const MAX_DATA_CHUNK_SIZE: &str = "max-data-chunk-size";
 pub const SKIP_LAST_CHUNK_ARG: &str = "skip-last-chunk";
 pub const STREAMING_CLONE: &str = "streaming-clone";
 pub const TAG_ARG: &str = "tag";
+pub const NO_UPLOAD_IF_LESS_THAN_CHUNKS_ARG: &str = "no-upload-if-less-than-chunks";
 pub const UPDATE_SUB_CMD: &str = "update";
 
 pub async fn streaming_clone<'a>(
@@ -132,6 +133,20 @@ async fn update_streaming_changelog(
         max_data_chunk_size,
         skip_last_chunk,
     )?;
+
+    let no_upload_if_less_than_chunks: Option<usize> =
+        args::get_and_parse_opt(sub_m, NO_UPLOAD_IF_LESS_THAN_CHUNKS_ARG);
+
+    if let Some(at_least_chunks) = no_upload_if_less_than_chunks {
+        if chunks.len() < at_least_chunks {
+            info!(
+                ctx.logger(),
+                "has too few chunks to upload - {}. Exiting",
+                chunks.len()
+            );
+            return Ok(0);
+        }
+    }
 
     info!(ctx.logger(), "about to upload {} entries", chunks.len());
     let chunks = upload_chunks_blobstore(&ctx, &repo, &chunks, &idx, &data).await?;
@@ -478,6 +493,14 @@ fn add_common_args<'a, 'b>(sub_cmd: App<'a, 'b>) -> App<'a, 'b> {
                 .takes_value(false)
                 .required(false)
                 .help("skip uploading last chunk. "),
+        )
+        .arg(
+            Arg::with_name(NO_UPLOAD_IF_LESS_THAN_CHUNKS_ARG)
+                .long(NO_UPLOAD_IF_LESS_THAN_CHUNKS_ARG)
+                .takes_value(true)
+                .required(false)
+                .conflicts_with(SKIP_LAST_CHUNK_ARG)
+                .help("Do not do anything if we have less than that number of chunks to upload"),
         )
 }
 

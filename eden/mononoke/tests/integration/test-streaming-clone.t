@@ -178,3 +178,18 @@ Clone it again to make sure saved streaming chunks are valid
   $ cd "$TESTTMP"
   $ diff repo-streamclone-2/.hg/store/00changelog.i repo-streamclone-3/.hg/store/00changelog.i
   $ diff repo-streamclone-2/.hg/store/00changelog.d repo-streamclone-3/.hg/store/00changelog.d
+
+Check no-upload-if-less-than-chunks option
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from streaming_changelog_chunks where repo_id = 0;"
+  $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --no-upload-if-less-than-chunks 2
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Reloading redacted config from configerator (glob)
+  * current sizes in database: index: 0, data: 0, repo: repo (glob)
+  * has too few chunks to upload - 1. Exiting, repo: repo (glob)
+  $ streaming_clone create --dot-hg-path "$TESTTMP/repo-hg/.hg" --no-upload-if-less-than-chunks 2 --max-data-chunk-size 1
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Reloading redacted config from configerator (glob)
+  * current sizes in database: index: 0, data: 0, repo: repo (glob)
+  * about to upload 3 entries, repo: repo (glob)
+  * inserting into streaming clone database, repo: repo (glob)
+  * current max chunk num is None, repo: repo (glob)
