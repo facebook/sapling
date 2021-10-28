@@ -1450,6 +1450,7 @@ async fn test_verify_integrity_fast_failure(fb: FacebookInit) {
         rewrite_dates: None,
         hooks_skip_ancestors_of: vec![],
         ensure_ancestor_of: None,
+        allow_move_to_public_commits_without_hooks: false,
     }];
     config.hooks = vec![HookParams {
         name: "verify_integrity".into(),
@@ -1477,6 +1478,7 @@ async fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
         rewrite_dates: None,
         hooks_skip_ancestors_of: vec![],
         ensure_ancestor_of: None,
+        allow_move_to_public_commits_without_hooks: false,
     }];
 
     config.hooks = vec![HookParams {
@@ -1529,6 +1531,7 @@ async fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
         rewrite_dates: None,
         hooks_skip_ancestors_of: vec![],
         ensure_ancestor_of: None,
+        allow_move_to_public_commits_without_hooks: false,
     }];
 
     config.hooks = vec![HookParams {

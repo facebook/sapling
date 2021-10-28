@@ -1066,6 +1066,7 @@ mod test {
             [[bookmarks]]
             regex="[^/]*/stable"
             ensure_ancestor_of="master"
+            allow_move_to_public_commits_without_hooks=true
 
             [[hooks]]
             name="hook1"
@@ -1291,6 +1292,7 @@ mod test {
                         rewrite_dates: None,
                         hooks_skip_ancestors_of: vec![],
                         ensure_ancestor_of: None,
+                        allow_move_to_public_commits_without_hooks: false,
                     },
                     BookmarkParams {
                         bookmark: Regex::new("[^/]*/stable").unwrap().into(),
@@ -1301,6 +1303,7 @@ mod test {
                         rewrite_dates: None,
                         hooks_skip_ancestors_of: vec![],
                         ensure_ancestor_of: Some(BookmarkName::new("master").unwrap()),
+                        allow_move_to_public_commits_without_hooks: true,
                     },
                 ],
                 hooks: vec![

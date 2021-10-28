@@ -92,6 +92,10 @@ impl AffectedChangesets {
         &self.source_changesets
     }
 
+    fn adding_new_changesets_to_repo(&self) -> bool {
+        !self.source_changesets.is_empty() || !self.new_changesets.is_empty()
+    }
+
     /// Load bonsais in the additional changeset range that are not already in
     /// `new_changesets` and are ancestors of `head` but not ancestors of `base`
     /// or any of the `hooks_skip_ancestors_of` bookmarks for the named
@@ -445,6 +449,35 @@ impl AffectedChangesets {
                 )
                 .await
                 .context("Failed to load additional affected changesets")?;
+
+                let skip_running_hooks_if_public: bool = bookmark_attrs
+                    .select(bookmark)
+                    .map(|attr| attr.params().allow_move_to_public_commits_without_hooks)
+                    .any(|x| x);
+                if skip_running_hooks_if_public && !self.adding_new_changesets_to_repo() {
+                    // For some bookmarks we allow to skip running hooks if:
+                    // 1) this is just a bookmark move i.e. no new commits are added or pushrebased to the repo
+                    // 2) we are allowed to skip commits for a bookmark like that
+                    // 3) if all commits that are affectd by this bookmark move are public (which means
+                    //  we should have already ran hooks for these commits).
+
+                    let cs_ids = self
+                        .iter()
+                        .map(|bcs| bcs.get_changeset_id())
+                        .collect::<Vec<_>>();
+
+                    let public = repo
+                        .get_phases()
+                        .get_public(
+                            ctx.clone(),
+                            cs_ids.clone(),
+                            false, /* ephemeral_derive */
+                        )
+                        .await?;
+                    if public == cs_ids.into_iter().collect::<HashSet<_>>() {
+                        return Ok(());
+                    }
+                }
 
                 if !self.is_empty() {
                     run_hooks(

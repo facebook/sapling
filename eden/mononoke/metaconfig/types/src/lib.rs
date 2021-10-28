@@ -554,6 +554,11 @@ pub struct BookmarkParams {
     /// bookmark. That also implies that it's not longer possible to
     /// pushrebase to these bookmarks.
     pub ensure_ancestor_of: Option<BookmarkName>,
+    /// This option allows moving a bookmark to a commit that's already
+    /// public while bypassing all the hooks. Note that should be fine,
+    /// because commit is already public, meaning that hooks already
+    /// should have been run when the commit was first made public.
+    pub allow_move_to_public_commits_without_hooks: bool,
 }
 
 /// The type of the hook

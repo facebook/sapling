@@ -178,6 +178,9 @@ impl Convert for RawBookmarkConfig {
             .map(BookmarkName::new)
             .collect::<Result<Vec<_>, _>>()?;
         let ensure_ancestor_of = self.ensure_ancestor_of.map(BookmarkName::new).transpose()?;
+        let allow_move_to_public_commits_without_hooks = self
+            .allow_move_to_public_commits_without_hooks
+            .unwrap_or(false);
 
         Ok(BookmarkParams {
             bookmark: bookmark_or_regex,
@@ -188,6 +191,7 @@ impl Convert for RawBookmarkConfig {
             rewrite_dates,
             hooks_skip_ancestors_of,
             ensure_ancestor_of,
+            allow_move_to_public_commits_without_hooks,
         })
     }
 }
