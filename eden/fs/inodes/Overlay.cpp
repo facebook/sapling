@@ -165,12 +165,8 @@ folly::SemiFuture<Unit> Overlay::initialize(
       return;
     }
     promise.setValue();
-#ifndef _WIN32
-    // TODO: On Windows files are cached by the ProjectedFS. We need to
-    // clean the cached files while doing GC.
 
     gcThread();
-#endif
   });
   return std::move(initFuture);
 }
@@ -370,7 +366,6 @@ void Overlay::removeOverlayData(InodeNumber inodeNumber) {
   backingOverlay_->removeOverlayData(inodeNumber);
 }
 
-#ifndef _WIN32
 void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
   IORequest req{this};
 
@@ -386,7 +381,6 @@ void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
     gcCondVar_.notify_one();
   }
 }
-#endif
 
 #ifndef _WIN32
 folly::Future<folly::Unit> Overlay::flushPendingAsync() {
@@ -496,10 +490,6 @@ void Overlay::closeAndWaitForOutstandingIO() {
   }
 }
 
-#ifndef _WIN32
-// TODO: On Windows files are cached by the ProjectedFS. We need to clean that
-// cache before doing GC.
-
 void Overlay::gcThread() noexcept {
   for (;;) {
     std::vector<GCRequest> requests;
@@ -596,7 +586,6 @@ void Overlay::handleGCRequest(GCRequest& request) {
     processDir(dir);
   }
 }
-#endif // !1
 
 void Overlay::addChild(
     InodeNumber parent,

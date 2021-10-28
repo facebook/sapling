@@ -2918,7 +2918,6 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
 
   wasDirectoryListModified = true;
 
-#ifndef _WIN32
   // Contents have changed and the entry is not materialized, but we may have
   // allocated and remembered inode numbers for this tree.  It's much faster to
   // simply forget the inode numbers we allocated here -- if we were a real
@@ -2931,7 +2930,6 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
                << ")";
     getOverlay()->recursivelyRemoveOverlayData(oldEntryInodeNumber);
   }
-#endif
 
   // TODO: contents have changed: we probably should propagate
   // this information up to our caller so it can mark us
