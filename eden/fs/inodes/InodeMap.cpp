@@ -239,6 +239,8 @@ bool isFileInWorkingCopy(AbsolutePathPiece /*path*/) {
 void InodeMap::initializeFromOverlay(TreeInodePtr root, Overlay& overlay) {
   XCHECK(mount_->isWorkingCopyPersistent());
 
+  XLOG(DBG2) << "Initializing InodeMap for " << mount_->getPath();
+
   auto data = data_.wlock();
   initializeRoot(data, std::move(root));
 
