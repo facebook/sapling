@@ -56,11 +56,11 @@ import ssl
 import sys
 
 from .. import pycompat
+from .. import pycompat
 from . import _readers
 
 if pycompat.iswindows:
     from eden.thrift.windows_thrift import WindowsSocketHandle
-
 
 try:
     # pyre-fixme[21]: Could not find `httplib`.

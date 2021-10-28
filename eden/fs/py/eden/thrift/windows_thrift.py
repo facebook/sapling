@@ -92,7 +92,12 @@ connect.restype = ctypes.c_int
 #   int        flags
 # );
 send = ctypes.windll.ws2_32.send
-send.argtypes = [ctypes.wintypes.HANDLE, ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
+send.argtypes = [
+    ctypes.wintypes.HANDLE,
+    ctypes.POINTER(ctypes.c_char),
+    ctypes.c_int,
+    ctypes.c_int,
+]
 send.restype = ctypes.c_int
 
 # int recv(
@@ -102,7 +107,12 @@ send.restype = ctypes.c_int
 #   int    flags
 # );
 recv = ctypes.windll.ws2_32.recv
-recv.argtypes = [ctypes.wintypes.HANDLE, ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
+recv.argtypes = [
+    ctypes.wintypes.HANDLE,
+    ctypes.POINTER(ctypes.c_char),
+    ctypes.c_int,
+    ctypes.c_int,
+]
 recv.restype = ctypes.c_int
 
 # int closesocket(
@@ -190,6 +200,7 @@ class WindowsSocketHandle(object):
                 raise WindowsSocketException(errcode)
 
     def __init__(self):
+        self._io_refs = 0  # stub to make socket.makefile work on this object
         wsa_data = WSAData64()
         # ctypes.c_ushort(514) = MAKE_WORD(2,2) which is for the winsock
         # library version 2.2
@@ -235,8 +246,15 @@ class WindowsSocketHandle(object):
         self.address = address
 
     def send(self, buff):
-        # type: (bytes) -> int
-        retcode = send(self.fd, buff, len(buff), 0)
+        # type: (bytes|memoryview) -> int
+        size = len(buff)
+
+        if isinstance(buff, memoryview):
+            # making a copy of buff, because it's not possible to get
+            # c_char_p from memoryview (it might not be continuous)
+            buff = buff.tobytes()  # making a copy of buff
+
+        retcode = send(self.fd, buff, size, 0)
         self._checkReturnCode(retcode)
         return retcode
 
@@ -256,6 +274,16 @@ class WindowsSocketHandle(object):
         retsize = recv(self.fd, buff, size, 0)
         self._checkReturnCode(retsize)
         return buff.raw[0:retsize]
+
+    def recv_into(self, buffer, size=0):
+        if size == 0:
+            size = len(buffer)
+
+        dest = (ctypes.c_char * size).from_buffer(buffer)
+        retsize = recv(self.fd, dest, size, 0)
+        self._checkReturnCode(retsize)
+
+        return retsize
 
     def getpeername(self):
         # type: () -> str

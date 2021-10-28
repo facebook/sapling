@@ -42,7 +42,11 @@ from bindings import clientinfo, zstd, cats
 
 from . import error, progress, httpconnection, sslutil, util, stdiopeer
 from .i18n import _
-from .pycompat import decodeutf8, encodeutf8
+from .pycompat import decodeutf8, encodeutf8, iswindows
+
+
+if iswindows:
+    from eden.thrift.windows_thrift import WindowsSocketHandle
 
 # Netencoding special characters
 NETSTRING_SEPARATOR = b":"
@@ -59,6 +63,7 @@ class mononokepipe(object):
     """Wraps a pipe that count the number of bytes read/written to it"""
 
     def __init__(self, ui, pipe, decompress=False):
+
         self._sendbuf = b""
         self._readbuf = b""
         self._readoffset = 0
@@ -278,7 +283,10 @@ class mononokepeer(stdiopeer.stdiopeer):
         with self.ui.timeblockedsection("mononoke_tcp"):
             try:
                 if self._unix_socket_proxy:
-                    self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    if iswindows:
+                        self.sock = WindowsSocketHandle()
+                    else:
+                        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     self.sock.settimeout(self._sockettimeout)
                     self.sock.connect(self._unix_socket_proxy)
                     return
@@ -360,9 +368,12 @@ class mononokepeer(stdiopeer.stdiopeer):
 
                 self.sock.send(httprequest)
 
-                # Read HTTP response headers so we can start our own
-                # protocol afterwards
-                self.handle = self.sock.makefile(mode="rwb")
+                if iswindows:
+                    self.handle = socket.socket.makefile(self.sock, mode="rwb")
+                else:
+                    # Read HTTP response headers so we can start our own
+                    # protocol afterwards
+                    self.handle = self.sock.makefile(mode="rwb")
 
                 # First line is wether request was successful
                 line = self.handle.readline(1024).strip()
