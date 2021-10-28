@@ -48,6 +48,7 @@ pub async fn copy(
     msg: String,
     limits: Limits,
     options: Options,
+    skip_overwrite_warning: Option<&dyn Fn(&CoreContext, &MPath) -> ()>,
 ) -> Result<Vec<ChangesetId>, Error> {
     // These are the file changes that have to be removed first
     let mut remove_file_changes = BTreeMap::new();
@@ -85,6 +86,9 @@ pub async fn copy(
                 if options.overwrite {
                     remove_file_changes.insert(to_path.clone(), None);
                 } else {
+                    if let Some(skip_overwrite_warning) = skip_overwrite_warning {
+                        skip_overwrite_warning(ctx, &to_path);
+                    }
                     continue;
                 }
             }
@@ -370,6 +374,7 @@ mod test {
             "msg".to_string(),
             Limits::default(),
             Options::default(),
+            None,
         )
         .await?
         .last()
@@ -419,6 +424,7 @@ mod test {
             "msg".to_string(),
             Limits::default(),
             Options::default(),
+            None,
         )
         .await?
         .last()
@@ -474,6 +480,7 @@ mod test {
             "msg".to_string(),
             limit.clone(),
             Options::default(),
+            None,
         )
         .await?
         .last()
@@ -502,6 +509,7 @@ mod test {
             "msg".to_string(),
             limit,
             Options::default(),
+            None,
         )
         .await?
         .last()
@@ -550,6 +558,7 @@ mod test {
                 maybe_exclude_file_regex: Some(Regex::new("(BUCK|.*\\.bzl|TARGETS)$")?),
                 ..Default::default()
             },
+            None,
         )
         .await?
         .last()
@@ -598,6 +607,7 @@ mod test {
                 lfs_threshold: None,
             },
             Options::default(),
+            None,
         )
         .await?
         .last()
@@ -629,6 +639,7 @@ mod test {
                 lfs_threshold: None,
             },
             Options::default(),
+            None,
         )
         .await?
         .last()
@@ -678,6 +689,7 @@ mod test {
                 lfs_threshold: NonZeroU64::new(2),
             },
             Options::default(),
+            None,
         )
         .await?;
         assert_eq!(cs_ids.len(), 1);
@@ -725,6 +737,7 @@ mod test {
                 overwrite: false,
                 ..Default::default()
             },
+            None,
         )
         .await?;
         assert!(cs_ids.is_empty());
@@ -745,6 +758,7 @@ mod test {
                 overwrite: true,
                 ..Default::default()
             },
+            None,
         )
         .await?;
 
@@ -943,6 +957,7 @@ mod test {
                 overwrite: true,
                 ..Default::default()
             },
+            None,
         )
         .await?;
 

@@ -19,6 +19,7 @@ use cmdlib::{
 use context::CoreContext;
 use mononoke_types::{ChangesetId, MPath};
 use regex::Regex;
+use slog::warn;
 use slog::Logger;
 use std::num::NonZeroU64;
 
@@ -257,6 +258,16 @@ pub async fn subcommand_rsync<'a>(
                 msg,
                 limits_from_matches(sub_matches),
                 options_from_matches(sub_matches)?,
+                Some(
+                    &(|ctx: &CoreContext, path| {
+                        warn!(
+                            ctx.logger(),
+                            "skipping {} because it already exists in the destination, \
+                            use --overwrite to override this behaviour",
+                            path
+                        );
+                    }),
+                ),
             )
             .await?;
 
