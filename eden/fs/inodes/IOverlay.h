@@ -82,6 +82,13 @@ class IOverlay {
       InodeNumber inodeNumber) = 0;
 
   /**
+   * Remove the directory associated with the given `InodeNumber` and return
+   * its content.
+   */
+  virtual std::optional<overlay::OverlayDir> loadAndRemoveOverlayDir(
+      InodeNumber inodeNumber) = 0;
+
+  /**
    * Save a directory content to overlay with the given `InodeNumber`
    */
   virtual void saveOverlayDir(

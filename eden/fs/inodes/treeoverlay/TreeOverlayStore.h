@@ -94,6 +94,11 @@ class TreeOverlayStore {
   overlay::OverlayDir loadTree(InodeNumber inode);
 
   /**
+   * Remove the tree from the store and return it.
+   */
+  overlay::OverlayDir loadAndRemoveTree(InodeNumber inode);
+
+  /**
    * Delete a tree from storage
    *
    * @throws if the tree being deleted is non-empty

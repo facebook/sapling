@@ -41,6 +41,11 @@ std::optional<overlay::OverlayDir> TreeOverlay::loadOverlayDir(
   return store_.loadTree(inodeNumber);
 }
 
+std::optional<overlay::OverlayDir> TreeOverlay::loadAndRemoveOverlayDir(
+    InodeNumber inodeNumber) {
+  return store_.loadAndRemoveTree(inodeNumber);
+}
+
 void TreeOverlay::saveOverlayDir(
     InodeNumber inodeNumber,
     const overlay::OverlayDir& odir) {

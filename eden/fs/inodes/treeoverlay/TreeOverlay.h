@@ -58,6 +58,8 @@ class TreeOverlay : public IOverlay {
 
   std::optional<overlay::OverlayDir> loadOverlayDir(
       InodeNumber inodeNumber) override;
+  std::optional<overlay::OverlayDir> loadAndRemoveOverlayDir(
+      InodeNumber inodeNumber) override;
 
   void saveOverlayDir(InodeNumber inodeNumber, const overlay::OverlayDir& odir)
       override;

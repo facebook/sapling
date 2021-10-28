@@ -373,7 +373,6 @@ void Overlay::removeOverlayData(InodeNumber inodeNumber) {
 #ifndef _WIN32
 void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
   IORequest req{this};
-  auto dirData = backingOverlay_->loadOverlayDir(inodeNumber);
 
   // This inode's data must be removed from the overlay before
   // recursivelyRemoveOverlayData returns to avoid a race condition if
@@ -381,8 +380,7 @@ void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
   // saveOverlayDir(I).  There's also no risk of violating our durability
   // guarantees if the process dies after this call but before the thread could
   // remove this data.
-  removeOverlayData(inodeNumber);
-
+  auto dirData = backingOverlay_->loadAndRemoveOverlayDir(inodeNumber);
   if (dirData) {
     gcQueue_.lock()->queue.emplace_back(std::move(*dirData));
     gcCondVar_.notify_one();

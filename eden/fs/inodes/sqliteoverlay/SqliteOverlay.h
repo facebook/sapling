@@ -68,6 +68,8 @@ class SqliteOverlay : public IOverlay {
       override;
   std::optional<overlay::OverlayDir> loadOverlayDir(
       InodeNumber inodeNumber) override;
+  std::optional<overlay::OverlayDir> loadAndRemoveOverlayDir(
+      InodeNumber inodeNumber) override;
 
   void removeOverlayData(InodeNumber inodeNumber) override;
   bool hasOverlayData(InodeNumber inodeNumber) override;

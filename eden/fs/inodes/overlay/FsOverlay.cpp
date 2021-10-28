@@ -295,6 +295,13 @@ optional<overlay::OverlayDir> FsOverlay::loadOverlayDir(
   return deserializeOverlayDir(inodeNumber);
 }
 
+std::optional<overlay::OverlayDir> FsOverlay::loadAndRemoveOverlayDir(
+    InodeNumber inodeNumber) {
+  auto result = loadOverlayDir(inodeNumber);
+  removeOverlayData(inodeNumber);
+  return result;
+}
+
 void FsOverlay::saveOverlayDir(
     InodeNumber inodeNumber,
     const overlay::OverlayDir& odir) {

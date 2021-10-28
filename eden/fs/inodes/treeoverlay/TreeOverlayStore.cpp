@@ -332,6 +332,33 @@ overlay::OverlayDir TreeOverlayStore::loadTree(InodeNumber inode) {
   return dir;
 }
 
+overlay::OverlayDir TreeOverlayStore::loadAndRemoveTree(InodeNumber inode) {
+  overlay::OverlayDir dir;
+
+  db_->transaction([&](auto& txn) {
+    // SQLite does not support select-and-delete in one query.
+    auto& query = cache_->selectTree.get(txn);
+    query.bind(1, inode.get());
+
+    while (query.step()) {
+      auto name = query.columnBlob(0);
+      overlay::OverlayEntry entry;
+      entry.mode_ref() =
+          dtype_to_mode(static_cast<dtype_t>(query.columnUint64(1)));
+      entry.inodeNumber_ref() = query.columnUint64(2);
+      entry.hash_ref() = query.columnBlob(3).toString();
+      dir.entries_ref()->emplace(std::make_pair(name, entry));
+    }
+
+    auto& deleteInode = cache_->deleteTree.get(txn);
+    deleteInode.reset();
+    deleteInode.bind(1, inode.get());
+    deleteInode.step();
+  });
+
+  return dir;
+}
+
 void TreeOverlayStore::removeTree(InodeNumber inode) {
   db_->transaction([&](auto& txn) {
     auto& children = cache_->countChildren.get(txn);

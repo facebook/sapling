@@ -214,6 +214,13 @@ std::optional<overlay::OverlayDir> SqliteOverlay::loadOverlayDir(
       serializedData.value());
 }
 
+std::optional<overlay::OverlayDir> SqliteOverlay::loadAndRemoveOverlayDir(
+    InodeNumber inodeNumber) {
+  auto result = loadOverlayDir(inodeNumber);
+  removeOverlayData(inodeNumber);
+  return result;
+}
+
 void SqliteOverlay::removeOverlayData(InodeNumber inodeNumber) {
   auto db = db_->lock();
   auto& stmt = cache_->deleteInode.get(db);

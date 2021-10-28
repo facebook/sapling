@@ -120,6 +120,9 @@ class FsOverlay : public IOverlay {
   std::optional<overlay::OverlayDir> loadOverlayDir(
       InodeNumber inodeNumber) override;
 
+  std::optional<overlay::OverlayDir> loadAndRemoveOverlayDir(
+      InodeNumber inodeNumber) override;
+
   void saveNextInodeNumber(InodeNumber nextInodeNumber);
 
   void writeNextInodeNumber(InodeNumber nextInodeNumber);
