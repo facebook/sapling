@@ -55,7 +55,11 @@ import socket
 import ssl
 import sys
 
+from .. import pycompat
 from . import _readers
+
+if pycompat.iswindows:
+    from eden.thrift.windows_thrift import WindowsSocketHandle
 
 
 try:
@@ -550,7 +554,10 @@ class HTTPConnection(object):
             )
 
             if self._unix_socket_path:
-                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                if pycompat.iswindows:
+                    sock = WindowsSocketHandle()
+                else:
+                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 sock.settimeout(self.timeout)
                 sock.connect(self._unix_socket_path)
             else:
@@ -595,7 +602,10 @@ class HTTPConnection(object):
                 )
         else:
             if self._unix_socket_path:
-                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                if pycompat.iswindows:
+                    sock = WindowsSocketHandle()
+                else:
+                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 sock.settimeout(self.timeout)
                 sock.connect(self._unix_socket_path)
             else:

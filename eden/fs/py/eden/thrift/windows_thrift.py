@@ -9,6 +9,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import ctypes
+import errno
 import socket
 import sys
 
@@ -27,11 +28,16 @@ if sys.platform == "win32":
 # WSA Error codes
 WSAETIMEDOUT = 10060
 WSAECONNREFUSED = 10061
+WSAEWOULDBLOCK = 10035
+WSATRY_AGAIN = 11002
 
 # Socket options
 SO_SNDTIMEO = 0x1005
 SO_RCVTIMEO = 0x1006
 SOL_SOCKET = 0xFFFF
+
+# ioctlsocket operations
+FIONBIO = 2147772030
 
 # int WSAStartup(
 #     WORD      wVersionRequired,
@@ -124,6 +130,19 @@ WinSetIntSockOpt.argtypes = [
 ]
 WinSetIntSockOpt.restype = ctypes.c_int
 
+# int ioctlsocket(
+#   [in]      SOCKET s,
+#   [in]      long   cmd,
+#   [in, out] u_long *argp
+# );
+ioctlsocket = ctypes.windll.ws2_32.ioctlsocket
+ioctlsocket.argtypes = [
+    ctypes.wintypes.HANDLE,
+    ctypes.c_long,
+    ctypes.POINTER(ctypes.wintypes.DWORD),
+]
+ioctlsocket.restype = ctypes.c_int
+
 
 class SOCKADDR_UN(ctypes.Structure):
     _fields_ = [("sun_family", ctypes.c_ushort), ("sun_path", ctypes.c_char * 108)]
@@ -155,6 +174,18 @@ class WindowsSocketHandle(object):
                 )
             elif errcode == WSAETIMEDOUT:
                 raise socket.timeout()
+            elif errcode == WSAEWOULDBLOCK:
+                raise OSError(
+                    errno.EWOULDBLOCK,
+                    strerror="Resource temporarily unavailable",
+                    winerror=WSAEWOULDBLOCK,
+                )
+            elif errcode == WSATRY_AGAIN:
+                raise OSError(
+                    errno.EAGAIN,
+                    strerror="Resource temporarily unavailable",
+                    winerror=WSATRY_AGAIN,
+                )
             else:
                 raise WindowsSocketException(errcode)
 
@@ -237,6 +268,13 @@ class WindowsSocketHandle(object):
     def close(self):
         # type: () -> int
         return closesocket(self.fd)
+
+    def setblocking(self, flag):
+        # type: (bool) -> int
+        mode = ctypes.wintypes.DWORD(0 if flag else 1)
+        retcode = ioctlsocket(self.fd, FIONBIO, ctypes.pointer(mode))
+        self._checkReturnCode(retcode)
+        return retcode
 
 
 class WinTSocket(TSocket):
