@@ -30,6 +30,7 @@ from . import (
     templatekw,
     templater,
     util,
+    pathutil,
 )
 from .i18n import _
 from .node import nullid, short
@@ -383,11 +384,13 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
             # therefore 'mynode' is used for 'destnode', not fcd.node()
             destpath = ui.prompt(
                 _(
-                    "path '%(fd)s' in commit %(srcnode)s was renamed to [what path] in commit %(destnode)s ?"
+                    "path '%(fd)s' in commit %(srcnode)s was renamed to [what path relative to repo root] in commit %(destnode)s ?"
                 )
                 % {"fd": fd, "srcnode": short(fco.node()), "destnode": short(mynode)},
                 default="",
             )
+            # normalize absolute path to repo path
+            destpath = pathutil.canonpath(repo.root, repo.root, destpath)
             if not destpath or destpath not in destctx:
                 ui.warn(
                     _(

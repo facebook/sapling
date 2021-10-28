@@ -26,14 +26,16 @@ A
 )
 
 sh % "hg up -q $C"
-sh % "hg rebase -r $C -d $D '--config=ui.interactive=1' '--config=experimental.copytrace=off'" << r"""
+# rename should support absolute path
+root = (sh % "hg root").output
+sh % "hg rebase -r $C -d $D '--config=ui.interactive=1' '--config=experimental.copytrace=off'" << f"""
 r
-Renamed
+{root}/Renamed
 """ == r"""
     rebasing 85b47c0eb942 "C"
     other [source] changed A which local [dest] deleted
     use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? r
-    path 'A' in commit 85b47c0eb942 was renamed to [what path] in commit ed4ad4ec6472 ? Renamed
+    path 'A' in commit 85b47c0eb942 was renamed to [what path relative to repo root] in commit ed4ad4ec6472 ? $TESTTMP/repo1/Renamed
     merging Renamed"""
 
 sh % "hg log -Gp -T '{desc}\\n' --git Renamed A" == r"""
