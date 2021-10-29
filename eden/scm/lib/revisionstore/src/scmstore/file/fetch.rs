@@ -461,37 +461,37 @@ impl FetchState {
                 }
             })
             .collect();
-        let (entries, stats) = {
-            block_on(async move {
-                let response = store.files_attrs(pending_attrs).await?;
-                let entries = {
-                    response.entries.then(move |res_entry| {
-                        let lfs_cache = lfs_cache.clone();
-                        let indexedlog_cache = indexedlog_cache.clone();
-                        let aux_cache = aux_cache.clone();
-                        let memcache = memcache.clone();
-                        spawn_blocking(move || {
-                            res_entry.map(move |entry| {
-                                (
-                                    entry.key.clone(),
-                                    Self::found_edenapi(
-                                        entry,
-                                        indexedlog_cache,
-                                        lfs_cache,
-                                        aux_cache,
-                                        memcache,
-                                    ),
-                                )
-                            })
-                        })
+
+        let response = block_on(store.files_attrs(pending_attrs))?;
+        let entries = response
+            .entries
+            .map(move |res_entry| {
+                let lfs_cache = lfs_cache.clone();
+                let indexedlog_cache = indexedlog_cache.clone();
+                let aux_cache = aux_cache.clone();
+                let memcache = memcache.clone();
+                spawn_blocking(move || {
+                    res_entry.map(move |entry| {
+                        (
+                            entry.key.clone(),
+                            Self::found_edenapi(
+                                entry,
+                                indexedlog_cache,
+                                lfs_cache,
+                                aux_cache,
+                                memcache,
+                            ),
+                        )
                     })
-                };
-                // Explicitly force the result type here, since otherwise it can't infer the error
-                // type.
-                let result: Result<_> = Ok((entries, response.stats.await?));
-                result
-            })?
-        };
+                })
+
+                // Processing a response may involve compressing the response, which
+                // can be expensive. If we don't process entries fast enough, edenapi
+                // can start queueing up responses which causes forever increasing
+                // memory usage. So let's process responses in parallel to stay ahead
+                // of download speeds.
+            })
+            .buffer_unordered(4);
 
         // Record found entries
         for res in stream_to_iter(entries) {
@@ -508,7 +508,7 @@ impl FetchState {
             }
         }
 
-        util::record_edenapi_stats(&span, &stats);
+        util::record_edenapi_stats(&span, &block_on(response.stats)?);
 
         Ok(())
     }
