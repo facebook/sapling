@@ -10,8 +10,14 @@ use crate::treecontentstore::TreeContentStore;
 use crate::utils::key_from_path_node_slice;
 use anyhow::Result;
 use edenapi::{Builder as EdenApiBuilder, EdenApi};
+#[allow(unused)]
+use log::warn;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
+#[allow(unused)]
+use progress::null::NullProgressFactory;
+#[allow(unused)]
+use revisionstore::MemcacheStore;
 use revisionstore::{
     ContentStore, ContentStoreBuilder, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore,
     LocalStore, RemoteDataStore, StoreKey, StoreResult,
