@@ -8,6 +8,7 @@
 mod builder;
 mod client;
 mod response;
+mod retryable;
 
 // Re-export for convenience.
 pub use configmodel;

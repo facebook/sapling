@@ -48,3 +48,13 @@ pub enum ConfigError {
     #[error("Invalid config item: {0}")]
     Invalid(String, #[source] anyhow::Error),
 }
+
+impl EdenApiError {
+    pub fn is_retryable(&self) -> bool {
+        use EdenApiError::*;
+        match self {
+            Http(_) | HttpError { .. } => true,
+            _ => false,
+        }
+    }
+}
