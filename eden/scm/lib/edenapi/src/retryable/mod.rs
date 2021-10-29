@@ -17,8 +17,13 @@ use http_client::Stats;
 use crate::client::Client;
 use crate::errors::EdenApiError;
 
-const MAX_RETRIES: usize = 3;
+mod files;
+mod trees;
 
+pub(crate) use files::{RetryableFileAttrs, RetryableFiles};
+pub(crate) use trees::RetryableTrees;
+
+const MAX_RETRIES: usize = 3;
 #[async_trait]
 pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
     type Item: Send + 'static;

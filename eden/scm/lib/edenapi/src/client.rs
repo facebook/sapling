@@ -105,6 +105,10 @@ use crate::builder::Config;
 use crate::errors::EdenApiError;
 use crate::response::Response;
 use crate::response::ResponseMeta;
+use crate::retryable::RetryableFileAttrs;
+use crate::retryable::RetryableFiles;
+use crate::retryable::RetryableStreamRequest;
+use crate::retryable::RetryableTrees;
 use crate::types::wire::pull::PullFastForwardRequest;
 
 /// All non-alphanumeric characters (except hypens, underscores, and periods)
@@ -379,6 +383,77 @@ impl Client {
         });
     }
 
+    pub(crate) async fn fetch_files(
+        &self,
+        repo: String,
+        keys: Vec<Key>,
+    ) -> Result<Response<FileEntry>, EdenApiError> {
+        tracing::info!("Requesting content for {} file(s)", keys.len());
+
+        if keys.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let guards = vec![FILES_INFLIGHT.entrance_guard(keys.len())];
+
+        let url = self.build_url(paths::FILES, Some(&repo))?;
+        let requests = self.prepare_requests(&url, keys, self.config().max_files, |keys| {
+            let req = FileRequest { keys, reqs: vec![] };
+            self.log_request(&req, "files");
+            req.to_wire()
+        })?;
+
+        Ok(self.fetch_guard::<WireFileEntry>(requests, guards)?)
+    }
+
+    pub(crate) async fn fetch_trees(
+        &self,
+        repo: String,
+        keys: Vec<Key>,
+        attributes: Option<TreeAttributes>,
+    ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
+        tracing::info!("Requesting {} tree(s)", keys.len());
+
+        if keys.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let url = self.build_url(paths::TREES, Some(&repo))?;
+        let requests = self.prepare_requests(&url, keys, self.config().max_trees, |keys| {
+            let req = TreeRequest {
+                keys,
+                attributes: attributes.clone().unwrap_or_default(),
+            };
+            self.log_request(&req, "trees");
+            req.to_wire()
+        })?;
+
+        Ok(self.fetch::<WireTreeEntry>(requests)?)
+    }
+
+    pub(crate) async fn fetch_files_attrs(
+        &self,
+        repo: String,
+        reqs: Vec<FileSpec>,
+    ) -> Result<Response<FileEntry>, EdenApiError> {
+        tracing::info!("Requesting attributes for {} file(s)", reqs.len());
+
+        if reqs.is_empty() {
+            return Ok(Response::empty());
+        }
+
+        let guards = vec![FILES_ATTRS_INFLIGHT.entrance_guard(reqs.len())];
+
+        let url = self.build_url(paths::FILES, Some(&repo))?;
+        let requests = self.prepare_requests(&url, reqs, self.config().max_files, |reqs| {
+            let req = FileRequest { reqs, keys: vec![] };
+            self.log_request(&req, "files");
+            req.to_wire()
+        })?;
+
+        Ok(self.fetch_guard::<WireFileEntry>(requests, guards)?)
+    }
+
     /// Upload a single file
     async fn process_single_file_upload(
         &self,
@@ -445,7 +520,6 @@ impl Client {
         })?
     }
 
-
     async fn with_retry<'t, T>(
         &'t self,
         func: impl Fn(&'t Self) -> BoxFuture<'t, Result<T, EdenApiError>>,
@@ -486,20 +560,9 @@ impl EdenApi for Client {
     ) -> Result<Response<FileEntry>, EdenApiError> {
         tracing::info!("Requesting content for {} file(s)", keys.len());
 
-        if keys.is_empty() {
-            return Ok(Response::empty());
-        }
-
-        let guards = vec![FILES_INFLIGHT.entrance_guard(keys.len())];
-
-        let url = self.build_url(paths::FILES, Some(&repo))?;
-        let requests = self.prepare_requests(&url, keys, self.config().max_files, |keys| {
-            let req = FileRequest { keys, reqs: vec![] };
-            self.log_request(&req, "files");
-            req.to_wire()
-        })?;
-
-        Ok(self.fetch_guard::<WireFileEntry>(requests, guards)?)
+        RetryableFiles::new(keys)
+            .perform_with_retries(self.clone(), repo)
+            .await
     }
 
     async fn files_attrs(
@@ -509,20 +572,9 @@ impl EdenApi for Client {
     ) -> Result<Response<FileEntry>, EdenApiError> {
         tracing::info!("Requesting attributes for {} file(s)", reqs.len());
 
-        if reqs.is_empty() {
-            return Ok(Response::empty());
-        }
-
-        let guards = vec![FILES_ATTRS_INFLIGHT.entrance_guard(reqs.len())];
-
-        let url = self.build_url(paths::FILES, Some(&repo))?;
-        let requests = self.prepare_requests(&url, reqs, self.config().max_files, |reqs| {
-            let req = FileRequest { reqs, keys: vec![] };
-            self.log_request(&req, "files");
-            req.to_wire()
-        })?;
-
-        Ok(self.fetch_guard::<WireFileEntry>(requests, guards)?)
+        RetryableFileAttrs::new(reqs)
+            .perform_with_retries(self.clone(), repo)
+            .await
     }
 
     async fn history(
@@ -563,21 +615,9 @@ impl EdenApi for Client {
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         tracing::info!("Requesting {} tree(s)", keys.len());
 
-        if keys.is_empty() {
-            return Ok(Response::empty());
-        }
-
-        let url = self.build_url(paths::TREES, Some(&repo))?;
-        let requests = self.prepare_requests(&url, keys, self.config().max_trees, |keys| {
-            let req = TreeRequest {
-                keys,
-                attributes: attributes.clone().unwrap_or_default(),
-            };
-            self.log_request(&req, "trees");
-            req.to_wire()
-        })?;
-
-        Ok(self.fetch::<WireTreeEntry>(requests)?)
+        RetryableTrees::new(keys, attributes)
+            .perform_with_retries(self.clone(), repo)
+            .await
     }
 
     async fn commit_revlog_data(
@@ -625,7 +665,6 @@ impl EdenApi for Client {
         self.fetch_vec_with_retry::<WireCommitHashLookupResponse>(requests)
             .await
     }
-
 
     async fn bookmarks(
         &self,
@@ -936,7 +975,6 @@ impl EdenApi for Client {
             entries: Box::pin(futures::stream::iter(all_tokens)),
         })
     }
-
 
     async fn upload_filenodes_batch(
         &self,
