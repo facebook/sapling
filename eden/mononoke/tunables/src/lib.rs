@@ -193,6 +193,9 @@ pub struct MononokeTunables {
     // How often to check if derived data is disabled or not
     derived_data_disabled_watcher_delay_secs: AtomicI64,
 
+    // Disable derivation via direved data service.
+    derived_data_disable_remote_derivation: AtomicBool,
+
     // multiplexed blobstore is_present/get new semantics rollout
     multiplex_blobstore_get_do_queue_lookup: AtomicBool,
     multiplex_blobstore_is_present_do_queue_lookup: AtomicBool,

@@ -17,6 +17,7 @@ use std::time::Duration;
 use anyhow::{bail, format_err, Context, Error, Result};
 use cached_config::ConfigStore;
 use clap::{ArgMatches, Values};
+use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use maybe_owned::MaybeOwned;
 use megarepo_config::MononokeMegarepoConfigsOptions;
@@ -51,13 +52,14 @@ use super::{
         ArgType, MononokeAppData, BLOBSTORE_BYTES_MIN_THROTTLE_ARG, BLOBSTORE_PUT_BEHAVIOUR_ARG,
         BLOBSTORE_SCRUB_ACTION_ARG, BLOBSTORE_SCRUB_GRACE_ARG,
         BLOBSTORE_SCRUB_QUEUE_PEEK_BOUND_ARG, BLOBSTORE_SCRUB_WRITE_MOSTLY_MISSING_ARG,
-        CACHELIB_ATTEMPT_ZSTD_ARG, CRYPTO_PATH_REGEX_ARG, DISABLE_TUNABLES, ENABLE_MCROUTER,
-        GET_MEAN_DELAY_SECS_ARG, GET_STDDEV_DELAY_SECS_ARG, LOCAL_CONFIGERATOR_PATH_ARG,
-        LOGVIEW_ADDITIONAL_LEVEL_FILTER, LOGVIEW_CATEGORY, LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG,
-        MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY, MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT,
-        MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT, MYSQL_POOL_PER_KEY_LIMIT,
-        MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT, MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT,
-        MYSQL_SQLBLOB_POOL_LIMIT, MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM,
+        CACHELIB_ATTEMPT_ZSTD_ARG, CRYPTO_PATH_REGEX_ARG, DERIVE_REMOTELY, DISABLE_TUNABLES,
+        ENABLE_MCROUTER, GET_MEAN_DELAY_SECS_ARG, GET_STDDEV_DELAY_SECS_ARG,
+        LOCAL_CONFIGERATOR_PATH_ARG, LOGVIEW_ADDITIONAL_LEVEL_FILTER, LOGVIEW_CATEGORY,
+        LOG_EXCLUDE_TAG, LOG_INCLUDE_TAG, MYSQL_CONN_OPEN_TIMEOUT, MYSQL_MASTER_ONLY,
+        MYSQL_MAX_QUERY_TIME, MYSQL_POOL_AGE_TIMEOUT, MYSQL_POOL_IDLE_TIMEOUT, MYSQL_POOL_LIMIT,
+        MYSQL_POOL_PER_KEY_LIMIT, MYSQL_POOL_THREADS_NUM, MYSQL_SQLBLOB_POOL_AGE_TIMEOUT,
+        MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT, MYSQL_SQLBLOB_POOL_LIMIT,
+        MYSQL_SQLBLOB_POOL_PER_KEY_LIMIT, MYSQL_SQLBLOB_POOL_THREADS_NUM,
         NO_DEFAULT_SCUBA_DATASET_ARG, PUT_MEAN_DELAY_SECS_ARG, PUT_STDDEV_DELAY_SECS_ARG,
         READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG,
         RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS, SCUBA_DATASET_ARG, SCUBA_LOG_FILE_ARG,
@@ -127,6 +129,7 @@ impl<'a> MononokeMatches<'a> {
         let rendezvous_options =
             parse_rendezvous_options(&matches).context("Failed to parse rendezvous options")?;
         let megarepo_configs_options = parse_mononoke_megarepo_configs_options(&matches)?;
+        let remote_derivation_options = parse_remote_derivation_options(&matches)?;
 
         maybe_enable_mcrouter(fb, &matches, &arg_types);
 
@@ -145,6 +148,7 @@ impl<'a> MononokeMatches<'a> {
                 readonly_storage,
                 rendezvous_options,
                 megarepo_configs_options,
+                remote_derivation_options,
             }),
             app_data,
         })
@@ -877,4 +881,15 @@ fn maybe_enable_mcrouter(fb: FacebookInit, matches: &ArgMatches<'_>, arg_types: 
             ENABLE_MCROUTER
         );
     }
+}
+
+fn parse_remote_derivation_options(
+    matches: &ArgMatches<'_>,
+) -> Result<RemoteDerivationOptions, Error> {
+    let derive_remotely = matches.is_present(DERIVE_REMOTELY);
+    let smc_tier = matches.value_of(DERIVE_REMOTELY).map(|s| s.to_string());
+    Ok(RemoteDerivationOptions {
+        derive_remotely,
+        smc_tier,
+    })
 }

@@ -12,6 +12,7 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
 use context::CoreContext;
+use derived_data_remote::DerivationClient;
 use filenodes::Filenodes;
 use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -51,6 +52,8 @@ pub struct DerivedDataManagerInner {
     /// in that order. For example, bubble managers are secondary, as all the data in
     /// the persistent blobstore must be derived BEFORE deriving data in the bubble.
     secondary: Option<SecondaryManagerData>,
+    /// If this client is set, then derivation will be done remotely on derived data service
+    derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
 }
 
 pub struct DerivationAssignment {
@@ -86,6 +89,7 @@ impl DerivedDataManager {
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
         config: DerivedDataTypesConfig,
+        derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
     ) -> Self {
         let lease = DerivedDataLease::new(lease);
         DerivedDataManager {
@@ -100,6 +104,7 @@ impl DerivedDataManager {
                 lease,
                 scuba,
                 secondary: None,
+                derivation_service_client,
             }),
         }
     }
@@ -203,5 +208,9 @@ impl DerivedDataManager {
 
     pub fn filenodes(&self) -> Result<&dyn Filenodes> {
         self.inner.filenodes.as_deref().context("Missing filenodes")
+    }
+
+    pub fn derivation_service_client(&self) -> Option<&dyn DerivationClient<Output = ()>> {
+        self.inner.derivation_service_client.as_deref()
     }
 }

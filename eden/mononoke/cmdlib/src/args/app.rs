@@ -90,6 +90,7 @@ pub const WITH_DYNAMIC_OBSERVABILITY: &str = "with-dynamic-observability";
 pub const LOCAL_CONFIGERATOR_PATH_ARG: &str = "local-configerator-path";
 pub const WITH_TEST_MEGAREPO_CONFIGS_CLIENT: &str = "with-test-megarepo-configs-client";
 pub const CRYPTO_PATH_REGEX_ARG: &str = "crypto-path-regex";
+pub const DERIVE_REMOTELY: &str = "derive-remotely";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ArgType {
@@ -133,6 +134,8 @@ pub enum ArgType {
     Scribe,
     /// Adds options related to rendezvous
     RendezVous,
+    /// Adds options related to derivation
+    Derivation,
 }
 
 // Arguments that are enabled by default for MononokeAppBuilder
@@ -146,6 +149,7 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
     ArgType::Runtime,
     ArgType::Tunables,
     ArgType::RendezVous,
+    ArgType::Derivation,
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -591,6 +595,9 @@ impl MononokeAppBuilder {
         }
         if self.arg_types.contains(&ArgType::RendezVous) {
             app = add_rendezvous_args(app);
+        }
+        if self.arg_types.contains(&ArgType::Derivation) {
+            app = add_derivation_args(app);
         }
 
         app = add_megarepo_svc_args(app);
@@ -1128,5 +1135,15 @@ fn add_megarepo_svc_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .takes_value(true)
             .possible_values(&["true", "false"])
             .default_value("false"),
+    )
+}
+
+fn add_derivation_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(DERIVE_REMOTELY)
+            .long(DERIVE_REMOTELY)
+            .takes_value(true)
+            .value_name("SMC")
+            .help("Derive data remotely using provided SMC tier or default one"),
     )
 }

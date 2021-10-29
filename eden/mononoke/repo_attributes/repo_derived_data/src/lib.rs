@@ -17,6 +17,7 @@ use cacheblob::LeaseOps;
 use changesets::Changesets;
 use context::CoreContext;
 use derived_data_manager::{BonsaiDerivable, DerivationError, DerivedDataManager};
+use derived_data_remote::DerivationClient;
 use filenodes::Filenodes;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -45,6 +46,7 @@ impl RepoDerivedData {
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
         config: DerivedDataConfig,
+        derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
     ) -> Result<RepoDerivedData> {
         let manager = DerivedDataManager::new(
             repo_id,
@@ -56,6 +58,7 @@ impl RepoDerivedData {
             lease,
             scuba,
             config.enabled.clone(),
+            derivation_service_client,
         );
         Ok(RepoDerivedData { config, manager })
     }

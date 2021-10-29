@@ -217,6 +217,7 @@ impl<Derivable> DerivedUtilsFromManager<Derivable> {
             lease,
             scuba,
             config.clone(),
+            None, // derivation_service_client=None
         );
         Self {
             manager,

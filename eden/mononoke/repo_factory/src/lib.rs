@@ -45,7 +45,10 @@ use changesets::ArcChangesets;
 use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
 use context::SessionContainer;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
+#[cfg(fbcode_build)]
+use derived_data_client_library::Client as DerivationServiceClient;
 use derived_data_manager::{ArcDerivedDataManagerSet, DerivedDataManagerSet};
+use derived_data_remote::{DerivationClient, RemoteDerivationOptions};
 use environment::{Caching, MononokeEnvironment};
 use ephemeral_blobstore::{
     ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore, RepoEphemeralBlobstoreBuilder,
@@ -751,6 +754,8 @@ impl RepoFactory {
             config.scuba_table.clone(),
             repo_identity.name(),
         );
+        let derivation_service_client =
+            get_derivation_client(self.env.fb, self.env.remote_derivation_options.clone())?;
         Ok(Arc::new(RepoDerivedData::new(
             repo_identity.id(),
             repo_identity.name().to_string(),
@@ -761,6 +766,7 @@ impl RepoFactory {
             lease,
             scuba,
             config,
+            derivation_service_client,
         )?))
     }
 
@@ -868,6 +874,8 @@ impl RepoFactory {
             config.scuba_table.clone(),
             repo_identity.name(),
         );
+        let derivation_service_client =
+            get_derivation_client(self.env.fb, self.env.remote_derivation_options.clone())?;
         Ok::<_, anyhow::Error>(Arc::new(DerivedDataManagerSet::new(
             repo_identity.id(),
             repo_identity.name().to_string(),
@@ -878,6 +886,7 @@ impl RepoFactory {
             lease,
             scuba,
             config,
+            derivation_service_client,
         )?))
     }
 }
@@ -905,4 +914,29 @@ fn build_scuba(
     scuba.add_common_server_data();
     scuba.add("reponame", reponame);
     scuba
+}
+
+fn get_derivation_client(
+    fb: FacebookInit,
+    remote_derivation_options: RemoteDerivationOptions,
+) -> Result<Option<Arc<dyn DerivationClient<Output = ()>>>> {
+    let derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>> =
+        if remote_derivation_options.derive_remotely {
+            #[cfg(fbcode_build)]
+            {
+                let client = match remote_derivation_options.smc_tier {
+                    Some(smc_tier) => DerivationServiceClient::from_tier_name(fb, smc_tier)?,
+                    None => DerivationServiceClient::new(fb)?,
+                };
+                Some(Arc::new(client))
+            }
+            #[cfg(not(fbcode_build))]
+            {
+                let _ = fb;
+                None
+            }
+        } else {
+            None
+        };
+    Ok(derivation_service_client)
 }

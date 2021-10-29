@@ -398,6 +398,7 @@ impl TestRepoFactory {
             lease,
             MononokeScubaSampleBuilder::with_discard(),
             repo_config.derived_data_config.clone(),
+            None, // derivation_service_client = None
         )?))
     }
 

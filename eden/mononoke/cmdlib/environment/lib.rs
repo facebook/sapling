@@ -7,6 +7,7 @@
 
 use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
 use cached_config::ConfigStore;
+use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
 use megarepo_config::MononokeMegarepoConfigsOptions;
 use observability::ObservabilityContext;
@@ -43,4 +44,5 @@ pub struct MononokeEnvironment {
     pub readonly_storage: ReadOnlyStorage,
     pub rendezvous_options: RendezVousOptions,
     pub megarepo_configs_options: MononokeMegarepoConfigsOptions,
+    pub remote_derivation_options: RemoteDerivationOptions,
 }

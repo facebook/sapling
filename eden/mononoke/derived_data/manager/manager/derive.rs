@@ -135,6 +135,61 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
+        const RETRY_DELAY: Duration = Duration::from_millis(100);
+        const RETRY_ATTEMPTS_LIMIT: u8 = 10;
+        if let Some(client) = self.derivation_service_client() {
+            let mut attempt = 0;
+            while !tunables::tunables().get_derived_data_disable_remote_derivation() {
+                match client
+                    .derive_remotely(
+                        self.repo_name().to_string(),
+                        Derivable::NAME.to_string(),
+                        csid,
+                    )
+                    .await
+                {
+                    Ok(response) => match response {
+                        Some(_) => {
+                            return Ok((
+                                csid,
+                                derivation_ctx
+                                    .fetch_derived::<Derivable>(ctx, csid)
+                                    .await?
+                                    .ok_or_else(|| anyhow!("failed to derive {}", csid))?,
+                            ));
+                        }
+                        None => {
+                            tokio::time::sleep(RETRY_DELAY).await;
+                            continue;
+                        }
+                    },
+                    Err(e) => {
+                        if attempt >= RETRY_ATTEMPTS_LIMIT {
+                            self.derived_data_scuba::<Derivable>()
+                                .add("changeset", csid.to_string());
+                            self.derived_data_scuba::<Derivable>()
+                                .log_with_msg("Derived data service failed", format!("{:#}", e));
+                            break;
+                        }
+                        attempt += 1;
+                        continue;
+                    }
+                }
+            }
+        }
+        self.perform_single_derivation_locally(&ctx, &derivation_ctx, csid)
+            .await
+    }
+
+    async fn perform_single_derivation_locally<Derivable>(
+        &self,
+        ctx: &CoreContext,
+        derivation_ctx: &DerivationContext,
+        csid: ChangesetId,
+    ) -> Result<(ChangesetId, Derivable)>
+    where
+        Derivable: BonsaiDerivable,
+    {
         let mut scuba = ctx.scuba().clone();
         scuba
             .add("changeset_id", csid.to_string())

@@ -9,8 +9,14 @@ use anyhow::Result;
 use async_trait::async_trait;
 use mononoke_types::ChangesetId;
 
+#[derive(Clone, Debug)]
+pub struct RemoteDerivationOptions {
+    pub derive_remotely: bool,
+    pub smc_tier: Option<String>,
+}
+
 #[async_trait]
-pub trait DerivationClient {
+pub trait DerivationClient: Send + Sync {
     type Output;
 
     async fn derive_remotely(
