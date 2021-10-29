@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <folly/lang/Assume.h>
+
 namespace facebook::eden {
 
 template <typename T>
@@ -127,6 +129,7 @@ bool ImmediateFuture<T>::isReady() const {
     case Kind::Nothing:
       throw DestroyedImmediateFutureError{};
   }
+  folly::assume_unreachable();
 }
 
 template <typename T>
@@ -167,6 +170,7 @@ ImmediateFuture<T>::thenTry(Func&& func) && {
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
   }
+  folly::assume_unreachable();
 }
 
 template <typename T>
@@ -179,6 +183,7 @@ T ImmediateFuture<T>::get() && {
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
   }
+  folly::assume_unreachable();
 }
 
 template <typename T>
@@ -191,6 +196,7 @@ folly::Try<T> ImmediateFuture<T>::getTry() && {
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
   }
+  folly::assume_unreachable();
 }
 
 template <typename T>
@@ -203,6 +209,7 @@ T ImmediateFuture<T>::get(folly::HighResDuration timeout) && {
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
   }
+  folly::assume_unreachable();
 }
 
 template <typename T>
@@ -215,6 +222,7 @@ folly::Try<T> ImmediateFuture<T>::getTry(folly::HighResDuration timeout) && {
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
   }
+  folly::assume_unreachable();
 }
 
 template <typename T>
@@ -227,6 +235,7 @@ folly::SemiFuture<T> ImmediateFuture<T>::semi() && {
     case Kind::Nothing:
       throw DestroyedImmediateFutureError();
   }
+  folly::assume_unreachable();
 }
 
 template <typename T, typename E>
