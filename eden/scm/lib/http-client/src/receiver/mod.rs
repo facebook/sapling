@@ -10,6 +10,8 @@ use crate::errors::HttpClientError;
 use crate::header::Header;
 use crate::progress::Progress;
 
+use anyhow::Result;
+
 pub mod channel;
 
 pub use channel::ChannelReceiver;
@@ -18,10 +20,10 @@ pub use channel::ResponseStreams;
 /// Interface for streaming HTTP response handlers.
 pub trait Receiver: Sized {
     /// Handle received chunk of the response body.
-    fn chunk(&mut self, chunk: Vec<u8>);
+    fn chunk(&mut self, chunk: Vec<u8>) -> Result<()>;
 
     /// Handle a received header.
-    fn header(&mut self, header: Header);
+    fn header(&mut self, header: Header) -> Result<()>;
 
     /// Get progress updates for this transfer.
     /// This function will be called whenever the underlying
@@ -91,11 +93,12 @@ pub(crate) mod testutil {
     }
 
     impl Receiver for TestReceiver {
-        fn chunk(&mut self, chunk: Vec<u8>) {
+        fn chunk(&mut self, chunk: Vec<u8>) -> Result<()> {
             self.inner.borrow_mut().chunks.push(chunk);
+            Ok(())
         }
 
-        fn header(&mut self, header: Header) {
+        fn header(&mut self, header: Header) -> Result<()> {
             match header {
                 Header::Status(_, status) => {
                     self.inner.borrow_mut().status = Some(status);
@@ -104,7 +107,8 @@ pub(crate) mod testutil {
                     self.inner.borrow_mut().headers.push((name, value));
                 }
                 Header::EndOfHeaders => {}
-            }
+            };
+            Ok(())
         }
 
         fn progress(&mut self, progress: Progress) {
@@ -117,7 +121,11 @@ pub(crate) mod testutil {
     pub struct NullReceiver;
 
     impl Receiver for NullReceiver {
-        fn chunk(&mut self, _chunk: Vec<u8>) {}
-        fn header(&mut self, _header: Header) {}
+        fn chunk(&mut self, _chunk: Vec<u8>) -> Result<()> {
+            Ok(())
+        }
+        fn header(&mut self, _header: Header) -> Result<()> {
+            Ok(())
+        }
     }
 }

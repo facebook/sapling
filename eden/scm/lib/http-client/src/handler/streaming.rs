@@ -55,7 +55,11 @@ impl<R: Receiver> Handler for Streaming<R> {
             .event_listeners
             .trigger_download_bytes(self.request_context(), data.len());
         if let Some(ref mut receiver) = self.receiver {
-            receiver.chunk(data.into());
+            if receiver.chunk(data.into()).is_err() {
+                // WriteError can only return "Pause", so instead we need to return an incorrect
+                // number of bytes written, which will trigger curl to end the request.
+                return Ok(0);
+            }
         }
         Ok(data.len())
     }
@@ -104,7 +108,9 @@ impl<R: Receiver> Handler for Streaming<R> {
         match Header::parse(data) {
             Ok(header) => {
                 if let Some(ref mut receiver) = self.receiver {
-                    receiver.header(header);
+                    if receiver.header(header).is_err() {
+                        return false;
+                    }
                 }
             }
             Err(e) => {

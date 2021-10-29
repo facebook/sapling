@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use futures::channel::mpsc;
 use futures::channel::oneshot;
 
@@ -54,12 +55,12 @@ impl ChannelReceiver {
 }
 
 impl Receiver for ChannelReceiver {
-    fn chunk(&mut self, chunk: Vec<u8>) {
-        let _ = self.body_tx.unbounded_send(chunk);
+    fn chunk(&mut self, chunk: Vec<u8>) -> Result<()> {
+        self.body_tx.unbounded_send(chunk).map_err(|e| e.into())
     }
 
-    fn header(&mut self, header: Header) {
-        let _ = self.headers_tx.unbounded_send(header);
+    fn header(&mut self, header: Header) -> Result<()> {
+        self.headers_tx.unbounded_send(header).map_err(|e| e.into())
     }
 
     fn done(self, res: Result<(), HttpClientError>) -> Result<(), Abort> {
