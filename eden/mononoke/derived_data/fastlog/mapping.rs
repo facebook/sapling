@@ -42,6 +42,12 @@ pub enum ErrorKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RootFastlog(ChangesetId);
 
+impl RootFastlog {
+    pub fn changeset_id(&self) -> &ChangesetId {
+        &self.0
+    }
+}
+
 impl From<ChangesetId> for RootFastlog {
     fn from(csid: ChangesetId) -> RootFastlog {
         RootFastlog(csid)

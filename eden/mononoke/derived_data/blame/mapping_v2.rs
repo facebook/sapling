@@ -29,6 +29,10 @@ impl RootBlameV2 {
     pub fn root_manifest(&self) -> RootUnodeManifestId {
         self.root_manifest
     }
+
+    pub fn changeset_id(&self) -> ChangesetId {
+        self.csid
+    }
 }
 
 fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {

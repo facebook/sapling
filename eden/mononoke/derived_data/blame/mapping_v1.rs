@@ -20,6 +20,12 @@ use crate::derive_v1::derive_blame_v1;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BlameRoot(ChangesetId);
 
+impl BlameRoot {
+    pub fn changeset_id(&self) -> &ChangesetId {
+        &self.0
+    }
+}
+
 impl From<ChangesetId> for BlameRoot {
     fn from(csid: ChangesetId) -> BlameRoot {
         BlameRoot(csid)
