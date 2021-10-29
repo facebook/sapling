@@ -775,8 +775,6 @@ function setup_mononoke_repo_config {
   mkdir -p "$TESTTMP/$reponame"
   mkdir -p "$TESTTMP/traffic-replay-blobstore"
   cat > "repos/$reponame/server.toml" <<CONFIG
-repoid=$REPOID
-enabled=${ENABLED:-true}
 hash_validation_percentage=100
 CONFIG
 
@@ -795,20 +793,12 @@ CONFIG
 fi
 
 if [[ -n "${ACL_NAME:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-hipster_acl = "$ACL_NAME"
-CONFIG
-
   cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
 hipster_acl = "$ACL_NAME"
 CONFIG
 fi
 
 if [[ -n "${READ_ONLY_REPO:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-readonly=true
-CONFIG
-
   cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
 readonly=true
 CONFIG
@@ -1052,10 +1042,6 @@ CONFIG
 fi
 
 if [[ -n "${BACKUP_FROM:-}" ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-[backup_config]
-backup_source_name="$BACKUP_FROM"
-CONFIG
   cat >> "repo_definitions/$reponame/server.toml" <<CONFIG
 backup_source_repo_name="$BACKUP_FROM"
 CONFIG
