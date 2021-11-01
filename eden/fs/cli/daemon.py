@@ -210,6 +210,16 @@ def prepare_edenfs_privileges(
         return (cmd, env)
 
     privhelper = os.path.join(os.path.dirname(daemon_binary), "edenfs_privhelper")
+
+    # EdenFS accepts a privhelper_path argument to locate the privhelper, so if
+    # we are about to pass that we should extract it.
+    next_arg_is_privhelper = False
+    for arg in cmd:
+        if next_arg_is_privhelper:
+            privhelper = arg
+            break
+        next_arg_is_privhelper = arg == "--privhelper_path"
+
     # If the EdenFS privhelper is installed as setuid root we don't need to use
     # sudo.
     try:
