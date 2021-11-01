@@ -20,6 +20,8 @@ use regex::Regex;
 #[derive(Default)]
 pub struct LimitCommitsizeBuilder {
     commit_size_limit: Option<u64>,
+    override_limit_path_regexes: Option<Vec<String>>,
+    override_limits: Option<Vec<u64>>,
     ignore_path_regexes: Option<Vec<String>>,
     changed_files_limit: Option<u64>,
 }
@@ -35,11 +37,31 @@ impl LimitCommitsizeBuilder {
         if let Some(v) = config.ints.get("changed_files_limit") {
             self = self.changed_files_limit(*v as u64)
         }
+        if let Some(v) = config.string_lists.get("override_limit_path_regexes") {
+            self = self.override_limit_path_regexes(v);
+        }
+        if let Some(v) = config.int_lists.get("override_limits") {
+            self = self.override_limits(v.into_iter().map(|i| *i as u64));
+        }
         self
     }
 
     pub fn commit_size_limit(mut self, limit: u64) -> Self {
         self.commit_size_limit = Some(limit);
+        self
+    }
+
+    pub fn override_limit_path_regexes(
+        mut self,
+        strs: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> Self {
+        self.override_limit_path_regexes =
+            Some(strs.into_iter().map(|s| String::from(s.as_ref())).collect());
+        self
+    }
+
+    pub fn override_limits(mut self, limits: impl IntoIterator<Item = u64>) -> Self {
+        self.override_limits = Some(limits.into_iter().collect());
         self
     }
 
@@ -55,10 +77,34 @@ impl LimitCommitsizeBuilder {
     }
 
     pub fn build(self) -> Result<LimitCommitsize> {
+        let regexes = self
+            .override_limit_path_regexes
+            .unwrap_or_else(Vec::new)
+            .into_iter()
+            .map(|s| Regex::new(&s))
+            .collect::<Result<Vec<_>, _>>()
+            .context("Failed to create regex for override_limit_path_regexes")?;
+
+        let limits = self
+            .override_limits
+            .unwrap_or_else(Vec::new)
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        if regexes.len() != limits.len() {
+            return Err(anyhow!(
+                "Failed to initialize limit_commitsize hook. Lists 'override_limit_path_regexes' and 'override_limits' have different sizes."
+            ));
+        }
+
+        let regexes_with_limits: Vec<(Regex, u64)> =
+            regexes.into_iter().zip(limits.into_iter()).collect();
+
         Ok(LimitCommitsize {
             commit_size_limit: self
                 .commit_size_limit
                 .ok_or_else(|| anyhow!("Missing commitsizelimit config"))?,
+            override_limit_path_regexes_with_limits: regexes_with_limits,
             ignore_path_regexes: self
                 .ignore_path_regexes
                 .unwrap_or_else(Vec::new)
@@ -74,6 +120,7 @@ impl LimitCommitsizeBuilder {
 pub struct LimitCommitsize {
     commit_size_limit: u64,
     ignore_path_regexes: Vec<Regex>,
+    override_limit_path_regexes_with_limits: Vec<(Regex, u64)>,
     changed_files_limit: Option<u64>,
 }
 
@@ -96,6 +143,21 @@ impl ChangesetHook for LimitCommitsize {
         if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
             // For push-redirected commits, we rely on running source-repo hooks
             return Ok(HookExecution::Accepted);
+        }
+
+        // find max commit size based on the files in the changeset
+        let mut max_commit_size_limit = self.commit_size_limit;
+        for (path, _) in changeset.file_changes() {
+            let path = format!("{}", path);
+            let path_size_limit = self
+                .override_limit_path_regexes_with_limits
+                .iter()
+                .filter(|(regex, _)| regex.is_match(&path))
+                .map(|(_, size)| size)
+                .max();
+            if let Some(limit) = path_size_limit {
+                max_commit_size_limit = u64::max(max_commit_size_limit, *limit);
+            }
         }
 
         let mut num_changed_files = 0;
@@ -124,14 +186,14 @@ impl ChangesetHook for LimitCommitsize {
             }
 
             totalsize += file_change.size().unwrap_or(0);
-            if totalsize > self.commit_size_limit {
+            if totalsize > max_commit_size_limit {
                 return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                     "Commit too large",
                     format!(
                         "Commit size limit is {} bytes.\n\
                         You tried to push a commit {} bytes in size that is over the limit.\n\
                         See https://fburl.com/landing_big_diffs for instructions.",
-                        self.commit_size_limit, totalsize
+                        max_commit_size_limit, totalsize
                     ),
                 )));
             }
@@ -284,13 +346,113 @@ mod test {
         Ok(())
     }
 
+    #[fbinit::test]
+    async fn test_limitcommitsize_override(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        borrowed!(ctx, repo);
+
+        let cs_id = CreateCommitContext::new_root(ctx, repo)
+            .add_file("dir/a", "a")
+            .add_file("dir/b", "b")
+            .add_file("odir/c", "c")
+            .commit()
+            .await?;
+
+        let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+
+        let content_manager = BlobRepoFileContentManager::new(repo.clone());
+        let hook = build_hook_with_limits(
+            hashmap! {
+                "commitsizelimit".to_string() => 1,
+                "changed_files_limit".to_string() => 3,
+            },
+            hashmap! {
+                "override_limit_path_regexes".to_string() => vec!["^dir/.*$".to_string()],
+            },
+            hashmap! {
+                "override_limits".to_string() => vec![3],
+            },
+        )?;
+        let hook_execution = hook
+            .run(
+                ctx,
+                &BookmarkName::new("book")?,
+                &bcs,
+                &content_manager,
+                CrossRepoPushSource::NativeToThisRepo,
+            )
+            .await?;
+        // override max size is 3 bytes which is enough for 3 bytes commit
+        assert_eq!(hook_execution, HookExecution::Accepted);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_limitcommitsize_override_hits_limit(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        borrowed!(ctx, repo);
+
+        let cs_id = CreateCommitContext::new_root(ctx, repo)
+            .add_file("dir/a", "a")
+            .add_file("dir/b", "b")
+            .add_file("odir/c", "c")
+            .commit()
+            .await?;
+
+        let bcs = cs_id.load(ctx, repo.blobstore()).await?;
+
+        let content_manager = BlobRepoFileContentManager::new(repo.clone());
+
+        let hook = build_hook_with_limits(
+            hashmap! {
+                "commitsizelimit".to_string() => 1,
+                "changed_files_limit".to_string() => 3,
+            },
+            hashmap! {
+                "override_limit_path_regexes".to_string() => vec!["^odir/.*$".to_string()],
+            },
+            hashmap! {
+                "override_limits".to_string() => vec![2],
+            },
+        )?;
+        let hook_execution = hook
+            .run(
+                ctx,
+                &BookmarkName::new("book")?,
+                &bcs,
+                &content_manager,
+                CrossRepoPushSource::NativeToThisRepo,
+            )
+            .await?;
+        // override max size is 2 bytes, but commit has 3 in total
+        match hook_execution {
+            HookExecution::Rejected(_) => {}
+            HookExecution::Accepted => {
+                return Err(anyhow!("should be rejected"));
+            }
+        };
+
+        Ok(())
+    }
+
     fn build_hook(ints: HashMap<String, i32>) -> Result<LimitCommitsize> {
+        build_hook_with_limits(ints, hashmap! {}, hashmap! {})
+    }
+
+    fn build_hook_with_limits(
+        ints: HashMap<String, i32>,
+        string_lists: HashMap<String, Vec<String>>,
+        int_lists: HashMap<String, Vec<i32>>,
+    ) -> Result<LimitCommitsize> {
         let config = HookConfig {
             bypass: None,
             strings: hashmap! {},
             ints,
-            string_lists: hashmap! {},
-            int_lists: hashmap! {},
+            string_lists,
+            int_lists,
         };
         let mut builder = LimitCommitsize::builder();
         builder = builder.set_from_config(&config);
