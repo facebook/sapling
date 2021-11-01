@@ -97,25 +97,11 @@ TakeoverData takeoverMounts(
     expectedMessage.error().throw_exception();
   }
   auto& message = expectedMessage.value();
-
-  auto data = TakeoverData::deserialize(&message.data);
-  // Add 2 here for the lock file and the thrift socket
-  if (data.mountPoints.size() + 2 != message.files.size()) {
-    throw std::runtime_error(folly::to<string>(
-        "received ",
-        data.mountPoints.size(),
-        " mount paths, but ",
-        message.files.size(),
-        " FDs (including the lock file FD)"));
-  }
-  data.lockFile = std::move(message.files[0]);
-  data.thriftSocket = std::move(message.files[1]);
-  for (size_t n = 0; n < data.mountPoints.size(); ++n) {
-    auto& mountInfo = data.mountPoints[n];
-    mountInfo.fuseFD = std::move(message.files[n + 2]);
+  for (auto& file : message.files) {
+    XLOG(DBG7) << "received fd for takeover: " << file.fd();
   }
 
-  return data;
+  return TakeoverData::deserialize(message);
 }
 } // namespace eden
 } // namespace facebook

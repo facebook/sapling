@@ -81,6 +81,7 @@ class TakeoverServer::ConnHandler {
   FutureUnixSocket socket_;
   int32_t protocolVersion_{
       TakeoverData::kTakeoverProtocolVersionNeverSupported};
+  uint64_t protocolCapabilities_{0};
 };
 
 Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
@@ -148,8 +149,9 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
           }
           // Initiate the takeover shutdown.
           protocolVersion_ = supported.value();
-          shouldPing_ =
-              (protocolVersion_ == TakeoverData::kTakeoverProtocolVersionFour);
+          protocolCapabilities_ =
+              TakeoverData::versionToCapabilites(protocolVersion_);
+          shouldPing_ = (protocolCapabilities_ & TakeoverCapabilities::PING);
           return server_->getTakeoverHandler()->startTakeoverShutdown();
         })
         .thenTryInline(folly::makeAsyncTask(
@@ -176,7 +178,8 @@ Future<Unit> TakeoverServer::ConnHandler::sendError(
   XLOG(ERR) << "error while performing takeover shutdown: " << error;
   if (socket_) {
     // Send the error to the client.
-    return socket_.send(TakeoverData::serializeError(protocolVersion_, error));
+    return socket_.send(
+        TakeoverData::serializeError(protocolCapabilities_, error));
   }
   // Socket was closed (likely by a receive timeout above), so don't
   // try to send again in here lest we break; instead just pass up
@@ -234,16 +237,15 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
 
   UnixSocket::Message msg;
   try {
-    msg.data = data.serialize(protocolVersion_);
-    msg.files.push_back(std::move(data.lockFile));
-    msg.files.push_back(std::move(data.thriftSocket));
-    for (auto& mount : data.mountPoints) {
-      msg.files.push_back(std::move(mount.fuseFD));
+    data.serialize(protocolCapabilities_, msg);
+    for (auto& file : msg.files) {
+      XLOG(DBG7) << "sending fd for takeover: " << file.fd();
     }
   } catch (const std::exception& ex) {
     auto ew = folly::exception_wrapper{std::current_exception(), ex};
     data.takeoverComplete.setException(ew);
-    return socket_.send(TakeoverData::serializeError(protocolVersion_, ew));
+    return socket_.send(
+        TakeoverData::serializeError(protocolCapabilities_, ew));
   }
 
   XLOG(INFO) << "Sending takeover data to new process: "

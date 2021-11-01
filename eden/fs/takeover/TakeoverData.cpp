@@ -9,6 +9,8 @@
 
 #include "eden/fs/takeover/TakeoverData.h"
 
+#include <stdexcept>
+
 #include <folly/Format.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
@@ -47,39 +49,98 @@ std::optional<int32_t> TakeoverData::computeCompatibleVersion(
   return best;
 }
 
-IOBuf TakeoverData::serialize(int32_t protocolVersion) {
-  switch (protocolVersion) {
+uint64_t TakeoverData::versionToCapabilites(int32_t version) {
+  switch (version) {
+    case kTakeoverProtocolVersionNeverSupported:
+      return 0;
     case kTakeoverProtocolVersionOne:
-      return serializeVersion1();
+      return TakeoverCapabilities::CUSTOM_SERIALIZATION |
+          TakeoverCapabilities::FUSE;
     case kTakeoverProtocolVersionThree:
+      return TakeoverCapabilities::FUSE |
+          TakeoverCapabilities::THRIFT_SERIALIZATION;
     case kTakeoverProtocolVersionFour:
-      // versions 3 and 4 use the same data serialization
-      return serializeVersion3();
-    default: {
-      EDEN_BUG() << "asked to serialize takeover data in unsupported format "
-                 << protocolVersion;
-    }
+      return TakeoverCapabilities::FUSE |
+          TakeoverCapabilities::THRIFT_SERIALIZATION |
+          TakeoverCapabilities::PING;
+  }
+  throw std::runtime_error(fmt::format("Unsupported version: {}", version));
+}
+
+int32_t TakeoverData::capabilitesToVersion(uint64_t capabilities) {
+  if (capabilities == 0) {
+    return kTakeoverProtocolVersionNeverSupported;
+  }
+  if (capabilities ==
+      (TakeoverCapabilities::CUSTOM_SERIALIZATION |
+       TakeoverCapabilities::FUSE)) {
+    return kTakeoverProtocolVersionOne;
+  }
+  if (capabilities ==
+      (TakeoverCapabilities::FUSE |
+       TakeoverCapabilities::THRIFT_SERIALIZATION)) {
+    return kTakeoverProtocolVersionThree;
+  }
+  if (capabilities ==
+      (TakeoverCapabilities::FUSE | TakeoverCapabilities::THRIFT_SERIALIZATION |
+       TakeoverCapabilities::PING)) {
+    return kTakeoverProtocolVersionFour;
+  }
+
+  throw std::runtime_error(
+      fmt::format("Unsupported combination of capabilities: {}", capabilities));
+}
+
+void TakeoverData::serialize(
+    uint64_t protocolCapabilities,
+    UnixSocket::Message& msg) {
+  msg.data = serialize(protocolCapabilities);
+  msg.files.push_back(std::move(lockFile));
+  msg.files.push_back(std::move(thriftSocket));
+  for (auto& mount : mountPoints) {
+    msg.files.push_back(std::move(mount.fuseFD));
+  }
+}
+
+IOBuf TakeoverData::serialize(uint64_t protocolCapabilities) {
+  uint64_t serializationMethod = protocolCapabilities &
+      (TakeoverCapabilities::CUSTOM_SERIALIZATION |
+       TakeoverCapabilities::THRIFT_SERIALIZATION);
+
+  if (serializationMethod == TakeoverCapabilities::CUSTOM_SERIALIZATION) {
+    return serializeCustom();
+  } else if (
+      serializationMethod == TakeoverCapabilities::THRIFT_SERIALIZATION) {
+    return serializeThrift(protocolCapabilities);
+  } else {
+    throw std::runtime_error(fmt::format(
+        "Asked to serialize takeover data in unsupported format. "
+        "Cababilities: {}",
+        protocolCapabilities));
   }
 }
 
 folly::IOBuf TakeoverData::serializeError(
-    int32_t protocolVersion,
+    uint64_t protocolCapabilities,
     const folly::exception_wrapper& ew) {
-  switch (protocolVersion) {
-    // We allow NeverSupported in the error case so that we don't
-    // end up EDEN_BUG'ing out in the version mismatch error
-    // reporting case.
-    case kTakeoverProtocolVersionNeverSupported:
-    case kTakeoverProtocolVersionOne:
-      return serializeErrorVersion1(ew);
-    case kTakeoverProtocolVersionThree:
-    case kTakeoverProtocolVersionFour:
-      // versions 3 and 4 use the same data serialization
-      return serializeErrorVersion3(ew);
-    default: {
-      EDEN_BUG() << "asked to serialize takeover error in unsupported format "
-                 << protocolVersion;
-    }
+  uint64_t serializationMethod = protocolCapabilities &
+      (TakeoverCapabilities::CUSTOM_SERIALIZATION |
+       TakeoverCapabilities::THRIFT_SERIALIZATION);
+
+  // We allow NeverSupported in the error case so that we don't
+  // end up erroring out in the version mismatch error
+  // reporting case.
+  if (serializationMethod == TakeoverCapabilities::CUSTOM_SERIALIZATION ||
+      protocolCapabilities == 0) {
+    return serializeErrorCustom(ew);
+  } else if (
+      serializationMethod == TakeoverCapabilities::THRIFT_SERIALIZATION) {
+    return serializeErrorThrift(ew);
+  } else {
+    throw std::runtime_error(fmt::format(
+        "Asked to serialize takeover error in unsupported format. "
+        "Capabilities: {}",
+        protocolCapabilities));
   }
 }
 
@@ -99,7 +160,32 @@ folly::IOBuf TakeoverData::serializePing() {
   return buf;
 }
 
-TakeoverData TakeoverData::deserialize(IOBuf* buf) {
+TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
+  auto protocolVersion = TakeoverData::getProtocolVersion(&msg.data);
+  auto capabilities = TakeoverData::versionToCapabilites(protocolVersion);
+
+  auto data = TakeoverData::deserialize(capabilities, &msg.data);
+  constexpr auto mountPointFilesOffset = 2;
+
+  // Add 2 here for the lock file and the thrift socket
+  if (data.mountPoints.size() + mountPointFilesOffset != msg.files.size()) {
+    throw std::runtime_error(folly::to<string>(
+        "received ",
+        data.mountPoints.size(),
+        " mount paths, but ",
+        msg.files.size(),
+        " FDs (including the lock file FD)"));
+  }
+  data.lockFile = std::move(msg.files[0]);
+  data.thriftSocket = std::move(msg.files[1]);
+  for (size_t n = 0; n < data.mountPoints.size(); ++n) {
+    auto& mountInfo = data.mountPoints[n];
+    mountInfo.fuseFD = std::move(msg.files[n + mountPointFilesOffset]);
+  }
+  return data;
+}
+
+int32_t TakeoverData::getProtocolVersion(IOBuf* buf) {
   // We need to probe the data to see which version we have
   folly::io::Cursor cursor(buf);
 
@@ -109,13 +195,14 @@ TakeoverData TakeoverData::deserialize(IOBuf* buf) {
     case MessageType::MOUNTS:
       // A version 1 response.  We don't advance the buffer that we pass down
       // because it the messageType is needed to decode the response.
-      return deserializeVersion1(buf);
+      return kTakeoverProtocolVersionOne;
     case kTakeoverProtocolVersionThree:
+    case kTakeoverProtocolVersionFour:
       // Version 3 (there was no 2 because of how Version 1 used word values
       // 1 and 2) doesn't care about this version byte, so we skip past it
       // and let the underlying code decode the data
       buf->trimStart(sizeof(uint32_t));
-      return deserializeVersion3(buf);
+      return messageType;
     default:
       throw std::runtime_error(fmt::format(
           "Unrecognized TakeoverData response starting with {:x}",
@@ -123,7 +210,25 @@ TakeoverData TakeoverData::deserialize(IOBuf* buf) {
   }
 }
 
-IOBuf TakeoverData::serializeVersion1() {
+TakeoverData TakeoverData::deserialize(
+    uint64_t protocolCapabilities,
+    IOBuf* buf) {
+  uint64_t serializationMethod = protocolCapabilities &
+      (TakeoverCapabilities::CUSTOM_SERIALIZATION |
+       TakeoverCapabilities::THRIFT_SERIALIZATION);
+  if (serializationMethod == TakeoverCapabilities::CUSTOM_SERIALIZATION) {
+    return deserializeCustom(buf);
+  }
+  if (serializationMethod == TakeoverCapabilities::THRIFT_SERIALIZATION) {
+    return deserializeThrift(buf);
+  }
+
+  throw std::runtime_error(fmt::format(
+      "Unrecognized TakeoverData serialization capability {:x}",
+      protocolCapabilities));
+}
+
+IOBuf TakeoverData::serializeCustom() {
   // Compute the body data length
   uint64_t bodyLength = sizeof(uint32_t);
   for (const auto& mount : mountPoints) {
@@ -193,7 +298,7 @@ IOBuf TakeoverData::serializeVersion1() {
   return buf;
 }
 
-folly::IOBuf TakeoverData::serializeErrorVersion1(
+folly::IOBuf TakeoverData::serializeErrorCustom(
     const folly::exception_wrapper& ew) {
   // Compute the body data length
   auto exceptionClassName = ew.class_name();
@@ -218,7 +323,7 @@ folly::IOBuf TakeoverData::serializeErrorVersion1(
   return buf;
 }
 
-TakeoverData TakeoverData::deserializeVersion1(IOBuf* buf) {
+TakeoverData TakeoverData::deserializeCustom(IOBuf* buf) {
   folly::io::Cursor cursor(buf);
 
   auto messageType = cursor.readBE<uint32_t>();
@@ -284,14 +389,25 @@ TakeoverData TakeoverData::deserializeVersion1(IOBuf* buf) {
   return data;
 }
 
-IOBuf TakeoverData::serializeVersion3() {
+IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
   SerializedTakeoverData serialized;
 
   folly::IOBufQueue bufQ;
   folly::io::QueueAppender app(&bufQ, 0);
 
-  // First word is the protocol version
-  app.writeBE<uint32_t>(kTakeoverProtocolVersionThree);
+  { // we scope this to avoid using the version any further in the code.
+    // Ideally we would only use capabilities, but we need to send version
+    // numbers to be compatible with older version.
+    int32_t versionToAdvertize = capabilitesToVersion(protocolCapabilities);
+    // first word is the protocol version. previous versions of EdenFS do not
+    // know how to deserialize version 4 because they assume that protocol 4
+    // uses protocol 3 serialization. We need to do this funkiness for rollback
+    // safety.
+    if (versionToAdvertize == kTakeoverProtocolVersionFour) {
+      versionToAdvertize = kTakeoverProtocolVersionThree;
+    }
+    app.writeBE<uint32_t>(versionToAdvertize);
+  }
 
   std::vector<SerializedMountInfo> serializedMounts;
   for (const auto& mount : mountPoints) {
@@ -325,7 +441,7 @@ IOBuf TakeoverData::serializeVersion3() {
   return std::move(*bufQ.move());
 }
 
-folly::IOBuf TakeoverData::serializeErrorVersion3(
+folly::IOBuf TakeoverData::serializeErrorThrift(
     const folly::exception_wrapper& ew) {
   SerializedTakeoverData serialized;
   auto exceptionClassName = ew.class_name();
@@ -343,7 +459,7 @@ folly::IOBuf TakeoverData::serializeErrorVersion3(
   return std::move(*bufQ.move());
 }
 
-TakeoverData TakeoverData::deserializeVersion3(IOBuf* buf) {
+TakeoverData TakeoverData::deserializeThrift(IOBuf* buf) {
   auto serialized = CompactSerializer::deserialize<SerializedTakeoverData>(buf);
 
   switch (serialized.getType()) {

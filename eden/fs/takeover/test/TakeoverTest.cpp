@@ -154,6 +154,32 @@ void checkExpectedFile(int fd, AbsolutePathPiece path) {
 }
 } // namespace
 
+TEST(Takeover, roundTripVersionCapabilities) {
+  for (auto& version : kSupportedTakeoverVersions) {
+    EXPECT_EQ(
+        TakeoverData::capabilitesToVersion(
+            TakeoverData::versionToCapabilites(version)),
+        version);
+  }
+}
+
+TEST(Takeover, unsupportedVersionCapabilites) {
+  EXPECT_EQ(
+      TakeoverData::versionToCapabilites(
+          TakeoverData::kTakeoverProtocolVersionNeverSupported),
+      0);
+
+  EXPECT_EQ(
+      TakeoverData::capabilitesToVersion(0),
+      TakeoverData::kTakeoverProtocolVersionNeverSupported);
+}
+
+TEST(Takeover, invalidComboCapabilites) {
+  EXPECT_THROW(
+      TakeoverData::capabilitesToVersion(TakeoverCapabilities::FUSE),
+      std::runtime_error);
+}
+
 TEST(Takeover, simple) {
   TemporaryDirectory tmpDir("eden_takeover_test");
   AbsolutePathPiece tmpDirPath{tmpDir.path().string()};

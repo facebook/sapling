@@ -15,6 +15,7 @@
 
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/FsChannelTypes.h"
+#include "eden/fs/utils/FutureUnixSocket.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -26,7 +27,54 @@ namespace facebook {
 namespace eden {
 
 // Holds the versions supported by this build.
+// TODO(T104382350): The code is being migrated to use capabilities bits instead
+// of versions numbers as the former makes it less error prone to check for
+// supported features by both the client and server. Currently, the protocol
+// works by agreeing on a mutually supported version which is then
+// deterministically mapped to a set of capabilities. We would like to instead
+// agree on a shared set of capabilities. To completely migrate to capabilities
+// this we need to bump the version number and introduce
+// kSupportedTakeoverCapabilities (Should use a lower overhead representation
+// than std::set, probably a uint). We also need to teach the server and client
+// to find the common supported capabilities of the client and server. After
+// this capability matching version of takeover has made it into a stable build,
+// we can delete the version related code (and all code for early versions).
+// Note "stable build" means we should never need to rollback before the change,
+// so the capability matching build should be out for at least a month before we
+// delete all the version code.
 extern const std::set<int32_t> kSupportedTakeoverVersions;
+
+// TODO (T104724681): use a nicer representation for a bit set to combine these
+// flags like watchman's OptionSet.
+// Note that capabilities must be things that a new version is able to do, not
+// things that that version can not do. Capabilities must be all positive so
+// that we can find the intersection of the capabilities of the server and
+// client to find all the capabilities they both support.
+class TakeoverCapabilities {
+ public:
+  enum : uint64_t {
+    // This indicates we use our own invented format for sending takeover data
+    // between the client and server. This was used in early versions of the
+    // protocol.
+    CUSTOM_SERIALIZATION = 1 << 0,
+
+    // Indicates this version of the protocol is able to serialize FUSE mount
+    // points.
+    FUSE = 1 << 1,
+
+    // Indicates this version of the protocol uses thrift based serialization.
+    // This means we use thrift to serialize our takeover data when sending it
+    // between client and server. See the types defined in takeover.thrift.
+    // This is used in all the modern takeover versions.
+    THRIFT_SERIALIZATION = 1 << 2,
+
+    // Indicates a ping will be sent by the server to the client before sending
+    // takeover data. This handles client failure cases more gracefully.
+    // This should be used in all modern takeover versions.
+    PING = 1 << 3,
+
+  };
+};
 
 /**
  * TakeoverData contains the data exchanged between processes during
@@ -72,9 +120,28 @@ class TakeoverData {
     kTakeoverProtocolVersionFour = 4,
   };
 
-  // Given a set of versions provided by a client, find the largest
-  // version that is also present in the provided set of supported
-  // versions.
+  /**
+   * Converts a supported version to the capabilities that version of the
+   * protocol supports. This is used as a bridge between the version based
+   * protocol we use now and the capability based protocol we would like to use
+   * in future versions. See T104382350.
+   */
+  static uint64_t versionToCapabilites(int32_t version);
+
+  /**
+   * Converts a valid set of capabilities into the takeover version that
+   * supports exactly those capabilities. This is used to "serialize" the
+   * capabilities. Older versions of the protocol were version based instead of
+   * capability based. So we "serialize" the capabilities as a version number.
+   * Eventually we will migrate off versions, then we can get rid of this.
+   */
+  static int32_t capabilitesToVersion(uint64_t capabilities);
+
+  /**
+   * Given a set of versions provided by a client, find the largest
+   * version that is also present in the provided set of supported
+   * versions.
+   */
   static std::optional<int32_t> computeCompatibleVersion(
       const std::set<int32_t>& versions,
       const std::set<int32_t>& supported = kSupportedTakeoverVersions);
@@ -116,13 +183,13 @@ class TakeoverData {
    * This includes all data except for file descriptors.  The file descriptors
    * must be sent separately.
    */
-  folly::IOBuf serialize(int32_t protocolVersion);
+  void serialize(uint64_t protocolCapabilities, UnixSocket::Message& msg);
 
   /**
    * Serialize an exception.
    */
   static folly::IOBuf serializeError(
-      int32_t protocolVersion,
+      uint64_t protocolCapabilities,
       const folly::exception_wrapper& ew);
 
   /**
@@ -131,9 +198,18 @@ class TakeoverData {
   static folly::IOBuf serializePing();
 
   /**
-   * Deserialize the TakeoverData from a buffer.
+   * Determine the protocol version of the serialized message in buf.
+   *
+   * Note this should only be called once. This will advance the buffer past
+   * the version byte so that the data to deserialize is at the beginning of the
+   * buffer.
    */
-  static TakeoverData deserialize(folly::IOBuf* buf);
+  static int32_t getProtocolVersion(folly::IOBuf* buf);
+
+  /**
+   * Deserialize the TakeoverData from a UnixSocket msg.
+   */
+  static TakeoverData deserialize(UnixSocket::Message& msg);
 
   /**
    * Checks to see if a message is of type PING
@@ -164,38 +240,53 @@ class TakeoverData {
 
  private:
   /**
+   * Serialize the TakeoverData using the specified protocol version into a
+   * buffer that can be sent to a remote process.
+   *
+   * This includes all data except for file descriptors; these must be sent
+   * separately.
+   */
+  folly::IOBuf serialize(uint64_t protocolCapabilities);
+
+  /**
    * Serialize data using version 1 of the takeover protocol.
    */
-  folly::IOBuf serializeVersion1();
+  folly::IOBuf serializeCustom();
 
   /**
    * Serialize an exception using version 1 of the takeover protocol.
    */
-  static folly::IOBuf serializeErrorVersion1(
-      const folly::exception_wrapper& ew);
+  static folly::IOBuf serializeErrorCustom(const folly::exception_wrapper& ew);
+
+  /**
+   * Serialize data using version 2 of the takeover protocol.
+   */
+  folly::IOBuf serializeThrift(uint64_t protocolCapabilities);
+
+  /**
+   * Serialize an exception using version 2 of the takeover protocol.
+   */
+  static folly::IOBuf serializeErrorThrift(const folly::exception_wrapper& ew);
+
+  /**
+   * Deserialize the TakeoverData from a buffer. We assume that we are only sent
+   * mounts with mount protocols that we are able to parse.
+   */
+  static TakeoverData deserialize(
+      uint64_t protocolCapabilities,
+      folly::IOBuf* buf);
+
+  /**
+   * Deserialize the TakeoverData from a buffer using version 3 (also known as
+   * 2), 4 or 5 of the takeover protocol.
+   */
+  static TakeoverData deserializeThrift(folly::IOBuf* buf);
 
   /**
    * Deserialize the TakeoverData from a buffer using version 1 of the takeover
    * protocol.
    */
-  static TakeoverData deserializeVersion1(folly::IOBuf* buf);
-
-  /**
-   * Serialize data using version 2 of the takeover protocol.
-   */
-  folly::IOBuf serializeVersion3();
-
-  /**
-   * Serialize an exception using version 2 of the takeover protocol.
-   */
-  static folly::IOBuf serializeErrorVersion3(
-      const folly::exception_wrapper& ew);
-
-  /**
-   * Deserialize the TakeoverData from a buffer using version 2 of the takeover
-   * protocol.
-   */
-  static TakeoverData deserializeVersion3(folly::IOBuf* buf);
+  static TakeoverData deserializeCustom(folly::IOBuf* buf);
 
   /**
    * Message type values.
