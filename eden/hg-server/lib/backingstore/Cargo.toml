@@ -15,7 +15,9 @@ configparser = { path = "../configparser" }
 edenapi = { path = "../edenapi" }
 env_logger = "0.7"
 libc = "0.2.98"
+log = { version = "0.4.8", features = ["kv_unstable"] }
 manifest = { path = "../manifest" }
 manifest-tree = { path = "../manifest-tree" }
+progress = { path = "../progress" }
 revisionstore = { path = "../revisionstore" }
 types = { path = "../types" }

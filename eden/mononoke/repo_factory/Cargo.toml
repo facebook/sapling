@@ -26,6 +26,7 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 context = { version = "0.1.0", path = "../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
+derived_data_remote = { version = "0.1.0", path = "../derived_data/remote" }
 environment = { version = "0.1.0", path = "../cmdlib/environment" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

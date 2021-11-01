@@ -19,6 +19,7 @@ cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimen
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 clap = "2.33"
 context = { version = "0.1.0", path = "../server/context" }
+derived_data_remote = { version = "0.1.0", path = "../derived_data/remote" }
 env_logger = "0.7"
 environment = { version = "0.1.0", path = "environment" }
 facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
