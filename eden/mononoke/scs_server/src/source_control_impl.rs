@@ -10,6 +10,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use ephemeral_blobstore::BubbleId;
 use fbinit::FacebookInit;
 use futures::try_join;
 use futures_ext::FbFutureExt;
@@ -210,9 +211,18 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
     ) -> Result<RepoContext, errors::ServiceError> {
+        self.repo_with_bubble(ctx, repo, None).await
+    }
+
+    async fn repo_with_bubble(
+        &self,
+        ctx: CoreContext,
+        repo: &thrift::RepoSpecifier,
+        bubble: Option<BubbleId>,
+    ) -> Result<RepoContext, errors::ServiceError> {
         let repo = self
             .mononoke
-            .repo(ctx, &repo.name)
+            .repo_with_bubble(ctx, &repo.name, bubble)
             .await?
             .ok_or_else(|| errors::repo_not_found(repo.description()))?;
         Ok(repo)
@@ -224,8 +234,10 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: &thrift::CommitSpecifier,
     ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
-        let repo = self.repo(ctx, &commit.repo).await?;
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
+        let repo = self
+            .repo_with_bubble(ctx, &commit.repo, changeset_specifier.bubble_id())
+            .await?;
         let changeset = repo
             .changeset(changeset_specifier)
             .await?

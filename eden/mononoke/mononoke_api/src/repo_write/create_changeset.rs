@@ -517,10 +517,6 @@ impl RepoWriteContext {
             )
             .await?;
         }
-        Ok(ChangesetContext::new_with_bubble(
-            self.repo.clone(),
-            new_changeset_id,
-            bubble.cloned(),
-        ))
+        Ok(ChangesetContext::new(self.repo.clone(), new_changeset_id))
     }
 }

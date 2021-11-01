@@ -9,18 +9,16 @@ use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 
 use anyhow::anyhow;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use changeset_info::ChangesetInfo;
-use changesets::{Changesets, ChangesetsArc};
+use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use ephemeral_blobstore::Bubble;
 use fsnodes::RootFsnodeId;
 use futures::future::{self, try_join, try_join_all, FutureExt, Shared};
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
@@ -48,7 +46,6 @@ use crate::specifiers::{ChangesetId, GitSha1, HgChangesetId};
 pub struct ChangesetContext {
     repo: RepoContext,
     id: ChangesetId,
-    changesets: Arc<dyn Changesets>,
     bonsai_changeset:
         Shared<Pin<Box<dyn Future<Output = Result<BonsaiChangeset, MononokeError>> + Send>>>,
     changeset_info:
@@ -88,31 +85,12 @@ impl ChangesetContext {
     /// Construct a new `MononokeChangeset`.  The changeset must exist
     /// in the repo.
     pub(crate) fn new(repo: RepoContext, id: ChangesetId) -> Self {
-        ChangesetContext::new_with_bubble(repo, id, None)
-    }
-
-    /// Construct a new `MononokeChangeset`.  The changeset must exist
-    /// in the repo.
-    pub(crate) fn new_with_bubble(
-        repo: RepoContext,
-        id: ChangesetId,
-        bubble: Option<Bubble>,
-    ) -> Self {
-        let blobstore = repo.blob_repo().blobstore().clone();
-        let changesets = repo.blob_repo().changesets_arc();
         let manager = repo.blob_repo().repo_derived_data().manager().clone();
-        let (blobstore, changesets, manager) = match bubble {
-            Some(bubble) => (
-                bubble.wrap_repo_blobstore(blobstore),
-                Arc::new(bubble.changesets(repo.blob_repo())) as Arc<dyn Changesets + Sync + Send>,
-                manager.for_bubble(bubble, repo.blob_repo()),
-            ),
-            None => (blobstore, changesets, manager),
-        };
+
         let bonsai_changeset = {
             cloned!(repo);
             async move {
-                id.load(repo.ctx(), &blobstore)
+                id.load(repo.ctx(), repo.blob_repo().blobstore())
                     .await
                     .map_err(MononokeError::from)
             }
@@ -151,7 +129,6 @@ impl ChangesetContext {
         Self {
             repo,
             id,
-            changesets,
             changeset_info,
             bonsai_changeset,
             root_fsnode_id,
@@ -391,7 +368,9 @@ impl ChangesetContext {
     /// The generation number of the given changeset
     pub async fn generation(&self) -> Result<Generation, MononokeError> {
         Ok(Generation::new(
-            self.changesets
+            self.repo
+                .blob_repo()
+                .changesets()
                 .get(self.ctx().clone(), self.id)
                 .await?
                 .ok_or_else(|| {

@@ -19,10 +19,12 @@ use bookmarks::{
     BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
 };
 use cacheblob::LeaseOps;
+use changeset_fetcher::SimpleChangesetFetcher;
 use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
 use changesets::{ChangesetInsert, Changesets, ChangesetsRef};
 use cloned::cloned;
 use context::CoreContext;
+use ephemeral_blobstore::Bubble;
 use filenodes::{ArcFilenodes, Filenodes};
 use filestore::FilestoreConfig;
 use futures::{
@@ -418,6 +420,27 @@ impl BlobRepo {
 
     /// To be used by `DagerouseOverride` only
     pub fn from_inner_dangerous(inner: BlobRepoInner) -> Self {
+        Self {
+            inner: Arc::new(inner),
+        }
+    }
+
+    pub fn with_bubble(&self, bubble: Bubble) -> Self {
+        let blobstore = bubble.wrap_repo_blobstore(self.get_blobstore());
+        let changesets = Arc::new(bubble.changesets(self));
+        let changeset_fetcher = SimpleChangesetFetcher::new(changesets.clone(), self.get_repoid());
+        let new_manager = self
+            .inner
+            .repo_derived_data
+            .manager()
+            .clone()
+            .for_bubble(bubble, self);
+        let repo_derived_data = self.inner.repo_derived_data.with_manager(new_manager);
+        let mut inner = (*self.inner).clone();
+        inner.repo_derived_data = Arc::new(repo_derived_data);
+        inner.changesets = changesets;
+        inner.changeset_fetcher = Arc::new(changeset_fetcher);
+        inner.repo_blobstore = Arc::new(blobstore);
         Self {
             inner: Arc::new(inner),
         }

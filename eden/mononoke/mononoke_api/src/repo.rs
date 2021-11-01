@@ -119,6 +119,7 @@ pub struct Repo {
 pub struct RepoContext {
     ctx: CoreContext,
     repo: Arc<Repo>,
+    blob_repo: BlobRepo,
 }
 
 impl fmt::Debug for RepoContext {
@@ -745,9 +746,27 @@ pub struct Stack {
 /// A context object representing a query to a particular repo.
 impl RepoContext {
     pub async fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
+        Self::new_with_bubble(ctx, repo, None).await
+    }
+
+    pub async fn new_with_bubble(
+        ctx: CoreContext,
+        repo: Arc<Repo>,
+        bubble: Option<BubbleId>,
+    ) -> Result<Self, MononokeError> {
         // Check the user is permitted to access this repo.
         repo.check_permissions(&ctx, "read").await?;
-        Ok(Self { repo, ctx })
+        let blob_repo = if let Some(bubble_id) = bubble {
+            let bubble = repo.ephemeral_blobstore().open_bubble(bubble_id).await?;
+            repo.blob_repo().with_bubble(bubble)
+        } else {
+            repo.blob_repo().clone()
+        };
+        Ok(Self {
+            repo,
+            ctx,
+            blob_repo,
+        })
     }
 
     /// Initializes the repo without the ACL check.
@@ -758,7 +777,12 @@ impl RepoContext {
         ctx: CoreContext,
         repo: Arc<Repo>,
     ) -> Result<Self, MononokeError> {
-        Ok(Self { repo, ctx })
+        let blob_repo = repo.blob_repo().clone();
+        Ok(Self {
+            repo,
+            ctx,
+            blob_repo,
+        })
     }
 
     /// The context for this query.
@@ -778,7 +802,7 @@ impl RepoContext {
 
     /// The underlying `BlobRepo`.
     pub fn blob_repo(&self) -> &BlobRepo {
-        &self.repo.blob_repo()
+        &self.blob_repo
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
@@ -987,14 +1011,10 @@ impl RepoContext {
         specifier: impl Into<ChangesetSpecifier>,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let specifier = specifier.into();
-        let bubble = match specifier.bubble_id() {
-            Some(id) => Some(self.open_bubble(id).await?),
-            None => None,
-        };
         let changeset = self
             .resolve_specifier(specifier.into())
             .await?
-            .map(|cs_id| ChangesetContext::new_with_bubble(self.clone(), cs_id, bubble));
+            .map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
         Ok(changeset)
     }
 

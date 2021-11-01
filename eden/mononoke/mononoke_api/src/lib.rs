@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error};
 pub use bookmarks::BookmarkName;
+use ephemeral_blobstore::BubbleId;
 use futures::future;
 use futures_watchdog::WatchdogExt;
 use mononoke_types::RepositoryId;
@@ -130,11 +131,23 @@ impl Mononoke {
         ctx: CoreContext,
         name: impl AsRef<str>,
     ) -> Result<Option<RepoContext>, MononokeError> {
+        self.repo_with_bubble(ctx, name, None).await
+    }
+
+    pub async fn repo_with_bubble(
+        &self,
+        ctx: CoreContext,
+        name: impl AsRef<str>,
+        bubble: Option<BubbleId>,
+    ) -> Result<Option<RepoContext>, MononokeError> {
         match self.repos.get(name.as_ref()) {
             None => Ok(None),
-            Some(repo) => Ok(Some(RepoContext::new(ctx, repo.clone()).await?)),
+            Some(repo) => Ok(Some(
+                RepoContext::new_with_bubble(ctx, repo.clone(), bubble).await?,
+            )),
         }
     }
+
 
     pub async fn repo_by_id(
         &self,

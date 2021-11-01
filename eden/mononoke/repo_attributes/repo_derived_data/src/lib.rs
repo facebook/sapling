@@ -108,6 +108,13 @@ impl RepoDerivedData {
         }
     }
 
+    pub fn with_manager(&self, manager: DerivedDataManager) -> Self {
+        Self {
+            config: self.config.clone(),
+            manager,
+        }
+    }
+
     /// Current derived data configuration for this repo.
     pub fn config(&self) -> &DerivedDataConfig {
         &self.config
