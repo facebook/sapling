@@ -151,6 +151,11 @@ impl<'a> Diff<'a> {
         let item = self.receiver.recv()?;
         self.pending -= 1;
 
+        if let Some(bar) = self.progress_bar {
+            // Set "depth" according to item depth.
+            bar.set_position(item.path().ancestors().count() as u64);
+        }
+
         let entries = item.process(
             &mut self.sender,
             &self.store,
@@ -158,11 +163,6 @@ impl<'a> Diff<'a> {
             &mut self.pending,
         )?;
         self.output.extend(entries);
-
-        if let Some(bar) = self.progress_bar {
-            // Increase "depth" by one as we descend to next BFS level.
-            bar.increase_position(1);
-        }
 
         Ok(self.pending != 0)
     }
