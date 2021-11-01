@@ -52,7 +52,11 @@ def updatecmd(*args, **kwargs):
     update.update(*args, **kwargs)
 
 
-@subcmd("show|info", [], _("ID"))
+@subcmd(
+    "show|info",
+    [("", "json", None, _("Print info about snapshot in json format"))],
+    _("ID"),
+)
 def showcmd(*args, **kwargs):
     """gather information about the snapshot"""
     show.show(*args, **kwargs)

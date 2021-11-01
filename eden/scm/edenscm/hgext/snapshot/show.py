@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 from edenscm.mercurial import error, scmutil
-from edenscm.mercurial.cmdutil import changeset_printer
+from edenscm.mercurial.cmdutil import changeset_printer, jsonchangeset
 from edenscm.mercurial.context import memctx, memfilectx
 from edenscm.mercurial.edenapi_upload import (
     getreponame,
@@ -79,10 +79,14 @@ def show(ui, repo, csid, **opts):
     except Exception:
         raise error.Abort(_("snapshot doesn't exist"))
     else:
-        ui.status(_("snapshot: {}\n").format(csid))
         ctx = _snapshot2ctx(repo, snapshot)
-        displayer = changeset_printer(
-            ui, repo, scmutil.matchall(repo), {"patch": True}, False
-        )
+        match = scmutil.matchall(repo)
+        printeropt = {"patch": True}
+        buffered = False
+        if opts["json"] is True:
+            displayer = jsonchangeset(ui, repo, match, printeropt, buffered)
+        else:
+            ui.status(_("snapshot: {}\n").format(csid))
+            displayer = changeset_printer(ui, repo, match, printeropt, buffered)
         displayer.show(ctx)
         displayer.close()
