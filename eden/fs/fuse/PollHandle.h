@@ -7,7 +7,7 @@
 
 #pragma once
 #include <memory>
-#include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/utils/FsChannelTypes.h"
 
 namespace facebook::eden {
 

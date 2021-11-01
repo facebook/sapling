@@ -12,7 +12,7 @@
 #include <chrono>
 #include <vector>
 
-#include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/utils/FsChannelTypes.h"
 
 namespace facebook {
 namespace eden {

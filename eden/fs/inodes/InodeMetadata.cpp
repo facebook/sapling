@@ -8,7 +8,7 @@
 #ifndef _WIN32
 
 #include "eden/fs/inodes/InodeMetadata.h"
-#include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/utils/FsChannelTypes.h"
 
 namespace facebook {
 namespace eden {

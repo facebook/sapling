@@ -9,8 +9,8 @@
 
 #include "eden/fs/fuse/DirList.h"
 
-#include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/utils/FsChannelTypes.h"
 
 using folly::StringPiece;
 
