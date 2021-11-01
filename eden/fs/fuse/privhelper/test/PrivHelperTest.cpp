@@ -391,8 +391,8 @@ TEST_F(PrivHelperTest, takeoverShutdown) {
   client_->bindMount("/bind/mount/source", "/mnt/somerepo2/buck-out").get(1s);
 
   // Indicate that /mnt/abc and /mnt/somerepo are being taken over.
-  client_->fuseTakeoverShutdown("/mnt/abc").get(1s);
-  client_->fuseTakeoverShutdown("/mnt/somerepo").get(1s);
+  client_->takeoverShutdown("/mnt/abc").get(1s);
+  client_->takeoverShutdown("/mnt/somerepo").get(1s);
 
   // Destroy the privhelper.
   // /mnt/somerepo2 should be unmounted, but /mnt/abc and /mnt/somerepo
@@ -415,11 +415,11 @@ TEST_F(PrivHelperTest, takeoverStartup) {
 
   // Indicate that we are taking over some mount points.
   client_
-      ->fuseTakeoverStartup(
+      ->takeoverStartup(
           "/mnt/abc", {"/mnt/abc/foo/buck-out", "/mnt/abc/xyz/test/buck-out"})
       .get(1s);
-  client_->fuseTakeoverStartup("/data/users/johndoe/myrepo", {}).get(1s);
-  client_->fuseTakeoverStartup("/mnt/repo_x", {"/mnt/repo_x/y"}).get(1s);
+  client_->takeoverStartup("/data/users/johndoe/myrepo", {}).get(1s);
+  client_->takeoverStartup("/mnt/repo_x", {"/mnt/repo_x/y"}).get(1s);
 
   // Manually mount one other mount point.
   server_.setFuseMountResult("/mnt/xyz").setValue(File(tempFile.fd(), false));

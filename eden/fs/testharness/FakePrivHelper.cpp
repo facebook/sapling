@@ -126,17 +126,17 @@ folly::Future<folly::Unit> FakePrivHelper::bindUnMount(
       runtime_error("FakePrivHelper::bindUnMount() not implemented"));
 }
 
-Future<Unit> FakePrivHelper::fuseTakeoverShutdown(
+Future<Unit> FakePrivHelper::takeoverShutdown(
     folly::StringPiece /* mountPath */) {
   return makeFuture<Unit>(
-      runtime_error("FakePrivHelper::fuseTakeoverShutdown() not implemented"));
+      runtime_error("FakePrivHelper::takeoverShutdown() not implemented"));
 }
 
-Future<Unit> FakePrivHelper::fuseTakeoverStartup(
+Future<Unit> FakePrivHelper::takeoverStartup(
     folly::StringPiece /* mountPath */,
     const std::vector<std::string>& /* bindMounts */) {
   return makeFuture<Unit>(
-      runtime_error("FakePrivHelper::fuseTakeoverStartup() not implemented"));
+      runtime_error("FakePrivHelper::takeoverStartup() not implemented"));
 }
 
 Future<Unit> FakePrivHelper::setLogFile(folly::File /* logFile */) {

@@ -102,14 +102,14 @@ class PrivHelper {
    * graceful restart, and a new edenfs daemon will take over our existing
    * mount points without unmounting them.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseTakeoverShutdown(
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> takeoverShutdown(
       folly::StringPiece mountPath) = 0;
 
   /**
    * Inform the privhelper process that we have taken over an existing mount
    * point from another edenfs process.
    */
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseTakeoverStartup(
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> takeoverStartup(
       folly::StringPiece mountPath,
       const std::vector<std::string>& bindMounts) = 0;
 

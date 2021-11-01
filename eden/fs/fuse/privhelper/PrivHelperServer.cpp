@@ -896,7 +896,7 @@ UnixSocket::Message PrivHelperServer::processTakeoverShutdownMsg(
   const auto it = mountPoints_.find(mountPath);
   if (it == mountPoints_.end()) {
     throw std::domain_error(
-        folly::to<string>("No FUSE mount found for ", mountPath));
+        folly::to<string>("No mount found for ", mountPath));
   }
 
   mountPoints_.erase(mountPath);

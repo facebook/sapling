@@ -115,8 +115,8 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
       override;
   folly::Future<folly::Unit> bindUnMount(folly::StringPiece mountPath) override;
-  Future<Unit> fuseTakeoverShutdown(StringPiece mountPath) override;
-  Future<Unit> fuseTakeoverStartup(
+  Future<Unit> takeoverShutdown(StringPiece mountPath) override;
+  Future<Unit> takeoverStartup(
       StringPiece mountPath,
       const vector<string>& bindMounts) override;
   Future<Unit> setLogFile(folly::File logFile) override;
@@ -448,7 +448,7 @@ folly::Future<folly::Unit> PrivHelperClientImpl::bindUnMount(
       });
 }
 
-Future<Unit> PrivHelperClientImpl::fuseTakeoverShutdown(StringPiece mountPath) {
+Future<Unit> PrivHelperClientImpl::takeoverShutdown(StringPiece mountPath) {
   auto xid = getNextXid();
   auto request =
       PrivHelperConn::serializeTakeoverShutdownRequest(xid, mountPath);
@@ -460,7 +460,7 @@ Future<Unit> PrivHelperClientImpl::fuseTakeoverShutdown(StringPiece mountPath) {
       });
 }
 
-Future<Unit> PrivHelperClientImpl::fuseTakeoverStartup(
+Future<Unit> PrivHelperClientImpl::takeoverStartup(
     StringPiece mountPath,
     const vector<string>& bindMounts) {
   auto xid = getNextXid();

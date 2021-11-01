@@ -576,7 +576,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
                 return std::nullopt;
               }
               return self->serverState_->getPrivHelper()
-                  ->fuseTakeoverShutdown(edenMount->getPath().stringPiece())
+                  ->takeoverShutdown(edenMount->getPath().stringPiece())
                   .thenValue([takeover = std::move(takeover)](auto&&) mutable {
                     return std::move(takeover);
                   });
@@ -1370,7 +1370,7 @@ Future<Unit> EdenServer::performTakeoverStart(
   for (const auto& bindMount : info.bindMounts) {
     bindMounts.emplace_back(bindMount.value());
   }
-  auto future = serverState_->getPrivHelper()->fuseTakeoverStartup(
+  auto future = serverState_->getPrivHelper()->takeoverStartup(
       info.mountPath.stringPiece(), bindMounts);
   return std::move(future).thenValue([this,
                                       edenMount = std::move(edenMount),
