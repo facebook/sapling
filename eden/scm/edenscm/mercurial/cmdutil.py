@@ -1954,10 +1954,11 @@ class changeset_printer(object):
             return
 
         columns = self._columns
-        self.ui.write(
-            columns["changeset"] % scmutil.formatchangeid(ctx),
-            label=_changesetlabels(ctx),
-        )
+        if changenode:
+            self.ui.write(
+                columns["changeset"] % scmutil.formatchangeid(ctx),
+                label=_changesetlabels(ctx),
+            )
 
         # branches are shown first before any other names due to backwards
         # compatibility

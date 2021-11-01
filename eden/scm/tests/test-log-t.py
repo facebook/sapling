@@ -1627,13 +1627,11 @@ sh % "hg log -r 'null:null'" == r"""
 # clean:
 
 sh % "hg log -r 'wdir()' --debug" == r"""
-    commit:      ffffffffffffffffffffffffffffffffffffffff
     phase:       draft
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     extra:       branch=default"""
 sh % "hg log -r 'wdir()' -p --stat" == r"""
-    commit:      ffffffffffff
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 
@@ -1649,13 +1647,11 @@ sh % "hg status" == r"""
     R .d6/f1"""
 
 sh % "hg log -r 'wdir()'" == r"""
-    commit:      ffffffffffff
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 sh % "hg log -r 'wdir()' -q" == "ffffffffffff"
 
 sh % "hg log -r 'wdir()' --debug" == r"""
-    commit:      ffffffffffffffffffffffffffffffffffffffff
     phase:       draft
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1664,7 +1660,6 @@ sh % "hg log -r 'wdir()' --debug" == r"""
     files-:      .d6/f1
     extra:       branch=default"""
 sh % "hg log -r 'wdir()' -p --stat --git" == r"""
-    commit:      ffffffffffff
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
 

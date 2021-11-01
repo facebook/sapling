@@ -6,7 +6,7 @@
 from edenscm.mercurial import error, registrar
 from edenscm.mercurial.i18n import _
 
-from . import createremote, restore, info
+from . import createremote, update, show
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -23,8 +23,8 @@ def snapshot(ui, repo, **opts):
 
 subcmd = snapshot.subcommand(
     categories=[
-        ("Manage snapshots", ["createremote", "restore"]),
-        ("Query snapshots", ["info"]),
+        ("Manage snapshots", ["create", "update"]),
+        ("Query snapshots", ["show"]),
     ]
 )
 
@@ -36,7 +36,7 @@ def createremotecmd(*args, **kwargs):
 
 
 @subcmd(
-    "restore",
+    "update|restore|checkout|co|up",
     [
         (
             "C",
@@ -47,12 +47,12 @@ def createremotecmd(*args, **kwargs):
     ],
     _("ID"),
 )
-def restorecmd(*args, **kwargs):
+def updatecmd(*args, **kwargs):
     """download a previously created snapshot and update working copy to its state"""
-    restore.restore(*args, **kwargs)
+    update.update(*args, **kwargs)
 
 
-@subcmd("info", [], _("ID"))
-def infocmd(*args, **kwargs):
+@subcmd("show|info", [], _("ID"))
+def showcmd(*args, **kwargs):
     """gather information about the snapshot"""
-    info.info(*args, **kwargs)
+    show.show(*args, **kwargs)

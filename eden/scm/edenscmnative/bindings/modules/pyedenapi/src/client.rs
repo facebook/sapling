@@ -392,6 +392,15 @@ py_class!(pub class client |py| {
         self.inner(py).clone().downloadfiles_py(py, repo, root, files)
     }
 
+    /// Download file from given upload token to memory
+    def downloadfiletomemory(
+        &self,
+        repo: String,
+        token: Serde<UploadToken>
+    ) -> PyResult<PyBytes> {
+        self.inner(py).clone().downloadfiletomemory_py(py, repo, token)
+    }
+
     def ephemeralprepare(&self, repo: String)
         -> PyResult<TStream<anyhow::Result<Serde<EphemeralPrepareResponse>>>>
     {

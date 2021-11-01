@@ -38,7 +38,7 @@ def _fullclean(ui, repo):
     )
 
 
-def restore(ui, repo, csid, clean=False):
+def update(ui, repo, csid, clean=False):
     ui.status(_("Will restore snapshot {}\n").format(csid), component="snapshot")
 
     snapshot = repo.edenapi.fetchsnapshot(

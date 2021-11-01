@@ -741,6 +741,18 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)
             .map(|_| true)
     }
+
+    fn downloadfiletomemory_py(
+        &self,
+        py: Python,
+        repo: String,
+        token: Serde<UploadToken>,
+    ) -> PyResult<PyBytes> {
+        py.allow_threads(|| block_unless_interrupted(self.download_file(repo.clone(), token.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)
+            .map(|data| PyBytes::new(py, &data))
+    }
 }
 
 impl<T: EdenApi + ?Sized> EdenApiPyExt for T {}
