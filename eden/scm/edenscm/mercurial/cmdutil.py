@@ -360,7 +360,9 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
         diffopts.nodates = True
         diffopts.git = True
         diffopts.showfunc = True
-        originaldiff = patch.diff(repo, changes=status, opts=diffopts)
+        originaldiff = patch.diff(
+            repo, repo[repo.dirstate.p1()], repo[None], changes=status, opts=diffopts
+        )
         originalchunks = patch.parsepatch(originaldiff)
 
         # 1. filter patch, since we are intending to apply subset of it
@@ -1727,7 +1729,9 @@ def _exportsingle(
     writestr(ctx.description().rstrip())
     writestr("\n\n")
 
-    for chunk, label in patch.diffui(repo, prev, node, match, opts=diffopts):
+    for chunk, label in patch.diffui(
+        repo, repo[prev], repo[node], match, opts=diffopts
+    ):
         write(chunk, label=label)
 
 
@@ -1817,8 +1821,8 @@ def diffordiffstat(
     ui,
     repo,
     diffopts,
-    node1,
-    node2,
+    ctx1,
+    ctx2,
     match,
     changes=None,
     stat=False,
@@ -1861,8 +1865,8 @@ def diffordiffstat(
             width = ui.termwidth()
         chunks = patch.diff(
             repo,
-            node1,
-            node2,
+            ctx1,
+            ctx2,
             match,
             changes,
             opts=diffopts,
@@ -1875,8 +1879,8 @@ def diffordiffstat(
     else:
         for chunk, label in patch.diffui(
             repo,
-            node1,
-            node2,
+            ctx1,
+            ctx2,
             match,
             changes,
             opts=diffopts,
@@ -2034,15 +2038,14 @@ class changeset_printer(object):
             stat = self.diffopts.get("stat")
             diff = self.diffopts.get("patch")
             diffopts = patch.diffallopts(self.ui, self.diffopts)
-            node = ctx.node()
-            prev = ctx.p1().node()
+            prevctx = ctx.p1()
             if stat:
                 diffordiffstat(
                     self.ui,
                     self.repo,
                     diffopts,
-                    prev,
-                    node,
+                    prevctx,
+                    ctx,
                     match=matchfn,
                     stat=True,
                     hunksfilterfn=hunksfilterfn,
@@ -2054,8 +2057,8 @@ class changeset_printer(object):
                     self.ui,
                     self.repo,
                     diffopts,
-                    prev,
-                    node,
+                    prevctx,
+                    ctx,
                     match=matchfn,
                     stat=False,
                     hunksfilterfn=hunksfilterfn,
@@ -2155,11 +2158,11 @@ class jsonchangeset(changeset_printer):
             stat = self.diffopts.get("stat")
             diff = self.diffopts.get("patch")
             diffopts = patch.difffeatureopts(self.ui, self.diffopts, git=True)
-            node, prev = ctx.node(), ctx.p1().node()
+            prevctx = ctx.p1()
             if stat:
                 self.ui.pushbuffer()
                 diffordiffstat(
-                    self.ui, self.repo, diffopts, prev, node, match=matchfn, stat=True
+                    self.ui, self.repo, diffopts, prevctx, ctx, match=matchfn, stat=True
                 )
                 self.ui.write(
                     _x(',\n  "diffstat": %s') % json.dumps(self.ui.popbuffer())
@@ -2167,7 +2170,13 @@ class jsonchangeset(changeset_printer):
             if diff:
                 self.ui.pushbuffer()
                 diffordiffstat(
-                    self.ui, self.repo, diffopts, prev, node, match=matchfn, stat=False
+                    self.ui,
+                    self.repo,
+                    diffopts,
+                    prevctx,
+                    ctx,
+                    match=matchfn,
+                    stat=False,
                 )
                 # Don't use the j() helper because it expects utf8 strings.
                 diff = encoding.jsonescape(self.ui.popbufferbytes())
@@ -4257,9 +4266,9 @@ def _performrevert(
             operation = "apply"
             reversehunks = False
         if reversehunks:
-            diff = patch.diff(repo, ctx.node(), None, m, opts=diffopts)
+            diff = patch.diff(repo, ctx, repo[None], m, opts=diffopts)
         else:
-            diff = patch.diff(repo, None, ctx.node(), m, opts=diffopts)
+            diff = patch.diff(repo, repo[None], ctx, m, opts=diffopts)
         originalchunks = patch.parsepatch(diff)
 
         try:

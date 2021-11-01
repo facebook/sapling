@@ -26,10 +26,10 @@ def diffstat(ui, repo, **kwargs):
     if kwargs.get("parent2"):
         return
     node = kwargs["node"]
-    first = repo[node].p1().node()
+    first = repo[node].p1()
     if "url" in kwargs:
-        last = repo["tip"].node()
+        last = repo["tip"]
     else:
-        last = node
+        last = repo[node]
     diff = patch.diff(repo, first, last)
     ui.write(patch.diffstat(util.iterlines(diff)))

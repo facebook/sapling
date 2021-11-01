@@ -72,9 +72,10 @@ def _diff2o(ui, repo, rev1, rev2, *pats, **opts):
     # Phabricator revs are often filtered (hidden)
     # First reconstruct textual diffs for rev1 and rev2 independently.
     def changediff(node):
-        nodebase = repo[node].p1().node()
+        ctx = repo[node]
+        basectx = ctx.p1()
         m = scmutil.matchall(repo)
-        diff = patch.diffhunks(repo, nodebase, node, m, opts=mdiff.diffopts(context=0))
+        diff = patch.diffhunks(repo, basectx, ctx, m, opts=mdiff.diffopts(context=0))
         filepatches = {}
         for _fctx1, _fctx2, headerlines, hunks in diff:
             difflines = []

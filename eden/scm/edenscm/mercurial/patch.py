@@ -2568,8 +2568,8 @@ def difffeatureopts(
 
 def diff(
     repo,
-    node1=None,
-    node2=None,
+    ctx1,
+    ctx2,
     match=None,
     changes=None,
     opts=None,
@@ -2579,11 +2579,7 @@ def diff(
     copy=None,
     hunksfilterfn=None,
 ):
-    """yields diff of changes to files between two nodes, or node and
-    working directory.
-
-    if node1 is None, use first dirstate parent instead.
-    if node2 is None, compare node1 with working directory.
+    """yields diff of changes to files between two contexts.
 
     losedatafn(**kwarg) is a callable run when opts.upgrade=True and
     every time some change cannot be represented with the current
@@ -2607,8 +2603,8 @@ def diff(
     """
     for fctx1, fctx2, hdr, hunks in diffhunks(
         repo,
-        node1=node1,
-        node2=node2,
+        ctx1,
+        ctx2,
         match=match,
         changes=changes,
         opts=opts,
@@ -2632,8 +2628,8 @@ def diff(
 
 def diffhunks(
     repo,
-    node1=None,
-    node2=None,
+    ctx1,
+    ctx2,
     match=None,
     changes=None,
     opts=None,
@@ -2651,9 +2647,6 @@ def diffhunks(
 
     if opts is None:
         opts = mdiff.defaultopts
-
-    if not node1 and not node2:
-        node1 = repo.dirstate.p1()
 
     def lrugetfilectx():
         cache = {}
@@ -2673,9 +2666,6 @@ def diffhunks(
         return getfilectx
 
     getfilectx = lrugetfilectx()
-
-    ctx1 = repo[node1]
-    ctx2 = repo[node2]
 
     relfiltered = False
     if relroot != "" and match.always():

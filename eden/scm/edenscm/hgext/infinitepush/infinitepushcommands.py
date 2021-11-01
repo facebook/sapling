@@ -62,14 +62,14 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
             bundlerepo = hg.repository(ui, bundlepath)
             repo = bundlerepo
 
-        p1 = repo[node].p1().node()
+        p1 = repo[node].p1()
         diffopts = patch.diffallopts(ui, {})
         match = scmutil.matchall(repo)
-        chunks = patch.diff(repo, p1, node, match, None, diffopts, relroot="")
+        chunks = patch.diff(repo, p1, repo[node], match, None, diffopts, relroot="")
         difflines = util.iterlines(chunks)
 
         states = "modified added removed deleted unknown ignored clean".split()
-        status = repo.status(p1, node)
+        status = repo.status(p1.node(), node)
         status = zip(states, status)
 
         filestatus = {}
@@ -79,7 +79,7 @@ def debugfillinfinitepushmetadata(ui, repo, **opts):
 
         diffstat = patch.diffstatdata(difflines)
         changed_files = {}
-        copies = copiesmod.pathcopies(repo[p1], repo[node])
+        copies = copiesmod.pathcopies(p1, repo[node])
         for filename, adds, removes, isbinary in diffstat[:filelimit]:
             # use special encoding that allows non-utf8 filenames
             filename = pycompat.decodeutf8(

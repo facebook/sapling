@@ -1,3 +1,8 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # Extension dedicated to test patch.diff() upgrade modes
 
 from __future__ import absolute_import
@@ -45,7 +50,9 @@ def autodiff(ui, repo, *pats, **opts):
 
     node1, node2 = scmutil.revpair(repo, [])
     m = scmutil.match(repo[node2], pats, opts)
-    it = patch.diff(repo, node1, node2, match=m, opts=diffopts, losedatafn=losedatafn)
+    it = patch.diff(
+        repo, repo[node1], repo[node2], match=m, opts=diffopts, losedatafn=losedatafn
+    )
     for chunk in it:
         ui.writebytes(chunk)
     for fn in sorted(brokenfiles):

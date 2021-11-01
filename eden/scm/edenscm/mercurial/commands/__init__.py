@@ -2117,24 +2117,24 @@ def diff(ui, repo, *pats, **opts):
         msg = _("cannot specify --rev and --change at the same time")
         raise error.Abort(msg)
     elif change:
-        node2 = scmutil.revsingle(repo, change, None).node()
-        node1 = repo[node2].p1().node()
+        ctx2 = scmutil.revsingle(repo, change, None)
+        ctx1 = ctx2.p1()
     else:
-        node1, node2 = scmutil.revpair(repo, revs)
+        ctx1, ctx2 = (repo[node] for node in scmutil.revpair(repo, revs))
 
     if reverse:
-        node1, node2 = node2, node1
+        ctx1, ctx2 = ctx2, ctx1
 
     if onlyfilesinrevs:
-        files1 = set(repo[node1].files())
-        files2 = set(repo[node2].files())
+        files1 = set(ctx1.files())
+        files2 = set(ctx2.files())
         pats = pats + tuple(repo.wvfs.join(f) for f in files1 | files2)
 
     diffopts = patch.diffallopts(ui, opts)
-    m = scmutil.match(repo[node2], pats, opts)
+    m = scmutil.match(ctx2, pats, opts)
     ui.pager("diff")
     cmdutil.diffordiffstat(
-        ui, repo, diffopts, node1, node2, m, stat=stat, root=opts.get("root")
+        ui, repo, diffopts, ctx1, ctx2, m, stat=stat, root=opts.get("root")
     )
 
 

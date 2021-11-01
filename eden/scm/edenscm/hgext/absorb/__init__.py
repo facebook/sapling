@@ -900,7 +900,7 @@ def absorb(ui, repo, stack=None, targetctx=None, pats=None, opts=None):
     state = fixupstate(stack, ui=ui, opts=opts)
     matcher = scmutil.match(targetctx, pats, opts)
     if opts.get("interactive"):
-        diff = patch.diff(repo, stack[-1].node(), targetctx.node(), matcher)
+        diff = patch.diff(repo, stack[-1], targetctx, matcher)
         origchunks = patch.parsepatch(diff)
         chunks = cmdutil.recordfilter(ui, origchunks)[0]
         targetctx = overlaydiffcontext(stack[-1], chunks)
