@@ -72,13 +72,13 @@ sh % "'HGUSER=Test Longname <test.longname@example.com>' hg cloud join" == r"""
     commitcloud: commits synchronized
     finished in * (glob)"""
 sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from the 'user/test.longname@example.com/default' workspace"
-sh % "'HGUSER=Test Longname <test.longname@example.com>' hg cloud join --config 'commitcloud.email_domain=example.com'" == r"""
+sh % "'HGUSER=Test Longname <test.longname@example.com>' hg cloud join --config 'commitcloud.email_domains=example.com'" == r"""
     commitcloud: this repository is now connected to the 'user/test.longname/default' workspace for the 'server' repo
     commitcloud: synchronizing 'server' with 'user/test.longname/default'
     commitcloud: commits synchronized
     finished in * (glob)"""
 sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from the 'user/test.longname/default' workspace"
-sh % "'HGUSER=Another Domain <other.longname@example.org>' hg cloud join --config 'commitcloud.email_domain=example.com'" == r"""
+sh % "'HGUSER=Another Domain <other.longname@example.org>' hg cloud join --config 'commitcloud.email_domains=example.com'" == r"""
     commitcloud: this repository is now connected to the 'user/other.longname@example.org/default' workspace for the 'server' repo
     commitcloud: synchronizing 'server' with 'user/other.longname@example.org/default'
     commitcloud: commits synchronized
@@ -128,7 +128,7 @@ sh % "hg cloud join -u other" == r"""
 sh % "hg cloud leave" == "commitcloud: this repository is now disconnected from the 'user/other/default' workspace"
 
 # Test joining other user's workspace by matching domain email
-sh % "hg cloud join -u 'other@example.com' --config 'commitcloud.email_domain=example.com'" == r"""
+sh % "hg cloud join -u 'other@example.com' --config 'commitcloud.email_domains=example.net example.com'" == r"""
     commitcloud: this repository is now connected to the 'user/other/default' workspace for the 'server' repo
     commitcloud: synchronizing 'server' with 'user/other/default'
     commitcloud: commits synchronized

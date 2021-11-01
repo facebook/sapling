@@ -58,8 +58,8 @@ def parseworkspace(ui, opts):
     # Currently only "user" workspaces are implemented
     if not user:
         user = ui.username()
-    domain = ui.config("commitcloud", "email_domain")
-    user = util.emaildomainuser(user, domain)
+    domains = ui.configlist("commitcloud", "email_domains")
+    user = util.emaildomainuser(user, domains)
     prefix = "user/%s/" % user
 
     if not workspace:
@@ -80,24 +80,24 @@ def parseworkspace(ui, opts):
 def defaultworkspace(ui, user=None):
     """Returns the default workspace for the given or current user"""
     if user is None:
-        domain = ui.config("commitcloud", "email_domain")
-        user = util.emaildomainuser(ui.username(), domain)
+        domains = ui.configlist("commitcloud", "email_domains")
+        user = util.emaildomainuser(ui.username(), domains)
     return "user/%s/default" % user
 
 
 def userworkspaceprefix(ui, user=None):
     """Returns the workspace prefix for the given user or current user"""
     if user is None:
-        domain = ui.config("commitcloud", "email_domain")
-        user = util.emaildomainuser(ui.username(), domain)
+        domains = ui.configlist("commitcloud", "email_domains")
+        user = util.emaildomainuser(ui.username(), domains)
     return "user/%s/" % user
 
 
 def hostnameworkspace(ui, user=None):
     """Returns the host workspace for the given or current user for the current host"""
     if user is None:
-        domain = ui.config("commitcloud", "email_domain")
-        user = util.emaildomainuser(ui.username(), domain)
+        domains = ui.configlist("commitcloud", "email_domains")
+        user = util.emaildomainuser(ui.username(), domains)
     return "user/%s/%s" % (
         user,
         ui.config("commitcloud", "hostname", socket.gethostname()),

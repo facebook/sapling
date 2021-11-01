@@ -34,8 +34,8 @@ Configs::
     # education page
     education_page = https://someurl.com/wiki/CommitCloud
 
-    # email domain to drop from email addresses for default users
-    email_domain = example.com
+    # list of email domains to drop from email addresses for default users
+    email_domains = example.com
 
     # update to a new revision if the current revision has been moved
     updateonmove = true

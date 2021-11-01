@@ -2482,12 +2482,14 @@ def email(author):
     return author[author.find("<") + 1 : r]
 
 
-def emaildomainuser(user, domain):
-    # type: (str, str) -> str
-    """get email of author, abbreviating users in the given domain."""
+def emaildomainuser(user, domains):
+    # type: (str, List[str]) -> str
+    """get email of author, abbreviating users in the given domains."""
     useremail = email(user)
-    if domain and useremail.endswith("@" + domain):
-        useremail = useremail[: -len(domain) - 1]
+    for domain in domains:
+        if useremail.endswith("@" + domain):
+            useremail = useremail[: -len(domain) - 1]
+            break
     return useremail
 
 
