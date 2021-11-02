@@ -28,7 +28,11 @@ fn python_fallback() -> Result<Command> {
         let python_binary = binary
             .parent()
             .ok_or_else(|| anyhow!("unable to locate Python binary"))?
-            .join("edenfsctl.real");
+            .join(if cfg!(windows) {
+                "edenfsctl.real.exe"
+            } else {
+                "edenfsctl.real"
+            });
         Ok(Command::new(python_binary))
     }
 }
