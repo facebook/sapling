@@ -532,29 +532,6 @@ class replacementtracker(object):
         self.replacementsreceived = True
         return orig(op, cg, tr, source, url, **kwargs)
 
-    def mergemarkers(self, orig, obsstore, transaction, data):
-        """find replacements from obsmarkers
-
-        Look through the markers that the server returned, looking for ones
-        that tell us the commits that replaced the ones we just pushed.
-        """
-        version, markers = obsolete._readmarkers(data)
-        if version == obsolete._fm1version:
-            # only support fm1 1:1 replacements for now, record prec -> sucs
-            for prec, sucs, flags, meta, date, parents in markers:
-                if len(sucs) == 1:
-                    self.mapping[prec] = sucs[0]
-
-        # We force retrieval of obsmarkers even if they are not enabled locally,
-        # so that we can look at them to track replacements and maybe synthesize
-        # mutation information for the commits.  However, if markers are not
-        # enabled locally then the store is read-only and we shouldn't add the
-        # markers to it.  In this case, just skip adding them - this is the same
-        # as if we'd never requested them.
-        if not obsstore._readonly:
-            return orig(obsstore, transaction, data)
-        return 0
-
     def mutationmergemarkers(self, orig, obsstore, transaction, data):
         # See 'mergemarker'. Record marker information to 'self.mapping'.
         version, markers = obsolete._readmarkers(data)
@@ -614,7 +591,6 @@ class replacementtracker(object):
         wrapfunction(exchange, "_pushdiscovery", self.pushdiscovery)
         wrapfunction(bundle2, "_processchangegroup", self.processchangegroup)
         wrapfunction(exchange, "_localphasemove", self.phasemove)
-        wrapfunction(obsolete.obsstore, "mergemarkers", self.mergemarkers)
         wrapfunction(
             obsolete.mutationobsstore, "mergemarkers", self.mutationmergemarkers
         )
@@ -623,7 +599,6 @@ class replacementtracker(object):
         unwrapfunction(exchange, "_pushdiscovery", self.pushdiscovery)
         unwrapfunction(bundle2, "_processchangegroup", self.processchangegroup)
         unwrapfunction(exchange, "_localphasemove", self.phasemove)
-        unwrapfunction(obsolete.obsstore, "mergemarkers", self.mergemarkers)
         unwrapfunction(
             obsolete.mutationobsstore, "mergemarkers", self.mutationmergemarkers
         )
