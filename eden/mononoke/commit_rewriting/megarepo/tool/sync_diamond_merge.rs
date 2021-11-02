@@ -160,7 +160,7 @@ pub async fn do_sync_diamond_merge(
     let onto_value =
         maybe_onto_value.ok_or(format_err!("cannot find bookmark {}", onto_bookmark))?;
 
-    let rewritten = create_rewritten_merge_commit(
+    let (rewritten, version_for_merge) = create_rewritten_merge_commit(
         ctx.clone(),
         small_merge_cs_id,
         &small_repo.blob_repo,
@@ -179,7 +179,7 @@ pub async fn do_sync_diamond_merge(
         &ctx,
         hashmap! {small_merge_cs_id => new_merge_cs_id},
         &syncers.small_to_large,
-        &syncers.small_to_large.get_current_version(&ctx).await?,
+        &version_for_merge,
     )
     .await?;
 
@@ -207,7 +207,7 @@ async fn create_rewritten_merge_commit(
     syncers: &Syncers<SqlSyncedCommitMapping>,
     small_root: ChangesetId,
     onto_value: ChangesetId,
-) -> Result<BonsaiChangeset, Error> {
+) -> Result<(BonsaiChangeset, CommitSyncConfigVersion), Error> {
     let merge_bcs = small_merge_cs_id.load(&ctx, small_repo.blobstore()).await?;
 
     let parents = merge_bcs.parents().collect();
@@ -276,7 +276,8 @@ async fn create_rewritten_merge_commit(
         additional_file_changes.insert(path, fc);
     }
     rewritten.file_changes = additional_file_changes;
-    rewritten.freeze()
+    let cs_id = rewritten.freeze()?;
+    Ok((cs_id, version_p1))
 }
 
 /// This function finds all the changed file between root and onto that are from another small repo.
