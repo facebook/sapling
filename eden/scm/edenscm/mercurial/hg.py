@@ -1011,6 +1011,7 @@ def remoteui(src, opts):
     for sect in (
         "auth",
         "auth_proxy",
+        "cats",
         "hostfingerprints",
         "hostsecurity",
         "http_proxy",
