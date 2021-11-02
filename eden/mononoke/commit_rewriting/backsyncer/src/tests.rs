@@ -711,7 +711,7 @@ async fn verify_bookmarks(
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
-    let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx).await?;
+    let bookmark_renamer = commit_syncer.get_bookmark_renamer().await?;
 
     let bookmarks: Vec<_> = source_repo
         .get_publishing_bookmarks_maybe_stale(ctx.clone())

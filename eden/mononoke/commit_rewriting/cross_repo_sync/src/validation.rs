@@ -384,7 +384,7 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
         rename_and_remap_bookmarks(ctx.clone(), &commit_syncer, source_bookmarks).await?
     };
 
-    let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer(&ctx).await?;
+    let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer().await?;
     let mut diff = vec![];
     for (target_book, target_cs_id) in &target_bookmarks {
         if no_sync_outcome.contains(&target_book) {
@@ -726,7 +726,7 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
     ),
     Error,
 > {
-    let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx).await?;
+    let bookmark_renamer = commit_syncer.get_bookmark_renamer().await?;
 
     let mut renamed_and_remapped_bookmarks = vec![];
     for (bookmark, cs_id) in bookmarks {

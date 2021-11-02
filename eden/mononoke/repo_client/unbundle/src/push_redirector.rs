@@ -345,7 +345,7 @@ impl PushRedirector {
         // changesets to be rewritten
         let maybe_renamed_bookmark = self
             .small_to_large_commit_syncer
-            .rename_bookmark(ctx, bookmark_spec.get_bookmark_name())
+            .rename_bookmark(bookmark_spec.get_bookmark_name())
             .await?;
 
         let uploaded_bonsais = self
@@ -554,7 +554,7 @@ impl PushRedirector {
 
         let onto = self
             .large_to_small_commit_syncer
-            .rename_bookmark(ctx, &onto)
+            .rename_bookmark(&onto)
             .await?
             .ok_or(format_err!(
                 "bookmark_renamer unexpectedly dropped {} in {:?}",
@@ -757,7 +757,7 @@ impl PushRedirector {
 
         let name = self
             .small_to_large_commit_syncer
-            .rename_bookmark(ctx, &name)
+            .rename_bookmark(&name)
             .await?
             .ok_or(format_err!(
                 "Bookmark {} unexpectedly dropped in {:?}",
@@ -783,7 +783,7 @@ impl PushRedirector {
             PushrebaseBookmarkSpec::NormalPushrebase(bookmark) => {
                 let bookmark = self
                     .small_to_large_commit_syncer
-                    .rename_bookmark(ctx, &bookmark)
+                    .rename_bookmark(&bookmark)
                     .await?
                     .ok_or(format_err!(
                         "Bookmark {} unexpectedly dropped in {:?}",

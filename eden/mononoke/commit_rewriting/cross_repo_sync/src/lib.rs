@@ -505,19 +505,16 @@ where
             .await
     }
 
-    pub async fn get_bookmark_renamer(&self, ctx: &CoreContext) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_version(ctx).await?;
+    pub async fn get_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
+        let (source_repo, target_repo) = self.get_source_target();
 
         self.commit_sync_data_provider
             .get_bookmark_renamer(source_repo.get_repoid(), target_repo.get_repoid())
             .await
     }
 
-    pub async fn get_reverse_bookmark_renamer(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_version(ctx).await?;
+    pub async fn get_reverse_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
+        let (source_repo, target_repo) = self.get_source_target();
 
         self.commit_sync_data_provider
             .get_reverse_bookmark_renamer(source_repo.get_repoid(), target_repo.get_repoid())
@@ -528,17 +525,19 @@ where
         &self,
         ctx: &CoreContext,
     ) -> Result<CommitSyncConfigVersion, Error> {
-        let (_, _, version_name) = self.get_source_target_version(ctx).await?;
+        let version_name = self
+            .commit_sync_data_provider
+            .get_current_version(ctx, self.repos.get_source_repo().get_repoid())
+            .await?;
 
         Ok(version_name)
     }
 
     pub async fn rename_bookmark(
         &self,
-        ctx: &CoreContext,
         bookmark: &BookmarkName,
     ) -> Result<Option<BookmarkName>, Error> {
-        Ok(self.get_bookmark_renamer(ctx).await?(bookmark))
+        Ok(self.get_bookmark_renamer().await?(bookmark))
     }
 
     pub async fn get_plural_commit_sync_outcome<'a>(
@@ -1499,18 +1498,6 @@ where
         }
 
         Ok(source_cs)
-    }
-
-    async fn get_source_target_version(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<(BlobRepo, BlobRepo, CommitSyncConfigVersion), Error> {
-        let (source, target) = self.get_source_target();
-        let version = self
-            .commit_sync_data_provider
-            .get_current_version(ctx, source.get_repoid())
-            .await?;
-        Ok((source, target, version))
     }
 
     fn get_source_target(&self) -> (BlobRepo, BlobRepo) {

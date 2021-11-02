@@ -332,9 +332,9 @@ async fn run_pushredirection_subcommand<'a>(
                     .ok_or_else(|| format_err!("{} is not specified", LARGE_REPO_BOOKMARK_ARG))?,
             );
             let small_bookmark = Small(
-                commit_syncer.get_bookmark_renamer(&ctx).await?(&large_bookmark).ok_or_else(
-                    || format_err!("{} bookmark doesn't remap to small repo", large_bookmark),
-                )?,
+                commit_syncer.get_bookmark_renamer().await?(&large_bookmark).ok_or_else(|| {
+                    format_err!("{} bookmark doesn't remap to small repo", large_bookmark)
+                })?,
             );
 
             let large_repo = Large(commit_syncer.get_large_repo());
