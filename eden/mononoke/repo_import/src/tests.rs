@@ -589,6 +589,10 @@ mod tests {
         Arc::new(sync_config)
     }
 
+    fn first_version() -> CommitSyncConfigVersion {
+        CommitSyncConfigVersion("TEST_VERSION".to_string())
+    }
+
     fn get_large_repo_sync_config() -> CommitSyncConfig {
         CommitSyncConfig {
             large_repo_id: RepositoryId::new(0),
@@ -597,7 +601,7 @@ mod tests {
                 RepositoryId::new(1) => get_small_repo_sync_config_1(),
                 RepositoryId::new(2) => get_small_repo_sync_config_2(),
             },
-            version_name: CommitSyncConfigVersion("TEST_VERSION".to_string()),
+            version_name: first_version(),
         }
     }
 
@@ -768,7 +772,7 @@ mod tests {
             &small_repo,
             &large_to_small_syncer,
             &shifted_bcs_ids,
-            &large_to_small_syncer.get_current_version(&ctx).await?,
+            &first_version(),
         )
         .await?;
 
@@ -910,7 +914,7 @@ mod tests {
             &small_repo,
             &large_to_small_syncer,
             &large_repo_cs_ids,
-            &large_to_small_syncer.get_current_version(&ctx).await?,
+            &first_version(),
         )
         .await?;
 
@@ -960,7 +964,7 @@ mod tests {
             &small_repo,
             &large_to_small_syncer,
             &[root, first_commit],
-            &large_to_small_syncer.get_current_version(&ctx).await?,
+            &first_version(),
         )
         .await?;
 

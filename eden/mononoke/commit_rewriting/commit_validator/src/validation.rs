@@ -1516,7 +1516,9 @@ async fn verify_filenodes_have_same_contents<
 mod tests {
     use super::*;
     use cross_repo_sync::update_mapping_with_version;
-    use cross_repo_sync_test_utils::init_small_large_repo;
+    use cross_repo_sync_test_utils::{
+        init_small_large_repo, xrepo_mapping_version_with_small_repo,
+    };
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use skiplist::SkiplistIndex;
@@ -1582,9 +1584,7 @@ mod tests {
             &ctx,
             commit_mapping,
             &small_to_large_commit_syncer,
-            &small_to_large_commit_syncer
-                .get_current_version(&ctx)
-                .await?,
+            &xrepo_mapping_version_with_small_repo(),
         )
         .await?;
         let large_repo = Large(large_repo.clone());

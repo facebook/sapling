@@ -78,7 +78,9 @@ pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use cross_repo_sync_test_utils::init_small_large_repo;
+    use cross_repo_sync_test_utils::{
+        init_small_large_repo, xrepo_mapping_version_with_small_repo,
+    };
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::MPath;
@@ -127,7 +129,7 @@ mod test {
             &small_to_large,
             commit_to_sync,
             Some(vec![bigmove]),
-            small_to_large.get_current_version(&ctx).await?,
+            xrepo_mapping_version_with_small_repo(),
         )
         .await?;
 
@@ -189,7 +191,7 @@ mod test {
             &large_to_small,
             commit_to_sync,
             None,
-            large_to_small.get_current_version(&ctx).await?,
+            xrepo_mapping_version_with_small_repo(),
         )
         .await?;
 

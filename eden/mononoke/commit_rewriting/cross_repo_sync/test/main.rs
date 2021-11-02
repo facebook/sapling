@@ -279,6 +279,10 @@ async fn check_mapping<M>(
     }
 }
 
+pub fn version_name_with_small_repo() -> CommitSyncConfigVersion {
+    CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())
+}
+
 fn create_commit_sync_config(
     small_repo_id: RepositoryId,
     large_repo_id: RepositoryId,
@@ -297,7 +301,7 @@ fn create_commit_sync_config(
         small_repos: hashmap! {
             small_repo_id => small_repo_config,
         },
-        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+        version_name: version_name_with_small_repo(),
     })
 }
 
@@ -810,13 +814,13 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     let source_repo_id = Source(fail_repos.get_source_repo().get_repoid());
     let target_repo_id = Target(fail_repos.get_target_repo().get_repoid());
     fail_config.repos = fail_repos;
-    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let version = version_name_with_small_repo();
     let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        current_version.clone(),
+        version.clone(),
         source_repo_id,
         target_repo_id,
         hashmap! {
-            current_version.clone() => SyncData {
+            version.clone() => SyncData {
                 mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
                 reverse_mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
             }
@@ -849,11 +853,11 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
         large_repo: megarepo.clone(),
     };
     let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        current_version.clone(),
+        version.clone(),
         Source(copyfrom_fail_repos.get_source_repo().get_repoid()),
         Target(copyfrom_fail_repos.get_target_repo().get_repoid()),
         hashmap! {
-            current_version => SyncData {
+            version => SyncData {
                 mover: Arc::new(move |path: &MPath| {
                     match path.basename().as_ref() {
                         b"1" => bail!("This only fails if the file is named '1'"),
@@ -968,13 +972,13 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         small_repo: repo.clone(),
         large_repo: megarepo.clone(),
     };
-    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let version = version_name_with_small_repo();
     let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        current_version.clone(),
+        version.clone(),
         Source(commit_sync_repos.get_source_repo().get_repoid()),
         Target(commit_sync_repos.get_target_repo().get_repoid()),
         hashmap! {
-            current_version.clone() => SyncData {
+            version.clone() => SyncData {
                 mover,
                 reverse_mover,
             }
@@ -1000,7 +1004,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         megarepo_initial_bcs_id,
         repo.get_repoid(),
         repo_initial_bcs_id,
-        current_version,
+        version,
         commit_syncer.get_source_repo_type(),
     );
     mapping.add(ctx.clone(), entry).compat().await?;
@@ -1241,7 +1245,7 @@ async fn get_multiple_master_mapping_setup(
     let megarepo_master_cs_id = get_bookmark(&ctx, &megarepo, "master").await;
     let small_repo_master_cs_id = get_bookmark(&ctx, &small_repo, "master").await;
     // Masters map to each other before we even do any syncs
-    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let version = version_name_with_small_repo();
     mapping
         .add(
             ctx.clone(),
@@ -1250,7 +1254,7 @@ async fn get_multiple_master_mapping_setup(
                 megarepo_master_cs_id,
                 small_repo.get_repoid(),
                 small_repo_master_cs_id,
-                current_version.clone(),
+                version.clone(),
                 small_to_large_syncer.get_source_repo_type(),
             ),
         )
@@ -1787,7 +1791,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
     let megarepo_master_cs_id = get_bookmark(&ctx, &megarepo, "master").await;
     let small_repo_master_cs_id = get_bookmark(&ctx, &small_repo, "master").await;
     // Masters map to each other before we even do any syncs
-    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let version = version_name_with_small_repo();
     mapping
         .add(
             ctx.clone(),
@@ -1796,7 +1800,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                 megarepo_master_cs_id,
                 small_repo.get_repoid(),
                 small_repo_master_cs_id,
-                current_version.clone(),
+                version.clone(),
                 small_to_large_syncer.get_source_repo_type(),
             ),
         )
@@ -1896,13 +1900,12 @@ async fn prepare_commit_syncer_with_mapping_change(
         .set_to(root_cs_id)
         .await?;
 
-    let current_version = large_to_small_syncer.get_current_version(&ctx).await?;
     let maybe_small_root_cs_id = large_to_small_syncer
         .unsafe_always_rewrite_sync_commit(
             &ctx,
             root_cs_id,
             None,
-            &current_version,
+            &version_name_with_small_repo(),
             CommitSyncContext::Tests,
         )
         .await?;
@@ -1943,8 +1946,6 @@ async fn prepare_commit_syncer_with_mapping_change(
         },
         version_name: new_version.clone(),
     };
-    config_source.remove_current_version(&old_version);
-    config_source.add_current_version(new_version.clone());
     config_source.add_common_config(CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
         small_repos: btreemap! {
@@ -2176,7 +2177,6 @@ async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result
     let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
     let heads = heads_with_versions[&Some(v1.clone())].clone();
     let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
-    assert_eq!(lts_syncer.get_current_version(&ctx).await?, v1);
     println!(
         "merge sync outcome: {:?}",
         lts_syncer
@@ -2209,7 +2209,6 @@ async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result
     let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
     let heads = heads_with_versions[&Some(v2.clone())].clone();
     let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
-    assert_ne!(lts_syncer.get_current_version(&ctx).await?, v2);
     lts_syncer
         .sync_commit(
             &ctx,
@@ -2291,7 +2290,7 @@ async fn test_no_accidental_preserved_roots(
     commit_sync_repos: CommitSyncRepos,
     mapping: SqlSyncedCommitMapping,
 ) -> Result<(), Error> {
-    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let version = version_name_with_small_repo();
     let commit_syncer = {
         use CommitSyncRepos::*;
         let mut commit_syncer = match &commit_sync_repos {
@@ -2318,11 +2317,11 @@ async fn test_no_accidental_preserved_roots(
         };
 
         let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-            current_version.clone(),
+            version.clone(),
             Source(commit_sync_repos.get_source_repo().get_repoid()),
             Target(commit_sync_repos.get_target_repo().get_repoid()),
             hashmap! {
-                current_version.clone() => SyncData {
+                version.clone() => SyncData {
                     mover: Arc::new(identity_mover),
                     reverse_mover: Arc::new(identity_mover),
                 }
@@ -2350,9 +2349,7 @@ async fn test_no_accidental_preserved_roots(
     let outcome = commit_syncer
         .get_commit_sync_outcome(&ctx, root_commit)
         .await?;
-    assert!(
-        matches!(outcome, Some(CommitSyncOutcome::RewrittenAs(_, version)) if version == current_version)
-    );
+    assert!(matches!(outcome, Some(CommitSyncOutcome::RewrittenAs(_, v)) if v == version));
 
     Ok(())
 }
