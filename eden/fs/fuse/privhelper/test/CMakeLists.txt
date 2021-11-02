@@ -13,6 +13,7 @@ target_link_libraries(
   PUBLIC
     eden_fuse_privhelper
     eden_utils_test_lib
+    eden_testharness
     Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}
 )

@@ -23,6 +23,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
 #include "eden/fs/fuse/privhelper/test/PrivHelperTestServer.h"
+#include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
@@ -199,12 +200,15 @@ class PrivHelperTest : public ::testing::Test {
 };
 
 TEST_F(PrivHelperTest, fuseMount) {
-  // Prepare a promise to use as the result for trying to mount "/foo/bar"
-  auto filePromise = server_.setFuseMountResult("/foo/bar");
+  auto mountPoint = makeTempDir("bar");
+  auto path = mountPoint.path().string();
+
+  // Prepare a promise to use as the result for trying to mount mountPoint
+  auto filePromise = server_.setFuseMountResult(path);
 
   // Call fuseMount() this should return a future that is not ready yet,
   // since we have not fulfilled the promise.
-  auto result = client_->fuseMount("/foo/bar", false);
+  auto result = client_->fuseMount(path, false);
   EXPECT_FALSE(result.isReady());
 
   // Create a temporary file to respond with
@@ -239,32 +243,52 @@ TEST_F(PrivHelperTest, fuseMount) {
   // from the unmount operation.
 }
 
+TEST_F(PrivHelperTest, fuseMountPermissions) {
+  if (getuid() != 0) {
+    auto path = folly::kIsApple ? "/var/root/bar" : "/root/bar";
+    EXPECT_THROW_RE(
+        client_->fuseMount(path, false).get(),
+        std::exception,
+        folly::to<std::string>(
+            "User doesn't have access to ", path, ": Permission denied"));
+  }
+}
+
 TEST_F(PrivHelperTest, fuseMountError) {
+  auto tempdir = makeTempDir();
+  auto path = tempdir.path().string();
   // Test calling fuseMount() with a mount path that is not registered.
   // This will throw an error in the privhelper server thread.  Make sure the
   // error message is raised in the client correctly.
   EXPECT_THROW_RE(
-      client_->fuseMount("/foo/bar", false).get(),
+      client_->fuseMount(path, false).get(),
       std::exception,
-      "no result available for /foo/bar");
+      fmt::format("no result available for {}", path));
 }
 
 TEST_F(PrivHelperTest, multiplePendingFuseMounts) {
+  auto abcMountPoint = makeTempDir("abc");
+  auto abcPath = abcMountPoint.path().string();
+  auto defMountPoint = makeTempDir("def");
+  auto defPath = defMountPoint.path().string();
+  auto barMountPoint = makeTempDir("bar");
+  auto barPath = barMountPoint.path().string();
+
   // Prepare several promises for various mount points
-  auto abcPromise = server_.setFuseMountResult("/mnt/abc");
-  auto defPromise = server_.setFuseMountResult("/mnt/def");
-  auto foobarPromise = server_.setFuseMountResult("/foo/bar");
+  auto abcPromise = server_.setFuseMountResult(abcPath);
+  auto defPromise = server_.setFuseMountResult(defPath);
+  auto barPromise = server_.setFuseMountResult(barPath);
 
   // Also set up unmount results for when the privhelper tries to unmount these
   // mount points during cleanup.
-  server_.setFuseUnmountResult("/mnt/abc").setValue();
-  server_.setFuseUnmountResult("/mnt/def").setValue();
-  server_.setFuseUnmountResult("/foo/bar").setValue();
+  server_.setFuseUnmountResult(abcPath).setValue();
+  server_.setFuseUnmountResult(defPath).setValue();
+  server_.setFuseUnmountResult(barPath).setValue();
 
   // Make several fuseMount() calls
-  auto abcResult = client_->fuseMount("/mnt/abc", false);
-  auto defResult = client_->fuseMount("/mnt/def", false);
-  auto foobarResult = client_->fuseMount("/foo/bar", false);
+  auto abcResult = client_->fuseMount(abcPath, false);
+  auto defResult = client_->fuseMount(defPath, false);
+  auto foobarResult = client_->fuseMount(barPath, false);
   EXPECT_FALSE(abcResult.isReady());
   EXPECT_FALSE(defResult.isReady());
   EXPECT_FALSE(foobarResult.isReady());
@@ -273,7 +297,7 @@ TEST_F(PrivHelperTest, multiplePendingFuseMounts) {
   // We fulfill them in a different order than the order of the requests here.
   // This shouldn't affect the behavior of the code.
   TemporaryFile tempFile;
-  foobarPromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
+  barPromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
   abcPromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
   defPromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
 
@@ -290,31 +314,42 @@ TEST_F(PrivHelperTest, multiplePendingFuseMounts) {
 }
 
 TEST_F(PrivHelperTest, bindMounts) {
+  auto abcMountPoint = makeTempDir("abc");
+  auto abcPath = abcMountPoint.path().string();
   TemporaryFile tempFile;
 
+  boost::filesystem::create_directory(abcMountPoint.path() / "foo");
+  boost::filesystem::create_directory(abcMountPoint.path() / "bar");
+
   // Prepare promises for the mount calls
-  server_.setFuseMountResult("/mnt/abc").setValue(File(tempFile.fd(), false));
-  server_.setBindMountResult("/mnt/abc/buck-out").setValue();
-  server_.setBindMountResult("/mnt/abc/foo/buck-out").setValue();
-  server_.setBindMountResult("/mnt/abc/bar/buck-out").setValue();
+  server_.setFuseMountResult(abcPath).setValue(File(tempFile.fd(), false));
+  server_.setBindMountResult(abcPath + "/buck-out").setValue();
+  server_.setBindMountResult(abcPath + "/foo/buck-out").setValue();
+  server_.setBindMountResult(abcPath + "/bar/buck-out").setValue();
 
-  server_.setFuseMountResult("/data/users/foo/somerepo")
+  auto userMountPoint = makeTempDir("user");
+  auto userPath = userMountPoint.path().string();
+
+  boost::filesystem::create_directory(userMountPoint.path() / "somerepo");
+
+  server_.setFuseMountResult(userPath + "/somerepo")
       .setValue(File(tempFile.fd(), false));
-  server_.setBindMountResult("/data/users/foo/somerepo/buck-out").setValue();
+  server_.setBindMountResult(userPath + "/somerepo/buck-out").setValue();
 
-  server_.setFuseMountResult("/data/users/foo/somerepo2")
+  boost::filesystem::create_directory(userMountPoint.path() / "somerepo2");
+  server_.setFuseMountResult(userPath + "/somerepo2")
       .setValue(File(tempFile.fd(), false));
 
   // Prepare promises for the unmount calls
-  server_.setFuseUnmountResult("/mnt/abc").setValue();
-  server_.setBindUnmountResult("/mnt/abc/buck-out").setValue();
-  server_.setBindUnmountResult("/mnt/abc/foo/buck-out").setValue();
-  server_.setBindUnmountResult("/mnt/abc/bar/buck-out").setValue();
-  server_.setFuseUnmountResult("/data/users/foo/somerepo").setValue();
-  server_.setFuseUnmountResult("/data/users/foo/somerepo2").setValue();
+  server_.setFuseUnmountResult(abcPath).setValue();
+  server_.setBindUnmountResult(abcPath + "/buck-out").setValue();
+  server_.setBindUnmountResult(abcPath + "/foo/buck-out").setValue();
+  server_.setBindUnmountResult(abcPath + "/bar/buck-out").setValue();
+  server_.setFuseUnmountResult(userPath + "/somerepo").setValue();
+  server_.setFuseUnmountResult(userPath + "/somerepo2").setValue();
   // Leave the promise for somerepo/buck-out unfulfilled for now
   auto somerepoBuckOutUnmountPromise =
-      server_.setBindUnmountResult("/data/users/foo/somerepo/buck-out");
+      server_.setBindUnmountResult(userPath + "/somerepo/buck-out");
 
   // Prepare some extra unmount promises that we don't expect to be used,
   // just to verify that cleanup happens as expected.
@@ -322,21 +357,21 @@ TEST_F(PrivHelperTest, bindMounts) {
   server_.setBindUnmountResult("/bind/never/actually/mounted").setValue();
 
   // Mount everything
-  client_->fuseMount("/data/users/foo/somerepo", false).get(1s);
-  client_->bindMount("/bind/mount/source", "/data/users/foo/somerepo/buck-out")
+  client_->fuseMount(userPath + "/somerepo", false).get(1s);
+  client_->bindMount("/bind/mount/source", userPath + "/somerepo/buck-out")
       .get(1s);
 
-  client_->fuseMount("/mnt/abc", false).get(1s);
-  client_->bindMount("/bind/mount/source", "/mnt/abc/buck-out").get(1s);
-  client_->bindMount("/bind/mount/source", "/mnt/abc/foo/buck-out").get(1s);
-  client_->fuseMount("/data/users/foo/somerepo2", false).get(1s);
-  client_->bindMount("/bind/mount/source", "/mnt/abc/bar/buck-out").get(1s);
+  client_->fuseMount(abcPath, false).get(1s);
+  client_->bindMount("/bind/mount/source", abcPath + "/buck-out").get(1s);
+  client_->bindMount("/bind/mount/source", abcPath + "/foo/buck-out").get(1s);
+  client_->fuseMount(userPath + "/somerepo2", false).get(1s);
+  client_->bindMount("/bind/mount/source", abcPath + "/bar/buck-out").get(1s);
 
-  // Manually unmount /data/users/foo/somerepo
+  // Manually unmount /somerepo
   // This will finish even though somerepoBuckOutUnmountPromise is still
   // outstanding because the privhelper and the OS don't care about relative
   // ordering of these two operations.
-  auto unmountResult = client_->fuseUnmount("/data/users/foo/somerepo");
+  auto unmountResult = client_->fuseUnmount(userPath + "/somerepo");
   std::move(unmountResult).get(1s);
 
   // Clean up this promise: no one is waiting on its results, but we just
@@ -357,42 +392,54 @@ TEST_F(PrivHelperTest, bindMounts) {
 }
 
 TEST_F(PrivHelperTest, takeoverShutdown) {
+  auto abcMountPoint = makeTempDir("abc");
+  auto abcPath = abcMountPoint.path().string();
   TemporaryFile tempFile;
 
-  // Set up mount promises
-  server_.setFuseMountResult("/mnt/abc").setValue(File(tempFile.fd(), false));
-  server_.setBindMountResult("/mnt/abc/buck-out").setValue();
-  server_.setBindMountResult("/mnt/abc/foo/buck-out").setValue();
-  server_.setBindMountResult("/mnt/abc/bar/buck-out").setValue();
+  boost::filesystem::create_directory(abcMountPoint.path() / "foo");
+  boost::filesystem::create_directory(abcMountPoint.path() / "bar");
 
-  server_.setFuseMountResult("/mnt/somerepo")
+  // Prepare promises for the mount calls
+  server_.setFuseMountResult(abcPath).setValue(File(tempFile.fd(), false));
+  server_.setBindMountResult(abcPath + "/buck-out").setValue();
+  server_.setBindMountResult(abcPath + "/foo/buck-out").setValue();
+  server_.setBindMountResult(abcPath + "/bar/buck-out").setValue();
+
+  auto userMountPoint = makeTempDir("user");
+  auto userPath = userMountPoint.path().string();
+
+  boost::filesystem::create_directory(userMountPoint.path() / "somerepo");
+
+  server_.setFuseMountResult(userPath + "/somerepo")
       .setValue(File(tempFile.fd(), false));
 
-  server_.setFuseMountResult("/mnt/somerepo2")
+  boost::filesystem::create_directory(userMountPoint.path() / "somerepo2");
+  server_.setFuseMountResult(userPath + "/somerepo2")
       .setValue(File(tempFile.fd(), false));
-  server_.setBindMountResult("/mnt/somerepo2/buck-out").setValue();
+  server_.setBindMountResult(userPath + "/somerepo2/buck-out").setValue();
 
   // Set up unmount promises
-  server_.setFuseUnmountResult("/mnt/abc").setValue();
-  server_.setBindUnmountResult("/mnt/abc/buck-out").setValue();
-  server_.setBindUnmountResult("/mnt/abc/foo/buck-out").setValue();
-  server_.setBindUnmountResult("/mnt/abc/bar/buck-out").setValue();
-  server_.setFuseUnmountResult("/mnt/somerepo").setValue();
-  server_.setFuseUnmountResult("/mnt/somerepo2").setValue();
-  server_.setBindUnmountResult("/mnt/somerepo2/buck-out").setValue();
+  server_.setFuseUnmountResult(abcPath).setValue();
+  server_.setBindUnmountResult(abcPath + "/buck-out").setValue();
+  server_.setBindUnmountResult(abcPath + "/foo/buck-out").setValue();
+  server_.setBindUnmountResult(abcPath + "/bar/buck-out").setValue();
+  server_.setFuseUnmountResult(userPath + "/somerepo").setValue();
+  server_.setFuseUnmountResult(userPath + "/somerepo2").setValue();
+  server_.setBindUnmountResult(userPath + "/somerepo2/buck-out").setValue();
 
   // Mount everything
-  client_->fuseMount("/mnt/abc", false).get(1s);
-  client_->bindMount("/bind/mount/source", "/mnt/abc/buck-out").get(1s);
-  client_->bindMount("/bind/mount/source", "/mnt/abc/foo/buck-out").get(1s);
-  client_->bindMount("/bind/mount/source", "/mnt/abc/bar/buck-out").get(1s);
-  client_->fuseMount("/mnt/somerepo", false).get(1s);
-  client_->fuseMount("/mnt/somerepo2", false).get(1s);
-  client_->bindMount("/bind/mount/source", "/mnt/somerepo2/buck-out").get(1s);
+  client_->fuseMount(abcPath, false).get(1s);
+  client_->bindMount("/bind/mount/source", abcPath + "/buck-out").get(1s);
+  client_->bindMount("/bind/mount/source", abcPath + "/foo/buck-out").get(1s);
+  client_->bindMount("/bind/mount/source", abcPath + "/bar/buck-out").get(1s);
+  client_->fuseMount(userPath + "/somerepo", false).get(1s);
+  client_->fuseMount(userPath + "/somerepo2", false).get(1s);
+  client_->bindMount("/bind/mount/source", userPath + "/somerepo2/buck-out")
+      .get(1s);
 
   // Indicate that /mnt/abc and /mnt/somerepo are being taken over.
-  client_->takeoverShutdown("/mnt/abc").get(1s);
-  client_->takeoverShutdown("/mnt/somerepo").get(1s);
+  client_->takeoverShutdown(abcPath).get(1s);
+  client_->takeoverShutdown(userPath + "/somerepo").get(1s);
 
   // Destroy the privhelper.
   // /mnt/somerepo2 should be unmounted, but /mnt/abc and /mnt/somerepo
@@ -401,67 +448,83 @@ TEST_F(PrivHelperTest, takeoverShutdown) {
 
   EXPECT_THAT(
       server_.getUnusedFuseUnmountResults(),
-      UnorderedElementsAre("/mnt/abc", "/mnt/somerepo"));
+      UnorderedElementsAre(abcPath, userPath + "/somerepo"));
   EXPECT_THAT(
       server_.getUnusedBindUnmountResults(),
       UnorderedElementsAre(
-          "/mnt/abc/buck-out",
-          "/mnt/abc/foo/buck-out",
-          "/mnt/abc/bar/buck-out"));
+          abcPath + "/buck-out",
+          abcPath + "/foo/buck-out",
+          abcPath + "/bar/buck-out"));
 }
 
 TEST_F(PrivHelperTest, takeoverStartup) {
+  auto abcMountPoint = makeTempDir("abc");
+  auto abcPath = abcMountPoint.path().string();
   TemporaryFile tempFile;
+
+  boost::filesystem::create_directories(
+      abcMountPoint.path() / "foo" / "buck-out");
+  boost::filesystem::create_directories(
+      abcMountPoint.path() / "xyz" / "test" / "buck-out");
 
   // Indicate that we are taking over some mount points.
   client_
       ->takeoverStartup(
-          "/mnt/abc", {"/mnt/abc/foo/buck-out", "/mnt/abc/xyz/test/buck-out"})
+          abcPath, {abcPath + "/foo/buck-out", abcPath + "/xyz/test/buck-out"})
       .get(1s);
-  client_->takeoverStartup("/data/users/johndoe/myrepo", {}).get(1s);
-  client_->takeoverStartup("/mnt/repo_x", {"/mnt/repo_x/y"}).get(1s);
+
+  auto myrepoMountPoint = makeTempDir("myrepo");
+  auto myrepoPath = myrepoMountPoint.path().string();
+  client_->takeoverStartup(myrepoPath, {}).get(1s);
+
+  auto repoXMountPoint = makeTempDir("repo_x");
+  auto repoXPath = repoXMountPoint.path().string();
+  client_->takeoverStartup(repoXPath, {repoXPath + "/y"}).get(1s);
 
   // Manually mount one other mount point.
-  server_.setFuseMountResult("/mnt/xyz").setValue(File(tempFile.fd(), false));
-  server_.setBindMountResult("/mnt/xyz/buck-out").setValue();
-  client_->fuseMount("/mnt/xyz", false).get(1s);
-  client_->bindMount("/bind/mount/source", "/mnt/xyz/buck-out").get(1s);
+  auto xyzMountPoint = makeTempDir("xyz");
+  auto xyzPath = xyzMountPoint.path().string();
+  server_.setFuseMountResult(xyzPath).setValue(File(tempFile.fd(), false));
+  server_.setBindMountResult(xyzPath + "/buck-out").setValue();
+  client_->fuseMount(xyzPath, false).get(1s);
+  client_->bindMount("/bind/mount/source", xyzPath + "/buck-out").get(1s);
 
   // Manually unmount /mnt/repo_x
-  server_.setFuseUnmountResult("/mnt/repo_x").setValue();
-  server_.setBindUnmountResult("/mnt/repo_x/y").setValue();
-  client_->fuseUnmount("/mnt/repo_x").get(1s);
+  server_.setFuseUnmountResult(repoXPath).setValue();
+  server_.setBindUnmountResult(repoXPath + "/y").setValue();
+  client_->fuseUnmount(repoXPath).get(1s);
   EXPECT_THAT(server_.getUnusedFuseUnmountResults(), UnorderedElementsAre());
   EXPECT_THAT(server_.getUnusedBindUnmountResults(), UnorderedElementsAre());
 
   // Re-register the unmount results for repo_x just to confirm that they are
   // not re-used on shutdown.
-  server_.setFuseUnmountResult("/mnt/repo_x").setValue();
-  server_.setBindUnmountResult("/mnt/repo_x/y").setValue();
+  server_.setFuseUnmountResult(repoXPath).setValue();
+  server_.setBindUnmountResult(repoXPath + "/y").setValue();
 
   // Register results for the other unmount operations that should occur.
-  server_.setFuseUnmountResult("/mnt/abc").setValue();
-  server_.setBindUnmountResult("/mnt/abc/foo/buck-out").setValue();
-  server_.setBindUnmountResult("/mnt/abc/xyz/test/buck-out").setValue();
-  server_.setFuseUnmountResult("/mnt/xyz").setValue();
-  server_.setBindUnmountResult("/mnt/xyz/buck-out").setValue();
-  server_.setFuseUnmountResult("/data/users/johndoe/myrepo").setValue();
+  server_.setFuseUnmountResult(abcPath).setValue();
+  server_.setBindUnmountResult(abcPath + "/foo/buck-out").setValue();
+  server_.setBindUnmountResult(abcPath + "/xyz/test/buck-out").setValue();
+  server_.setFuseUnmountResult(xyzPath).setValue();
+  server_.setBindUnmountResult(xyzPath + "/buck-out").setValue();
+  server_.setFuseUnmountResult(myrepoPath).setValue();
 
   // Shut down the privhelper.  It should unmount the registered mount points.
   cleanup();
   EXPECT_THAT(
-      server_.getUnusedFuseUnmountResults(),
-      UnorderedElementsAre("/mnt/repo_x"));
+      server_.getUnusedFuseUnmountResults(), UnorderedElementsAre(repoXPath));
   EXPECT_THAT(
       server_.getUnusedBindUnmountResults(),
-      UnorderedElementsAre("/mnt/repo_x/y"));
+      UnorderedElementsAre(repoXPath + "/y"));
 }
 
 TEST_F(PrivHelperTest, detachEventBase) {
+  auto barMountPoint = makeTempDir("bar");
+  auto barPath = barMountPoint.path().string();
   // Perform one call using the current EventBase
   TemporaryFile tempFile;
-  auto filePromise = server_.setFuseMountResult("/foo/bar");
-  auto result = client_->fuseMount("/foo/bar", false);
+  auto filePromise = server_.setFuseMountResult(barPath);
+  auto result = client_->fuseMount(barPath, false);
   EXPECT_FALSE(result.isReady());
   filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
   auto resultFile = std::move(result).get(1s);
@@ -475,9 +538,12 @@ TEST_F(PrivHelperTest, detachEventBase) {
     EventBase evb;
     client_->attachEventBase(&evb);
 
-    filePromise = server_.setFuseMountResult("/new/event/base");
-    server_.setFuseUnmountResult("/new/event/base").setValue();
-    result = client_->fuseMount("/new/event/base", false);
+    auto newMountPoint = makeTempDir("new");
+    auto newPath = newMountPoint.path().string();
+
+    filePromise = server_.setFuseMountResult(newPath);
+    server_.setFuseUnmountResult(newPath).setValue();
+    result = client_->fuseMount(newPath, false);
     // The result should not be immediately ready since we have not fulfilled
     // the promise yet.  It will only be ready if something unexpected failed.
     if (result.isReady()) {
@@ -505,8 +571,8 @@ TEST_F(PrivHelperTest, detachEventBase) {
       [&] { client_->attachEventBase(clientIoThread_.getEventBase()); });
 
   // Perform another call with the clientIoThread_ EventBase
-  auto unmountPromise = server_.setFuseUnmountResult("/foo/bar");
-  auto unmountResult = client_->fuseUnmount("/foo/bar");
+  auto unmountPromise = server_.setFuseUnmountResult(barPath);
+  auto unmountResult = client_->fuseUnmount(barPath);
   EXPECT_FALSE(unmountResult.isReady());
   unmountPromise.setValue();
   std::move(unmountResult).get(1s);

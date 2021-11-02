@@ -824,6 +824,8 @@ UnixSocket::Message PrivHelperServer::processTakeoverStartupMsg(
   XLOG(DBG3) << "takeover startup for \"" << mountPath << "\"; "
              << bindMounts.size() << " bind mounts";
 
+  sanityCheckMountPoint(mountPath);
+
   mountPoints_.insert(mountPath);
   return makeResponse();
 }
@@ -833,6 +835,8 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
   bool readOnly;
   PrivHelperConn::parseMountRequest(cursor, mountPath, readOnly);
   XLOG(DBG3) << "mount \"" << mountPath << "\"";
+
+  sanityCheckMountPoint(mountPath);
 
   auto fuseDev = fuseMount(mountPath.c_str(), readOnly);
   mountPoints_.insert(mountPath);
@@ -848,6 +852,8 @@ UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
   PrivHelperConn::parseMountNfsRequest(
       cursor, mountPath, mountdAddr, nfsdAddr, readOnly, iosize);
   XLOG(DBG3) << "mount.nfs \"" << mountPath << "\"";
+
+  sanityCheckMountPoint(mountPath);
 
   nfsMount(mountPath, mountdAddr, nfsdAddr, readOnly, iosize);
   mountPoints_.insert(mountPath);

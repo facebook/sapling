@@ -98,6 +98,15 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
 
+  /**
+   * Verify that the user has the right credentials to mount/unmount this path.
+   *
+   * This will check that the user has RW access to every path component
+   * leading to the mount point. A std::domain_error exception will be raised
+   * if the user doesn't have access to the mount point.
+   */
+  void sanityCheckMountPoint(const std::string& mountPoint);
+
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath, bool readOnly);
   virtual void nfsMount(
