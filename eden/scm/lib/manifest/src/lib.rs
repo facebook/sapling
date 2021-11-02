@@ -98,6 +98,22 @@ pub trait Manifest {
         other: &'a Self,
         matcher: &'a M,
     ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>>;
+
+    /// Calculates modified directories between two Manifests.
+    ///
+    /// A directory is considered "modified" if:
+    /// - It only exists in one Manifest.
+    /// - It exists in both Manifests. A direct sub-item (file or dir)
+    ///   is added, removed, or renamed.
+    ///
+    /// Similar to when the OS needs to update directory mtime.
+    /// Modifying content of a file alone does not count as modifying its
+    /// parent directory.
+    fn modified_dirs<'a, M: Matcher>(
+        &'a self,
+        other: &'a Self,
+        matcher: &'a M,
+    ) -> Result<Box<dyn Iterator<Item = Result<DirDiffEntry>> + 'a>>;
 }
 
 /// The result of a list operation. Given a path, the manifest will return:
@@ -213,6 +229,16 @@ impl FileMetadata {
 pub struct DiffEntry {
     pub path: RepoPathBuf,
     pub diff_type: DiffType,
+}
+
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub struct DirDiffEntry {
+    /// Path of the directory.
+    pub path: RepoPathBuf,
+    /// Exist on the left side.
+    pub left: bool,
+    /// Exist on the right side.
+    pub right: bool,
 }
 
 impl DiffEntry {

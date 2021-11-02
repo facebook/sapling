@@ -20,6 +20,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use bytes::Bytes;
 use manifest::DiffEntry;
+use manifest::DirDiffEntry;
 use manifest::Directory;
 use manifest::File;
 use manifest::FileMetadata;
@@ -330,6 +331,14 @@ impl Manifest for TreeManifest {
         matcher: &'a M,
     ) -> Result<Box<dyn Iterator<Item = Result<DiffEntry>> + 'a>> {
         Ok(Box::new(Diff::new(self, other, matcher)?))
+    }
+
+    fn modified_dirs<'a, M: Matcher>(
+        &'a self,
+        other: &'a Self,
+        matcher: &'a M,
+    ) -> Result<Box<dyn Iterator<Item = Result<DirDiffEntry>> + 'a>> {
+        todo!()
     }
 }
 
