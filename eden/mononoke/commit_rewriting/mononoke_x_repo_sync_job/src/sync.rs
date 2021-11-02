@@ -40,6 +40,16 @@ use std::{
 };
 use synced_commit_mapping::SyncedCommitMapping;
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum SyncResult {
+    Synced(Vec<ChangesetId>),
+    // SkippedNoKnownVersion usually happens when a new root commit was
+    // added to the repository, and its descendant are not merged into any
+    // mainline bookmark. See top level doc comments in main file for
+    // more details.
+    SkippedNoKnownVersion,
+}
+
 /// Sync all new commits and update the bookmark that were introduced by BookmarkUpdateLogEntry
 /// in the source repo.
 /// This function:
@@ -60,7 +70,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     mut scuba_sample: MononokeScubaSampleBuilder,
-) -> Result<Vec<ChangesetId>, Error> {
+) -> Result<SyncResult, Error> {
     info!(ctx.logger(), "processing log entry #{}", entry.id);
     let bookmark = commit_syncer.get_bookmark_renamer().await?(&entry.bookmark_name)
         .ok_or(format_err!("unexpected empty bookmark rename"))?;
@@ -82,7 +92,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
             )
             .await?;
 
-            return Ok(vec![]);
+            return Ok(SyncResult::Synced(vec![]));
         }
     };
 
@@ -113,14 +123,12 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     scuba_sample: MononokeScubaSampleBuilder,
-) -> Result<Vec<ChangesetId>, Error> {
+) -> Result<SyncResult, Error> {
     let (unsynced_ancestors, unsynced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(&ctx, &commit_syncer, to_cs_id.clone()).await?;
 
     let version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
-        // TODO(stash): do not use current version here, and instead do not sync
-        // these commits
-        commit_syncer.get_current_version(&ctx).await?
+        return Ok(SyncResult::SkippedNoKnownVersion);
     } else {
         let maybe_version = unsynced_ancestors_versions
             .get_only_version()
@@ -162,7 +170,8 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
                 unsynced_ancestors,
                 &version,
             )
-            .await;
+            .await
+            .map(SyncResult::Synced);
         }
     }
 
@@ -193,7 +202,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
         )
         .await?;
     }
-    Ok(res)
+    Ok(SyncResult::Synced(res))
 }
 
 /// This function syncs commits via pushrebase with a caveat - some commits shouldn't be
@@ -763,14 +772,30 @@ mod test {
             bookmark(&ctx, &smallrepo, "newrepohead")
                 .set_to(second_new_repo)
                 .await?;
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+
+            let res = sync(
+                &ctx,
+                &commit_syncer,
+                &mutable_counters,
+                &hashset! {BookmarkName::new("master")?},
+            )
+            .await?;
+            assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
 
             let merge = CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepohead"])
                 .commit()
                 .await?;
 
             bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+
+            sync_and_validate_with_common_bookmarks(
+                &ctx,
+                &commit_syncer,
+                &mutable_counters,
+                &hashset! {BookmarkName::new("master")?},
+                &hashset! {BookmarkName::new("newrepohead")?},
+            )
+            .await?;
 
             // Diamond merges are not allowed
             let diamond_merge =
@@ -890,14 +915,28 @@ mod test {
             bookmark(&ctx, &smallrepo, "newrepoimport")
                 .set_to(merge_new_repo)
                 .await?;
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+            let res = sync(
+                &ctx,
+                &commit_syncer,
+                &mutable_counters,
+                &hashset! {BookmarkName::new("master")?},
+            )
+            .await?;
+            assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
 
             let merge = CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepoimport"])
                 .commit()
                 .await?;
 
             bookmark(&ctx, &smallrepo, "master").set_to(merge).await?;
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+            sync_and_validate_with_common_bookmarks(
+                &ctx,
+                &commit_syncer,
+                &mutable_counters,
+                &hashset! {BookmarkName::new("master")?},
+                &hashset! {BookmarkName::new("newrepoimport")?},
+            )
+            .await?;
 
             Ok(())
         })
@@ -922,7 +961,14 @@ mod test {
             bookmark(&ctx, &smallrepo, "newrepohead")
                 .set_to(new_repo)
                 .await?;
-            sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
+            let res = sync(
+                &ctx,
+                &commit_syncer,
+                &mutable_counters,
+                &hashset! {BookmarkName::new("master")?},
+            )
+            .await?;
+            assert_eq!(res.last(), Some(&SyncResult::SkippedNoKnownVersion));
 
             let merge = CreateCommitContext::new(&ctx, &smallrepo, vec!["master", "newrepohead"])
                 .commit()
@@ -930,9 +976,15 @@ mod test {
 
             bookmark(&ctx, &smallrepo, "somebook").set_to(merge).await?;
             assert!(
-                sync_and_validate(&ctx, &commit_syncer, &mutable_counters)
-                    .await
-                    .is_err()
+                sync_and_validate_with_common_bookmarks(
+                    &ctx,
+                    &commit_syncer,
+                    &mutable_counters,
+                    &hashset! {BookmarkName::new("master")?},
+                    &hashset! {BookmarkName::new("newrepohead")?, BookmarkName::new("somebook")?},
+                )
+                .await
+                .is_err()
             );
             Ok(())
         })
@@ -961,6 +1013,7 @@ mod test {
             &commit_syncer,
             &mutable_counters,
             &hashset! { BookmarkName::new("master")?},
+            &hashset! {},
         )
         .await?;
 
@@ -975,7 +1028,8 @@ mod test {
 
         sync_and_validate_with_common_bookmarks(
             &ctx, &commit_syncer, &mutable_counters,
-            &hashset!{ BookmarkName::new("master")?, BookmarkName::new("another_pushrebase_bookmark")?}
+            &hashset!{ BookmarkName::new("master")?, BookmarkName::new("another_pushrebase_bookmark")?},
+            &hashset!{},
         ).await?;
 
         Ok(())
@@ -991,6 +1045,7 @@ mod test {
             commit_syncer,
             mutable_counters,
             &hashset! {BookmarkName::new("master")?},
+            &hashset! {},
         )
         .await
     }
@@ -1000,7 +1055,43 @@ mod test {
         commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
         mutable_counters: &SqlMutableCounters,
         common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+        should_be_missing: &HashSet<BookmarkName>,
     ) -> Result<(), Error> {
+        let smallrepo = commit_syncer.get_source_repo();
+        sync(
+            ctx,
+            commit_syncer,
+            mutable_counters,
+            common_pushrebase_bookmarks,
+        )
+        .await?;
+
+        let actually_missing = validation::find_bookmark_diff(ctx.clone(), commit_syncer)
+            .await?
+            .into_iter()
+            .map(|diff| diff.target_bookmark().clone())
+            .collect::<HashSet<_>>();
+        println!("actually missing bookmarks: {:?}", actually_missing);
+        assert_eq!(&actually_missing, should_be_missing,);
+
+        let heads: Vec<_> = smallrepo
+            .get_bonsai_heads_maybe_stale(ctx.clone())
+            .try_collect()
+            .await?;
+        for head in heads {
+            println!("verifying working copy for {}", head);
+            validation::verify_working_copy(ctx.clone(), commit_syncer.clone(), head).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn sync(
+        ctx: &CoreContext,
+        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+        mutable_counters: &SqlMutableCounters,
+        common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+    ) -> Result<Vec<SyncResult>, Error> {
         let smallrepo = commit_syncer.get_source_repo();
         let megarepo = commit_syncer.get_target_repo();
 
@@ -1031,11 +1122,12 @@ mod test {
             megarepo.get_repoid()
         );
 
+        let mut res = vec![];
         let source_skiplist_index = Source(Arc::new(SkiplistIndex::new()));
         let target_skiplist_index = Target(Arc::new(SkiplistIndex::new()));
         for entry in log_entries {
             let entry_id = entry.id;
-            sync_single_bookmark_update_log(
+            let single_res = sync_single_bookmark_update_log(
                 &ctx,
                 &commit_syncer,
                 entry,
@@ -1045,6 +1137,7 @@ mod test {
                 MononokeScubaSampleBuilder::with_discard(),
             )
             .await?;
+            res.push(single_res);
 
             mutable_counters
                 .set_counter(ctx.clone(), target_repo_id, &counter, entry_id, None)
@@ -1052,19 +1145,6 @@ mod test {
                 .await?;
         }
 
-        assert_eq!(
-            validation::find_bookmark_diff(ctx.clone(), commit_syncer).await?,
-            vec![],
-        );
-        let heads: Vec<_> = smallrepo
-            .get_bonsai_heads_maybe_stale(ctx.clone())
-            .try_collect()
-            .await?;
-        for head in heads {
-            println!("verifying working copy for {}", head);
-            validation::verify_working_copy(ctx.clone(), commit_syncer.clone(), head).await?;
-        }
-
-        Ok(())
+        Ok(res)
     }
 }

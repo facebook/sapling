@@ -8,12 +8,33 @@
 #![feature(auto_traits)]
 #![deny(warnings)]
 
+use crate::sync::SyncResult;
 /// Mononoke Cross Repo sync job
 ///
 /// This is a special job used to tail "small" Mononoke repo into "large" Mononoke repo when
 /// small repo is a source of truth (i.e. "hg push" go directly to small repo).
-/// At the moment the main limitation is that syncing of merges commits is not supported
-/// (though it will be changed soon to support some types of merges).
+/// At the moment there two main limitations:
+/// 1) Syncing of some merge commits is not supported
+/// 2) Root commits and their descendants that are not merged into a main line
+/// aren't going to be synced. For example,
+///   O <- main bookmark
+///   |
+///   O
+///   |   A <- new_bookmark, that added a new root commit
+///   O   |
+///    ...
+///
+///   Commit A, its ancestors and new_bookmark aren't going to be synced to the large repo.
+///   However if commit A gets merged into a mainline e.g.
+///   O <- main bookmark
+///   | \
+///   O  \
+///   |   A <- new_bookmark, that added a new root commit
+///   O   |
+///    ...
+///
+///   Then commit A and all of its ancestors WILL be synced to the large repo, however
+///   new_bookmark still WILL NOT be synced to the large repo.
 ///
 /// This job does tailing by following bookmark update log of the small repo and replaying
 /// each commit into the large repo. Note that some bookmarks called "common_pushrebase_bookmarks"
@@ -272,25 +293,27 @@ async fn tail<
                 .await;
 
                 log_bookmark_update_result(&ctx, entry_id, scuba_sample.clone(), &res, stats);
-                let synced_css = res?;
+                let maybe_synced_css = res?;
 
-                derive_data_for_csids(
-                    &ctx,
-                    &commit_syncer.get_target_repo(),
-                    synced_css,
-                    derived_data_types,
-                )?
-                .await?;
+                if let SyncResult::Synced(synced_css) = maybe_synced_css {
+                    derive_data_for_csids(
+                        &ctx,
+                        &commit_syncer.get_target_repo(),
+                        synced_css,
+                        derived_data_types,
+                    )?
+                    .await?;
 
-                maybe_apply_backpressure(
-                    ctx,
-                    mutable_counters,
-                    backpressure_params,
-                    commit_syncer.get_target_repo(),
-                    scuba_sample.clone(),
-                    sleep_secs,
-                )
-                .await?;
+                    maybe_apply_backpressure(
+                        ctx,
+                        mutable_counters,
+                        backpressure_params,
+                        commit_syncer.get_target_repo(),
+                        scuba_sample.clone(),
+                        sleep_secs,
+                    )
+                    .await?;
+                }
             } else {
                 info!(
                     ctx.logger(),

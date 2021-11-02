@@ -22,11 +22,14 @@ setup hg server repos
   $ cd $TESTTMP
   $ hginit_treemanifest fbs-hg-srv
   $ cd fbs-hg-srv
--- create an initial commit, which will be the last_synced_commit
+-- create an initial stack of commits, which will be the last_synced_commit
+-- note that stack is important here, because we have a heuristic in mononoke_x_repo_sync_job
+-- that looks at generation number to decide what is being merged.
   $ createfile fbcode/fbcodefile_fbsource
+  $ hg -q ci -m "fbsource commit 1"
   $ createfile arvr/arvrfile_fbsource
   $ createfile otherfile_fbsource
-  $ hg -q ci -m "fbsource commit 1" && hg book -ir . fbsource_c1
+  $ hg -q ci -m "fbsource commit 2" && hg book -ir . fbsource_c1
 
   $ hg up -q null
   $ createfile arvr/tomerge
@@ -73,21 +76,6 @@ insert sync mapping entry
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 
 run the sync again
-  $ mononoke_x_repo_sync 1 0 once --commit "$TOMERGE" |& grep -v "using repo"
-  *Reloading redacted config from configerator* (glob)
-  *Reloading redacted config from configerator* (glob)
-  *Reloading redacted config from configerator* (glob)
-  *Reloading redacted config from configerator* (glob)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
-  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
-  * Checking if 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 is already synced 1->0 (glob)
-  * 1 unsynced ancestors of 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 (glob)
-  * syncing 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 (glob)
-  * changeset 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 synced as fa8f65693524f78f5e0a40099d10acdc3001d6d472c62baabf03231e51b109c7 in * (glob)
-  * successful sync (glob)
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit fbsource_master |& grep -v "using repo"
   *Reloading redacted config from configerator* (glob)
   *Reloading redacted config from configerator* (glob)
@@ -99,8 +87,10 @@ run the sync again
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if * is already synced 1->0 (glob)
-  * 1 unsynced ancestors of 85b7d7910b3858629737adff1f3e2c4aa9f16b6239f115507cce6e91c8665df8 (glob)
-  * syncing 85b7d7910b3858629737adff1f3e2c4aa9f16b6239f115507cce6e91c8665df8 via pushrebase for master_bookmark (glob)
+  * 2 unsynced ancestors of 46bab414a4d4a87666622accf4af5e1450feba6bfd5f41467f5b5d671b41aa55 (glob)
+  * syncing 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 (glob)
+  * synced as * in *ms (glob)
+  * syncing 46bab414a4d4a87666622accf4af5e1450feba6bfd5f41467f5b5d671b41aa55 via pushrebase for master_bookmark (glob)
   * synced as * in *ms (glob)
   * successful sync (glob)
   $ flush_mononoke_bookmarks

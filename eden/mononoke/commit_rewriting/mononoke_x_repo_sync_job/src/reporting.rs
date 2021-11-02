@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use crate::sync::SyncResult;
 use anyhow::Error;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
 use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{error, info, Logger};
+use slog::{error, info, warn, Logger};
 use synced_commit_mapping::SyncedCommitMapping;
 
 pub const SCUBA_TABLE: &str = "mononoke_x_repo_sync";
@@ -183,15 +184,24 @@ pub fn log_bookmark_update_result(
     ctx: &CoreContext,
     entry_id: i64,
     mut scuba_sample: MononokeScubaSampleBuilder,
-    res: &Result<Vec<ChangesetId>, Error>,
+    res: &Result<SyncResult, Error>,
     stats: FutureStats,
 ) {
     scuba_sample.add(DURATION_MS, stats.completion_time.as_millis() as u64);
     match res {
-        Ok(_) => {
+        Ok(SyncResult::Synced(_)) => {
             info!(
                 ctx.logger(),
                 "successful sync bookmark update log #{}", entry_id
+            );
+            scuba_sample.add(SUCCESS, 1);
+            scuba_sample.log();
+        }
+        Ok(SyncResult::SkippedNoKnownVersion) => {
+            warn!(
+                ctx.logger(),
+                "Skipped syncing log entry #{} because no mapping version found. Is it a new root commit in the repo?",
+                entry_id
             );
             scuba_sample.add(SUCCESS, 1);
             scuba_sample.log();
