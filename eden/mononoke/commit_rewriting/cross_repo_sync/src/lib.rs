@@ -949,7 +949,7 @@ where
         .await?;
         match rewritten_commit {
             None => {
-                self.update_wc_equivalence(ctx, source_cs_id, None).await?;
+                self.set_no_sync_candidate(ctx, source_cs_id).await?;
                 Ok(None)
             }
             Some(rewritten) => {
@@ -1091,19 +1091,25 @@ where
         match rewritten {
             None => {
                 if remapped_parents_outcome.is_empty() {
-                    self.update_wc_equivalence(ctx, hash, None).await?;
+                    self.set_no_sync_candidate(ctx, hash).await?;
                 } else if remapped_parents_outcome.len() == 1 {
                     use CommitSyncOutcome::*;
                     let (sync_outcome, _) = &remapped_parents_outcome[0];
-                    let wc_equivalence = match sync_outcome {
-                        NotSyncCandidate => None,
-                        RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => {
-                            Some(*cs_id)
+                    match sync_outcome {
+                        NotSyncCandidate => {
+                            self.set_no_sync_candidate(ctx, hash).await?;
+                        }
+                        RewrittenAs(cs_id, version)
+                        | EquivalentWorkingCopyAncestor(cs_id, version) => {
+                            self.update_wc_equivalence_with_version(
+                                ctx,
+                                hash,
+                                Some(*cs_id),
+                                version.clone(),
+                            )
+                            .await?;
                         }
                     };
-
-                    self.update_wc_equivalence(ctx, hash, wc_equivalence)
-                        .await?;
                 } else {
                     return Err(ErrorKind::AmbiguousWorkingCopyEquivalent(
                         source_cs.get_changeset_id(),
@@ -1234,7 +1240,7 @@ where
             NotSyncCandidate => {
                 // If there's not working copy for parent commit then there's no working
                 // copy for child either.
-                self.update_wc_equivalence(ctx, source_cs_id, None).await?;
+                self.set_no_sync_candidate(ctx, source_cs_id).await?;
                 Ok(None)
             }
             RewrittenAs(remapped_p, version)
@@ -1431,15 +1437,20 @@ where
                         .values()
                         .next()
                         .ok_or(Error::msg("logic merge: cannot find merge parent"))?;
-                    self.update_wc_equivalence(ctx, source_cs_id, Some(*parent_cs_id))
-                        .await?;
+                    self.update_wc_equivalence_with_version(
+                        ctx,
+                        source_cs_id,
+                        Some(*parent_cs_id),
+                        version,
+                    )
+                    .await?;
                     Ok(Some(*parent_cs_id))
                 }
             }
         } else {
             // All parents of the merge commit are NotSyncCandidate, mark it as NotSyncCandidate
             // as well
-            self.update_wc_equivalence(ctx, source_cs_id, None).await?;
+            self.set_no_sync_candidate(ctx, source_cs_id).await?;
             Ok(None)
         }
     }
@@ -1525,21 +1536,15 @@ where
         }
     }
 
-    async fn update_wc_equivalence<'a>(
+    async fn set_no_sync_candidate<'a>(
         &'a self,
         ctx: &'a CoreContext,
         source_bcs_id: ChangesetId,
-        maybe_target_bcs_id: Option<ChangesetId>,
     ) -> Result<(), Error> {
         // TODO(stash, ikostia): use the real version that was used to remap a commit
         let version_name = self.get_current_version(&ctx).await?;
-        self.update_wc_equivalence_with_version(
-            ctx,
-            source_bcs_id,
-            maybe_target_bcs_id,
-            version_name,
-        )
-        .await
+        self.update_wc_equivalence_with_version(ctx, source_bcs_id, None, version_name)
+            .await
     }
 
     async fn update_wc_equivalence_with_version<'a>(
