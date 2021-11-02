@@ -79,8 +79,6 @@ class sqlindex(object):
         self.shorthasholdrevthreshold = ui.configint(
             "infinitepush", "shorthasholdrevthreshold", 60
         )
-        self.forwardfill = ui.configbool("infinitepush", "forwardfill")
-        self.replaybookmarks = ui.configbool("infinitepush", "replaybookmarks")
 
     def sqlconnect(self):
         if self.sqlconn:
@@ -154,12 +152,6 @@ class sqlindex(object):
             params=(bundleid, self.reponame),
         )
 
-        if self.forwardfill and bundleid is not None and not iscrossbackendsync:
-            self.sqlcursor.execute(
-                "INSERT INTO forwardfillerqueue(bundle, reponame) VALUES (%s, %s)",
-                params=(bundleid, self.reponame),
-            )
-
         # insert nodes to bundle mapping
 
         self.sqlcursor.executemany(
@@ -208,8 +200,6 @@ class sqlindex(object):
             params=(bookmark, node, self.reponame),
         )
 
-        self.logmanybookmarksforreplay({bookmark: node}, isbackup)
-
     def addmanybookmarks(self, bookmarks, isbackup):
         """Record the contents of the ``bookmarks`` dict as bookmarks."""
         if not self._connected:
@@ -225,8 +215,6 @@ class sqlindex(object):
             "VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE node=VALUES(node)",
             data,
         )
-
-        self.logmanybookmarksforreplay(bookmarks, isbackup)
 
     def deletebookmarks(self, patterns):
         """Delete all bookmarks that match any of the patterns in ``patterns``."""
@@ -415,32 +403,6 @@ class sqlindex(object):
             "UPDATE nodesmetadata SET optional_json_metadata=%s WHERE "
             "reponame=%s AND node=%s",
             params=(jsonmetadata, self.reponame, node),
-        )
-
-    def logmanybookmarksforreplay(self, bookmarks, isbackup):
-        """Log the contents of the ``bookmarks`` dict for replay."""
-
-        if isbackup:
-            # We don't replay backup bookmarks.
-            return
-
-        if not self.replaybookmarks:
-            return
-
-        data = [
-            (
-                bookmark,
-                node,
-                hashlib.sha1(pycompat.encodeutf8(bookmark)).hexdigest(),
-                self.reponame,
-            )
-            for (bookmark, node) in pycompat.iteritems(bookmarks)
-        ]
-
-        self.sqlcursor.executemany(
-            "INSERT INTO replaybookmarksqueue(bookmark, node, bookmark_hash, reponame) "
-            "VALUES (%s, %s, %s, %s)",
-            data,
         )
 
 

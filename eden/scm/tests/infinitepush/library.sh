@@ -74,20 +74,6 @@ reponame=$1
 EOF
 }
 
-enableforwardfill() {
-cat << EOF >> .hg/hgrc
-[infinitepush]
-forwardfill=True
-EOF
-}
-
-enablereplaybookmarks() {
-cat << EOF >> .hg/hgrc
-[infinitepush]
-replaybookmarks=True
-EOF
-}
-
 createinfinitepushtablessql() {
   cat <<EOF
 DROP TABLE IF EXISTS nodestobundle;

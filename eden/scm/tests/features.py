@@ -9,10 +9,6 @@ mutationblacklist = """
     test-fb-hgext-hiddenerror.t
     test-fb-hgext-treemanifest-infinitepush.t
     test-fb-hgext-treemanifest-treeonly-linknodes.t
-    test-infinitepush-forwardfillerqueue.t
-    test-infinitepush-replaybookmarksqueue-ignore-backup.t
-    test-infinitepush-replaybookmarksqueue-multiple-updates.t
-    test-infinitepush-replaybookmarksqueue-one-bookmark.t
     test-inherit-mode.t
     test-mutation-fromobsmarkers.t
     test-rebase-dest.t
