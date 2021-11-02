@@ -53,7 +53,7 @@ enum MyEnum {
     #[id(1)]
     A,
     #[id(2)]
-    B,
+    B(u32),
 }
 
 impl Default for MyEnum {
@@ -85,7 +85,7 @@ impl Arbitrary for MyEnum {
         if Arbitrary::arbitrary(g) {
             Self::A
         } else {
-            Self::B
+            Self::B(Arbitrary::arbitrary(g))
         }
     }
 }
@@ -113,4 +113,10 @@ fn main() {
     assert_eq!(x, y.clone().to_api().unwrap());
     assert_eq!(&serde_json::to_string(&y).unwrap(), r#""1""#);
     assert_eq!(WireMyEnum::default().to_api().unwrap(), MyEnum::A);
+
+    let x = MyEnum::B(12);
+    let y = WireMyEnum::B(12);
+    assert_eq!(x.clone().to_wire(), y);
+    assert_eq!(x, y.clone().to_api().unwrap());
+    assert_eq!(&serde_json::to_string(&y).unwrap(), r#"{"2":12}"#);
 }

@@ -208,7 +208,6 @@ fn get_wire_enum(original: &mut ItemEnum) -> Result<TokenStream> {
     let mut variants = vec![];
     let mut ids = HashSet::new();
     item.variants.iter_mut().try_for_each(|ref mut variant| {
-        variants.push(variant.ident.clone());
         let (id, other_attrs) = extract_id(std::mem::take(&mut variant.attrs), &variant, &mut ids)?;
         variant.attrs = other_attrs;
         if id == 0 {
@@ -216,15 +215,22 @@ fn get_wire_enum(original: &mut ItemEnum) -> Result<TokenStream> {
         }
         let name = format!("{}", id);
         variant.attrs.push(parse_quote!( #[serde(rename=#name)]));
-        match &mut variant.fields {
-            Fields::Unit => {}
+        let unit = match &mut variant.fields {
+            Fields::Unit => true,
+            Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
+                let field = fields.unnamed.first_mut().unwrap();
+                let ty = &field.ty;
+                field.ty = parse_quote!( <#ty as crate::ToWire>::Wire );
+                false
+            }
             _ => {
                 return Err(Error::new(
                     variant.fields.span(),
-                    "Only enum with unit fields supported",
+                    "Only unit variants or with a single field supported",
                 ));
             }
-        }
+        };
+        variants.push((variant.ident.clone(), unit));
         Ok(())
     })?;
     item.variants.push_value(parse_quote!(
@@ -237,9 +243,13 @@ fn get_wire_enum(original: &mut ItemEnum) -> Result<TokenStream> {
         remove_id(&mut variant.attrs);
     });
 
-    let variants_to_wire = variants
-        .iter()
-        .map(|name| quote! { Self::#name => Self::Wire::#name });
+    let variants_to_wire = variants.iter().map(|(name, unit)| {
+        if *unit {
+            quote! { Self::#name => Self::Wire::#name }
+        } else {
+            quote! { Self::#name(value) => Self::Wire::#name(value.to_wire()) }
+        }
+    });
 
     let generics = &original.generics;
 
@@ -255,9 +265,13 @@ fn get_wire_enum(original: &mut ItemEnum) -> Result<TokenStream> {
         }
     };
 
-    let variants_to_api = variants
-        .iter()
-        .map(|name| quote! { Self::#name => Ok(Self::Api::#name) });
+    let variants_to_api = variants.iter().map(|(name, unit)| {
+        if *unit {
+            quote! { Self::#name => Ok(Self::Api::#name) }
+        } else {
+            quote! { Self::#name(value) => Ok(Self::Api::#name(value.to_api()?)) }
+        }
+    });
 
     let to_api_impl = quote! {
         impl #generics crate::ToApi for #wire_ident #generics {
