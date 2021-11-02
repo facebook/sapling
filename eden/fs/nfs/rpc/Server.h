@@ -88,7 +88,8 @@ class RpcServer {
    private:
     void connectionAccepted(
         folly::NetworkSocket fd,
-        const folly::SocketAddress& clientAddr) noexcept override;
+        const folly::SocketAddress& clientAddr,
+        AcceptInfo /* info */) noexcept override;
 
     void acceptError(const std::exception& ex) noexcept override;
 

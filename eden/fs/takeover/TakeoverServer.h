@@ -48,7 +48,8 @@ class TakeoverServer : private folly::AsyncServerSocket::AcceptCallback {
   // AcceptCallback methods
   void connectionAccepted(
       folly::NetworkSocket fdNetworkSocket,
-      const folly::SocketAddress& clientAddr) noexcept override;
+      const folly::SocketAddress& clientAddr,
+      AcceptInfo /* info */) noexcept override;
   void acceptError(folly::exception_wrapper ex) noexcept override;
 
   void connectionDone(ConnHandler* handler);

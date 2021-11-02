@@ -364,7 +364,8 @@ void RpcTcpHandler::dispatchAndReply(
 
 void RpcServer::RpcAcceptCallback::connectionAccepted(
     folly::NetworkSocket fd,
-    const folly::SocketAddress& clientAddr) noexcept {
+    const folly::SocketAddress& clientAddr,
+    AcceptInfo /* info */) noexcept {
   XLOG(DBG7) << "Accepted connection from: " << clientAddr;
   auto socket = AsyncSocket::newSocket(evb_, fd);
   auto handler = RpcTcpHandler::create(proc_, std::move(socket), threadPool_);

@@ -297,7 +297,8 @@ void TakeoverServer::start() {
 
 void TakeoverServer::connectionAccepted(
     folly::NetworkSocket fdNetworkSocket,
-    const folly::SocketAddress& /* clientAddr */) noexcept {
+    const folly::SocketAddress& /* clientAddr */,
+    AcceptInfo /* info */) noexcept {
   int fd = fdNetworkSocket.toFd();
 
   folly::File socket(fd, /* ownsFd */ true);
