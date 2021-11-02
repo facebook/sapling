@@ -338,7 +338,7 @@ impl Manifest for TreeManifest {
         other: &'a Self,
         matcher: &'a M,
     ) -> Result<Box<dyn Iterator<Item = Result<DirDiffEntry>> + 'a>> {
-        todo!()
+        Ok(Box::new(Diff::new(self, other, matcher)?.modified_dirs()))
     }
 }
 
