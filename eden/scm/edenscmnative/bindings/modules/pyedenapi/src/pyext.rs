@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -46,7 +47,8 @@ use edenapi_types::HgChangesetContent;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
-use edenapi_types::LookupResponse;
+use edenapi_types::IndexableId;
+use edenapi_types::LookupResult;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
@@ -351,7 +353,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         ids: Vec<PyBytes>,
-    ) -> PyResult<Serde<Vec<LookupResponse>>> {
+    ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
         self.lookup_py(
             py,
             repo,
@@ -368,7 +370,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         nodes: Vec<HgId>,
-    ) -> PyResult<Serde<Vec<LookupResponse>>> {
+    ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
         self.lookup_py(
             py,
             repo,
@@ -381,7 +383,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         ids: Vec<HgId>,
-    ) -> PyResult<Serde<Vec<LookupResponse>>> {
+    ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
         self.lookup_py(py, repo, ids.into_iter().map(AnyId::HgFilenodeId).collect())
     }
 
@@ -390,7 +392,7 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         ids: Vec<HgId>,
-    ) -> PyResult<Serde<Vec<LookupResponse>>> {
+    ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
         self.lookup_py(py, repo, ids.into_iter().map(AnyId::HgTreeId).collect())
     }
 
@@ -400,7 +402,7 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         filenodes_ids: Vec<HgId>,
         trees_ids: Vec<HgId>,
-    ) -> PyResult<Serde<Vec<LookupResponse>>> {
+    ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
         self.lookup_py(
             py,
             repo,
@@ -417,9 +419,50 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         ids: Vec<AnyId>,
-    ) -> PyResult<Serde<Vec<LookupResponse>>> {
+    ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
         let responses = py
-            .allow_threads(|| block_unless_interrupted(self.lookup_batch(repo, ids, None)))
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    // Deduplicates input, keeping indexes
+                    let indexable_ids: HashMap<IndexableId, Vec<usize>> = ids
+                        .iter()
+                        .cloned()
+                        .map(|id| IndexableId {
+                            id,
+                            bubble_id: None,
+                        })
+                        .enumerate()
+                        .fold(HashMap::new(), |mut map, (idx, id)| {
+                            map.entry(id).or_default().push(idx);
+                            map
+                        });
+                    let request_ids: Vec<_> =
+                        indexable_ids.iter().map(|(id, _)| id.clone()).collect();
+                    self.lookup_batch(
+                        repo,
+                        request_ids.iter().map(|id| id.id.clone()).collect(),
+                        None,
+                    )
+                    .await
+                    .map(|responses| {
+                        responses
+                            .into_iter()
+                            .flat_map(|r| {
+                                match r.into_result_consider_old(request_ids.as_slice()) {
+                                    LookupResult::Present(token) => indexable_ids
+                                        .get(&token.indexable_id())
+                                        .cloned()
+                                        .unwrap_or_default()
+                                        .into_iter()
+                                        .map(|idx| (idx, token.clone()))
+                                        .collect(),
+                                    LookupResult::NotPresent(_) => vec![],
+                                }
+                            })
+                            .collect()
+                    })
+                })
+            })
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(responses))

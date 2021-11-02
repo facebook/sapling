@@ -10,6 +10,7 @@ use serde::Serialize;
 
 use crate::token::UploadTokenMetadata;
 pub use crate::token::WireFileContentTokenMetadata;
+pub use crate::token::WireIndexableId;
 pub use crate::token::WireUploadToken;
 pub use crate::token::WireUploadTokenData;
 pub use crate::token::WireUploadTokenSignature;
@@ -57,5 +58,5 @@ mod tests {
     use super::*;
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(WireUploadToken);
+    auto_wire_tests!(WireUploadToken, WireIndexableId);
 }

@@ -35,7 +35,6 @@ use edenapi_types::FileSpec;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
-use edenapi_types::LookupResponse;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
@@ -274,28 +273,28 @@ py_class!(pub class client |py| {
 
     /// lookup_file_contents(repo: str, content_ids: [bytes])
     def lookup_file_contents(&self, repo: String, content_ids: Vec<PyBytes>)
-        -> PyResult<Serde<Vec<LookupResponse>>>
+        -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
         self.inner(py).clone().lookup_file_contents(py, repo, content_ids)
     }
 
     /// lookup_commits(repo: str, nodes: [bytes])
     def lookup_commits(&self, repo: String, nodes: Serde<Vec<HgId>>)
-        -> PyResult<Serde<Vec<LookupResponse>>>
+        -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
         self.inner(py).clone().lookup_commits(py, repo, nodes.0)
     }
 
     /// lookup_filenodes(repo: str, filenodes: [bytes])
     def lookup_filenodes(&self, repo: String, hgids: Serde<Vec<HgId>>)
-        -> PyResult<Serde<Vec<LookupResponse>>>
+        -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
         self.inner(py).clone().lookup_filenodes(py, repo, hgids.0)
     }
 
     /// lookup_trees(repo: str, trees: [bytes])
     def lookup_trees(&self, repo: String, hgids: Serde<Vec<HgId>>)
-        -> PyResult<Serde<Vec<LookupResponse>>>
+        -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
         self.inner(py).clone().lookup_trees(py, repo, hgids.0)
     }
@@ -303,7 +302,7 @@ py_class!(pub class client |py| {
 
     /// lookup_filenodes_and_trees(repo: str, filenodes: [bytes], trees: [bytes])
     def lookup_filenodes_and_trees(&self, repo: String, filenodes: Serde<Vec<HgId>>, trees: Serde<Vec<HgId>>)
-        -> PyResult<Serde<Vec<LookupResponse>>>
+        -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
         self.inner(py).clone().lookup_filenodes_and_trees(py, repo, filenodes.0, trees.0)
     }

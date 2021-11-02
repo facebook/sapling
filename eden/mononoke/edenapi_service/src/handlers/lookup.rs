@@ -103,7 +103,7 @@ async fn check_request_item(
 
     Ok(LookupResponse {
         index,
-        token: match lookup {
+        old_token: match lookup {
             Lookup::NotPresent => None,
             Lookup::Present(None) => Some(UploadToken::new_fake_token(item.id, item.bubble_id)),
             Lookup::Present(Some(metadata)) => Some(UploadToken::new_fake_token_with_metadata(
@@ -112,6 +112,7 @@ async fn check_request_item(
                 metadata,
             )),
         },
+        result: Default::default(),
     })
 }
 

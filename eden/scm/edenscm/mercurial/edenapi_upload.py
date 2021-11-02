@@ -54,14 +54,12 @@ def _filteruploaded(repo, files, trees):
             blobslen = len(files)
 
             foundindicesblobs = {
-                item[INDEX_KEY]
-                for item in results
-                if item[TOKEN_KEY] and "HgFilenodeId" in item[TOKEN_KEY]["data"]["id"]
+                idx for idx, token in results if "HgFilenodeId" in token["data"]["id"]
             }
             foundindicestrees = {
-                item[INDEX_KEY] - blobslen
-                for item in results
-                if item[TOKEN_KEY] and "HgTreeId" in item[TOKEN_KEY]["data"]["id"]
+                idx - blobslen
+                for idx, token in results
+                if "HgTreeId" in token["data"]["id"]
             }
 
             missingfiles = [

@@ -57,6 +57,17 @@ pub struct UploadTokenSignature {
     pub signature: Vec<u8>,
 }
 
+/// Uniquely identifies an id an upload token can refer to.
+/// Can be used as a key in maps/sets.
+#[auto_wire]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq, Hash)]
+pub struct IndexableId {
+    #[id(1)]
+    pub id: AnyId,
+    #[id(2)]
+    pub bubble_id: Option<NonZeroU64>,
+}
+
 #[auto_wire]
 #[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct UploadToken {
@@ -97,6 +108,13 @@ impl UploadToken {
         }
     }
     // TODO: implement secure signed tokens
+
+    pub fn indexable_id(&self) -> IndexableId {
+        IndexableId {
+            id: self.data.id.clone(),
+            bubble_id: self.data.bubble_id,
+        }
+    }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -105,6 +123,16 @@ impl Arbitrary for UploadToken {
         Self {
             data: Arbitrary::arbitrary(g),
             signature: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for IndexableId {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        Self {
+            id: Arbitrary::arbitrary(g),
+            bubble_id: Arbitrary::arbitrary(g),
         }
     }
 }

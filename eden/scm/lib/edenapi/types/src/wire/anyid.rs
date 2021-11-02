@@ -14,6 +14,7 @@ use crate::anyid::AnyId;
 use crate::anyid::BonsaiChangesetId;
 pub use crate::anyid::WireLookupRequest;
 pub use crate::anyid::WireLookupResponse;
+pub use crate::anyid::WireLookupResult;
 use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireAnyFileContentId;
@@ -111,5 +112,10 @@ mod tests {
     use super::*;
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(WireAnyId, WireLookupRequest, WireLookupResponse);
+    auto_wire_tests!(
+        WireAnyId,
+        WireLookupRequest,
+        WireLookupResponse,
+        WireLookupResult,
+    );
 }

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::fs::create_dir_all;
@@ -63,8 +64,10 @@ use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
 use edenapi_types::HistoryRequest;
+use edenapi_types::IndexableId;
 use edenapi_types::LookupRequest;
 use edenapi_types::LookupResponse;
+use edenapi_types::LookupResult;
 use edenapi_types::ServerError;
 use edenapi_types::ToApi;
 use edenapi_types::ToWire;
@@ -778,59 +781,45 @@ impl EdenApi for Client {
         repo: String,
         hgids: Vec<HgId>,
     ) -> Result<Vec<CommitKnownResponse>, EdenApiError> {
-        let entries = self
-            .lookup_batch(
-                repo,
-                hgids
-                    .clone()
-                    .into_iter()
-                    .map(|hgid| AnyId::HgChangesetId(hgid))
-                    .collect(),
-                None,
-            )
-            .await?;
+        let anyids: Vec<_> = hgids
+            .iter()
+            .cloned()
+            .map(|hgid| AnyId::HgChangesetId(hgid))
+            .collect();
+        let entries = self.lookup_batch(repo, anyids.clone(), None).await?;
 
-        let mut knowns: Vec<Option<bool>> = vec![None; hgids.len()];
+        let ids: Vec<_> = anyids
+            .iter()
+            .cloned()
+            .map(|id| IndexableId {
+                id,
+                bubble_id: None,
+            })
+            .collect();
 
-        // Convert `lookup_batch` to Vec<Option<bool>> with token validation (check `HgChangesetId` in the token is correct for the index).
-        // `Some(true)`: The server verified that `hgid` is known.
-        // `Some(false)`: The server does not known `hgid`.
-        // `None`: The server failed to check `hgid` due to some error.
-        //         The existing API doesn't provide information for what id was the error,
-        //         so log the original error and convert it to a generic "the server cannot check `HgChangesetId`"
+        let into_hgid = |id: IndexableId| match id.id {
+            AnyId::HgChangesetId(hgid) => Ok(hgid),
+            _ => Err(EdenApiError::Other(format_err!("Invalid id returned"))),
+        };
 
-        for entry in entries {
-            if entry.index >= hgids.len() {
-                return Err(EdenApiError::Other(format_err!(
-                    "`lookup_batch` returned an invalid index"
-                )));
-            }
-            match entry.token {
-                Some(token) => {
-                    if let AnyId::HgChangesetId(token_id) = token.data.id {
-                        if token_id != hgids[entry.index] {
-                            return Err(EdenApiError::Other(format_err!(
-                                "`lookup_batch` returned an invalid token or an invalid index"
-                            )));
-                        }
-                        knowns[entry.index] = Some(true)
-                    } else {
-                        return Err(EdenApiError::Other(format_err!(
-                            "`lookup_batch` returned an invalid token"
-                        )));
+        let id_to_token: HashMap<HgId, Option<UploadToken>> = entries
+            .into_iter()
+            .map(
+                |response| match response.into_result_consider_old(ids.as_slice()) {
+                    LookupResult::NotPresent(id) => Ok((into_hgid(id)?, None)),
+                    LookupResult::Present(token) => {
+                        Ok((into_hgid(token.indexable_id())?, Some(token)))
                     }
-                }
-                None => knowns[entry.index] = Some(false),
-            }
-        }
+                },
+            )
+            .collect::<Result<_, EdenApiError>>()?;
 
         Ok(hgids
             .into_iter()
-            .zip(knowns)
-            .map(|(hgid, res)| match res {
+            .map(|hgid| match id_to_token.get(&hgid) {
                 Some(value) => CommitKnownResponse {
                     hgid,
-                    known: Ok(value),
+                    known: Ok(value.is_some()),
                 },
                 None => CommitKnownResponse {
                     hgid,
@@ -910,19 +899,26 @@ impl EdenApi for Client {
         }
         // Filter already uploaded file contents first
 
-        let mut uploaded_indices = HashSet::<usize>::new();
+        let mut uploaded_ids = HashSet::new();
         let mut uploaded_tokens: Vec<UploadToken> = vec![];
 
-        let anyids = data
+        let anyids: Vec<_> = data
             .iter()
             .map(|(id, _data)| AnyId::AnyFileContentId(id.clone()))
             .collect();
 
-        let entries = self.lookup_batch(repo.clone(), anyids, bubble_id).await?;
+        let entries = self
+            .lookup_batch(repo.clone(), anyids.clone(), bubble_id)
+            .await?;
+        let ids: Vec<_> = anyids
+            .iter()
+            .cloned()
+            .map(|id| IndexableId { id, bubble_id })
+            .collect();
         for entry in entries {
-            if let Some(token) = entry.token {
-                uploaded_indices.insert(entry.index);
-                uploaded_tokens.push(token)
+            if let LookupResult::Present(token) = entry.into_result_consider_old(ids.as_slice()) {
+                uploaded_ids.insert(token.indexable_id());
+                uploaded_tokens.push(token);
             }
         }
 
@@ -935,9 +931,13 @@ impl EdenApi for Client {
         // Upload the rest of the contents in parallel
         let new_tokens = stream::iter(
             data.into_iter()
-                .enumerate()
-                .filter(|(index, _)| !uploaded_indices.contains(index))
-                .map(|(_, (id, content))| {
+                .filter(|(id, _content)| {
+                    !uploaded_ids.contains(&IndexableId {
+                        id: AnyId::AnyFileContentId(id.clone()),
+                        bubble_id,
+                    })
+                })
+                .map(|(id, content)| {
                     let repo = repo.clone();
                     async move {
                         self.process_single_file_upload(repo, id, content, bubble_id)

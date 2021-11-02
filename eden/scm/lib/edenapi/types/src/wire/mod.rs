@@ -83,6 +83,7 @@ use types::RepoPathBuf;
 pub use crate::wire::anyid::WireAnyId;
 pub use crate::wire::anyid::WireLookupRequest;
 pub use crate::wire::anyid::WireLookupResponse;
+pub use crate::wire::anyid::WireLookupResult;
 pub use crate::wire::batch::WireBatch;
 pub use crate::wire::bookmark::WireBookmarkEntry;
 pub use crate::wire::bookmark::WireBookmarkRequest;
