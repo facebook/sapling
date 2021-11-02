@@ -56,7 +56,6 @@ use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
-use edenapi_types::UploadTreeResponse;
 use futures::prelude::*;
 use futures::stream;
 use progress::ProgressBar;
@@ -679,7 +678,7 @@ pub trait EdenApiPyExt: EdenApi {
             Serde<HgId>, /* p2 */
             PyBytes,     /* data */
         )>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTreeResponse>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         let items = to_trees_upload_items(py, &items)?;
         let (responses, stats) = py
             .allow_threads(|| {
@@ -691,7 +690,7 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let responses_py = responses.map_ok(|r| Serde(r.token)).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((responses_py.into(), stats_py))
     }

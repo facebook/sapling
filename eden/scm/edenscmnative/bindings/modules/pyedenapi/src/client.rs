@@ -41,7 +41,6 @@ use edenapi_types::TreeEntry;
 use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
-use edenapi_types::UploadTreeResponse;
 use futures::TryStreamExt;
 use minibytes::Bytes;
 use progress::NullProgressFactory;
@@ -345,7 +344,7 @@ py_class!(pub class client |py| {
             Serde<HgId>,  /* p2 */
             PyBytes,      /* data */
         )>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTreeResponse>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         self.inner(py).clone().uploadtrees_py(py, repo, items)
     }
 

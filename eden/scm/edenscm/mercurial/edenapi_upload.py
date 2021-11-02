@@ -120,14 +120,14 @@ def _uploadtrees(repo, treesbase):
     try:
         with repo.ui.timesection("http.edenapi.upload_trees"):
             stream, _stats = repo.edenapi.uploadtrees(getreponame(repo), trees)
-            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+            trees = list(stream)
             repo.ui.status(
                 _n(
                     "uploaded %d tree\n",
                     "uploaded %d trees\n",
-                    len(foundindices),
+                    len(trees),
                 )
-                % len(foundindices),
+                % len(trees),
                 component="edenapi",
             )
     except (error.RustError, error.HttpError) as e:
