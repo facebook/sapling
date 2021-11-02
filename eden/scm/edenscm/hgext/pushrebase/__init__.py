@@ -26,18 +26,11 @@ Configs:
 
     ``pushrebase.verbose`` print verbose messages from the server.
 
-    ``pushrebase.enablerecording`` whether to enable the recording of pushrebase
-    requests.
-
     ``pushrebase.bundlepartuploadbinary`` binary and command line arguments that
     will be called to upload bundle2 part. One of the arguments should contain
     '{filename}' to specify a filename with a bundle2 part. It should return
     a handle, that can later be used to access the part. Note: handles MUST NOT
     contain whitespaces.
-
-    ``pushrebase.recordingrepoid`` id of the repo for the pushrebase recording
-
-    ``pushrebase.recordingsqlargs`` sql arguments for the pushrebase recording
 
     ``pushrebase.syncondispatch`` perform a full SQL sync when receiving pushes
 
@@ -92,7 +85,7 @@ from ..remotefilelog import (
     shallowbundle,
     wirepack,
 )
-from . import common, recording, stackpush
+from . import common, stackpush
 from .errors import ConflictsError, StackPushUnsupportedError
 
 
@@ -314,31 +307,12 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
             replaydata=replaydata,
             respondlightly=respondlightly,
         )
-        recording.recordpushrebaserequest(
-            repo, conflicts=None, pushrebaseerrmsg=None, starttime=starttime
-        )
         return result
-    except ConflictsError as ex:
-        recording.recordpushrebaserequest(
-            repo,
-            conflicts="\n".join(sorted(ex.conflicts)),
-            pushrebaseerrmsg=None,
-            starttime=starttime,
-        )
-        raise
     except error.HookAbort as ex:
         if ex.reason:
             errmsg = "%s reason: %s" % (ex, ex.reason)
         else:
             errmsg = "%s" % ex
-        recording.recordpushrebaserequest(
-            repo, conflicts=None, pushrebaseerrmsg=errmsg, starttime=starttime
-        )
-        raise
-    except Exception as ex:
-        recording.recordpushrebaserequest(
-            repo, conflicts=None, pushrebaseerrmsg="%s" % ex, starttime=starttime
-        )
         raise
 
 
@@ -806,14 +780,7 @@ def _exchangesetup():
                 bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
                 bundle = _createbundlerepo(op, bundlepath)
 
-                def setrecordingparams(repo, ontoparam, ontoctx):
-                    repo.pushrebaserecordingparams = {
-                        "onto": ontoparam,
-                        "ontorev": ontoctx and ontoctx.hex(),
-                    }
-
                 ontoctx = resolveonto(op.repo, ontoparam)
-                setrecordingparams(op.repo, ontoparam, ontoctx)
 
                 prepushrebasehooks(op, params, bundle, bundlefile)
 
@@ -876,7 +843,6 @@ def _exchangesetup():
                     # section.
                     log(_("checking conflicts with %s\n") % (ontoctx,))
 
-                    setrecordingparams(op.repo, ontoparam, ontoctx)
                     pushrequest.check(ontoctx)
 
                     # Print and log what commits to push.
@@ -901,7 +867,6 @@ def _exchangesetup():
                         _("rebasing stack from %s onto %s\n")
                         % (short(pushrequest.stackparentnode), ontoctx)
                     )
-                    setrecordingparams(op.repo, ontoparam, ontoctx)
                     added, replacements = pushrequest.pushonto(
                         ontoctx, getcommitdatefn=common.commitdategenerator(op)
                     )
@@ -927,7 +892,6 @@ def _exchangesetup():
 
                     onto = getontotarget(op, params, bundle)
 
-                    setrecordingparams(op.repo, ontoparam, onto)
                     revs, oldonto = _getrevs(op, bundle, onto, renamesrccache)
 
                     op.repo.hook("prechangegroup", throw=True, **hookargs)
@@ -958,34 +922,6 @@ def _exchangesetup():
 
                 markers = _buildobsolete(replacements, bundle, op.repo, markerdate)
             finally:
-                pushrebaserecordingparams = getattr(
-                    op.repo, "pushrebaserecordingparams", None
-                )
-                if pushrebaserecordingparams is not None:
-                    rebasedctx = resolveonto(op.repo, ontoparam)
-                    if rebasedctx:
-                        pushrebaserecordingparams["onto_rebased_rev"] = rebasedctx.hex()
-                    pushrebaserecordingparams.update(
-                        {
-                            "replacements_revs": json.dumps(
-                                {
-                                    hex(k): hex(v)
-                                    for k, v in getattr(
-                                        op.repo, "pushrebasereplacements", {}
-                                    ).items()
-                                }
-                            ),
-                            "ordered_added_revs": json.dumps(
-                                [
-                                    hex(v)
-                                    for v in getattr(
-                                        op.repo, "pushrebaseaddedchangesets", []
-                                    )
-                                ]
-                            ),
-                        }
-                    )
-
                 try:
                     if bundlefile:
                         os.unlink(bundlefile)
