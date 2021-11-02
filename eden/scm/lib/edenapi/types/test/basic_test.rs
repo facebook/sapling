@@ -47,6 +47,21 @@ struct ComplexObj {
     b: bool,
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum MyEnum {
+    #[id(1)]
+    A,
+    #[id(2)]
+    B,
+}
+
+impl Default for MyEnum {
+    fn default() -> Self {
+        Self::A
+    }
+}
+
 impl Arbitrary for ApiObj {
     fn arbitrary(g: &mut Gen) -> Self {
         Self {
@@ -61,6 +76,16 @@ impl Arbitrary for ComplexObj {
         Self {
             inner: Arbitrary::arbitrary(g),
             b: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+impl Arbitrary for MyEnum {
+    fn arbitrary(g: &mut Gen) -> Self {
+        if Arbitrary::arbitrary(g) {
+            Self::A
+        } else {
+            Self::B
         }
     }
 }
@@ -81,4 +106,11 @@ fn main() {
         &serde_json::to_string(&y).unwrap(),
         r#"{"1":{"0":12,"1":42},"2":true}"#
     );
+
+    let x = MyEnum::A;
+    let y = WireMyEnum::A;
+    assert_eq!(x.clone().to_wire(), y);
+    assert_eq!(x, y.clone().to_api().unwrap());
+    assert_eq!(&serde_json::to_string(&y).unwrap(), r#""1""#);
+    assert_eq!(WireMyEnum::default().to_api().unwrap(), MyEnum::A);
 }
