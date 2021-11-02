@@ -1178,62 +1178,19 @@ def debugdiffdirs(ui, repo, *pats, **opts):
     oldmf = oldctx.manifest()
     newmf = newctx.manifest()
     matcher = scmutil.match(newctx, pats, opts)
-    diff = oldmf.diff(newmf, matcher)
+    diff = oldmf.modifieddirs(newmf, matcher)
 
     fm = ui.formatter("debugdifftree", opts)
 
-    processed = set()
-    alreadyoutput = set()
-    for filepath, ((oldnode, oldflags), (newnode, newflags)) in sorted(diff.items()):
-        path = filepath
-        while path:
-            # Only record visits and abort early for directories. This cuts down
-            # on memory usage, since we don't need to record files (since we
-            # won't see them twice), and makes sure that we can still process a
-            # file who was a directory in the previous diff, if the directory
-            # was processed first.
-            if path != filepath:
-                if path in processed:
-                    break
-                processed.add(path)
-
-            parentpath, name = os.path.split(path)
-            if parentpath == "":
-                break
-
-            if parentpath in alreadyoutput:
-                break
-
-            if path != filepath:
-                oldhasdir = oldmf.hasdir(path)
-                newhasdir = newmf.hasdir(path)
-                childadded = not oldhasdir and newhasdir
-                childremoved = oldhasdir and not newhasdir
-            else:
-                childadded = oldnode is None
-                childremoved = newnode is None
-
-            if childadded or childremoved:
-                alreadyoutput.add(parentpath)
-
-                oldhasdir = oldmf.hasdir(parentpath)
-                newhasdir = newmf.hasdir(parentpath)
-                added = not oldhasdir and newhasdir
-                removed = oldhasdir and not newhasdir
-                if added:
-                    status = "A"
-                elif removed:
-                    status = "R"
-                else:
-                    status = "M"
-
-                fm.write("status path", "%s %s\n", status, parentpath)
-                fm.data(
-                    path=parentpath,
-                    status=status,
-                )
-
-            path = parentpath
+    statuslist = [" ", "R", "A", "M"]
+    for path, inold, innew in diff:
+        # Skip the root path.
+        if not path:
+            continue
+        statusindex = inold | (innew << 1)
+        status = statuslist[statusindex]
+        fm.write("status path", "%s %s\n", status, path)
+        fm.data(path=path, status=status)
 
     fm.end()
 

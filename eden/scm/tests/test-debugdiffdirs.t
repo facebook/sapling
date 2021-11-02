@@ -27,8 +27,8 @@
   $ touch dir/nested/poo
   $ hg commit -Aqm nested-added
   $ hg debugdiffdirs -r .^ -r .
-  A dir/nested
   M dir
+  A dir/nested
 
   $ hg rm dir/nested/poo
   $ touch dir/nested
