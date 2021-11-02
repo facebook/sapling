@@ -513,6 +513,12 @@ pub struct FetchSnapshotResponse {
     pub hg_parents: Parents,
     #[id(2)]
     pub file_changes: Vec<(RepoPathBuf, BonsaiFileChange)>,
+    #[id(3)]
+    pub author: String,
+    #[id(4)]
+    pub time: i64,
+    #[id(5)]
+    pub tz: i32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
@@ -587,6 +593,9 @@ impl Arbitrary for FetchSnapshotRequest {
 impl Arbitrary for FetchSnapshotResponse {
     fn arbitrary(g: &mut Gen) -> Self {
         Self {
+            author: Arbitrary::arbitrary(g),
+            time: Arbitrary::arbitrary(g),
+            tz: Arbitrary::arbitrary(g),
             hg_parents: Arbitrary::arbitrary(g),
             file_changes: Arbitrary::arbitrary(g),
         }

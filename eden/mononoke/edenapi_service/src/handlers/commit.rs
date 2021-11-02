@@ -399,7 +399,12 @@ impl EdenApiHandler for FetchSnapshotHandler {
             .context("Snapshot not in a bubble")?;
         let blobstore = repo.bubble_blobstore(Some(bubble_id)).await?;
         let cs = cs_id.load(repo.ctx(), &blobstore).await?.into_mut();
+        let time = cs.author_date.timestamp_secs();
+        let tz = cs.author_date.tz_offset_secs();
         let response = FetchSnapshotResponse {
+            author: cs.author,
+            time,
+            tz,
             hg_parents: Parents::from_iter(
                 stream::iter(
                     cs.parents

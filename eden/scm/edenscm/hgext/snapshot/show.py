@@ -56,14 +56,20 @@ def _snapshot2ctx(repo, snapshot):
         else:
             raise error.Abort(_("Unknown file change {}").format(change))
 
+    time, tz = snapshot["time"], snapshot["tz"]
+    if time or tz:
+        date = (time, tz)
+    else:
+        date = None
+
     ctx = memctx(
         repo,
         parents,
         text="",
         files=list(path2filechange.keys()),
         filectxfn=getfile,
-        user=None,
-        date=None,
+        user=snapshot["author"] or None,
+        date=date,
     )
     return ctx
 
