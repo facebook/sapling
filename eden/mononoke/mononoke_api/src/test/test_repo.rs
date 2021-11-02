@@ -809,20 +809,16 @@ async fn init_x_repo(
     let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(small_to_large.get_mapping().clone());
     Mononoke::new_test_xrepo(
         ctx.clone(),
-        vec![
-            (
-                "smallrepo".to_string(),
-                small_to_large.get_small_repo().clone(),
-                commit_sync_config.clone(),
-                mapping.clone(),
-            ),
-            (
-                "largerepo".to_string(),
-                small_to_large.get_large_repo().clone(),
-                commit_sync_config.clone(),
-                mapping.clone(),
-            ),
-        ],
+        (
+            "smallrepo".to_string(),
+            small_to_large.get_small_repo().clone(),
+        ),
+        (
+            "largerepo".to_string(),
+            small_to_large.get_large_repo().clone(),
+        ),
+        commit_sync_config.clone(),
+        mapping.clone(),
     )
     .await
 }

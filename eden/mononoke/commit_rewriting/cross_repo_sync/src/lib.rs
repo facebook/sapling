@@ -506,14 +506,10 @@ where
     }
 
     pub async fn get_bookmark_renamer(&self, ctx: &CoreContext) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx).await?;
+        let (source_repo, target_repo, _) = self.get_source_target_version(ctx).await?;
 
         self.commit_sync_data_provider
-            .get_bookmark_renamer(
-                &version_name,
-                source_repo.get_repoid(),
-                target_repo.get_repoid(),
-            )
+            .get_bookmark_renamer(source_repo.get_repoid(), target_repo.get_repoid())
             .await
     }
 
@@ -521,14 +517,10 @@ where
         &self,
         ctx: &CoreContext,
     ) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx).await?;
+        let (source_repo, target_repo, _) = self.get_source_target_version(ctx).await?;
 
         self.commit_sync_data_provider
-            .get_reverse_bookmark_renamer(
-                &version_name,
-                source_repo.get_repoid(),
-                target_repo.get_repoid(),
-            )
+            .get_reverse_bookmark_renamer(source_repo.get_repoid(), target_repo.get_repoid())
             .await
     }
 

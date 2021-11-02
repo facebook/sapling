@@ -1213,11 +1213,11 @@ mod test {
                 current_version => SyncData {
                     mover: Arc::new(identity_mover),
                     reverse_mover: Arc::new(identity_mover),
-                    bookmark_renamer: bookmark_renamer,
-                    reverse_bookmark_renamer: reverse_bookmark_renamer,
                 }
             },
             vec![BookmarkName::new("master")?],
+            bookmark_renamer,
+            reverse_bookmark_renamer,
         );
 
         Ok(CommitSyncer::new_with_provider(

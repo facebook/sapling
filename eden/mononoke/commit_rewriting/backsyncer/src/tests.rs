@@ -415,17 +415,15 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
             current_version.clone() => SyncData {
                 mover: current_mover_type.get_mover(),
                 reverse_mover: current_mover_type.get_reverse_mover(),
-                bookmark_renamer: bookmark_renamer_type.get_bookmark_renamer(),
-                reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
             },
             new_version.clone() => SyncData{
                 mover: new_mover_type.get_mover(),
                 reverse_mover: new_mover_type.get_reverse_mover(),
-                bookmark_renamer: bookmark_renamer_type.get_bookmark_renamer(),
-                reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
             }
         },
         vec![BookmarkName::new("master")?],
+        bookmark_renamer_type.get_bookmark_renamer(),
+        bookmark_renamer_type.get_reverse_bookmark_renamer(),
     );
     let commit_syncer =
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
@@ -1023,11 +1021,11 @@ async fn init_repos(
             current_version => SyncData {
                 mover: mover_type.get_mover(),
                 reverse_mover: mover_type.get_reverse_mover(),
-                bookmark_renamer: bookmark_renamer_type.get_bookmark_renamer(),
-                reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
             }
         },
         vec![BookmarkName::new("master")?],
+        bookmark_renamer_type.get_bookmark_renamer(),
+        bookmark_renamer_type.get_reverse_bookmark_renamer(),
     );
     let commit_syncer =
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
@@ -1347,17 +1345,15 @@ async fn init_merged_repos(
                 current_version => SyncData {
                     mover: mover_type.get_reverse_mover(),
                     reverse_mover: mover_type.get_mover(),
-                    bookmark_renamer: bookmark_renamer.clone(),
-                    reverse_bookmark_renamer: reverse_bookmark_renamer.clone(),
                 },
                 noop_version => SyncData {
                     mover: Arc::new(identity_mover),
                     reverse_mover: Arc::new(identity_mover),
-                    bookmark_renamer: bookmark_renamer,
-                    reverse_bookmark_renamer: reverse_bookmark_renamer,
                 }
             },
             vec![BookmarkName::new("master")?],
+            bookmark_renamer.clone(),
+            reverse_bookmark_renamer.clone(),
         );
 
         let commit_syncer = CommitSyncer::new_with_provider(
@@ -1620,11 +1616,11 @@ async fn preserve_premerge_commit(
                 noop_version => SyncData {
                     mover: Arc::new(identity_mover),
                     reverse_mover: Arc::new(identity_mover),
-                    bookmark_renamer: bookmark_renamer.clone(),
-                    reverse_bookmark_renamer: bookmark_renamer.clone(),
                 }
             },
             vec![BookmarkName::new("master")?],
+            bookmark_renamer.clone(),
+            bookmark_renamer.clone(),
         );
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider)
     };

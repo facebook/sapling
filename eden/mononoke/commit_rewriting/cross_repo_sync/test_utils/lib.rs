@@ -15,6 +15,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use commit_transformation::upload_commits;
+use commitsync::types::{CommonCommitSyncConfig, RawSmallRepoPermanentConfig};
 use context::CoreContext;
 use cross_repo_sync::{
     rewrite_commit,
@@ -24,7 +25,7 @@ use cross_repo_sync::{
 };
 use futures::compat::Future01CompatExt;
 use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
-use maplit::hashmap;
+use maplit::{btreemap, hashmap};
 use megarepolib::{common::ChangesetArgs, perform_move};
 use metaconfig_types::{
     CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
@@ -148,17 +149,15 @@ pub async fn init_small_large_repo(
             noop_version.clone() => SyncData {
                 mover: Arc::new(identity_mover),
                 reverse_mover: Arc::new(identity_mover),
-                bookmark_renamer: Arc::new(identity_renamer),
-                reverse_bookmark_renamer: Arc::new(identity_renamer),
             },
             current_version.clone() => SyncData {
                 mover: Arc::new(prefix_mover),
                 reverse_mover: Arc::new(reverse_prefix_mover),
-                bookmark_renamer: Arc::new(identity_renamer),
-                reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
         vec![BookmarkName::new("master")?],
+        Arc::new(identity_renamer),
+        Arc::new(identity_renamer),
     );
 
     let small_to_large_commit_syncer = CommitSyncer::new_with_provider(
@@ -181,17 +180,15 @@ pub async fn init_small_large_repo(
             noop_version.clone() =>  SyncData {
                 mover: Arc::new(identity_mover),
                 reverse_mover: Arc::new(identity_mover),
-                bookmark_renamer: Arc::new(identity_renamer),
-                reverse_bookmark_renamer: Arc::new(identity_renamer),
             },
             current_version => SyncData {
                 mover: Arc::new(reverse_prefix_mover),
                 reverse_mover: Arc::new(prefix_mover),
-                bookmark_renamer: Arc::new(identity_renamer),
-                reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
         vec![BookmarkName::new("master")?],
+        Arc::new(identity_renamer),
+        Arc::new(identity_renamer),
     );
 
     let large_to_small_commit_syncer = CommitSyncer::new_with_provider(
@@ -371,6 +368,17 @@ pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
 
     source.add_config(first_version);
     source.add_config(second_version);
+
+
+    source.add_common_config(CommonCommitSyncConfig {
+        common_pushrebase_bookmarks: vec![],
+        small_repos: btreemap! {
+            1 => RawSmallRepoPermanentConfig {
+                bookmark_prefix: "small".to_string(),
+            }
+        },
+        large_repo_id: 0,
+    });
 
     Arc::new(sync_config)
 }

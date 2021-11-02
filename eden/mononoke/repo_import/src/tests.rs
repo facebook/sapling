@@ -20,6 +20,7 @@ mod tests {
     use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
     use cacheblob::InProcessLease;
     use cached_config::{ConfigStore, ModificationTime, TestSource};
+    use commitsync::types::{CommonCommitSyncConfig, RawSmallRepoPermanentConfig};
     use context::CoreContext;
     use cross_repo_sync::{create_commit_syncers, CommitSyncContext};
     use derived_data_manager::BonsaiDerivable;
@@ -562,6 +563,28 @@ mod tests {
         source.add_config(commit_sync_config.clone());
         source.add_config(later_commit_sync_config);
         source.add_current_version(commit_sync_config.version_name);
+        source.add_common_config(CommonCommitSyncConfig {
+            common_pushrebase_bookmarks: commit_sync_config
+                .common_pushrebase_bookmarks
+                .iter()
+                .map(|b| b.to_string())
+                .collect(),
+            small_repos: commit_sync_config
+                .small_repos
+                .iter()
+                .map(|(repo_id, small_repo_config)| {
+                    (
+                        repo_id.id(),
+                        RawSmallRepoPermanentConfig {
+                            bookmark_prefix: small_repo_config.bookmark_prefix.to_string(),
+                        },
+                    )
+                })
+                .collect(),
+            large_repo_id: commit_sync_config.large_repo_id.id(),
+        });
+
+
 
         Arc::new(sync_config)
     }

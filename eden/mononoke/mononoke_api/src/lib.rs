@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error};
 pub use bookmarks::BookmarkName;
+use commitsync::types::{CommonCommitSyncConfig, RawSmallRepoPermanentConfig};
 use ephemeral_blobstore::BubbleId;
 use futures::future;
 use futures_watchdog::WatchdogExt;
@@ -278,29 +279,45 @@ pub mod test_impl {
 
         pub async fn new_test_xrepo(
             ctx: CoreContext,
-            repos: impl IntoIterator<
-                Item = (
-                    String,
-                    BlobRepo,
-                    CommitSyncConfig,
-                    Arc<dyn SyncedCommitMapping>,
-                ),
-            >,
+            small_repo: (String, BlobRepo),
+            large_repo: (String, BlobRepo),
+            commit_sync_config: CommitSyncConfig,
+            mapping: Arc<dyn SyncedCommitMapping>,
         ) -> Result<(Self, TestLiveCommitSyncConfigSource), Error> {
             use futures::stream::{FuturesOrdered, TryStreamExt};
             let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
             let lv_cfg: Arc<dyn LiveCommitSyncConfig> = Arc::new(lv_cfg);
+            lv_cfg_src.add_config(commit_sync_config.clone());
+            lv_cfg_src.add_current_version(commit_sync_config.version_name);
 
-            let repos = repos
+            lv_cfg_src.add_common_config(CommonCommitSyncConfig {
+                common_pushrebase_bookmarks: commit_sync_config
+                    .common_pushrebase_bookmarks
+                    .iter()
+                    .map(|b| b.to_string())
+                    .collect(),
+                small_repos: commit_sync_config
+                    .small_repos
+                    .iter()
+                    .map(|(repo_id, small_repo_config)| {
+                        (
+                            repo_id.id(),
+                            RawSmallRepoPermanentConfig {
+                                bookmark_prefix: small_repo_config.bookmark_prefix.to_string(),
+                            },
+                        )
+                    })
+                    .collect(),
+                large_repo_id: large_repo.1.get_repoid().id(),
+            });
+
+            let repos = vec![small_repo, large_repo]
                 .into_iter()
                 .map({
-                    cloned!(lv_cfg_src);
-                    move |(name, repo, commit_sync_config, synced_commit_maping)| {
-                        cloned!(ctx, lv_cfg, lv_cfg_src);
+                    move |(name, repo)| {
+                        cloned!(ctx, lv_cfg, mapping);
                         async move {
-                            lv_cfg_src.add_config(commit_sync_config.clone());
-                            lv_cfg_src.add_current_version(commit_sync_config.version_name);
-                            Repo::new_test_xrepo(ctx.clone(), repo, lv_cfg, synced_commit_maping)
+                            Repo::new_test_xrepo(ctx.clone(), repo, lv_cfg, mapping)
                                 .await
                                 .map(move |repo| (name, Arc::new(repo)))
                         }

@@ -24,6 +24,7 @@ use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cacheblob::InProcessLease;
 use cloned::cloned;
+use commitsync::types::{CommonCommitSyncConfig, RawSmallRepoPermanentConfig};
 use context::CoreContext;
 use cross_repo_sync::{
     update_mapping_with_version, validation::verify_working_copy, CommitSyncContext,
@@ -311,11 +312,20 @@ fn create_small_to_large_commit_syncer(
     let large_repo_id = large_repo.get_repoid();
 
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
-    let repos = CommitSyncRepos::new(small_repo, large_repo, &commit_sync_config)?;
+    let repos = CommitSyncRepos::new(small_repo.clone(), large_repo.clone(), &commit_sync_config)?;
 
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     source.add_config(commit_sync_config.clone());
     source.add_current_version(commit_sync_config.version_name);
+    source.add_common_config(CommonCommitSyncConfig {
+        common_pushrebase_bookmarks: vec![],
+        small_repos: btreemap! {
+            small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
+                bookmark_prefix: "".to_string(),
+            }
+        },
+        large_repo_id: large_repo.get_repoid().id(),
+    });
 
     let live_commit_sync_config = Arc::new(sync_config);
     let lease = Arc::new(InProcessLease::new());
@@ -345,11 +355,20 @@ fn create_large_to_small_commit_syncer_and_config_source(
     let large_repo_id = large_repo.get_repoid();
 
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
-    let repos = CommitSyncRepos::new(large_repo, small_repo, &commit_sync_config)?;
+    let repos = CommitSyncRepos::new(large_repo.clone(), small_repo.clone(), &commit_sync_config)?;
 
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     source.add_config(commit_sync_config.clone());
     source.add_current_version(commit_sync_config.version_name);
+    source.add_common_config(CommonCommitSyncConfig {
+        common_pushrebase_bookmarks: vec![],
+        small_repos: btreemap! {
+            small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
+                bookmark_prefix: "".to_string(),
+            }
+        },
+        large_repo_id: large_repo.get_repoid().id(),
+    });
 
     let live_commit_sync_config = Arc::new(sync_config);
     let lease = Arc::new(InProcessLease::new());
@@ -800,11 +819,11 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
             current_version.clone() => SyncData {
                 mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
                 reverse_mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
-                bookmark_renamer: Arc::new(identity_renamer),
-                reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
         vec![BookmarkName::new("master")?],
+        Arc::new(identity_renamer),
+        Arc::new(identity_renamer),
     );
     fail_config.commit_sync_data_provider = commit_sync_data_provider;
 
@@ -847,11 +866,11 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
                         _ => Ok(Some(mpath("linear").join(path))),
                     }
                 }),
-                bookmark_renamer: Arc::new(identity_renamer),
-                reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
         vec![BookmarkName::new("master")?],
+        Arc::new(identity_renamer),
+        Arc::new(identity_renamer),
     );
     copyfrom_fail_config.commit_sync_data_provider = commit_sync_data_provider;
     copyfrom_fail_config.repos = copyfrom_fail_repos;
@@ -958,11 +977,11 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
             current_version.clone() => SyncData {
                 mover,
                 reverse_mover,
-                bookmark_renamer: Arc::new(identity_renamer),
-                reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
         vec![BookmarkName::new("master")?],
+        Arc::new(identity_renamer),
+        Arc::new(identity_renamer),
     );
     commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
     commit_syncer.repos = commit_sync_repos;
@@ -1926,6 +1945,15 @@ async fn prepare_commit_syncer_with_mapping_change(
     };
     config_source.remove_current_version(&old_version);
     config_source.add_current_version(new_version.clone());
+    config_source.add_common_config(CommonCommitSyncConfig {
+        common_pushrebase_bookmarks: vec![],
+        small_repos: btreemap! {
+            small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
+                bookmark_prefix: "".to_string(),
+            }
+        },
+        large_repo_id: large_repo_id.id(),
+    });
     config_source.add_config(commit_sync_config);
 
     // Create manual commit to change mapping
@@ -1987,17 +2015,15 @@ fn get_merge_sync_data_provider(
             v1 => SyncData {
                 mover: Arc::new(identity_mover),
                 reverse_mover: Arc::new(identity_mover),
-                bookmark_renamer: idrn.clone(),
-                reverse_bookmark_renamer: idrn.clone(),
             },
             v2 => SyncData {
                 mover: Arc::new(identity_mover),
                 reverse_mover: Arc::new(identity_mover),
-                bookmark_renamer: idrn.clone(),
-                reverse_bookmark_renamer: idrn,
             }
         },
         vec![BookmarkName::new("master").unwrap()],
+        idrn.clone(),
+        idrn,
     )
 }
 
@@ -2299,11 +2325,11 @@ async fn test_no_accidental_preserved_roots(
                 current_version.clone() => SyncData {
                     mover: Arc::new(identity_mover),
                     reverse_mover: Arc::new(identity_mover),
-                    bookmark_renamer: Arc::new(identity_renamer),
-                    reverse_bookmark_renamer: Arc::new(identity_renamer),
                 }
             },
             vec![BookmarkName::new("master")?],
+            Arc::new(identity_renamer),
+            Arc::new(identity_renamer),
         );
         commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
         commit_syncer.repos = commit_sync_repos.clone();

@@ -17,6 +17,7 @@ use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
 };
+use commitsync::types::CommonCommitSyncConfig;
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncer_lease,
@@ -29,7 +30,7 @@ use futures::{compat::Future01CompatExt, stream, try_join, TryFutureExt};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use maplit::{btreemap, hashmap, hashset};
-use metaconfig_types::{BookmarkAttrs, CommitSyncConfig, RepoConfig};
+use metaconfig_types::{BookmarkAttrs, CommitSyncConfig};
 use metaconfig_types::{CommitSyncConfigVersion, DefaultSmallToLargeCommitSyncPathAction};
 use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath, RepositoryId,
@@ -146,21 +147,14 @@ pub async fn subcommand_crossrepo<'a>(
             .map_err(|e| e.into())
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
-            let config_store = matches.config_store();
-
             let (source_repo, target_repo, mapping) =
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
-            let source_repo_id = source_repo.get_repoid();
-
-            let (_, source_repo_config) =
-                args::get_config_by_repoid(config_store, matches, source_repo_id)?;
 
             let update_large_repo_bookmarks = sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS);
 
             subcommand_verify_bookmarks(
                 ctx,
                 source_repo,
-                source_repo_config,
                 target_repo,
                 mapping,
                 update_large_repo_bookmarks,
@@ -1012,13 +1006,15 @@ async fn subcommand_map(
 async fn subcommand_verify_bookmarks(
     ctx: CoreContext,
     source_repo: BlobRepo,
-    source_repo_config: RepoConfig,
     target_repo: BlobRepo,
     mapping: SqlSyncedCommitMapping,
     should_update_large_repo_bookmarks: bool,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     matches: &MononokeMatches<'_>,
 ) -> Result<(), SubcommandError> {
+    let common_config = live_commit_sync_config
+        .get_common_config(target_repo.get_repoid())
+        .await?;
     let commit_syncer = get_large_to_small_commit_syncer(
         &ctx,
         source_repo,
@@ -1038,15 +1034,11 @@ async fn subcommand_verify_bookmarks(
         Ok(())
     } else {
         if should_update_large_repo_bookmarks {
-            let commit_sync_config = source_repo_config
-                .commit_sync_config
-                .as_ref()
-                .ok_or_else(|| format_err!("missing CommitSyncMapping config"))?;
             update_large_repo_bookmarks(
                 ctx.clone(),
                 &diff,
                 small_repo,
-                commit_sync_config,
+                &common_config,
                 large_repo,
                 mapping,
             )
@@ -1109,7 +1101,7 @@ async fn update_large_repo_bookmarks(
     ctx: CoreContext,
     diff: &Vec<BookmarkDiff>,
     small_repo: &BlobRepo,
-    commit_sync_config: &CommitSyncConfig,
+    common_commit_sync_config: &CommonCommitSyncConfig,
     large_repo: &BlobRepo,
     mapping: SqlSyncedCommitMapping,
 ) -> Result<(), Error> {
@@ -1120,11 +1112,12 @@ async fn update_large_repo_bookmarks(
     );
     let mut book_txn = large_repo.update_bookmark_transaction(ctx.clone());
 
-    let bookmark_renamer = get_small_to_large_renamer(commit_sync_config, small_repo.get_repoid())?;
+    let bookmark_renamer =
+        get_small_to_large_renamer(common_commit_sync_config, small_repo.get_repoid())?;
     for d in diff {
-        if commit_sync_config
+        if common_commit_sync_config
             .common_pushrebase_bookmarks
-            .contains(d.target_bookmark())
+            .contains(&d.target_bookmark().to_string())
         {
             info!(
                 ctx.logger(),
@@ -1460,6 +1453,7 @@ async fn get_large_to_small_commit_syncer<'a>(
 mod test {
     use super::*;
     use bookmarks::BookmarkName;
+    use commitsync::types::RawSmallRepoPermanentConfig;
     use cross_repo_sync::{
         types::{Source, Target},
         validation::find_bookmark_diff,
@@ -1468,10 +1462,7 @@ mod test {
     use fixtures::{linear, set_bookmark};
     use futures::{compat::Stream01CompatExt, TryStreamExt};
     use maplit::{hashmap, hashset};
-    use metaconfig_types::{
-        CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
-        DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
-    };
+    use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
     use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
@@ -1549,25 +1540,21 @@ mod test {
 
         // Update the bookmarks
         {
-            let small_repo_sync_config = SmallRepoCommitSyncConfig {
-                default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
-                direction: CommitSyncDirection::SmallToLarge,
-                map: Default::default(),
-                bookmark_prefix: Default::default(),
-            };
-            let mut commit_sync_config = CommitSyncConfig {
-                large_repo_id: large_repo.get_repoid(),
-                common_pushrebase_bookmarks: vec![master.clone()],
-                small_repos: hashmap! {
-                    small_repo.get_repoid() => small_repo_sync_config,
+            let mut common_config = CommonCommitSyncConfig {
+                common_pushrebase_bookmarks: vec![master.to_string()],
+                small_repos: btreemap! {
+                    small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
+                        bookmark_prefix: Default::default()
+                    },
                 },
-                version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+                large_repo_id: large_repo.get_repoid().id(),
             };
+
             update_large_repo_bookmarks(
                 ctx.clone(),
                 &actual_diff,
                 small_repo,
-                &commit_sync_config,
+                &common_config,
                 large_repo,
                 commit_syncer.get_mapping().clone(),
             )
@@ -1590,13 +1577,13 @@ mod test {
 
             // Now remove master bookmark from common_pushrebase_bookmarks and update large repo
             // bookmarks again
-            commit_sync_config.common_pushrebase_bookmarks = vec![];
+            common_config.common_pushrebase_bookmarks = vec![];
 
             update_large_repo_bookmarks(
                 ctx.clone(),
                 &actual_diff,
                 small_repo,
-                &commit_sync_config,
+                &common_config,
                 large_repo,
                 commit_syncer.get_mapping().clone(),
             )
@@ -1664,11 +1651,11 @@ mod test {
                 current_version => SyncData {
                     mover: Arc::new(identity_mover),
                     reverse_mover: Arc::new(identity_mover),
-                    bookmark_renamer: Arc::new(noop_book_renamer),
-                    reverse_bookmark_renamer: Arc::new(noop_book_renamer),
                 }
             },
             vec![BookmarkName::new("master")?],
+            Arc::new(noop_book_renamer),
+            Arc::new(noop_book_renamer),
         );
         Ok(CommitSyncer::new_with_provider(
             &ctx,

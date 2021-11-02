@@ -10,7 +10,9 @@
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use cached_config::{ConfigHandle, ConfigStore};
-use commitsync::types::{RawCommitSyncAllVersions, RawCommitSyncCurrentVersions};
+use commitsync::types::{
+    CommonCommitSyncConfig, RawCommitSyncAllVersions, RawCommitSyncCurrentVersions,
+};
 use context::CoreContext;
 use metaconfig_parser::Convert;
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion};
@@ -41,6 +43,10 @@ pub enum ErrorKind {
     PartOfMultipleCommitSyncConfigsVersionSets(RepositoryId),
     #[error("{0:?} has no CommitSyncConfig with version name {1}")]
     UnknownCommitSyncConfigVersion(RepositoryId, String),
+    #[error("{0:?} is not a part of any configs")]
+    NotPartOfAnyConfigs(RepositoryId),
+    #[error("{0:?} is a part of multiple config")]
+    PartOfMultipleConfigs(RepositoryId),
 }
 
 #[async_trait]
@@ -118,6 +124,9 @@ pub trait LiveCommitSyncConfig: Send + Sync {
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
     ) -> Result<CommitSyncConfig>;
+
+    /// Returns a config that applies to all config versions
+    async fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig>;
 }
 
 #[derive(Clone)]
@@ -246,6 +255,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
         let large_repo_config_version_sets = &self.config_handle_for_all_versions.get().repos;
 
         let mut interesting_configs: Vec<_> = vec![];
+
         for (_, config_version_set) in large_repo_config_version_sets.iter() {
             for raw_commit_sync_config in config_version_set.versions.iter() {
                 if Self::related_to_repo(&raw_commit_sync_config, repo_id) {
@@ -278,6 +288,31 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
             ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
         })
     }
+
+    async fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
+        let config = self.config_handle_for_all_versions.get();
+        let maybe_common_config = {
+            let interesting_common_configs = config
+                .repos
+                .iter()
+                .filter(|(_, all_versions_config)| {
+                    all_versions_config.common.large_repo_id == repo_id.id()
+                        || all_versions_config
+                            .common
+                            .small_repos
+                            .contains_key(&repo_id.id())
+                })
+                .map(|(_, all_versions_config)| all_versions_config.common.clone());
+
+            let mut iter = interesting_common_configs;
+            match (iter.next(), iter.next()) {
+                (None, _) => Ok(None),
+                (Some(config), None) => Ok(Some(config)),
+                (Some(_), Some(_)) => Err(ErrorKind::PartOfMultipleConfigs(repo_id)),
+            }?
+        };
+        maybe_common_config.ok_or_else(|| ErrorKind::NotPartOfAnyConfigs(repo_id).into())
+    }
 }
 
 /// Inner container for `TestLiveCommitSyncConfigSource`
@@ -287,6 +322,7 @@ struct TestLiveCommitSyncConfigSourceInner {
     current_versions: Mutex<HashSet<CommitSyncConfigVersion>>,
     push_redirection_for_draft: Mutex<HashMap<RepositoryId, bool>>,
     push_redirection_for_public: Mutex<HashMap<RepositoryId, bool>>,
+    common_configs: Mutex<Vec<CommonCommitSyncConfig>>,
 }
 
 /// A helper type to manage `TestLiveCommitSyncConfig` from outside
@@ -308,6 +344,7 @@ impl TestLiveCommitSyncConfigSource {
             current_versions: Mutex::new(HashSet::new()),
             push_redirection_for_draft: Mutex::new(HashMap::new()),
             push_redirection_for_public: Mutex::new(HashMap::new()),
+            common_configs: Mutex::new(vec![]),
         }))
     }
 
@@ -349,6 +386,14 @@ impl TestLiveCommitSyncConfigSource {
             .lock()
             .expect("poisoned lock")
             .insert(repo_id, true);
+    }
+
+    pub fn add_common_config(&self, config: CommonCommitSyncConfig) {
+        self.0
+            .common_configs
+            .lock()
+            .expect("poisoned lock")
+            .push(config);
     }
 
     pub fn get_commit_sync_config_for_repo_if_exists(
@@ -464,6 +509,19 @@ impl TestLiveCommitSyncConfigSource {
         }
     }
 
+    fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
+        let common_configs = self.0.common_configs.lock().unwrap();
+        for config in common_configs.iter() {
+            if config.large_repo_id == repo_id.id()
+                || config.small_repos.contains_key(&repo_id.id())
+            {
+                return Ok(config.clone());
+            }
+        }
+
+        Err(anyhow!("not found common config for {}", repo_id))
+    }
+
     fn related_to_repo(commit_sync_config: &CommitSyncConfig, repo_id: RepositoryId) -> bool {
         commit_sync_config.large_repo_id == repo_id
             || commit_sync_config
@@ -542,5 +600,9 @@ impl LiveCommitSyncConfig for TestLiveCommitSyncConfig {
     ) -> Result<CommitSyncConfig> {
         self.source
             .get_commit_sync_config_by_version(repo_id, version_name)
+    }
+
+    async fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
+        self.source.get_common_config(repo_id)
     }
 }

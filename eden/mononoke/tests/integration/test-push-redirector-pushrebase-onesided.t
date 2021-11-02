@@ -116,7 +116,19 @@ setup configerator configs
   >           "version_name": "TEST_VERSION_NAME_LIVE"
   >         }
   >       ],
-  >      "current_version": "TEST_VERSION_NAME_LIVE"
+  >      "current_version": "TEST_VERSION_NAME_LIVE",
+  >      "common": {
+  >        "common_pushrebase_bookmarks": ["master_bookmark"],
+  >        "large_repo_id": 0,
+  >        "small_repos": {
+  >          1: {
+  >            "bookmark_prefix": "bookprefix1/"
+  >          },
+  >          2: {
+  >            "bookmark_prefix": "bookprefix2/"
+  >          }
+  >        }
+  >      }
   >     }
   >   }
   > }

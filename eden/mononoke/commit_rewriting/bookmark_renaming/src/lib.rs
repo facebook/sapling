@@ -10,9 +10,11 @@
 use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use metaconfig_types::{CommitSyncConfig, CommitSyncDirection};
+use commitsync::types::CommonCommitSyncConfig;
+use metaconfig_types::CommitSyncDirection;
 use mononoke_types::RepositoryId;
 use std::collections::HashSet;
+use std::str::FromStr;
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -33,26 +35,28 @@ pub struct BookmarkRenamers {
 }
 
 fn get_prefix_and_common_bookmarks(
-    commit_sync_config: &CommitSyncConfig,
+    commit_sync_config: &CommonCommitSyncConfig,
     small_repo_id: RepositoryId,
 ) -> Result<(AsciiString, HashSet<BookmarkName>)> {
-    let common_pushrebase_bookmarks: HashSet<BookmarkName> = commit_sync_config
+    let common_pushrebase_bookmarks: Result<HashSet<BookmarkName>> = commit_sync_config
         .common_pushrebase_bookmarks
         .iter()
         .cloned()
+        .map(BookmarkName::new)
         .collect();
+    let common_pushrebase_bookmarks = common_pushrebase_bookmarks?;
     let prefix = commit_sync_config
         .small_repos
-        .get(&small_repo_id)
+        .get(&small_repo_id.id())
         .ok_or(ErrorKind::SmallRepoNotFound(small_repo_id))?
         .bookmark_prefix
         .clone();
-    Ok((prefix, common_pushrebase_bookmarks))
+    Ok((AsciiString::from_str(&prefix)?, common_pushrebase_bookmarks))
 }
 
 /// Get a renamer for small-to-large repo sync
 pub fn get_small_to_large_renamer(
-    commit_sync_config: &CommitSyncConfig,
+    commit_sync_config: &CommonCommitSyncConfig,
     small_repo_id: RepositoryId,
 ) -> Result<BookmarkRenamer> {
     let (prefix, common_pushrebase_bookmarks) =
@@ -70,7 +74,7 @@ pub fn get_small_to_large_renamer(
 
 /// Get a renamer for a large-to-small repo sync
 pub fn get_large_to_small_renamer(
-    commit_sync_config: &CommitSyncConfig,
+    commit_sync_config: &CommonCommitSyncConfig,
     small_repo_id: RepositoryId,
 ) -> Result<BookmarkRenamer> {
     let (prefix, common_pushrebase_bookmarks) =
@@ -90,7 +94,7 @@ pub fn get_large_to_small_renamer(
 
 /// Get both forward and reverse bookmark renamer in the `BookmarkRenamers` struct
 pub fn get_bookmark_renamers(
-    commit_sync_config: &CommitSyncConfig,
+    commit_sync_config: &CommonCommitSyncConfig,
     small_repo_id: RepositoryId,
     direction: CommitSyncDirection,
 ) -> Result<BookmarkRenamers> {
@@ -115,46 +119,21 @@ pub fn get_bookmark_renamers(
 #[cfg(test)]
 mod test {
     use super::*;
-    use maplit::hashmap;
-    use mercurial_types::MPath;
-    use metaconfig_types::{
-        CommitSyncConfigVersion, DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
-    };
+    use commitsync::types::RawSmallRepoPermanentConfig;
+    use maplit::btreemap;
 
-    fn mp(s: &'static str) -> MPath {
-        MPath::new(s).unwrap()
-    }
-
-    fn get_small_repo_sync_config_1() -> SmallRepoCommitSyncConfig {
-        SmallRepoCommitSyncConfig {
-            default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
-            map: hashmap! {},
-            bookmark_prefix: AsciiString::from_ascii("b1/".to_string()).unwrap(),
-            direction: CommitSyncDirection::LargeToSmall,
-        }
-    }
-
-    fn get_small_repo_sync_config_2() -> SmallRepoCommitSyncConfig {
-        SmallRepoCommitSyncConfig {
-            default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted")),
-            map: hashmap! {},
-            bookmark_prefix: AsciiString::from_ascii("b2/".to_string()).unwrap(),
-            direction: CommitSyncDirection::LargeToSmall,
-        }
-    }
-
-    fn get_commit_sync_config() -> CommitSyncConfig {
-        CommitSyncConfig {
-            large_repo_id: RepositoryId::new(3),
-            common_pushrebase_bookmarks: vec![
-                BookmarkName::new("m1").unwrap(),
-                BookmarkName::new("m2").unwrap(),
-            ],
-            small_repos: hashmap! {
-                RepositoryId::new(1) => get_small_repo_sync_config_1(),
-                RepositoryId::new(2) => get_small_repo_sync_config_2(),
+    fn get_commit_sync_config() -> CommonCommitSyncConfig {
+        CommonCommitSyncConfig {
+            common_pushrebase_bookmarks: vec!["m1".to_string(), "m2".to_string()],
+            small_repos: btreemap! {
+                1 => RawSmallRepoPermanentConfig {
+                    bookmark_prefix: "b1/".to_string()
+                },
+                2 => RawSmallRepoPermanentConfig {
+                    bookmark_prefix: "b2/".to_string()
+                },
             },
-            version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+            large_repo_id: 0,
         }
     }
 

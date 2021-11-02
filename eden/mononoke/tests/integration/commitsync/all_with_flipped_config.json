@@ -99,7 +99,19 @@
           "version_name": "TEST_VERSION_NAME_FLIPPED"
         }
       ],
-      "current_version": "TEST_VERSION_NAME"
+      "current_version": "TEST_VERSION_NAME",
+      "common": {
+        "common_pushrebase_bookmarks": ["master_bookmark"],
+        "large_repo_id": 1,
+        "small_repos": {
+          "0": {
+            "bookmark_prefix": "megarepo_test/"
+          },
+          "2": {
+            "bookmark_prefix": "ovrsource/"
+          }
+        }
+      }
     }
   }
 }

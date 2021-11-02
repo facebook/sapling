@@ -134,11 +134,6 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
 - compare the working copies
   $ REPOIDLARGE=$MEG_REPOID REPOIDSMALL=$OVR_REPOID verify_wc master_bookmark
 
-Add a new config version to "all" configs, but do not mark it as current
-This new version has fbsource as large repo. Ensure that having such version
-in "all" configs does not cause any undesired effects for push-rebases
-  $ cp "$TEST_FIXTURES/commitsync/all_with_flipped_config.json" "$COMMIT_SYNC_CONF/all"
-
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ REPONAME=ovr-mon hgmn up -q master_bookmark
   $ echo 2 > pushredirected_2 && hg addremove -q && hg ci -q -m pushredirected_2
@@ -169,6 +164,9 @@ Set current version of CommitSyncConfig to have fbsource as large repo,
 but disable push-redirection until invisible merge is done
 -- stop mononoke before changing config with large repo change
   $ kill $MONONOKE_PID
+
+Add a new config version to "all" configs, this new version has fbsource as large repo.
+  $ cp "$TEST_FIXTURES/commitsync/all_with_flipped_config.json" "$COMMIT_SYNC_CONF/all"
 
 -- This is an expected state of our configs at the last restart before
 -- the invisible merge
