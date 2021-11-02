@@ -42,6 +42,10 @@ use synced_commit_mapping::{
 use test_repo_factory::TestRepoFactory;
 use tests_utils::{bookmark, CreateCommitContext};
 
+pub fn xrepo_mapping_version_with_small_repo() -> CommitSyncConfigVersion {
+    CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())
+}
+
 // Helper function that takes a root commit from source repo and rebases it on master bookmark
 // in target repo
 pub async fn rebase_root_on_master<M>(
@@ -139,10 +143,10 @@ pub async fn init_small_large_repo(
         large_repo: megarepo.clone(),
     };
 
-    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let version_with_small_repo = xrepo_mapping_version_with_small_repo();
     let noop_version = CommitSyncConfigVersion("noop".to_string());
     let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        current_version.clone(),
+        version_with_small_repo.clone(),
         Source(repos.get_source_repo().get_repoid()),
         Target(repos.get_target_repo().get_repoid()),
         hashmap! {
@@ -150,7 +154,7 @@ pub async fn init_small_large_repo(
                 mover: Arc::new(identity_mover),
                 reverse_mover: Arc::new(identity_mover),
             },
-            current_version.clone() => SyncData {
+            version_with_small_repo.clone() => SyncData {
                 mover: Arc::new(prefix_mover),
                 reverse_mover: Arc::new(reverse_prefix_mover),
             }
@@ -173,7 +177,7 @@ pub async fn init_small_large_repo(
     };
 
     let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        current_version.clone(),
+        version_with_small_repo.clone(),
         Source(repos.get_source_repo().get_repoid()),
         Target(repos.get_target_repo().get_repoid()),
         hashmap! {
@@ -181,7 +185,7 @@ pub async fn init_small_large_repo(
                 mover: Arc::new(identity_mover),
                 reverse_mover: Arc::new(identity_mover),
             },
-            current_version => SyncData {
+            version_with_small_repo.clone() => SyncData {
                 mover: Arc::new(reverse_prefix_mover),
                 reverse_mover: Arc::new(prefix_mover),
             }
@@ -282,9 +286,7 @@ pub async fn init_small_large_repo(
         &ctx,
         hashmap! { small_master_bcs_id => large_master_bcs_id},
         &small_to_large_commit_syncer,
-        &small_to_large_commit_syncer
-            .get_current_version(&ctx)
-            .await?,
+        &version_with_small_repo,
     )
     .await?;
 
