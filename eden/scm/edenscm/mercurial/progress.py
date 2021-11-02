@@ -19,23 +19,13 @@ import threading
 import time
 
 import bindings
-from bindings import threading as rustthreading, tracing
+from bindings import threading as rustthreading
 
-from . import encoding, pycompat, util
+from . import encoding, util
 from .i18n import _, _x
 
 
 _tracer = util.tracer
-
-
-def spacejoin(*args):
-    return " ".join(s for s in args if s)
-
-
-def shouldprint(ui):
-    return not (ui.quiet or ui.plain("progress")) and (
-        ui._isatty(ui.ferr) or ui.configbool("progress", "assume-tty")
-    )
 
 
 def fmtremaining(seconds):
@@ -129,297 +119,7 @@ def estimatespeed(bar):
     return None
 
 
-# file_write() and file_flush() of Python 2 do not restart on EINTR if
-# the file is attached to a "slow" device (e.g. a terminal) and raise
-# IOError. We cannot know how many bytes would be written by file_write(),
-# but a progress text is known to be short enough to be written by a
-# single write() syscall, so we can just retry file_write() with the whole
-# text. (issue5532)
-#
-# This should be a short-term workaround. We'll need to fix every occurrence
-# of write() to a terminal or pipe.
-def _eintrretry(func, *args):
-    while True:
-        try:
-            return func(*args)
-        except IOError as err:
-            if err.errno == errno.EINTR:
-                continue
-            raise
-
-
-class baserenderer(object):
-    """progress bar renderer for classic-style progress bars"""
-
-    def __init__(self, bar):
-        self._bar = bar
-        self.printed = False
-        self.configwidth = bar._ui.config("progress", "width", default=None)
-
-    def _writeprogress(self, msg, flush=False):
-        msg = msg.strip("\r\n")
-        # The Rust set_progress handles both the stderr (no pager),
-        # and streampager cases.
-        # If there is an external pager running, then the progress
-        # is not expected to be rendered.
-        util.mainio.set_progress(msg)
-
-    def width(self):
-        ui = self._bar._ui
-        tw = ui.termwidth()
-        if self.configwidth is not None:
-            return min(int(self.configwidth), tw)
-        else:
-            return tw
-
-    def show(self):
-        raise NotImplementedError()
-
-    def clear(self):
-        if not self.printed:
-            return
-        self._writeprogress("")
-
-    def complete(self):
-        if not self.printed:
-            return
-        self.show(time.time())
-        self._writeprogress("")
-
-
-class classicrenderer(baserenderer):
-    def __init__(self, bar):
-        super(classicrenderer, self).__init__(bar)
-        self.order = bar._ui.configlist("progress", "format")
-
-    def show(self, now):
-        pos, item = _progvalue(self._bar.value)
-        if pos is None:
-            pos = round(now - self._bar._enginestarttime, 1)
-        formatfunc = self._bar._formatfunc
-        if formatfunc is None:
-            formatfunc = str
-        topic = self._bar._topic
-        unit = self._bar._unit
-        total = self._bar._total
-        termwidth = self.width()
-        self.printed = True
-        head = ""
-        needprogress = False
-        tail = ""
-        for indicator in self.order:
-            add = ""
-            if indicator == "topic":
-                add = topic
-            elif indicator == "number":
-                fpos = formatfunc(pos)
-                if total:
-                    ftotal = formatfunc(total)
-                    maxlen = max(len(fpos), len(ftotal))
-                    add = ("% " + str(maxlen) + "s/%s") % (fpos, ftotal)
-                else:
-                    add = fpos
-            elif indicator.startswith("item") and item:
-                slice = "end"
-                if "-" in indicator:
-                    wid = int(indicator.split("-")[1])
-                elif "+" in indicator:
-                    slice = "beginning"
-                    wid = int(indicator.split("+")[1])
-                else:
-                    wid = 20
-                if slice == "end":
-                    add = encoding.trim(item, wid, leftside=True)
-                else:
-                    add = encoding.trim(item, wid)
-                add += (wid - encoding.colwidth(add)) * " "
-            elif indicator == "bar":
-                add = ""
-                needprogress = True
-            elif indicator == "unit" and unit:
-                add = unit
-            elif indicator == "estimate":
-                add = fmtremaining(estimateremaining(self._bar))
-            elif indicator == "speed":
-                add = fmtspeed(estimatespeed(self._bar), self._bar)
-            if not needprogress:
-                head = spacejoin(head, add)
-            else:
-                tail = spacejoin(tail, add)
-        if needprogress:
-            used = 0
-            if head:
-                used += encoding.colwidth(head) + 1
-            if tail:
-                used += encoding.colwidth(tail) + 1
-            progwidth = termwidth - used - 3
-            if pos is not None and total and pos <= total:
-                amt = pos * progwidth // total
-                bar = "=" * (amt - 1)
-                if amt > 0:
-                    bar += ">"
-                bar += " " * (progwidth - amt)
-            else:
-                elapsed = now - self._bar._enginestarttime
-                indetpos = int(elapsed / self._bar._refresh)
-                progwidth -= 3
-                # mod the count by twice the width so we can make the
-                # cursor bounce between the right and left sides
-                amt = indetpos % (2 * progwidth)
-                amt -= progwidth
-                bar = " " * int(progwidth - abs(amt)) + "<=>" + " " * int(abs(amt))
-            prog = "".join(("[", bar, "]"))
-            out = spacejoin(head, prog, tail)
-        else:
-            out = spacejoin(head, tail)
-        self._writeprogress("\r" + encoding.trim(out, termwidth), flush=True)
-
-
-class fancyrenderer(baserenderer):
-    def __init__(self, bar):
-        super(fancyrenderer, self).__init__(bar)
-
-    def _mergespans(self, leftspans, rightspans):
-        spans = []
-        leftspans.reverse()
-        rightspans.reverse()
-        while leftspans and rightspans:
-            leftwidth, leftlabel = leftspans.pop()
-            rightwidth, rightlabel = rightspans.pop()
-            if leftwidth < rightwidth:
-                spans.append((leftwidth, spacejoin(leftlabel, rightlabel)))
-                rightspans.append((rightwidth - leftwidth, rightlabel))
-            elif leftwidth == rightwidth:
-                spans.append((leftwidth, spacejoin(leftlabel, rightlabel)))
-            elif leftwidth > rightwidth:
-                spans.append((rightwidth, spacejoin(leftlabel, rightlabel)))
-                leftspans.append((leftwidth - rightwidth, leftlabel))
-        spans.extend(reversed(leftspans))
-        spans.extend(reversed(rightspans))
-        return spans
-
-    def _applyspans(self, ui, line, spans):
-        out = []
-        outpos = 0
-        outdebt = 0
-        linebyte = 0
-        linewidth = encoding.colwidth(line)
-        spans.reverse()
-        while outpos < linewidth:
-            if not spans:
-                out.append(line[linebyte:])
-                break
-            spanwidth, spanlabel = spans.pop()
-            spantext = encoding.trim(line[linebyte:], spanwidth + outdebt)
-            outdebt += spanwidth - encoding.colwidth(spantext)
-            linebyte += len(spantext)
-            out.append(ui.label(spantext, spanlabel))
-            outpos += spanwidth
-        return "".join(out)
-
-    def show(self, now):
-        topic = self._bar._topic
-        total = self._bar._total
-        pos, item = _progvalue(self._bar.value)
-        if total:
-            style = "normal"
-        else:
-            if pos is None:
-                style = "spinner"
-                pos = round(now - self._bar._enginestarttime, 1)
-            else:
-                style = "indet"
-            spinpos = int((now - self._bar._enginestarttime) * 20)
-        termwidth = self.width()
-        self.printed = True
-        formatfunc = self._bar._formatfunc or str
-        fpos = formatfunc(pos)
-        if total:
-            ftotal = formatfunc(total)
-            number = ("% " + str(len(ftotal)) + "s/%s") % (fpos, ftotal)
-            remaining = " " + fmtremaining(estimateremaining(self._bar))
-        else:
-            number = fpos
-            remaining = ""
-
-        start = " %s" % topic
-        if item:
-            start += ": "
-        end = "  %s%s " % (number, remaining)
-        startwidth = encoding.colwidth(start)
-        endwidth = encoding.colwidth(end)
-        midwidth = termwidth - startwidth - endwidth
-        mid = encoding.trim(item + " " * midwidth, midwidth)
-        line = encoding.trim(start + mid + end, termwidth)
-        if style == "normal":
-            progpos = termwidth * pos // total
-            spans = [
-                (progpos, "progress.fancy.bar.normal"),
-                (termwidth - progpos, "progress.fancy.bar.background"),
-            ]
-        elif style == "indet":
-            spinnerwidth = min(6, termwidth / 2)
-            progpos = spinpos % ((termwidth - spinnerwidth) * 2)
-            if progpos >= (termwidth - spinnerwidth):
-                progpos = 2 * (termwidth - spinnerwidth) - progpos
-            spans = [
-                (progpos, "progress.fancy.bar.background"),
-                (spinnerwidth, "progress.fancy.bar.indeterminate"),
-                (termwidth - spinnerwidth - progpos, "progress.fancy.bar.background"),
-            ]
-        elif style == "spinner":
-            spinnerwidth = min(6, termwidth / 2)
-            progpos = spinpos % termwidth
-            spans = []
-            on = "progress.fancy.bar.spinner"
-            off = "progress.fancy.bar.background"
-            if progpos > termwidth - spinnerwidth:
-                spans = [
-                    (spinnerwidth - (termwidth - progpos), on),
-                    (termwidth - spinnerwidth, off),
-                    (termwidth - progpos, on),
-                ]
-            else:
-                spans = [
-                    (progpos, off),
-                    (spinnerwidth, on),
-                    (termwidth - spinnerwidth - progpos, off),
-                ]
-
-        spans = self._mergespans(
-            spans,
-            [
-                (startwidth, "progress.fancy.topic"),
-                (midwidth, "progress.fancy.item"),
-                (endwidth, "progress.fancy.count"),
-            ],
-        )
-        line = self._applyspans(self._bar._ui, line, spans)
-        self._writeprogress("\r" + line + "\r", flush=True)
-
-
-class nullrenderer(baserenderer):
-    def __init__(self, bar):
-        super(nullrenderer, self).__init__(bar)
-
-    def show(self, now):
-        pass
-
-
-renderers = {
-    "classic": classicrenderer,
-    "fancy": fancyrenderer,
-    "none": nullrenderer,
-    # Rust model is updated via basebar, so no rendering logic is necessary.
-    "rust:simple": nullrenderer,
-}
-
-
-def getrenderer(bar):
-    renderername = bar._ui.config("progress", "renderer")
-    return renderers.get(renderername, classicrenderer)(bar)
-
-
+# NB: the engine's only purpose is to maintain the progressfile extension's hook point.
 class engine(object):
     def __init__(self):
         self._cond = rustthreading.Condition()
@@ -444,14 +144,10 @@ class engine(object):
     @contextlib.contextmanager
     def _lockclear(self):
         with self.lock(), _suspendrustprogressbar():
-            bar = self._currentbar()
-            if bar is not None:
-                bar._enginerenderer.clear()
             yield
 
     def resetstate(self):
         with self.lock():
-            self._clear()
             self._bars = []
             self._currentbarindex = None
             self._refresh = None
@@ -459,10 +155,8 @@ class engine(object):
 
     def register(self, bar):
         with self.lock():
-            self._activate(bar._ui)
             now = time.time()
             bar._enginestarttime = now
-            bar._enginerenderer = getrenderer(bar)
             self._bars.append(bar)
             self._recalculatedisplay(now)
             global suspend
@@ -481,8 +175,6 @@ class engine(object):
                 if index == self._currentbarindex:
                     if index == 0:
                         self._complete()
-                    else:
-                        self._clear()
                 del self._bars[index:]
                 self._recalculatedisplay(time.time())
                 if not self._bars:
@@ -491,7 +183,6 @@ class engine(object):
                 # Do not redraw when unregistering a nested bar
                 if len(self._bars) < 1:
                     self._cond.notify_all()
-            bar._enginerenderer = None
 
     def _activate(self, ui):
         with self.lock():
@@ -520,25 +211,10 @@ class engine(object):
                     self._show(now)
 
     def _show(self, now):
-        with self.lock():
-            bar = self._currentbar()
-            if bar is not None:
-                bar._enginerenderer.show(now)
-
-    def _clear(self):
-        with self.lock():
-            bar = self._currentbar()
-            if bar is not None:
-                bar._enginerenderer.clear()
+        pass
 
     def _complete(self):
-        with self.lock():
-            bar = self._currentbar()
-            if bar is not None:
-                if bar._ui.configbool("progress", "clear-complete"):
-                    bar._enginerenderer.clear()
-                else:
-                    bar._enginerenderer.complete()
+        pass
 
     def _currentbar(self):
         if self._currentbarindex is not None:
@@ -778,47 +454,9 @@ class debugbar(basebar):
         super(debugbar, self).__setattr__(name, value)
 
 
-class nullbar(basebar):
-    """progress bar context manager that just keeps track of state.
-
-    The rust progress registry will still be updated since rust wants
-    to know about all progress metadata, even if progress bars are not
-    being rendered.
-    """
-
-    def __init__(self, ui, topic, unit="", total=None, start=0, formatfunc=None):
-        super(nullbar, self).__init__()
-
-        self._topic = topic
-        self._unit = unit
-        self._total = total
-        self._start = start
-        self._formatfunc = formatfunc
-
-    def reset(self, topic, unit="", total=None):
-        self._topic = topic
-        self._unit = unit
-        self._total = total
-        self.value = self._start
-
-    def enter(self):
-        self.value = self._start
-        return self
-
-    def exit(self, type, value, traceback):
-        pass
-
-
 def bar(ui, topic, unit="", total=None, start=0, formatfunc=None):
     if ui.configbool("progress", "debug"):
         return debugbar(ui, topic, unit, total, start, formatfunc)
-    elif (
-        ui.quiet
-        or ui.debugflag
-        or ui.configbool("progress", "disable")
-        or not shouldprint(ui)
-    ):
-        return nullbar(ui, topic, unit, total, start, formatfunc)
     else:
         return normalbar(ui, topic, unit, total, start, formatfunc)
 

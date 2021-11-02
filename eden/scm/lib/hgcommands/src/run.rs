@@ -314,8 +314,8 @@ fn spawn_progress_thread(
     }
 
     let render_function = progress_render::simple::render;
-    let renderer_name = config.get_or("progress", "renderer", || "classic".to_string())?;
-    if renderer_name != "rust:simple" {
+    let renderer_name = config.get_or("progress", "renderer", || "rust:simple".to_string())?;
+    if renderer_name == "none" {
         disable_rendering = true;
     }
 
