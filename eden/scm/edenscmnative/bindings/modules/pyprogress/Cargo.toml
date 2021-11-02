@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0"
 cpython = { version = "0.5", default-features = false }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 progress = { path = "../../../../lib/progress" }

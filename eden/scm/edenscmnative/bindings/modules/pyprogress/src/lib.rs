@@ -15,26 +15,20 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
-pub use rust::PyProgressFactory;
 
 mod model;
-mod python;
 mod render;
-mod rust;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "progress"].join(".");
     let m = PyModule::new(py, &name)?;
-
-    m.add_class::<python::bar>(py)?;
-    m.add_class::<python::spinner>(py)?;
 
     let model_mod = PyModule::new(py, &format!("{}.model", name))?;
     model_mod.add_class::<model::ProgressBar>(py)?;
     model_mod.add_class::<model::CacheStats>(py)?;
     m.add(py, "model", model_mod)?;
 
-    let render_mod = PyModule::new(py, &format!("{}.model", name))?;
+    let render_mod = PyModule::new(py, &format!("{}.render", name))?;
     use render::debug;
     use render::simple;
     render_mod.add(py, "simple", py_fn!(py, simple()))?;

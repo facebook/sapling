@@ -26,8 +26,7 @@ py_class!(pub class ProgressBar |py| {
     ) -> PyResult<Self> {
         let unit = unit.clone().unwrap_or_default();
         let total = total.unwrap_or_default();
-        let bar = ProgressBarModel::new(topic, total, unit);
-        Registry::main().register_progress_bar(&bar);
+        let bar = ProgressBarModel::register_new(topic, total, unit);
         Self::create_instance(py, bar)
     }
 
