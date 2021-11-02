@@ -43,10 +43,7 @@ use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use futures::TryStreamExt;
 use minibytes::Bytes;
-use progress::NullProgressFactory;
-use progress::ProgressFactory;
 use pyconfigparser::config;
-use pyprogress::PyProgressFactory;
 use pyrevisionstore::edenapifilestore;
 use pyrevisionstore::edenapitreestore;
 use revisionstore::EdenApiFileStore;
@@ -64,12 +61,10 @@ use crate::stats::stats;
 // the `EdenApiPyExt` trait.
 py_class!(pub class client |py| {
     data inner: Arc<dyn EdenApi>;
-    data progress: Arc<dyn ProgressFactory>;
 
     def __new__(
         _cls,
         config: config,
-        ui: Option<PyObject> = None,
         correlator: Option<String> = None
     ) -> PyResult<client> {
         let config = config.get_cfg(py);
@@ -79,12 +74,7 @@ py_class!(pub class client |py| {
             .build()
             .map_pyerr(py)?;
 
-        let progress = match ui {
-            Some(ui) => PyProgressFactory::arc(py, ui)?,
-            None => NullProgressFactory::arc(),
-        };
-
-        client::create_instance(py, inner, progress)
+        client::create_instance(py, inner)
     }
 
     def health(&self) -> PyResult<PyDict> {
@@ -142,8 +132,7 @@ py_class!(pub class client |py| {
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<Serde<TreeAttributes>> = None
     ) -> PyResult<stats> {
-        let progress = self.progress(py).clone();
-        self.inner(py).clone().storetrees_py(py, store, repo, keys, attributes.map(|a| a.0), progress)
+        self.inner(py).clone().storetrees_py(py, store, repo, keys, attributes.map(|a| a.0))
     }
 
     def trees(
@@ -155,7 +144,7 @@ py_class!(pub class client |py| {
         self.inner(py).clone().trees_py(py, repo, keys, attributes.map(|a| a.0))
     }
 
-    /// commitdata(repo: str, nodes: [bytes], progress=None) -> [(node: bytes, data: bytes)], stats
+    /// commitdata(repo: str, nodes: [bytes]) -> [(node: bytes, data: bytes)], stats
     ///
     /// Fetch commit data in raw HG format (sorted([p1, p2]) + text).
     def commitdata(
@@ -194,8 +183,7 @@ py_class!(pub class client |py| {
         repo: String
     ) -> PyResult<edenapifilestore> {
         let edenapi = self.extract_inner(py);
-        let progress = Some(self.progress(py).clone());
-        let store = EdenApiFileStore::new(repo, edenapi, progress);
+        let store = EdenApiFileStore::new(repo, edenapi);
 
         edenapifilestore::new(py, store)
     }
@@ -205,13 +193,12 @@ py_class!(pub class client |py| {
         repo: String
     ) -> PyResult<edenapitreestore> {
         let edenapi = self.extract_inner(py);
-        let progress = Some(self.progress(py).clone());
-        let store = EdenApiTreeStore::new(repo, edenapi, progress);
+        let store = EdenApiTreeStore::new(repo, edenapi);
 
         edenapitreestore::new(py, store)
     }
 
-    /// commitlocationtohash(repo: str, requests: [(bytes, u64, u64), progress = None) ->
+    /// commitlocationtohash(repo: str, requests: [(bytes, u64, u64)) ->
     ///   [(location: (descendant: bytes, distance: u64), count: u64, hgids: [bytes])]
     ///
     /// Fetch the hash(es) of a location in the commit graph.
@@ -226,7 +213,7 @@ py_class!(pub class client |py| {
         self.inner(py).clone().commit_location_to_hash_py(py, repo, requests.0)
     }
 
-    /// commithashtolocation(repo: str, master_heads: [bytes], hghds: [bytes], progress = None) ->
+    /// commithashtolocation(repo: str, master_heads: [bytes], hghds: [bytes]) ->
     ///   [(hgid: bytes, location: (descendant: bytes, distance: u64))]
     ///
     /// Fetch the location in the commit graph of a given hash.
@@ -440,7 +427,6 @@ impl ExtractInnerRef for client {
 
 impl client {
     pub fn from_edenapi(py: Python, client: Arc<dyn EdenApi>) -> PyResult<Self> {
-        let progress = NullProgressFactory::arc();
-        Self::create_instance(py, client, progress)
+        Self::create_instance(py, client)
     }
 }

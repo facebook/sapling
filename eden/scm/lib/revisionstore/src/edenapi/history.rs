@@ -10,7 +10,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_runtime::block_on;
 use futures::prelude::*;
-use progress::Unit;
+use progress_model::ProgressBar;
 use types::Key;
 use types::NodeInfo;
 
@@ -50,20 +50,16 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         let client = self.remote.client.clone();
         let repo = self.remote.repo.clone();
-        let progress = self.remote.progress.clone();
         let keys = hgid_keys(keys);
 
         let response = async move {
-            let prog = progress.bar(
-                "Downloading file history over HTTP",
-                None,
-                Unit::Named("entries"),
-            )?;
+            let prog =
+                ProgressBar::register_new("Downloading file history over HTTP", 0, "entries");
 
             let mut response = client.history(repo, keys, None).await?;
             while let Some(entry) = response.entries.try_next().await? {
                 self.store.add_entry(&entry)?;
-                prog.increment(1)?;
+                prog.increase_position(1);
             }
 
             Ok(())
@@ -116,7 +112,7 @@ mod tests {
         let history = hashmap! { k.clone() => n.clone() };
 
         let client = FakeEdenApi::new().history(history).into_arc();
-        let remote = EdenApiRemoteStore::<File>::new("repo", client, None);
+        let remote = EdenApiRemoteStore::<File>::new("repo", client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -144,7 +140,7 @@ mod tests {
     #[should_panic]
     fn test_tree_history() {
         let client = FakeEdenApi::new().into_arc();
-        let remote = EdenApiRemoteStore::<Tree>::new("repo", client, None);
+        let remote = EdenApiRemoteStore::<Tree>::new("repo", client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new().unwrap();

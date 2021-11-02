@@ -11,7 +11,7 @@ use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use futures::prelude::*;
-use progress::Unit;
+use progress_model::ProgressBar;
 use tracing::field;
 
 use super::hgid_keys;
@@ -51,15 +51,14 @@ impl RemoteDataStore for EdenApiDataStore<File> {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let client = self.remote.client.clone();
         let repo = self.remote.repo.clone();
-        let progress = self.remote.progress.clone();
         let hgidkeys = hgid_keys(keys);
 
         let response = async move {
-            let prog = progress.bar(
+            let prog = ProgressBar::register_new(
                 "Downloading files over HTTP",
-                Some(hgidkeys.len() as u64),
-                Unit::Named("files"),
-            )?;
+                hgidkeys.len() as u64,
+                "files",
+            );
 
             let response = File::prefetch_files(client, repo, hgidkeys).await?;
             // store.add_file() may compress the data before writing it to the store. This can slow
@@ -76,7 +75,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
 
             while let Some(result) = entries.try_next().await? {
                 let _ = result??;
-                prog.increment(1)?;
+                prog.increase_position(1);
             }
             // Explicitly force the result type here, since otherwise it can't infer the error
             // type.
@@ -110,20 +109,19 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let client = self.remote.client.clone();
         let repo = self.remote.repo.clone();
-        let progress = self.remote.progress.clone();
         let hgidkeys = hgid_keys(keys);
 
         let response = async move {
-            let prog = progress.bar(
+            let prog = ProgressBar::register_new(
                 "Downloading trees over HTTP",
-                Some(hgidkeys.len() as u64),
-                Unit::Named("trees"),
-            )?;
+                hgidkeys.len() as u64,
+                "trees",
+            );
 
             let mut response = Tree::prefetch_trees(client, repo, hgidkeys, None).await?;
             while let Some(Ok(entry)) = response.entries.try_next().await? {
                 self.store.add_tree(&entry)?;
-                prog.increment(1)?;
+                prog.increase_position(1);
             }
             // Explicitly force the result type here, since otherwise it can't infer the error
             // type.
@@ -224,7 +222,7 @@ mod tests {
         let files = hashmap! { k.clone() => d.data.clone() };
 
         let client = FakeEdenApi::new().files(files).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo", client, None);
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client);
 
         // Set up local cache store to write received data.
         let mut store = FileStore::empty();
@@ -261,7 +259,7 @@ mod tests {
         let trees = hashmap! { k.clone() => d.data.clone() };
 
         let client = FakeEdenApi::new().trees(trees).into_arc();
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client, None);
+        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client);
 
         // Set up local cache store to write received data.
         let mut store = TreeStore::empty();
@@ -296,7 +294,7 @@ mod tests {
     #[test]
     fn test_not_found() -> Result<()> {
         let client = FakeEdenApi::new().into_arc();
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client, None);
+        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client);
 
         // Set up local cache store to write received data.
         let mut store = TreeStore::empty();
@@ -320,7 +318,7 @@ mod tests {
         let files = hashmap! { k.clone() => d.data.clone() };
 
         let client = FakeEdenApi::new().files(files).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo", client, None);
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client);
 
         // Set up local cache store to write received data.
         let mut store = FileStore::empty();

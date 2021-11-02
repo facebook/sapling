@@ -62,7 +62,6 @@ mod dummy {
     use std::iter::empty;
 
     use configparser::config::ConfigSet;
-    use progress::ProgressFactory;
 
     use super::*;
 
@@ -70,7 +69,7 @@ mod dummy {
     pub struct MemcacheStore;
 
     impl MemcacheStore {
-        pub fn new(_config: &ConfigSet, _progress: Arc<dyn ProgressFactory>) -> Result<Self> {
+        pub fn new(_config: &ConfigSet) -> Result<Self> {
             Ok(MemcacheStore {})
         }
 

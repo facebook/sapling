@@ -58,9 +58,7 @@ use edenapi_types::UploadToken;
 use edenapi_types::UploadTokensResponse;
 use futures::prelude::*;
 use futures::stream;
-use progress::ProgressBar;
-use progress::ProgressFactory;
-use progress::Unit;
+use progress_model::ProgressBar;
 use pyrevisionstore::as_legacystore;
 use revisionstore::datastore::separate_metadata;
 use revisionstore::HgIdMutableDeltaStore;
@@ -130,7 +128,6 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<TreeAttributes>,
-        progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<stats> {
         let keys = to_keys(py, &keys)?;
         let store = as_deltastore(py, store)?;
@@ -138,13 +135,13 @@ pub trait EdenApiPyExt: EdenApi {
         let stats = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let prog = progress.bar(
+                    let prog = ProgressBar::register_new(
                         "Downloading trees over HTTP",
-                        Some(keys.len() as u64),
-                        Unit::Named("trees"),
-                    )?;
+                        keys.len() as u64,
+                        "trees",
+                    );
                     let response = self.trees(repo, keys, attributes).await?;
-                    write_trees(response, store, prog.as_ref()).await
+                    write_trees(response, store, prog).await
                 })
             })
             .map_pyerr(py)?
@@ -802,11 +799,11 @@ impl<T: EdenApi + ?Sized> EdenApiPyExt for T {}
 async fn write_trees(
     mut response: Response<Result<TreeEntry, EdenApiServerError>>,
     store: Arc<dyn HgIdMutableDeltaStore>,
-    prog: &dyn ProgressBar,
+    prog: Arc<ProgressBar>,
 ) -> Result<Stats, EdenApiError> {
     while let Some(Ok(entry)) = response.entries.try_next().await? {
         store.add_tree(&entry)?;
-        prog.increment(1)?;
+        prog.increase_position(1);
     }
     response.stats.await
 }

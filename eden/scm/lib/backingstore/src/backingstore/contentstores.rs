@@ -15,7 +15,6 @@ use log::warn;
 use manifest::List;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
-use progress::null::NullProgressFactory;
 use revisionstore::ContentStore;
 use revisionstore::ContentStoreBuilder;
 use revisionstore::EdenApiFileStore;
@@ -57,7 +56,7 @@ impl BackingContentStores {
         // Memcache takes 30s to initialize on debug builds slowing down tests significantly, let's
         // not even try to initialize it then.
         if !cfg!(debug_assertions) {
-            match MemcacheStore::new(config, NullProgressFactory::arc()) {
+            match MemcacheStore::new(config) {
                 Ok(memcache) => {
                     // XXX: Add the memcachestore for the treestore.
                     blobstore = blobstore.memcachestore(Arc::new(memcache));
@@ -69,8 +68,8 @@ impl BackingContentStores {
         let (blobstore, treestore) = match config.get_opt::<String>("remotefilelog", "reponame")? {
             Some(repo) if use_edenapi => {
                 let edenapi = EdenApiBuilder::from_config(config)?.build()?;
-                let fileremotestore = EdenApiFileStore::new(repo.clone(), edenapi.clone(), None);
-                let treeremotestore = EdenApiTreeStore::new(repo, edenapi, None);
+                let fileremotestore = EdenApiFileStore::new(repo.clone(), edenapi.clone());
+                let treeremotestore = EdenApiTreeStore::new(repo, edenapi);
                 (
                     blobstore.remotestore(fileremotestore).build()?,
                     treestore.remotestore(treeremotestore).build()?,

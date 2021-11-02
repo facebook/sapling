@@ -15,7 +15,6 @@ use anyhow::Result;
 use configparser::config::ConfigSet;
 use log::warn;
 use manifest::List;
-use progress::null::NullProgressFactory;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileAuxData;
 use revisionstore::scmstore::FileStore;
@@ -55,7 +54,7 @@ impl BackingScmStores {
         // Memcache takes 30s to initialize on debug builds slowing down tests significantly, let's
         // not even try to initialize it then.
         if !cfg!(debug_assertions) {
-            match MemcacheStore::new(&config, NullProgressFactory::arc()) {
+            match MemcacheStore::new(&config) {
                 Ok(memcache) => {
                     // XXX: Add the memcachestore for the treestore.
                     filestore = filestore.memcache(Arc::new(memcache));

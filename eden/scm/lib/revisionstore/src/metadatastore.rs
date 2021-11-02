@@ -654,7 +654,6 @@ mod tests {
     mod fbcode_tests {
         use memcache::MockMemcache;
         use once_cell::sync::Lazy;
-        use progress::null::NullProgressFactory;
 
         use super::*;
 
@@ -679,7 +678,7 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.hist(map);
 
-            let memcache = Arc::new(MemcacheStore::new(&config, NullProgressFactory::arc())?);
+            let memcache = Arc::new(MemcacheStore::new(&config)?);
             let store = MetadataStoreBuilder::new(&config)
                 .local_path(&localdir)
                 .remotestore(Arc::new(remotestore))

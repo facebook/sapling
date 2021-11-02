@@ -18,8 +18,6 @@ use edenapi_types::FileEntry;
 use edenapi_types::FileSpec;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
-use progress::NullProgressFactory;
-use progress::ProgressFactory;
 use types::Key;
 
 use crate::datastore::HgIdMutableDeltaStore;
@@ -51,7 +49,6 @@ pub type EdenApiTreeStore = EdenApiRemoteStore<Tree>;
 pub struct EdenApiRemoteStore<T> {
     client: Arc<dyn EdenApi>,
     repo: String,
-    progress: Arc<dyn ProgressFactory>,
     _phantom: PhantomData<T>,
 }
 
@@ -76,15 +73,10 @@ impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
     /// ```rust,ignore
     /// let store = EdenApiStore::<File>::new(repo, edenapi);
     /// ```
-    pub fn new(
-        repo: impl ToString,
-        client: Arc<dyn EdenApi>,
-        progress: Option<Arc<dyn ProgressFactory>>,
-    ) -> Arc<Self> {
+    pub fn new(repo: impl ToString, client: Arc<dyn EdenApi>) -> Arc<Self> {
         Arc::new(Self {
             client,
             repo: repo.to_string(),
-            progress: progress.unwrap_or_else(|| NullProgressFactory::arc()),
             _phantom: PhantomData,
         })
     }

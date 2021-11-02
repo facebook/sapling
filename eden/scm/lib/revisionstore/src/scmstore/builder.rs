@@ -188,7 +188,7 @@ impl<'a> FileStoreBuilder<'a> {
         let reponame = get_repo_name(self.config)?;
         let client = Builder::from_config(self.config)?.build()?;
 
-        Ok(EdenApiFileStore::new(reponame, client, None))
+        Ok(EdenApiFileStore::new(reponame, client))
     }
 
     pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
@@ -488,7 +488,7 @@ impl<'a> TreeStoreBuilder<'a> {
         let reponame = get_repo_name(self.config)?;
         let client = Builder::from_config(self.config)?.build()?;
 
-        Ok(EdenApiTreeStore::new(reponame, client, None))
+        Ok(EdenApiTreeStore::new(reponame, client))
     }
 
     pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
