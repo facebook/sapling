@@ -197,7 +197,17 @@ pub struct SegmentWithWrongHead(Segment);
 
 impl fmt::Debug for SegmentWithWrongHead {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        let span = self.0.span().unwrap();
+        if self.0.has_root().unwrap() {
+            write!(f, "R")?;
+        }
+        if self.0.only_head().unwrap() {
+            write!(f, "H")?;
+        }
+        // Mask out the "high" part since it's incorrect.
+        let parents = self.parents().unwrap();
+        write!(f, "{}-x{:?}", span.low, parents)?;
+        Ok(())
     }
 }
 

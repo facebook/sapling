@@ -713,7 +713,7 @@ mod tests {
         // affect correctness for now.
         assert_eq!(
             dbg_iter(iddag2.iter_flat_segments_with_parent(Id(3))?),
-            "[6-10[3]]"
+            "[6-x[3]]"
         );
 
         // Check (level, head) -> segment index.
