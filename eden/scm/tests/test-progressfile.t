@@ -4,7 +4,7 @@
   $ setconfig extensions.progresstest="$TESTDIR/progresstest.py"
   $ setconfig progress.delay=0 progress.changedelay=2 progress.refresh=1 progress.assume-tty=true
   $ setconfig progress.statefile="$TESTTMP/progressstate" progress.statefileappend=true
-  $ setconfig progress.fakedpid=42
+  $ setconfig progress.fakedpid=42 progress.lockstep=True
 
   $ withprogress() {
   >   "$@"

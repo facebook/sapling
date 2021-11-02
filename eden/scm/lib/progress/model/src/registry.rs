@@ -8,6 +8,8 @@
 use std::sync::Arc;
 
 use once_cell::sync::Lazy;
+use parking_lot::Condvar;
+use parking_lot::Mutex;
 use parking_lot::RwLock;
 use parking_lot::RwLockUpgradableReadGuard;
 
@@ -23,6 +25,7 @@ use crate::ProgressBar;
 ///   (ex. "fetching files 123/456")
 #[derive(Default, Clone, Debug)]
 pub struct Registry {
+    render_cond: Arc<(Mutex<bool>, Condvar)>,
     inner: Arc<RwLock<Inner>>,
 }
 
@@ -95,9 +98,40 @@ impl Registry {
     pub fn main() -> &'static Self {
         static REGISTRY: Lazy<Registry> = Lazy::new(|| {
             tracing::debug!("main progress Registry initialized");
-            Default::default()
+            Registry {
+                render_cond: Arc::new((Mutex::new(false), Condvar::new())),
+                ..Default::default()
+            }
         });
         &REGISTRY
+    }
+
+    /// step/wait provide a mechanism for tests to step through
+    /// rendering/handling of the registry in a controlled manner. The
+    /// test calls step() which unblocks the wait()er. Then step()
+    /// waits for the next wait() call, ensuring that the registry
+    /// processing loop finished its iteration.
+    pub fn step(&self) {
+        let &(ref lock, ref var) = &*self.render_cond;
+        let mut ready = lock.lock();
+        *ready = true;
+        var.notify_one();
+        // Wait for wait() to notify us that it completed an iteration.
+        var.wait(&mut ready);
+    }
+
+    /// See step().
+    pub fn wait(&self) {
+        let &(ref lock, ref var) = &*self.render_cond;
+        let mut ready = lock.lock();
+        if *ready {
+            // We've come around to the next iteration's wait() call -
+            // notify step() that we finished an iteration.
+            *ready = false;
+            var.notify_one();
+        }
+        // Wait for next step() call.
+        var.wait(&mut ready);
     }
 }
 

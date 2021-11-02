@@ -29,9 +29,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "model", model_mod)?;
 
     let render_mod = PyModule::new(py, &format!("{}.render", name))?;
-    use render::debug;
-    use render::simple;
+    use render::*;
     render_mod.add(py, "simple", py_fn!(py, simple()))?;
+    render_mod.add(py, "step", py_fn!(py, step()))?;
     render_mod.add(py, "debug", py_fn!(py, debug()))?;
     m.add(py, "render", render_mod)?;
 

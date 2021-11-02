@@ -8,6 +8,7 @@
 //! This module exposes Rust's progress rendering to Python.
 
 use cpython::*;
+use cpython_ext::PyNone;
 use progress_model::Registry;
 
 pub(crate) fn simple(_py: Python) -> PyResult<String> {
@@ -21,4 +22,9 @@ pub(crate) fn simple(_py: Python) -> PyResult<String> {
 pub(crate) fn debug(_py: Python) -> PyResult<String> {
     let reg = Registry::main();
     Ok(format!("{:?}", reg))
+}
+
+pub(crate) fn step(_py: Python) -> PyResult<PyNone> {
+    Registry::main().step();
+    Ok(PyNone)
 }

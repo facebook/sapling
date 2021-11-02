@@ -2,7 +2,7 @@
 
   $ enable progress
   $ setconfig extensions.progresstest="$TESTDIR/progresstest.py"
-  $ setconfig progress.delay=0 progress.changedelay=2 progress.refresh=1 progress.assume-tty=true
+  $ setconfig progress.delay=0 progress.changedelay=2 progress.refresh=1 progress.assume-tty=true progress.lockstep=True
 
 simple test
   $ hg progresstest 4 4

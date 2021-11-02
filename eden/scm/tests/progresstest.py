@@ -2,8 +2,8 @@ from __future__ import absolute_import
 
 import time
 
+import bindings
 from edenscm.mercurial import progress, pycompat, registrar, util
-
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -59,7 +59,7 @@ def progresstest(ui, loops, total, **opts):
                 prog.value = (i, unicodeloopitems[i % len(unicodeloopitems)])
             else:
                 prog.value = (i, "loop %s" % i)
-            progress.getengine().pump(_faketime.increment())
+            syncrender()
             if nested:
                 nestedtotal = 5 if i % 6 == 5 else 2
                 with progress.bar(
@@ -67,7 +67,7 @@ def progresstest(ui, loops, total, **opts):
                 ) as nestedprog:
                     for j in range(nestedtotal + 1):
                         nestedprog.value = (j, "nest %s" % j)
-                        progress.getengine().pump(_faketime.increment())
+                        syncrender()
 
 
 @command("bytesprogresstest", norepo=True)
@@ -92,7 +92,7 @@ def bytesprogresstest(ui):
     ) as prog:
         for value in values:
             prog.value = (value, "%s bytes" % value)
-            progress.getengine().pump(_faketime.increment())
+            syncrender()
 
 
 def uisetup(ui):
@@ -109,3 +109,8 @@ def uisetup(ui):
             self._show(now)
 
     progress.getengine().__class__ = syncengine
+
+
+def syncrender():
+    progress.getengine().pump(_faketime.increment())
+    bindings.progress.render.step()

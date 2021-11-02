@@ -322,6 +322,9 @@ fn spawn_progress_thread(
     let interval = Duration::from_secs_f64(config.get_or("progress", "refresh", || 0.1)?)
         .max(Duration::from_millis(50));
 
+    // lockstep is used by tests to control progress rendering run loop.
+    let lockstep = config.get_or("progress", "lockstep", || false)?;
+
     // Limit how often we write runlog. This config knob is primarily for tests to lower.
     let runlog_interval =
         Duration::from_secs_f64(config.get_or("runlog", "progress_refresh", || 0.5)?).max(interval);
@@ -347,6 +350,10 @@ fn spawn_progress_thread(
 
         while Weak::upgrade(&in_scope).is_some() {
             let now = Instant::now();
+
+            if lockstep {
+                registry.wait();
+            }
 
             if !disable_rendering {
                 let mut text = (render_function)(&registry, &config);
@@ -377,7 +384,10 @@ fn spawn_progress_thread(
             }
 
             registry.remove_orphan_progress_bar();
-            thread::sleep(interval);
+
+            if !lockstep {
+                thread::sleep(interval);
+            }
         }
     });
 
