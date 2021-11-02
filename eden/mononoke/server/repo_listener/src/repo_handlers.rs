@@ -15,11 +15,10 @@ use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cache_warmup::cache_warmup;
 use cached_config::ConfigStore;
 use cloned::cloned;
+use commitsync::types::CommonCommitSyncConfig;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use metaconfig_types::{
-    BackupRepoConfig, CommitSyncConfig, RepoClientKnobs, WireprotoLoggingConfig,
-};
+use metaconfig_types::{BackupRepoConfig, RepoClientKnobs, WireprotoLoggingConfig};
 use mononoke_api::Mononoke;
 use mononoke_types::RepositoryId;
 use repo_client::{MononokeRepo, PushRedirectorArgs, WireprotoLogging};
@@ -53,7 +52,7 @@ struct IncompleteRepoHandler {
 
 #[derive(Clone)]
 struct IncompletePushRedirectorArgs {
-    commit_sync_config: CommitSyncConfig,
+    common_commit_sync_config: CommonCommitSyncConfig,
     synced_commit_mapping: SqlSyncedCommitMapping,
     target_repo_dbs: TargetRepoDbs,
     source_blobrepo: BlobRepo,
@@ -65,13 +64,13 @@ impl IncompletePushRedirectorArgs {
         repo_lookup_table: &HashMap<RepositoryId, IncompleteRepoHandler>,
     ) -> Result<PushRedirectorArgs, Error> {
         let Self {
-            commit_sync_config,
+            common_commit_sync_config,
             synced_commit_mapping,
             target_repo_dbs,
             source_blobrepo,
         } = self;
 
-        let large_repo_id = commit_sync_config.large_repo_id;
+        let large_repo_id = RepositoryId::new(common_commit_sync_config.large_repo_id);
         let target_repo: MononokeRepo = repo_lookup_table
             .get(&large_repo_id)
             .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id))?
@@ -179,12 +178,18 @@ pub async fn repo_handlers<'a>(
         let logger = root_log.new(o!("repo" => reponame.clone()));
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
+
         // Clone the few things we're going to need later in our bootstrap.
         let cache_warmup_params = config.cache_warmup.clone();
         let db_config = config.storage_config.metadata.clone();
         let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
         let wireproto_logging = config.wireproto_logging.clone();
-        let commit_sync_config = config.commit_sync_config.clone();
+
+        let common_commit_sync_config = repo
+            .live_commit_sync_config()
+            .get_common_config_if_exists(repo.blob_repo().get_repoid())
+            .await?;
+
         let repo_client_knobs = config.repo_client_knobs.clone();
         let backup_repo_config = config.backup_repo_config.clone();
 
@@ -238,10 +243,10 @@ pub async fn repo_handlers<'a>(
         let (mononoke_repo, wireproto_logging, backsyncer_dbs) =
             futures::future::try_join3(mononoke_repo, wireproto_logging, backsyncer_dbs).await?;
 
-        let maybe_incomplete_push_redirector_args = commit_sync_config.and_then({
+        let maybe_incomplete_push_redirector_args = common_commit_sync_config.and_then({
             cloned!(logger);
-            move |commit_sync_config| {
-                if commit_sync_config.large_repo_id == blobrepo.get_repoid() {
+            move |common_commit_sync_config| {
+                if common_commit_sync_config.large_repo_id == blobrepo.get_repoid().id() {
                     debug!(
                         logger,
                         "Not constructing push redirection args: {:?}",
@@ -255,7 +260,7 @@ pub async fn repo_handlers<'a>(
                         blobrepo.get_repoid()
                     );
                     Some(IncompletePushRedirectorArgs {
-                        commit_sync_config,
+                        common_commit_sync_config,
                         synced_commit_mapping: sql_commit_sync_mapping,
                         target_repo_dbs: backsyncer_dbs,
                         source_blobrepo: blobrepo,

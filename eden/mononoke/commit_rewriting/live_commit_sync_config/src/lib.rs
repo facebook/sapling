@@ -126,7 +126,17 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     ) -> Result<CommitSyncConfig>;
 
     /// Returns a config that applies to all config versions
-    async fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig>;
+    async fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
+        self.get_common_config_if_exists(repo_id)
+            .await?
+            .ok_or_else(|| ErrorKind::NotPartOfAnyConfigs(repo_id).into())
+    }
+
+    /// Returns a config that applies to all config versions if it exists
+    async fn get_common_config_if_exists(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<Option<CommonCommitSyncConfig>>;
 }
 
 #[derive(Clone)]
@@ -289,7 +299,10 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
         })
     }
 
-    async fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
+    async fn get_common_config_if_exists(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<Option<CommonCommitSyncConfig>> {
         let config = self.config_handle_for_all_versions.get();
         let maybe_common_config = {
             let interesting_common_configs = config
@@ -311,7 +324,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
                 (Some(_), Some(_)) => Err(ErrorKind::PartOfMultipleConfigs(repo_id)),
             }?
         };
-        maybe_common_config.ok_or_else(|| ErrorKind::NotPartOfAnyConfigs(repo_id).into())
+        Ok(maybe_common_config)
     }
 }
 
@@ -509,17 +522,20 @@ impl TestLiveCommitSyncConfigSource {
         }
     }
 
-    fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
+    fn get_common_config_if_exists(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<Option<CommonCommitSyncConfig>> {
         let common_configs = self.0.common_configs.lock().unwrap();
         for config in common_configs.iter() {
             if config.large_repo_id == repo_id.id()
                 || config.small_repos.contains_key(&repo_id.id())
             {
-                return Ok(config.clone());
+                return Ok(Some(config.clone()));
             }
         }
 
-        Err(anyhow!("not found common config for {}", repo_id))
+        Ok(None)
     }
 
     fn related_to_repo(commit_sync_config: &CommitSyncConfig, repo_id: RepositoryId) -> bool {
@@ -602,7 +618,10 @@ impl LiveCommitSyncConfig for TestLiveCommitSyncConfig {
             .get_commit_sync_config_by_version(repo_id, version_name)
     }
 
-    async fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
-        self.source.get_common_config(repo_id)
+    async fn get_common_config_if_exists(
+        &self,
+        repo_id: RepositoryId,
+    ) -> Result<Option<CommonCommitSyncConfig>> {
+        self.source.get_common_config_if_exists(repo_id)
     }
 }
