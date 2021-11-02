@@ -228,6 +228,7 @@ impl IdMap {
                     id, name, existing_id, name
                 ));
             }
+            tracing::debug!("need reassign {:?} {:?} => {:?}", name, existing_id, id);
             // Mark "need_rebuild_non_master". This prevents "sync" until
             // the callsite uses "remove_non_master" to remove and re-insert
             // non-master ids.
