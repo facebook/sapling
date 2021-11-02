@@ -10,8 +10,8 @@ use async_trait::async_trait;
 use futures::{stream, StreamExt};
 
 use edenapi_types::{
-    AnyId, Batch, FileContentTokenMetadata, LookupRequest, LookupResponse, UploadToken,
-    UploadTokenMetadata,
+    AnyId, Batch, FileContentTokenMetadata, IndexableId, LookupRequest, LookupResponse,
+    LookupResult, UploadToken, UploadTokenMetadata,
 };
 use ephemeral_blobstore::BubbleId;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
@@ -46,7 +46,8 @@ async fn check_request_item(
             }
         }
     }
-    let bubble_id = item.bubble_id.map(BubbleId::new);
+    let old_bubble_id = item.bubble_id;
+    let bubble_id = old_bubble_id.map(BubbleId::new);
     let hg_on_bubble_error = "Hg derived data cannot be stored in bubbles";
     let lookup = match item.id {
         AnyId::AnyFileContentId(id) => {
@@ -100,19 +101,32 @@ async fn check_request_item(
         })
         .into(),
     };
+    let (old_token, result) = match lookup {
+        Lookup::NotPresent => (
+            None,
+            LookupResult::NotPresent(IndexableId {
+                id: item.id,
+                bubble_id: old_bubble_id,
+            }),
+        ),
+        Lookup::Present(None) => {
+            let token = UploadToken::new_fake_token(item.id.clone(), item.bubble_id);
+            (Some(token.clone()), LookupResult::Present(token))
+        }
+        Lookup::Present(Some(metadata)) => {
+            let token = UploadToken::new_fake_token_with_metadata(
+                item.id.clone(),
+                item.bubble_id,
+                metadata,
+            );
+            (Some(token.clone()), LookupResult::Present(token))
+        }
+    };
 
     Ok(LookupResponse {
         index,
-        old_token: match lookup {
-            Lookup::NotPresent => None,
-            Lookup::Present(None) => Some(UploadToken::new_fake_token(item.id, item.bubble_id)),
-            Lookup::Present(Some(metadata)) => Some(UploadToken::new_fake_token_with_metadata(
-                item.id,
-                item.bubble_id,
-                metadata,
-            )),
-        },
-        result: Default::default(),
+        old_token,
+        result,
     })
 }
 
