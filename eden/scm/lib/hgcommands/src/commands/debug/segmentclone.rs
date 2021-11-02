@@ -21,7 +21,6 @@ use dag::ops::Open;
 use dag::CloneData;
 use dag::VertexName;
 use progress_model::ProgressBar;
-use progress_model::Registry;
 
 use super::ConfigSet;
 use super::Result;
@@ -61,8 +60,7 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
         .context("error opening segmented changelog")?;
 
     let len = clone_data.idmap.len();
-    let bar = ProgressBar::new("Building", len as _, "commits");
-    Registry::main().register_progress_bar(&bar);
+    let bar = ProgressBar::register_new("Building", len as _, "commits");
     let idmap: HashMap<dag::Id, dag::Vertex> = clone_data
         .idmap
         .into_iter()

@@ -17,6 +17,8 @@ use std::time::Instant;
 
 use arc_swap::ArcSwapOption;
 
+use crate::Registry;
+
 /// A progress bar. It has multiple `Metric`s and a `Metric`.
 ///
 /// ```plain,ignore
@@ -47,6 +49,17 @@ impl ProgressBar {
             created_at: Instant::now(),
         };
         Arc::new(bar)
+    }
+
+    /// Create a new progress bar and register with default registry.
+    pub fn register_new(
+        topic: impl Into<Cow<'static, str>>,
+        total: u64,
+        unit: impl Into<Cow<'static, str>>,
+    ) -> Arc<Self> {
+        let bar = Self::new(topic, total, unit);
+        Registry::main().register_progress_bar(&bar);
+        bar
     }
 
     /// Get the progress bar topic.

@@ -79,9 +79,7 @@ fn add_progress_bar_threads(
 ) -> Vec<JoinHandle<()>> {
     let threads: Vec<JoinHandle<_>> = (0..num_threads)
         .map(|_| {
-            let bar = ProgressBar::new("Progress", total, "items");
-            let registry = Registry::main();
-            registry.register_progress_bar(&bar);
+            let bar = ProgressBar::register_new("Progress", total, "items");
             thread::spawn(move || {
                 for _i in 0..total {
                     bar.increase_position(1);

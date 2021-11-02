@@ -30,7 +30,6 @@ use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
 use progress_model::ProgressBar;
-use progress_model::Registry;
 use pyconfigparser::config;
 use pymanifest::treemanifest;
 use pypathmatcher::extract_matcher;
@@ -78,8 +77,7 @@ py_class!(class checkoutplan |py| {
             let target = target.read();
             let current = current.read();
             let mut diff = Diff::new(&current, &target, &matcher)?;
-            let bar = &ProgressBar::new("Calculating", 0, "depth");
-            Registry::main().register_progress_bar(bar);
+            let bar = &ProgressBar::register_new("Calculating", 0, "depth");
             diff.attach_progress_bar(bar);
             ActionMap::from_diff(diff)
         }).map_pyerr(py)?;
