@@ -357,7 +357,6 @@ metaedit noncontinuous set of commits in the stack:
 Test copying obsmarkers
 
   $ hg init $TESTTMP/autorel
-  $ setconfig mutation.proxy-obsstore=off experimental.evolution=obsolete
   $ cd $TESTTMP/autorel
   $ drawdag<<'EOS'
   > D
@@ -400,7 +399,6 @@ Test copying obsmarkers
 Slightly more complex: with double amends
 
   $ newrepo autorel1
-  $ setconfig mutation.proxy-obsstore=off experimental.evolution=obsolete
   $ drawdag<<'EOS'
   > D
   > |
