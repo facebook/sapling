@@ -293,6 +293,23 @@ mod tests {
         )
     });
 
+    // Helpers
+    const ROOT: SegmentFlags = SegmentFlags::HAS_ROOT;
+    const EMPTY: SegmentFlags = SegmentFlags::empty();
+
+    const M: Group = Group::MASTER;
+    const N: Group = Group::NON_MASTER;
+
+    fn seg(flags: SegmentFlags, group: Group, low: u64, high: u64, parents: &[u64]) -> Segment {
+        Segment::new(
+            flags,
+            0,
+            group.min_id() + low,
+            group.min_id() + high,
+            &parents.iter().copied().map(Id).collect::<Vec<_>>(),
+        )
+    }
+
     fn insert_segments(store: &mut dyn IdDagStore, segments: Vec<&Segment>) {
         for segment in segments {
             store.insert_segment(segment.clone()).unwrap();
@@ -375,23 +392,9 @@ mod tests {
     }
 
     fn test_all_ids_in_groups(store: &mut dyn IdDagStore) {
-        // Helpers
-        const ROOT: SegmentFlags = SegmentFlags::HAS_ROOT;
-        const EMPTY: SegmentFlags = SegmentFlags::empty();
-        let seg = |flags, group: Group, low, high, parents: &[u64]| {
-            Segment::new(
-                flags,
-                0,
-                group.min_id() + low,
-                group.min_id() + high,
-                &parents.iter().copied().map(Id).collect::<Vec<_>>(),
-            )
-        };
         let all_id_str = |store: &dyn IdDagStore, groups| {
             format!("{:?}", store.all_ids_in_groups(groups).unwrap())
         };
-        const M: Group = Group::MASTER;
-        const N: Group = Group::NON_MASTER;
 
         // Insert some discontinuous segments. Then query all_ids_in_groups.
         store.insert_segment(seg(ROOT, M, 10, 20, &[])).unwrap();
