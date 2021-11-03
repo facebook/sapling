@@ -412,10 +412,16 @@ def run(
 ):
     manifest = os.path.abspath(manifest)
     if is_libfb_present():
-        from eden.mononoke.tests.integration.facebook.lib_runner import (
-            load_manifest_env,
-        )
+        from eden.mononoke.tests.integration.facebook.lib_buck import find_buck_out
         from libfb.py.log import set_simple_logging
+
+        def load_manifest_env(manifest_path: str) -> Dict[str, str]:
+            buck_out = find_buck_out(manifest_path)
+
+            with open(manifest_path) as f:
+                manifest_env = json.load(f)
+
+            return {k: os.path.join(buck_out, v) for k, v in manifest_env.items()}
 
         set_simple_logging(logging.INFO)
         manifest_env: ManifestEnv = load_manifest_env(manifest)
@@ -461,15 +467,15 @@ def run(
     else:
         selected_tests.extend(tests)
 
-    if is_libfb_present():
+    try:
         from eden.mononoke.tests.integration.facebook.lib_runner import fb_test_context
-
+    except ImportError:
+        run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env={})
+    else:
         with fb_test_context(
             ctx, dry_run, mysql_client, mysql_schemas, devdb, selected_tests
         ) as test_env:
             run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env)
-    else:
-        run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env={})
 
 
 if __name__ == "__main__":
