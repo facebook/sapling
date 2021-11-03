@@ -12,12 +12,12 @@ anyhow = "1.0"
 async-stream = "0.3"
 async_requests = { version = "0.1.0", path = "../async_requests" }
 clap = "2.33"
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
 context = { version = "0.1.0", path = "../../server/context" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 megarepo_api = { version = "0.1.0", path = ".." }
 megarepo_config = { version = "0.1.0", path = "../megarepo_config" }
 megarepo_error = { version = "0.1.0", path = "../megarepo_error" }
@@ -30,7 +30,7 @@ source_control = { version = "0.1.0", path = "../../scs/if" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 megarepo_configs = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/megarepo" }
 requests_table = { version = "0.1.0", path = "../requests_table" }
 

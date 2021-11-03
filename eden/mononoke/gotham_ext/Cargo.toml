@@ -12,8 +12,8 @@ anyhow = "1.0"
 async-compression = { version = "0.3.8", features = ["all-implementations", "brotli", "bzip2", "deflate", "gzip", "zlib", "zstd"] }
 async-trait = "0.1.51"
 bytes = { version = "1.1", features = ["serde"] }
-cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 gotham = { version = "0.6.0", default-features = false }
 gotham_derive = "0.6.0"
@@ -30,7 +30,7 @@ quiet_stream = { version = "0.1.0", path = "../quiet_stream" }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"
 tokio-util = { version = "0.6", features = ["full"] }

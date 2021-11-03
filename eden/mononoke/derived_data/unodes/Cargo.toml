@@ -14,9 +14,9 @@ path = "lib.rs"
 anyhow = "1.0"
 async-trait = "0.1.51"
 blobstore = { version = "0.1.0", path = "../../blobstore" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bytes = { version = "1.1", features = ["serde"] }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = ".." }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
@@ -25,7 +25,7 @@ manifest = { version = "0.1.0", path = "../../manifest" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
 tunables = { version = "0.1.0", path = "../../tunables" }
 
@@ -35,8 +35,8 @@ blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 derived_data_filenodes = { version = "0.1.0", path = "../filenodes" }
 derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }

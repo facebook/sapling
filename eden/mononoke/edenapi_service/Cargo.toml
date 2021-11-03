@@ -13,11 +13,11 @@ async-trait = "0.1.51"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 gotham = { version = "0.6.0", default-features = false }
 gotham_derive = "0.6.0"
@@ -42,7 +42,7 @@ serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_dep
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
 sshrelay = { version = "0.1.0", path = "../sshrelay" }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
 types = { version = "0.1.0", path = "../../scm/lib/types" }
 

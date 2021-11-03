@@ -18,20 +18,20 @@ bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 clap = "2.33"
 dns-lookup = "1.0"
-failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures-util = "0.3.7"
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 libc = "0.2.98"
 openssl = "0.10.35"
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 rand = { version = "0.8", features = ["small_rng"] }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 session_id = { version = "0.1.0", path = "../server/session_id" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 slog-term = "2.8"

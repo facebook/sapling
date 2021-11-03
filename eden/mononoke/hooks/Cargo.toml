@@ -20,11 +20,11 @@ anyhow = "1.0"
 async-trait = "0.1.51"
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bytes = { version = "1.1", features = ["serde"] }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hooks_content_stores = { version = "0.1.0", path = "content-stores" }
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 hyper-tls = "0.5"
@@ -38,13 +38,13 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 regex = "1.5.4"
-scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tempdir = "0.3"
 thiserror = "1.0.29"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
@@ -52,11 +52,11 @@ tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
-sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
 

@@ -19,8 +19,8 @@ tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 walkdir = "2.3"
 
 [dev-dependencies]
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 
 [patch.crates-io]
 curl-sys = { git = "https://github.com/mzr/curl-rust", rev = "97694cf73ea9309d9e8ed067ec0c05367841d405" }

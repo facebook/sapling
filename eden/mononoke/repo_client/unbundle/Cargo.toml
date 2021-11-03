@@ -19,14 +19,14 @@ bookmarks_movement = { version = "0.1.0", path = "../../bookmarks/bookmarks_move
 bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
-futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 getbundle_response = { version = "0.1.0", path = "../getbundle_response" }
 hex = "0.4.3"
 hooks = { version = "0.1.0", path = "../../hooks" }
@@ -55,7 +55,7 @@ scribe_commit_queue = { version = "0.1.0", path = "../scribe_commit_queue" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 sha2 = "0.8"
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0.29"
 time_window_counter = { version = "0.1.0", path = "../../time_window_counter" }
@@ -65,8 +65,8 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 wirepack = { version = "0.1.0", path = "../wirepack" }
 
 [dev-dependencies]
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.10.1"
 mercurial_types-mocks = { version = "0.1.0", path = "../../mercurial/types/mocks" }
 quickcheck_async = "0.1.1"

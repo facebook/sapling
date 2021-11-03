@@ -90,16 +90,16 @@ blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "blobstore" }
 blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
 bookmarks = { version = "0.1.0", path = "bookmarks" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bulkops = { version = "0.1.0", path = "bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
 bytesize = "1.0"
 cacheblob = { version = "0.1.0", path = "blobstore/cacheblob" }
-cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changesets = { version = "0.1.0", path = "changesets" }
 check_git_wc = { version = "0.1.0", path = "git/check_git_wc" }
 clap = "2.33"
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "cmdlib" }
 context = { version = "0.1.0", path = "server/context" }
 criterion = "=0.3.1"
@@ -107,15 +107,15 @@ dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
 derive_more = "0.99.3"
 derived_data = { version = "0.1.0", path = "derived_data" }
 environment = { version = "0.1.0", path = "cmdlib/environment" }
-failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures-util = "0.3.7"
 git2 = "0.13"
 itertools = "0.10.1"
-lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "manifest" }
 mercurial_derived_data = { version = "0.1.0", path = "derived_data/mercurial_derived_data" }
 mercurial_revlog = { version = "0.1.0", path = "mercurial/revlog" }

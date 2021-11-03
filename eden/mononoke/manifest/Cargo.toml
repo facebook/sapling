@@ -12,9 +12,9 @@ anyhow = "1.0"
 async-stream = "0.3"
 async-trait = "0.1.51"
 blobstore = { version = "0.1.0", path = "../blobstore" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 maplit = "1.0"
@@ -25,8 +25,8 @@ serde_derive = "1.0"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memblob = { version = "0.1.0", path = "../blobstore/memblob" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 pretty_assertions = "0.6"

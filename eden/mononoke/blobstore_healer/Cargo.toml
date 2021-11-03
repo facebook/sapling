@@ -17,16 +17,16 @@ async-trait = "0.1.51"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 blobstore_sync_queue = { version = "0.1.0", path = "../blobstore_sync_queue" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
-futures_03_ext = { package = "futures_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_03_ext = { package = "futures_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.10.1"
 lazy_static = "1.0"
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
@@ -39,7 +39,7 @@ tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
 bytes = { version = "1.1", features = ["serde"] }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 
 [patch.crates-io]
 curl-sys = { git = "https://github.com/mzr/curl-rust", rev = "97694cf73ea9309d9e8ed067ec0c05367841d405" }

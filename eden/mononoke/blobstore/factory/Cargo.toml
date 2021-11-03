@@ -13,15 +13,15 @@ blobstore = { version = "0.1.0", path = ".." }
 blobstore_stats = { version = "0.1.0", path = "../blobstore_stats" }
 blobstore_sync_queue = { version = "0.1.0", path = "../../blobstore_sync_queue" }
 cacheblob = { version = "0.1.0", path = "../cacheblob" }
-cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 chaosblob = { version = "0.1.0", path = "../chaosblob" }
 clap = "2.33"
 delayblob = { version = "0.1.0", path = "../delayblob" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fileblob = { version = "0.1.0", path = "../fileblob" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 logblob = { version = "0.1.0", path = "../logblob" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
@@ -32,7 +32,7 @@ readonlyblob = { version = "0.1.0", path = "../readonlyblob" }
 samplingblob = { version = "0.1.0", path = "../samplingblob" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 sqlblob = { version = "0.1.0", path = "../sqlblob" }

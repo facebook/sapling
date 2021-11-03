@@ -25,7 +25,7 @@ bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
 bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
-cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../../changesets" }
 changesets_impl = { version = "0.1.0", path = "../../changesets/changesets_impl" }
@@ -35,13 +35,13 @@ context = { version = "0.1.0", path = "../../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
 delayblob = { version = "0.1.0", path = "../../blobstore/delayblob" }
 derived_data_utils = { version = "0.1.0", path = "../../derived_data/utils" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }

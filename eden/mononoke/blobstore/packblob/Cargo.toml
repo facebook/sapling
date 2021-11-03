@@ -15,7 +15,7 @@ blobstore = { version = "0.1.0", path = ".." }
 bufsize = "1.0"
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
@@ -24,9 +24,9 @@ packblob_thrift = { version = "0.1.0", path = "if" }
 zstd = "=0.8.0+zstd.1.4.9"
 
 [dev-dependencies]
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 memblob = { version = "0.1.0", path = "../memblob" }
 rand = { version = "0.8", features = ["small_rng"] }
 rand_xorshift = "0.3"

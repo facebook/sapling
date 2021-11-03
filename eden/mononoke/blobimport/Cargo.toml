@@ -23,8 +23,8 @@ context = { version = "0.1.0", path = "../server/context" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
-failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mercurial_revlog = { version = "0.1.0", path = "../mercurial/revlog" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
@@ -34,7 +34,7 @@ slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 
 [dev-dependencies]
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 
 [patch.crates-io]
 curl-sys = { git = "https://github.com/mzr/curl-rust", rev = "97694cf73ea9309d9e8ed067ec0c05367841d405" }

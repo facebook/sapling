@@ -22,21 +22,21 @@ changesets = { version = "0.1.0", path = "../changesets" }
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 maplit = "1.0"
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

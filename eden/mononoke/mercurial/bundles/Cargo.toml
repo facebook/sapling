@@ -9,20 +9,20 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-async_compression = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+async_compression = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bufsize = "0.4"
 byteorder = "1.3"
 bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
-bytes_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bytes_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.10.1"
 lazy_static = "1.0"
-limited_async_read = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+limited_async_read = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 maplit = "1.0"
 mercurial_mutation = { version = "0.1.0", path = "../mutation" }
 mercurial_types = { version = "0.1.0", path = "../types" }
@@ -42,8 +42,8 @@ vlqencoding = { version = "0.1.0", path = "../../../scm/lib/vlqencoding" }
 
 [dev-dependencies]
 assert_matches = "1.5"
-failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_types-mocks = { version = "0.1.0", path = "../types/mocks" }
 partial-io = { git = "https://github.com/vgao1996/rust-partial-io", rev = "919bf89e8a5ccda789d5a53052d30ed6fc8b1988", features = ["quickcheck_types", "tokio"] }
 

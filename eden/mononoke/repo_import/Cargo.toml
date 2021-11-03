@@ -15,13 +15,13 @@ blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 clap = "2.33"
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 import_tools = { version = "0.1.0", path = "../git/import_tools" }
 itertools = "0.10.1"
@@ -45,10 +45,10 @@ topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 [dev-dependencies]
 ascii = "1.0"
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
-cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 commitsync = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/repos/commitsync" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_types = { version = "0.1.0", path = "../git/git_types" }
 mercurial_types-mocks = { version = "0.1.0", path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }

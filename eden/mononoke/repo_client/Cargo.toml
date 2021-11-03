@@ -16,20 +16,20 @@ bookmarks = { version = "0.1.0", path = "../bookmarks" }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks/bookmarks_types" }
 bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
-bytes_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bytes_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
-futures_01_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_01_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 getbundle_response = { version = "0.1.0", path = "getbundle_response" }
 hgproto = { version = "0.1.0", path = "../hgproto" }
-hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 iterhelpers = { version = "0.1.0", path = "../common/iterhelpers" }
 itertools = "0.10.1"
 lazy_static = "1.0"
@@ -53,17 +53,17 @@ scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 streaming_clone = { version = "0.1.0", path = "streaming_clone" }
 thiserror = "1.0.29"
-time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../tunables" }
 unbundle = { version = "0.1.0", path = "unbundle" }
 warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }
 
 [dev-dependencies]
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }

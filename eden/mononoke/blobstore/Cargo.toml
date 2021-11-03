@@ -19,20 +19,20 @@ async-trait = "0.1.51"
 auto_impl = "0.4"
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 strum = "0.21"
 strum_macros = "0.21"
 thiserror = "1.0.29"
 zstd = "=0.8.0+zstd.1.4.9"
 
 [dev-dependencies]
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cacheblob = { version = "0.1.0", path = "cacheblob" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fileblob = { version = "0.1.0", path = "fileblob" }
 memblob = { version = "0.1.0", path = "memblob" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }

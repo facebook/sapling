@@ -18,25 +18,25 @@ blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 bytes = { version = "1.1", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 changesets = { version = "0.1.0", path = "../changesets" }
 clap = "2.33"
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 context = { version = "0.1.0", path = "../server/context" }
 deleted_files_manifest = { version = "0.1.0", path = "../derived_data/deleted_files_manifest" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fastlog = { version = "0.1.0", path = "../derived_data/fastlog" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 humantime = "2.1"
 manifest = { version = "0.1.0", path = "../manifest" }
 mononoke_api_types = { version = "0.1.0", path = "../mononoke_api/types" }
@@ -48,8 +48,8 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tokio-stream = { version = "0.1.4", features = ["fs", "io-util", "net", "signal", "sync", "time"] }
 topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
@@ -59,7 +59,7 @@ unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 [dev-dependencies]
 async-trait = "0.1.51"
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

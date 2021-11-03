@@ -16,9 +16,9 @@ doctest = false
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.51"
-codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 const-cstr = "0.3.0"
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 once_cell = "1.8"
 rate_limiting_config = { version = "0.1.0", path = "../ratelimiting" }
@@ -30,4 +30,4 @@ tracing = "0.1.27"
 tracing-futures = "0.2.5"
 
 [build-dependencies]
-thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

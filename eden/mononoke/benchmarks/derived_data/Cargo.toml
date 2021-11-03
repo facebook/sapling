@@ -18,10 +18,10 @@ context = { version = "0.1.0", path = "../../server/context" }
 deleted_files_manifest = { version = "0.1.0", path = "../../derived_data/deleted_files_manifest" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../../derived_data/manager" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 rand = { version = "0.8", features = ["small_rng"] }

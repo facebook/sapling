@@ -17,7 +17,7 @@ blame = { version = "0.1.0", path = "../../derived_data/blame" }
 bookmarks = { version = "0.1.0", path = ".." }
 bookmarks_types = { version = "0.1.0", path = "../bookmarks_types" }
 changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 deleted_files_manifest = { version = "0.1.0", path = "../../derived_data/deleted_files_manifest" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
@@ -27,10 +27,10 @@ fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 itertools = "0.10.1"
-lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_api_types = { version = "0.1.0", path = "../../mononoke_api/types" }
@@ -38,20 +38,20 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 phases = { version = "0.1.0", path = "../../phases" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 
 [dev-dependencies]
 delayblob = { version = "0.1.0", path = "../../blobstore/delayblob" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
 memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 rand_distr = "0.4"
-sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 

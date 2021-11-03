@@ -14,28 +14,29 @@ backsyncer = { version = "0.1.0", path = "../../commit_rewriting/backsyncer" }
 base64 = "0.11.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 cache_warmup = { version = "0.1.0", path = "../../cache_warmup" }
-cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clientinfo = { version = "0.1.0", path = "../../../scm/lib/clientinfo" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../../cmdlib" }
+commitsync = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/commitsync" }
 context = { version = "0.1.0", path = "../context" }
 edenapi_service = { version = "0.1.0", path = "../../edenapi_service" }
-failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
 futures-util = "0.3.7"
-futures_01_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_01_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 gotham_ext = { version = "0.1.0", path = "../../gotham_ext" }
 hgproto = { version = "0.1.0", path = "../../hgproto" }
-hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 http = "0.2"
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 lazy_static = "1.0"
@@ -63,10 +64,10 @@ slog_ext = { version = "0.1.0", path = "../../common/rust/slog_ext" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 sshrelay = { version = "0.1.0", path = "../../sshrelay" }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 synced_commit_mapping = { version = "0.1.0", path = "../../commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0.29"
-time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"
 tokio-util = { version = "0.6", features = ["full"] }

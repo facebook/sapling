@@ -22,8 +22,8 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 maplit = "1.0"
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }

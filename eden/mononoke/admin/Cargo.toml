@@ -29,11 +29,11 @@ bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 bulkops = { version = "0.1.0", path = "../bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
-cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../changesets" }
 clap = "2.33"
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
 commitsync = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/repos/commitsync" }
 context = { version = "0.1.0", path = "../server/context" }
@@ -45,14 +45,14 @@ derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 ephemeral_blobstore = { version = "0.1.0", path = "../blobstore/ephemeral_blobstore" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 filenodes = { version = "0.1.0", path = "../filenodes" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fsnodes = { version = "0.1.0", path = "../derived_data/fsnodes" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 git_types = { version = "0.1.0", path = "../git/git_types" }
 humantime = "2.1"
 itertools = "0.10.1"
@@ -85,7 +85,7 @@ serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_dep
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
-sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 source_control = { version = "0.1.0", path = "../scs/if" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
@@ -96,7 +96,7 @@ unodes = { version = "0.1.0", path = "../derived_data/unodes" }
 xdiff = { version = "0.1.0", path = "../../scm/lib/xdiff" }
 
 [dev-dependencies]
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }

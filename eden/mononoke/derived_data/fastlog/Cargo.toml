@@ -16,23 +16,23 @@ async-trait = "0.1.51"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 deleted_files_manifest = { version = "0.1.0", path = "../deleted_files_manifest" }
 derived_data = { version = "0.1.0", path = ".." }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
-futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 itertools = "0.10.1"
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 mutable_renames = { version = "0.1.0", path = "../../mutable_renames" }
-stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
-time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../unodes" }
@@ -40,10 +40,10 @@ unodes = { version = "0.1.0", path = "../unodes" }
 [dev-dependencies]
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
-borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }

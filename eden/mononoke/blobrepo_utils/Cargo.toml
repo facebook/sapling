@@ -18,12 +18,12 @@ blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 dashmap = { version = "4.0.2", features = ["rayon", "serde"] }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.31" }
-futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 manifest = { version = "0.1.0", path = "../manifest" }
 mercurial_derived_data = { version = "0.1.0", path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
@@ -33,8 +33,8 @@ thiserror = "1.0.29"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [dev-dependencies]
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 
 [patch.crates-io]

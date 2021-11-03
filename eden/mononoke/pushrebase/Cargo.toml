@@ -14,7 +14,7 @@ blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobrepo_utils = { version = "0.1.0", path = "../blobrepo_utils" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
@@ -33,14 +33,14 @@ tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
 async-trait = "0.1.51"
-fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 rand = { version = "0.8", features = ["small_rng"] }
-sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
