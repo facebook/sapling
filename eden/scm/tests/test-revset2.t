@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ enable commitextras
@@ -204,8 +203,8 @@ test that more than one `-r`s are combined in the right order and deduplicated:
   2326846efdab34abffaf5ad2e7831f64a8ebb017
   904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
   5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
   d75937da8da0322d18c3771fb029ffd88b996c89
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
 
 test that `or` operation skips duplicated revisions from right-hand side
 
@@ -221,15 +220,14 @@ test that `or` operation skips duplicated revisions from right-hand side
         (symbol 'ancestors')
         (symbol '4'))))
   * set:
-  <addset
-    <baseset- [1, 3, 5]>,
-    <generatorset+>>
+  <nameset-
+    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:904fa392b9415cad2ad08ac82d39bed6cfbcaa1c+0:5]>>
   5
+  4
   3
+  2
   1
   0
-  2
-  4
   $ try 'sort(ancestors(4) or reverse(1::5))'
   (func
     (symbol 'sort')
@@ -244,9 +242,8 @@ test that `or` operation skips duplicated revisions from right-hand side
             (symbol '1')
             (symbol '5'))))))
   * set:
-  <addset+
-    <generatorset+>,
-    <baseset- [1, 3, 5]>>
+  <nameset+
+    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:904fa392b9415cad2ad08ac82d39bed6cfbcaa1c+0:5]>>
   0
   1
   2
@@ -300,7 +297,8 @@ test optimization of trivial `or` operation
   * set:
   <addset
     <baseset [0, 1]>,
-    <idset+ [2 3]>>
+    <nameset+
+      <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2:8528aa5637f252b36e034c373e36890ace37524c+2:3]>>>
   0
   1
   2
@@ -332,7 +330,8 @@ test optimization of trivial `or` operation
         (symbol '_list')
         (string '5\x006'))))
   * set:
-  <idset+ [0..=6]>
+  <nameset+
+    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:e0cc66ef77e8b6f711815af4e001a6594fde3ba5+0:6]>>
   0
   1
   2
@@ -405,8 +404,8 @@ test integer range in `_list`
 test '0000' != '0' in `_list`
 
   $ log '0|0000'
-  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
-  0000000000000000000000000000000000000000
+  abort: unknown revision '0000'!
+  [255]
 
 test ',' in `_list`
   $ log '0,1'
@@ -443,7 +442,8 @@ test that chained `or` operations make balanced addsets
         (symbol '4')
         (symbol '5'))))
   * set:
-  <idset+ [0..=5]>
+  <nameset+
+    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:904fa392b9415cad2ad08ac82d39bed6cfbcaa1c+0:5]>>
   0
   1
   2
@@ -495,7 +495,8 @@ check that conversion to only works
       (symbol '3')
       (symbol '1')))
   * set:
-  <baseset+ [3]>
+  <nameset+
+    <spans [8528aa5637f252b36e034c373e36890ace37524c+3]>>
   3
   $ try --optimize 'ancestors(1) - ancestors(3)'
   (minus
@@ -512,7 +513,8 @@ check that conversion to only works
       (symbol '1')
       (symbol '3')))
   * set:
-  <baseset+ []>
+  <nameset+
+    <spans []>>
   $ try --optimize 'not ::2 and ::6'
   (and
     (not
@@ -527,7 +529,8 @@ check that conversion to only works
       (symbol '6')
       (symbol '2')))
   * set:
-  <baseset+ [3, 4, 5, 6]>
+  <nameset+
+    <spans [8528aa5637f252b36e034c373e36890ace37524c:e0cc66ef77e8b6f711815af4e001a6594fde3ba5+3:6]>>
   3
   4
   5
@@ -548,7 +551,8 @@ check that conversion to only works
       (symbol '6')
       (symbol '4')))
   * set:
-  <baseset+ [3, 5, 6]>
+  <nameset+
+    <spans [904fa392b9415cad2ad08ac82d39bed6cfbcaa1c:e0cc66ef77e8b6f711815af4e001a6594fde3ba5+5:6, 8528aa5637f252b36e034c373e36890ace37524c+3]>>
   3
   5
   6
@@ -707,11 +711,11 @@ issue2654: report a parse error if the revset was not completely parsed
      ^ here)
   [255]
 
-or operator should preserve ordering:
+or operator should preserve ordering (no longer true with nameset fast paths):
   $ log 'reverse(2::4) or tip'
+  6a4f54cc779b5949146617ba046459baab4a496f
   2326846efdab34abffaf5ad2e7831f64a8ebb017
   5ed5505e9f1c21de2345daabdd7913fe53e4acd2
-  6a4f54cc779b5949146617ba046459baab4a496f
 
 parentrevspec
 
@@ -861,9 +865,8 @@ aliases:
     (symbol 'merge')
     None)
   * set:
-  <filteredset
-    <fullreposet+ [0..=9]>,
-    <merge>>
+  <nameset-
+    <meta ?>>
   6
 
   $ HGPLAIN=1
@@ -882,9 +885,8 @@ aliases:
     (symbol 'merge')
     None)
   * set:
-  <filteredset
-    <fullreposet+ [0..=9]>,
-    <merge>>
+  <nameset-
+    <meta ?>>
   6
 
   $ unset HGPLAIN
@@ -939,7 +941,8 @@ test alias recursion
       (symbol 'merge')
       None))
   * set:
-  <generatorset+>
+  <nameset+
+    <spans [e0cc66ef77e8b6f711815af4e001a6594fde3ba5:013af1973af4a1932911a575960a876af6c02aaa+6:7]>>
   6
   7
 
@@ -1001,7 +1004,8 @@ test nesting and variable passing
   <baseset
     <max
       <fullreposet+ [0..=9]>,
-      <idset+ [2..=5]>>>
+      <nameset+
+        <spans [5ed5505e9f1c21de2345daabdd7913fe53e4acd2:904fa392b9415cad2ad08ac82d39bed6cfbcaa1c+2:5]>>>>
   5
 
 test chained `or` operations are flattened at parsing phase
@@ -1033,7 +1037,8 @@ test chained `or` operations are flattened at parsing phase
         (symbol '2')
         (symbol '3'))))
   * set:
-  <idset+ [0..=3]>
+  <nameset+
+    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4:8528aa5637f252b36e034c373e36890ace37524c+0:3]>>
   0
   1
   2
@@ -1076,9 +1081,8 @@ but 'all()' should never be substituted to '0()'.
       (symbol 'all')
       None))
   * set:
-  <filteredset
-    <baseset [0]>,
-    <idset+ [0..=9]>>
+  <nameset-
+    <spans [2785f51eece5a23075c6f1d74702d8d9cb8bf0d4+0]>>
   0
 
 test unknown reference:
@@ -1602,22 +1606,22 @@ Test obsstore related revsets
   > EOS
 
   $ hg log -G -r "all()" -T '{desc}\n'
-  o  H
+  o  G
   │
-  │ o  G
-  │ │
-  │ │ x  F
-  │ ├─╯
-  │ o  E
-  │ │
-  │ │ o  D
-  │ ├─╯
-  │ │ x  C
-  │ ├─╯
-  x │  B
+  │ x  F
   ├─╯
-  │ o  Z
-  │
+  │ o  D
+  │ │
+  │ │ o  H
+  │ │ │
+  o │ │  E
+  ├─╯ │
+  │ x │  C
+  ├─╯ │
+  │ o │  Z
+  │   │
+  │   x  B
+  ├───╯
   x  A
   
 
@@ -1638,16 +1642,16 @@ Test obsstore related revsets
   $ hg log -r "successors($B)" -T '{desc}\n'
   B
   C
-  D
   E
+  D
   F
   G
 
   $ hg log -r "successors($B)" -T '{desc}\n' --hidden
   B
   C
-  D
   E
+  D
   F
   G
 
@@ -1672,19 +1676,9 @@ Test obsstore related revsets
   D
 
   $ hg log -r "successors($B)-obsolete()" -T '{desc}\n' --hidden
-  D
   E
+  D
   G
-
-  $ hg log -r "successors($B+$A)-contentdivergent()" -T '{desc}\n'
-  A
-  Z
-  B
-  C
-  F
-
-  $ hg log -r "successors($B+$A)-contentdivergent()-obsolete()" -T '{desc}\n'
-  Z
 
 Test `draft() & ::x` optimization
 
@@ -1710,11 +1704,7 @@ Test `draft() & ::x` optimization
   $ hg log -G -T '{desc} {phase}' -r 'sort(all(), topo, topo.firstbranch=P5)'
   o  P5 public
   │
-  │ o  S1 secret
-  │ │
   │ o  D3 draft
-  ├─╯
-  │ o  S2 secret
   ├─╯
   o  P4 public
   │
