@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings, missing_docs, clippy::all, broken_intra_doc_links)]
+#![deny(warnings, missing_docs, clippy::all, rustdoc::broken_intra_doc_links)]
 
 //! Deduplicate items by replacing them with an index into an array.
 
