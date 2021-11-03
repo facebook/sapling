@@ -510,7 +510,7 @@ def _innerwalk(self, match, event, span):
             ):
                 oldpid = _watchmanpid(event["old_clock"])
                 newpid = _watchmanpid(event["new_clock"])
-                if oldpid is not None and newpid is not None:
+                if oldpid is not None and newpid is not None and oldpid != newpid:
                     self._ui.warn(
                         _(
                             "warning: watchman has recently restarted (old pid %s, new pid %s) - operation will be slower than usual\n"
