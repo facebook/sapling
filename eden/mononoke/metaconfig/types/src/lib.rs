@@ -184,8 +184,6 @@ pub struct RepoConfig {
     pub list_keys_patterns_max: u64,
     /// Params for File storage
     pub filestore: Option<FilestoreParams>,
-    /// Config for commit sync
-    pub commit_sync_config: Option<CommitSyncConfig>,
     /// Maximum size to consider files in hooks
     pub hook_max_file_size: u64,
     /// Hipster ACL that controls access to this repo

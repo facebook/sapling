@@ -318,14 +318,6 @@ impl Repo {
         live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     ) -> Result<Self, Error> {
-        let init_commit_sync_config = match live_commit_sync_config.as_ref() {
-            None => None,
-            Some(lcsc) => Some(
-                lcsc.get_current_commit_sync_config(&ctx, blob_repo.get_repoid())
-                    .await?,
-            ),
-        };
-
         let repo_id = blob_repo.get_repoid();
         let inner = InnerRepo {
             blob_repo,
@@ -339,7 +331,6 @@ impl Repo {
         };
 
         let config = RepoConfig {
-            commit_sync_config: init_commit_sync_config,
             infinitepush: InfinitepushParams {
                 namespace: Some(InfinitepushNamespace::new(
                     Regex::new("scratch/.+").unwrap(),

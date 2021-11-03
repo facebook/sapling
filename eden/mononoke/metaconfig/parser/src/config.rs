@@ -18,15 +18,12 @@ use crate::errors::ConfigurationError;
 use anyhow::{anyhow, Context, Result};
 use cached_config::ConfigStore;
 use metaconfig_types::{
-    AllowlistEntry, BackupRepoConfig, BlobConfig, CensoredScubaParams, CommitSyncConfig,
-    CommonConfig, HgsqlGlobalrevsName, HgsqlName, Redaction, RedactionConfig, RepoConfig,
-    RepoReadOnly, StorageConfig,
+    AllowlistEntry, BackupRepoConfig, BlobConfig, CensoredScubaParams, CommonConfig,
+    HgsqlGlobalrevsName, HgsqlName, Redaction, RedactionConfig, RepoConfig, RepoReadOnly,
+    StorageConfig,
 };
 use mononoke_types::RepositoryId;
-use repos::{
-    RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinition,
-    RawStorageConfig,
-};
+use repos::{RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawRepoDefinition, RawStorageConfig};
 
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
@@ -57,7 +54,8 @@ pub fn load_repo_configs(
     config_store: &ConfigStore,
 ) -> Result<RepoConfigs> {
     let RawRepoConfigs {
-        commit_sync,
+        // TODO(stash): unused, can be deleted
+        commit_sync: _,
         common,
         repos,
         storage,
@@ -67,18 +65,13 @@ pub fn load_repo_configs(
     let repo_configs = repos;
     let storage_configs = storage;
 
-    let commit_sync = parse_commit_sync_config(commit_sync)?;
 
     let mut resolved_repo_configs = HashMap::new();
     let mut repoids = HashSet::new();
 
     for (reponame, raw_repo_definition) in repo_definitions.into_iter() {
-        let repo_config = parse_with_repo_definition(
-            raw_repo_definition,
-            &repo_configs,
-            &storage_configs,
-            &commit_sync,
-        )?;
+        let repo_config =
+            parse_with_repo_definition(raw_repo_definition, &repo_configs, &storage_configs)?;
 
         if !repoids.insert(repo_config.repoid) {
             return Err(ConfigurationError::DuplicatedRepoId(repo_config.repoid).into());
@@ -99,7 +92,6 @@ fn parse_with_repo_definition(
     repo_definition: RawRepoDefinition,
     named_repo_configs: &HashMap<String, RawRepoConfig>,
     named_storage_configs: &HashMap<String, RawStorageConfig>,
-    commit_sync_config: &HashMap<String, CommitSyncConfig>,
 ) -> Result<RepoConfig> {
     let RawRepoDefinition {
         repo_id: repoid,
@@ -272,21 +264,6 @@ fn parse_with_repo_definition(
     let hgsql_globalrevs_name =
         HgsqlGlobalrevsName(hgsql_globalrevs_name.unwrap_or_else(|| hgsql_name.0.clone()));
 
-    let relevant_commit_sync_configs: Vec<&CommitSyncConfig> = commit_sync_config
-        .values()
-        .filter(|config| is_commit_sync_config_relevant_to_repo(&repoid, config))
-        .collect();
-    let commit_sync_config = match relevant_commit_sync_configs.as_slice() {
-        [] => None,
-        [commit_sync_config] => Some((*commit_sync_config).clone()),
-        _ => {
-            return Err(anyhow!(
-                "Repo {} participates in more than one commit sync config",
-                repoid,
-            ));
-        }
-    };
-
     let enforce_lfs_acl_check = enforce_lfs_acl_check.unwrap_or(false);
     let repo_client_use_warm_bookmarks_cache =
         repo_client_use_warm_bookmarks_cache.unwrap_or(false);
@@ -320,7 +297,6 @@ fn parse_with_repo_definition(
         infinitepush,
         list_keys_patterns_max,
         filestore,
-        commit_sync_config,
         hook_max_file_size,
         hipster_acl,
         source_control_service,
@@ -459,30 +435,6 @@ fn parse_common_config(
     })
 }
 
-fn is_commit_sync_config_relevant_to_repo(
-    repoid: &RepositoryId,
-    commit_sync_config: &CommitSyncConfig,
-) -> bool {
-    &commit_sync_config.large_repo_id == repoid
-        || commit_sync_config
-            .small_repos
-            .iter()
-            .any(|(k, _)| k == repoid)
-}
-
-/// Parse a collection of raw commit sync config into commit sync config and validate it.
-fn parse_commit_sync_config(
-    raw_commit_syncs: HashMap<String, RawCommitSyncConfig>,
-) -> Result<HashMap<String, CommitSyncConfig>> {
-    raw_commit_syncs
-        .into_iter()
-        .map(|(config_name, commit_sync_config)| {
-            let commit_sync_config = commit_sync_config.convert()?;
-            Ok((config_name, commit_sync_config))
-        })
-        .collect()
-}
-
 impl RepoConfigs {
     /// Get individual `RepoConfig`, given a repo_id
     pub fn get_repo_config(&self, repo_id: RepositoryId) -> Option<(&String, &RepoConfig)> {
@@ -501,26 +453,40 @@ mod test {
     use maplit::{btreemap, hashmap, hashset};
     use metaconfig_types::{
         BlameVersion, BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams,
-        CacheWarmupParams, CommitSyncConfigVersion, CommitSyncDirection, DatabaseConfig,
-        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
-        EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
-        HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
-        MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams, PushrebaseFlags,
-        PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
-        SegmentedChangelogConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
-        SmallRepoCommitSyncConfig, SourceControlServiceMonitoring, SourceControlServiceParams,
-        UnodeVersion, WireprotoLoggingConfig,
+        CacheWarmupParams, CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
+        DatabaseConfig, DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig,
+        DerivedDataTypesConfig, EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig,
+        HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
+        LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams,
+        PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
+        RepoClientKnobs, SegmentedChangelogConfig, ShardableRemoteDatabaseConfig,
+        ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
+        SourceControlServiceParams, UnodeVersion, WireprotoLoggingConfig,
     };
     use mononoke_types::MPath;
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
     use regex::Regex;
+    use repos::RawCommitSyncConfig;
     use std::fs::{create_dir_all, write};
     use std::num::NonZeroUsize;
     use std::str::FromStr;
     use std::sync::Arc;
     use std::time::Duration;
     use tempdir::TempDir;
+
+    /// Parse a collection of raw commit sync config into commit sync config and validate it.
+    fn parse_commit_sync_config(
+        raw_commit_syncs: HashMap<String, RawCommitSyncConfig>,
+    ) -> Result<HashMap<String, CommitSyncConfig>> {
+        raw_commit_syncs
+            .into_iter()
+            .map(|(config_name, commit_sync_config)| {
+                let commit_sync_config = commit_sync_config.convert()?;
+                Ok((config_name, commit_sync_config))
+            })
+            .collect()
+    }
 
     fn write_files(
         files: impl IntoIterator<Item = (impl AsRef<Path>, impl AsRef<[u8]>)>,
@@ -636,13 +602,17 @@ mod test {
         let paths = btreemap! {
             "common/commitsyncmap.toml" => commit_sync_config
         };
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store);
-        let msg = format!("{:#?}", res);
-        println!("res = {}", msg);
-        assert!(res.is_err());
-        assert!(msg.contains("is one of the small repos too"));
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
+        let RawRepoConfigs { commit_sync, .. } =
+            crate::raw::read_raw_configs(tmp_dir.path().as_ref(), &config_store).unwrap();
+        for (_config_name, commit_sync_config) in commit_sync {
+            let res = commit_sync_config.convert();
+            let msg = format!("{:#?}", res);
+            println!("res = {}", msg);
+            assert!(res.is_err());
+            assert!(msg.contains("is one of the small repos too"));
+        }
     }
 
     #[test]
@@ -669,13 +639,17 @@ mod test {
         let paths = btreemap! {
             "common/commitsyncmap.toml" => commit_sync_config
         };
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store);
-        let msg = format!("{:#?}", res);
-        println!("res = {}", msg);
-        assert!(res.is_err());
-        assert!(msg.contains("present multiple times in the same CommitSyncConfig"));
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
+        let RawRepoConfigs { commit_sync, .. } =
+            crate::raw::read_raw_configs(tmp_dir.path().as_ref(), &config_store).unwrap();
+        for (_config_name, commit_sync_config) in commit_sync {
+            let res = commit_sync_config.convert();
+            let msg = format!("{:#?}", res);
+            println!("res = {}", msg);
+            assert!(res.is_err());
+            assert!(msg.contains("present multiple times in the same CommitSyncConfig"));
+        }
     }
 
     #[test]
@@ -709,13 +683,17 @@ mod test {
         let paths = btreemap! {
             "common/commitsyncmap.toml" => commit_sync_config
         };
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store);
-        let msg = format!("{:#?}", res);
-        println!("res = {}", msg);
-        assert!(res.is_err());
-        assert!(msg.contains("One bookmark prefix starts with another, which is prohibited"));
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
+        let RawRepoConfigs { commit_sync, .. } =
+            crate::raw::read_raw_configs(tmp_dir.path().as_ref(), &config_store).unwrap();
+        for (_config_name, commit_sync_config) in commit_sync {
+            let res = commit_sync_config.convert();
+            let msg = format!("{:#?}", res);
+            println!("res = {}", msg);
+            assert!(res.is_err());
+            assert!(msg.contains("One bookmark prefix starts with another, which is prohibited"));
+        }
     }
 
     #[test]
@@ -1130,7 +1108,6 @@ mod test {
                     chunk_size: 768,
                     concurrency: 48,
                 }),
-                commit_sync_config: None,
                 hipster_acl: Some("foo/test".to_string()),
                 source_control_service: SourceControlServiceParams {
                     permit_writes: false,
@@ -1229,7 +1206,6 @@ mod test {
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
                 filestore: None,
-                commit_sync_config: None,
                 hipster_acl: None,
                 source_control_service: SourceControlServiceParams::default(),
                 source_control_service_monitoring: None,
