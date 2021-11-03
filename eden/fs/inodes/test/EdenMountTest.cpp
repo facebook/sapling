@@ -228,6 +228,56 @@ TEST(EdenMount, getTreeOrTreeEntry) {
   }
 }
 
+TEST(EdenMount, canonicalizePathFromTree) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile("src/test.c", "testy tests");
+  builder.mkdir("bar");
+  builder.mkdir("bar/baz");
+  builder.setFile("bar/baz/TEST.c", "this is a test");
+
+  TestMount testMount{builder};
+  const auto& edenMount = testMount.getEdenMount();
+
+  {
+    auto path =
+        edenMount
+            ->canonicalizePathFromTree(
+                "bar/baz/TEST.c"_relpath, ObjectFetchContext::getNullContext())
+            .get(0ms);
+    EXPECT_EQ(path, "bar/baz/TEST.c"_relpath);
+  }
+
+  if (folly::kIsWindows) {
+    {
+      auto path =
+          edenMount
+              ->canonicalizePathFromTree(
+                  "SRC/TEST.c"_relpath, ObjectFetchContext::getNullContext())
+              .get(0ms);
+      EXPECT_EQ(path, "src/test.c"_relpath);
+    }
+
+    {
+      auto path =
+          edenMount
+              ->canonicalizePathFromTree(
+                  "bar/BAZ"_relpath, ObjectFetchContext::getNullContext())
+              .get(0ms);
+      EXPECT_EQ(path, "bar/baz"_relpath);
+    }
+
+    {
+      auto path = edenMount
+                      ->canonicalizePathFromTree(
+                          "bar/BAZ/test.c"_relpath,
+                          ObjectFetchContext::getNullContext())
+                      .get(0ms);
+      EXPECT_EQ(path, "bar/baz/TEST.c"_relpath);
+    }
+  }
+}
+
 TEST(EdenMount, loadFileContentsInvalidInodePtr) {
   FakeTreeBuilder builder;
   builder.mkdir("src");

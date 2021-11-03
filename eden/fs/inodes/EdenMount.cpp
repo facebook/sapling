@@ -991,6 +991,78 @@ EdenMount::getTreeOrTreeEntry(
       });
 }
 
+namespace {
+class CanonicalizeProcessor {
+ public:
+  CanonicalizeProcessor(
+      RelativePath path,
+      std::shared_ptr<ObjectStore> objectStore,
+      ObjectFetchContext& context)
+      : path_{std::move(path)},
+        iterRange_{path_.components()},
+        iter_{iterRange_.begin()},
+        objectStore_{std::move(objectStore)},
+        context_{context} {}
+
+  ImmediateFuture<RelativePath> next(std::shared_ptr<const Tree> tree) {
+    auto name = *iter_++;
+    auto* treeEntry = tree->getEntryPtr(name);
+
+    if (!treeEntry) {
+      return makeImmediateFuture<RelativePath>(
+          std::system_error(ENOENT, std::generic_category()));
+    }
+
+    retPath_ = retPath_ + treeEntry->getName();
+
+    if (iter_ == iterRange_.end()) {
+      return ImmediateFuture{retPath_};
+    } else {
+      if (!treeEntry->isTree()) {
+        return makeImmediateFuture<RelativePath>(
+            std::system_error(ENOTDIR, std::generic_category()));
+      } else {
+        return objectStore_->getTree(treeEntry->getHash(), context_)
+            .thenValue([this](std::shared_ptr<const Tree> tree) {
+              return next(std::move(tree));
+            });
+      }
+    }
+  }
+
+ private:
+  RelativePath path_;
+  RelativePath::base_type::component_iterator_range iterRange_;
+  RelativePath::base_type::component_iterator iter_;
+  std::shared_ptr<ObjectStore> objectStore_;
+  // The ObjectFetchContext is allocated at the beginning of a request and
+  // released once the request completes. Since the lifetime of LookupProcessor
+  // is strictly less than the one of a request, we can safely store a
+  // reference to the fetch context.
+  ObjectFetchContext& context_;
+
+  RelativePath retPath_{""};
+};
+} // namespace
+
+ImmediateFuture<RelativePath> EdenMount::canonicalizePathFromTree(
+    RelativePathPiece path,
+    ObjectFetchContext& context) const {
+  if (path.empty()) {
+    return path.copy();
+  }
+
+  return ImmediateFuture{getRootTree(context).semi()}.thenValue(
+      [path = path.copy(), &context, objectStore = objectStore_](
+          std::shared_ptr<const Tree> tree) mutable {
+        auto processor = std::make_unique<CanonicalizeProcessor>(
+            std::move(path), std::move(objectStore), context);
+        auto future = processor->next(std::move(tree));
+        return std::move(future).ensure(
+            [p = std::move(processor)]() mutable { p.reset(); });
+      });
+}
+
 #ifndef _WIN32
 InodeNumber EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;

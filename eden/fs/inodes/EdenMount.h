@@ -471,6 +471,20 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   getTreeOrTreeEntry(RelativePathPiece path, ObjectFetchContext& context) const;
 
   /**
+   * Walk the Tree hierarchy and return a path whose case matches the Tree path
+   * components.
+   *
+   * This is only really useful on Windows where the casing of paths from
+   * ProjectedFS is arbitrary but EdenFS must return the proper casing for
+   * them. On other platform, this will simply returns the passed in path.
+   *
+   * This may fail with the same errors as the getTreeOrTreeEntry method.
+   */
+  ImmediateFuture<RelativePath> canonicalizePathFromTree(
+      RelativePathPiece path,
+      ObjectFetchContext& context) const;
+
+  /**
    * Look up the Inode object for the specified path.
    *
    * This may fail with an InodeError containing ENOENT if the path does not
