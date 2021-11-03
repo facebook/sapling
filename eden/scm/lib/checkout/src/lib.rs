@@ -22,6 +22,7 @@ use std::time::SystemTime;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::format_err;
+use anyhow::Context;
 use anyhow::Result;
 use futures::stream;
 use futures::try_join;
@@ -611,7 +612,10 @@ impl CheckoutPlan {
         flag: bool,
         bar: &Arc<ProgressBar>,
     ) -> Result<()> {
-        async_vfs.set_executable(path.to_owned(), flag).await?;
+        async_vfs
+            .set_executable(path.to_owned(), flag)
+            .await
+            .context(format!("Updating exec on {}", path))?;
         stats.meta_updated.fetch_add(1, Ordering::Relaxed);
         bar.increase_position(1);
         Ok(())

@@ -112,7 +112,12 @@ impl ActionMap {
                     Entry::Vacant(va) => {
                         va.insert(Action::Update(UpdateAction::new(None, file.meta)));
                     }
-                    Entry::Occupied(_) => {}
+                    Entry::Occupied(mut oc) => match oc.get() {
+                        Action::Remove | Action::Update(_) => {}
+                        Action::UpdateExec(_) => {
+                            oc.insert(Action::Update(UpdateAction::new(None, file.meta)));
+                        }
+                    },
                 }
             } else {
                 // by definition of xor matcher this means old_matcher.matches_file==true
