@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from . import bookmarks, error, obsutil, scmutil
+from . import bookmarks, error, mutation, scmutil
 from .i18n import _
 
 
@@ -25,7 +25,7 @@ def _destupdateobs(repo, clean):
 
     if p1.obsolete() and not p1.children():
         # allow updating to successors
-        successors = obsutil.successorssets(repo, p1.node())
+        successors = mutation.successorssets(repo, p1.node())
 
         # behavior of certain cases is as follows,
         #
