@@ -11,7 +11,7 @@ import sys
 from edenscm.mercurial import (
     cmdutil,
     extensions,
-    obsutil,
+    mutation,
     pycompat,
     registrar,
     smartset,
@@ -268,7 +268,7 @@ def showsyncstatus(repo, ctx, templ, **args):
     if local == remote:
         return "sync"
     elif count == 1:
-        precursors = list(obsutil.allpredecessors(repo.obsstore, [ctx.node()]))
+        precursors = list(mutation.allpredecessors(repo, [ctx.node()]))
         hashes = [repo[h].hex() for h in precursors if h in repo]
         # hashes[0] is the current
         # hashes[1] is the previous
