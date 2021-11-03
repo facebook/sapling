@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable};
 use cloned::cloned;
@@ -19,6 +19,8 @@ use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
 use crate::fastlog_impl::{create_new_batch, save_fastlog_batch_by_unode_id};
+
+use derived_data_service_if::types as thrift;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum FastlogParent {
@@ -132,6 +134,24 @@ impl BonsaiDerivable for RootFastlog {
             Some(_) => Ok(Some(RootFastlog(changeset_id))),
             None => Ok(None),
         }
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        if let thrift::DerivedData::fastlog(thrift::DerivedDataFastlog::root_fastlog_id(id)) = data
+        {
+            ChangesetId::from_thrift(id).map(Self)
+        } else {
+            Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            ))
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        Ok(thrift::DerivedData::fastlog(
+            thrift::DerivedDataFastlog::root_fastlog_id(data.changeset_id().into_thrift()),
+        ))
     }
 }
 

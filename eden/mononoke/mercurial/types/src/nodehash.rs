@@ -469,6 +469,17 @@ impl HgFileNodeId {
         HgNodeHash::from_bytes(bytes).map(HgFileNodeId)
     }
 
+    pub fn from_thrift(thrift_hash: thrift::HgNodeHash) -> Result<Self> {
+        HgNodeHash::from_thrift(thrift_hash).map(HgFileNodeId)
+    }
+
+    pub fn from_thrift_opt(thrift_hash_opt: Option<thrift::HgNodeHash>) -> Result<Option<Self>> {
+        match thrift_hash_opt {
+            Some(h) => Ok(Some(Self::from_thrift(h)?)),
+            None => Ok(None),
+        }
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }

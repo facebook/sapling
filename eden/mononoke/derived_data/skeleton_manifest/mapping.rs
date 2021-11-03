@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
@@ -20,6 +20,8 @@ use mononoke_types::{
 
 use crate::batch::derive_skeleton_manifests_in_batch;
 use crate::derive::derive_skeleton_manifest;
+
+use derived_data_service_if::types as thrift;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootSkeletonManifestId(pub(crate) SkeletonManifestId);
@@ -125,6 +127,28 @@ impl BonsaiDerivable for RootSkeletonManifestId {
             .await?
             .map(TryInto::try_into)
             .transpose()?)
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        if let thrift::DerivedData::skeleton_manifest(
+            thrift::DerivedDataSkeletonManifest::root_skeleton_manifest_id(id),
+        ) = data
+        {
+            SkeletonManifestId::from_thrift(id).map(Self)
+        } else {
+            Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            ))
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        Ok(thrift::DerivedData::skeleton_manifest(
+            thrift::DerivedDataSkeletonManifest::root_skeleton_manifest_id(
+                data.skeleton_manifest_id().into_thrift(),
+            ),
+        ))
     }
 }
 

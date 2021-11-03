@@ -12,12 +12,14 @@ use context::CoreContext;
 use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use metaconfig_types::BlameVersion;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, ManifestUnodeId};
 use std::collections::HashMap;
 use unodes::RootUnodeManifestId;
 
 use crate::batch_v2::derive_blame_v2_in_batch;
 use crate::derive_v2::derive_blame_v2;
+
+use derived_data_service_if::types as thrift;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RootBlameV2 {
@@ -104,6 +106,40 @@ impl BonsaiDerivable for RootBlameV2 {
             })),
             None => Ok(None),
         }
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        if let thrift::DerivedData::blame(thrift::DerivedDataBlame::root_blame_v2(blame)) = data {
+            Ok(Self {
+                csid: ChangesetId::from_thrift(blame.changeset_id)?,
+                root_manifest: match blame.unode {
+                    thrift::DerivedDataUnode::root_unode_manifest_id(id) => {
+                        ManifestUnodeId::from_thrift(id).map(RootUnodeManifestId)
+                    }
+                    thrift::DerivedDataUnode::UnknownField(x) => Err(anyhow!(
+                        "Can't convert {} from provided thrift::DerivedData, unknown field: {}",
+                        Self::NAME.to_string(),
+                        x,
+                    )),
+                }?,
+            })
+        } else {
+            Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            ))
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        Ok(thrift::DerivedData::blame(
+            thrift::DerivedDataBlame::root_blame_v2(thrift::DerivedDataRootBlameV2 {
+                changeset_id: data.csid.into_thrift(),
+                unode: thrift::DerivedDataUnode::root_unode_manifest_id(
+                    data.root_manifest().manifest_unode_id().into_thrift(),
+                ),
+            }),
+        ))
     }
 }
 

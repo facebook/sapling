@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Error, Result};
+use anyhow::{anyhow, bail, Error, Result};
 use async_trait::async_trait;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use context::CoreContext;
@@ -14,6 +14,8 @@ use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use std::collections::HashMap;
+
+use derived_data_service_if::types as thrift;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct MappedHgChangesetId(pub HgChangesetId);
@@ -95,6 +97,26 @@ impl BonsaiDerivable for MappedHgChangesetId {
             .into_iter()
             .map(|entry| (entry.bcs_id, MappedHgChangesetId(entry.hg_cs_id)))
             .collect())
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        if let thrift::DerivedData::hg_changeset(
+            thrift::DerivedDataHgChangeset::mapped_hgchangeset_id(id),
+        ) = data
+        {
+            HgChangesetId::from_thrift(id).map(Self)
+        } else {
+            Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            ))
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        Ok(thrift::DerivedData::hg_changeset(
+            thrift::DerivedDataHgChangeset::mapped_hgchangeset_id(data.0.into_thrift()),
+        ))
     }
 }
 

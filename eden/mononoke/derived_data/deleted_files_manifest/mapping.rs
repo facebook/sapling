@@ -6,7 +6,7 @@
  */
 
 use crate::derive::{derive_deleted_files_manifest, get_changes};
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
@@ -15,6 +15,8 @@ use derived_data::impl_bonsai_derived_via_manager;
 use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId, DeletedManifestId};
 use unodes::RootUnodeManifestId;
+
+use derived_data_service_if::types as thrift;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootDeletedManifestId(DeletedManifestId);
@@ -101,6 +103,28 @@ impl BonsaiDerivable for RootDeletedManifestId {
             .await?
             .map(TryInto::try_into)
             .transpose()?)
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        if let thrift::DerivedData::deleted_manifest(
+            thrift::DerivedDataDeletedManifest::root_deleted_manifest_id(id),
+        ) = data
+        {
+            DeletedManifestId::from_thrift(id).map(Self)
+        } else {
+            Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            ))
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        Ok(thrift::DerivedData::deleted_manifest(
+            thrift::DerivedDataDeletedManifest::root_deleted_manifest_id(
+                data.deleted_manifest_id().into_thrift(),
+            ),
+        ))
     }
 }
 

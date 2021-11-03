@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use anyhow::{Error, Result};
+use anyhow::{bail, Error, Result};
 use async_trait::async_trait;
 use blobstore::{BlobstoreBytes, BlobstoreGetData};
 use bytes::Bytes;
@@ -17,6 +17,8 @@ use mononoke_types::{BonsaiChangeset, ChangesetId};
 use test_repo_factory::TestRepoFactory;
 
 use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
+
+use derived_data_service_if::types as thrift;
 
 #[derive(Clone, Debug)]
 pub struct DerivedGeneration {
@@ -119,6 +121,14 @@ impl BonsaiDerivable for DerivedGeneration {
             Some(blob) => Ok(Some(blob.try_into()?)),
             None => Ok(None),
         }
+    }
+
+    fn from_thrift(_: thrift::DerivedData) -> Result<Self> {
+        bail!("Not implemented for {}", Self::NAME);
+    }
+
+    fn into_thrift(_: Self) -> Result<thrift::DerivedData> {
+        bail!("Not implemented for {}", Self::NAME);
     }
 }
 

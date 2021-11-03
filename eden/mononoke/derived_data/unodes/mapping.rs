@@ -6,7 +6,7 @@
  */
 
 use crate::derive::{derive_unode_manifest, derive_unode_manifest_stack};
-use anyhow::{Context, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, Loadable};
 use bytes::Bytes;
@@ -22,8 +22,10 @@ use mononoke_types::{
 use slog::debug;
 use std::collections::HashMap;
 
+use derived_data_service_if::types as thrift;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct RootUnodeManifestId(ManifestUnodeId);
+pub struct RootUnodeManifestId(pub ManifestUnodeId);
 
 impl RootUnodeManifestId {
     pub fn manifest_unode_id(&self) -> &ManifestUnodeId {
@@ -193,6 +195,27 @@ impl BonsaiDerivable for RootUnodeManifestId {
             Some(blob) => Ok(Some(blob.try_into()?)),
             None => Ok(None),
         }
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        if let thrift::DerivedData::unode(thrift::DerivedDataUnode::root_unode_manifest_id(id)) =
+            data
+        {
+            ManifestUnodeId::from_thrift(id).map(Self)
+        } else {
+            Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            ))
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        Ok(thrift::DerivedData::unode(
+            thrift::DerivedDataUnode::root_unode_manifest_id(
+                data.manifest_unode_id().into_thrift(),
+            ),
+        ))
     }
 }
 

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{anyhow, bail, format_err, Error, Result};
 use async_trait::async_trait;
 use blobstore::Loadable;
 use context::CoreContext;
@@ -18,6 +18,8 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, RepoPath};
 use std::collections::HashMap;
 
 use crate::derive::{derive_filenodes, derive_filenodes_in_batch};
+
+use derived_data_service_if::types as thrift;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreparedRootFilenode {
@@ -187,6 +189,57 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
                 root_filenode: Some(filenode),
             }),
         )
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        match data {
+            thrift::DerivedData::filenode(thrift::DerivedDataFilenode::filenode_present(
+                filenode,
+            )) => match filenode.root_filenode {
+                None => Ok(FilenodesOnlyPublic::Present {
+                    root_filenode: None,
+                }),
+                Some(data) => Ok(FilenodesOnlyPublic::Present {
+                    root_filenode: Some(
+                        FilenodeInfo::from_thrift(data)
+                            .map(|info| PreparedFilenode {
+                                path: RepoPath::RootPath,
+                                info,
+                            })?
+                            .try_into()?,
+                    ),
+                }),
+            },
+            thrift::DerivedData::filenode(thrift::DerivedDataFilenode::filenode_disabled(_)) => {
+                Ok(FilenodesOnlyPublic::Disabled)
+            }
+            _ => Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            )),
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        match data {
+            FilenodesOnlyPublic::Present {
+                root_filenode: Some(root),
+            } => Ok(thrift::DerivedData::filenode(
+                thrift::DerivedDataFilenode::filenode_present(thrift::DerivedDataFilenodePresent {
+                    root_filenode: Some(PreparedFilenode::from(root).info.into_thrift()),
+                }),
+            )),
+            FilenodesOnlyPublic::Present {
+                root_filenode: None,
+            } => Ok(thrift::DerivedData::filenode(
+                thrift::DerivedDataFilenode::filenode_present(thrift::DerivedDataFilenodePresent {
+                    root_filenode: None,
+                }),
+            )),
+            FilenodesOnlyPublic::Disabled => Ok(thrift::DerivedData::filenode(
+                thrift::DerivedDataFilenode::filenode_disabled(thrift::DisabledFilenodes {}),
+            )),
+        }
     }
 }
 

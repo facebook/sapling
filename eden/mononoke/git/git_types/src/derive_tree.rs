@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Error, Result};
+use anyhow::{anyhow, bail, Error, Result};
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
@@ -23,6 +23,8 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
 
 use crate::errors::ErrorKind;
 use crate::{BlobHandle, Tree, TreeBuilder, TreeHandle};
+
+use derived_data_service_if::types as thrift;
 
 fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "git.derived_root.";
@@ -72,6 +74,25 @@ impl BonsaiDerivable for TreeHandle {
             .await?
             .map(TryInto::try_into)
             .transpose()?)
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        if let thrift::DerivedData::tree_handle(thrift::DerivedDataTreeHandle::tree_handle(id)) =
+            data
+        {
+            Self::try_from(id)
+        } else {
+            Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            ))
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        Ok(thrift::DerivedData::tree_handle(
+            thrift::DerivedDataTreeHandle::tree_handle(data.into()),
+        ))
     }
 }
 

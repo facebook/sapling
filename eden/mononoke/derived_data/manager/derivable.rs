@@ -18,6 +18,8 @@ use mononoke_types::{BonsaiChangeset, ChangesetId};
 
 use crate::context::DerivationContext;
 
+use derived_data_service_if::types::DerivedData;
+
 /// Defines how derivation occurs.  Each derived data type must implement
 /// `BonsaiDerivable` to describe how to derive a new value from its inputs
 /// and how to persist mappings from changesets to derived data.
@@ -153,6 +155,10 @@ pub trait BonsaiDerivable: Sized + Send + Sync + Clone + Debug + 'static {
         .try_collect()
         .await
     }
+
+    fn from_thrift(_data: DerivedData) -> Result<Self>;
+
+    fn into_thrift(_data: Self) -> Result<DerivedData>;
 }
 
 #[async_trait]

@@ -17,6 +17,8 @@ use unodes::RootUnodeManifestId;
 
 use crate::derive_v1::derive_blame_v1;
 
+use derived_data_service_if::types as thrift;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BlameRoot(ChangesetId);
 
@@ -86,6 +88,25 @@ impl BonsaiDerivable for BlameRoot {
             Some(_) => Ok(Some(BlameRoot(changeset_id))),
             None => Ok(None),
         }
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        if let thrift::DerivedData::blame(thrift::DerivedDataBlame::root_blame_v1(blame)) = data {
+            ChangesetId::from_thrift(blame.blame_root_id).map(Self)
+        } else {
+            Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            ))
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        Ok(thrift::DerivedData::blame(
+            thrift::DerivedDataBlame::root_blame_v1(thrift::DerivedDataRootBlameV1 {
+                blame_root_id: data.changeset_id().into_thrift(),
+            }),
+        ))
     }
 }
 

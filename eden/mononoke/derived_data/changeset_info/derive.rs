@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobstore::Blobstore;
 use context::CoreContext;
@@ -16,6 +16,8 @@ use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 
 use crate::ChangesetInfo;
+
+use derived_data_service_if::types as thrift;
 
 fn format_key(derivation_ctx: &DerivationContext, changeset_id: ChangesetId) -> String {
     let root_prefix = "changeset_info.blake2.";
@@ -77,6 +79,26 @@ impl BonsaiDerivable for ChangesetInfo {
             .await?
             .map(TryInto::try_into)
             .transpose()?)
+    }
+
+    fn from_thrift(data: thrift::DerivedData) -> Result<Self> {
+        if let thrift::DerivedData::changeset_info(
+            thrift::DerivedDataChangesetInfo::changeset_info(data),
+        ) = data
+        {
+            Self::from_thrift(data)
+        } else {
+            Err(anyhow!(
+                "Can't convert {} from provided thrift::DerivedData",
+                Self::NAME.to_string(),
+            ))
+        }
+    }
+
+    fn into_thrift(data: Self) -> Result<thrift::DerivedData> {
+        Ok(thrift::DerivedData::changeset_info(
+            thrift::DerivedDataChangesetInfo::changeset_info(data.into_thrift()),
+        ))
     }
 }
 
