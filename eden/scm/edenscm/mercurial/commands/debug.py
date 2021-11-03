@@ -60,7 +60,6 @@ from .. import (
     merge as mergemod,
     mutation,
     obsolete,
-    obsutil,
     phases,
     progress,
     pvec,
@@ -434,29 +433,6 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
             ui.write("%s%s\n" % (indent_string, hex(node)))
 
 
-def _debugobsmarkers(ui, part, indent=0, **opts):
-    """display version and markers contained in 'data'"""
-    data = part.read()
-    indent_string = " " * indent
-    try:
-        version, markers = obsolete._readmarkers(data)
-    except error.UnknownVersion as exc:
-        msg = "%sunsupported version: %s (%d bytes)\n"
-        msg %= indent_string, exc.version, len(data)
-        ui.write(msg)
-    else:
-        msg = "%sversion: %d (%d bytes)\n"
-        msg %= indent_string, version, len(data)
-        ui.write(msg)
-        fm = ui.formatter("debugobsolete", opts)
-        for rawmarker in sorted(markers):
-            m = obsutil.marker(None, rawmarker)
-            fm.startitem()
-            fm.plain(indent_string)
-            cmdutil.showmarker(fm, m)
-        fm.end()
-
-
 def _debugphaseheads(ui, data, indent=0):
     """display version and markers contained in 'data'"""
     indent_string = " " * indent
@@ -487,8 +463,6 @@ def _debugbundle2(ui, gen, all=None, **opts):
             version = part.params.get("version", "01")
             cg = changegroup.getunbundler(version, part, "UN")
             _debugchangegroup(ui, cg, all=all, indent=4, **opts)
-        if part.type == "obsmarkers":
-            _debugobsmarkers(ui, part, indent=4, **opts)
         if part.type == "phase-heads":
             _debugphaseheads(ui, part, indent=4)
         _debugbundle2part(ui, part, all, **opts)
