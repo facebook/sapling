@@ -1607,51 +1607,6 @@ def verifyactions(actions, state, ctxs):
         )
 
 
-def adjustreplacementsfrommarkers(repo, oldreplacements):
-    """Adjust replacements from obsolescence markers
-
-    Replacements structure is originally generated based on
-    histedit's state and does not account for changes that are
-    not recorded there. This function fixes that by adding
-    data read from obsolescence markers"""
-    if not obsolete.isenabled(repo, obsolete.createmarkersopt):
-        return oldreplacements
-
-    unfi = repo
-    nm = unfi.changelog.nodemap
-    obsstore = repo.obsstore
-    newreplacements = list(oldreplacements)
-    oldsuccs = [r[1] for r in oldreplacements]
-    # successors that have already been added to succstocheck once
-    seensuccs = set().union(*oldsuccs)  # create a set from an iterable of tuples
-    succstocheck = list(seensuccs)
-    obsoleterevs = obsolete.getrevs(repo, "obsolete")
-    while succstocheck:
-        n = succstocheck.pop()
-        missing = nm.get(n) is None
-        # successors.get does not handle cycles correctly. As a workaround,
-        # pretend there are no successor markers if "n" is not obsoleted.
-        markers = obsstore.successors.get(n, ())
-        try:
-            if unfi[n].rev() not in obsoleterevs:
-                markers = []
-        except error.RepoLookupError:
-            # Node n no longer exists (ex. stripped).
-            pass
-        if missing and not markers:
-            # dead end, mark it as such
-            newreplacements.append((n, ()))
-        for marker in markers:
-            nsuccs = marker[1]
-            newreplacements.append((n, nsuccs))
-            for nsucc in nsuccs:
-                if nsucc not in seensuccs:
-                    seensuccs.add(nsucc)
-                    succstocheck.append(nsucc)
-
-    return newreplacements
-
-
 def adjustreplacementsfrommutation(repo, oldreplacements):
     """Adjust replacements from commit mutation
 
@@ -1689,7 +1644,7 @@ def processreplacement(state):
     if mutation.enabled(state.repo):
         replacements = adjustreplacementsfrommutation(state.repo, state.replacements)
     else:
-        replacements = adjustreplacementsfrommarkers(state.repo, state.replacements)
+        replacements = state.replacements
     allsuccs = set()
     replaced = set()
     fullmapping = {}
