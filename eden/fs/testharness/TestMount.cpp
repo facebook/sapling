@@ -690,7 +690,9 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
 }
 
 std::shared_ptr<const Tree> TestMount::getRootTree() const {
-  return edenMount_->getRootTree().get();
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "TestMount::getRootTree");
+  return edenMount_->getRootTree(*context).get();
 }
 
 std::string TestMount::loadFileContentsFromPath(std::string path) {

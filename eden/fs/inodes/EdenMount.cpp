@@ -904,11 +904,10 @@ TreeInodePtr EdenMount::getRootInode() const {
   return inodeMap_->getRootInode();
 }
 
-folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree() const {
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "EdenMount::getRootTree");
+folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree(
+    ObjectFetchContext& context) const {
   RootId commitHash = *parentCommit_.rlock();
-  return objectStore_->getRootTree(commitHash, *context);
+  return objectStore_->getRootTree(commitHash, context);
 }
 
 #ifndef _WIN32

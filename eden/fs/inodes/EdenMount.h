@@ -449,7 +449,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 #endif // !_WIN32
 
   /** Convenience method for getting the Tree for the root of the mount. */
-  folly::Future<std::shared_ptr<const Tree>> getRootTree() const;
+  folly::Future<std::shared_ptr<const Tree>> getRootTree(
+      ObjectFetchContext& context) const;
 
   /**
    * Look up the Inode object for the specified path.
