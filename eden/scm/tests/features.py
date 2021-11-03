@@ -10,7 +10,6 @@ mutationblacklist = """
     test-fb-hgext-treemanifest-treeonly-linknodes.t
     test-inherit-mode.t
     test-mutation-fromobsmarkers.t
-    test-rebase-dest.t
     test-revset2.t
     test-obsmarker-template-t.py
 """.split()

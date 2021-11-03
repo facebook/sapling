@@ -396,7 +396,7 @@ Massively rewrite the DAG:
   
 Resolve instability:
 
-  $ rebasewithdag <<'EOF' -r 'orphan()-obsolete()' -d 'max((successors(max(roots(ALLSRC) & ::SRC)^)-obsolete())::)'
+  $ rebasewithdag <<'EOF' -r '(obsolete()::)-obsolete()' -d 'max((successors(max(roots(ALLSRC) & ::SRC)^)-obsolete())::)'
   >      F2
   >      |
   >    J E E2
