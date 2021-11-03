@@ -12,7 +12,6 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use borrowed::borrowed;
-use cached_config::ConfigStore;
 use clap::ArgMatches;
 use cmdlib::{
     args::{self, MononokeMatches},
@@ -36,7 +35,6 @@ use futures::{
 };
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
-use metaconfig_types::RepoConfig;
 use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{ChangesetId, FileChange, MPath, RepositoryId};
@@ -95,14 +93,22 @@ async fn run_move<'a>(
     ctx: CoreContext,
     matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
-    repo_config: RepoConfig,
+    live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), Error> {
     let origin_repo =
         RepositoryId::new(args::get_i32_opt(sub_m, ORIGIN_REPO).expect("Origin repo is missing"));
     let resulting_changeset_args = cs_args_from_matches(sub_m);
-    let commit_sync_config = repo_config.commit_sync_config.as_ref().unwrap();
-    let mover = get_small_to_large_mover(commit_sync_config, origin_repo).unwrap();
     let move_parent = sub_m.value_of(CHANGESET).unwrap().to_owned();
+
+    let mapping_version_name = sub_m
+        .value_of(MAPPING_VERSION_NAME)
+        .ok_or_else(|| format_err!("mapping-version-name is not specified"))?;
+    let mapping_version = CommitSyncConfigVersion(mapping_version_name.to_string());
+
+    let commit_sync_config = live_commit_sync_config
+        .get_commit_sync_config_by_version(origin_repo, &mapping_version)
+        .await?;
+    let mover = get_small_to_large_mover(&commit_sync_config, origin_repo).unwrap();
 
     let max_num_of_moves_in_commit: Option<NonZeroU64> =
         args::get_and_parse_opt(sub_m, MAX_NUM_OF_MOVES_IN_COMMIT);
@@ -1102,29 +1108,6 @@ fn get_version(matches: &ArgMatches<'_>) -> Result<CommitSyncConfigVersion> {
     ))
 }
 
-fn get_and_verify_repo_config<'a>(
-    config_store: &ConfigStore,
-    matches: &MononokeMatches<'a>,
-) -> Result<RepoConfig> {
-    args::get_config(config_store, &matches).and_then(|(repo_name, repo_config)| {
-        let repo_id = repo_config.repoid;
-        repo_config
-            .commit_sync_config
-            .as_ref()
-            .ok_or_else(|| format_err!("no sync config provided for {}", repo_name))
-            .map(|commit_sync_config| commit_sync_config.large_repo_id)
-            .and_then(move |large_repo_id| {
-                if repo_id != large_repo_id {
-                    Err(format_err!(
-                        "repo must be a large repo in commit sync config"
-                    ))
-                } else {
-                    Ok(repo_config)
-                }
-            })
-    })
-}
-
 async fn run_delete_no_longer_bound_files_from_large_repo<'a>(
     ctx: CoreContext,
     matches: &MononokeMatches<'a>,
@@ -1240,8 +1223,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
             (MERGE, Some(sub_m)) => run_merge(ctx, &matches, sub_m).await,
             (MOVE, Some(sub_m)) => {
-                let repo_config = get_and_verify_repo_config(config_store, &matches)?;
-                run_move(ctx, &matches, sub_m, repo_config).await
+                let live_commit_sync_config =
+                    CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
+                run_move(ctx, &matches, sub_m, live_commit_sync_config).await
             }
             (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
             (SYNC_COMMIT_AND_ANCESTORS, Some(sub_m)) => {

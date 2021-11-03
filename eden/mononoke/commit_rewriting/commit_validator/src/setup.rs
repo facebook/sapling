@@ -16,7 +16,7 @@ use cross_repo_sync::types::{Large, Small};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures::future::try_join_all;
-use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::RepoConfig;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::RepositoryId;
@@ -44,18 +44,7 @@ pub async fn get_validation_helpers<'a>(
 
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
-
-    let commit_sync_config = repo_config.commit_sync_config.clone().ok_or(format_err!(
-        "CommitSyncConfig not available for repo {}",
-        repo_id
-    ))?;
-
-    if repo_id != commit_sync_config.large_repo_id {
-        return Err(format_err!(
-            "Validator job must run on the large repo. {} is not large!",
-            repo_id
-        ));
-    }
+    let common_commit_sync_config = live_commit_sync_config.get_common_config(repo_id).await?;
 
     let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
         fb,
@@ -67,13 +56,14 @@ pub async fn get_validation_helpers<'a>(
     let large_repo_master_bookmark = get_master_bookmark(&matches)?;
 
     let validation_helper_futs =
-        commit_sync_config
+        common_commit_sync_config
             .small_repos
             .into_iter()
             .map(|(small_repo_id, _)| {
                 let large_blob_repo = large_repo.blob_repo.clone();
                 borrowed!(matches, ctx, scuba_sample);
                 async move {
+                    let small_repo_id = RepositoryId::new(small_repo_id);
                     let scuba_sample = {
                         let mut scuba_sample = scuba_sample.clone();
                         add_common_commit_syncing_fields(

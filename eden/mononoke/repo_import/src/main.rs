@@ -849,17 +849,11 @@ async fn get_pushredirected_vars(
     let large_repo_id = large_repo_config.repoid;
     let large_repo: BlobRepo =
         args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches).await?;
-    let commit_sync_config = match large_repo_config.commit_sync_config.clone() {
-        Some(config) => config,
-        None => {
-            return Err(format_err!(
-                "The repo ({}) doesn't have a commit sync config",
-                large_repo.name()
-            ));
-        }
-    };
+    let common_commit_sync_config = live_commit_sync_config
+        .get_common_config(large_repo_id)
+        .await?;
 
-    if commit_sync_config.small_repos.len() > 1 {
+    if common_commit_sync_config.small_repos.len() > 1 {
         return Err(format_err!(
             "Currently repo_import tool doesn't support backsyncing into multiple small repos for large repo {:?}, name: {}",
             large_repo_id,

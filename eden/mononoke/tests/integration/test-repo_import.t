@@ -19,7 +19,7 @@
   blobimporting
   starting Mononoke
   cloning repo in hg client 'repo2'
-  $ setup_configerator_configs
+  $ SKIP_CROSS_REPO_CONFIG=1 setup_configerator_configs
   $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
   > {
   > "per_repo": {
@@ -67,9 +67,7 @@
   * The destination bookmark name is: master_bookmark. * (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  *Reloading redacted config from configerator* (glob)
-  * Execution error: The repo (repo) doesn't have a commit sync config (glob)
+  * Execution error: Failed to fetch commit sync config: RepositoryId(0) is not a part of any CommitSyncConfig (glob)
   Error: Execution failed
   [1]
 

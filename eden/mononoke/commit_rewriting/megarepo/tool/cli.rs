@@ -233,6 +233,13 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(false),
         )
         .arg(
+            Arg::with_name(MAPPING_VERSION_NAME)
+                .long(MAPPING_VERSION_NAME)
+                .help("which mapping version to use when remapping from small to large repo")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
             Arg::with_name(ORIGIN_REPO)
                 .help("use predefined mover for part of megarepo, coming from this repo")
                 .takes_value(true)

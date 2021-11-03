@@ -709,15 +709,26 @@ EOF
 }
 EOF
   fi
-
-  export COMMIT_SYNC_CONF
+  
   COMMIT_SYNC_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/repos/commitsyncmaps"
   mkdir -p "$COMMIT_SYNC_CONF"
-  if [[ ! -f "$COMMIT_SYNC_CONF/all" ]]; then
-    cp "$TEST_FIXTURES/commitsync/all.json" "$COMMIT_SYNC_CONF/all"
-  fi
-  if [[ ! -f "$COMMIT_SYNC_CONF/current" ]]; then
-    cp "$TEST_FIXTURES/commitsync/current.json" "$COMMIT_SYNC_CONF/current"
+  export COMMIT_SYNC_CONF
+  if [[ -n $SKIP_CROSS_REPO_CONFIG ]]; then
+    cat > "$COMMIT_SYNC_CONF/all" <<EOF
+{
+}
+EOF
+    cat > "$COMMIT_SYNC_CONF/current" <<EOF
+{
+}
+EOF
+  else
+    if [[ ! -f "$COMMIT_SYNC_CONF/all" ]]; then
+      cp "$TEST_FIXTURES/commitsync/all.json" "$COMMIT_SYNC_CONF/all"
+    fi
+    if [[ ! -f "$COMMIT_SYNC_CONF/current" ]]; then
+      cp "$TEST_FIXTURES/commitsync/current.json" "$COMMIT_SYNC_CONF/current"
+    fi
   fi
 
   export XDB_GC_CONF
