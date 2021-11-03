@@ -27,7 +27,6 @@ from . import (
     mutation,
     node,
     obsolete as obsmod,
-    obsutil,
     pathutil,
     phases,
     pycompat,
@@ -2346,9 +2345,7 @@ def _predecessors(repo, subset, targetset, startdepth, stopdepth):
             repo, nodes, startdepth=startdepth, stopdepth=stopdepth
         )
     else:
-        f = lambda nodes: obsutil.allpredecessors(
-            repo.obsstore, nodes, startdepth=startdepth, stopdepth=stopdepth
-        )
+        return baseset(repo=repo)
     s = getset(repo, fullreposet(repo), targetset)
     d = _mapbynodefunc(repo, s, f)
     return subset & d
@@ -2398,9 +2395,7 @@ def _successors(repo, subset, targetset, startdepth, stopdepth):
             repo, nodes, startdepth=startdepth, stopdepth=stopdepth
         )
     else:
-        f = lambda nodes: obsutil.allsuccessors(
-            repo.obsstore, nodes, startdepth=startdepth, stopdepth=stopdepth
-        )
+        return baseset(repo=repo)
     s = getset(repo, fullreposet(repo), targetset)
     d = _mapbynodefunc(repo, s, f, visibleonly=True)
     return subset & d

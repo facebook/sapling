@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from edenscm.mercurial import mutation, obsutil, phases, registrar, revset, smartset
+from edenscm.mercurial import mutation, phases, registrar, revset, smartset
 from edenscm.mercurial.node import nullrev
 
 
@@ -46,7 +46,7 @@ def _destrestack(repo, subset, x):
     if mutation.enabled(repo):
         succnodes = mutation.allsuccessors(repo, [basenode])
     else:
-        succnodes = obsutil.allsuccessors(repo.obsstore, [basenode])
+        succnodes = []
     succnodes = [
         n
         for n in succnodes

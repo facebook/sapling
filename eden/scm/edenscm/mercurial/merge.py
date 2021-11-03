@@ -32,7 +32,6 @@ from . import (
     json,
     match as matchmod,
     mutation,
-    obsutil,
     perftrace,
     progress,
     pycompat,
@@ -2421,11 +2420,11 @@ def update(
                 dirty = wc.dirty(missing=True)
                 if dirty:
                     # Branching is a bit strange to ensure we do the minimal
-                    # amount of call to obsutil/mutation.foreground.
+                    # amount of call to mutation.foreground.
                     if mutation.enabled(repo):
                         foreground = mutation.foreground(repo, [p1.node()])
                     else:
-                        foreground = obsutil.foreground(repo, [p1.node()])
+                        foreground = set()
                     # note: the <node> variable contains a random identifier
                     if repo[node].node() in foreground:
                         pass  # allow updating to successors

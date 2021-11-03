@@ -18,7 +18,6 @@ from . import (
     hbisect,
     i18n,
     mutation,
-    obsutil,
     patch,
     pycompat,
     registrar,
@@ -720,7 +719,7 @@ def showpredecessors(repo, ctx, **args):
     if mutation.enabled(repo):
         predecessors = sorted(mutation.predecessorsset(repo, ctx.node(), closest=True))
     else:
-        predecessors = sorted(obsutil.closestpredecessors(repo, ctx.node()))
+        predecessors = []
     predecessors = list(map(hex, predecessors))
 
     return _hybrid(
@@ -743,7 +742,7 @@ def showsuccessorssets(repo, ctx, **args):
     if mutation.enabled(repo):
         ssets = mutation.successorssets(repo, ctx.node(), closest=True)
     else:
-        ssets = obsutil.successorssets(repo, ctx.node(), closest=True)
+        ssets = []
     ssets = [[hex(n) for n in ss] for ss in ssets]
 
     data = []

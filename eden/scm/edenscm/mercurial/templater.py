@@ -24,7 +24,6 @@ from . import (
     error,
     hintutil,
     minirst,
-    obsutil,
     parser,
     pycompat,
     registrar,

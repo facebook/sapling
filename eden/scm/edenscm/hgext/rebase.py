@@ -42,7 +42,6 @@ from edenscm.mercurial import (
     mergeutil,
     mutation,
     obsolete,
-    obsutil,
     patch,
     perftrace,
     phases,
@@ -1745,7 +1744,7 @@ def successorrevs(unfi, rev):
     if mutation.enabled(unfi):
         successors = mutation.allsuccessors(unfi, [node])
     else:
-        successors = obsutil.allsuccessors(unfi.obsstore, [node])
+        successors = []
     for s in successors:
         if s in nodemap:
             yield nodemap[s]
@@ -2281,7 +2280,7 @@ def _computeobsoletenotrebased(repo, rebaseobsrevs, destmap):
         if mutation.enabled(repo):
             successors = list(mutation.allsuccessors(repo, [srcnode]))
         else:
-            successors = list(obsutil.allsuccessors(repo.obsstore, [srcnode]))
+            successors = []
         if len(successors) == 1:
             # allsuccessors includes node itself. When the list only
             # contains one element, it means there are no successors.

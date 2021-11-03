@@ -22,7 +22,6 @@ from edenscm.mercurial import (
     merge,
     mutation,
     obsolete,
-    obsutil,
     phases,
     pycompat,
     registrar,
@@ -1295,9 +1294,6 @@ def smarthide(repo, revhide, revshow, local=False):
         if mutation.enabled(unfi):
             related.update(mutation.allpredecessors(unfi, [ctx.node()]))
             related.update(mutation.allsuccessors(unfi, [ctx.node()]))
-        else:
-            related.update(obsutil.allpredecessors(unfi.obsstore, [ctx.node()]))
-            related.update(obsutil.allsuccessors(unfi.obsstore, [ctx.node()]))
         related.intersection_update(x.node() for x in showctxs)
         destinations = [repo[x] for x in related]
 

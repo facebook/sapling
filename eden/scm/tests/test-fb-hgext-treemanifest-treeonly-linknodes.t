@@ -58,7 +58,6 @@ Create a commit, and then amend the message twice.  All three should share a man
   
 
 Push commit 1 to the server
-  $ hg hide 'successors(5ee5c65bfee26d54c1fb59cf411fd5a81a328b83)' -q
   $ hg push -r 5ee5c65bfee26d54c1fb59cf411fd5a81a328b83 --allow-anon
   pushing to ssh://user@dummy/master
   searching for changes

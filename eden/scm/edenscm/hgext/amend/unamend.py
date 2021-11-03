@@ -14,7 +14,6 @@ from edenscm.mercurial import (
     mutation,
     node as nodemod,
     obsolete,
-    obsutil,
     pycompat,
     registrar,
     visibility,
@@ -24,12 +23,6 @@ from edenscm.mercurial.i18n import _
 
 cmdtable = {}
 command = registrar.command(cmdtable)
-
-
-def predecessormarkers(ctx):
-    """yields the obsolete markers marking the given changeset as a successor"""
-    for data in ctx.repo().obsstore.predecessors.get(ctx.node(), ()):
-        yield obsutil.marker(ctx.repo(), data)
 
 
 @command("unamend|una|unam|uname|unamen", [])
@@ -72,7 +65,7 @@ def unamend(ui, repo, **opts):
         if not prednodes:
             prednodes = []
     else:
-        prednodes = [marker.prednode() for marker in predecessormarkers(curctx)]
+        prednodes = []
 
     if len(prednodes) != 1:
         e = _("changeset must have one predecessor, found %i predecessors")

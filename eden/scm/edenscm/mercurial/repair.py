@@ -23,7 +23,6 @@ from . import (
     error,
     exchange,
     obsolete,
-    obsutil,
     progress,
     pycompat,
     scmutil,

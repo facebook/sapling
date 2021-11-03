@@ -20,8 +20,6 @@ def _nslist(repo):
     n = {}
     for k in _namespaces:
         n[k] = ""
-    if not obsolete.isenabled(repo, obsolete.exchangeopt):
-        n.pop("obsolete")
     return n
 
 
@@ -29,7 +27,6 @@ _namespaces = {
     "namespaces": (lambda *x: False, _nslist),
     "bookmarks": (bookmarks.pushbookmark, bookmarks.listbookmarks),
     "phases": (phases.pushphase, phases.listphases),
-    "obsolete": (obsolete.pushmarker, obsolete.listmarkers),
 }
 
 

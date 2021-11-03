@@ -43,7 +43,6 @@ from edenscm.mercurial import (
     graphmod,
     mutation,
     node as nodemod,
-    obsutil,
     phases,
     pycompat,
     registrar,

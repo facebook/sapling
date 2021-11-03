@@ -3371,7 +3371,7 @@ def debugsuccessorssets(ui, repo, *revs, **opts):
     if mutation.enabled(repo):
         successorssets = mutation.successorssets
     else:
-        successorssets = obsutil.successorssets
+        successorssets = []
     if ui.debug():
 
         def ctx2str(ctx):

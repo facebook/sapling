@@ -26,7 +26,6 @@ from ..mercurial import (
     commands,
     extensions,
     mutation,
-    obsolete,
     phases,
     registrar,
     visibility,
@@ -159,11 +158,7 @@ def extsetup(ui):
 
 
 def _pull(orig, ui, repo, *args, **opts):
-    if (
-        not obsolete.isenabled(repo, obsolete.createmarkersopt)
-        and not mutation.enabled(repo)
-        and not visibility.tracking(repo)
-    ):
+    if not mutation.enabled(repo) and not visibility.tracking(repo):
         return orig(ui, repo, *args, **opts)
 
     maxrevbeforepull = len(repo.changelog)
@@ -200,8 +195,6 @@ def createmarkers(pullres, repo, start, stop, fromdrafts=True):
 
     unfi = repo
     with unfi.lock(), unfi.transaction("pullcreatemarkers"):
-        if obsolete.isenabled(repo, obsolete.createmarkersopt):
-            obsolete.createmarkers(unfi, tocreate)
         if mutation.enabled(repo) or visibility.tracking(repo):
             mutationentries = []
             tohide = []

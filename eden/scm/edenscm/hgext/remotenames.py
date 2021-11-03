@@ -39,7 +39,6 @@ from edenscm.mercurial import (
     hg,
     localrepo,
     mutation,
-    obsutil,
     pycompat,
     registrar,
     revset,
@@ -724,7 +723,7 @@ def expushdiscoverybookmarks(pushop):
         if mutation.enabled(repo):
             foreground = mutation.foreground(repo, [repo.lookup(old)])
         else:
-            foreground = obsutil.foreground(repo, [repo.lookup(old)])
+            foreground = set()
         if repo[rev].node() not in foreground:
             msg = _("pushed rev is not in the foreground of remote bookmark")
             hint = _("use --non-forward-move flag to complete arbitrary moves")

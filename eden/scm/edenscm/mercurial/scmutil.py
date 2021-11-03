@@ -28,7 +28,6 @@ from . import (
     error,
     match as matchmod,
     obsolete,
-    obsutil,
     pathutil,
     phases,
     pycompat,
