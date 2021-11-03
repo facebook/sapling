@@ -90,17 +90,16 @@ def _uploadfilenodes(repo, fctxs):
     try:
         with repo.ui.timesection("http.edenapi.upload_files"):
             stream, _stats = repo.edenapi.uploadfiles(dpack, getreponame(repo), keys)
-            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+            items = list(stream)
             repo.ui.status(
                 _n(
                     "uploaded %d file\n",
                     "uploaded %d files\n",
-                    len(foundindices),
+                    len(items),
                 )
-                % len(foundindices),
+                % len(items),
                 component="edenapi",
             )
-            return foundindices
 
     except (error.RustError, error.HttpError) as e:
         raise error.Abort(e)
@@ -144,18 +143,18 @@ def _uploadchangesets(repo, changesets, mutations):
             stream, _stats = repo.edenapi.uploadchangesets(
                 getreponame(repo), changesets, mutations
             )
-            foundindices = {item[INDEX_KEY] for item in stream if item[TOKEN_KEY]}
+            foundids = {item["data"]["id"]["HgChangesetId"] for item in stream}
             repo.ui.status(
                 _n(
                     "uploaded %d changeset\n",
                     "uploaded %d changesets\n",
-                    len(foundindices),
+                    len(foundids),
                 )
-                % len(foundindices),
+                % len(foundids),
                 component="edenapi",
             )
-            for index, cs in enumerate(changesets):
-                if index in foundindices:
+            for cs in changesets:
+                if cs[0] in foundids:
                     uploaded.append(cs[0])
                 else:
                     failed.append(cs[0])

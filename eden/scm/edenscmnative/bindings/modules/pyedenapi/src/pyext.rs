@@ -55,7 +55,6 @@ use edenapi_types::TreeEntry;
 use edenapi_types::UploadHgChangeset;
 use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
-use edenapi_types::UploadTokensResponse;
 use futures::prelude::*;
 use futures::stream;
 use progress_model::ProgressBar;
@@ -470,10 +469,7 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf /* path */, Serde<HgId> /* hgid */)>,
-    ) -> PyResult<(
-        TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
-        PyFuture,
-    )> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         let keys = to_keys(py, &keys)?;
         let store = as_legacystore(py, store)?;
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
@@ -534,13 +530,12 @@ pub trait EdenApiPyExt: EdenApi {
                             Ok((content_id, token))
                         })
                         .collect::<Result<BTreeMap<_, _>, _>>()?;
-                    let tokens = content_ids.into_iter().enumerate().map(move |(idx, cid)|
-                        Result::<_, EdenApiError>::Ok(UploadTokensResponse {
-                            index: idx,
-                            token: file_content_tokens
+                    let tokens = content_ids.into_iter().map(move |cid|
+                        Result::<_, EdenApiError>::Ok(
+                            file_content_tokens
                             .get(&cid)
                             .ok_or_else(|| EdenApiError::Other(format_err!("unexpected error: upload token is missing for ContentId({})", cid)))?.clone(),
-                        })
+                        )
                     );
                     Ok::<_, EdenApiError>((stream::iter(tokens), response.stats))
                 })
@@ -564,10 +559,7 @@ pub trait EdenApiPyExt: EdenApi {
             Serde<HgId>, /* p1 */
             Serde<HgId>, /* p2 */
         )>,
-    ) -> PyResult<(
-        TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
-        PyFuture,
-    )> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         let keys = to_keys_with_parents(py, &keys)?;
         let store = as_legacystore(py, store)?;
 
@@ -659,7 +651,7 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let responses_py = responses.map_ok(|r| Serde(r.token)).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((responses_py.into(), stats_py))
     }
@@ -703,10 +695,7 @@ pub trait EdenApiPyExt: EdenApi {
             HgChangesetContent, /* changeset content */
         )>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
-    ) -> PyResult<(
-        TStream<anyhow::Result<Serde<UploadTokensResponse>>>,
-        PyFuture,
-    )> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         let changesets = changesets
             .into_iter()
             .map(|(node_id, content)| UploadHgChangeset {
@@ -725,7 +714,7 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
-        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let responses_py = responses.map_ok(|r| Serde(r.token)).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((responses_py.into(), stats_py))
     }

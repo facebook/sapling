@@ -40,7 +40,6 @@ use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
-use edenapi_types::UploadTokensResponse;
 use futures::TryStreamExt;
 use minibytes::Bytes;
 use pyconfigparser::config;
@@ -302,7 +301,7 @@ py_class!(pub class client |py| {
             PyPathBuf,   /* path */
             Serde<HgId>, /* hgid */
         )>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         self.inner(py).clone().uploadfileblobs_py(py, store, repo, keys)
     }
 
@@ -317,7 +316,7 @@ py_class!(pub class client |py| {
             Serde<HgId>,   /* p1 */
             Serde<HgId>,   /* p2 */
         )>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         self.inner(py).clone().uploadfiles_py(py, store, repo, keys)
     }
 
@@ -345,7 +344,7 @@ py_class!(pub class client |py| {
             HgChangesetContent  /* changeset content */
         )>>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
-    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadTokensResponse>>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         self.inner(py).clone().uploadchangesets_py(py, repo, changesets.0, mutations)
     }
 
