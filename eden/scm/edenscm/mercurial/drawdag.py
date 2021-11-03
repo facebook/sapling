@@ -457,12 +457,14 @@ def drawdag(repo, text, **opts):
     defaultfiles = not any("drawdag.defaultfiles=false" in c for c in comments)
 
     committed = {None: node.nullid}  # {name: node}
+    existed = {None}
 
     # for leaf nodes, try to find existing nodes in repo
     for name, parents in edges.items():
         if len(parents) == 0:
             try:
                 committed[name] = scmutil.revsingle(repo, name).node()
+                existed.add(name)
             except error.RepoLookupError:
                 pass
 
@@ -585,7 +587,7 @@ def drawdag(repo, text, **opts):
         ctx = simplecommitctx(repo, name, pctxs, added, commitmutations, date)
         n = ctx.commit()
         committed[name] = n
-        if name not in mutationpreds:
+        if name not in mutationpreds and opts.get("bookmarks"):
             with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:
                 bookmarks.addbookmarks(repo, tr, [name], hex(n), True, True)
 
@@ -608,8 +610,14 @@ def drawdag(repo, text, **opts):
                         hidenodes.add(getctx(p).node())
             visibility.remove(repo, hidenodes - revivenodes)
 
+    del committed[None]
     if opts.get("print"):
-        del committed[None]
         for name, n in sorted(committed.items()):
             if name:
                 repo.ui.write("%s %s\n" % (node.short(n), name))
+    if opts.get("write_env"):
+        path = opts.get("write_env")
+        with open(path, "w") as f:
+            for name, n in sorted(committed.items()):
+                if name and name not in existed:
+                    f.write("%s=%s\n" % (name, node.hex(n)))

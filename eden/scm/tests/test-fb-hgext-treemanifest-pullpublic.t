@@ -106,3 +106,4 @@ Test error message about MissingNodesError
   > EOS
   abort: "unable to find the following nodes locally or on the server: ('', f064a7f8e3e138341587096641d86e9d23cd9778)"
   (commit: 055a42cdd88768532f9cf79daa407fc8d138de9b)
+  [255]

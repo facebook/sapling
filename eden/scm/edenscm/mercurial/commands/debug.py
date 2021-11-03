@@ -3512,7 +3512,11 @@ def debugwireargs(ui, repopath, *vals, **opts):
 
 @command(
     "debugdrawdag",
-    [("p", "print", False, _("print the node to hash mapping of all created nodes"))],
+    [
+        ("p", "print", False, _("print name to hash mapping of created nodes")),
+        ("b", "bookmarks", True, _("create bookmarks")),
+        ("", "write-env", "", _("write NAME=HEX per line to a given file (ADVANCED)")),
+    ],
 )
 def debugdrawdag(ui, repo, **opts):
     """read an ASCII graph from stdin and create changesets

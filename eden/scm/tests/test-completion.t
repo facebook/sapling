@@ -432,7 +432,7 @@ Show all commands + options
   debugdirs: rev, print0
   debugdirstate: nodates, datesort, json
   debugdiscovery: rev, ssh, remotecmd
-  debugdrawdag: print
+  debugdrawdag: print, bookmarks, write-env
   debugdryup: 
   debugdumpdynamicconfig: reponame, username, canary
   debugdumpindexedlog: 

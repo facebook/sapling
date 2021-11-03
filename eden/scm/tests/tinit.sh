@@ -251,16 +251,14 @@ disable() {
 
 # Like "hg debugdrawdag", but do not leave local tags in the repo and define
 # nodes as environment variables.
-# This is useful if the test wants to hide those commits because tags would
-# make commits visible. The function will set environment variables so
-# commits can still be referred as $TAGNAME.
+_drawdagcount=0
 drawdag() {
-  hg debugdrawdag "$@" --config remotenames.autopullhoistpattern=
-  eval `hg bookmarks -T '{bookmark}={node}\n'`
-  BOOKMARKS=$(hg book -T '{bookmark} ')
-  if [[ -n "${BOOKMARKS}" ]]; then
-    hg book -fd ${BOOKMARKS}
-  fi
+  _drawdagcount=$((_drawdagcount+1))
+  local env_path="$TESTTMP/.drawdag-${_drawdagcount}"
+  hg debugdrawdag "$@" --config remotenames.autopullhoistpattern= --no-bookmarks --write-env="$env_path" "$@"
+  local _exitcode="$?"
+  [[ -f "$env_path" ]] && source "$env_path"
+  return $_exitcode
 }
 
 # Simplify error reporting so crash does not show a traceback.

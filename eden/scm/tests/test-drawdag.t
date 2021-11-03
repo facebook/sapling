@@ -298,7 +298,7 @@ Change file contents via comments
 Special comments: "(removed)", "(copied from X)", "(renamed from X)"
 
   $ newrepo
-  $ drawdag --print <<'EOS'
+  $ drawdag <<'EOS'
   > C   # C/X1 = (removed)
   > |   # C/C = (removed)
   > |
@@ -310,9 +310,6 @@ Special comments: "(removed)", "(copied from X)", "(renamed from X)"
   > A   # A/X = X\n
   >     # A/Y = Y\n
   > EOS
-  4cde4db8875f A
-  034611431ce7 B
-  4406a8c344b8 C
 
   $ hg log -p -G -r 'all()' --config diff.git=1 -T '{desc}\n'
   o  C
@@ -367,3 +364,19 @@ Special comments: "X has date 1 0"
   $ hg log -r 'all()' -T '{desc} {date}\n'
   A 0.00
   B 2.00
+
+--no-bookmarks and --print:
+
+  $ newrepo
+  $ echo 'A' | hg debugdrawdag --no-bookmarks --print
+  426bada5c675 A
+  $ hg up 'desc(A)' -q
+  $ hg debugdrawdag --no-bookmarks --print << 'EOS'
+  > B
+  > |
+  > .
+  > EOS
+  426bada5c675 .
+  112478962961 B
+  $ hg bookmarks
+  no bookmarks set

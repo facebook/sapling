@@ -1125,7 +1125,9 @@ def _restoreheads(repo, reverseindex):
     """Revert visibility heads to a previous state"""
     nodedict = _readindex(repo, reverseindex)
     headnode = nodedict["visibleheads"]
-    oldheads = list(map(bin, _readnode(repo, "visibleheads.i", headnode).split("\n")))
+    oldheads = list(
+        filter(None, map(bin, _readnode(repo, "visibleheads.i", headnode).split("\n")))
+    )
     tr = repo.currenttransaction()
     repo.changelog._visibleheads.setvisibleheads(repo, oldheads, tr)
 
