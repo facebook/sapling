@@ -4,7 +4,6 @@
 # GNU General Public License version 2.
 
 mutationblacklist = """
-    test-commitcloud-backup-all.t
     test-commitcloud-sync-oscillation.t
     test-fb-hgext-hiddenerror.t
     test-fb-hgext-treemanifest-infinitepush.t
