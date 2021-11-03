@@ -26,7 +26,7 @@ percent-encoding = "2.1"
 pprint = { path = "../pprint" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_cbor = "0.11"
-serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.27"
 types = { path = "../types" }

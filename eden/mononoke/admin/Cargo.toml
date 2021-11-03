@@ -35,6 +35,7 @@ changesets = { version = "0.1.0", path = "../changesets" }
 clap = "2.33"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
+commitsync = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/repos/commitsync" }
 context = { version = "0.1.0", path = "../server/context" }
 copy_utils = { version = "0.1.0", path = "../common/copy_utils" }
 cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
@@ -80,7 +81,7 @@ revset = { version = "0.1.0", path = "../revset" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
-serde_json = { version = "1.0", features = ["float_roundtrip", "unbounded_depth"] }
+serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }

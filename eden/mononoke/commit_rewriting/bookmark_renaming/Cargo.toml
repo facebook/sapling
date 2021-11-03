@@ -11,13 +11,13 @@ license = "GPLv2+"
 anyhow = "1.0"
 ascii = "1.0"
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+commitsync = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/commitsync" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 thiserror = "1.0.29"
 
 [dev-dependencies]
 maplit = "1.0"
-mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 
 [patch.crates-io]
 curl-sys = { git = "https://github.com/mzr/curl-rust", rev = "97694cf73ea9309d9e8ed067ec0c05367841d405" }
