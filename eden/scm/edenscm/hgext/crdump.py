@@ -17,7 +17,6 @@ from edenscm.mercurial import (
     encoding,
     error,
     extensions,
-    obsutil,
     phases,
     registrar,
     scmutil,
@@ -155,12 +154,6 @@ def crdump(ui, repo, *revs, **opts):
             if ctx.p1().phase() != phases.public:
                 # we need this only if parent is in the same draft stack
                 rdata["p1"]["differential_revision"] = phabricatorrevision(ctx.p1())
-
-            if opts["obsolete"]:
-                markers = obsutil.getmarkers(repo, [ctx.node()])
-                obsolete = dumpmarkers(markers)
-                if obsolete:
-                    rdata["obsolete"] = obsolete
 
             rdata["branch"] = ""
 
