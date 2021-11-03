@@ -172,6 +172,62 @@ TEST(EdenMount, loadFileContents) {
   EXPECT_EQ(contents, "test\n gitignore\n contents\n");
 }
 
+TEST(EdenMount, getTreeOrTreeEntry) {
+  FakeTreeBuilder builder;
+  builder.mkdir("src");
+  builder.setFile("src/test.c", "testy tests");
+  builder.mkdir("bar");
+  builder.mkdir("bar/baz");
+  builder.setFile("bar/baz/test.c", "this is a test");
+
+  TestMount testMount{builder};
+  const auto& edenMount = testMount.getEdenMount();
+
+  {
+    auto variant = edenMount
+                       ->getTreeOrTreeEntry(
+                           ""_relpath, ObjectFetchContext::getNullContext())
+                       .get(0ms);
+    auto& tree = std::get<std::shared_ptr<const Tree>>(variant);
+    EXPECT_EQ(*tree, *testMount.getRootTree());
+  }
+
+  {
+    auto variant =
+        edenMount
+            ->getTreeOrTreeEntry(
+                "src/test.c"_relpath, ObjectFetchContext::getNullContext())
+            .get(0ms);
+    auto& treeEntry = std::get<TreeEntry>(variant);
+    EXPECT_EQ(treeEntry.getType(), TreeEntryType::REGULAR_FILE);
+    auto& storedBlob = builder.getStoredBlob("src/test.c"_relpath)->get();
+    EXPECT_EQ(treeEntry.getHash(), storedBlob.getHash());
+  }
+
+  {
+    auto variant =
+        edenMount
+            ->getTreeOrTreeEntry(
+                "bar/baz"_relpath, ObjectFetchContext::getNullContext())
+            .get(0ms);
+    auto& tree = std::get<std::shared_ptr<const Tree>>(variant);
+    auto& storedTree = builder.getStoredTree("bar/baz"_relpath)->get();
+    EXPECT_EQ(tree->getHash(), storedTree.getHash());
+  }
+
+  {
+    auto fut = edenMount->getTreeOrTreeEntry(
+        "not/present"_relpath, ObjectFetchContext::getNullContext());
+    EXPECT_THROW_ERRNO(std::move(fut).get(0ms), ENOENT);
+  }
+
+  {
+    auto fut = edenMount->getTreeOrTreeEntry(
+        "bar/baz/test.c/foo"_relpath, ObjectFetchContext::getNullContext());
+    EXPECT_THROW_ERRNO(std::move(fut).get(0ms), ENOTDIR);
+  }
+}
+
 TEST(EdenMount, loadFileContentsInvalidInodePtr) {
   FakeTreeBuilder builder;
   builder.mkdir("src");

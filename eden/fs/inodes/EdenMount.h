@@ -89,6 +89,7 @@ class UnboundedQueueExecutor;
 struct FileMetadata;
 template <typename T>
 class ImmediateFuture;
+class TreeEntry;
 
 class RenameLock;
 class SharedRenameLock;
@@ -451,6 +452,23 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   /** Convenience method for getting the Tree for the root of the mount. */
   folly::Future<std::shared_ptr<const Tree>> getRootTree(
       ObjectFetchContext& context) const;
+
+  /**
+   * Look up the Tree or TreeEntry for the specified path.
+   *
+   * When the source control object referenced by the path is a file, a
+   * TreeEntry will be returned, a Tree otherwise.
+   *
+   * This may fail with an InodeError containing ENOENT if the path does not
+   * exist, or ENOTDIR if one of the intermediate components along the path is
+   * not a directory.
+   *
+   * This may also fail with other exceptions if something else goes wrong
+   * besides the path being invalid (for instance, an error loading data from
+   * the ObjectStore).
+   */
+  ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
+  getTreeOrTreeEntry(RelativePathPiece path, ObjectFetchContext& context) const;
 
   /**
    * Look up the Inode object for the specified path.

@@ -910,6 +910,87 @@ folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree(
   return objectStore_->getRootTree(commitHash, context);
 }
 
+namespace {
+
+class TreeLookupProcessor {
+ public:
+  explicit TreeLookupProcessor(
+      RelativePathPiece path,
+      std::shared_ptr<ObjectStore> objectStore,
+      ObjectFetchContext& context)
+      : path_{path},
+        iterRange_{path_.components()},
+        iter_{iterRange_.begin()},
+        objectStore_{std::move(objectStore)},
+        context_{context} {}
+
+  ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>> next(
+      std::shared_ptr<const Tree> tree) {
+    using RetType = std::variant<std::shared_ptr<const Tree>, TreeEntry>;
+    auto name = *iter_++;
+    auto* treeEntry = tree->getEntryPtr(name);
+
+    if (!treeEntry) {
+      return makeImmediateFuture<RetType>(
+          std::system_error(ENOENT, std::generic_category()));
+    }
+
+    if (iter_ == iterRange_.end()) {
+      if (treeEntry->isTree()) {
+        return objectStore_->getTree(treeEntry->getHash(), context_)
+            .thenValue([](std::shared_ptr<const Tree> tree) -> RetType {
+              return tree;
+            });
+      } else {
+        return ImmediateFuture{RetType{*treeEntry}};
+      }
+    } else {
+      if (!treeEntry->isTree()) {
+        return makeImmediateFuture<RetType>(
+            std::system_error(ENOTDIR, std::generic_category()));
+      } else {
+        return objectStore_->getTree(treeEntry->getHash(), context_)
+            .thenValue([this](std::shared_ptr<const Tree> tree) {
+              return next(std::move(tree));
+            });
+      }
+    }
+  }
+
+ private:
+  RelativePath path_;
+  RelativePath::base_type::component_iterator_range iterRange_;
+  RelativePath::base_type::component_iterator iter_;
+  std::shared_ptr<ObjectStore> objectStore_;
+  // The ObjectFetchContext is allocated at the beginning of a request and
+  // released once the request completes. Since the lifetime of
+  // TreeLookupProcessor is strictly less than the one of a request, we can
+  // safely store a reference to the fetch context.
+  ObjectFetchContext& context_;
+};
+} // namespace
+
+ImmediateFuture<std::variant<std::shared_ptr<const Tree>, TreeEntry>>
+EdenMount::getTreeOrTreeEntry(
+    RelativePathPiece path,
+    ObjectFetchContext& context) const {
+  return ImmediateFuture{getRootTree(context).semi()}.thenValue(
+      [path = path.copy(), &context, objectStore = objectStore_](
+          std::shared_ptr<const Tree> tree) mutable {
+        if (path.empty()) {
+          return ImmediateFuture{
+              std::variant<std::shared_ptr<const Tree>, TreeEntry>{
+                  std::move(tree)}};
+        }
+
+        auto processor = std::make_unique<TreeLookupProcessor>(
+            path, std::move(objectStore), context);
+        auto future = processor->next(std::move(tree));
+        return std::move(future).ensure(
+            [p = std::move(processor)]() mutable { p.reset(); });
+      });
+}
+
 #ifndef _WIN32
 InodeNumber EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;
