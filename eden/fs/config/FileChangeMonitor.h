@@ -29,7 +29,7 @@ class FileChangeReason {
     DEV,
     INO,
     MODE,
-    CTIME,
+    CTIME_,
     MTIME,
   };
 

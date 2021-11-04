@@ -36,7 +36,7 @@ FileChangeReason hasFileChanged(
       return FileChangeReason::MODE;
     }
     if (stCtime(stat1) != stCtime(stat2)) {
-      return FileChangeReason::CTIME;
+      return FileChangeReason::CTIME_;
     }
   }
   return FileChangeReason::NONE;
@@ -54,7 +54,7 @@ folly::StringPiece FileChangeReason::str() const {
       return "ino";
     case MODE:
       return "mode";
-    case CTIME:
+    case CTIME_:
       return "ctime";
     case MTIME:
       return "mtime";
