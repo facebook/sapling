@@ -89,6 +89,8 @@ define_perf_counters! {
         NumKnown,
         NumKnownRequested,
         NumUnknown,
+        SegmentedChangelogServerSideOpsHits,
+        SegmentedChangelogServerSideOpsFallbacks,
         SkiplistAncestorGen,
         SkiplistDescendantGen,
         SkiplistNoskipIterations,
@@ -181,6 +183,8 @@ impl PerfCounterType {
             | NumKnown
             | NumKnownRequested
             | NumUnknown
+            | SegmentedChangelogServerSideOpsHits
+            | SegmentedChangelogServerSideOpsFallbacks
             | SkiplistAncestorGen
             | SkiplistDescendantGen
             | SkiplistNoskipIterations

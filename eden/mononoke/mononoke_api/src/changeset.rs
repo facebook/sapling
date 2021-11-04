@@ -17,7 +17,7 @@ use changeset_info::ChangesetInfo;
 use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::future::{self, try_join, try_join_all, FutureExt, Shared};
@@ -412,9 +412,15 @@ impl ChangesetContext {
                     .is_ancestor(&self.ctx(), self.id, other_commit)
                     .await?
                 {
+                    self.ctx()
+                        .perf_counters()
+                        .increment_counter(PerfCounterType::SegmentedChangelogServerSideOpsHits);
                     // ... it's cheaper to return it.
                     return Ok(result);
                 }
+                self.ctx()
+                    .perf_counters()
+                    .increment_counter(PerfCounterType::SegmentedChangelogServerSideOpsFallbacks);
             }
         }
 
