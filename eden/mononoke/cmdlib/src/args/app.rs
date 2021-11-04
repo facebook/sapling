@@ -91,6 +91,7 @@ pub const LOCAL_CONFIGERATOR_PATH_ARG: &str = "local-configerator-path";
 pub const WITH_TEST_MEGAREPO_CONFIGS_CLIENT: &str = "with-test-megarepo-configs-client";
 pub const CRYPTO_PATH_REGEX_ARG: &str = "crypto-path-regex";
 pub const DERIVE_REMOTELY: &str = "derive-remotely";
+pub const DERIVE_REMOTELY_TIER: &str = "derive-remotely-tier";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ArgType {
@@ -1142,8 +1143,13 @@ fn add_derivation_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name(DERIVE_REMOTELY)
             .long(DERIVE_REMOTELY)
+            .help("Derive data remotely using default service"),
+    )
+    .arg(
+        Arg::with_name(DERIVE_REMOTELY_TIER)
+            .long(DERIVE_REMOTELY_TIER)
             .takes_value(true)
             .value_name("SMC")
-            .help("Derive data remotely using provided SMC tier or default one"),
+            .help("Specify smc tier for derived data service"),
     )
 }
