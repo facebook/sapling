@@ -495,7 +495,7 @@ class treedirstatemap(object):
             self._ui.warn(
                 _(
                     "please post the following debug information "
-                    "to the Source Control @ FB group:\n"
+                    "to the Mercurial Users group:\n"
                 )
             )
             treestat = self._opener.lstat(treefileprefix + self._treeid)
