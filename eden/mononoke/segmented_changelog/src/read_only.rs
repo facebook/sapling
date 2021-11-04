@@ -207,7 +207,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
     ) -> Result<Option<bool>> {
         let request_ids = self
             .idmap
-            .find_many_dag_ids(ctx, vec![ancestor, descendant])
+            .find_many_dag_ids_maybe_stale(ctx, vec![ancestor, descendant])
             .await?;
         let ancestor_id = if let Some(ancestor_id) = request_ids.get(&ancestor) {
             ancestor_id
