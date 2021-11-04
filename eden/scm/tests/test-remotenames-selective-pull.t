@@ -403,6 +403,7 @@ Check the repo.pull API
   pulling '023871', '1449e793' from 'ssh://user@dummy/remoterepo'
   0238718db2b174d2622ae9c4c75d61745eb12b25
   1449e7934ec1c4d0c2eefb1194c1cb70e78ba232
+  $ hg bundle -q -r a81520e7283a --base 0238718db2b1 ../bundle.hg
 
 --- x will not be auto-pulled inside "present(x)":
 
@@ -415,3 +416,14 @@ Check the repo.pull API
   $ newrepo
   $ setconfig paths.default=ssh://user@dummy/remoterepo
   $ hg log -r '.~1000000' -T "{node}\n"
+
+--- autopull base revisions during unbundle
+
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ hg unbundle ../bundle.hg
+  pulling missing base commits: 0238718db2b174d2622ae9c4c75d61745eb12b25
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files

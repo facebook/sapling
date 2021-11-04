@@ -459,7 +459,7 @@ class partiterator(object):
             exc.duringunbundle2 = True
             salvaged = []
             replycaps = None
-            if self.op.reply is not None:
+            if self.op is not None and self.op.reply is not None:
                 salvaged = self.op.reply.salvageoutput()
                 replycaps = self.op.reply.capabilities
             exc._replycaps = replycaps

@@ -6200,17 +6200,20 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     """
     fnames = (fname1,) + fnames
 
-    with repo.lock():
+    with repo.wlock(), repo.lock():
         for fname in fnames:
-            f = hg.openpath(ui, fname)
-            gen = exchange.readbundle(ui, f, fname)
-            if isinstance(gen, streamclone.streamcloneapplier):
-                raise error.Abort(
-                    _("packed bundles cannot be applied with " '"hg unbundle"'),
-                    hint=_('use "hg debugapplystreamclonebundle"'),
-                )
-            url = "bundle:" + fname
             try:
+                _ensurebaserev(ui, repo, fname)
+
+                f = hg.openpath(ui, fname)
+                gen = exchange.readbundle(ui, f, fname)
+
+                if isinstance(gen, streamclone.streamcloneapplier):
+                    raise error.Abort(
+                        _("packed bundles cannot be applied with " '"hg unbundle"'),
+                        hint=_('use "hg debugapplystreamclonebundle"'),
+                    )
+                url = "bundle:" + fname
                 txnname = "unbundle"
                 if not isinstance(gen, bundle2.unbundle20):
                     txnname = "unbundle\n%s" % util.hidepassword(url)
@@ -6228,6 +6231,39 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
             modheads = bundle2.combinechangegroupresults(op)
 
     return postincoming(ui, repo, modheads, opts.get(r"update"), None, None)
+
+
+def _ensurebaserev(ui, repo, fname):
+    """ensure that the repo has the necessary base commits for the given bundle
+    file"""
+    f = hg.openpath(ui, fname)
+    gen = exchange.readbundle(ui, f, fname)
+    # Bundle 1 not supported
+    if not isinstance(gen, bundle2.unbundle20):
+        return
+
+    nodes = set()
+    contained = set()
+    with bundle2.partiterator(repo, None, gen) as parts:
+        for part in parts:
+            if part.type == "changegroup":
+                unpackerversion = part.params.get("version", "01")
+                unpacker = changegroup.getunbundler(unpackerversion, part, None)
+                for deltadata in unpacker.deltaiter():
+                    node, p1, p2, cs, deltabase, delta, flags = deltadata
+                    contained.add(node)
+                    nodes.add(node)
+                    nodes.add(p1)
+                    nodes.add(p2)
+    basenodes = nodes - contained
+    basenodes.discard(nullid)
+    missingnodes = list(repo.changelog.filternodes(list(basenodes), inverse=True))
+    if missingnodes:
+        ui.status(
+            _("pulling missing base commits: %s\n")
+            % (", ".join(hex(n) for n in missingnodes))
+        )
+        repo.pull(headnodes=missingnodes)
 
 
 @command(
