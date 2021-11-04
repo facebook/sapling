@@ -335,6 +335,21 @@ impl IdMap for SqlIdMap {
         Ok(dag_ids)
     }
 
+    /// The maybe stale version of the method doesn't reach out beyond
+    /// replica servers even if information is missing so it might ommit
+    /// newest entries.
+    async fn find_many_dag_ids_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, DagId>> {
+        STATS::find_dag_id.add_value(cs_ids.len() as i64);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+        self.select_many_dag_ids(&self.connections.read_connection, &cs_ids)
+            .await
+    }
+
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
         STATS::get_last_entry.add_value(1);
         ctx.perf_counters()
@@ -574,6 +589,86 @@ mod tests {
 
         let response = idmap.find_many_dag_ids(&ctx, vec![FIVES_CSID]).await?;
         assert!(response.is_empty());
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_find_many_dag_maybe_stale_no_leader_fallback(fb: FacebookInit) -> Result<()> {
+        fn conn() -> Result<Connection> {
+            let con = SqliteConnection::open_in_memory()?;
+            con.execute_batch(SegmentedChangelogSqlConnections::CREATION_QUERY)?;
+            Ok(Connection::with_sqlite(con))
+        }
+
+        let ctx = CoreContext::test_mock(fb);
+
+        let leader = conn()?;
+        let replica = conn()?;
+
+        // We're setting those conns separately so we can craft replica content
+        // and make it different from leader.
+        let write_to_replica_conns = SqlConnections {
+            write_connection: replica.clone(),
+            read_connection: replica.clone(),
+            read_master_connection: replica.clone(),
+        };
+
+        let write_to_replica_idmap = SqlIdMap::new(
+            write_to_replica_conns,
+            Arc::new(NoReplicaLagMonitor()),
+            RepositoryId::new(0),
+            IdMapVersion(0),
+        );
+
+        write_to_replica_idmap
+            .insert(&ctx, DagId(0), AS_CSID)
+            .await?;
+        write_to_replica_idmap
+            .insert_many(&ctx, vec![(DagId(1), ONES_CSID), (DagId(2), TWOS_CSID)])
+            .await?;
+
+        let conns = SqlConnections {
+            write_connection: leader.clone(),
+            read_connection: replica,
+            read_master_connection: leader,
+        };
+
+        let idmap = SqlIdMap::new(
+            conns,
+            Arc::new(NoReplicaLagMonitor()),
+            RepositoryId::new(0),
+            IdMapVersion(0),
+        );
+
+        idmap.insert(&ctx, DagId(0), AS_CSID).await?;
+        idmap
+            .insert_many(
+                &ctx,
+                vec![
+                    (DagId(1), ONES_CSID),
+                    (DagId(2), TWOS_CSID),
+                    (DagId(3), THREES_CSID),
+                    (DagId(4), FOURS_CSID),
+                ],
+            )
+            .await?;
+
+        let response = idmap
+            .find_many_dag_ids(&ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
+            .await?;
+        assert_eq!(
+            response,
+            hashmap![ONES_CSID => DagId(1), TWOS_CSID => DagId(2), THREES_CSID => DagId(3)]
+        );
+
+        let response = idmap
+            .find_many_dag_ids_maybe_stale(&ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
+            .await?;
+        assert_eq!(
+            response,
+            hashmap![ONES_CSID => DagId(1), TWOS_CSID => DagId(2)]
+        );
 
         Ok(())
     }

@@ -19,7 +19,7 @@ use caching_ext::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::{self, TryFutureExt};
+use futures::future::{self, FutureExt, TryFutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
 
@@ -125,7 +125,22 @@ impl IdMap for CachedIdMap {
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, DagId>> {
-        let ctx = (ctx, self);
+        let ctx = (ctx, self, DagIdStaleness::Fresh);
+        let res = get_or_fill(ctx, cs_ids.into_iter().collect())
+            .await
+            .with_context(|| "Error fetching many changeset ids via cache")?
+            .into_iter()
+            .map(|(k, v)| (k, v.0))
+            .collect();
+        Ok(res)
+    }
+
+    async fn find_many_dag_ids_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, DagId>> {
+        let ctx = (ctx, self, DagIdStaleness::MaybeStale);
         let res = get_or_fill(ctx, cs_ids.into_iter().collect())
             .await
             .with_context(|| "Error fetching many changeset ids via cache")?
@@ -140,7 +155,7 @@ impl IdMap for CachedIdMap {
     }
 }
 
-type CacheRequest<'a> = (&'a CoreContext, &'a CachedIdMap);
+type ChangesetIdCacheRequest<'a> = (&'a CoreContext, &'a CachedIdMap);
 
 #[derive(Clone, Copy, Debug, Abomonation)]
 pub struct ChangesetIdWrapper(ChangesetId);
@@ -164,7 +179,7 @@ impl MemcacheEntity for ChangesetIdWrapper {
     }
 }
 
-impl EntityStore<ChangesetIdWrapper> for CacheRequest<'_> {
+impl EntityStore<ChangesetIdWrapper> for ChangesetIdCacheRequest<'_> {
     fn cachelib(&self) -> &CachelibHandler<ChangesetIdWrapper> {
         let (_, bag) = self;
         &bag.cache_handlers.dag_to_cs
@@ -188,7 +203,7 @@ impl EntityStore<ChangesetIdWrapper> for CacheRequest<'_> {
 }
 
 #[async_trait]
-impl KeyedEntityStore<DagId, ChangesetIdWrapper> for CacheRequest<'_> {
+impl KeyedEntityStore<DagId, ChangesetIdWrapper> for ChangesetIdCacheRequest<'_> {
     fn get_cache_key(&self, dag_id: &DagId) -> String {
         let (_, bag) = self;
         format!("{}.dag_id.{}", bag.repo_id, dag_id)
@@ -212,6 +227,13 @@ impl KeyedEntityStore<DagId, ChangesetIdWrapper> for CacheRequest<'_> {
     }
 }
 
+enum DagIdStaleness {
+    MaybeStale,
+    Fresh,
+}
+
+type DagIdCacheRequest<'a> = (&'a CoreContext, &'a CachedIdMap, DagIdStaleness);
+
 #[derive(Clone, Copy, Debug, Abomonation)]
 pub struct DagIdWrapper(DagId);
 
@@ -232,19 +254,19 @@ impl MemcacheEntity for DagIdWrapper {
     }
 }
 
-impl EntityStore<DagIdWrapper> for CacheRequest<'_> {
+impl EntityStore<DagIdWrapper> for DagIdCacheRequest<'_> {
     fn cachelib(&self) -> &CachelibHandler<DagIdWrapper> {
-        let (_, bag) = self;
+        let (_, bag, _) = self;
         &bag.cache_handlers.cs_to_dag
     }
 
     fn keygen(&self) -> &KeyGen {
-        let (_, bag) = self;
+        let (_, bag, _) = self;
         &bag.keygen
     }
 
     fn memcache(&self) -> &MemcacheHandler {
-        let (_, bag) = self;
+        let (_, bag, _) = self;
         &bag.cache_handlers.memcache
     }
 
@@ -256,9 +278,9 @@ impl EntityStore<DagIdWrapper> for CacheRequest<'_> {
 }
 
 #[async_trait]
-impl KeyedEntityStore<ChangesetId, DagIdWrapper> for CacheRequest<'_> {
+impl KeyedEntityStore<ChangesetId, DagIdWrapper> for DagIdCacheRequest<'_> {
     fn get_cache_key(&self, cs_id: &ChangesetId) -> String {
-        let (_, bag) = self;
+        let (_, bag, _) = self;
         format!("{}.cs.{}", bag.repo_id, cs_id)
     }
 
@@ -266,12 +288,19 @@ impl KeyedEntityStore<ChangesetId, DagIdWrapper> for CacheRequest<'_> {
         &self,
         keys: HashSet<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, DagIdWrapper>> {
-        let (ctx, bag) = self;
+        let (ctx, bag, staleness) = self;
 
-        let futures = keys.into_iter().map(|cs_id| {
-            bag.idmap
+        let futures = keys.into_iter().map(|cs_id| match staleness {
+            DagIdStaleness::Fresh => bag
+                .idmap
                 .find_dag_id(ctx, cs_id)
                 .map_ok(move |v| (cs_id, v))
+                .left_future(),
+            DagIdStaleness::MaybeStale => bag
+                .idmap
+                .find_dag_id_maybe_stale(ctx, cs_id)
+                .map_ok(move |v| (cs_id, v))
+                .right_future(),
         });
 
         let res = future::try_join_all(futures)

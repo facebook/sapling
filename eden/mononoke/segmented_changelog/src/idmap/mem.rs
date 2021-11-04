@@ -127,6 +127,14 @@ impl IdMap for ConcurrentMemIdMap {
         Ok(result)
     }
 
+    async fn find_many_dag_ids_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, DagId>> {
+        self.find_many_dag_ids(ctx, cs_ids).await
+    }
+
     async fn get_last_entry(&self, _ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
         let inner = self.inner.read();
         inner.get_last_entry()

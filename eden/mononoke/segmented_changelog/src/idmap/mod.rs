@@ -51,6 +51,16 @@ pub trait IdMap: Send + Sync {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, DagId>>;
 
+    /// Finds the dag ID for given changeset - if possible to do so quickly.
+    /// Might return no answers for changesets that have dag ids assigned.
+    ///
+    /// Should be used by callers that can deal with missing information.
+    async fn find_many_dag_ids_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, DagId>>;
+
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>>;
 
     // Default implementations
@@ -73,6 +83,17 @@ pub trait IdMap: Send + Sync {
     async fn find_dag_id(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<DagId>> {
         Ok(self
             .find_many_dag_ids(ctx, vec![cs_id])
+            .await?
+            .remove(&cs_id))
+    }
+
+    async fn find_dag_id_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Option<DagId>> {
+        Ok(self
+            .find_many_dag_ids_maybe_stale(ctx, vec![cs_id])
             .await?
             .remove(&cs_id))
     }
@@ -114,6 +135,14 @@ impl IdMap for Arc<dyn IdMap> {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, DagId>> {
         (**self).find_many_dag_ids(ctx, cs_ids).await
+    }
+
+    async fn find_many_dag_ids_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, DagId>> {
+        (**self).find_many_dag_ids_maybe_stale(ctx, cs_ids).await
     }
 
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
@@ -224,6 +253,41 @@ impl IdMap for OverlayIdMap {
             .filter(|cs_id| !result.contains_key(&cs_id))
             .collect();
         let from_shared = self.shared.find_many_dag_ids(ctx, to_get_shared).await?;
+        for (cs, v) in from_shared {
+            if v < self.cutoff {
+                result.insert(cs, v);
+            }
+        }
+        Ok(result)
+    }
+
+    async fn find_many_dag_ids_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, DagId>> {
+        let mut result = self
+            .mem
+            .find_many_dag_ids_maybe_stale(ctx, cs_ids.clone())
+            .await?;
+        for (cs, v) in result.iter() {
+            if v < &self.cutoff {
+                bail!(
+                    "unexpected assignment found in mem idmap: {} for {} but cutoff is {}",
+                    v,
+                    cs,
+                    self.cutoff
+                );
+            }
+        }
+        let to_get_shared = cs_ids
+            .into_iter()
+            .filter(|cs_id| !result.contains_key(&cs_id))
+            .collect();
+        let from_shared = self
+            .shared
+            .find_many_dag_ids_maybe_stale(ctx, to_get_shared)
+            .await?;
         for (cs, v) in from_shared {
             if v < self.cutoff {
                 result.insert(cs, v);
