@@ -34,6 +34,7 @@ test sparse
   $ ls
   show
   show2
+#if no-windows
   $ cat >> .sparse-include <<EOF
   > [include]
   > show
@@ -52,4 +53,5 @@ test sparse
   show
   show2
   show3
+#endif
 
