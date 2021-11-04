@@ -11,10 +11,11 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
+use commitsync::types::CommonCommitSyncConfig as RawCommonCommitSyncConfig;
 use itertools::Itertools;
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
-    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
+    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use repos::{RawCommitSyncConfig, RawCommitSyncSmallRepoConfig};
@@ -181,6 +182,36 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             map,
             bookmark_prefix,
             direction,
+        })
+    }
+}
+
+impl Convert for RawCommonCommitSyncConfig {
+    type Output = CommonCommitSyncConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let large_repo_id = RepositoryId::new(self.large_repo_id);
+        let common_pushrebase_bookmarks: Result<Vec<BookmarkName>> = self
+            .common_pushrebase_bookmarks
+            .into_iter()
+            .map(BookmarkName::new)
+            .try_collect();
+        let common_pushrebase_bookmarks = common_pushrebase_bookmarks?;
+        let small_repos: HashMap<_, _> = self
+            .small_repos
+            .into_iter()
+            .map(|(repo_id, small_repo_config)| {
+                let repo_id = RepositoryId::new(repo_id);
+                let config = SmallRepoPermanentConfig {
+                    bookmark_prefix: small_repo_config.bookmark_prefix,
+                };
+                (repo_id, config)
+            })
+            .collect();
+        Ok(CommonCommitSyncConfig {
+            large_repo_id,
+            common_pushrebase_bookmarks,
+            small_repos,
         })
     }
 }

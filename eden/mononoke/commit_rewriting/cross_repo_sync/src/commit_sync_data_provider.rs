@@ -8,11 +8,12 @@
 use anyhow::{anyhow, Error};
 use bookmark_renaming::{get_bookmark_renamers, BookmarkRenamer, BookmarkRenamers};
 use bookmarks::BookmarkName;
-use commitsync::types::CommonCommitSyncConfig;
 use context::CoreContext;
 use futures::future::try_join;
 use live_commit_sync_config::LiveCommitSyncConfig;
-use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection};
+use metaconfig_types::{
+    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+};
 use mononoke_types::RepositoryId;
 use movers::{get_movers, Mover, Movers};
 use std::collections::HashMap;
@@ -333,12 +334,12 @@ fn get_direction_and_small_repo_id(
     source_repo_id: RepositoryId,
     target_repo_id: RepositoryId,
 ) -> Result<(CommitSyncDirection, RepositoryId), Error> {
-    let small_repo_id = if common_config.large_repo_id == source_repo_id.id()
-        && common_config.small_repos.contains_key(&target_repo_id.id())
+    let small_repo_id = if common_config.large_repo_id == source_repo_id
+        && common_config.small_repos.contains_key(&target_repo_id)
     {
         target_repo_id
-    } else if common_config.large_repo_id == target_repo_id.id()
-        && common_config.small_repos.contains_key(&source_repo_id.id())
+    } else if common_config.large_repo_id == target_repo_id
+        && common_config.small_repos.contains_key(&source_repo_id)
     {
         source_repo_id
     } else {

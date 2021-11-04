@@ -24,7 +24,6 @@ use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cacheblob::InProcessLease;
 use cloned::cloned;
-use commitsync::types::{CommonCommitSyncConfig, RawSmallRepoPermanentConfig};
 use context::CoreContext;
 use cross_repo_sync::{
     update_mapping_with_version, validation::verify_working_copy, CommitSyncContext,
@@ -38,8 +37,8 @@ use manifest::ManifestOps;
 use maplit::{btreemap, hashmap};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
-    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
+    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
 };
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
@@ -317,12 +316,12 @@ fn create_small_to_large_commit_syncer(
 
     let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
-        small_repos: btreemap! {
-            small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
+        small_repos: hashmap! {
+            small_repo.get_repoid() => SmallRepoPermanentConfig {
                 bookmark_prefix: "".to_string(),
             }
         },
-        large_repo_id: large_repo.get_repoid().id(),
+        large_repo_id: large_repo.get_repoid(),
     };
     let repos = CommitSyncRepos::new(small_repo.clone(), large_repo.clone(), &common_config)?;
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
@@ -362,12 +361,12 @@ fn create_large_to_small_commit_syncer_and_config_source(
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
     let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
-        small_repos: btreemap! {
-            small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
+        small_repos: hashmap! {
+            small_repo.get_repoid() => SmallRepoPermanentConfig {
                 bookmark_prefix: "".to_string(),
             }
         },
-        large_repo_id: large_repo.get_repoid().id(),
+        large_repo_id: large_repo.get_repoid(),
     };
     let repos = CommitSyncRepos::new(large_repo.clone(), small_repo.clone(), &common_config)?;
 
@@ -1950,12 +1949,12 @@ async fn prepare_commit_syncer_with_mapping_change(
     };
     config_source.add_common_config(CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
-        small_repos: btreemap! {
-            small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
+        small_repos: hashmap! {
+            small_repo.get_repoid() => SmallRepoPermanentConfig {
                 bookmark_prefix: "".to_string(),
             }
         },
-        large_repo_id: large_repo_id.id(),
+        large_repo_id,
     });
     config_source.add_config(commit_sync_config);
 

@@ -17,7 +17,6 @@ use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
 };
-use commitsync::types::CommonCommitSyncConfig;
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncer_lease,
@@ -31,7 +30,9 @@ use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use maplit::{btreemap, hashmap, hashset};
 use metaconfig_types::{BookmarkAttrs, CommitSyncConfig};
-use metaconfig_types::{CommitSyncConfigVersion, DefaultSmallToLargeCommitSyncPathAction};
+use metaconfig_types::{
+    CommitSyncConfigVersion, CommonCommitSyncConfig, DefaultSmallToLargeCommitSyncPathAction,
+};
 use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath, RepositoryId,
 };
@@ -1116,7 +1117,7 @@ async fn update_large_repo_bookmarks(
     for d in diff {
         if common_commit_sync_config
             .common_pushrebase_bookmarks
-            .contains(&d.target_bookmark().to_string())
+            .contains(&d.target_bookmark())
         {
             info!(
                 ctx.logger(),
@@ -1452,7 +1453,6 @@ async fn get_large_to_small_commit_syncer<'a>(
 mod test {
     use super::*;
     use bookmarks::BookmarkName;
-    use commitsync::types::RawSmallRepoPermanentConfig;
     use cross_repo_sync::{
         types::{Source, Target},
         validation::find_bookmark_diff,
@@ -1461,7 +1461,9 @@ mod test {
     use fixtures::{linear, set_bookmark};
     use futures::{compat::Stream01CompatExt, TryStreamExt};
     use maplit::{hashmap, hashset};
-    use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
+    use metaconfig_types::{
+        CommitSyncConfigVersion, CommitSyncDirection, SmallRepoPermanentConfig,
+    };
     use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
@@ -1540,13 +1542,13 @@ mod test {
         // Update the bookmarks
         {
             let mut common_config = CommonCommitSyncConfig {
-                common_pushrebase_bookmarks: vec![master.to_string()],
-                small_repos: btreemap! {
-                    small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
+                common_pushrebase_bookmarks: vec![master.clone()],
+                small_repos: hashmap! {
+                    small_repo.get_repoid() => SmallRepoPermanentConfig {
                         bookmark_prefix: Default::default()
                     },
                 },
-                large_repo_id: large_repo.get_repoid().id(),
+                large_repo_id: large_repo.get_repoid(),
             };
 
             update_large_repo_bookmarks(

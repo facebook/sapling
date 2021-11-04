@@ -20,7 +20,6 @@ mod tests {
     use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
     use cacheblob::InProcessLease;
     use cached_config::{ConfigStore, ModificationTime, TestSource};
-    use commitsync::types::{CommonCommitSyncConfig, RawSmallRepoPermanentConfig};
     use context::CoreContext;
     use cross_repo_sync::{create_commit_syncers, CommitSyncContext};
     use derived_data_manager::BonsaiDerivable;
@@ -37,9 +36,9 @@ mod tests {
     use mercurial_types::MPath;
     use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
     use metaconfig_types::{
-        CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
+        CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
         DefaultSmallToLargeCommitSyncPathAction, PushrebaseParams, RepoConfig,
-        SmallRepoCommitSyncConfig,
+        SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
     };
     use mononoke_hg_sync_job_helper_lib::LATEST_REPLAYED_REQUEST_KEY;
     use mononoke_types::{
@@ -606,24 +605,20 @@ mod tests {
         source.add_config(later_commit_sync_config);
         source.add_current_version(commit_sync_config.version_name);
         source.add_common_config(CommonCommitSyncConfig {
-            common_pushrebase_bookmarks: commit_sync_config
-                .common_pushrebase_bookmarks
-                .iter()
-                .map(|b| b.to_string())
-                .collect(),
+            common_pushrebase_bookmarks: commit_sync_config.common_pushrebase_bookmarks.clone(),
             small_repos: commit_sync_config
                 .small_repos
                 .iter()
                 .map(|(repo_id, small_repo_config)| {
                     (
-                        repo_id.id(),
-                        RawSmallRepoPermanentConfig {
+                        *repo_id,
+                        SmallRepoPermanentConfig {
                             bookmark_prefix: small_repo_config.bookmark_prefix.to_string(),
                         },
                     )
                 })
                 .collect(),
-            large_repo_id: commit_sync_config.large_repo_id.id(),
+            large_repo_id: commit_sync_config.large_repo_id,
         });
 
 

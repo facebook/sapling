@@ -15,7 +15,6 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use commit_transformation::upload_commits;
-use commitsync::types::{CommonCommitSyncConfig, RawSmallRepoPermanentConfig};
 use context::CoreContext;
 use cross_repo_sync::{
     rewrite_commit,
@@ -25,11 +24,11 @@ use cross_repo_sync::{
 };
 use futures::compat::Future01CompatExt;
 use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
-use maplit::{btreemap, hashmap};
+use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
-    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
+    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
 };
 use mononoke_types::RepositoryId;
 use mononoke_types::{ChangesetId, DateTime, MPath};
@@ -374,12 +373,12 @@ pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
 
     source.add_common_config(CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
-        small_repos: btreemap! {
-            1 => RawSmallRepoPermanentConfig {
+        small_repos: hashmap! {
+            RepositoryId::new(1) => SmallRepoPermanentConfig {
                 bookmark_prefix: "small".to_string(),
             }
         },
-        large_repo_id: 0,
+        large_repo_id: RepositoryId::new(0),
     });
 
     Arc::new(sync_config)

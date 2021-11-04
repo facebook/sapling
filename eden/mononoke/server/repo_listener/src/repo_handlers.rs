@@ -15,10 +15,11 @@ use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cache_warmup::cache_warmup;
 use cached_config::ConfigStore;
 use cloned::cloned;
-use commitsync::types::CommonCommitSyncConfig;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use metaconfig_types::{BackupRepoConfig, RepoClientKnobs, WireprotoLoggingConfig};
+use metaconfig_types::{
+    BackupRepoConfig, CommonCommitSyncConfig, RepoClientKnobs, WireprotoLoggingConfig,
+};
 use mononoke_api::Mononoke;
 use mononoke_types::RepositoryId;
 use repo_client::{MononokeRepo, PushRedirectorArgs, WireprotoLogging};
@@ -70,7 +71,7 @@ impl IncompletePushRedirectorArgs {
             source_blobrepo,
         } = self;
 
-        let large_repo_id = RepositoryId::new(common_commit_sync_config.large_repo_id);
+        let large_repo_id = common_commit_sync_config.large_repo_id;
         let target_repo: MononokeRepo = repo_lookup_table
             .get(&large_repo_id)
             .ok_or(ErrorKind::LargeRepoNotFound(large_repo_id))?
@@ -246,7 +247,7 @@ pub async fn repo_handlers<'a>(
         let maybe_incomplete_push_redirector_args = common_commit_sync_config.and_then({
             cloned!(logger);
             move |common_commit_sync_config| {
-                if common_commit_sync_config.large_repo_id == blobrepo.get_repoid().id() {
+                if common_commit_sync_config.large_repo_id == blobrepo.get_repoid() {
                     debug!(
                         logger,
                         "Not constructing push redirection args: {:?}",

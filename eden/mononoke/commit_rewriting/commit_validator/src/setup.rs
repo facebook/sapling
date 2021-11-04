@@ -63,7 +63,6 @@ pub async fn get_validation_helpers<'a>(
                 let large_blob_repo = large_repo.blob_repo.clone();
                 borrowed!(matches, ctx, scuba_sample);
                 async move {
-                    let small_repo_id = RepositoryId::new(small_repo_id);
                     let scuba_sample = {
                         let mut scuba_sample = scuba_sample.clone();
                         add_common_commit_syncing_fields(

@@ -14,10 +14,10 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error};
 pub use bookmarks::BookmarkName;
-use commitsync::types::{CommonCommitSyncConfig, RawSmallRepoPermanentConfig};
 use ephemeral_blobstore::BubbleId;
 use futures::future;
 use futures_watchdog::WatchdogExt;
+use metaconfig_types::{CommonCommitSyncConfig, SmallRepoPermanentConfig};
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
 use slog::{debug, info, o};
@@ -291,24 +291,20 @@ pub mod test_impl {
             lv_cfg_src.add_current_version(commit_sync_config.version_name);
 
             lv_cfg_src.add_common_config(CommonCommitSyncConfig {
-                common_pushrebase_bookmarks: commit_sync_config
-                    .common_pushrebase_bookmarks
-                    .iter()
-                    .map(|b| b.to_string())
-                    .collect(),
+                common_pushrebase_bookmarks: commit_sync_config.common_pushrebase_bookmarks.clone(),
                 small_repos: commit_sync_config
                     .small_repos
                     .iter()
                     .map(|(repo_id, small_repo_config)| {
                         (
-                            repo_id.id(),
-                            RawSmallRepoPermanentConfig {
+                            *repo_id,
+                            SmallRepoPermanentConfig {
                                 bookmark_prefix: small_repo_config.bookmark_prefix.to_string(),
                             },
                         )
                     })
                     .collect(),
-                large_repo_id: large_repo.1.get_repoid().id(),
+                large_repo_id: large_repo.1.get_repoid(),
             });
 
             let repos = vec![small_repo, large_repo]

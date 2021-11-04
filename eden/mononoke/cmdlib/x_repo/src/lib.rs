@@ -21,7 +21,6 @@ use cross_repo_sync::{
 };
 use futures_util::try_join;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
-use mononoke_types::RepositoryId;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -41,7 +40,7 @@ pub async fn create_commit_syncers_from_matches(
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
-    let large_repo_id = RepositoryId::new(common_config.large_repo_id);
+    let large_repo_id = common_config.large_repo_id;
     let source_repo_id = source_repo.0.get_repoid();
     let target_repo_id = target_repo.0.get_repoid();
     let (small_repo, large_repo) = if large_repo_id == source_repo_id {

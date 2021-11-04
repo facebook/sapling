@@ -36,7 +36,7 @@ use maplit::hashset;
 use mercurial_types::{HgChangesetId, MPath};
 use metaconfig_types::{BookmarkAttrs, CommitSyncConfigVersion, RepoConfig};
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
-use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, RepositoryId};
+use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::{DefaultAction, Mover};
 use mutable_counters::SqlMutableCounters;
 use pushrebase::do_pushrebase_bonsai;
@@ -767,7 +767,7 @@ async fn get_large_repo_config_if_pushredirected<'a>(
                     ));
                 }
             };
-        let large_repo_id = RepositoryId::new(common_commit_sync_config.large_repo_id);
+        let large_repo_id = common_commit_sync_config.large_repo_id;
         let (_, large_repo_config) = match repos
             .iter()
             .find(|(_, repo_config)| repo_config.repoid == large_repo_id)

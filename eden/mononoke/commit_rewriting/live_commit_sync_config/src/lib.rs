@@ -10,12 +10,10 @@
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use cached_config::{ConfigHandle, ConfigStore};
-use commitsync::types::{
-    CommonCommitSyncConfig, RawCommitSyncAllVersions, RawCommitSyncCurrentVersions,
-};
+use commitsync::types::{RawCommitSyncAllVersions, RawCommitSyncCurrentVersions};
 use context::CoreContext;
 use metaconfig_parser::Convert;
-use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion};
+use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig};
 use mononoke_types::RepositoryId;
 use pushredirect_enable::types::{MononokePushRedirectEnable, PushRedirectEnableState};
 use repos::types::RawCommitSyncConfig;
@@ -324,7 +322,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
                 (Some(_), Some(_)) => Err(ErrorKind::PartOfMultipleConfigs(repo_id)),
             }?
         };
-        Ok(maybe_common_config)
+        maybe_common_config.map(Convert::convert).transpose()
     }
 }
 
@@ -528,9 +526,7 @@ impl TestLiveCommitSyncConfigSource {
     ) -> Result<Option<CommonCommitSyncConfig>> {
         let common_configs = self.0.common_configs.lock().unwrap();
         for config in common_configs.iter() {
-            if config.large_repo_id == repo_id.id()
-                || config.small_repos.contains_key(&repo_id.id())
-            {
+            if config.large_repo_id == repo_id || config.small_repos.contains_key(&repo_id) {
                 return Ok(Some(config.clone()));
             }
         }

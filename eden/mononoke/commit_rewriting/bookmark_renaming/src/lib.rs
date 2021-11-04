@@ -10,8 +10,7 @@
 use anyhow::Result;
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
-use commitsync::types::CommonCommitSyncConfig;
-use metaconfig_types::CommitSyncDirection;
+use metaconfig_types::{CommitSyncDirection, CommonCommitSyncConfig};
 use mononoke_types::RepositoryId;
 use std::collections::HashSet;
 use std::str::FromStr;
@@ -38,16 +37,14 @@ fn get_prefix_and_common_bookmarks(
     commit_sync_config: &CommonCommitSyncConfig,
     small_repo_id: RepositoryId,
 ) -> Result<(AsciiString, HashSet<BookmarkName>)> {
-    let common_pushrebase_bookmarks: Result<HashSet<BookmarkName>> = commit_sync_config
+    let common_pushrebase_bookmarks: HashSet<BookmarkName> = commit_sync_config
         .common_pushrebase_bookmarks
         .iter()
         .cloned()
-        .map(BookmarkName::new)
         .collect();
-    let common_pushrebase_bookmarks = common_pushrebase_bookmarks?;
     let prefix = commit_sync_config
         .small_repos
-        .get(&small_repo_id.id())
+        .get(&small_repo_id)
         .ok_or(ErrorKind::SmallRepoNotFound(small_repo_id))?
         .bookmark_prefix
         .clone();
@@ -119,21 +116,24 @@ pub fn get_bookmark_renamers(
 #[cfg(test)]
 mod test {
     use super::*;
-    use commitsync::types::RawSmallRepoPermanentConfig;
-    use maplit::btreemap;
+    use maplit::hashmap;
+    use metaconfig_types::SmallRepoPermanentConfig;
 
     fn get_commit_sync_config() -> CommonCommitSyncConfig {
         CommonCommitSyncConfig {
-            common_pushrebase_bookmarks: vec!["m1".to_string(), "m2".to_string()],
-            small_repos: btreemap! {
-                1 => RawSmallRepoPermanentConfig {
+            common_pushrebase_bookmarks: vec![
+                BookmarkName::new("m1").unwrap(),
+                BookmarkName::new("m2").unwrap(),
+            ],
+            small_repos: hashmap! {
+                RepositoryId::new(1) => SmallRepoPermanentConfig {
                     bookmark_prefix: "b1/".to_string()
                 },
-                2 => RawSmallRepoPermanentConfig {
+                RepositoryId::new(2) => SmallRepoPermanentConfig {
                     bookmark_prefix: "b2/".to_string()
                 },
             },
-            large_repo_id: 0,
+            large_repo_id: RepositoryId::new(0),
         }
     }
 

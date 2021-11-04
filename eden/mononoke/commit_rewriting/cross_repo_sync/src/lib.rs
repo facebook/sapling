@@ -17,7 +17,6 @@ use cacheblob::{InProcessLease, LeaseOps, MemcacheOps};
 use commit_transformation::{
     rewrite_commit as multi_mover_rewrite_commit, upload_commits, MultiMover,
 };
-use commitsync::types::CommonCommitSyncConfig;
 use context::CoreContext;
 use environment::Caching;
 use fbinit::FacebookInit;
@@ -32,7 +31,7 @@ use futures::{
 use futures_old::Future;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::{hashmap, hashset};
-use metaconfig_types::{CommitSyncConfigVersion, PushrebaseFlags};
+use metaconfig_types::{CommitSyncConfigVersion, CommonCommitSyncConfig, PushrebaseFlags};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
@@ -320,17 +319,16 @@ impl CommitSyncRepos {
         target_repo: BlobRepo,
         common_commit_sync_config: &CommonCommitSyncConfig,
     ) -> Result<Self, Error> {
-        let small_repo_id = if common_commit_sync_config.large_repo_id
-            == source_repo.get_repoid().id()
+        let small_repo_id = if common_commit_sync_config.large_repo_id == source_repo.get_repoid()
             && common_commit_sync_config
                 .small_repos
-                .contains_key(&target_repo.get_repoid().id())
+                .contains_key(&target_repo.get_repoid())
         {
             target_repo.get_repoid()
-        } else if common_commit_sync_config.large_repo_id == target_repo.get_repoid().id()
+        } else if common_commit_sync_config.large_repo_id == target_repo.get_repoid()
             && common_commit_sync_config
                 .small_repos
-                .contains_key(&source_repo.get_repoid().id())
+                .contains_key(&source_repo.get_repoid())
         {
             source_repo.get_repoid()
         } else {

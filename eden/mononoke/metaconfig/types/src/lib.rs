@@ -1328,6 +1328,24 @@ pub struct CommitSyncConfig {
     pub version_name: CommitSyncConfigVersion,
 }
 
+/// Config that applies to all mapping versions
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct CommonCommitSyncConfig {
+    /// Large repository id
+    pub large_repo_id: RepositoryId,
+    /// Common pushrebase bookmarks
+    pub common_pushrebase_bookmarks: Vec<BookmarkName>,
+    /// Small repos configs
+    pub small_repos: HashMap<RepositoryId, SmallRepoPermanentConfig>,
+}
+
+/// Permanent config for a single small repo
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SmallRepoPermanentConfig {
+    /// Prefix of the bookmark
+    pub bookmark_prefix: String,
+}
+
 /// Configuration for logging wireproto commands and arguments
 /// This is used by traffic replay script to replay on prod traffic on shadow tier
 #[derive(Debug, Clone, Eq, PartialEq)]
