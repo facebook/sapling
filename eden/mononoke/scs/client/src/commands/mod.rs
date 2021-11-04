@@ -64,6 +64,7 @@ commands! {
     mod diff;
     mod export;
     mod info;
+    mod is_ancestor;
     mod land_stack if ENV_WRITES_ENABLED;
     mod list_bookmarks;
     mod log;
