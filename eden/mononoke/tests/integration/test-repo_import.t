@@ -67,7 +67,7 @@
   * The destination bookmark name is: master_bookmark. * (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
-  * Execution error: Failed to fetch commit sync config: RepositoryId(0) is not a part of any CommitSyncConfig (glob)
+  * Execution error: Failed to fetch common commit sync config: RepositoryId(0) is not a part of any configs (glob)
   Error: Execution failed
   [1]
 

@@ -36,7 +36,7 @@ use maplit::hashset;
 use mercurial_types::{HgChangesetId, MPath};
 use metaconfig_types::{BookmarkAttrs, CommitSyncConfigVersion, RepoConfig};
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
-use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
+use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, RepositoryId};
 use movers::{DefaultAction, Mover};
 use mutable_counters::SqlMutableCounters;
 use pushrebase::do_pushrebase_bonsai;
@@ -749,7 +749,6 @@ fn get_importing_bookmark(bookmark_suffix: &str) -> Result<BookmarkName, Error> 
 
 // Note: pushredirection only works from small repo to large repo.
 async fn get_large_repo_config_if_pushredirected<'a>(
-    ctx: &CoreContext,
     repo: &BlobRepo,
     live_commit_sync_config: &CfgrLiveCommitSyncConfig,
     repos: &HashMap<String, RepoConfig>,
@@ -758,14 +757,17 @@ async fn get_large_repo_config_if_pushredirected<'a>(
     let enabled = live_commit_sync_config.push_redirector_enabled_for_public(repo_id);
 
     if enabled {
-        let commit_sync_config = match live_commit_sync_config
-            .get_current_commit_sync_config(&ctx, repo_id)
-            .await
-        {
-            Ok(config) => config,
-            Err(e) => return Err(format_err!("Failed to fetch commit sync config: {}", e)),
-        };
-        let large_repo_id = commit_sync_config.large_repo_id;
+        let common_commit_sync_config =
+            match live_commit_sync_config.get_common_config(repo_id).await {
+                Ok(config) => config,
+                Err(e) => {
+                    return Err(format_err!(
+                        "Failed to fetch common commit sync config: {:#}",
+                        e
+                    ));
+                }
+            };
+        let large_repo_id = RepositoryId::new(common_commit_sync_config.large_repo_id);
         let (_, large_repo_config) = match repos
             .iter()
             .find(|(_, repo_config)| repo_config.repoid == large_repo_id)
@@ -950,13 +952,9 @@ async fn repo_import(
     let mysql_options = matches.mysql_options();
     let readonly_storage = matches.readonly_storage();
 
-    let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
-        &ctx,
-        &repo,
-        &live_commit_sync_config,
-        &configs.repos,
-    )
-    .await?;
+    let maybe_large_repo_config =
+        get_large_repo_config_if_pushredirected(&repo, &live_commit_sync_config, &configs.repos)
+            .await?;
     let mut maybe_small_repo_back_sync_vars = None;
     let mut movers = vec![movers::mover_factory(
         HashMap::new(),
@@ -1238,13 +1236,9 @@ async fn check_additional_setup_steps(
 
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
     let configs = args::load_repo_configs(config_store, &matches)?;
-    let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
-        &ctx,
-        &repo,
-        &live_commit_sync_config,
-        &configs.repos,
-    )
-    .await?;
+    let maybe_large_repo_config =
+        get_large_repo_config_if_pushredirected(&repo, &live_commit_sync_config, &configs.repos)
+            .await?;
     if let Some(large_repo_config) = maybe_large_repo_config {
         let (large_repo, large_repo_import_setting, _syncers) = get_pushredirected_vars(
             &ctx,

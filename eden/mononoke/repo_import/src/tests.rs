@@ -441,8 +441,47 @@ mod tests {
         }
     }"#;
 
-    const EMTPY_COMMMIT_SYNC_ALL: &str = r#"{
-        "repos": {}
+    const COMMMIT_SYNC_ALL: &str = r#"{
+        "repos": {
+            "large_repo_1": {
+                "versions": [{
+                    "large_repo_id": 0,
+                    "common_pushrebase_bookmarks": ["b1"],
+                    "small_repos": [
+                        {
+                            "repoid": 1,
+                            "default_action": "prepend_prefix",
+                            "default_prefix": "f1",
+                            "bookmark_prefix": "bp1/",
+                            "mapping": {"d": "dd"},
+                            "direction": "large_to_small"
+                        },
+                        {
+                            "repoid": 2,
+                            "default_action": "prepend_prefix",
+                            "default_prefix": "f2",
+                            "bookmark_prefix": "bp2/",
+                            "mapping": {"d": "ddd"},
+                            "direction": "small_to_large"
+                        }
+                    ],
+                    "version_name": "TEST_VERSION_NAME_LIVE_1"
+                }],
+                "current_version": "TEST_VERSION_NAME_LIVE_1",
+                "common": {
+                    "common_pushrebase_bookmarks": ["b1"],
+                    "large_repo_id": 0,
+                    "small_repos": {
+                      "1": {
+                        "bookmark_prefix": "bp1/"
+                      },
+                      "2": {
+                        "bookmark_prefix": "bp2/"
+                      }
+                    }
+                }
+            }
+        }
     }"#;
 
     fn insert_repo_config(id: i32, repos: &mut HashMap<String, RepoConfig>) {
@@ -479,7 +518,7 @@ mod tests {
 
         test_source.insert_config(
             CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
-            EMTPY_COMMMIT_SYNC_ALL,
+            COMMMIT_SYNC_ALL,
             ModificationTime::UnixTimestamp(0),
         );
 
@@ -494,7 +533,7 @@ mod tests {
 
         insert_repo_config(0, &mut repos);
         assert!(
-            get_large_repo_config_if_pushredirected(&ctx, &repo0, &live_commit_sync_config, &repos)
+            get_large_repo_config_if_pushredirected(&repo0, &live_commit_sync_config, &repos)
                 .await?
                 .is_none()
         );
@@ -502,14 +541,17 @@ mod tests {
         let repo1 = create_repo(1)?;
 
         insert_repo_config(1, &mut repos);
-        get_large_repo_config_if_pushredirected(&ctx, &repo1, &live_commit_sync_config, &repos)
-            .await?;
+        assert!(
+            get_large_repo_config_if_pushredirected(&repo1, &live_commit_sync_config, &repos)
+                .await?
+                .is_some()
+        );
 
         let repo2 = create_repo(2)?;
 
         insert_repo_config(2, &mut repos);
         assert!(
-            get_large_repo_config_if_pushredirected(&ctx, &repo2, &live_commit_sync_config, &repos)
+            get_large_repo_config_if_pushredirected(&repo2, &live_commit_sync_config, &repos)
                 .await?
                 .is_none()
         );
