@@ -21,6 +21,7 @@ use cross_repo_sync::{
 };
 use futures_util::try_join;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use mononoke_types::RepositoryId;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -33,14 +34,14 @@ pub async fn create_commit_syncers_from_matches(
     let (source_repo, target_repo, mapping, live_commit_sync_config) =
         get_things_from_matches(ctx, matches).await?;
 
-    let current_config = live_commit_sync_config
-        .get_current_commit_sync_config(ctx, source_repo.0.get_repoid())
+    let common_config = live_commit_sync_config
+        .get_common_config(source_repo.0.get_repoid())
         .await?;
 
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
-    let large_repo_id = current_config.large_repo_id;
+    let large_repo_id = RepositoryId::new(common_config.large_repo_id);
     let source_repo_id = source_repo.0.get_repoid();
     let target_repo_id = target_repo.0.get_repoid();
     let (small_repo, large_repo) = if large_repo_id == source_repo_id {
@@ -50,7 +51,7 @@ pub async fn create_commit_syncers_from_matches(
     } else {
         bail!(
             "Unexpectedly CommitSyncConfig {:?} has neither of {}, {} as a large repo",
-            current_config,
+            common_config,
             source_repo_id,
             target_repo_id
         );
@@ -180,11 +181,11 @@ async fn create_commit_syncer<'a>(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     x_repo_syncer_lease: Arc<dyn LeaseOps>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
-    let current_config = live_commit_sync_config
-        .get_current_commit_sync_config(ctx, source_repo.0.get_repoid())
+    let common_config = live_commit_sync_config
+        .get_common_config(source_repo.0.get_repoid())
         .await?;
 
-    let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, &current_config)?;
+    let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, &common_config)?;
     let commit_syncer = CommitSyncer::new(
         ctx,
         mapping,

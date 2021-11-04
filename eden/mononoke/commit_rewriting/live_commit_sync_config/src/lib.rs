@@ -522,7 +522,7 @@ impl TestLiveCommitSyncConfigSource {
         }
     }
 
-    fn get_common_config_if_exists(
+    pub fn get_common_config_if_exists(
         &self,
         repo_id: RepositoryId,
     ) -> Result<Option<CommonCommitSyncConfig>> {

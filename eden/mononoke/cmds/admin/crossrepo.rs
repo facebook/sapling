@@ -94,11 +94,10 @@ pub async fn subcommand_crossrepo<'a>(
             let (source_repo, target_repo, mapping) =
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
 
-            let commit_sync_config = live_commit_sync_config
-                .get_current_commit_sync_config(&ctx, source_repo.get_repoid())
+            let common_config = live_commit_sync_config
+                .get_common_config(source_repo.get_repoid())
                 .await?;
-            let commit_sync_repos =
-                CommitSyncRepos::new(source_repo, target_repo, &commit_sync_config)?;
+            let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, &common_config)?;
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
 

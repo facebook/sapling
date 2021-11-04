@@ -1373,9 +1373,9 @@ impl RepoContext {
         specifier: impl Into<ChangesetSpecifier>,
         maybe_candidate_selection_hint_args: Option<CandidateSelectionHintArgs>,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
-        let commit_sync_config = self
+        let common_config = self
             .live_commit_sync_config()
-            .get_current_commit_sync_config(self.ctx(), self.blob_repo().get_repoid())
+            .get_common_config(self.blob_repo().get_repoid())
             .await
             .map_err(|e| {
                 MononokeError::InvalidRequest(format!(
@@ -1391,7 +1391,7 @@ impl RepoContext {
         let commit_sync_repos = CommitSyncRepos::new(
             self.blob_repo().clone(),
             other.blob_repo().clone(),
-            &commit_sync_config,
+            &common_config,
         )?;
 
         let specifier = specifier.into();

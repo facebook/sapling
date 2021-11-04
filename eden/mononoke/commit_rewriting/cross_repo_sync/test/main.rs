@@ -315,13 +315,7 @@ fn create_small_to_large_commit_syncer(
     let small_repo_id = small_repo.get_repoid();
     let large_repo_id = large_repo.get_repoid();
 
-    let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
-    let repos = CommitSyncRepos::new(small_repo.clone(), large_repo.clone(), &commit_sync_config)?;
-
-    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
-    source.add_config(commit_sync_config.clone());
-    source.add_current_version(commit_sync_config.version_name);
-    source.add_common_config(CommonCommitSyncConfig {
+    let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
         small_repos: btreemap! {
             small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
@@ -329,7 +323,14 @@ fn create_small_to_large_commit_syncer(
             }
         },
         large_repo_id: large_repo.get_repoid().id(),
-    });
+    };
+    let repos = CommitSyncRepos::new(small_repo.clone(), large_repo.clone(), &common_config)?;
+    let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
+
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    source.add_config(commit_sync_config.clone());
+    source.add_current_version(commit_sync_config.version_name);
+    source.add_common_config(common_config);
 
     let live_commit_sync_config = Arc::new(sync_config);
     let lease = Arc::new(InProcessLease::new());
@@ -359,12 +360,7 @@ fn create_large_to_small_commit_syncer_and_config_source(
     let large_repo_id = large_repo.get_repoid();
 
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
-    let repos = CommitSyncRepos::new(large_repo.clone(), small_repo.clone(), &commit_sync_config)?;
-
-    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
-    source.add_config(commit_sync_config.clone());
-    source.add_current_version(commit_sync_config.version_name);
-    source.add_common_config(CommonCommitSyncConfig {
+    let common_config = CommonCommitSyncConfig {
         common_pushrebase_bookmarks: vec![],
         small_repos: btreemap! {
             small_repo.get_repoid().id() => RawSmallRepoPermanentConfig {
@@ -372,7 +368,13 @@ fn create_large_to_small_commit_syncer_and_config_source(
             }
         },
         large_repo_id: large_repo.get_repoid().id(),
-    });
+    };
+    let repos = CommitSyncRepos::new(large_repo.clone(), small_repo.clone(), &common_config)?;
+
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    source.add_config(commit_sync_config.clone());
+    source.add_current_version(commit_sync_config.version_name);
+    source.add_common_config(common_config);
 
     let live_commit_sync_config = Arc::new(sync_config);
     let lease = Arc::new(InProcessLease::new());

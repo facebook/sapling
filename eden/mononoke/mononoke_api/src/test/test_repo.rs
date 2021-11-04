@@ -733,6 +733,9 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     let large_repo_id = largerepo.blob_repo().get_repoid();
     let small_repo_id = smallrepo.blob_repo().get_repoid();
     let mut cfg = cfg_src.get_commit_sync_config_for_repo(large_repo_id)?;
+    let common_config = cfg_src
+        .get_common_config_if_exists(large_repo_id)?
+        .ok_or_else(|| anyhow!("common config doesn't exist"))?;
     cfg.small_repos
         .get_mut(&small_repo_id)
         .unwrap()
@@ -756,7 +759,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     let commit_sync_repos = CommitSyncRepos::new(
         largerepo.blob_repo().clone(),
         smallrepo.blob_repo().clone(),
-        &cfg,
+        &common_config,
     )?;
 
     let commit_syncer = CommitSyncer::new(

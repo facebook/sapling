@@ -17,6 +17,7 @@ use cacheblob::{InProcessLease, LeaseOps, MemcacheOps};
 use commit_transformation::{
     rewrite_commit as multi_mover_rewrite_commit, upload_commits, MultiMover,
 };
+use commitsync::types::CommonCommitSyncConfig;
 use context::CoreContext;
 use environment::Caching;
 use fbinit::FacebookInit;
@@ -31,7 +32,7 @@ use futures::{
 use futures_old::Future;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::{hashmap, hashset};
-use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, PushrebaseFlags};
+use metaconfig_types::{CommitSyncConfigVersion, PushrebaseFlags};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
@@ -312,26 +313,24 @@ pub enum CommitSyncRepos {
 
 impl CommitSyncRepos {
     /// Create a new instance of `CommitSyncRepos`
-    /// The direction is determined by the `source_repo` and `target_repo`
-    /// arguments, while `SmallToLarge` vs `LargeToSmall` - by the
-    /// `CommitSyncConfig` field of the `source_or_target_repo_config` argument.
-    /// The name `source_or_target_repo_config` is meant to signify that it
-    /// makes no difference which one to pass.
+    /// Whether it's SmallToLarge or LargeToSmall is determined by
+    /// source_repo/target_repo and common_commit_sync_config.
     pub fn new(
         source_repo: BlobRepo,
         target_repo: BlobRepo,
-        commit_sync_config: &CommitSyncConfig,
+        common_commit_sync_config: &CommonCommitSyncConfig,
     ) -> Result<Self, Error> {
-        let small_repo_id = if commit_sync_config.large_repo_id == source_repo.get_repoid()
-            && commit_sync_config
+        let small_repo_id = if common_commit_sync_config.large_repo_id
+            == source_repo.get_repoid().id()
+            && common_commit_sync_config
                 .small_repos
-                .contains_key(&target_repo.get_repoid())
+                .contains_key(&target_repo.get_repoid().id())
         {
             target_repo.get_repoid()
-        } else if commit_sync_config.large_repo_id == target_repo.get_repoid()
-            && commit_sync_config
+        } else if common_commit_sync_config.large_repo_id == target_repo.get_repoid().id()
+            && common_commit_sync_config
                 .small_repos
-                .contains_key(&source_repo.get_repoid())
+                .contains_key(&source_repo.get_repoid().id())
         {
             source_repo.get_repoid()
         } else {
