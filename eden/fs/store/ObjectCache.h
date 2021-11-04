@@ -135,9 +135,6 @@ class ObjectCache
   struct GetResult {
     ObjectPtr object;
     ObjectInterestHandle<ObjectType> interestHandle;
-
-    GetResult(GetResult&&) = default;
-    GetResult& operator=(GetResult&&) = default;
   };
 
   struct Stats {

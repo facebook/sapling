@@ -101,14 +101,14 @@ int trace_hg(
 
   static const std::unordered_map<HgEventType, const char*> kEventTypes = {
       {HgEventType::QUEUE, " "},
-      {HgEventType::START, u8"\u21E3"},
-      {HgEventType::FINISH, u8"\u2193"},
+      {HgEventType::START, reinterpret_cast<const char*>(u8"\u21E3")},
+      {HgEventType::FINISH, reinterpret_cast<const char*>(u8"\u2193")},
   };
 
   static const std::unordered_map<HgResourceType, const char*> kResourceTypes =
       {
-          {HgResourceType::BLOB, u8"\U0001F954"},
-          {HgResourceType::TREE, u8"\U0001F332"},
+          {HgResourceType::BLOB, reinterpret_cast<const char*>(u8"\U0001F954")},
+          {HgResourceType::TREE, reinterpret_cast<const char*>(u8"\U0001F332")},
       };
 
   std::move(traceHgStream).subscribeInline([&](folly::Try<HgEvent>&& event) {

@@ -84,14 +84,14 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   using value_type = typename Vector::value_type;
   using key_compare = Compare;
   using allocator_type = Allocator;
-  using reference = typename Allocator::reference;
-  using const_reference = typename Allocator::const_reference;
+  using reference = Pair&;
+  using const_reference = const Pair&;
   using iterator = typename Vector::iterator;
   using const_iterator = typename Vector::const_iterator;
   using size_type = typename Vector::size_type;
   using difference_type = typename Vector::difference_type;
-  using pointer = typename Allocator::pointer;
-  using const_pointer = typename Allocator::const_pointer;
+  using pointer = Pair*;
+  using const_pointer = const Pair*;
   using reverse_iterator = typename Vector::reverse_iterator;
   using const_reverse_iterator = typename Vector::const_reverse_iterator;
 

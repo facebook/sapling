@@ -34,7 +34,8 @@ TEST(ChronoUnit, validUnits) {
   EXPECT_EQ(subsecond(1000000000), doLookup("nanosecond"));
   EXPECT_EQ(subsecond(1000000000), doLookup("nanoseconds"));
   EXPECT_EQ(subsecond(1000000), doLookup("us"));
-  EXPECT_EQ(subsecond(1000000), doLookup(u8"\u03BCs"));
+  EXPECT_EQ(
+      subsecond(1000000), doLookup(reinterpret_cast<const char*>(u8"\u03BCs")));
   EXPECT_EQ(subsecond(1000000), doLookup("microsecond"));
   EXPECT_EQ(subsecond(1000000), doLookup("microseconds"));
   EXPECT_EQ(subsecond(1000), doLookup("ms"));
