@@ -17,6 +17,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "1.1", features = ["serde"] }
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data_manager = { version = "0.1.0", path = "../manager" }
+derived_data_service_if = { version = "0.1.0", path = "../remote/if" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
