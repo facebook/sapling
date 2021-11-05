@@ -16,6 +16,7 @@ use derivative::Derivative;
 use mononoke_types::{ChangesetId, DateTime, RepositoryId, Timestamp};
 use sql::queries;
 use sql_ext::SqlConnections;
+use std::time::Duration;
 
 use crate::bubble::{Bubble, BubbleId};
 use crate::error::EphemeralBlobstoreError;
@@ -81,10 +82,19 @@ queries! {
     }
 }
 
+// Approximating a big duration to max chrono duration (~10^11 years) is good enough
+fn to_chrono(duration: Duration) -> ChronoDuration {
+    ChronoDuration::from_std(duration).unwrap_or_else(|_| ChronoDuration::max_value())
+}
+
 impl RepoEphemeralBlobstoreInner {
-    async fn create_bubble(&self) -> Result<Bubble> {
+    async fn create_bubble(&self, custom_duration: Option<Duration>) -> Result<Bubble> {
         let created_at = DateTime::now();
-        let expires_at = created_at + self.initial_bubble_lifespan;
+        let duration = match custom_duration {
+            None => self.initial_bubble_lifespan,
+            Some(duration) => to_chrono(duration),
+        };
+        let expires_at = created_at + duration;
 
         let res = CreateBubble::query(
             &self.connections.write_connection,
@@ -150,16 +160,16 @@ impl RepoEphemeralBlobstore {
         repo_id: RepositoryId,
         connections: SqlConnections,
         blobstore: Arc<dyn Blobstore>,
-        initial_bubble_lifespan: ChronoDuration,
-        bubble_expiration_grace: ChronoDuration,
+        initial_bubble_lifespan: Duration,
+        bubble_expiration_grace: Duration,
     ) -> Self {
         Self {
             repo_id,
             inner: Some(Arc::new(RepoEphemeralBlobstoreInner {
                 blobstore,
                 connections,
-                initial_bubble_lifespan,
-                bubble_expiration_grace,
+                initial_bubble_lifespan: to_chrono(initial_bubble_lifespan),
+                bubble_expiration_grace: to_chrono(bubble_expiration_grace),
             })),
         }
     }
@@ -177,8 +187,8 @@ impl RepoEphemeralBlobstore {
             .ok_or_else(|| EphemeralBlobstoreError::NoEphemeralBlobstore(self.repo_id))
     }
 
-    pub async fn create_bubble(&self) -> Result<Bubble> {
-        self.inner()?.create_bubble().await
+    pub async fn create_bubble(&self, custom_duration: Option<Duration>) -> Result<Bubble> {
+        self.inner()?.create_bubble(custom_duration).await
     }
 
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble> {
@@ -226,13 +236,13 @@ mod test {
         let eph = RepoEphemeralBlobstoreBuilder::with_sqlite_in_memory()?.build(
             REPO_ZERO,
             blobstore.clone(),
-            ChronoDuration::days(30),
-            ChronoDuration::hours(6),
+            Duration::from_secs(30 * 24 * 60 * 60),
+            Duration::from_secs(6 * 60 * 60),
         );
         let key = "test_key".to_string();
 
         // Create a bubble and put data in it.
-        let bubble1 = eph.create_bubble().await?;
+        let bubble1 = eph.create_bubble(None).await?;
         let bubble1_id = bubble1.bubble_id();
         let bubble1 = bubble1.wrap_repo_blobstore(repo_blobstore.clone());
         bubble1
@@ -259,7 +269,7 @@ mod test {
         );
 
         // Create a new bubble and put data in it.
-        let bubble2 = eph.create_bubble().await?;
+        let bubble2 = eph.create_bubble(None).await?;
         let bubble2_id = bubble2.bubble_id();
         let bubble2 = bubble2.wrap_repo_blobstore(repo_blobstore.clone());
         bubble2

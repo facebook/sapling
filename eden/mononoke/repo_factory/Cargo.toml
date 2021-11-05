@@ -22,7 +22,6 @@ cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
 changesets = { version = "0.1.0", path = "../changesets" }
 changesets_impl = { version = "0.1.0", path = "../changesets/changesets_impl" }
-chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 context = { version = "0.1.0", path = "../server/context" }
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
 derived_data_manager = { version = "0.1.0", path = "../derived_data/manager" }

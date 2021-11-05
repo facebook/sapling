@@ -8,7 +8,6 @@
 //! Repository factory.
 #![feature(trait_alias)]
 
-use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use sql_construct::{SqlConstruct, SqlConstructFromDatabaseConfig};
@@ -839,8 +838,8 @@ impl RepoFactory {
             .build(
                 repo_identity.id(),
                 blobstore,
-                ChronoDuration::from_std(ephemeral_config.initial_bubble_lifespan)?,
-                ChronoDuration::from_std(ephemeral_config.bubble_expiration_grace)?,
+                ephemeral_config.initial_bubble_lifespan,
+                ephemeral_config.bubble_expiration_grace,
             );
             Ok(Arc::new(ephemeral_blobstore))
         } else {

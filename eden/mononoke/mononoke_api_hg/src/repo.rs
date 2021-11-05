@@ -6,6 +6,7 @@
  */
 
 use std::collections::HashMap;
+use std::time::Duration;
 
 use anyhow::{self, format_err, Context, Error};
 use blobrepo::BlobRepo;
@@ -79,8 +80,15 @@ impl HgRepoContext {
     }
 
     /// Create bubble and return its id
-    pub async fn create_bubble(&self) -> Result<Bubble, MononokeError> {
-        Ok(self.repo().ephemeral_blobstore().create_bubble().await?)
+    pub async fn create_bubble(
+        &self,
+        custom_duration: Option<Duration>,
+    ) -> Result<Bubble, MononokeError> {
+        Ok(self
+            .repo()
+            .ephemeral_blobstore()
+            .create_bubble(custom_duration)
+            .await?)
     }
 
     /// Get a write context to make changes to this repository.

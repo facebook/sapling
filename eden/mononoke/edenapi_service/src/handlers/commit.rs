@@ -474,7 +474,7 @@ impl EdenApiHandler for EphemeralPrepareHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         Ok(stream::once(async move {
             Ok(EphemeralPrepareResponse {
-                bubble_id: repo.create_bubble().await?.bubble_id().into(),
+                bubble_id: repo.create_bubble(None).await?.bubble_id().into(),
             })
         })
         .boxed())
