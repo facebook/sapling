@@ -16,12 +16,13 @@ import distutils.core
 import distutils.errors
 import distutils.util
 import errno
+import io
 import os
 import shutil
 import subprocess
-import tarfile
+import sys
 import tempfile
-import time
+import threading
 
 
 # This manifest is merged with the default .exe manifest to allow
@@ -287,7 +288,7 @@ replace-with = "vendored-sources"
         env = os.environ.copy()
         env["LIB_DIRS"] = os.path.abspath(self.build_temp)
 
-        rc = subprocess.call(cmd, env=env)
+        rc = _callretry(cmd, env=env)
         if rc:
             raise distutils.errors.CompileError(
                 "compilation of Rust target '%s' failed" % target.name
@@ -424,6 +425,54 @@ class InstallRustExt(distutils.command.install_scripts.install_scripts):
         if not self.skip_build:
             self.run_command("build_rust_ext")
         self.outfiles = self.copy_tree(self.build_dir, self.install_dir)
+
+
+def _tee(stream, *outputs):
+    while True:
+        buf = stream.read(1)
+        if not buf:
+            break
+        for o in outputs:
+            o.write(buf)
+            if b"\n" in buf or b"\r" in buf:
+                o.flush()
+    for o in outputs:
+        o.flush()
+
+
+def _callretry(cmd, env=None, retry=3):
+    if sys.stderr.isatty():
+        env = (env or os.environ).copy()
+        env["CARGO_TERM_COLOR"] = "always"
+        env["CARGO_TERM_PROGRESS_WHEN"] = "always"
+        env["CARGO_TERM_PROGRESS_WIDTH"] = env.get("COLUMNS") or "80"
+    return _callattempt(cmd, env=env, retry=retry)
+
+
+def _callattempt(cmd, env=None, retry=3):
+    """like subprocess.call but retry on flaky failures on Windows"""
+    sio = io.BytesIO()
+    proc = subprocess.Popen(cmd, env=env, stderr=subprocess.PIPE)
+    t = threading.Thread(target=_tee, args=(proc.stderr, sys.stderr.buffer, sio))
+    t.start()
+    returncode = proc.wait()
+    if retry > 0 and returncode != 0:
+        stderr = sio.getvalue()
+        if _isflaky(stderr):
+            distutils.log.warn("retrying %r on flaky error" % (cmd,))
+            return _callattempt(cmd, env=env, retry=retry - 1)
+    return returncode
+
+
+def _isflaky(stderr):
+    if b"fatal error C1056" in stderr:
+        # full error:
+        # fatal error C1056: cannot update the time date stamp field in
+        # '...\eden\scm\build\cargo-target\release\build\libnghttp2-sys-047b2e8066895d56
+        # \out\i\lib\nghttp2\lib\nghttp2_http.o'; error code %u
+        # exit code: 2
+        return True
+    return False
 
 
 distutils.dist.Distribution.rust_ext_modules = ()
