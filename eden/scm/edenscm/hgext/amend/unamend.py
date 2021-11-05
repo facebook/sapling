@@ -13,7 +13,6 @@ from edenscm.mercurial import (
     extensions,
     mutation,
     node as nodemod,
-    obsolete,
     pycompat,
     registrar,
     visibility,
@@ -105,8 +104,6 @@ def unamend(ui, repo, **opts):
         for book in ctxbookmarks:
             changes.append((book, prednode))
         repo._bookmarks.applychanges(repo, tr, changes)
-        if obsolete.isenabled(repo, obsolete.createmarkersopt):
-            obsolete.createmarkers(repo, [(curctx, (predctx,))])
         visibility.remove(repo, [curctx.node()])
         visibility.add(repo, [predctx.node()])
         tr.close()
