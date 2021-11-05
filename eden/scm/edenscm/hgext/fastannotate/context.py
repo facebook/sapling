@@ -767,7 +767,9 @@ class pathhelper(object):
         return self._repo.localvfs.join(self._vfspath + ".l")
 
     def lock(self):
-        return lockmod.lock(self._repo.localvfs, self._vfspath + ".lock")
+        return lockmod.lock(
+            self._repo.localvfs, self._vfspath + ".lock", ui=self._repo.ui
+        )
 
     @contextlib.contextmanager
     def _lockflock(self):

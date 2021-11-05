@@ -1552,7 +1552,9 @@ def waitbackup(ui, repo, timeout):
         raise error.Abort("timeout should be integer")
 
     try:
-        with lockmod.lock(repo.sharedvfs, backuplock.lockfilename, timeout=timeout):
+        with lockmod.lock(
+            repo.sharedvfs, backuplock.lockfilename, timeout=timeout, ui=ui
+        ):
             pass
     except error.LockHeld as e:
         if e.errno == errno.ETIMEDOUT:

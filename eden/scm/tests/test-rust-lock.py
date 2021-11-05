@@ -102,6 +102,83 @@ class testrustlock(unittest.TestCase):
 
             self.assertNotLocked("foo")
 
+    def testpyandrust(self):
+        # Lock both python and rust locks.
+        with self.ui.configoverride({("devel", "lockmode"): "python_and_rust"}):
+            acquired, prereleased, postreleased = (0, 0, 0)
+
+            def acquire():
+                nonlocal acquired
+                acquired += 1
+
+            def release():
+                nonlocal prereleased
+                prereleased += 1
+
+            def postrelease():
+                nonlocal postreleased
+                postreleased += 1
+
+            with lock.trylock(
+                self.ui, self.vfs, "foo.lock", 5, acquirefn=acquire, releasefn=release
+            ) as l:
+                l.postrelease.append(postrelease)
+                self.assertLocked("foo.lock")
+                self.assertLegacyLock("foo.lock", True)
+                self.assertEqual(acquired, 1)
+                self.assertEqual(prereleased, 0)
+                self.assertEqual(postreleased, 0)
+
+            self.assertNotLocked("foo.lock")
+            self.assertLegacyLock("foo.lock", False)
+            self.assertEqual(acquired, 1)
+            self.assertEqual(prereleased, 1)
+            self.assertEqual(postreleased, 1)
+
+    # Test what happens when rust lock is unavailable.
+    def testcontendedpyandrust(self):
+        with self.ui.configoverride({("devel", "lockmode"): "python_and_rust"}):
+            acquired, released = (0, 0)
+
+            def acquire():
+                nonlocal acquired
+                acquired += 1
+
+            def release():
+                nonlocal released
+                released += 1
+
+            with lock.rustlock(self.vfs, "foo"):
+                with self.assertRaises(error.LockHeld):
+                    lock.trylock(
+                        self.ui,
+                        self.vfs,
+                        "foo",
+                        0,
+                        acquirefn=acquire,
+                        releasefn=release,
+                    )
+
+                # Rust still locked
+                self.assertLocked("foo")
+
+                # Make sure we released python lock and didn't call any callbacks.
+                self.assertLegacyLock("foo", False)
+                self.assertEqual(acquired, 0)
+                self.assertEqual(released, 0)
+
+    # Make sure the devel.lockmode=rust_only flag works.
+    def testrustonlymode(self):
+        with self.ui.configoverride({("devel", "lockmode"): "rust_only"}):
+            with lock.lock(self.vfs, "foo", ui=self.ui):
+                self.assertLocked("foo")
+                self.assertLegacyLock("foo", False)
+
+            self.assertNotLocked("foo")
+
+    def assertLegacyLock(self, name, exists):
+        self.assertEqual(self.vfs.lexists(name), exists)
+
     def assertLocked(self, name):
         with self.assertRaises(error.LockHeld):
             lock.rustlock(self.vfs, name, timeout=0)

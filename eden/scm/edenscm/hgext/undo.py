@@ -182,7 +182,9 @@ def safelog(repo, command):
             except OSError:
                 repo.ui.debug("can't make undolog folder in .hg\n")
                 return changes
-            with lockmod.lock(repo.localvfs, "undolog/lock", desc="undolog", timeout=2):
+            with lockmod.lock(
+                repo.localvfs, "undolog/lock", desc="undolog", timeout=2, ui=repo.ui
+            ):
                 repo.ui.log("undologlock", "lock acquired\n")
                 tr = lighttransaction(repo)
                 with tr:

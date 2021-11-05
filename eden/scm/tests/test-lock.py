@@ -12,6 +12,7 @@ from edenscm.mercurial import (
     extensions,
     lock,
     pycompat,
+    ui,
     util,
     vfs as vfsmod,
 )
@@ -21,7 +22,7 @@ from hghave import require
 testlockname = "testlock"
 
 
-class lockwrapper(lock.lock):
+class lockwrapper(lock.pythonlock):
     def __init__(self, pidoffset, *args, **kwargs):
         # lock.lock.__init__() calls lock(), so the pidoffset assignment needs
         # to be earlier

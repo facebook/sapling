@@ -13,8 +13,10 @@
 from __future__ import absolute_import
 
 import contextlib
+import copy
 import errno
 import os
+import random
 import socket
 import sys
 import time
@@ -180,8 +182,23 @@ def trylock(ui, vfs, lockname, timeout, warntimeout=None, *args, **kwargs):
     return l
 
 
+# Temporary method to dispatch based on devel.lockmode during transition to rust locks.
+def lock(*args, ui=None, **kwargs):
+    lockclass = pythonlock
+
+    if ui:
+        mode = ui.config("devel", "lockmode")
+        if mode == "rust_only":
+            lockclass = rustlock
+        elif mode == "python_and_rust":
+            kwargs = copy.copy(kwargs)
+            kwargs["andrust"] = True
+
+    return lockclass(*args, ui=ui, **kwargs)
+
+
 # pyre-fixme[30]: Terminating analysis - type `lock` not defined.
-class lock(object):
+class pythonlock(object):
     """An advisory lock held by one process to control access to a set
     of files.  Non-cooperating processes or incorrectly written scripts
     can ignore Mercurial's locking scheme and stomp all over the
@@ -213,6 +230,7 @@ class lock(object):
         warnattemptidx=None,
         debugattemptidx=None,
         checkdeadlock=True,
+        andrust=False,
     ):
         self.vfs = vfs
         self.f = file
@@ -231,6 +249,8 @@ class lock(object):
         self.checkdeadlock = checkdeadlock
         self._debugmessagesprinted = set([])
         self._lockfd = None
+        self.andrust = andrust
+        self._rustlock = None
 
         self.delay = self.lock()
         if self.acquirefn:
@@ -345,6 +365,30 @@ class lock(object):
                 errno.EAGAIN, self.vfs.join(self.f), self.desc, emptylockinfo
             )
 
+        lockrust = self.andrust
+        # Randomly acquire rust lock in tests to get some more coverage.
+        if util.istest() and random.choice((True, False)):
+            lockrust = True
+
+        if lockrust:
+            try:
+                self._rustlock = rustlock(
+                    self.vfs,
+                    self.f,
+                    timeout=self.timeout,
+                    desc=self.desc,
+                    ui=self.ui,
+                    warnattemptidx=self.warnattemptidx,
+                    debugattemptidx=self.debugattemptidx,
+                    # don't pass callbacks to avoid double invocation
+                    # don't pass spinner to avoid double spinner
+                )
+            except Exception as err:
+                # Avoid invoking python lock's release callback if rust lock acquisition fails.
+                self.releasefn = None
+                self.release()
+                raise err
+
     def _readlock(self):
         """read lock and return its value
 
@@ -434,8 +478,11 @@ class lock(object):
     def _release(self):
         util.releaselock(self._lockfd, self.vfs.join(self.f))
 
+        if self._rustlock:
+            self._rustlock.release()
 
-class rustlock(lock):
+
+class rustlock(pythonlock):
     """Delegates to rust implementation of advisory file lock."""
 
     def _trylock(self):

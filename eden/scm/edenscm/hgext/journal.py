@@ -323,14 +323,18 @@ class journalstorage(object):
             raise error.Abort(_("journal lock does not support nesting"))
         desc = _("journal of %s") % vfs.base
         try:
-            l = lock.lock(vfs, "namejournal.lock", 0, desc=desc)
+            l = lock.lock(vfs, "namejournal.lock", 0, desc=desc, ui=self.ui)
         except error.LockHeld as inst:
             self.ui.warn(
                 _("waiting for lock on %s held by %r\n") % (desc, inst.lockinfo)
             )
             # default to 600 seconds timeout
             l = lock.lock(
-                vfs, "namejournal.lock", self.ui.configint("ui", "timeout"), desc=desc
+                vfs,
+                "namejournal.lock",
+                self.ui.configint("ui", "timeout"),
+                desc=desc,
+                ui=self.ui,
             )
             self.ui.warn(_("got lock after %s seconds\n") % l.delay)
         self._lockref = weakref.ref(l)
