@@ -283,7 +283,7 @@ class basectx(object):
     def _fileinfo(self, path):
         if r"_manifest" in self.__dict__:
             try:
-                return self._manifest[path], self._manifest.flags(path)
+                return self._manifest.find(path)
             except KeyError:
                 raise error.ManifestLookupError(
                     self._node, path, _("not found in manifest")
