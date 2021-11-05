@@ -50,7 +50,6 @@ from .. import (
     match as matchmod,
     merge as mergemod,
     mutation,
-    obsolete,
     patch,
     phases,
     pycompat,
@@ -1743,9 +1742,7 @@ def _docommit(ui, repo, *pats, **opts):
         #
         # Note: eventually this guard will be removed. Please do not expect
         # this behavior to remain.
-        if not obsolete.isenabled(
-            repo, obsolete.createmarkersopt
-        ) and not mutation.enabled(repo):
+        if not mutation.enabled(repo):
             cmdutil.checkunfinished(repo)
 
         node = cmdutil.amend(ui, repo, old, extra, pats, opts)
@@ -5995,20 +5992,6 @@ def summary(ui, repo, **opts):
 
     if draft or secret:
         ui.status(_("phases: %s\n") % ", ".join(t))
-
-    if obsolete.isenabled(repo, obsolete.createmarkersopt) and not mutation.enabled(
-        repo
-    ):
-        for trouble in ("orphan", "contentdivergent", "phasedivergent"):
-            numtrouble = len(repo.revs(trouble + "()"))
-            # We write all the possibilities to ease translation
-            troublemsg = {
-                "orphan": _("orphan: %d changesets"),
-                "contentdivergent": _("content-divergent: %d changesets"),
-                "phasedivergent": _("phase-divergent: %d changesets"),
-            }
-            if numtrouble > 0:
-                ui.status(troublemsg[trouble] % numtrouble + "\n")
 
     cmdutil.summaryhooks(ui, repo)
 
