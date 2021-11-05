@@ -38,7 +38,7 @@ use pathmatcher::TreeMatcher;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
 use pyrevisionstore::contentstore;
-use pyrevisionstore::filescmstore;
+use pyrevisionstore::treescmstore;
 use pyrevisionstore::PythonHgIdDataStore;
 use revisionstore::HgIdDataStore;
 use revisionstore::LegacyStore;
@@ -127,7 +127,9 @@ py_class!(pub class treemanifest |py| {
         node: Option<&PyBytes> = None
     ) -> PyResult<treemanifest> {
         let store = contentstore::downcast_from(py, store.clone_ref(py)).map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
-            .or_else(|_| filescmstore::downcast_from(py, store.clone_ref(py)).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>))
+            .or_else(|_| treescmstore::downcast_from(py, store.clone_ref(py)).map(|s| {
+                s.extract_inner(py) as Arc<dyn LegacyStore>
+            }))
             .unwrap_or_else(|_| Arc::new(PythonHgIdDataStore::new(store)) as Arc<dyn LegacyStore>);
         let manifest_store = Arc::new(ManifestStore::new(store));
         let underlying = match node {
