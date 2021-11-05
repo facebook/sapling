@@ -42,7 +42,6 @@ from edenscm.mercurial import (
     mdiff,
     merge,
     node as nodemod,
-    obsolete,
     patch,
     pycompat,
     registrar,
@@ -947,22 +946,19 @@ def _checkunshelveuntrackedproblems(ui, repo, shelvectx):
         raise error.Abort(m, hint=hint)
 
 
-def _obsoleteredundantnodes(repo, tr, pctx, shelvectx, tmpwctx):
+def _hideredundantnodes(repo, tr, pctx, shelvectx, tmpwctx):
     # order is important in the list of [shelvectx, tmpwctx] below
     # some nodes may already be obsolete
-    toobsolete = []
+    tohide = []
     if shelvectx != pctx:
-        toobsolete.append(shelvectx)
+        tohide.append(shelvectx)
     if tmpwctx not in (pctx, shelvectx):
-        toobsolete.append(tmpwctx)
-    _hidenodes(repo, [ctx.node() for ctx in toobsolete])
+        tohide.append(tmpwctx)
+    _hidenodes(repo, [ctx.node() for ctx in tohide])
 
 
 def _hidenodes(repo, nodes):
     unfi = repo
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        markers = [(unfi[n], ()) for n in nodes]
-        obsolete.createmarkers(repo, markers)
     if visibility.tracking(repo):
         visibility.remove(repo, nodes)
 
@@ -1127,7 +1123,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
             restorebranch(ui, repo, branchtorestore)
             _forgetunknownfiles(repo, shelvectx, addedbefore)
 
-        _obsoleteredundantnodes(repo, tr, pctx, shelvectx, tmpwctx)
+        _hideredundantnodes(repo, tr, pctx, shelvectx, tmpwctx)
 
         shelvedstate.clear(repo)
         _finishunshelve(repo, tr, activebookmark)

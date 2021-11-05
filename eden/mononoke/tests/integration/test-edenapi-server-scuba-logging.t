@@ -32,6 +32,6 @@ Check the logging
   $ wait_for_json_record_count "$SCUBA" 1
 
   $ jq -r .normal.edenapi_error < "$SCUBA"
-  Key does not exist: Key { path: RepoPathBuf(""), hgid: HgId("1111111111111111111111111111111111111111") }
+  Key does not exist: Key { path: RepoPathBuf(""), hgid: HgId("*") } (glob)
   $ jq -r .int.edenapi_error_count < "$SCUBA"
   2
