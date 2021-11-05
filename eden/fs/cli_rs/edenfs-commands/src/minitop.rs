@@ -8,7 +8,8 @@
 //! edenfsctl minitop
 
 use async_trait::async_trait;
-use crossterm::{cursor, QueueableCommand};
+use crossterm::terminal;
+use crossterm::{cursor, execute, QueueableCommand};
 use std::collections::BTreeMap;
 use std::io::{stdout, Write};
 use std::path::Path;
@@ -216,7 +217,10 @@ impl crate::Subcommand for MinitopCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let client = instance.connect(None).await?;
         let mut tracked_processes = TrackedProcesses::new();
+
+        // Setup rendering
         let mut stdout = stdout();
+        execute!(stdout, cursor::Hide, terminal::DisableLineWrap);
 
         loop {
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
