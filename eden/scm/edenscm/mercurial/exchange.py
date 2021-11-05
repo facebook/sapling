@@ -768,26 +768,12 @@ def _pushcheckoutgoing(pushop):
         return False
     # something to push
     if not pushop.force:
-        # if repo.obsstore == False --> no obsolete
-        # then, save the iteration
-        if unfi.obsstore:
-            # this message are here for 80 char limit reason
-            mso = _("push includes obsolete changeset: %s!")
-            mspd = _("push includes phase-divergent changeset: %s!")
-            mscd = _("push includes content-divergent changeset: %s!")
-            mst = {
-                "orphan": _("push includes orphan changeset: %s!"),
-                "phase-divergent": mspd,
-                "content-divergent": mscd,
-            }
-            # If we are to push if there is at least one
-            # obsolete or unstable changeset in missing, at
-            # least one of the missinghead will be obsolete or
-            # unstable. So checking heads only is ok
-            for node in outgoing.missingheads:
-                ctx = unfi[node]
-                if ctx.obsolete():
-                    raise error.Abort(mso % ctx)
+        mso = _("push includes obsolete changeset: %s!")
+        # XXX: unstable (descendant of obsolete()) is not checked here
+        for node in outgoing.missingheads:
+            ctx = unfi[node]
+            if ctx.obsolete():
+                raise error.Abort(mso % ctx)
 
     return True
 
