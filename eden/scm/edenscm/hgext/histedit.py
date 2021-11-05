@@ -252,7 +252,6 @@ from edenscm.mercurial import (
     mergeutil,
     mutation,
     node,
-    obsolete,
     progress,
     pycompat,
     registrar,
@@ -1410,9 +1409,7 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
 
     # Create a backup so we can always abort completely.
     backupfile = None
-    if not obsolete.isenabled(repo, obsolete.createmarkersopt) and not mutation.enabled(
-        repo
-    ):
+    if not mutation.enabled(repo):
         backupfile = repair._bundle(repo, [parentctxnode], [topmost], root, "histedit")
     state.backupfile = backupfile
 
@@ -1454,10 +1451,7 @@ def between(repo, old, new, keep):
     When keep is false, the specified set can't have children."""
     ctxs = list(repo.set("%n::%n", old, new))
     if ctxs and not keep:
-        if not (
-            obsolete.isenabled(repo, obsolete.allowunstableopt)
-            or visibility.tracking(repo)
-        ) and repo.revs("(%ld::) - (%ld)", ctxs, ctxs):
+        if not (visibility.tracking(repo)) and repo.revs("(%ld::) - (%ld)", ctxs, ctxs):
             raise error.Abort(
                 _("can only histedit a changeset together " "with all its descendants")
             )
