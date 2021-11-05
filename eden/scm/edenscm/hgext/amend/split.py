@@ -25,7 +25,6 @@ from edenscm.mercurial import (
     hintutil,
     lock as lockmod,
     mutation,
-    obsolete,
     registrar,
     scmutil,
     visibility,
@@ -82,9 +81,7 @@ def split(ui, repo, *revs, **opts):
             cmdutil.checkunfinished(repo)
         ctx = repo[rev]
         r = ctx.hex()
-        allowunstable = visibility.tracking(repo) or obsolete.isenabled(
-            repo, obsolete.allowunstableopt
-        )
+        allowunstable = visibility.tracking(repo)
         if not allowunstable:
             # XXX We should check head revs
             if repo.revs("(%d::) - %d", rev, rev):
@@ -189,10 +186,6 @@ def split(ui, repo, *revs, **opts):
                 bmupdate(tip.node())
                 if bookactive is not None:
                     bookmarks.activate(repo, bookactive)
-                if obsolete.isenabled(repo, obsolete.createmarkersopt):
-                    obsolete.createmarkers(
-                        repo, [(repo[r], newcommits)], operation="split"
-                    )
             if torebase:
                 rebaseopts = {"dest": "_destrestack(SRC)", "rev": torebase}
                 rebase.rebase(ui, repo, **rebaseopts)
