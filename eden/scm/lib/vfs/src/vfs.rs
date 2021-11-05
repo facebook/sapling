@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::error;
+use std::fmt;
+use std::fs;
 use std::fs::create_dir_all;
 use std::fs::remove_dir;
 use std::fs::remove_dir_all;
@@ -16,9 +19,9 @@ use std::fs::Metadata;
 use std::fs::OpenOptions;
 #[cfg(unix)]
 use std::fs::Permissions;
+use std::io;
 use std::io::ErrorKind;
 use std::io::Write;
-use std::io::{self};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -29,10 +32,13 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
+use fs2::FileExt;
 use fsinfo::fstype;
 use fsinfo::FsType;
 use minibytes::Bytes;
+use types::PathComponent;
 use types::RepoPath;
+use util::lock::PathLock;
 use util::path::remove_file;
 
 use crate::pathauditor::PathAuditor;
@@ -302,7 +308,7 @@ impl VFS {
         Ok(content.into())
     }
 
-    /// Removes file, but inlike Self::remove, does not delete empty directories.
+    /// Removes file, but unlike Self::remove, does not delete empty directories.
     fn remove_keep_path(&self, filepath: &PathBuf) -> Result<()> {
         if let Ok(metadata) = symlink_metadata(&filepath) {
             let file_type = metadata.file_type();
@@ -329,12 +335,91 @@ impl VFS {
     pub fn supports_executables(&self) -> bool {
         self.inner.supports_executables
     }
+
+    /// try_lock attempts to acquire an advisory file lock and write
+    /// specified contents. Lock acquisition and content writing are
+    /// atomic as long as the content reader also uses this method. If
+    /// the lock is not available, LockContendederror is returned
+    /// immediately containing the lock's current contents.
+    pub fn try_lock<B: AsRef<[u8]>>(&self, name: &str, contents: B) -> Result<File, LockError> {
+        // Our locking strategy uses three files:
+        //   1. An empty advisory lock file at the directory level.
+        //   2. An empty advisory lock file named <name>.lock. This file is returned.
+        //   3. A plain file named <name>.data which contains the contents.
+        //
+        //  Readers and writers acquire the directory lock first. This
+        //  ensures atomicity across lock acquisition and content
+        //  writing.
+        let _dir_lock = self.lock_dir()?;
+
+        let name = sanitize_lock_name(name);
+
+        let path = self
+            .join(PathComponent::from_str(&name)?.as_ref())
+            .with_extension("data");
+        let lock_file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path.with_extension("lock"))?;
+        match lock_file.try_lock_exclusive() {
+            Ok(_) => {}
+            Err(err) if err.kind() == fs2::lock_contended_error().kind() => {
+                let contents = fs::read(&path)?;
+                return Err(LockContendedError { path, contents }.into());
+            }
+            Err(err) => return Err(err.into()),
+        };
+
+        fs::write(&path, contents)?;
+
+        Ok(lock_file)
+    }
+
+    fn lock_dir(&self) -> Result<PathLock, LockError> {
+        Ok(PathLock::exclusive(
+            self.join(PathComponent::from_str(".dir_lock")?.as_ref()),
+        )?)
+    }
+}
+
+fn sanitize_lock_name(name: &str) -> String {
+    // Avoid letting a caller specify "foo.lock" and accidentally
+    // interfering with the underlying locking details. This is
+    // mainly for compatibility during python lock transition to
+    // avoid a python lock "foo.lock" accidentally colliding with
+    // the rust lock file.
+    name.replace(".", "_")
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum LockError {
+    #[error(transparent)]
+    Contended(#[from] LockContendedError),
+    #[error(transparent)]
+    Io(#[from] io::Error),
+    #[error(transparent)]
+    PathError(#[from] types::path::ParseError),
+}
+
+#[derive(Debug)]
+pub struct LockContendedError {
+    pub path: PathBuf,
+    pub contents: Vec<u8>,
+}
+
+impl error::Error for LockContendedError {}
+
+impl fmt::Display for LockContendedError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "lock {:?} contended", self.path)
+    }
 }
 
 #[cfg(unix)]
 #[cfg(test)]
 mod unix_tests {
     use std::fs;
+    use std::thread;
 
     use super::*;
 
@@ -374,6 +459,71 @@ mod unix_tests {
 
         assert_eq!(0o755, VFS::update_mode(0o644, true));
         assert_eq!(0o644, VFS::update_mode(0o755, false));
+    }
+
+    #[test]
+    fn test_try_lock() -> Result<()> {
+        let tmp = tempfile::tempdir()?;
+        let vfs = VFS::new(tmp.path().to_path_buf())?;
+
+        {
+            let _foo_lock = vfs.try_lock("foo", "some contents")?;
+
+            // Can get current lock data via lock contended error.
+            if let Err(LockError::Contended(LockContendedError { contents, .. })) =
+                vfs.try_lock("foo", "bar")
+            {
+                assert_eq!("some contents".as_bytes(), contents);
+            } else {
+                panic!("expected LockContendedError")
+            }
+        }
+
+        // Now we can acquire "foo" lock since above lock has been dropped.
+        let _foo_lock = vfs.try_lock("foo", "some contents")?;
+
+        Ok(())
+    }
+
+    // Test readers never see incomplete or inconsistent lock data
+    // contents.
+    #[test]
+    fn test_lock_atomicity() -> Result<()> {
+        let tmp = tempfile::tempdir()?;
+
+        // Two threads taking turns with the lock. If lock is
+        // unavailable, the thread knows the lock contents should be
+        // that of the other thread (because there are only two
+        // threads).
+        let threads: Vec<_> = vec!["a", "b"]
+            .into_iter()
+            .map(|c| {
+                let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+
+                // Make contents big so we include the case where
+                // writing the contents takes multiple writes.
+                let my_contents = c.repeat(1_000_000);
+                let other = if c == "a" { "b" } else { "a" };
+                let other_contents = other.repeat(1_000_000);
+                thread::spawn(move || {
+                    for _ in 0..10 {
+                        match vfs.try_lock("foo", &my_contents) {
+                            Ok(_) => {}
+                            Err(LockError::Contended(LockContendedError { contents, .. })) => {
+                                assert_eq!(other_contents.as_bytes(), contents,);
+                            }
+                            _ => panic!("unexpected result"),
+                        }
+                    }
+                })
+            })
+            .collect();
+
+        for t in threads {
+            t.join().unwrap();
+        }
+
+        Ok(())
     }
 }
 

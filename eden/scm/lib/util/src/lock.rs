@@ -13,6 +13,7 @@ use std::path::Path;
 use fs2::FileExt;
 
 /// RAII lock on a filesystem path.
+#[derive(Debug)]
 pub struct PathLock {
     file: File,
 }
