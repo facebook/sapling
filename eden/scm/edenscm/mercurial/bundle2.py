@@ -1748,7 +1748,6 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts, caps):
 
 
 def buildobsmarkerspart(bundler, markers):
-    # type: (bundle20, obsolete.obsstore) -> Optional[bundlepart]
     """add an obsmarker part to the bundler with <markers>
 
     No part is created if markers is empty.
