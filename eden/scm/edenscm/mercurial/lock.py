@@ -206,8 +206,6 @@ class lock(object):
     # old-style lock: symlink to pid
     # new-style lock: symlink to hostname:pid
 
-    _namespace = None
-
     def __init__(
         self,
         vfs,
@@ -402,20 +400,6 @@ class lock(object):
         except error.LockError:
             self._debugprintonce(_("failed to remove the stale lock file\n"))
             return info
-
-    def testlock(self):
-        """return id of lockinfo if lock is valid, else None.
-
-        If old-style lock, we cannot tell what machine lockinfo is on.
-        with new-style lock, if lockinfo is on this machine, we can
-        see if lockinfo is alive.  If lockinfo is on this machine but
-        not alive, we can safely break lock.
-
-        The lock file is only deleted when None is returned.
-
-        """
-        info = lockinfo(self._readlock(), path=self.vfs.join(self.f))
-        return self._testlock(info)
 
     def release(self):
         """release the lock and execute callback function if any
