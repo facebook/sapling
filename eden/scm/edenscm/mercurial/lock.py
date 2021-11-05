@@ -147,7 +147,6 @@ def trylock(ui, vfs, lockname, timeout, warntimeout=None, *args, **kwargs):
 
     This function is responsible to issue warnings and or debug messages about
     the held lock while trying to acquires it."""
-    l = lock(vfs, lockname, 0, *args, dolock=False, ui=ui, **kwargs)
 
     debugidx = 0 if (warntimeout and timeout) else -1
     warningidx = 0
@@ -158,32 +157,24 @@ def trylock(ui, vfs, lockname, timeout, warntimeout=None, *args, **kwargs):
     else:
         warningidx = defaultlockwaitwarntimeout
 
-    delay = 0
-    while True:
-        try:
-            l._trylock()
-            break
-        except error.LockHeld as inst:
-            if delay == debugidx:
-                ui.debug(inst.lockinfo.getwarning(l))
-            if delay == warningidx:
-                ui.warn(inst.lockinfo.getwarning(l))
-            if timeout <= delay:
-                raise error.LockHeld(
-                    errno.ETIMEDOUT, inst.filename, l.desc, inst.lockinfo
-                )
-            time.sleep(1)
-            delay += 1
+    l = lock(
+        vfs,
+        lockname,
+        timeout,
+        *args,
+        ui=ui,
+        warnattemptidx=warningidx,
+        debugattemptidx=debugidx,
+        **kwargs
+    )
 
-    l.delay = delay
     if l.delay:
         msg = _("got lock after %s seconds\n") % l.delay
         if 0 <= warningidx <= l.delay:
             ui.warn(msg)
         else:
             ui.debug(msg)
-    if l.acquirefn:
-        l.acquirefn()
+
     return l
 
 
@@ -214,10 +205,11 @@ class lock(object):
         releasefn=None,
         acquirefn=None,
         desc=None,
-        dolock=True,
         ui=None,
         showspinner=False,
         spinnermsg=None,
+        warnattemptidx=None,
+        debugattemptidx=None,
     ):
         self.vfs = vfs
         self.f = file
@@ -231,12 +223,14 @@ class lock(object):
         self.ui = ui
         self.showspinner = showspinner
         self.spinnermsg = spinnermsg
+        self.warnattemptidx = warnattemptidx
+        self.debugattemptidx = debugattemptidx
         self._debugmessagesprinted = set([])
         self._lockfd = None
-        if dolock:
-            self.delay = self.lock()
-            if self.acquirefn:
-                self.acquirefn()
+
+        self.delay = self.lock()
+        if self.acquirefn:
+            self.acquirefn()
 
     def __enter__(self):
         return self
@@ -279,20 +273,24 @@ class lock(object):
             self._dolock()
 
     def _dolock(self):
-        timeout = self.timeout
+        delay = 0
         while True:
             try:
                 self._trylock()
-                return self.timeout - timeout
+                return delay
             except error.LockHeld as inst:
-                if timeout != 0:
-                    time.sleep(1)
-                    if timeout > 0:
-                        timeout -= 1
-                    continue
-                raise error.LockHeld(
-                    errno.ETIMEDOUT, inst.filename, self.desc, inst.lockinfo
-                )
+                if self.ui and delay == self.debugattemptidx:
+                    self.ui.debug(inst.lockinfo.getwarning(self))
+                if self.ui and delay == self.warnattemptidx:
+                    self.ui.warn(inst.lockinfo.getwarning(self))
+
+                if self.timeout >= 0 and delay >= self.timeout:
+                    raise error.LockHeld(
+                        errno.ETIMEDOUT, inst.filename, self.desc, inst.lockinfo
+                    )
+
+                time.sleep(1)
+                delay += 1
 
     def _trylock(self):
         if self.held:
