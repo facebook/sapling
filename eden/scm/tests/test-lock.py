@@ -143,28 +143,30 @@ class testlock(unittest.TestCase):
         state.assertpostreleasecalled(True)
         state.assertlockexists(False)
 
-    def testlockfork(self):
-        state = teststate(self, tempfile.mkdtemp(dir=os.getcwd()))
-        lock = state.makelock()
-        state.assertacquirecalled(True)
+    if not pycompat.iswindows:
 
-        pid = os.fork()
-        if pid == 0:
-            lock._pidoffset = os.getpid()
+        def testlockfork(self):
+            state = teststate(self, tempfile.mkdtemp(dir=os.getcwd()))
+            lock = state.makelock()
+            state.assertacquirecalled(True)
+
+            pid = os.fork()
+            if pid == 0:
+                lock._pidoffset = os.getpid()
+                lock.release()
+                state.assertreleasecalled(False)
+                state.assertpostreleasecalled(False)
+                state.assertlockexists(True)
+                os._exit(0)
+
+            _, status = os.waitpid(pid, 0)
+            self.assertTrue(((status >> 8) & 0x7F) == 0)
+
+            # release the actual lock
             lock.release()
-            state.assertreleasecalled(False)
-            state.assertpostreleasecalled(False)
-            state.assertlockexists(True)
-            os._exit(0)
-
-        _, status = os.waitpid(pid, 0)
-        self.assertTrue(((status >> 8) & 0x7F) == 0)
-
-        # release the actual lock
-        lock.release()
-        state.assertreleasecalled(True)
-        state.assertpostreleasecalled(True)
-        state.assertlockexists(False)
+            state.assertreleasecalled(True)
+            state.assertpostreleasecalled(True)
+            state.assertlockexists(False)
 
     def testfrequentlockunlock(self):
         """This tests whether lock acquisition fails as expected, even if

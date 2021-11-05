@@ -30,6 +30,7 @@ CertificateError = bindings.error.CertificateError
 CommitLookupError = bindings.error.CommitLookupError
 HttpError = bindings.error.HttpError
 IndexedLogError = bindings.error.IndexedLogError
+LockContendedError = bindings.error.LockContendedError
 MetaLogError = bindings.error.MetaLogError
 NeedSlowPathError = bindings.error.NeedSlowPathError
 NonUTF8PathError = bindings.error.NonUTF8Path

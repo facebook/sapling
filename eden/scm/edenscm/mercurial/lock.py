@@ -20,6 +20,8 @@ import sys
 import time
 import warnings
 
+from bindings import lock as nativelock
+
 from . import encoding, error, progress, pycompat, util
 from .i18n import _
 
@@ -146,7 +148,7 @@ def trylock(ui, vfs, lockname, timeout, warntimeout=None, *args, **kwargs):
     """return an acquired lock or raise an a LockHeld exception
 
     This function is responsible to issue warnings and or debug messages about
-    the held lock while trying to acquires it."""
+    the held lock while trying to acquire it."""
 
     debugidx = 0 if (warntimeout and timeout) else -1
     warningidx = 0
@@ -420,7 +422,7 @@ class lock(object):
                     self.releasefn()
             finally:
                 try:
-                    util.releaselock(self._lockfd, self.vfs.join(self.f))
+                    self._release()
                     self._lockfd = None
                 except OSError:
                     pass
@@ -428,6 +430,50 @@ class lock(object):
                 callback()
             # Prevent double usage and help clear cycles.
             self.postrelease = None
+
+    def _release(self):
+        util.releaselock(self._lockfd, self.vfs.join(self.f))
+
+
+class rustlock(lock):
+    """Delegates to rust implementation of advisory file lock."""
+
+    def _trylock(self):
+        if self.held:
+            self.held += 1
+            return
+        assert self._lockfd is None
+
+        path = self.vfs.join(self.f)
+        if (
+            util.istest()
+            and self.f
+            in encoding.environ.get("EDENSCM_TEST_PRETEND_LOCKED", "").split()
+        ):
+            raise error.LockHeld(errno.EAGAIN, path, self.desc, None)
+
+        try:
+            self._lockfd = nativelock.pathlock.trylock(
+                self.vfs.dirname(path), self.vfs.basename(path), self._getlockname()
+            )
+            self.held = 1
+        except error.LockContendedError as err:
+            raise error.LockHeld(
+                errno.EAGAIN,
+                path,
+                self.desc,
+                lockinfo(err.args[0], path=path),
+            )
+        except IOError as err:
+            raise error.LockUnavailable(
+                err.errno,
+                str(err),
+                path,
+                self.desc,
+            )
+
+    def _release(self):
+        self._lockfd.unlock()
 
 
 def islocked(vfs, name):
