@@ -208,7 +208,6 @@ def _preimportmodules():
         "namespaces",
         "node",
         "obsolete",
-        "obsutil",
         "parser",
         "patch",
         "pathutil",
