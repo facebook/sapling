@@ -210,6 +210,7 @@ class lock(object):
         spinnermsg=None,
         warnattemptidx=None,
         debugattemptidx=None,
+        checkdeadlock=True,
     ):
         self.vfs = vfs
         self.f = file
@@ -225,6 +226,7 @@ class lock(object):
         self.spinnermsg = spinnermsg
         self.warnattemptidx = warnattemptidx
         self.debugattemptidx = debugattemptidx
+        self.checkdeadlock = checkdeadlock
         self._debugmessagesprinted = set([])
         self._lockfd = None
 
@@ -310,7 +312,9 @@ class lock(object):
         while not self.held and retry:
             retry -= 1
             try:
-                self._lockfd = self.vfs.makelock(self._getlockname(), self.f)
+                self._lockfd = self.vfs.makelock(
+                    self._getlockname(), self.f, checkdeadlock=self.checkdeadlock
+                )
                 self.held = 1
             except (OSError, IOError) as why:
                 # EEXIST: lockfile exists (Windows)
@@ -424,6 +428,14 @@ class lock(object):
                 callback()
             # Prevent double usage and help clear cycles.
             self.postrelease = None
+
+
+def islocked(vfs, name):
+    try:
+        lock(vfs, name, timeout=0, checkdeadlock=False).release()
+        return False
+    except error.LockHeld:
+        return True
 
 
 def release(*locks):

@@ -166,7 +166,7 @@ def lock(repo):
 
 
 def islocked(repo):
-    return util.islocked(repo.sharedvfs.join(lockfilename))
+    return lockmod.islocked(repo.sharedvfs, lockfilename)
 
 
 def status(repo):

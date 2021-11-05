@@ -152,7 +152,6 @@ groupmembers = platform.groupmembers
 groupname = platform.groupname
 hidewindow = platform.hidewindow
 isexec = platform.isexec
-islocked = platform.islocked
 isowner = platform.isowner
 listdir = osutil.listdir
 localpath = platform.localpath

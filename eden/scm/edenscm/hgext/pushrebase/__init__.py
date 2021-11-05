@@ -57,6 +57,7 @@ from edenscm.mercurial import (
     exchange,
     extensions,
     hg,
+    lock,
     manifest,
     mutation,
     obsolete,
@@ -132,14 +133,12 @@ def uisetup(ui):
             else:
                 node = nodeorrev
 
-            haslock = util.islocked(os.path.join(self.opener.join(""), "../wlock"))
             wasincache = node in cache
             cache[node] = True
 
-            msg = "%s manifest read for %s (%s lock)\n" % (
+            msg = "%s manifest read for %s\n" % (
                 "cached" if wasincache else "*FULL*",
                 short(node),
-                "*inside*" if haslock else "outside",
             )
 
             # Write to user (stderr) if configured

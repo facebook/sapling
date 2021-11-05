@@ -136,7 +136,7 @@ def _issymlinklockstale(oldinfo, newinfo):
     return not testpid(pid)
 
 
-def makelock(info, pathname):
+def makelock(info, pathname, checkdeadlock=True):
     # type: (str, str, bool) -> Optional[int]
     """Try to make a lock at given path. Write info inside it.
 
@@ -201,7 +201,7 @@ def makelock(info, pathname):
     #     the flock. So it knows nobody else has the lock. Therefore it can do
     #     the unlink without extra locking.
     dirname = os.path.dirname(pathname)
-    if pathname in _processlocks:
+    if checkdeadlock and pathname in _processlocks:
         raise error.ProgrammingError(
             "deadlock: %s was locked in the same process" % pathname
         )
@@ -309,26 +309,6 @@ def releaselock(lockfd, pathname):
 
 
 _processlocks = {}  # {path: fd}
-
-
-def islocked(pathname):
-    with _locked(os.path.dirname(pathname) or "."):
-        try:
-            fd = os.open(pathname, os.O_RDONLY | os.O_NOFOLLOW | O_CLOEXEC)
-        except OSError as ex:
-            # ELOOP, ENOENT, EPERM, ...
-            # Only treat ENOENT as "not locked".
-            return ex.errno != errno.ENOENT
-        try:
-            fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
-            return False
-        except IOError as ex:
-            if ex.errno == errno.EAGAIN:
-                return True
-            else:
-                raise
-        finally:
-            os.close(fd)
 
 
 def openhardlinks():

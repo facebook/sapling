@@ -193,6 +193,17 @@ class testlock(unittest.TestCase):
             self.assertTrue(why.lockinfo == lock.emptylockinfo)
             state.assertlockexists(False)
 
+    def testislocked(self):
+        d = tempfile.mkdtemp(dir=os.getcwd())
+        state = teststate(self, d)
+
+        self.assertFalse(lock.islocked(state.vfs, testlockname))
+
+        with state.makelock():
+            self.assertTrue(lock.islocked(state.vfs, testlockname))
+
+        self.assertFalse(lock.islocked(state.vfs, testlockname))
+
 
 if not pycompat.iswindows:
 

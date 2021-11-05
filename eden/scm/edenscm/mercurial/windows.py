@@ -654,7 +654,7 @@ def _cleanuptemplockfiles(dirname, basename):
             pass
 
 
-def makelock(info, pathname):
+def makelock(info, pathname, checkdeadlock=None):
     # type: (str, str, bool) -> Optional[int]
     dirname = os.path.dirname(pathname)
     basename = os.path.basename(pathname)
@@ -690,10 +690,6 @@ def readlock(pathname):
 def releaselock(_lockfd, pathname):
     # type: (Optional[int], str) -> None
     os.unlink(pathname)
-
-
-def islocked(pathname):
-    return os.path.exists(pathname)
 
 
 # Set outputencoding to UTF-8

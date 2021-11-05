@@ -164,11 +164,8 @@ Check backup status with an unbacked up changeset that is disjoint from existing
 Test template keyword for when a backup is in progress
   $ hg log -T '{if(backingup,"Yes","No")}\n' -r .
   No
-  $ rm -f .hg/infinitepushbackup.lock
-  $ ln -s fakelock .hg/infinitepushbackup.lock
-  $ hg log -T '{if(backingup,"Yes","No")}\n' -r .
+  $ EDENSCM_TEST_PRETEND_LOCKED=infinitepushbackup.lock hg log -T '{if(backingup,"Yes","No")}\n' -r .
   Yes
-  $ rm -f .hg/infinitepushbackup.lock
 
 Test for infinitepushbackup disable
   $ setconfig infinitepushbackup.autobackup=true
