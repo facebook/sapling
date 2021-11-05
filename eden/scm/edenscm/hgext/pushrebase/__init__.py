@@ -397,7 +397,7 @@ def createrebasepart(repo, peer, outgoing, onto):
     # it has an unwanted side effect: pushing markers from client to server.
     #
     # "createmarkers" is all we need to be able to write a new marker.
-    if obsolete.isenabled(repo, obsolete.createmarkersopt) or mutation.enabled(repo):
+    if mutation.enabled(repo):
         obsmarkerversions = "\0".join(str(v) for v in obsolete.formats)
     else:
         obsmarkerversions = ""

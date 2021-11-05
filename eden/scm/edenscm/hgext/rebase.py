@@ -41,7 +41,6 @@ from edenscm.mercurial import (
     merge as mergemod,
     mergeutil,
     mutation,
-    obsolete,
     patch,
     perftrace,
     phases,
@@ -384,9 +383,7 @@ class rebaseruntime(object):
             return 0
 
         rebaseset = destmap.keys()
-        allowunstable = visibility.tracking(self.repo) or obsolete.isenabled(
-            self.repo, obsolete.allowunstableopt
-        )
+        allowunstable = visibility.tracking(self.repo)
         if not (self.keepf or allowunstable) and self.repo.revs(
             "first(children(%ld) - %ld)", rebaseset, rebaseset
         ):
