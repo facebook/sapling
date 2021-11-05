@@ -83,7 +83,6 @@ _enabled = False
 # Options for obsolescence
 createmarkersopt = "createmarkers"
 allowunstableopt = "allowunstable"
-exchangeopt = "exchange"
 
 
 def _getoptionvalue(repo, option):
@@ -127,10 +126,9 @@ def isenabled(repo, option):
     """
     createmarkersvalue = _getoptionvalue(repo, createmarkersopt)
     unstabluevalue = _getoptionvalue(repo, allowunstableopt)
-    exchangevalue = _getoptionvalue(repo, exchangeopt)
 
     # createmarkers must be enabled if other options are enabled
-    if (unstabluevalue or exchangevalue) and not createmarkersvalue:
+    if unstabluevalue and not createmarkersvalue:
         raise error.Abort(
             _(
                 "'createmarkers' obsolete option must be enabled "

@@ -1657,9 +1657,6 @@ def getrepocaps(repo, allowpushback=False):
     """
     caps = capabilities.copy()
     caps["changegroup"] = tuple(sorted(changegroup.supportedincomingversions(repo)))
-    if obsolete.isenabled(repo, obsolete.exchangeopt):
-        supportedformat = tuple("V%i" % v for v in obsolete.formats)
-        caps["obsmarkers"] = supportedformat
     if allowpushback:
         caps["pushback"] = ()
     if "phases" in repo.ui.configlist("devel", "legacy.exchange"):

@@ -690,20 +690,6 @@ def _pushdiscoveryphase(pushop):
     pushop.fallbackoutdatedphases = fallback
 
 
-@pushdiscovery("obsmarker")
-def _pushdiscoveryobsmarkers(pushop):
-    if (
-        obsolete.isenabled(pushop.repo, obsolete.exchangeopt)
-        and pushop.repo.obsstore
-        and "obsolete" in pushop.remote.listkeys("namespaces")
-    ):
-        repo = pushop.repo
-        # very naive computation, that can be quite expensive on big repo.
-        # However: evolution is currently slow on them anyway.
-        nodes = (c.node() for c in repo.set("::%ln", pushop.futureheads))
-        pushop.outobsmarkers = pushop.repo.obsstore.relevantmarkers(nodes)
-
-
 @pushdiscovery("bookmarks")
 def _pushdiscoverybookmarks(pushop):
     ui = pushop.ui
@@ -1512,8 +1498,6 @@ def pull(
                 _pullphase(pullop)
             if pullop.extras.get("bookmarks", True):
                 _pullbookmarks(pullop)
-            if pullop.extras.get("obsolete", True):
-                _pullobsolete(pullop)
         pullop.trmanager.close()
     finally:
         lockmod.release(pullop.trmanager, lock, wlock)
@@ -1699,11 +1683,6 @@ def _pullbundle2(pullop):
     else:
         if pullop.heads is None and set(pullop.common).issubset({nullid}):
             pullop.repo.ui.status(_("requesting all changes\n"))
-    if obsolete.isenabled(pullop.repo, obsolete.exchangeopt):
-        remoteversions = bundle2.obsmarkersversion(pullop.remotebundle2caps)
-        if obsolete.commonversion(remoteversions) is not None:
-            kwargs["obsmarkers"] = True
-            pullop.stepsdone.add("obsmarkers")
     _pullbundle2extraprepare(pullop, kwargs)
     bundle = pullop.remote.getbundle("pull", **kwargs)
     try:
@@ -1910,35 +1889,6 @@ def _pullbookmarks(pullop):
         pullop.gettransaction,
         explicit=pullop.explicitbookmarks,
     )
-
-
-def _pullobsolete(pullop):
-    """utility function to pull obsolete markers from a remote
-
-    The `gettransaction` is function that return the pull transaction, creating
-    one if necessary. We return the transaction to inform the calling code that
-    a new transaction have been created (when applicable).
-
-    Exists mostly to allow overriding for experimentation purpose"""
-    if "obsmarkers" in pullop.stepsdone:
-        return
-    pullop.stepsdone.add("obsmarkers")
-    tr = None
-    if obsolete.isenabled(pullop.repo, obsolete.exchangeopt):
-        pullop.repo.ui.debug("fetching remote obsolete markers\n")
-        remoteobs = pullop.remote.listkeys("obsolete")
-        if "dump0" in remoteobs:
-            tr = pullop.gettransaction()
-            markers = []
-            for key in sorted(remoteobs, reverse=True):
-                if key.startswith("dump"):
-                    data = util.b85decode(remoteobs[key])
-                    version, newmarks = obsolete._readmarkers(data)
-                    markers += newmarks
-            if markers:
-                pullop.repo.obsstore.add(tr, markers)
-            pullop.repo.invalidatevolatilesets()
-    return tr
 
 
 def caps20to10(repo):
