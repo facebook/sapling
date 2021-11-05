@@ -846,7 +846,7 @@ we have reusable code here
   │ │ │
   │ │ o  112478962961 B
   │ ├─╯
-  x │  1fc8102cda62 G
+  o │  1fc8102cda62 G
     │
     o  426bada5c675 A A B C I b-B b-C b-I
   

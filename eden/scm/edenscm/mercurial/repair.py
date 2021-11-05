@@ -133,8 +133,7 @@ def stripgeneric(repo, nodelist, backup=True, topic="backup"):
         # Apply bookmark and visibility changes.
         with repo.transaction("strip"):
             allnodes = list(repo.nodes("%ln::", nodelist))
-            # skip obsstore to avoid a draft/public check.
-            scmutil.cleanupnodes(repo, allnodes, "strip", skipobsstore=True)
+            scmutil.cleanupnodes(repo, allnodes, "strip")
 
         # Strip changelog (unsafe for readers).
         # Handled by the Rust layer. Independent from revlog.

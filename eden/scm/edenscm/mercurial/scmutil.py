@@ -27,7 +27,6 @@ from . import (
     encoding,
     error,
     match as matchmod,
-    obsolete,
     pathutil,
     phases,
     pycompat,
@@ -785,9 +784,7 @@ class _containsnode(object):
         return self._revcontains(self._torev(node))
 
 
-def cleanupnodes(
-    repo, replacements, operation, moves=None, metadata=None, skipobsstore=False
-):
+def cleanupnodes(repo, replacements, operation, moves=None, metadata=None):
     """do common cleanups when old nodes are replaced by new nodes
 
     That includes writing obsmarkers or stripping nodes, and moving bookmarks.
@@ -881,28 +878,8 @@ def cleanupnodes(
         if bmarkchanges:
             bmarks.applychanges(repo, tr, bmarkchanges)
 
-        # Obsolete, adjust visibility, or strip nodes
+        # adjust visibility, or strip nodes
         strip = True
-        if obsolete.isenabled(repo, obsolete.createmarkersopt) and not skipobsstore:
-            # If a node is already obsoleted, and we want to obsolete it
-            # without a successor, skip that obssolete request since it's
-            # unnecessary. That's the "if s or not isobs(n)" check below.
-            # Also sort the node in topology order, that might be useful for
-            # some obsstore logic.
-            # NOTE: the filtering and sorting might belong to createmarkers.
-            isobs = unfi.obsstore.successors.__contains__
-            torev = unfi.changelog.rev
-            sortfunc = lambda ns: torev(ns[0])
-            rels = [
-                (unfi[n], tuple(unfi[m] for m in s))
-                for n, s in sorted(replacements.items(), key=sortfunc)
-                if s or not isobs(n)
-            ]
-            if rels:
-                obsolete.createmarkers(
-                    repo, rels, operation=operation, metadata=metadata
-                )
-            strip = False
         if visibility.tracking(repo):
             visibility.remove(repo, replacements.keys())
             strip = False
