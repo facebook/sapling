@@ -16,6 +16,7 @@ edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
 once_cell = "1.8"
 structopt = "0.3.23"
 termwiz = { version = "0.13", features = ["widgets"] }
+thrift-types = { version = "0.1.0", path = "../../../scm/lib/thrift-types" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 toml = "=0.5.8"
 tracing = "0.1.27"
