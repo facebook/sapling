@@ -12,7 +12,7 @@
 
 from __future__ import absolute_import
 
-from . import error, mutation, node, obsolete, revset
+from . import error, node, revset
 from .i18n import _
 
 
@@ -35,22 +35,3 @@ def precheck(repo, revs, action="rewrite"):
         msg = _("cannot %s public changesets") % action
         hint = _("see 'hg help phases' for details")
         raise error.Abort(msg, hint=hint)
-
-    newunstable = disallowednewunstable(repo, revs)
-    if newunstable:
-        raise error.Abort(_("cannot %s changeset with children") % action)
-
-
-def disallowednewunstable(repo, revs):
-    """Checks whether editing the revs will create new unstable changesets and
-    are we allowed to create them.
-
-    To allow new unstable changesets, set the config:
-        `experimental.evolution.allowunstable=True`
-    """
-    if mutation.enabled(repo):
-        return revset.baseset(repo=repo)
-    allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
-    if allowunstable:
-        return revset.baseset(repo=repo)
-    return repo.revs("(%ld::) - %ld", revs, revs)
