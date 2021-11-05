@@ -68,12 +68,13 @@ def update(ui, repo, csid, clean=False):
             component="snapshot",
         )
 
-        rev = snapshot["hg_parents"].hex()
+        parent = snapshot["hg_parents"]
         # This will resolve the parent revision even if it's not available locally
         # and needs pulling from server.
-        rev = scmutil.revsingle(repo, rev, rev).rev()
+        if parent not in repo:
+            repo.pull(headnodes=(parent,))
 
-        hg.updatetotally(ui, repo, rev, None, updatecheck="abort")
+        hg.updatetotally(ui, repo, parent, None, clean=False, updatecheck="abort")
 
         files2download = []
         files2hgadd = []
