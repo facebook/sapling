@@ -17,11 +17,6 @@ test various admin commands
   TEST_VERSION_NAME
   TEST_VERSION_NAME_OLD
 
-  $ REPOID=0 mononoke_admin crossrepo config current
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
-  TEST_VERSION_NAME
-
   $ REPOID=0 mononoke_admin crossrepo config list --with-contents
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
@@ -69,29 +64,6 @@ test various admin commands
         xplat->.ovrsource-rest/xplat
   
   
-  $ REPOID=0 mononoke_admin crossrepo config current --with-contents
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
-  large repo: 0
-  common pushrebase bookmarks: [BookmarkName { bookmark: "master_bookmark" }]
-  version name: TEST_VERSION_NAME
-    small repo: 1
-    bookmark prefix: fbsource/
-    direction: SmallToLarge
-    default action: Preserve
-    prefix map:
-      arvr->.fbsource-rest/arvr
-    small repo: 2
-    bookmark prefix: ovrsource/
-    direction: SmallToLarge
-    default action: PrependPrefix(MPath("arvr-legacy"))
-    prefix map:
-      arvr->arvr
-      fbandroid->.ovrsource-rest/fbandroid
-      fbcode->.ovrsource-rest/fbcode
-      fbobjc->.ovrsource-rest/fbobjc
-      xplat->.ovrsource-rest/xplat
-
   $ REPOID=0 mononoke_admin crossrepo config by-version TEST_VERSION_NAME_OLD
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)

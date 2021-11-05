@@ -76,7 +76,6 @@ const VIA_EXTRAS_ARG: &str = "via-extra";
 const SUBCOMMAND_CONFIG: &str = "config";
 const SUBCOMMAND_BY_VERSION: &str = "by-version";
 const SUBCOMMAND_LIST: &str = "list";
-const SUBCOMMAND_CURRENT: &str = "current";
 const ARG_VERSION_NAME: &str = "version-name";
 const ARG_WITH_CONTENTS: &str = "with-contents";
 
@@ -164,7 +163,7 @@ pub async fn subcommand_crossrepo<'a>(
             .await
         }
         (SUBCOMMAND_CONFIG, Some(sub_sub_m)) => {
-            run_config_sub_subcommand(ctx, matches, sub_sub_m, live_commit_sync_config).await
+            run_config_sub_subcommand(matches, sub_sub_m, live_commit_sync_config).await
         }
         (PUSHREDIRECTION_SUBCOMMAND, Some(sub_sub_m)) => {
             run_pushredirection_subcommand(
@@ -185,7 +184,6 @@ pub async fn subcommand_crossrepo<'a>(
 }
 
 async fn run_config_sub_subcommand<'a>(
-    ctx: CoreContext,
     matches: &'a MononokeMatches<'_>,
     config_subcommand_matches: &'a ArgMatches<'a>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
@@ -198,12 +196,6 @@ async fn run_config_sub_subcommand<'a>(
         (SUBCOMMAND_BY_VERSION, Some(sub_m)) => {
             let version_name: String = sub_m.value_of(ARG_VERSION_NAME).unwrap().to_string();
             subcommand_by_version(repo_id, live_commit_sync_config, version_name)
-                .await
-                .map_err(|e| e.into())
-        }
-        (SUBCOMMAND_CURRENT, Some(sub_m)) => {
-            let with_contents = sub_m.is_present(ARG_WITH_CONTENTS);
-            subcommand_current(ctx, repo_id, live_commit_sync_config, with_contents)
                 .await
                 .map_err(|e| e.into())
         }
@@ -929,24 +921,6 @@ fn print_commit_sync_config(csc: CommitSyncConfig, line_prefix: &str) {
     }
 }
 
-async fn subcommand_current<'a, L: LiveCommitSyncConfig>(
-    ctx: CoreContext,
-    repo_id: RepositoryId,
-    live_commit_sync_config: L,
-    with_contents: bool,
-) -> Result<(), Error> {
-    let csc = live_commit_sync_config
-        .get_current_commit_sync_config(&ctx, repo_id)
-        .await?;
-    if with_contents {
-        print_commit_sync_config(csc, "");
-    } else {
-        println!("{}", csc.version_name);
-    }
-
-    Ok(())
-}
-
 async fn subcommand_list<'a, L: LiveCommitSyncConfig>(
     repo_id: RepositoryId,
     live_commit_sync_config: L,
@@ -1244,19 +1218,8 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                     .help("Do not just print version names, also include config bodies"),
             );
 
-        let current_subcommand = SubCommand::with_name(SUBCOMMAND_CURRENT)
-            .about("print current CommitSyncConfig version for repo")
-            .arg(
-                Arg::with_name(ARG_WITH_CONTENTS)
-                    .long(ARG_WITH_CONTENTS)
-                    .required(false)
-                    .takes_value(false)
-                    .help("Do not just print version name, also include config body"),
-            );
-
         SubCommand::with_name(SUBCOMMAND_CONFIG)
             .about("query available CommitSyncConfig versions for repo")
-            .subcommand(current_subcommand)
             .subcommand(list_subcommand)
             .subcommand(by_version_subcommand)
     };
@@ -1411,18 +1374,18 @@ async fn get_large_to_small_commit_syncer<'a>(
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
-    let commit_sync_config = live_commit_sync_config
-        .get_current_commit_sync_config(ctx, source_repo.get_repoid())
+    let common_sync_config = live_commit_sync_config
+        .get_common_config(source_repo.get_repoid())
         .await?;
 
-    let (large_repo, small_repo) = if commit_sync_config.large_repo_id == source_repo.get_repoid()
-        && commit_sync_config
+    let (large_repo, small_repo) = if common_sync_config.large_repo_id == source_repo.get_repoid()
+        && common_sync_config
             .small_repos
             .contains_key(&target_repo.get_repoid())
     {
         (source_repo, target_repo)
-    } else if commit_sync_config.large_repo_id == target_repo.get_repoid()
-        && commit_sync_config
+    } else if common_sync_config.large_repo_id == target_repo.get_repoid()
+        && common_sync_config
             .small_repos
             .contains_key(&source_repo.get_repoid())
     {
