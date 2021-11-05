@@ -172,132 +172,6 @@ def isenabled(repo, option):
 bumpedfix = 1
 usingsha256 = 2
 
-## Parsing and writing of version "0"
-#
-# The header is followed by the markers. Each marker is made of:
-#
-# - 1 uint8 : number of new changesets "N", can be zero.
-#
-# - 1 uint32: metadata size "M" in bytes.
-#
-# - 1 byte: a bit field. It is reserved for flags used in common
-#   obsolete marker operations, to avoid repeated decoding of metadata
-#   entries.
-#
-# - 20 bytes: obsoleted changeset identifier.
-#
-# - N*20 bytes: new changesets identifiers.
-#
-# - M bytes: metadata as a sequence of nul-terminated strings. Each
-#   string contains a key and a value, separated by a colon ':', without
-#   additional encoding. Keys cannot contain '\0' or ':' and values
-#   cannot contain '\0'.
-_fm0version = 0
-_fm0fixed = ">BIB20s"
-_fm0node = "20s"
-_fm0fsize = _calcsize(_fm0fixed)
-_fm0fnodesize = _calcsize(_fm0node)
-
-
-def _fm0readmarkers(data, off, stop):
-    # Loop on markers
-    while off < stop:
-        # read fixed part
-        cur = data[off : off + _fm0fsize]
-        off += _fm0fsize
-        numsuc, mdsize, flags, pre = _unpack(_fm0fixed, cur)
-        # read replacement
-        sucs = ()
-        if numsuc:
-            s = _fm0fnodesize * numsuc
-            cur = data[off : off + s]
-            sucs = _unpack(_fm0node * numsuc, cur)
-            off += s
-        # read metadata
-        # (metadata will be decoded on demand)
-        metadata = data[off : off + mdsize]
-        if len(metadata) != mdsize:
-            raise error.Abort(
-                _(
-                    "parsing obsolete marker: metadata is too "
-                    "short, %d bytes expected, got %d"
-                )
-                % (mdsize, len(metadata))
-            )
-        off += mdsize
-        metadata = _fm0decodemeta(metadata)
-        try:
-            when, offset = metadata.pop("date", "0 0").split(" ")
-            date = float(when), int(offset)
-        except ValueError:
-            date = (0.0, 0)
-        parents = None
-        if "p2" in metadata:
-            parents = (metadata.pop("p1", None), metadata.pop("p2", None))
-        elif "p1" in metadata:
-            parents = (metadata.pop("p1", None),)
-        elif "p0" in metadata:
-            parents = ()
-        if parents is not None:
-            try:
-                parents = tuple(node.bin(p) for p in parents)
-                # if parent content is not a nodeid, drop the data
-                for p in parents:
-                    if len(p) != 20:
-                        parents = None
-                        break
-            except TypeError:
-                # if content cannot be translated to nodeid drop the data.
-                parents = None
-
-        metadata = tuple(sorted(pycompat.iteritems(metadata)))
-
-        yield (pre, sucs, flags, metadata, date, parents)
-
-
-def _fm0encodeonemarker(marker):
-    pre, sucs, flags, metadata, date, parents = marker
-    if flags & usingsha256:
-        raise error.Abort(_("cannot handle sha256 with old obsstore format"))
-    metadata = dict(metadata)
-    time, tz = date
-    metadata["date"] = "%r %i" % (time, tz)
-    if parents is not None:
-        if not parents:
-            # mark that we explicitly recorded no parents
-            metadata["p0"] = ""
-        for i, p in enumerate(parents, 1):
-            metadata["p%i" % i] = node.hex(p)
-    metadata = _fm0encodemeta(metadata)
-    numsuc = len(sucs)
-    format = _fm0fixed + (_fm0node * numsuc)
-    data = [numsuc, len(metadata), flags, pre]
-    data.extend(sucs)
-    return _pack(format, *data) + metadata
-
-
-def _fm0encodemeta(meta):
-    """Return encoded metadata string to string mapping.
-
-    Assume no ':' in key and no '\0' in both key and value."""
-    for key, value in pycompat.iteritems(meta):
-        if ":" in key or "\0" in key:
-            raise ValueError("':' and '\0' are forbidden in metadata key'")
-        if "\0" in value:
-            raise ValueError("':' is forbidden in metadata value'")
-    return "\0".join(["%s:%s" % (k, meta[k]) for k in sorted(meta)])
-
-
-def _fm0decodemeta(data):
-    """Return string to string dictionary from encoded version."""
-    d = {}
-    for l in data.split("\0"):
-        if l:
-            key, value = l.split(":")
-            d[key] = value
-    return d
-
-
 ## Parsing and writing of version "1"
 #
 # The header is followed by the markers. Each marker is made of:
@@ -484,7 +358,6 @@ def _fm1readmarkers(data, off, stop):
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)
 formats = {
-    _fm0version: (_fm0readmarkers, _fm0encodeonemarker),
     _fm1version: (_fm1readmarkers, _fm1encodeonemarker),
 }
 
@@ -507,11 +380,11 @@ def _readmarkers(data, off=None, stop=None):
     return diskversion, formats[diskversion][0](data, off, stop)
 
 
-def encodeheader(version=_fm0version):
+def encodeheader(version=_fm1version):
     return _pack(">B", version)
 
 
-def encodemarkers(markers, addheader=False, version=_fm0version):
+def encodemarkers(markers, addheader=False, version=_fm1version):
     # Kept separate from flushmarkers(), it will be reused for
     # markers exchange.
     encodeone = formats[version][1]
