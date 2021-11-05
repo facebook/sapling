@@ -86,7 +86,6 @@ class ServerState;
 class Tree;
 class TreePrefetchLease;
 class UnboundedQueueExecutor;
-struct FileMetadata;
 template <typename T>
 class ImmediateFuture;
 class TreeEntry;

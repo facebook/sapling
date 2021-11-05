@@ -204,7 +204,7 @@ class PrjfsChannelInner {
     return *straceLogger_;
   }
 
-  void addDirectoryEnumeration(Guid guid, std::vector<FileMetadata> dirents) {
+  void addDirectoryEnumeration(Guid guid, std::vector<PrjfsDirEntry> dirents) {
     auto [iterator, inserted] = enumSessions_.wlock()->emplace(
         std::move(guid), std::make_shared<Enumerator>(std::move(dirents)));
     XDCHECK(inserted);

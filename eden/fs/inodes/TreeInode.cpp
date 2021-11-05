@@ -1946,8 +1946,8 @@ std::tuple<NfsDirList, bool> TreeInode::nfsReaddir(
 
 #else
 
-std::vector<FileMetadata> TreeInode::readdir() {
-  vector<FileMetadata> ret;
+std::vector<PrjfsDirEntry> TreeInode::readdir() {
+  vector<PrjfsDirEntry> ret;
 
   auto dir = contents_.rlock();
   auto& entries = dir->entries;
@@ -1955,7 +1955,6 @@ std::vector<FileMetadata> TreeInode::readdir() {
 
   for (auto& [name, entry] : entries) {
     auto isDir = entry.getDtype() == dtype_t::Dir;
-    auto winName = name.wide();
 
     if (!isDir) {
       // We only populates the file size for non-materialized files. For
@@ -1966,14 +1965,14 @@ std::vector<FileMetadata> TreeInode::readdir() {
             ObjectFetchContext::getNullContextWithCauseDetail(
                 "TreeInode::readdir");
         ret.emplace_back(
-            std::move(winName),
-            false,
+            name,
+            isDir,
             getMount()->getObjectStore()->getBlobSize(hash.value(), *context));
         continue;
       }
     }
 
-    ret.emplace_back(std::move(winName), isDir, ImmediateFuture<uint64_t>(0));
+    ret.emplace_back(name, isDir, ImmediateFuture<uint64_t>(0));
   }
 
   return ret;

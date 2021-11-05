@@ -94,8 +94,8 @@ TEST(TreeInode, readdirTest) {
   auto result = root->readdir();
 
   ASSERT_EQ(2, result.size());
-  EXPECT_EQ(L".eden", result[0].name);
-  EXPECT_EQ(L"file", result[1].name);
+  EXPECT_EQ(L".eden", result[0].getName());
+  EXPECT_EQ(L"file", result[1].getName());
 }
 
 TEST(TreeInode, updateAndReaddir) {
@@ -110,18 +110,18 @@ TEST(TreeInode, updateAndReaddir) {
   auto result = somedir->readdir();
 
   ASSERT_EQ(3, result.size());
-  EXPECT_EQ(L"file1", result[0].name);
-  EXPECT_EQ(L"file2", result[1].name);
-  EXPECT_EQ(L"file3", result[2].name);
+  EXPECT_EQ(L"file1", result[0].getName());
+  EXPECT_EQ(L"file2", result[1].getName());
+  EXPECT_EQ(L"file3", result[2].getName());
 
   auto resultInode =
       somedir->mknod("newfile.txt"_pc, S_IFREG, 0, InvalidationRequired::No);
   result = somedir->readdir();
   ASSERT_EQ(4, result.size());
-  EXPECT_EQ(L"file1", result[0].name);
-  EXPECT_EQ(L"file2", result[1].name);
-  EXPECT_EQ(L"file3", result[2].name);
-  EXPECT_EQ(L"newfile.txt", result[3].name);
+  EXPECT_EQ(L"file1", result[0].getName());
+  EXPECT_EQ(L"file2", result[1].getName());
+  EXPECT_EQ(L"file3", result[2].getName());
+  EXPECT_EQ(L"newfile.txt", result[3].getName());
 
   somedir
       ->unlink(
@@ -131,9 +131,9 @@ TEST(TreeInode, updateAndReaddir) {
       .get(0ms);
   result = somedir->readdir();
   ASSERT_EQ(3, result.size());
-  EXPECT_EQ(L"file1", result[0].name);
-  EXPECT_EQ(L"file3", result[1].name);
-  EXPECT_EQ(L"newfile.txt", result[2].name);
+  EXPECT_EQ(L"file1", result[0].getName());
+  EXPECT_EQ(L"file3", result[1].getName());
+  EXPECT_EQ(L"newfile.txt", result[2].getName());
 
   somedir
       ->rename(
@@ -145,9 +145,9 @@ TEST(TreeInode, updateAndReaddir) {
       .get(0ms);
   result = somedir->readdir();
   ASSERT_EQ(3, result.size());
-  EXPECT_EQ(L"file1", result[0].name);
-  EXPECT_EQ(L"newfile.txt", result[1].name);
-  EXPECT_EQ(L"renamedfile.txt", result[2].name);
+  EXPECT_EQ(L"file1", result[0].getName());
+  EXPECT_EQ(L"newfile.txt", result[1].getName());
+  EXPECT_EQ(L"renamedfile.txt", result[2].getName());
 }
 
 #else

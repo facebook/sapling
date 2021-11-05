@@ -34,7 +34,7 @@ class RenameLock;
 class Tree;
 class TreeEntry;
 class TreeInodeDebugInfo;
-struct FileMetadata;
+class PrjfsDirEntry;
 
 constexpr folly::StringPiece kDotEdenName{".eden"};
 
@@ -178,7 +178,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * way to get it, so in this function as an optimization we don't populate the
    * size of materialized files.
    */
-  FOLLY_NODISCARD std::vector<FileMetadata> readdir();
+  FOLLY_NODISCARD std::vector<PrjfsDirEntry> readdir();
 #endif
 
   const folly::Synchronized<TreeInodeState>& getContents() const {

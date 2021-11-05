@@ -17,7 +17,7 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
  public:
   explicit PrjfsDispatcherImpl(EdenMount* mount);
 
-  ImmediateFuture<std::vector<FileMetadata>> opendir(
+  ImmediateFuture<std::vector<PrjfsDirEntry>> opendir(
       RelativePath path,
       ObjectFetchContext& context) override;
 

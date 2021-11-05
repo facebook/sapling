@@ -7,42 +7,71 @@
 
 #ifdef _WIN32
 
-#include "folly/portability/Windows.h"
-
-#include <ProjectedFSLib.h> // @manual
 #include "eden/fs/prjfs/Enumerator.h"
 
-namespace facebook {
-namespace eden {
+#include <ProjectedFSLib.h> // @manual
+#include <folly/executors/GlobalExecutor.h>
+#include <folly/portability/Windows.h>
 
-Enumerator::Enumerator(std::vector<FileMetadata>&& entryList)
-    : metadataList_(std::move(entryList)) {
-  std::sort(
-      metadataList_.begin(),
-      metadataList_.end(),
-      [](const FileMetadata& first, const FileMetadata& second) -> bool {
-        return (
-            PrjFileNameCompare(first.name.c_str(), second.name.c_str()) < 0);
+namespace facebook::eden {
+
+PrjfsDirEntry::PrjfsDirEntry(
+    PathComponentPiece name,
+    bool isDir,
+    ImmediateFuture<uint64_t> sizeFuture)
+    : name_{name.wide()},
+      // In the case where the future isn't ready yet, we want to start
+      // driving it immediately, thus convert it to a Future.
+      sizeFuture_{
+          std::move(sizeFuture).semi().via(folly::getGlobalCPUExecutor())},
+      isDir_{isDir} {}
+
+bool PrjfsDirEntry::matchPattern(const std::wstring& pattern) const {
+  return PrjFileNameMatch(name_.c_str(), pattern.c_str());
+}
+
+ImmediateFuture<PrjfsDirEntry::Ready> PrjfsDirEntry::getFuture() {
+  return ImmediateFuture{sizeFuture_.getSemiFuture()}.thenValue(
+      [name = name_, isDir = isDir_](uint64_t size) {
+        return Ready{std::move(name), size, isDir};
       });
 }
 
-FileMetadata* Enumerator::current() {
-  for (; listIndex_ < metadataList_.size(); listIndex_++) {
-    if (PrjFileNameMatch(
-            metadataList_[listIndex_].name.c_str(),
-            searchExpression_.c_str())) {
-      //
-      // Don't increment the index here because we don't know if the caller
-      // would be able to use this. The caller should instead call advance() on
-      // success.
-      //
-      return &metadataList_[listIndex_];
-    }
-  }
-  return nullptr;
+bool PrjfsDirEntry::operator<(const PrjfsDirEntry& other) const {
+  return PrjFileNameCompare(name_.c_str(), other.name_.c_str()) < 0;
 }
 
-} // namespace eden
-} // namespace facebook
+Enumerator::Enumerator(std::vector<PrjfsDirEntry>&& entryList)
+    : metadataList_(std::move(entryList)), iter_{metadataList_.begin()} {
+  std::sort(
+      metadataList_.begin(),
+      metadataList_.end(),
+      [](const PrjfsDirEntry& first, const PrjfsDirEntry& second) -> bool {
+        return first < second;
+      });
+}
+
+void Enumerator::advanceEnumeration() {
+  XDCHECK_NE(iter_, metadataList_.end());
+
+  ++iter_;
+  while (iter_ != metadataList_.end() &&
+         !iter_->matchPattern(searchExpression_)) {
+    ++iter_;
+  }
+}
+
+std::vector<ImmediateFuture<PrjfsDirEntry::Ready>>
+Enumerator::getPendingDirEntries() {
+  std::vector<ImmediateFuture<PrjfsDirEntry::Ready>> ret;
+  for (auto it = iter_; it != metadataList_.end(); it++) {
+    if (it->matchPattern(searchExpression_)) {
+      ret.push_back(it->getFuture());
+    }
+  }
+  return ret;
+}
+
+} // namespace facebook::eden
 
 #endif

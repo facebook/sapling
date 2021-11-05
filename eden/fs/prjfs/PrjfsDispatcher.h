@@ -45,7 +45,7 @@ class PrjfsDispatcher {
   /**
    * Open a directory
    */
-  virtual ImmediateFuture<std::vector<FileMetadata>> opendir(
+  virtual ImmediateFuture<std::vector<PrjfsDirEntry>> opendir(
       RelativePath path,
       ObjectFetchContext& context) = 0;
 

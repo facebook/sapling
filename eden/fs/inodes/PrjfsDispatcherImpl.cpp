@@ -55,7 +55,7 @@ PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
       mount_{mount},
       dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
-ImmediateFuture<std::vector<FileMetadata>> PrjfsDispatcherImpl::opendir(
+ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
     RelativePath path,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context).thenValue([](const InodePtr inode) {

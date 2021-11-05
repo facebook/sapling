@@ -13,42 +13,61 @@
 #include <vector>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/ImmediateFuture.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
-struct FileMetadata {
-  //
-  // File name : final component
-  //
-  std::wstring name;
+class PrjfsDirEntry {
+ public:
+  PrjfsDirEntry() = delete;
 
-  //
-  // isDirectory will be set only for the directories
-  // For files it will be ignored
-  //
-  bool isDirectory{false};
+  PrjfsDirEntry(
+      PathComponentPiece name,
+      bool isDir,
+      ImmediateFuture<uint64_t> sizeFuture);
 
-  folly::Future<uint64_t> getSize() {
-    return sizeFuture_.getFuture();
+  /**
+   * An entry whose size future has been resolved.
+   */
+  struct Ready {
+    /** Name of the directory entry. */
+    std::wstring name;
+    /** Size of the file, 0 for a directory. */
+    uint64_t size;
+    /** Whether this entry is a directory. */
+    bool isDir;
+  };
+
+  /**
+   * Test whether this entry matches the given pattern.
+   */
+  bool matchPattern(const std::wstring& pattern) const;
+
+  /**
+   * Return a future that completes when the size of this entry becomes
+   * available.
+   */
+  ImmediateFuture<Ready> getFuture();
+
+  /**
+   * Do a lexicographical comparison of the entry.
+   *
+   * Return true if this entry is lexicographically before the other.
+   */
+  bool operator<(const PrjfsDirEntry& other) const;
+
+  /**
+   * Return the name of this entry.
+   */
+  const std::wstring& getName() const {
+    return name_;
   }
 
-  FileMetadata(
-      std::wstring&& name,
-      bool isDir,
-      ImmediateFuture<uint64_t> sizeFuture)
-      : name(std::move(name)),
-        isDirectory(isDir),
-        // In the case where the future isn't ready yet, we want to start
-        // driving it immediately, thus convert it to a Future.
-        sizeFuture_(std::move(sizeFuture)
-                        .semi()
-                        .via(&folly::QueuedImmediateExecutor::instance())) {}
-
-  FileMetadata() = delete;
-
  private:
+  std::wstring name_;
   folly::FutureSplitter<uint64_t> sizeFuture_;
+  bool isDir_;
 };
 
 class Enumerator {
@@ -56,23 +75,17 @@ class Enumerator {
   Enumerator(const Enumerator&) = delete;
   Enumerator& operator=(const Enumerator&) = delete;
 
-  Enumerator(std::vector<FileMetadata>&& entryList);
-
-  Enumerator(Enumerator&& other) noexcept
-      : searchExpression_(std::move(other.searchExpression_)),
-        metadataList_(std::move(other.metadataList_)),
-        listIndex_(std::move(other.listIndex_)) {}
+  explicit Enumerator(std::vector<PrjfsDirEntry>&& entryList);
+  Enumerator(Enumerator&& other) = default;
 
   explicit Enumerator() = delete;
 
-  FileMetadata* current();
+  std::vector<ImmediateFuture<PrjfsDirEntry::Ready>> getPendingDirEntries();
 
-  void advance() {
-    ++listIndex_;
-  }
+  void advanceEnumeration();
 
-  void restart() {
-    listIndex_ = 0;
+  void restartEnumeration() {
+    iter_ = metadataList_.begin();
   }
 
   bool isSearchExpressionEmpty() const {
@@ -85,13 +98,12 @@ class Enumerator {
 
  private:
   std::wstring searchExpression_;
-  std::vector<FileMetadata> metadataList_;
+  std::vector<PrjfsDirEntry> metadataList_;
 
-  //
-  // use the listIndex_ to return entries when the enumeration is done over
-  // multiple calls
-  //
-  size_t listIndex_ = 0;
+  /**
+   * Iterator on the first directory entry that didn't get send to ProjectedFS.
+   */
+  std::vector<PrjfsDirEntry>::iterator iter_;
 };
 } // namespace eden
 } // namespace facebook

@@ -242,7 +242,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
   }
 
   if (shouldRestart) {
-    enumerator->restart();
+    enumerator->restartEnumeration();
   }
 
   auto fut = makeImmediateFutureWith([this,
@@ -254,42 +254,58 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     auto stat = &ChannelThreadStats::readDir;
     context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
-    bool added = false;
-    for (FileMetadata* entry; (entry = enumerator->current());
-         enumerator->advance()) {
-      auto fileInfo = PRJ_FILE_BASIC_INFO();
+    // TODO(xavierd): there is a potential quadratic cost to the following code
+    // in the case where the buffer can only hold a single entry. The linear
+    // getPendingDirEntries would thus be called for as many entries, causing
+    // the quadratic complexity. In practice, ProjectedFS doesn't do this and
+    // thus we can afford a bit of redundant work.
+    auto pendingDirEntries = enumerator->getPendingDirEntries();
+    return collectAll(std::move(pendingDirEntries))
+        .thenValue([enumerator = std::move(enumerator),
+                    buffer,
+                    context = std::move(context)](
+                       std::vector<folly::Try<PrjfsDirEntry::Ready>> entries) {
+          bool added = false;
+          for (auto& try_ : entries) {
+            if (try_.hasException()) {
+              return folly::Try<folly::Unit>{try_.exception()};
+            }
+            auto& entry = try_.value();
 
-      fileInfo.IsDirectory = entry->isDirectory;
-      fileInfo.FileSize = entry->getSize().get();
+            auto fileInfo = PRJ_FILE_BASIC_INFO();
+            fileInfo.IsDirectory = entry.isDir;
+            fileInfo.FileSize = entry.size;
 
-      XLOGF(
-          DBG6,
-          "Directory entry: {}, {}, size={}",
-          fileInfo.IsDirectory ? "Dir" : "File",
-          PathComponent(entry->name),
-          fileInfo.FileSize);
+            XLOGF(
+                DBG6,
+                "Directory entry: {}, {}, size={}",
+                fileInfo.IsDirectory ? "Dir" : "File",
+                PathComponent(entry.name),
+                fileInfo.FileSize);
 
-      auto result =
-          PrjFillDirEntryBuffer(entry->name.c_str(), &fileInfo, buffer);
-      if (FAILED(result)) {
-        if (result == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) && added) {
-          // We are out of buffer space. This entry didn't make it. Return
-          // without increment.
-          break;
-        } else {
-          return folly::Try<folly::Unit>{makeHResultErrorExplicit(
-              result,
-              fmt::format(
-                  FMT_STRING("Adding directory entry {}"),
-                  PathComponent(entry->name)))};
-        }
-      }
+            auto result =
+                PrjFillDirEntryBuffer(entry.name.c_str(), &fileInfo, buffer);
+            if (FAILED(result)) {
+              if (result == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) &&
+                  added) {
+                // We are out of buffer space. This entry didn't make it. Return
+                // without increment.
+                break;
+              } else {
+                return folly::Try<folly::Unit>{makeHResultErrorExplicit(
+                    result,
+                    fmt::format(
+                        FMT_STRING("Adding directory entry {}"),
+                        PathComponent(entry.name)))};
+              }
+            }
+            added = true;
+            enumerator->advanceEnumeration();
+          }
 
-      added = true;
-    }
-
-    context->sendEnumerationSuccess(buffer);
-    return folly::Try{folly::unit};
+          context->sendEnumerationSuccess(buffer);
+          return folly::Try{folly::unit};
+        });
   });
 
   context->catchErrors(std::move(fut))
