@@ -149,33 +149,7 @@ def findcommonoutgoing(
     og.commonheads, _any, _hds = commoninc
 
     # compute outgoing
-    if repo.ui.configbool("experimental", "narrow-heads"):
-        mayexclude = None
-    else:
-        mayexclude = repo._phasecache.phaseroots[phases.secret] or repo.obsstore
-    if not mayexclude:
-        og.missingheads = onlyheads or repo.heads()
-    elif onlyheads is None:
-        # use visible heads as it should be cached
-        og.missingheads = repo.heads()
-        og.excluded = [ctx.node() for ctx in repo.set("secret()")]
-    else:
-        # compute common, missing and exclude secret stuff
-        sets = repo.changelog.findcommonmissing(og.commonheads, onlyheads)
-        og._common, allmissing = sets
-        og._missing = missing = []
-        og.excluded = excluded = []
-        for node in allmissing:
-            ctx = repo[node]
-            if ctx.phase() >= phases.secret:
-                excluded.append(node)
-            else:
-                missing.append(node)
-        if len(missing) == len(allmissing):
-            missingheads = onlyheads
-        else:  # update missing heads
-            missingheads = phases.newheads(repo, onlyheads, excluded)
-        og.missingheads = missingheads
+    og.missingheads = onlyheads or repo.heads()
     if portable:
         # recompute common and missingheads as if -r<rev> had been given for
         # each head of missing, and --base <rev> for each head of the proper
