@@ -27,7 +27,6 @@ use futures::{
     Stream,
 };
 use futures_01_ext::StreamExt as OldStreamExt;
-use futures_old::Future as OldFuture;
 use slog::{debug, error, info};
 
 use blobrepo::BlobRepo;
@@ -209,9 +208,8 @@ impl<'a> Blobimport<'a> {
                         .collect();
                     synced_commit_mapping
                         .add_bulk(ctx.clone(), entries)
-                        .map(|_| ())
-                        .compat()
                         .await
+                        .map(|_| ())
                 } else {
                     Ok(())
                 }

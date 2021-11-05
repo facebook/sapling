@@ -22,7 +22,6 @@ use cross_repo_sync::{
     update_mapping_with_version, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos,
     CommitSyncer, SyncData, Syncers,
 };
-use futures::compat::Future01CompatExt;
 use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
@@ -112,11 +111,7 @@ where
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         commit_syncer.get_source_repo_type(),
     );
-    commit_syncer
-        .get_mapping()
-        .add(ctx.clone(), entry)
-        .compat()
-        .await?;
+    commit_syncer.get_mapping().add(ctx.clone(), entry).await?;
 
     Ok(target_bcs.get_changeset_id())
 }

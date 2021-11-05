@@ -545,7 +545,7 @@ async fn run_insert_subcommand<'a>(
                 }
             };
 
-            let res = mapping.add(ctx.clone(), mapping_entry).compat().await?;
+            let res = mapping.add(ctx.clone(), mapping_entry).await?;
             if res {
                 info!(
                     ctx.logger(),
@@ -582,7 +582,6 @@ async fn run_insert_subcommand<'a>(
 
             let res = mapping
                 .insert_equivalent_working_copy(ctx.clone(), mapping_entry)
-                .compat()
                 .await?;
             if res {
                 info!(
@@ -628,7 +627,6 @@ async fn run_insert_subcommand<'a>(
 
             let res = mapping
                 .insert_equivalent_working_copy(ctx.clone(), mapping_entry)
-                .compat()
                 .await?;
             if res {
                 info!(
@@ -1115,7 +1113,6 @@ async fn update_large_repo_bookmarks(
                         *target_cs_id,
                         large_repo.get_repoid(),
                     )
-                    .compat()
                     .await?;
 
                 if large_cs_ids.len() > 1 {
@@ -1603,7 +1600,6 @@ mod test {
                         source_repo: Some(repos.get_source_repo_type()),
                     },
                 )
-                .compat()
                 .await?;
         }
 

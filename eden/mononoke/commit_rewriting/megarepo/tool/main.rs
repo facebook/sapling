@@ -775,7 +775,6 @@ async fn run_mark_not_synced<'a>(
                     cs_id,
                     small_repo.get_repoid(),
                 )
-                .compat()
                 .await?;
             if mappings.is_empty() {
                 let wc_entry = EquivalentWorkingCopyEntry {
@@ -787,7 +786,6 @@ async fn run_mark_not_synced<'a>(
                 };
                 let res = mapping
                     .insert_equivalent_working_copy(ctx.clone(), wc_entry)
-                    .compat()
                     .await?;
                 if !res {
                     warn!(
@@ -873,7 +871,7 @@ async fn run_backfill_noop_mapping<'a>(
                 let chunk: Result<Vec<_>, Error> = chunk.into_iter().collect();
                 let chunk = chunk?;
                 let len = chunk.len();
-                mapping.add_bulk(ctx.clone(), chunk).compat().await?;
+                mapping.add_bulk(ctx.clone(), chunk).await?;
                 Result::<_, Error>::Ok(len as u64)
             }
         })

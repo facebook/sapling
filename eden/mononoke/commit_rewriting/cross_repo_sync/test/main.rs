@@ -31,7 +31,7 @@ use cross_repo_sync::{
 };
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use fixtures::{linear, many_files_dirs};
-use futures::{compat::Future01CompatExt, future::join_all, FutureExt, TryStreamExt};
+use futures::{future::join_all, FutureExt, TryStreamExt};
 use live_commit_sync_config::{TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource};
 use manifest::ManifestOps;
 use maplit::{btreemap, hashmap};
@@ -249,7 +249,6 @@ async fn check_mapping<M>(
                 source_bcs_id,
                 destination_repoid,
             )
-            .compat()
             .await
             .unwrap()
             .into_iter()
@@ -267,7 +266,6 @@ async fn check_mapping<M>(
                     expected_bcs_id,
                     source_repoid
                 )
-                .compat()
                 .await
                 .unwrap()
                 .into_iter()
@@ -1008,7 +1006,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         version,
         commit_syncer.get_source_repo_type(),
     );
-    mapping.add(ctx.clone(), entry).compat().await?;
+    mapping.add(ctx.clone(), entry).await?;
 
     // d261bc7900818dea7c86935b3fb17a33b2e3a6b4 from "many_files_dirs" should sync cleanly
     // on top of master. Among others, it introduces the following files:
@@ -1259,7 +1257,6 @@ async fn get_multiple_master_mapping_setup(
                 small_to_large_syncer.get_source_repo_type(),
             ),
         )
-        .compat()
         .await?;
 
     // 1. Create two commits in megarepo, on separate branches,
@@ -1805,7 +1802,6 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
                 small_to_large_syncer.get_source_repo_type(),
             ),
         )
-        .compat()
         .await?;
 
     // 2. Create a small repo commit and sync it onto both branches

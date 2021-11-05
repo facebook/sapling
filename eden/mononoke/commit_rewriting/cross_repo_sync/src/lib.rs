@@ -23,12 +23,10 @@ use fbinit::FacebookInit;
 use futures::future::try_join;
 use futures::{
     channel::oneshot,
-    compat::Future01CompatExt,
     future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
     FutureExt,
 };
-use futures_old::Future;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::{hashmap, hashset};
 use metaconfig_types::{CommitSyncConfigVersion, CommonCommitSyncConfig, PushrebaseFlags};
@@ -1589,9 +1587,8 @@ where
 
         mapping
             .insert_equivalent_working_copy(ctx.clone(), wc_entry)
-            .map(|_| ())
-            .compat()
             .await
+            .map(|_| ())
     }
 }
 
@@ -1635,11 +1632,7 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
         })
         .collect();
 
-    syncer
-        .mapping
-        .add_bulk(ctx.clone(), entries)
-        .compat()
-        .await?;
+    syncer.mapping.add_bulk(ctx.clone(), entries).await?;
     Ok(())
 }
 

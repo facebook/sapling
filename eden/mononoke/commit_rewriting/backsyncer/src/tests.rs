@@ -1073,7 +1073,7 @@ async fn init_repos(
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         commit_syncer.get_source_repo_type(),
     );
-    mapping.add(ctx.clone(), first_entry).compat().await?;
+    mapping.add(ctx.clone(), first_entry).await?;
 
     // Create a few new commits on top of master
 
@@ -1465,7 +1465,7 @@ async fn init_merged_repos(
             CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             SyncedCommitSourceRepo::Large,
         );
-        mapping.add(ctx.clone(), entry).compat().await?;
+        mapping.add(ctx.clone(), entry).await?;
     }
 
     // Create new commit in large repo
@@ -1647,7 +1647,6 @@ async fn preserve_premerge_commit(
                     version_name: None,
                 },
             )
-            .compat()
             .await?;
     }
     Ok(())

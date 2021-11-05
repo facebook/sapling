@@ -11,7 +11,7 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use futures::future::try_join_all;
-use futures::{compat::Future01CompatExt, Future};
+use futures::Future;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::{ChangesetId, RepositoryId};
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -203,7 +203,6 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
             source_cs_id.0,
             target_repo_id.0,
         )
-        .compat()
         .await?;
     if !remapped.is_empty() {
         let remapped: Result<Vec<_>, Error> = remapped.into_iter()
@@ -231,7 +230,6 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
             source_cs_id.0,
             target_repo_id.0,
         )
-        .compat()
         .await?;
 
     match maybe_wc_equivalence {
@@ -684,7 +682,6 @@ mod tests {
                     SyncedCommitSourceRepo::Small,
                 ),
             )
-            .compat()
             .await?;
         }
         Ok(m)

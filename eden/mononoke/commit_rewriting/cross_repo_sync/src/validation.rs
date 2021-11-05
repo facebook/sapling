@@ -1201,7 +1201,6 @@ mod test {
                         source_repo: Some(repos.get_source_repo_type()),
                     },
                 )
-                .compat()
                 .await?;
         }
 

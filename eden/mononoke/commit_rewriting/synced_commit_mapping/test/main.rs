@@ -10,7 +10,6 @@
 #![deny(warnings)]
 
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 
 use context::CoreContext;
 use metaconfig_types::CommitSyncConfigVersion;
@@ -37,7 +36,6 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         true,
         mapping
             .add(ctx.clone(), entry.clone())
-            .compat()
             .await
             .expect("Adding new entry failed")
     );
@@ -45,14 +43,12 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         false,
         mapping
             .add(ctx.clone(), entry)
-            .compat()
             .await
             .expect("Adding same entry failed")
     );
 
     let res = mapping
         .get_equivalent_working_copy(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID, REPO_ONE)
-        .compat()
         .await
         .expect("get equivalent wc failed, should succeed");
 
@@ -77,14 +73,12 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         true,
         mapping
             .add(ctx.clone(), entry.clone())
-            .compat()
             .await
             .expect("Adding new entry failed")
     );
 
     let res = mapping
         .get_equivalent_working_copy(ctx.clone(), REPO_ZERO, bonsai::THREES_CSID, REPO_ONE)
-        .compat()
         .await
         .expect("get equivalent wc failed, should succeed");
 
@@ -98,7 +92,6 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
 
     let result = mapping
         .get(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID, REPO_ONE)
-        .compat()
         .await
         .expect("Get failed")
         .into_iter()
@@ -114,7 +107,6 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     );
     let result = mapping
         .get(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
-        .compat()
         .await
         .expect("Get failed")
         .into_iter()
@@ -134,7 +126,6 @@ async fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
     let result = mapping
         .get(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
-        .compat()
         .await
         .expect("Failed to fetch missing changeset (should succeed with None instead)");
     assert!(result.is_empty());
@@ -145,7 +136,6 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
     let version_name = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
     let result = mapping
         .get_equivalent_working_copy(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
-        .compat()
         .await
         .expect("Failed to fetch equivalent working copy (should succeed with None instead)");
     assert_eq!(result, None);
@@ -159,21 +149,18 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
     };
     let result = mapping
         .insert_equivalent_working_copy(ctx.clone(), entry.clone())
-        .compat()
         .await
         .expect("Failed to insert working copy");
     assert_eq!(result, true);
 
     let result = mapping
         .insert_equivalent_working_copy(ctx.clone(), entry)
-        .compat()
         .await
         .expect("Failed to insert working copy");
     assert_eq!(result, false);
 
     let res = mapping
         .get_equivalent_working_copy(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID, REPO_ONE)
-        .compat()
         .await
         .expect("get equivalent wc failed, should succeed");
 
@@ -195,14 +182,12 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
 
     let result = mapping
         .insert_equivalent_working_copy(ctx.clone(), null_entry)
-        .compat()
         .await
         .expect("Failed to insert working copy");
     assert_eq!(result, true);
 
     let res = mapping
         .get_equivalent_working_copy(ctx.clone(), REPO_ZERO, bonsai::THREES_CSID, REPO_ONE)
-        .compat()
         .await
         .expect("get equivalent wc failed, should succeed");
 
@@ -218,7 +203,6 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
     assert!(
         mapping
             .insert_equivalent_working_copy(ctx.clone(), should_fail)
-            .compat()
             .await
             .is_err()
     );

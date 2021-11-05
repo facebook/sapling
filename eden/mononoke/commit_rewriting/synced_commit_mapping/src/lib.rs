@@ -12,13 +12,9 @@ use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 
 use anyhow::Error;
+use async_trait::async_trait;
 use auto_impl::auto_impl;
-use cloned::cloned;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
-use futures::future::{FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::Future as Future01;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql_async::{
@@ -163,28 +159,29 @@ pub enum WorkingCopyEquivalence {
     WorkingCopy(ChangesetId, Option<CommitSyncConfigVersion>),
 }
 
+#[async_trait]
 #[auto_impl(Arc)]
 pub trait SyncedCommitMapping: Send + Sync {
     /// Given the full large, small mapping, store it in the DB.
     /// Future resolves to true if the mapping was saved, false otherwise
-    fn add(&self, ctx: CoreContext, entry: SyncedCommitMappingEntry) -> BoxFuture<bool, Error>;
+    async fn add(&self, ctx: CoreContext, entry: SyncedCommitMappingEntry) -> Result<bool, Error>;
 
     /// Bulk insert a set of large, small mappings
     /// This is meant for blobimport and similar
-    fn add_bulk(
+    async fn add_bulk(
         &self,
         ctx: CoreContext,
         entries: Vec<SyncedCommitMappingEntry>,
-    ) -> BoxFuture<u64, Error>;
+    ) -> Result<u64, Error>;
 
     /// Find all the mapping entries for a given source commit and target repo
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<
+    ) -> Result<
         Vec<(
             ChangesetId,
             Option<CommitSyncConfigVersion>,
@@ -200,20 +197,20 @@ pub trait SyncedCommitMapping: Send + Sync {
     ///
     /// If there's a mapping between small and large commits, then equivalent working copy is
     /// the same as the same as the mapping.
-    fn insert_equivalent_working_copy(
+    async fn insert_equivalent_working_copy(
         &self,
         ctx: CoreContext,
         entry: EquivalentWorkingCopyEntry,
-    ) -> BoxFuture<bool, Error>;
+    ) -> Result<bool, Error>;
 
     /// Finds equivalent working copy
-    fn get_equivalent_working_copy(
+    async fn get_equivalent_working_copy(
         &self,
         ctx: CoreContext,
         source_repo_id: RepositoryId,
         source_bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<Option<WorkingCopyEquivalence>, Error>;
+    ) -> Result<Option<WorkingCopyEquivalence>, Error>;
 }
 
 #[derive(Clone)]
@@ -294,46 +291,39 @@ impl SqlConstruct for SqlSyncedCommitMapping {
 impl SqlConstructFromMetadataDatabaseConfig for SqlSyncedCommitMapping {}
 
 impl SqlSyncedCommitMapping {
-    fn add_many(
-        &self,
-        entries: Vec<SyncedCommitMappingEntry>,
-    ) -> impl Future01<Item = u64, Error = Error> {
-        let conn = self.write_connection.clone();
-        async move {
-            let txn = conn.start_transaction().await?;
-            let (txn, affected_rows) = add_many_in_txn(txn, entries).await?;
-            txn.commit().await?;
-            Ok(affected_rows)
-        }
-        .boxed()
-        .compat()
+    async fn add_many(&self, entries: Vec<SyncedCommitMappingEntry>) -> Result<u64, Error> {
+        let txn = self.write_connection.start_transaction().await?;
+        let (txn, affected_rows) = add_many_in_txn(txn, entries).await?;
+        txn.commit().await?;
+        Ok(affected_rows)
     }
 }
 
+#[async_trait]
 impl SyncedCommitMapping for SqlSyncedCommitMapping {
-    fn add(&self, _ctx: CoreContext, entry: SyncedCommitMappingEntry) -> BoxFuture<bool, Error> {
+    async fn add(&self, _ctx: CoreContext, entry: SyncedCommitMappingEntry) -> Result<bool, Error> {
         STATS::adds.add_value(1);
 
-        self.add_many(vec![entry]).map(|count| count == 1).boxify()
+        self.add_many(vec![entry]).await.map(|count| count == 1)
     }
 
-    fn add_bulk(
+    async fn add_bulk(
         &self,
         _ctx: CoreContext,
         entries: Vec<SyncedCommitMappingEntry>,
-    ) -> BoxFuture<u64, Error> {
+    ) -> Result<u64, Error> {
         STATS::add_bulks.add_value(1);
 
-        self.add_many(entries).boxify()
+        self.add_many(entries).await
     }
 
-    fn get(
+    async fn get(
         &self,
         _ctx: CoreContext,
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<
+    ) -> Result<
         Vec<(
             ChangesetId,
             Option<CommitSyncConfigVersion>,
@@ -343,54 +333,52 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
     > {
         STATS::gets.add_value(1);
 
-        cloned!(self.read_connection, self.read_master_connection);
-        async move {
-            let rows =
-                SelectMapping::query(&read_connection, &source_repo_id, &bcs_id, &target_repo_id)
-                    .await?;
+        let rows = SelectMapping::query(
+            &self.read_connection,
+            &source_repo_id,
+            &bcs_id,
+            &target_repo_id,
+        )
+        .await?;
 
-            let rows = if rows.is_empty() {
-                STATS::gets_master.add_value(1);
-                SelectMapping::query(
-                    &read_master_connection,
-                    &source_repo_id,
-                    &bcs_id,
-                    &target_repo_id,
-                )
-                .await?
-            } else {
-                rows
-            };
+        let rows = if rows.is_empty() {
+            STATS::gets_master.add_value(1);
+            SelectMapping::query(
+                &self.read_master_connection,
+                &source_repo_id,
+                &bcs_id,
+                &target_repo_id,
+            )
+            .await?
+        } else {
+            rows
+        };
 
-            Ok(rows
-                .into_iter()
-                .map(|row| {
-                    let (
-                        large_repo_id,
-                        large_bcs_id,
-                        _small_repo_id,
-                        small_bcs_id,
-                        maybe_version_name,
-                        maybe_source_repo,
-                    ) = row;
-                    if target_repo_id == large_repo_id {
-                        (large_bcs_id, maybe_version_name, maybe_source_repo)
-                    } else {
-                        (small_bcs_id, maybe_version_name, maybe_source_repo)
-                    }
-                })
-                .collect())
-        }
-        .boxed()
-        .compat()
-        .boxify()
+        Ok(rows
+            .into_iter()
+            .map(|row| {
+                let (
+                    large_repo_id,
+                    large_bcs_id,
+                    _small_repo_id,
+                    small_bcs_id,
+                    maybe_version_name,
+                    maybe_source_repo,
+                ) = row;
+                if target_repo_id == large_repo_id {
+                    (large_bcs_id, maybe_version_name, maybe_source_repo)
+                } else {
+                    (small_bcs_id, maybe_version_name, maybe_source_repo)
+                }
+            })
+            .collect())
     }
 
-    fn insert_equivalent_working_copy(
+    async fn insert_equivalent_working_copy(
         &self,
         ctx: CoreContext,
         entry: EquivalentWorkingCopyEntry,
-    ) -> BoxFuture<bool, Error> {
+    ) -> Result<bool, Error> {
         STATS::insert_working_copy_eqivalence.add_value(1);
 
         let EquivalentWorkingCopyEntry {
@@ -402,117 +390,102 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         } = entry;
 
         let version_name_clone = version_name.clone();
-        let this = self.clone();
-        cloned!(self.write_connection, ctx);
-        async move {
-            let result = InsertWorkingCopyEquivalence::query(
-                &write_connection,
-                &[(
-                    &large_repo_id,
-                    &large_bcs_id,
-                    &small_repo_id,
-                    &small_bcs_id,
-                    &version_name,
-                )],
-            )
-            .await?;
+        let result = InsertWorkingCopyEquivalence::query(
+            &self.write_connection,
+            &[(
+                &large_repo_id,
+                &large_bcs_id,
+                &small_repo_id,
+                &small_bcs_id,
+                &version_name,
+            )],
+        )
+        .await?;
 
-            if result.affected_rows() == 1 {
-                Ok(true)
-            } else {
-                // Check that db stores consistent entry
-                let maybe_equivalent_wc = this
-                    .get_equivalent_working_copy(ctx, large_repo_id, large_bcs_id, small_repo_id)
-                    .compat()
-                    .await?;
+        if result.affected_rows() == 1 {
+            Ok(true)
+        } else {
+            // Check that db stores consistent entry
+            let maybe_equivalent_wc = self
+                .get_equivalent_working_copy(ctx, large_repo_id, large_bcs_id, small_repo_id)
+                .await?;
 
-                if let Some(equivalent_wc) = maybe_equivalent_wc {
-                    use WorkingCopyEquivalence::*;
-                    let (expected_bcs_id, expected_version) = match equivalent_wc {
-                        WorkingCopy(wc, mapping) => (Some(wc), mapping),
-                        NoWorkingCopy(mapping) => (None, mapping),
+            if let Some(equivalent_wc) = maybe_equivalent_wc {
+                use WorkingCopyEquivalence::*;
+                let (expected_bcs_id, expected_version) = match equivalent_wc {
+                    WorkingCopy(wc, mapping) => (Some(wc), mapping),
+                    NoWorkingCopy(mapping) => (None, mapping),
+                };
+                if (expected_bcs_id != small_bcs_id) || (expected_version != version_name_clone) {
+                    let err = ErrorKind::InconsistentWorkingCopyEntry {
+                        expected_bcs_id,
+                        expected_config_version: expected_version,
+                        actual_bcs_id: small_bcs_id,
+                        actual_config_version: version_name_clone,
                     };
-                    if (expected_bcs_id != small_bcs_id) || (expected_version != version_name_clone)
-                    {
-                        let err = ErrorKind::InconsistentWorkingCopyEntry {
-                            expected_bcs_id,
-                            expected_config_version: expected_version,
-                            actual_bcs_id: small_bcs_id,
-                            actual_config_version: version_name_clone,
-                        };
-                        return Err(err.into());
-                    }
+                    return Err(err.into());
                 }
-                Ok(false)
             }
+            Ok(false)
         }
-        .boxed()
-        .compat()
-        .boxify()
     }
 
-    fn get_equivalent_working_copy(
+    async fn get_equivalent_working_copy(
         &self,
         _ctx: CoreContext,
         source_repo_id: RepositoryId,
         source_bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> BoxFuture<Option<WorkingCopyEquivalence>, Error> {
+    ) -> Result<Option<WorkingCopyEquivalence>, Error> {
         STATS::get_equivalent_working_copy.add_value(1);
 
-        cloned!(self.read_master_connection, self.read_connection);
-        async move {
-            let rows = SelectWorkingCopyEquivalence::query(
-                &read_connection,
+        let rows = SelectWorkingCopyEquivalence::query(
+            &self.read_connection,
+            &source_repo_id,
+            &source_bcs_id,
+            &target_repo_id,
+        )
+        .await?;
+        let maybe_row = if !rows.is_empty() {
+            rows.get(0).cloned()
+        } else {
+            SelectWorkingCopyEquivalence::query(
+                &self.read_master_connection,
                 &source_repo_id,
                 &source_bcs_id,
                 &target_repo_id,
             )
-            .await?;
-            let maybe_row = if !rows.is_empty() {
-                rows.get(0).cloned()
-            } else {
-                SelectWorkingCopyEquivalence::query(
-                    &read_master_connection,
-                    &source_repo_id,
-                    &source_bcs_id,
-                    &target_repo_id,
-                )
-                .await
-                .map(|rows| rows.get(0).cloned())?
-            };
+            .await
+            .map(|rows| rows.get(0).cloned())?
+        };
 
-            Ok(match maybe_row {
-                Some(row) => {
-                    let (
-                        large_repo_id,
+        Ok(match maybe_row {
+            Some(row) => {
+                let (
+                    large_repo_id,
+                    large_bcs_id,
+                    _small_repo_id,
+                    maybe_small_bcs_id,
+                    maybe_mapping,
+                ) = row;
+
+                if target_repo_id == large_repo_id {
+                    Some(WorkingCopyEquivalence::WorkingCopy(
                         large_bcs_id,
-                        _small_repo_id,
-                        maybe_small_bcs_id,
                         maybe_mapping,
-                    ) = row;
-
-                    if target_repo_id == large_repo_id {
-                        Some(WorkingCopyEquivalence::WorkingCopy(
-                            large_bcs_id,
+                    ))
+                } else {
+                    match maybe_small_bcs_id {
+                        Some(small_bcs_id) => Some(WorkingCopyEquivalence::WorkingCopy(
+                            small_bcs_id,
                             maybe_mapping,
-                        ))
-                    } else {
-                        match maybe_small_bcs_id {
-                            Some(small_bcs_id) => Some(WorkingCopyEquivalence::WorkingCopy(
-                                small_bcs_id,
-                                maybe_mapping,
-                            )),
-                            None => Some(WorkingCopyEquivalence::NoWorkingCopy(maybe_mapping)),
-                        }
+                        )),
+                        None => Some(WorkingCopyEquivalence::NoWorkingCopy(maybe_mapping)),
                     }
                 }
-                None => None,
-            })
-        }
-        .boxed()
-        .compat()
-        .boxify()
+            }
+            None => None,
+        })
     }
 }
 

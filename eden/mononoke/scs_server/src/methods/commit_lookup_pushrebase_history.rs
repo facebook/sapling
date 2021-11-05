@@ -9,7 +9,6 @@ use std::iter::once;
 use std::sync::Arc;
 
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_api::{Mononoke, RepoContext};
 use mononoke_types::ChangesetId;
@@ -166,7 +165,6 @@ impl RepoChangesetsPushrebaseHistory {
             let entries = repo
                 .synced_commit_mapping()
                 .get(self.ctx.clone(), repo.repoid(), bcs_id, target_repo_id)
-                .compat()
                 .await
                 .map_err(errors::internal_error)?;
             if let Some(target_repo_name) = self.mononoke.repo_name_from_id(target_repo_id) {
