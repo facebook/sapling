@@ -207,7 +207,7 @@ impl<'a> Blobimport<'a> {
                         })
                         .collect();
                     synced_commit_mapping
-                        .add_bulk(ctx.clone(), entries)
+                        .add_bulk(&ctx, entries)
                         .await
                         .map(|_| ())
                 } else {

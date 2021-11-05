@@ -1586,7 +1586,7 @@ where
         };
 
         mapping
-            .insert_equivalent_working_copy(ctx.clone(), wc_entry)
+            .insert_equivalent_working_copy(ctx, wc_entry)
             .await
             .map(|_| ())
     }
@@ -1632,7 +1632,7 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
         })
         .collect();
 
-    syncer.mapping.add_bulk(ctx.clone(), entries).await?;
+    syncer.mapping.add_bulk(ctx, entries).await?;
     Ok(())
 }
 

@@ -164,7 +164,7 @@ impl RepoChangesetsPushrebaseHistory {
         for target_repo_id in target_repo_ids.into_iter() {
             let entries = repo
                 .synced_commit_mapping()
-                .get(self.ctx.clone(), repo.repoid(), bcs_id, target_repo_id)
+                .get(&self.ctx, repo.repoid(), bcs_id, target_repo_id)
                 .await
                 .map_err(errors::internal_error)?;
             if let Some(target_repo_name) = self.mononoke.repo_name_from_id(target_repo_id) {

@@ -14,7 +14,7 @@ use sql_ext::SqlConnections;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql_async::{
@@ -164,20 +164,20 @@ pub enum WorkingCopyEquivalence {
 pub trait SyncedCommitMapping: Send + Sync {
     /// Given the full large, small mapping, store it in the DB.
     /// Future resolves to true if the mapping was saved, false otherwise
-    async fn add(&self, ctx: CoreContext, entry: SyncedCommitMappingEntry) -> Result<bool, Error>;
+    async fn add(&self, ctx: &CoreContext, entry: SyncedCommitMappingEntry) -> Result<bool, Error>;
 
     /// Bulk insert a set of large, small mappings
     /// This is meant for blobimport and similar
     async fn add_bulk(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         entries: Vec<SyncedCommitMappingEntry>,
     ) -> Result<u64, Error>;
 
     /// Find all the mapping entries for a given source commit and target repo
     async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
@@ -199,14 +199,14 @@ pub trait SyncedCommitMapping: Send + Sync {
     /// the same as the same as the mapping.
     async fn insert_equivalent_working_copy(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         entry: EquivalentWorkingCopyEntry,
     ) -> Result<bool, Error>;
 
     /// Finds equivalent working copy
     async fn get_equivalent_working_copy(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         source_repo_id: RepositoryId,
         source_bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
@@ -291,7 +291,13 @@ impl SqlConstruct for SqlSyncedCommitMapping {
 impl SqlConstructFromMetadataDatabaseConfig for SqlSyncedCommitMapping {}
 
 impl SqlSyncedCommitMapping {
-    async fn add_many(&self, entries: Vec<SyncedCommitMappingEntry>) -> Result<u64, Error> {
+    async fn add_many(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<SyncedCommitMappingEntry>,
+    ) -> Result<u64, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         let txn = self.write_connection.start_transaction().await?;
         let (txn, affected_rows) = add_many_in_txn(txn, entries).await?;
         txn.commit().await?;
@@ -301,25 +307,27 @@ impl SqlSyncedCommitMapping {
 
 #[async_trait]
 impl SyncedCommitMapping for SqlSyncedCommitMapping {
-    async fn add(&self, _ctx: CoreContext, entry: SyncedCommitMappingEntry) -> Result<bool, Error> {
+    async fn add(&self, ctx: &CoreContext, entry: SyncedCommitMappingEntry) -> Result<bool, Error> {
         STATS::adds.add_value(1);
 
-        self.add_many(vec![entry]).await.map(|count| count == 1)
+        self.add_many(&ctx, vec![entry])
+            .await
+            .map(|count| count == 1)
     }
 
     async fn add_bulk(
         &self,
-        _ctx: CoreContext,
+        ctx: &CoreContext,
         entries: Vec<SyncedCommitMappingEntry>,
     ) -> Result<u64, Error> {
         STATS::add_bulks.add_value(1);
 
-        self.add_many(entries).await
+        self.add_many(&ctx, entries).await
     }
 
     async fn get(
         &self,
-        _ctx: CoreContext,
+        ctx: &CoreContext,
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
@@ -333,6 +341,8 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
     > {
         STATS::gets.add_value(1);
 
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectMapping::query(
             &self.read_connection,
             &source_repo_id,
@@ -343,6 +353,8 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
 
         let rows = if rows.is_empty() {
             STATS::gets_master.add_value(1);
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
             SelectMapping::query(
                 &self.read_master_connection,
                 &source_repo_id,
@@ -376,7 +388,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
 
     async fn insert_equivalent_working_copy(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         entry: EquivalentWorkingCopyEntry,
     ) -> Result<bool, Error> {
         STATS::insert_working_copy_eqivalence.add_value(1);
@@ -389,6 +401,8 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
             version_name,
         } = entry;
 
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         let version_name_clone = version_name.clone();
         let result = InsertWorkingCopyEquivalence::query(
             &self.write_connection,
@@ -432,12 +446,15 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
 
     async fn get_equivalent_working_copy(
         &self,
-        _ctx: CoreContext,
+        ctx: &CoreContext,
         source_repo_id: RepositoryId,
         source_bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
     ) -> Result<Option<WorkingCopyEquivalence>, Error> {
         STATS::get_equivalent_working_copy.add_value(1);
+
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let rows = SelectWorkingCopyEquivalence::query(
             &self.read_connection,
@@ -449,6 +466,8 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         let maybe_row = if !rows.is_empty() {
             rows.get(0).cloned()
         } else {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
             SelectWorkingCopyEquivalence::query(
                 &self.read_master_connection,
                 &source_repo_id,

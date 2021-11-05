@@ -243,12 +243,7 @@ async fn check_mapping<M>(
     let mapping = config.get_mapping();
     assert_eq!(
         mapping
-            .get(
-                ctx.clone(),
-                source_repoid,
-                source_bcs_id,
-                destination_repoid,
-            )
+            .get(&ctx, source_repoid, source_bcs_id, destination_repoid,)
             .await
             .unwrap()
             .into_iter()
@@ -260,12 +255,7 @@ async fn check_mapping<M>(
     if let Some(expected_bcs_id) = expected_bcs_id {
         assert_eq!(
             mapping
-                .get(
-                    ctx.clone(),
-                    destination_repoid,
-                    expected_bcs_id,
-                    source_repoid
-                )
+                .get(&ctx, destination_repoid, expected_bcs_id, source_repoid)
                 .await
                 .unwrap()
                 .into_iter()
@@ -1006,7 +996,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         version,
         commit_syncer.get_source_repo_type(),
     );
-    mapping.add(ctx.clone(), entry).await?;
+    mapping.add(&ctx, entry).await?;
 
     // d261bc7900818dea7c86935b3fb17a33b2e3a6b4 from "many_files_dirs" should sync cleanly
     // on top of master. Among others, it introduces the following files:
@@ -1247,7 +1237,7 @@ async fn get_multiple_master_mapping_setup(
     let version = version_name_with_small_repo();
     mapping
         .add(
-            ctx.clone(),
+            &ctx,
             SyncedCommitMappingEntry::new(
                 megarepo.get_repoid(),
                 megarepo_master_cs_id,
@@ -1792,7 +1782,7 @@ async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
     let version = version_name_with_small_repo();
     mapping
         .add(
-            ctx.clone(),
+            &ctx,
             SyncedCommitMappingEntry::new(
                 megarepo.get_repoid(),
                 megarepo_master_cs_id,

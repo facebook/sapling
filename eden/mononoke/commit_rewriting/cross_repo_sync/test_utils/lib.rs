@@ -111,7 +111,7 @@ where
         CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         commit_syncer.get_source_repo_type(),
     );
-    commit_syncer.get_mapping().add(ctx.clone(), entry).await?;
+    commit_syncer.get_mapping().add(&ctx, entry).await?;
 
     Ok(target_bcs.get_changeset_id())
 }

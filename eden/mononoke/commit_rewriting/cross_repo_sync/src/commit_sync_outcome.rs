@@ -197,12 +197,7 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     mapping: &'a M,
 ) -> Result<Option<PluralCommitSyncOutcome>, Error> {
     let remapped = mapping
-        .get(
-            ctx.clone(),
-            source_repo_id.0,
-            source_cs_id.0,
-            target_repo_id.0,
-        )
+        .get(ctx, source_repo_id.0, source_cs_id.0, target_repo_id.0)
         .await?;
     if !remapped.is_empty() {
         let remapped: Result<Vec<_>, Error> = remapped.into_iter()
@@ -224,12 +219,7 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     }
 
     let maybe_wc_equivalence = mapping
-        .get_equivalent_working_copy(
-            ctx.clone(),
-            source_repo_id.0,
-            source_cs_id.0,
-            target_repo_id.0,
-        )
+        .get_equivalent_working_copy(ctx, source_repo_id.0, source_cs_id.0, target_repo_id.0)
         .await?;
 
     match maybe_wc_equivalence {
@@ -672,7 +662,7 @@ mod tests {
         let m = SqlSyncedCommitMapping::from_sql_connections(SqlConnections::new_single(con));
         for (small_bcs_id, large_bcs_id) in entires {
             m.add(
-                ctx.clone(),
+                &ctx,
                 SyncedCommitMappingEntry::new(
                     large_repo_id,
                     large_bcs_id,

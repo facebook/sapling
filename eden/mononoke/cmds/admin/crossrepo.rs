@@ -545,7 +545,7 @@ async fn run_insert_subcommand<'a>(
                 }
             };
 
-            let res = mapping.add(ctx.clone(), mapping_entry).await?;
+            let res = mapping.add(&ctx, mapping_entry).await?;
             if res {
                 info!(
                     ctx.logger(),
@@ -581,7 +581,7 @@ async fn run_insert_subcommand<'a>(
             };
 
             let res = mapping
-                .insert_equivalent_working_copy(ctx.clone(), mapping_entry)
+                .insert_equivalent_working_copy(&ctx, mapping_entry)
                 .await?;
             if res {
                 info!(
@@ -626,7 +626,7 @@ async fn run_insert_subcommand<'a>(
             };
 
             let res = mapping
-                .insert_equivalent_working_copy(ctx.clone(), mapping_entry)
+                .insert_equivalent_working_copy(&ctx, mapping_entry)
                 .await?;
             if res {
                 info!(
@@ -1108,7 +1108,7 @@ async fn update_large_repo_bookmarks(
             } => {
                 let large_cs_ids = mapping
                     .get(
-                        ctx.clone(),
+                        &ctx,
                         small_repo.get_repoid(),
                         *target_cs_id,
                         large_repo.get_repoid(),
@@ -1590,7 +1590,7 @@ mod test {
         for cs_id in changesets {
             mapping
                 .add(
-                    ctx.clone(),
+                    &ctx,
                     SyncedCommitMappingEntry {
                         large_repo_id: large_repo.get_repoid(),
                         small_repo_id: small_repo.get_repoid(),

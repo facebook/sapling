@@ -1191,7 +1191,7 @@ mod test {
         for cs_id in changesets {
             mapping
                 .add(
-                    ctx.clone(),
+                    &ctx,
                     SyncedCommitMappingEntry {
                         large_repo_id: large_repo.get_repoid(),
                         small_repo_id: small_repo.get_repoid(),

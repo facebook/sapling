@@ -769,12 +769,7 @@ async fn run_mark_not_synced<'a>(
         .map_ok(move |line| async move {
             let cs_id = helpers::csid_resolve(&ctx, large_repo, line).await?;
             let mappings = mapping
-                .get(
-                    ctx.clone(),
-                    large_repo.get_repoid(),
-                    cs_id,
-                    small_repo.get_repoid(),
-                )
+                .get(ctx, large_repo.get_repoid(), cs_id, small_repo.get_repoid())
                 .await?;
             if mappings.is_empty() {
                 let wc_entry = EquivalentWorkingCopyEntry {
@@ -785,7 +780,7 @@ async fn run_mark_not_synced<'a>(
                     version_name: None,
                 };
                 let res = mapping
-                    .insert_equivalent_working_copy(ctx.clone(), wc_entry)
+                    .insert_equivalent_working_copy(ctx, wc_entry)
                     .await?;
                 if !res {
                     warn!(
@@ -871,7 +866,7 @@ async fn run_backfill_noop_mapping<'a>(
                 let chunk: Result<Vec<_>, Error> = chunk.into_iter().collect();
                 let chunk = chunk?;
                 let len = chunk.len();
-                mapping.add_bulk(ctx.clone(), chunk).await?;
+                mapping.add_bulk(ctx, chunk).await?;
                 Result::<_, Error>::Ok(len as u64)
             }
         })
