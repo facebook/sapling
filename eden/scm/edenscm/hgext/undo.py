@@ -1324,15 +1324,11 @@ def smarthide(repo, revhide, revshow, local=False):
                 markers.append((ctx, []))
                 nodes.append(ctx.node())
 
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        obsolete.createmarkers(repo, markers, operation="undo")
     visibility.remove(repo, nodes)
 
 
 def revealcommits(repo, rev):
     ctxs = list(repo.set(rev))
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        obsolete.revive(ctxs)
     visibility.add(repo, [ctx.node() for ctx in ctxs])
 
 
