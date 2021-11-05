@@ -22,7 +22,6 @@ from edenscm.mercurial import (
     extensions,
     hintutil,
     lock as lockmod,
-    obsolete,
     registrar,
     repair,
     scmutil,
@@ -222,9 +221,6 @@ def prune(ui, repo, *revs, **opts):
                 bookmarksmod.delete(repo, tr, bookmarks)
             for bookmark in sorted(bookmarks):
                 ui.write(_("bookmark '%s' deleted\n") % bookmark)
-
-        # create markers
-        obsolete.createmarkers(repo, relations, metadata=metadata, operation="prune")
 
         # hide nodes
         visibility.remove(repo, [c.node() for c in precs])
