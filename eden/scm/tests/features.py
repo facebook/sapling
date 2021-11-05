@@ -3,14 +3,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-mutationblacklist = """
-    test-commitcloud-sync-oscillation.t
-    test-fb-hgext-hiddenerror.t
-    test-inherit-mode.t
-    test-mutation-fromobsmarkers.t
-    test-obsmarker-template-t.py
-""".split()
-
 narrowheadsincompatiblelist = """
     test-bookmarks.t
     test-hgext-perfsuite.t
@@ -719,10 +711,6 @@ def setup(testname, hgrcpath):
     # Disable mutation.record to maintain commit hashes.
     with open(hgrcpath, "a") as f:
         f.write("\n[mutation]\nrecord=False\n")
-    # Disable mutation and re-enable obsstore on unsupported tests.
-    if testname in mutationblacklist:
-        with open(hgrcpath, "a") as f:
-            f.write("\n[mutation]\nenabled=False\nproxy-obsstore=False\n")
     # Disable narrow-heads if incompatible.
     if testname in narrowheadsincompatiblelist:
         with open(hgrcpath, "a") as f:
