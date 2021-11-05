@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from .. import mutation, node as nodemod, obsolete, scmutil, util, visibility
+from .. import mutation, node as nodemod, scmutil, util, visibility
 from ..i18n import _, _x
 from .cmdtable import command
 
@@ -154,9 +154,5 @@ def debugvisibilitystatus(ui, repo):
     """show current visibility tracking status"""
     if visibility.enabled(repo):
         ui.status(_("commit visibility is tracked explicitly\n"))
-    elif obsolete.isenabled(repo, obsolete.createmarkersopt):
-        ui.status(
-            _("commit visibility is determined implicitly from obsolescence markers\n")
-        )
     else:
         ui.status(_("commit visibility is not tracked\n"))
