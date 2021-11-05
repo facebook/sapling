@@ -6,8 +6,6 @@
 mutationblacklist = """
     test-commitcloud-sync-oscillation.t
     test-fb-hgext-hiddenerror.t
-    test-fb-hgext-treemanifest-infinitepush.t
-    test-fb-hgext-treemanifest-treeonly-linknodes.t
     test-inherit-mode.t
     test-mutation-fromobsmarkers.t
     test-obsmarker-template-t.py

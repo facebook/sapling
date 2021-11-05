@@ -2038,7 +2038,6 @@ class localrepository(object):
         self.invalidatevolatilesets()
 
     def invalidatevolatilesets(self):
-        obsolete.clearobscaches(self)
         mutation.clearobsoletecache(self)
         if "_phasecache" in self._filecache and "_phasecache" in self.__dict__:
             self._phasecache.invalidate()

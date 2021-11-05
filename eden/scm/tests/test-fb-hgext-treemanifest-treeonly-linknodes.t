@@ -61,10 +61,8 @@ Push commit 1 to the server
   $ hg push -r 5ee5c65bfee26d54c1fb59cf411fd5a81a328b83 --allow-anon
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
+  abort: push includes obsolete changeset: 5ee5c65bfee2!
+  [255]
 
 Works ok with pushrebase.
   $ hg unhide 'desc(x2a)'

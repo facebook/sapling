@@ -262,7 +262,7 @@ class basectx(object):
         if mutation.enabled(self._repo):
             return mutation.isobsolete(self._repo, self.node())
         else:
-            return self.rev() in obsmod.getrevs(self._repo, "obsolete")
+            return False
 
     def parents(self):
         """return contexts for each parent changeset"""

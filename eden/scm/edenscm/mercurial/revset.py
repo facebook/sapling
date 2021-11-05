@@ -26,7 +26,6 @@ from . import (
     match as matchmod,
     mutation,
     node,
-    obsolete as obsmod,
     pathutil,
     phases,
     pycompat,
@@ -807,7 +806,7 @@ def phasedivergent(repo, subset, x):
             repo=repo,
         )
     else:
-        phasedivergent = obsmod.getrevs(repo, "phasedivergent")
+        phasedivergent = baseset(repo=repo)
     return subset & phasedivergent
 
 
@@ -1082,7 +1081,7 @@ def contentdivergent(repo, subset, x):
             repo=repo,
         )
     else:
-        contentdivergent = obsmod.getrevs(repo, "contentdivergent")
+        contentdivergent = baseset(repo=repo)
     return subset & contentdivergent
 
 
@@ -1107,7 +1106,7 @@ def extinct(repo, subset, x):
         raise error.Abort(_("'extinct' is not supported with mutation"))
     # i18n: "extinct" is a keyword
     getargs(x, 0, 0, _("extinct takes no arguments"))
-    extinct = obsmod.getrevs(repo, "extinct")
+    extinct = baseset(repo=repo)
     return subset & extinct
 
 
@@ -1698,7 +1697,7 @@ def obsolete(repo, subset, x):
         cl = repo.changelog
         return subset & cl.torevset(nodes)
     else:
-        obsoletes = obsmod.getrevs(repo, "obsolete")
+        obsoletes = baseset(repo=repo)
     return subset & obsoletes
 
 
@@ -2428,7 +2427,7 @@ def orphan(repo, subset, x):
         raise error.Abort(_("'orphan' is not supported with mutation"))
     # i18n: "orphan" is a keyword
     getargs(x, 0, 0, _("orphan takes no arguments"))
-    orphan = obsmod.getrevs(repo, "orphan")
+    orphan = baseset(repo=repo)
     return subset & orphan
 
 
