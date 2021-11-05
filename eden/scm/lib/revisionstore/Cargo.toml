@@ -59,6 +59,9 @@ maplit = "1.0"
 mockito = "0.25"
 rand_chacha = "0.3"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+fbinit = { path = "../../../../common/rust/shed/fbinit" }
+
 [features]
 default = ["fb", "for-tests"]
 fb = []

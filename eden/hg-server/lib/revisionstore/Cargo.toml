@@ -55,6 +55,9 @@ zstd = "=0.8.0+zstd.1.4.9"
 maplit = "1.0"
 rand_chacha = "0.3"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+fbinit = { path = "../../../../common/rust/shed/fbinit" }
+
 [features]
 default = ["fb", "for-tests"]
 fb = []

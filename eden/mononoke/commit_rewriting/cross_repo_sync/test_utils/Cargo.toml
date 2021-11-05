@@ -18,7 +18,6 @@ blobrepo_hg = { version = "0.1.0", path = "../../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
 commit_transformation = { version = "0.1.0", path = "../../../megarepo_api/commit_transformation" }
-commitsync = { version = "0.1.0", path = "../../../../../configerator/structs/scm/mononoke/repos/commitsync" }
 context = { version = "0.1.0", path = "../../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = ".." }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
