@@ -17,7 +17,6 @@ from edenscm.mercurial import (
     hg,
     lock as lockmod,
     merge,
-    obsolete,
     phases,
     pycompat,
     registrar,
@@ -88,10 +87,6 @@ def _revive(repo, rev):
         # It could either be a revset or a stripped commit.
         pass
     else:
-        if obsolete.isenabled(repo, obsolete.createmarkersopt):
-            if ctx.obsolete():
-                torevive = unfi.set("::%d & obsolete()", ctx.rev())
-                obsolete.revive(torevive, operation="reset")
         visibility.add(repo, [ctx.node()])
 
     try:
