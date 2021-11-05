@@ -26,7 +26,6 @@ use byteorder::ByteOrder;
 use clidispatch::errors::FallbackToPython;
 use clidispatch::io::CanColor;
 use clidispatch::io::IO;
-use eden::client::EdenService;
 use eden::GetScmStatusParams;
 use eden::GetScmStatusResult;
 use eden::ScmFileStatus;
@@ -36,11 +35,12 @@ use fbthrift_socket::SocketTransport;
 use sha2::Digest;
 use sha2::Sha256;
 use thrift_types::edenfs as eden;
+use thrift_types::edenfs::client::EdenService;
 use thrift_types::fb303_core::client::BaseService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
 #[cfg(unix)]
-use tokio::net::UnixStream;
+use tokio_uds_compat::UnixStream;
 
 use crate::path_relativizer::PathRelativizer;
 

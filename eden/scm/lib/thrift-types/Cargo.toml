@@ -11,7 +11,7 @@ eden = { path = "eden" }
 eden_config = { path = "eden_config" }
 fb303 = { path = "fb303" }
 fb303_core = { path = "fb303_core" }
-fbthrift = { package = "fbthrift_eden_oss", path = "../third-party/rust/fbthrift" }
+fbthrift = { path = "../../../../thrift/lib/rust" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 hgclient_conf = { path = "hgclient_conf" }
 thiserror = "1.0.29"
