@@ -3045,18 +3045,7 @@ class localrepository(object):
         """
         # Migration of visibility, and treestate were moved to __init__ so they
         # run for users not running 'pull'.
-        try:
-            with self.wlock(wait=False), self.lock(wait=False):
-                mutation.automigrate(self)
-        except errormod.LockHeld:
-            self.ui.debug("skipping automigrate because lock is held\n")
-        except errormod.AbandonedTransactionFoundError:
-            # Migration can fail if the repository has an abandoned transaction
-            # and needs to be manually recovered.  Ignore this for now and proceed,
-            # so that read-only operations in the repository still work.  The abandoned
-            # transaction will still block commands that need to modify the repository,
-            # but those will fail later.
-            self.ui.debug("skipping automigrate due to an abandoned transaction\n")
+        pass
 
     def automigratefinish(self):
         """perform potentially expensive in-place migrations
