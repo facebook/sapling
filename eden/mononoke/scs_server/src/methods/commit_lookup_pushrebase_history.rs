@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
-use metaconfig_types::CommitSyncConfig;
+use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_api::{Mononoke, RepoContext};
 use mononoke_types::ChangesetId;
 use source_control as thrift;
@@ -130,13 +130,13 @@ impl RepoChangesetsPushrebaseHistory {
         let RepoChangeset(repo_name, bcs_id) = self.last();
         let repo = self.repo(&repo_name).await?;
 
-        let maybe_commit_sync_config = repo
+        let maybe_common_commit_sync_config = repo
             .live_commit_sync_config()
-            .get_current_commit_sync_config_if_exists(&self.ctx, repo.repoid())
+            .get_common_config_if_exists(repo.repoid())
             .await
             .map_err(errors::internal_error)?;
 
-        if let Some(config) = maybe_commit_sync_config {
+        if let Some(config) = maybe_common_commit_sync_config {
             self.try_traverse_commit_sync_inner(repo, bcs_id, config)
                 .await
         } else {
@@ -150,7 +150,7 @@ impl RepoChangesetsPushrebaseHistory {
         &mut self,
         repo: RepoContext,
         bcs_id: ChangesetId,
-        config: CommitSyncConfig,
+        config: CommonCommitSyncConfig,
     ) -> Result<bool, errors::ServiceError> {
         let mut synced_changesets = vec![];
         let (target_repo_ids, expected_sync_origin) = if config.large_repo_id == repo.repoid() {
