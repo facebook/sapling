@@ -24,7 +24,7 @@ def get_buck_command() -> str:
     return os.environ.get("SOURCE_BUILT_BUCK", "buck")
 
 
-def get_env_with_buck_version() -> Dict[str, str]:
+def get_env_with_buck_version(path: str) -> Dict[str, str]:
     env = get_environment_suitable_for_subprocess()
     if os.environ.get("SOURCE_BUILT_BUCK") is not None:
         # If we are going to use locally built buck we don't need to set a buck
@@ -43,6 +43,7 @@ def get_env_with_buck_version() -> Dict[str, str]:
         buckversion = subprocess.run(
             [get_buck_command(), "--version-fast"],
             stdout=subprocess.PIPE,
+            cwd=path,
             encoding="utf-8",
         ).stdout.strip()
 
@@ -86,7 +87,7 @@ def run_buck_command(
     buck_command: List[str], path: str
 ) -> "subprocess.CompletedProcess[bytes]":
 
-    env = get_env_with_buck_version()
+    env = get_env_with_buck_version(path)
     return subprocess.run(
         buck_command,
         stdout=subprocess.PIPE,
