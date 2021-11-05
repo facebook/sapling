@@ -826,7 +826,7 @@ Do you want to run `eden mount %s` instead?"""
 
             print(
                 f"""
-At this point your EdenFS mount is destoryed, but EdenFS is having
+At this point your EdenFS mount is destroyed, but EdenFS is having
 trouble cleaning up leftovers. You will need to manually remove {path}.
 """
             )
