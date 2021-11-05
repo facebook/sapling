@@ -97,7 +97,6 @@ from . import (
     error,
     mutation,
     node,
-    obsolete,
     pycompat,
     scmutil,
     visibility,
@@ -472,7 +471,7 @@ def drawdag(repo, text, **opts):
     obsmarkers = []
     mutations = {}
     for comment in comments:
-        rels = []  # obsolete relationships
+        rels = []  # mutation relationships
         args = comment.split(":", 1)
         if len(args) <= 1:
             continue
@@ -594,11 +593,6 @@ def drawdag(repo, text, **opts):
     # handle special comments
     with repo.wlock(), repo.lock(), repo.transaction("drawdag"):
         getctx = lambda x: repo[committed[x.strip()]]
-        if obsolete.isenabled(repo, obsolete.createmarkersopt):
-            for cmd, markers in obsmarkers:
-                obsrels = [(getctx(p), [getctx(s) for s in ss]) for p, ss in markers]
-                if obsrels:
-                    obsolete.createmarkers(repo, obsrels, date=(0, 0), operation=cmd)
         if visibility.tracking(repo):
             hidenodes = set()
             revivenodes = set()
