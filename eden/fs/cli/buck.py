@@ -46,9 +46,7 @@ def get_env_with_buck_version() -> Dict[str, str]:
             encoding="utf-8",
         ).stdout.strip()
 
-    # Buck's version selection is currently having problems on macOS
-    if sys.platform != "darwin":
-        env["BUCKVERSION"] = buckversion
+    env["BUCKVERSION"] = buckversion
 
     return env
 
