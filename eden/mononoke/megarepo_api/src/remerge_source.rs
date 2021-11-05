@@ -145,6 +145,14 @@ impl<'a> RemergeSource<'a> {
             )
             .await?;
 
+        self.move_bookmark_conditionally(
+            ctx,
+            target_repo.blob_repo(),
+            target.bookmark.clone(),
+            (target_location, remerged),
+        )
+        .await?;
+
         Ok(remerged)
     }
 
@@ -160,7 +168,7 @@ impl<'a> RemergeSource<'a> {
             .blob_repo()
             .get_changeset_parents_by_bonsai(ctx.clone(), actual_target_location)
             .await?;
-        if parents.len() != 2 || parents[0] == expected_target_location {
+        if parents.len() != 2 || parents[0] != expected_target_location {
             return Err(MegarepoError::request(anyhow!(
                 "Neither {} nor its first parent {:?} point to a target location {}",
                 actual_target_location,

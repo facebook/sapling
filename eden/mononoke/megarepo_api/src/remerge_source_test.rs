@@ -164,6 +164,8 @@ async fn test_remerge_source_simple(fb: FacebookInit) -> Result<(), Error> {
         }
     );
 
+    let resolved_target_cs_id = resolve_cs_id(&ctx, &test.blobrepo, "target").await?;
+    assert_eq!(target_cs_id, resolved_target_cs_id);
 
     Ok(())
 }
