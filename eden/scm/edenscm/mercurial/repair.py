@@ -310,33 +310,3 @@ def rebuildfncache(ui, repo):
                 fnc.write(tr)
         else:
             ui.write(_("fncache already up to date\n"))
-
-
-def deleteobsmarkers(obsstore, indices):
-    """Delete some obsmarkers from obsstore and return how many were deleted
-
-    'indices' is a list of ints which are the indices
-    of the markers to be deleted.
-
-    Every invocation of this function completely rewrites the obsstore file,
-    skipping the markers we want to be removed. The new temporary file is
-    created, remaining markers are written there and on .close() this file
-    gets atomically renamed to obsstore, thus guaranteeing consistency."""
-    if not indices:
-        # we don't want to rewrite the obsstore with the same content
-        return
-
-    left = []
-    current = obsstore._all
-    n = 0
-    for i, m in enumerate(current):
-        if i in indices:
-            n += 1
-            continue
-        left.append(m)
-
-    newobsstorefile = obsstore.svfs("obsstore", "w", atomictemp=True)
-    for bytes in obsolete.encodemarkers(left, True, obsstore._version):
-        newobsstorefile.write(bytes)
-    newobsstorefile.close()
-    return n

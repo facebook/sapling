@@ -2205,7 +2205,6 @@ def debugnamecomplete(ui, repo, *args):
             _("restrict display to markers only " "relevant to REV"),
         ),
         ("", "index", False, _("display index of the marker")),
-        ("", "delete", [], _("delete markers specified by indices")),
     ]
     + cmdutil.commitopts2
     + cmdutil.formatteropts,
@@ -2226,27 +2225,6 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
             # Fallback to revsingle.
             return scmutil.revsingle(repo, s).node()
 
-    if opts.get("delete"):
-        indices = []
-        for v in opts.get("delete"):
-            try:
-                indices.append(int(v))
-            except ValueError:
-                raise error.Abort(
-                    _("invalid index value: %r") % v, hint=_("use integers for indices")
-                )
-
-        if repo.currenttransaction():
-            raise error.Abort(
-                _("cannot delete obsmarkers in the middle " "of transaction.")
-            )
-
-        with repo.lock():
-            n = repair.deleteobsmarkers(repo.obsstore, indices)
-            ui.write(_("deleted %i obsolescence markers\n") % n)
-
-        return
-
     if precursor is not None:
         if opts["rev"]:
             raise error.Abort("cannot select revision when creating marker")
@@ -2264,26 +2242,18 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                     date = None
                 prec = parsenodeid(precursor)
                 parents = None
-                if opts["record_parents"]:
-                    if prec not in repo:
-                        raise error.Abort(
-                            "cannot used --record-parents on " "unknown changesets"
-                        )
-                    parents = repo[prec].parents()
-                    parents = tuple(p.node() for p in parents)
-                repo.obsstore.create(
-                    tr,
-                    prec,
-                    succs,
-                    opts["flags"],
-                    parents=parents,
-                    date=date,
-                    metadata=metadata,
-                    ui=ui,
-                )
-                unfi = repo
-                if prec in unfi:
-                    visibility.remove(unfi, [prec])
+                if succs:
+                    mutation.createsyntheticentry(
+                        repo,
+                        [prec],
+                        succs[0],
+                        op="debugobsolete",
+                        splitting=succs[1:] or None,
+                        user=metadata["user"],
+                        date=date,
+                    )
+                if prec in repo:
+                    visibility.remove(repo, [prec])
                 tr.close()
             except ValueError as exc:
                 raise error.Abort(_("bad obsmarker input: %s") % exc)

@@ -468,7 +468,7 @@ Show all commands + options
   debugmutation: rev, successors, time-range
   debugmutationfromobsmarkers: 
   debugnamecomplete: 
-  debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template
+  debugobsolete: flags, record-parents, rev, exclusive, index, date, user, template
   debugpathcomplete: full, normal, added, removed
   debugpickmergetool: rev, changedelete, include, exclude, tool
   debugpreviewbindag: 
