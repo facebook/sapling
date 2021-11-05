@@ -7,7 +7,9 @@
 
 use anyhow::{bail, Result};
 use std::fmt;
-use std::fs::File;
+use std::fs::{
+    create_dir, create_dir_all, remove_dir, remove_dir_all, remove_file, File, OpenOptions,
+};
 use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -57,12 +59,24 @@ struct ProbePlan(Vec<ProbeAction>);
 
 enum ProbeAction {
     Read(PathBuf),
+    Mkdir(PathBuf),
+    Rmdir(PathBuf),
+    Touch(PathBuf),
+    Rm(PathBuf),
+    MkdirAll(PathBuf),
+    RmdirAll(PathBuf),
 }
 
 // Probe plan file format is a new line separated list of actions
 // Each action has a format <action> [<params>]
 // Currently supported actions:
 //   * cat <path> - read full file at <path>
+//   * mkdir <path> - create a directory at <path>
+//   * rmdir <path> - remove directory at <path>
+//   * touch <path> - create a file at <path>
+//   * rm <path> - remove a file at <path>
+//   * mkdirall <path> - recursively create the directory hierarchy at <path>
+//   * rmdirall <path> - recursively remove the directory hierarchy at <path>
 impl ProbePlan {
     fn load(path: &Path) -> Result<Self> {
         let file = File::open(path)?;
@@ -118,14 +132,18 @@ impl ProbeAction {
         let space = s.find(' ');
         if let Some(space) = space {
             let cmd = &s[..space];
+            let path = &s[space + 1..];
+            if path.len() == 0 {
+                bail!("{} requires path", cmd);
+            }
             match cmd {
-                "cat" => {
-                    let path = &s[space + 1..];
-                    if path.len() == 0 {
-                        bail!("cat requires path");
-                    }
-                    Ok(ProbeAction::Read(path.into()))
-                }
+                "cat" => Ok(ProbeAction::Read(path.into())),
+                "mkdir" => Ok(ProbeAction::Mkdir(path.into())),
+                "rmdir" => Ok(ProbeAction::Rmdir(path.into())),
+                "touch" => Ok(ProbeAction::Touch(path.into())),
+                "rm" => Ok(ProbeAction::Rm(path.into())),
+                "mkdirall" => Ok(ProbeAction::MkdirAll(path.into())),
+                "rmdirall" => Ok(ProbeAction::RmdirAll(path.into())),
                 _ => bail!("Unknown command {}", cmd),
             }
         } else {
@@ -136,6 +154,12 @@ impl ProbeAction {
     pub fn run(&self, stats: &Stats) {
         let r = match self {
             Self::Read(path) => Self::read(path, stats),
+            Self::Mkdir(path) => Self::mkdir(path, stats),
+            Self::Rmdir(path) => Self::rmdir(path, stats),
+            Self::Touch(path) => Self::touch(path, stats),
+            Self::Rm(path) => Self::rm(path, stats),
+            Self::MkdirAll(path) => Self::mkdirall(path, stats),
+            Self::RmdirAll(path) => Self::rmdirall(path, stats),
         };
         if let Err(err) = r {
             stats.errors.fetch_add(1, Ordering::Relaxed);
@@ -151,12 +175,54 @@ impl ProbeAction {
         stats.files.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
+
+    fn mkdir(path: &Path, stats: &Stats) -> Result<()> {
+        create_dir(path)?;
+        stats.files.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn rmdir(path: &Path, stats: &Stats) -> Result<()> {
+        remove_dir(path)?;
+        stats.files.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn touch(path: &Path, stats: &Stats) -> Result<()> {
+        let _ = OpenOptions::new().write(true).create_new(true).open(path)?;
+        stats.files.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn rm(path: &Path, stats: &Stats) -> Result<()> {
+        remove_file(path)?;
+        stats.files.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn mkdirall(path: &Path, stats: &Stats) -> Result<()> {
+        create_dir_all(path)?;
+        stats.files.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn rmdirall(path: &Path, stats: &Stats) -> Result<()> {
+        remove_dir_all(path)?;
+        stats.files.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
 }
 
 impl fmt::Display for ProbeAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Read(path) => write!(f, "cat {}", path.display()),
+            Self::Mkdir(path) => write!(f, "mkdir {}", path.display()),
+            Self::Rmdir(path) => write!(f, "rmdir {}", path.display()),
+            Self::Touch(path) => write!(f, "touch {}", path.display()),
+            Self::Rm(path) => write!(f, "rm {}", path.display()),
+            Self::MkdirAll(path) => write!(f, "mkdirall {}", path.display()),
+            Self::RmdirAll(path) => write!(f, "rmdirall {}", path.display()),
         }
     }
 }
