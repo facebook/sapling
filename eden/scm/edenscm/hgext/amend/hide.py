@@ -22,7 +22,6 @@ from edenscm.mercurial import (
     hg,
     hintutil,
     node as nodemod,
-    obsolete,
     registrar,
     scmutil,
     visibility,
@@ -163,9 +162,6 @@ def hide(ui, repo, *revs, **opts):
                 _("working directory now at %s\n") % ui.label(str(newnode), "node")
             )
 
-        # create markers
-        if obsolete.isenabled(repo, obsolete.createmarkersopt):
-            obsolete.createmarkers(repo, [(r, []) for r in hidectxs], operation="hide")
         visibility.remove(repo, [c.node() for c in hidectxs])
         ui.status(
             _n("%i changeset hidden\n", "%i changesets hidden\n", len(hidectxs))
@@ -234,8 +230,4 @@ def unhide(ui, repo, *revs, **opts):
 
 
 def _dounhide(repo, revs):
-    unfi = repo
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        ctxs = unfi.set("not public() & ::(%ld) & obsolete()", revs)
-        obsolete.revive(ctxs, operation="unhide")
-    visibility.add(repo, [unfi[r].node() for r in revs])
+    visibility.add(repo, list(repo.changelog.tonodes(revs)))
