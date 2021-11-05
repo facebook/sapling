@@ -10,6 +10,7 @@ from edenscm.mercurial.edenapi_upload import (
     uploadhgchangesets,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.revset import parseage
 
 
 def _backupcurrentcommit(repo):
@@ -22,7 +23,15 @@ def _backupcurrentcommit(repo):
     uploadhgchangesets(repo, draftrevs)
 
 
+def _parselifetime(opts):
+    if opts["lifetime"] != "":
+        return parseage(opts["lifetime"])
+    else:
+        return None
+
+
 def createremote(ui, repo, **opts):
+    lifetime = _parselifetime(opts)
     with repo.lock():
         _backupcurrentcommit(repo)
 
@@ -60,6 +69,7 @@ def createremote(ui, repo, **opts):
                 "tz": tz,
                 "hg_parents": parentsfromctx(wctx),
             },
+            lifetime,
         )
 
     csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"]).hex()

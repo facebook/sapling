@@ -133,19 +133,20 @@ def _getdepthargs(name, args):
 _ageparser = re.compile(r"^(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$")
 
 
-def parseagerange(agerange):
-    def parseage(age):
-        m = _ageparser.match(age)
-        if not m:
-            raise error.ParseError("invalid age in age range: %s" % age)
-        days, hours, minutes, seconds = m.groups()
-        agedelta = 0
-        agedelta += int(days or 0) * 60 * 60 * 24
-        agedelta += int(hours or 0) * 60 * 60
-        agedelta += int(minutes or 0) * 60
-        agedelta += int(seconds or 0)
-        return agedelta
+def parseage(age):
+    m = _ageparser.match(age)
+    if not m:
+        raise error.ParseError("invalid age in age range: %s" % age)
+    days, hours, minutes, seconds = m.groups()
+    agedelta = 0
+    agedelta += int(days or 0) * 60 * 60 * 24
+    agedelta += int(hours or 0) * 60 * 60
+    agedelta += int(minutes or 0) * 60
+    agedelta += int(seconds or 0)
+    return agedelta
 
+
+def parseagerange(agerange):
     now = time.time()
     if agerange.startswith("<"):
         start = now - parseage(agerange[1:])

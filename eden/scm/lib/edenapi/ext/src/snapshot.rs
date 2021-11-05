@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::time::Duration;
 
 use anyhow::bail;
 use anyhow::format_err;
@@ -30,6 +31,7 @@ pub async fn upload_snapshot(
     api: &(impl EdenApi + ?Sized),
     repo: String,
     data: SnapshotRawData,
+    custom_duration_secs: Option<u64>,
 ) -> Result<UploadSnapshotResponse> {
     let SnapshotRawData {
         files,
@@ -84,7 +86,7 @@ pub async fn upload_snapshot(
         .collect();
 
     let prepare_response = {
-        api.ephemeral_prepare(repo.clone(), None)
+        api.ephemeral_prepare(repo.clone(), custom_duration_secs.map(Duration::from_secs))
             .await?
             .entries
             .next()

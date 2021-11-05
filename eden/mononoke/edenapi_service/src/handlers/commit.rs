@@ -16,6 +16,7 @@ use gotham_ext::{
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::num::NonZeroU64;
+use std::time::Duration;
 
 use blobstore::Loadable;
 use edenapi_types::{
@@ -470,11 +471,15 @@ impl EdenApiHandler for EphemeralPrepareHandler {
         repo: HgRepoContext,
         _path: Self::PathExtractor,
         _query: Self::QueryStringExtractor,
-        _request: Self::Request,
+        request: Self::Request,
     ) -> HandlerResult<'async_trait, Self::Response> {
         Ok(stream::once(async move {
             Ok(EphemeralPrepareResponse {
-                bubble_id: repo.create_bubble(None).await?.bubble_id().into(),
+                bubble_id: repo
+                    .create_bubble(request.custom_duration_secs.map(Duration::from_secs))
+                    .await?
+                    .bubble_id()
+                    .into(),
             })
         })
         .boxed())

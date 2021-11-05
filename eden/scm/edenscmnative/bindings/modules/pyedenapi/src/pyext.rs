@@ -724,11 +724,14 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         data: Serde<SnapshotRawData>,
+        custom_duration_secs: Option<u64>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
-        py.allow_threads(|| block_unless_interrupted(upload_snapshot(self, repo, data.0)))
-            .map_pyerr(py)?
-            .map_pyerr(py)
-            .map(Serde)
+        py.allow_threads(|| {
+            block_unless_interrupted(upload_snapshot(self, repo, data.0, custom_duration_secs))
+        })
+        .map_pyerr(py)?
+        .map_pyerr(py)
+        .map(Serde)
     }
 
     fn fetchsnapshot_py(

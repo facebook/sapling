@@ -31,5 +31,5 @@ Start up EdenAPI server.
   $ wait_for_mononoke
 
 Check response.
-  $ hgedenapi debugapi -e ephemeralprepare
+  $ hgedenapi debugapi -e ephemeralprepare -i None
   [{"bubble_id": 1}]

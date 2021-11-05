@@ -29,7 +29,20 @@ subcmd = snapshot.subcommand(
 )
 
 
-@subcmd("createremote|create", [])
+@subcmd(
+    "createremote|create",
+    [
+        (
+            "L",
+            "lifetime",
+            "",
+            _(
+                "how long the snapshot should last for, seconds to days supported (e.g. 60s, 90d, 1h30m)"
+            ),
+            _("LIFETIME"),
+        )
+    ],
+)
 def createremotecmd(*args, **kwargs):
     """upload to the server a snapshot of the current uncommitted changes"""
     createremote.createremote(*args, **kwargs)

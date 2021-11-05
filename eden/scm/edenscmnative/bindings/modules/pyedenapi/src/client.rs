@@ -7,6 +7,7 @@
 
 use std::num::NonZeroU64;
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_runtime::block_unless_interrupted;
 use cpython::*;
@@ -352,8 +353,9 @@ py_class!(pub class client |py| {
         &self,
         repo: String,
         data: Serde<SnapshotRawData>,
+        custom_duration_secs: Option<u64>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
-        self.inner(py).clone().uploadsnapshot_py(py, repo, data)
+        self.inner(py).clone().uploadsnapshot_py(py, repo, data, custom_duration_secs)
     }
 
     /// Fetch snapshot information
@@ -385,12 +387,12 @@ py_class!(pub class client |py| {
         self.inner(py).clone().downloadfiletomemory_py(py, repo, token)
     }
 
-    def ephemeralprepare(&self, repo: String)
+    def ephemeralprepare(&self, repo: String, custom_duration: Option<u64>)
         -> PyResult<TStream<anyhow::Result<Serde<EphemeralPrepareResponse>>>>
     {
         let inner = self.inner(py).clone();
         let entries = py
-            .allow_threads(|| block_unless_interrupted(inner.ephemeral_prepare(repo, None)))
+            .allow_threads(|| block_unless_interrupted(inner.ephemeral_prepare(repo, custom_duration.map(Duration::from_secs))))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;
