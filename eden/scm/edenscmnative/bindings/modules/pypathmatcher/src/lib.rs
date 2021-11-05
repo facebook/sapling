@@ -24,6 +24,7 @@ use pathmatcher::DifferenceMatcher;
 use pathmatcher::DirectoryMatch;
 use pathmatcher::GitignoreMatcher;
 use pathmatcher::Matcher;
+use pathmatcher::NeverMatcher;
 use pathmatcher::TreeMatcher;
 use pathmatcher::UnionMatcher;
 use types::RepoPath;
@@ -221,10 +222,12 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
     if let Ok(matcher) = treematcher::downcast_from(py, matcher.clone_ref(py)) {
         return Ok(matcher.extract_inner(py));
     }
-    if matcher.get_type(py).name(py).as_ref() == "treematcher" {
+    let py_type = matcher.get_type(py);
+    let type_name = py_type.name(py);
+    if type_name.as_ref() == "treematcher" {
         return extract_matcher(py, matcher.getattr(py, "_matcher")?);
     }
-    if matcher.get_type(py).name(py).as_ref() == "unionmatcher" {
+    if type_name.as_ref() == "unionmatcher" {
         let py_matchers = matcher.getattr(py, "_matchers")?;
         let py_matchers = PyList::extract(py, &py_matchers)?;
         let mut matchers: Vec<Arc<dyn Matcher + Sync + Send>> = vec![];
@@ -234,10 +237,17 @@ pub fn extract_matcher(py: Python, matcher: PyObject) -> PyResult<Arc<dyn Matche
 
         return Ok(Arc::new(UnionMatcher::new(matchers)));
     }
-    if matcher.get_type(py).name(py).as_ref() == "differencematcher" {
+    if type_name.as_ref() == "differencematcher" {
         let include = extract_matcher(py, matcher.getattr(py, "_m1")?)?;
         let exclude = extract_matcher(py, matcher.getattr(py, "_m2")?)?;
         return Ok(Arc::new(DifferenceMatcher::new(include, exclude)));
+    }
+
+    if type_name.as_ref() == "alwaysmatcher" {
+        return Ok(Arc::new(AlwaysMatcher::new()));
+    }
+    if type_name.as_ref() == "nevermatcher" {
+        return Ok(Arc::new(NeverMatcher::new()));
     }
 
     Ok(Arc::new(ThreadPythonMatcher::new(matcher)))
