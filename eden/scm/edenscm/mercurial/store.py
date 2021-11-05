@@ -423,7 +423,7 @@ def _calcmode(vfs):
 
 _data = (
     "data meta 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
-    " phaseroots obsstore visibleheads"
+    " phaseroots visibleheads"
     " segments hgcommits mutation metalog"
 )
 
@@ -746,7 +746,7 @@ class fncachestore(basicstore):
 
     def copylist(self):
         d = (
-            "data meta dh fncache phaseroots obsstore visibleheads"
+            "data meta dh fncache phaseroots visibleheads"
             " 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
             " segments hgcommits mutation metalog"
         )

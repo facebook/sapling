@@ -1149,10 +1149,6 @@ class localrepository(object):
     def _phasecache(self):
         return phases.phasecache(self, self._phasedefaults)
 
-    @storecache("obsstore")
-    def obsstore(self):
-        return obsolete.makestore(self.ui, self)
-
     @storecache("00changelog.i", "visibleheads", "remotenames")
     def changelog(self):
         def loadchangelog(self):

@@ -1036,7 +1036,6 @@ def remoteui(src, opts):
 foi = [
     ("spath", "00changelog.i"),
     ("spath", "phaseroots"),  # ! phase can change content at the same size
-    ("spath", "obsstore"),
     ("path", "bookmarks"),  # ! bookmark can change content at the same size
 ]
 
