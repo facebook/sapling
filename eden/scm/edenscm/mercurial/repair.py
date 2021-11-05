@@ -34,7 +34,7 @@ from .node import hex, short
 from .pycompat import encodeutf8, range
 
 
-def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
+def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
 
     backupdir = "strip-backup"
@@ -62,7 +62,6 @@ def _bundle(repo, bases, heads, node, suffix, compress=True, obsolescence=True):
     outgoing = discovery.outgoing(repo, missingroots=bases, missingheads=heads)
     contentopts = {
         "cg.version": cgversion,
-        "obsolescence": obsolescence,
         "phases": True,
     }
     return bundle2.writenewbundle(

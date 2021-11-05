@@ -1417,8 +1417,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
         compopts["level"] = complevel
 
     contentopts = {"cg.version": cgversion}
-    if repo.ui.configbool("experimental", "evolution.bundle-obsmarker"):
-        contentopts["obsolescence"] = True
     if repo.ui.configbool("experimental", "bundle-phases"):
         contentopts["phases"] = True
     bundle2.writenewbundle(

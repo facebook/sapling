@@ -2098,20 +2098,6 @@ def _getbundlelistkeysparts(
         part.data = pushkey.encodekeys(keys)
 
 
-@getbundle2partsgenerator("obsmarkers")
-def _getbundleobsmarkerpart(
-    bundler, repo, source, bundlecaps=None, b2caps=None, heads=None, **kwargs
-):
-    """add an obsolescence markers part to the requested bundle"""
-    if kwargs.get(r"obsmarkers", False):
-        if heads is None:
-            heads = repo.heads()
-        subset = [c.node() for c in repo.set("::%ln", heads)]
-        markers = repo.obsstore.relevantmarkers(subset)
-        markers = sorted(markers)
-        bundle2.buildobsmarkerspart(bundler, markers)
-
-
 @getbundle2partsgenerator("phases")
 def _getbundlephasespart(
     bundler, repo, source, bundlecaps=None, b2caps=None, heads=None, **kwargs

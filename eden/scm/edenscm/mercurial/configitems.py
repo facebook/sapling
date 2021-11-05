@@ -276,7 +276,6 @@ coreconfigitem(
     alias=[("experimental", "effect-flags")],
 )
 coreconfigitem("experimental", "evolution.exchange", default=None)
-coreconfigitem("experimental", "evolution.bundle-obsmarker", default=False)
 coreconfigitem("experimental", "evolution.track-operation", default=True)
 coreconfigitem("experimental", "worddiff", default=False)
 coreconfigitem("experimental", "mmapindexthreshold", default=1)

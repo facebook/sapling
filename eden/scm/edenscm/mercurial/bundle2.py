@@ -1712,8 +1712,6 @@ def writenewbundle(
         raise error.ProgrammingError("unknown bundle type: %s" % bundletype)
 
     caps = getrepocaps(repo)
-    if "obsolescence" in opts:
-        caps["obsmarkers"] = ("V1",)
     bundle = bundle20(ui, caps)
     bundle.setcompression(compression, compopts)
     _addpartsfromopts(ui, repo, bundle, source, outgoing, opts, caps)
@@ -1742,10 +1740,6 @@ def _addpartsfromopts(ui, repo, bundler, source, outgoing, opts, caps):
         part.addparam("nbchanges", "%d" % cg.extras["clcount"], mandatory=False)
     if opts.get("phases") and repo.revs("%ln and secret()", outgoing.missingheads):
         part.addparam("targetphase", "%d" % phases.secret, mandatory=False)
-
-    if opts.get("obsolescence", False):
-        obsmarkers = repo.obsstore.relevantmarkers(outgoing.missing)
-        buildobsmarkerspart(bundler, obsmarkers)
 
     if opts.get("phases", False):
         headsbyphase = phases.subsetphaseheads(repo, outgoing.missing)
