@@ -45,6 +45,8 @@ pub enum ErrorKind {
     NotPartOfAnyConfigs(RepositoryId),
     #[error("{0:?} is a part of multiple config")]
     PartOfMultipleConfigs(RepositoryId),
+    #[error("Multiple commit sync config with the same version {0}")]
+    MultipleConfigsForSameVersion(CommitSyncConfigVersion),
 }
 
 #[async_trait]
@@ -291,8 +293,26 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
     ) -> Result<CommitSyncConfig> {
-        let mut all_versions = self.get_all_commit_sync_config_versions(repo_id).await?;
-        all_versions.remove(&version_name).ok_or_else(|| {
+        let large_repo_config_version_sets = &self.config_handle_for_all_versions.get().repos;
+
+        let mut version = None;
+        for (_, config_version_set) in large_repo_config_version_sets.iter() {
+            for config in &config_version_set.versions {
+                if !Self::related_to_repo(&config, repo_id) {
+                    continue;
+                }
+                if config.version_name.as_ref() == Some(&version_name.0) {
+                    if version.is_some() {
+                        return Err(
+                            ErrorKind::MultipleConfigsForSameVersion(version_name.clone()).into(),
+                        );
+                    }
+                    version = Some(config.clone().convert()?);
+                }
+            }
+        }
+
+        version.ok_or_else(|| {
             ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
         })
     }
