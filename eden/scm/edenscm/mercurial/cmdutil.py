@@ -40,7 +40,6 @@ from . import (
     mdiff,
     mergeutil,
     mutation,
-    obsolete,
     patch,
     pathutil,
     perftrace,
@@ -3534,11 +3533,6 @@ def samefile(f, ctx1, ctx2, m1=None, m2=None):
 def amend(ui, repo, old, extra, pats, opts):
     # avoid cycle context -> subrepo -> cmdutil
     from . import context
-
-    # amend will reuse the existing user if not specified, but the obsolete
-    # marker creation requires that the current user's name is specified.
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
-        ui.username()  # raise exception if username not set
 
     ui.note(_("amending changeset %s\n") % old)
     base = old.p1()
