@@ -61,116 +61,19 @@ Examples:
 """
 from __future__ import absolute_import
 
-import errno
 import struct
 
 from edenscmnative import parsers
 
-from . import error, node, perftrace, phases, pycompat, util, visibility
+from . import error, pycompat, util
 from .i18n import _
-from .pycompat import encodeutf8, range
+from .pycompat import encodeutf8
 
 
 _pack = struct.pack
 _unpack = struct.unpack
 _calcsize = struct.calcsize
 propertycache = util.propertycache
-
-# the obsolete feature is not mature enough to be enabled by default.
-# you have to rely on third party extension extension to enable this.
-_enabled = False
-
-# Options for obsolescence
-createmarkersopt = "createmarkers"
-allowunstableopt = "allowunstable"
-
-
-def _getoptionvalue(repo, option):
-    """Returns True if the given repository has the given obsolete option
-    enabled.
-    """
-    configkey = "evolution.%s" % option
-    newconfig = repo.ui.configbool("experimental", configkey)
-
-    # Return the value only if defined
-    if newconfig is not None:
-        return newconfig
-
-    # Fallback on generic option
-    try:
-        return repo.ui.configbool("experimental", "evolution")
-    except (error.ConfigError, AttributeError):
-        # Fallback on old-fashion config
-        # inconsistent config: experimental.evolution
-        result = set(repo.ui.configlist("experimental", "evolution"))
-
-        if "all" in result:
-            return True
-
-        # For migration purposes, temporarily return true if the config hasn't
-        # been set but _enabled is true.
-        if len(result) == 0 and _enabled:
-            return True
-
-        # Temporary hack for next check
-        newconfig = repo.ui.config("experimental", "evolution.createmarkers")
-        if newconfig:
-            result.add("createmarkers")
-
-        return option in result
-
-
-def isenabled(repo, option):
-    """Returns True if the given repository has the given obsolete option
-    enabled.
-    """
-    createmarkersvalue = _getoptionvalue(repo, createmarkersopt)
-    unstabluevalue = _getoptionvalue(repo, allowunstableopt)
-
-    # createmarkers must be enabled if other options are enabled
-    if unstabluevalue and not createmarkersvalue:
-        raise error.Abort(
-            _(
-                "'createmarkers' obsolete option must be enabled "
-                "if other obsolete options are enabled"
-            )
-        )
-
-    return _getoptionvalue(repo, option)
-
-
-### obsolescence marker flag
-
-## bumpedfix flag
-#
-# When a changeset A' succeed to a changeset A which became public, we call A'
-# "bumped" because it's a successors of a public changesets
-#
-# o    A' (bumped)
-# |`:
-# | o  A
-# |/
-# o    Z
-#
-# The way to solve this situation is to create a new changeset Ad as children
-# of A. This changeset have the same content than A'. So the diff from A to A'
-# is the same than the diff from A to Ad. Ad is marked as a successors of A'
-#
-# o   Ad
-# |`:
-# | x A'
-# |'|
-# o | A
-# |/
-# o Z
-#
-# But by transitivity Ad is also a successors of A. To avoid having Ad marked
-# as bumped too, we add the `bumpedfix` flag to the marker. <A', (Ad,)>.
-# This flag mean that the successors express the changes between the public and
-# bumped version and fix the situation, breaking the transitivity of
-# "bumped" here.
-bumpedfix = 1
-usingsha256 = 2
 
 ## Parsing and writing of version "1"
 #
@@ -209,7 +112,6 @@ usingsha256 = 2
 _fm1version = 1
 _fm1fixed = ">IdhHBBB20s"
 _fm1nodesha1 = "20s"
-_fm1nodesha256 = "32s"
 _fm1parentnone = 3
 _fm1metapair = "BB"
 
@@ -218,8 +120,6 @@ def _fm1encodeonemarker(marker):
     pre, sucs, flags, metadata, date, parents = marker
     # determine node size
     _fm1node = _fm1nodesha1
-    if flags & usingsha256:
-        _fm1node = _fm1nodesha256
     numsuc = len(sucs)
     numextranodes = numsuc
     if parents is None:
@@ -304,19 +204,6 @@ def encodemarkers(markers, addheader=False, version=_fm1version):
         yield encodeheader(version)
     for marker in markers:
         yield encodeone(marker)
-
-
-def _checkinvalidmarkers(markers):
-    """search for marker with invalid data and raise error if needed
-
-    Exist as a separated function to allow the evolve extension for a more
-    subtle handling.
-    """
-    for mark in markers:
-        if node.nullid in mark[1]:
-            raise error.Abort(
-                _("bad obsolescence marker detected: " "invalid successors nullid")
-            )
 
 
 def commonversion(versions):
