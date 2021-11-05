@@ -210,89 +210,8 @@ _fm1version = 1
 _fm1fixed = ">IdhHBBB20s"
 _fm1nodesha1 = "20s"
 _fm1nodesha256 = "32s"
-_fm1nodesha1size = _calcsize(_fm1nodesha1)
-_fm1nodesha256size = _calcsize(_fm1nodesha256)
-_fm1fsize = _calcsize(_fm1fixed)
 _fm1parentnone = 3
-_fm1parentshift = 14
-_fm1parentmask = _fm1parentnone << _fm1parentshift
 _fm1metapair = "BB"
-_fm1metapairsize = _calcsize(_fm1metapair)
-
-
-def _fm1purereadmarkers(data, off, stop):
-    # make some global constants local for performance
-    noneflag = _fm1parentnone
-    sha2flag = usingsha256
-    sha1size = _fm1nodesha1size
-    sha2size = _fm1nodesha256size
-    sha1fmt = _fm1nodesha1
-    sha2fmt = _fm1nodesha256
-    metasize = _fm1metapairsize
-    metafmt = _fm1metapair
-    fsize = _fm1fsize
-    unpack = _unpack
-
-    # Loop on markers
-    ufixed = struct.Struct(_fm1fixed).unpack
-
-    while off < stop:
-        # read fixed part
-        o1 = off + fsize
-        t, secs, tz, flags, numsuc, numpar, nummeta, prec = ufixed(data[off:o1])
-
-        if flags & sha2flag:
-            # FIXME: prec was read as a SHA1, needs to be amended
-
-            # read 0 or more successors
-            if numsuc == 1:
-                o2 = o1 + sha2size
-                sucs = (data[o1:o2],)
-            else:
-                o2 = o1 + sha2size * numsuc
-                sucs = unpack(sha2fmt * numsuc, data[o1:o2])
-
-            # read parents
-            if numpar == noneflag:
-                o3 = o2
-                parents = None
-            elif numpar == 1:
-                o3 = o2 + sha2size
-                parents = (data[o2:o3],)
-            else:
-                o3 = o2 + sha2size * numpar
-                parents = unpack(sha2fmt * numpar, data[o2:o3])
-        else:
-            # read 0 or more successors
-            if numsuc == 1:
-                o2 = o1 + sha1size
-                sucs = (data[o1:o2],)
-            else:
-                o2 = o1 + sha1size * numsuc
-                sucs = unpack(sha1fmt * numsuc, data[o1:o2])
-
-            # read parents
-            if numpar == noneflag:
-                o3 = o2
-                parents = None
-            elif numpar == 1:
-                o3 = o2 + sha1size
-                parents = (data[o2:o3],)
-            else:
-                o3 = o2 + sha1size * numpar
-                parents = unpack(sha1fmt * numpar, data[o2:o3])
-
-        # read metadata
-        off = o3 + metasize * nummeta
-        metapairsize = unpack(">" + (metafmt * nummeta), data[o3:off])
-        metadata = []
-        for idx in range(0, len(metapairsize), 2):
-            o1 = off + metapairsize[idx]
-            o2 = o1 + metapairsize[idx + 1]
-            metadata.append((data[off:o1], data[o1:o2]))
-            off = o2
-
-        yield (prec, sucs, flags, tuple(metadata), (secs, tz * 60), parents)
 
 
 def _fm1encodeonemarker(marker):
@@ -348,17 +267,10 @@ def _fm1encodeonemarker(marker):
     return b"".join(data)
 
 
-def _fm1readmarkers(data, off, stop):
-    native = getattr(parsers, "fm1readmarkers", None)
-    if not native:
-        return _fm1purereadmarkers(data, off, stop)
-    return native(data, off, stop)
-
-
 # mapping to read/write various marker formats
 # <version> -> (decoder, encoder)
 formats = {
-    _fm1version: (_fm1readmarkers, _fm1encodeonemarker),
+    _fm1version: (parsers.fm1readmarkers, _fm1encodeonemarker),
 }
 
 
