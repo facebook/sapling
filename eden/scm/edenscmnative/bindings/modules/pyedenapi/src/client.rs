@@ -390,7 +390,7 @@ py_class!(pub class client |py| {
     {
         let inner = self.inner(py).clone();
         let entries = py
-            .allow_threads(|| block_unless_interrupted(inner.ephemeral_prepare(repo)))
+            .allow_threads(|| block_unless_interrupted(inner.ephemeral_prepare(repo, None)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;

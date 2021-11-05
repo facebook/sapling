@@ -38,6 +38,7 @@ use edenapi_types::UploadTokensResponse;
 use edenapi_types::UploadTreeEntry;
 use edenapi_types::UploadTreeResponse;
 use minibytes::Bytes;
+use std::time::Duration;
 use types::HgId;
 use types::Key;
 
@@ -252,8 +253,9 @@ pub trait EdenApi: Send + Sync + 'static {
     async fn ephemeral_prepare(
         &self,
         repo: String,
+        custom_duration: Option<Duration>,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
-        let _ = repo;
+        let _ = (repo, custom_duration);
         Err(EdenApiError::NotSupported)
     }
 

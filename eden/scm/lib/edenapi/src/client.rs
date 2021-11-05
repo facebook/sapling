@@ -1093,10 +1093,14 @@ impl EdenApi for Client {
     async fn ephemeral_prepare(
         &self,
         repo: String,
+        custom_duration: Option<Duration>,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         tracing::info!("Preparing ephemeral bubble");
         let url = self.build_url(paths::EPHEMERAL_PREPARE, Some(&repo))?;
-        let req = EphemeralPrepareRequest {}.to_wire();
+        let req = EphemeralPrepareRequest {
+            custom_duration_secs: custom_duration.map(|d| d.as_secs()),
+        }
+        .to_wire();
         let request = self
             .configure_request(Request::post(url.clone()))?
             .cbor(&req)

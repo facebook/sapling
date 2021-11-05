@@ -84,7 +84,7 @@ pub async fn upload_snapshot(
         .collect();
 
     let prepare_response = {
-        api.ephemeral_prepare(repo.clone())
+        api.ephemeral_prepare(repo.clone(), None)
             .await?
             .entries
             .next()

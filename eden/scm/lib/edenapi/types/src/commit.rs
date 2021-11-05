@@ -528,7 +528,10 @@ pub struct UploadSnapshotResponse {
 
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
-pub struct EphemeralPrepareRequest {}
+pub struct EphemeralPrepareRequest {
+    #[id(1)]
+    pub custom_duration_secs: Option<u64>,
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct EphemeralPrepareResponse {
@@ -537,8 +540,10 @@ pub struct EphemeralPrepareResponse {
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for EphemeralPrepareRequest {
-    fn arbitrary(_g: &mut quickcheck::Gen) -> Self {
-        EphemeralPrepareRequest {}
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        EphemeralPrepareRequest {
+            custom_duration_secs: Arbitrary::arbitrary(g),
+        }
     }
 }
 

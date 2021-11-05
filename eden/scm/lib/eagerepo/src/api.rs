@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 use std::num::NonZeroU64;
 use std::sync::Arc;
+use std::time::Duration;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -493,6 +494,7 @@ impl EdenApi for EagerRepo {
     async fn ephemeral_prepare(
         &self,
         _repo: String,
+        _custom_duration: Option<Duration>,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         Err(not_implemented_error(
             "EagerRepo does not support ephemeral_prepare endpoint".to_string(),
