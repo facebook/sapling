@@ -220,6 +220,12 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             return Ok(None);
         };
 
+        // Even though the ids exist, our local DAG might not have them.
+        let all = self.iddag.all()?;
+        if !all.contains(descendant_id.clone()) || !all.contains(ancestor_id.clone()) {
+            return Ok(None);
+        }
+
         Ok(Some(self.iddag.is_ancestor(*ancestor_id, *descendant_id)?))
     }
 
