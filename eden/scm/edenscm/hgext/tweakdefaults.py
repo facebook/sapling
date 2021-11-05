@@ -64,7 +64,6 @@ from edenscm.mercurial import (
     extensions,
     hg,
     hintutil,
-    obsolete,
     patch,
     pycompat,
     registrar,
@@ -203,10 +202,6 @@ def extsetup(ui):
         wrapfunction(histeditmodule, "commitfuncfor", histeditcommitfuncfor)
     except KeyError:
         pass
-
-    # wrapped createmarkers knows how to write operation-aware
-    # metadata (e.g. 'amend', 'rebase' and so forth)
-    wrapfunction(obsolete, "createmarkers", _createmarkers)
 
     # bookmark -D is an alias to strip -B
 
@@ -706,25 +701,6 @@ def diffcmd(orig, ui, repo, *args, **opts):
         output[filename] = {"adds": adds, "removes": removes, "isbinary": isbinary}
     ui.write("%s\n" % (json.dumps(output, sort_keys=True)))
     return res
-
-
-def _createmarkers(
-    orig, repo, relations, flag=0, date=None, metadata=None, operation=None
-):
-    configoperation = repo.ui.config(globaldata, createmarkersoperation)
-    if configoperation is not None:
-        operation = configoperation
-
-    if operation is None:
-        return orig(repo, relations, flag, date, metadata)
-
-    # While _createmarkers in newer Mercurial does have an operation argument,
-    # it is ignored unless certain configs are set. Let's just continue to set
-    # it directly on the metadata for now.
-    if metadata is None:
-        metadata = {}
-    metadata["operation"] = operation
-    return orig(repo, relations, flag, date, metadata)
 
 
 def _fixpager(ui):
