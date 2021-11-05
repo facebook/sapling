@@ -33,6 +33,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
     m.add(py, "hgmetrics", pyhgmetrics::init_module(py, &name)?)?;
     m.add(py, "hgtime", pyhgtime::init_module(py, &name)?)?;
     m.add(py, "indexes", pyindexes::init_module(py, &name)?)?;
+    m.add(py, "lock", pylock::init_module(py, &name)?)?;
     m.add(py, "lz4", pylz4::init_module(py, &name)?)?;
     m.add(py, "manifest", pymanifest::init_module(py, &name)?)?;
     m.add(py, "metalog", pymetalog::init_module(py, &name)?)?;

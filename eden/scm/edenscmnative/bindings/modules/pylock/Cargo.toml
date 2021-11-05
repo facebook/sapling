@@ -1,0 +1,10 @@
+[package]
+name = "pylock"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython = { version = "0.5", default-features = false }
+fs2 = "0.4"
+vfs = { path = "../../../../lib/vfs" }

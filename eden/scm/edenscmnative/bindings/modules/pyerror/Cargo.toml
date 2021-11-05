@@ -18,3 +18,4 @@ revlogindex = { path = "../../../../lib/revlogindex" }
 taggederror = { path = "../../../../lib/taggederror" }
 taggederror-util = { path = "../../../../lib/taggederror-util" }
 treestate = { path = "../../../../lib/treestate" }
+vfs = { path = "../../../../lib/vfs" }

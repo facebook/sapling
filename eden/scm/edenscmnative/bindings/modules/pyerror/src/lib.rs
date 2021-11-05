@@ -18,6 +18,7 @@ py_exception!(error, CertificateError);
 py_exception!(error, CommitLookupError, exc::KeyError);
 py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
+py_exception!(error, LockContendedError);
 py_exception!(error, MetaLogError);
 py_exception!(error, NeedSlowPathError);
 py_exception!(error, NonUTF8Path);
@@ -82,6 +83,11 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "CommitLookupError", py.get_type::<CommitLookupError>())?;
     m.add(py, "HttpError", py.get_type::<HttpError>())?;
     m.add(py, "IndexedLogError", py.get_type::<IndexedLogError>())?;
+    m.add(
+        py,
+        "LockContendedError",
+        py.get_type::<LockContendedError>(),
+    )?;
     m.add(py, "MetaLogError", py.get_type::<MetaLogError>())?;
     m.add(py, "NeedSlowPathError", py.get_type::<NeedSlowPathError>())?;
     m.add(py, "RustError", py.get_type::<RustError>())?;
@@ -143,6 +149,19 @@ fn register_error_handlers() {
                 }
                 _ => {}
             }
+        }
+
+        if let Some(e) = e.downcast_ref::<vfs::LockError>() {
+            return match e {
+                vfs::LockError::Contended(vfs::LockContendedError { contents, .. }) => {
+                    Some(PyErr::new::<LockContendedError, _>(
+                        py,
+                        cpython_ext::Str::from(contents.clone()),
+                    ))
+                }
+                vfs::LockError::Io(e) => Some(cpython_ext::error::translate_io_error(py, e)),
+                vfs::LockError::PathError(_) => None,
+            };
         }
 
         if e.is::<indexedlog::Error>() {

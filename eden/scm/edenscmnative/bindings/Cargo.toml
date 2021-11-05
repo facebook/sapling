@@ -37,6 +37,7 @@ pyfs = { path = "modules/pyfs" }
 pyhgmetrics = { path = "modules/pyhgmetrics" }
 pyhgtime = { path = "modules/pyhgtime" }
 pyindexes = { path = "modules/pyindexes", default-features = false }
+pylock = { path = "modules/pylock" }
 pylz4 = { path = "modules/pylz4" }
 pymanifest = { path = "modules/pymanifest" }
 pymetalog = { path = "modules/pymetalog" }
