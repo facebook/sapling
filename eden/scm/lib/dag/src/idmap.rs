@@ -15,6 +15,7 @@ use crate::id::VertexName;
 use crate::ops::IdConvert;
 use crate::ops::Parents;
 use crate::segment::PreparedFlatSegments;
+use crate::Error;
 use crate::IdSet;
 use crate::Result;
 
@@ -164,12 +165,31 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                     let id = match self.vertex_id_with_max_group(&head, group).await? {
                         Some(id) => id,
                         None => {
-                            let id = next_free_id;
+                            let parents = &parent_ids[parent_start..];
+                            let mut candidate_id = match parents.iter().max() {
+                                Some(&max_parent_id) => (max_parent_id + 1).max(group.min_id()),
+                                None => group.min_id(),
+                            };
+                            loop {
+                                if let Some(span) = covered_ids.span_contains(candidate_id) {
+                                    candidate_id = span.high + 1;
+                                    continue;
+                                }
+                                if let Some(span) = reserved_ids.span_contains(candidate_id) {
+                                    candidate_id = span.high + 1;
+                                    continue;
+                                }
+                                break;
+                            }
+                            let id = candidate_id;
+                            assert_eq!(id, next_free_id);
                             next_free_id = next_free_id + 1;
+                            if id.group() != group {
+                                return Err(Error::IdOverflow(group));
+                            }
                             tracing::trace!(target: "dag::assign", "assign {:?} = {:?}", &head, id);
                             covered_ids.push(id);
                             self.insert(id, head.as_ref()).await?;
-                            let parents = &parent_ids[parent_start..];
                             outcome.push_edge(id, parents);
                             id
                         }

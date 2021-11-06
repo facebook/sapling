@@ -9,6 +9,7 @@ use std::io;
 
 use thiserror::Error;
 
+use crate::Group;
 use crate::Id;
 use crate::VertexName;
 
@@ -39,6 +40,10 @@ pub enum DagError {
     /// The backend (ex. filesystem) cannot fulfill the request somehow.
     #[error(transparent)]
     Backend(Box<BackendError>),
+
+    /// No space for new Ids.
+    #[error("out of space for group {0:?}")]
+    IdOverflow(Group),
 }
 
 #[derive(Debug, Error)]
