@@ -49,11 +49,6 @@ pub struct PreparedFlatSegments {
 }
 
 impl PreparedFlatSegments {
-    /// The id of the head.
-    pub fn head_id(&self) -> Option<Id> {
-        self.segments.last().map(|s| s.high)
-    }
-
     pub fn vertex_count(&self) -> u64 {
         let mut count = 0;
         for segment in &self.segments {
@@ -85,40 +80,31 @@ impl PreparedFlatSegments {
     }
 
     /// Return set of all (unique) parents + head + roots of flat segments.
+    ///
+    /// Used by the pull fast path to provide necessary "anchor" vertexes
+    /// ("universally known", and ones needed by the client to make decisions)
+    /// in the IdMap.
+    ///
+    /// Might return some extra `Id`s that are not part of parents, heads, or
+    /// roots. They are useful for the client to verify the graph is the same
+    /// as the server.
+    ///
+    /// The size of the returned `Id`s is about `O(segments)`.
     pub fn parents_head_and_roots(&self) -> BTreeSet<Id> {
-        // Parents
-        let mut s: BTreeSet<Id> = self
-            .segments
+        self.segments
             .iter()
-            .map(|seg| &seg.parents)
+            .map(|seg| {
+                // `seg.high` is either a head, or a parent referred by another seg
+                // `seg.low` is either a room, or something unnecessary for lazy protocol,
+                // but speeds up graph shape verification (see `check_isomorphic_graph`).
+                // `parents` are either "universally known", essential for lazy protocol,
+                // or something necessary for the pull protocol to re-map the IdMap.
+                [seg.high, seg.low]
+                    .into_iter()
+                    .chain(seg.parents.clone().into_iter())
+            })
             .flatten()
-            .copied()
-            .collect();
-        // Head
-        if let Some(h) = self.head_id() {
-            s.insert(h);
-        }
-        // Roots
-        let id_set: BTreeSet<(Id, Id)> = self.segments.iter().map(|s| (s.low, s.high)).collect();
-        let contains = |id: Id| -> bool {
-            for &(low, high) in id_set.range(..=(id, Id::MAX)).rev() {
-                if id >= low && id <= high {
-                    return true;
-                }
-                if id < low {
-                    break;
-                }
-            }
-            false
-        };
-        for seg in &self.segments {
-            let pids: Vec<Id> = seg.parents.iter().copied().collect();
-            if pids.iter().all(|&p| !contains(p)) {
-                // seg.low is a root.
-                s.insert(seg.low);
-            }
-        }
-        s
+            .collect()
     }
 
     /// Add graph edges: id -> parent_ids. Used by `assign_head`.
@@ -158,11 +144,11 @@ impl PreparedFlatSegments {
                 // Sorted?
                 assert!(Some(seg.low) > last_high);
                 // Merged?
-                    if let Some(last_high) = last_high {
-                if seg.parents.len() == 1 && seg.parents[0] + 1 == seg.low {
-                    assert_ne!(last_high + 1, seg.low);
-                }
+                if let Some(last_high) = last_high {
+                    if seg.parents.len() == 1 && seg.parents[0] + 1 == seg.low {
+                        assert_ne!(last_high + 1, seg.low);
                     }
+                }
                 last_high = Some(seg.high);
             }
         }
