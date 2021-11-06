@@ -64,6 +64,11 @@ impl IdDagStore for InProcessStore {
             .get_head_index(level)
             .and_then(|head_index| head_index.range(id..).next())
             .map(|(_, store_id)| self.get_segment(store_id));
+        if let Some(ref seg) = &answer {
+            if seg.span()?.low > id {
+                return Ok(None);
+            }
+        }
         Ok(answer)
     }
 

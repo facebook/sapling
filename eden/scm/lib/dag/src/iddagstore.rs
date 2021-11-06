@@ -491,8 +491,7 @@ mod tests {
         let seg = store.find_flat_segment_including_id(Id(14)).unwrap();
         assert_eq!(fmt(seg), "Some(11-15[10])");
         let seg = store.find_flat_segment_including_id(Id(16)).unwrap();
-        // Different stores return different results.
-        // assert_eq!(fmt(seg), "None");
+        assert_eq!(fmt(seg), "None");
 
         // 20-30 and 31-35 are merged.
         let seg = store.find_flat_segment_including_id(Id(35)).unwrap();
