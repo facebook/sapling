@@ -11,6 +11,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::errors::bug;
+use crate::errors::programming;
 use crate::id::Group;
 use crate::id::Id;
 use crate::segment::Segment;
@@ -64,6 +65,75 @@ pub trait IdDagStore: Send + Sync + 'static {
     /// With discontinuous segments, this might return multiple spans for
     /// a single group.
     fn all_ids_in_groups(&self, groups: &[Group]) -> Result<IdSet>;
+
+    /// Find all ids covered by a specific level of segments.
+    ///
+    /// This function assumes that segments are built in order,
+    /// and higher level segments do not cover more than lower
+    /// levels.
+    ///
+    /// That is, if range `Id(x)..Id(y)` is covered by segment
+    /// level `n`. Then segment level `n+1` would cover `Id(x)..Id(p)`
+    /// and not cover `Id(p)..Id(y)` (x <= p <= y). In other words,
+    /// the following cases are forbidden:
+    ///
+    /// ```plain,ignore
+    ///     level n     [-------covered-------]
+    ///     level n+1   [covered] gap [covered]
+    ///
+    ///     level n     [---covered---]
+    ///     level n+1   gap [covered]
+    ///
+    ///     level n     [covered] gap
+    ///     level n+1   [---covered---]
+    /// ```
+    ///
+    /// The following cases are okay:
+    ///
+    /// ```plain,ignore
+    ///     level n     [---covered---]
+    ///     level n+1   [covered] gap
+    ///
+    ///     level n     [---covered---]
+    ///     level n+1   [---covered---]
+    /// ```
+    fn all_ids_in_segment_level(&self, level: Level) -> Result<IdSet> {
+        let all_ids = self.all_ids_in_groups(&Group::ALL)?;
+        if level == 0 {
+            return Ok(all_ids);
+        }
+
+        let mut result = IdSet::empty();
+        for span in all_ids.as_spans() {
+            // In this span:
+            //
+            //      [---------span--------]
+            //                 seg-]
+            //
+            // If we found the right side of a segment, then we can
+            // assume the segments cover till the left side without
+            // checking the actual segments:
+            //
+            //      [---------span--------]
+            //      [seg][...][seg-]
+            let seg = self.iter_segments_descending(span.high, level)?.next();
+            if let Some(seg) = seg {
+                let seg = seg?;
+                let seg_span = seg.span()?;
+                if span.contains(seg_span.high) {
+                    // sanity check
+                    if !span.contains(seg_span.low) {
+                        return programming(format!(
+                            "span {:?} from all_ids_in_groups should cover all segment {:?}",
+                            span, seg
+                        ));
+                    }
+                    result.push(span.low..=seg_span.high);
+                }
+            }
+        }
+        Ok(result)
+    }
 
     /// Return the next unused id for segments of the specified level.
     ///
@@ -318,6 +388,24 @@ mod tests {
         )
     }
 
+    /// High-level segment.
+    fn hseg(
+        level: Level,
+        flags: SegmentFlags,
+        group: Group,
+        low: u64,
+        high: u64,
+        parents: &[u64],
+    ) -> Segment {
+        Segment::new(
+            flags,
+            level,
+            group.min_id() + low,
+            group.min_id() + high,
+            &parents.iter().copied().map(Id).collect::<Vec<_>>(),
+        )
+    }
+
     fn fmt<T: fmt::Debug>(value: T) -> String {
         format!("{:?}", value)
     }
@@ -455,6 +543,46 @@ mod tests {
         store.remove_non_master().unwrap();
         assert_eq!(all_id_str(store, &[N]), "");
         assert_eq!(all_id_str(store, &[M, N]), "0..=70");
+    }
+
+    fn test_all_ids_in_segment_level(store: &mut dyn IdDagStore) {
+        let level_id_str = |store: &dyn IdDagStore, level| {
+            format!("{:?}", store.all_ids_in_segment_level(level).unwrap())
+        };
+
+        // Insert some discontinuous segments. Then query all_ids_in_groups.
+        insert_segments(
+            store,
+            vec![
+                &seg(ROOT, M, 0, 10, &[]),
+                &seg(EMPTY, M, 11, 20, &[9]),
+                &seg(EMPTY, M, 21, 30, &[15]),
+                &seg(ROOT, M, 50, 60, &[]),
+                &seg(EMPTY, M, 61, 70, &[51]),
+                &seg(EMPTY, M, 71, 75, &[51]),
+                &seg(EMPTY, M, 76, 80, &[51]),
+                &seg(EMPTY, M, 81, 85, &[51]),
+                &seg(ROOT, M, 100, 110, &[]),
+                &seg(EMPTY, M, 111, 120, &[105]),
+                &seg(EMPTY, M, 121, 130, &[115]),
+                &seg(ROOT, N, 0, 10, &[]),
+                &seg(EMPTY, N, 11, 20, &[9]),
+                &seg(EMPTY, N, 21, 30, &[15]),
+                &hseg(1, ROOT, M, 0, 10, &[]),
+                &hseg(1, EMPTY, M, 11, 20, &[9]),
+                &hseg(1, ROOT, M, 50, 70, &[]),
+                &hseg(1, EMPTY, M, 71, 80, &[51]),
+                &hseg(1, ROOT, M, 100, 120, &[]),
+                &hseg(1, ROOT, N, 0, 30, &[]),
+                &hseg(2, ROOT, M, 50, 80, &[]),
+                &hseg(2, ROOT, M, 100, 120, &[]),
+            ],
+        );
+
+        assert_eq!(level_id_str(store, 0), "0..=30 50..=85 100..=130 N0..=N30");
+        assert_eq!(level_id_str(store, 1), "0..=20 50..=80 100..=120 N0..=N30");
+        assert_eq!(level_id_str(store, 2), "50..=80 100..=120");
+        assert_eq!(level_id_str(store, 3), "");
     }
 
     fn test_discontinuous_merges(store: &mut dyn IdDagStore) {
@@ -755,6 +883,13 @@ mod tests {
     fn test_multi_stores_all_ids_in_groups() {
         for_each_empty_store(|store| {
             test_all_ids_in_groups(store);
+        })
+    }
+
+    #[test]
+    fn test_multi_stores_all_ids_in_segment_level() {
+        for_each_empty_store(|store| {
+            test_all_ids_in_segment_level(store);
         })
     }
 
