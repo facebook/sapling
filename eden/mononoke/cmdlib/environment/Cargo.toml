@@ -13,7 +13,6 @@ path = "lib.rs"
 [dependencies]
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-derived_data_remote = { version = "0.1.0", path = "../../derived_data/remote" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 megarepo_config = { version = "0.1.0", path = "../../megarepo_api/megarepo_config" }
 observability = { version = "0.1.0", path = "../../observability" }
