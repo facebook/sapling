@@ -1675,10 +1675,6 @@ where
     async fn dirty(&self) -> Result<NameSet> {
         let all = self.dag().all()?;
         let spans = all.difference(&self.persisted_id_set);
-        if cfg!(debug_assertions) {
-            let spans2 = self.dag().dirty()?;
-            assert_eq!(spans.as_spans(), spans2.as_spans());
-        }
         let set = NameSet::from_spans_dag(spans, self)?;
         Ok(set)
     }
