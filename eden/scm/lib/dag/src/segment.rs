@@ -57,6 +57,8 @@ bitflags! {
     pub struct SegmentFlags: u8 {
         /// This segment has roots (i.e. there is at least one id in
         /// `low..=high`, `parents(id)` is empty).
+        ///
+        /// This flag must be set correct for correctness.
         const HAS_ROOT = 0b1;
 
         /// This segment is the only head in `0..=high`.
@@ -64,6 +66,9 @@ bitflags! {
         ///
         /// This flag should not be set if the segment is either a high-level
         /// segment, or in a non-master group.
+        ///
+        /// This flag is an optimization. Not setting it might hurt performance
+        /// but not correctness.
         const ONLY_HEAD = 0b10;
     }
 }
