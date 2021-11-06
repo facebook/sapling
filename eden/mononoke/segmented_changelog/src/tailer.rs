@@ -29,7 +29,7 @@ use crate::owned::OwnedSegmentedChangelog;
 use crate::types::SegmentedChangelogVersion;
 use crate::update::build_incremental;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{DagId, Group, InProcessIdDag, SegmentedChangelogSqlConnections};
+use crate::{DagId, Group, SegmentedChangelogSqlConnections};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.tailer.update";
@@ -209,16 +209,10 @@ impl SegmentedChangelogTailer {
             );
         }
 
-        // Let's rebuild the iddag to keep segment fragmentation low
-        let mut new_iddag = InProcessIdDag::new_in_process();
-        let get_parents = |id| owned.iddag.parent_ids(id);
-        new_iddag.build_segments_volatile(head_dag_id, &get_parents)?;
-        info!(ctx.logger(), "repo {}: IdDag rebuilt", self.repo_id);
-
         // Save the IdDag
         let iddag_version = self
             .iddag_save_store
-            .save(&ctx, &new_iddag)
+            .save(&ctx, &owned.iddag)
             .await
             .with_context(|| format!("repo {}: error saving iddag", self.repo_id))?;
 
@@ -239,7 +233,6 @@ impl SegmentedChangelogTailer {
             "repo {}: successful incremental update to segmented changelog", self.repo_id,
         );
 
-        let new_owned = OwnedSegmentedChangelog::new(new_iddag, owned.idmap);
-        Ok((new_owned, head_dag_id, head))
+        Ok((owned, head_dag_id, head))
     }
 }
