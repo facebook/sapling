@@ -57,6 +57,16 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
         group: Group,
         covered_ids: &mut IdSet,
     ) -> Result<PreparedFlatSegments> {
+        // Use `covered_ids` to calculate next free id.
+        let mut next_free_id = match covered_ids
+            .intersection(&IdSet::from(group.min_id()..=group.max_id()))
+            .max()
+        {
+            Some(id) => id + 1,
+            None => group.min_id(),
+        };
+        assert_eq!(next_free_id, self.next_free_id(group).await?);
+
         // There are some interesting cases to optimize the numbers:
         //
         // C     For a merge C, it has choice to assign numbers to A or B
@@ -148,7 +158,8 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                     let id = match self.vertex_id_with_max_group(&head, group).await? {
                         Some(id) => id,
                         None => {
-                            let id = self.next_free_id(group).await?;
+                            let id = next_free_id;
+                            next_free_id = next_free_id + 1;
                             tracing::trace!(target: "dag::assign", "assign {:?} = {:?}", &head, id);
                             covered_ids.push(id);
                             self.insert(id, head.as_ref()).await?;
