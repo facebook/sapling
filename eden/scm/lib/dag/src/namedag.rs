@@ -408,10 +408,6 @@ where
         self.map.insert(id, name).await
     }
 
-    async fn next_free_id(&self, group: Group) -> Result<Id> {
-        self.map.next_free_id(group).await
-    }
-
     async fn remove_non_master(&mut self) -> Result<()> {
         self.map.remove_non_master().await
     }

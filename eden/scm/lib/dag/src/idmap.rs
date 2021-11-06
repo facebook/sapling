@@ -65,7 +65,6 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
             Some(id) => id + 1,
             None => group.min_id(),
         };
-        assert_eq!(next_free_id, self.next_free_id(group).await?);
 
         // There are some interesting cases to optimize the numbers:
         //
@@ -188,7 +187,6 @@ impl<T> IdMapAssignHead for T where T: IdConvert + IdMapWrite {}
 #[async_trait::async_trait]
 pub trait IdMapWrite {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
-    async fn next_free_id(&self, group: Group) -> Result<Id>;
     async fn remove_non_master(&mut self) -> Result<()>;
     async fn need_rebuild_non_master(&self) -> bool;
 }

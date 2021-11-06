@@ -378,9 +378,6 @@ impl IdMapWrite for IdMap {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         IdMap::insert(self, id, name)
     }
-    async fn next_free_id(&self, group: Group) -> Result<Id> {
-        IdMap::next_free_id(self, group)
-    }
     async fn remove_non_master(&mut self) -> Result<()> {
         self.log.append(IdMap::MAGIC_CLEAR_NON_MASTER)?;
         self.map_version = VerLink::new();

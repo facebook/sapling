@@ -176,11 +176,6 @@ impl IdMapWrite for MemIdMap {
         self.map_version.bump();
         Ok(())
     }
-    async fn next_free_id(&self, group: Group) -> Result<Id> {
-        let cached = self.cached_next_free_ids[group.0].load(atomic::Ordering::SeqCst);
-        let id = Id(cached).max(group.min_id());
-        Ok(id)
-    }
     async fn remove_non_master(&mut self) -> Result<()> {
         self.map_version = VerLink::new();
         Ok(())
