@@ -122,7 +122,7 @@ pub trait IdDagStore: Send + Sync + 'static {
     /// [---merged segment-----------------]
     /// ```
     ///
-    /// Return the merged segment if it's meregable.
+    /// Return the merged segment if it's mergeable.
     fn maybe_merged_flat_segment(&self, segment: &Segment) -> Result<Option<Segment>> {
         let level = segment.level()?;
         if level != 0 {
@@ -144,7 +144,7 @@ pub trait IdDagStore: Send + Sync + 'static {
             // Cannot merge - span.low dos not have parent [low-1] (non linear).
             return Ok(None);
         }
-        let last_segment = match self.iter_segments_descending(group.max_id(), 0)?.next() {
+        let last_segment = match self.iter_segments_descending(span.low, 0)?.next() {
             Some(Ok(s)) => s,
             _ => return Ok(None), // Cannot merge - No last flat segment.
         };
@@ -157,6 +157,8 @@ pub trait IdDagStore: Send + Sync + 'static {
         // Can merge!
 
         // Sanity check: No high-level segments should cover "last_span".
+        // This is because we intentionally dropped the last (incomplete)
+        // high-level segment when building.
         for lv in 1..=self.max_level()? {
             if self
                 .find_segment_by_head_and_level(last_span.high, lv)?
@@ -471,13 +473,13 @@ mod tests {
         );
 
         let iter = store.iter_segments_descending(Id(25), 0).unwrap();
-        assert_eq!(fmt_iter(iter), ["11-15[10]", "R0-10[]"]);
+        assert_eq!(fmt_iter(iter), ["R0-15[]"]);
 
-        // 0-10 and 11-15 are not merged.
+        // 0-10 and 11-15 are merged.
         let seg = store.find_segment_by_head_and_level(Id(10), 0).unwrap();
-        assert_eq!(fmt(seg), "Some(R0-10[])");
+        assert_eq!(fmt(seg), "None");
         let seg = store.find_segment_by_head_and_level(Id(15), 0).unwrap();
-        assert_eq!(fmt(seg), "Some(11-15[10])");
+        assert_eq!(fmt(seg), "Some(R0-15[])");
 
         // 20-30 and 31-35 are merged.
         let seg = store.find_segment_by_head_and_level(Id(30), 0).unwrap();
@@ -485,11 +487,11 @@ mod tests {
         let seg = store.find_segment_by_head_and_level(Id(35), 0).unwrap();
         assert_eq!(fmt(seg), "Some(20-35[5])");
 
-        // 0-10 and 11-15 are not merged.
+        // 0-10 and 11-15 are merged.
         let seg = store.find_flat_segment_including_id(Id(9)).unwrap();
-        assert_eq!(fmt(seg), "Some(R0-10[])");
+        assert_eq!(fmt(seg), "Some(R0-15[])");
         let seg = store.find_flat_segment_including_id(Id(14)).unwrap();
-        assert_eq!(fmt(seg), "Some(11-15[10])");
+        assert_eq!(fmt(seg), "Some(R0-15[])");
         let seg = store.find_flat_segment_including_id(Id(16)).unwrap();
         assert_eq!(fmt(seg), "None");
 
@@ -503,7 +505,7 @@ mod tests {
         let iter = store.iter_flat_segments_with_parent(Id(5)).unwrap();
         assert_eq!(fmt_iter(iter), ["20-x[5]"]);
         let iter = store.iter_flat_segments_with_parent(Id(10)).unwrap();
-        assert_eq!(fmt_iter(iter), ["11-x[10]"]);
+        assert_eq!(fmt_iter(iter), [] as [String; 0]);
         let iter = store.iter_flat_segments_with_parent(Id(30)).unwrap();
         assert_eq!(fmt_iter(iter), [] as [String; 0]);
     }

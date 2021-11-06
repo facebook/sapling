@@ -79,16 +79,24 @@ impl IdDagStore for InProcessStore {
         let parents = segment.parents()?;
         let group = high.group();
 
-        // Can we merge the segment with the last flat segment in "master_segments"?
+        // Can we merge the segment with the nearby flat segment?
         if let Some(merged) = self.maybe_merged_flat_segment(&segment)? {
             let (&last_high, &last_store_id) = match self
                 .get_head_index(0)
                 // This does a duplicated lookup that was done in maybe_merged_flat_segment.
-                // But the overhead is probably okay, and the code is easier to read.
-                .and_then(|index| index.range(..group.max_id()).rev().next())
+                // But the overhead is probably okay, and the code is not hard to read.
+                // The motivation was to share logic for stores (ex. `maybe_merged_flat_segment`).
+                .and_then(|index| index.range(..span.low).rev().next())
             {
-                Some(found) => found,
-                None => return bug("last segment should exist if segments are mergable"),
+                Some((high, store_id)) => {
+                    if cfg!(debug_assertions) {
+                        let seg = self.get_segment(store_id);
+                        debug_assert_eq!(seg.span()?.low, merged.span()?.low);
+                        debug_assert_eq!(seg.parents()?, merged.parents()?);
+                    }
+                    (high, store_id)
+                }
+                None => return bug("last segment should exist if segments are mergeable"),
             };
 
             // Store the merged segment.
