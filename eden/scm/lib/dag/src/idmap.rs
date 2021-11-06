@@ -15,6 +15,7 @@ use crate::id::VertexName;
 use crate::ops::IdConvert;
 use crate::ops::Parents;
 use crate::segment::PreparedFlatSegments;
+use crate::IdSet;
 use crate::Result;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
@@ -43,11 +44,18 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     /// New `id`s inserted by this function will have the specified `group`.
     /// Existing `id`s that are ancestors of `head` will get re-assigned
     /// if they have a higher `group`.
+    ///
+    /// `covered_ids` specifies what ranges of `Id`s are already covered.
+    /// This is usually obtained from `IdDag::all_ids_in_groups(&Group::ALL)`.
+    /// `IdMap` itself might not be able to provide that information
+    /// efficiently because it might be lazy. `covered_ids` will be updated
+    /// to cover newly inserted `Id`s.
     async fn assign_head(
         &mut self,
         head: VertexName,
         parents_by_name: &dyn Parents,
         group: Group,
+        covered_ids: &mut IdSet,
     ) -> Result<PreparedFlatSegments> {
         // There are some interesting cases to optimize the numbers:
         //
@@ -142,6 +150,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                         None => {
                             let id = self.next_free_id(group).await?;
                             tracing::trace!(target: "dag::assign", "assign {:?} = {:?}", &head, id);
+                            covered_ids.push(id);
                             self.insert(id, head.as_ref()).await?;
                             let parents = &parent_ids[parent_start..];
                             outcome.push_edge(id, parents);

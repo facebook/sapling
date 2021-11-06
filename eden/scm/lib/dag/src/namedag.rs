@@ -376,9 +376,13 @@ where
 
         // Update IdMap. Keep track of what heads are added.
         let mut outcome = PreparedFlatSegments::default();
+        let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
         for head in heads.iter() {
             if !self.contains_vertex_name(head).await? {
-                outcome.merge(self.assign_head(head.clone(), parents, group).await?);
+                let prepared_segments = self
+                    .assign_head(head.clone(), parents, group, &mut covered)
+                    .await?;
+                outcome.merge(prepared_segments);
                 self.pending_heads.push(head.clone());
             }
         }
@@ -2040,6 +2044,7 @@ where
     ) -> Result<()> {
         // Update IdMap.
         let mut outcome = PreparedFlatSegments::default();
+        let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
         for (nodes, group) in [
             (master_heads, Group::MASTER),
             (non_master_heads, Group::NON_MASTER),
@@ -2047,10 +2052,10 @@ where
             for node in nodes.iter() {
                 // Important: do not call self.map.assign_head. It does not trigger
                 // remote protocol properly.
-                outcome.merge(
-                    self.assign_head(node.clone(), parent_names_func, group)
-                        .await?,
-                );
+                let prepared_segments = self
+                    .assign_head(node.clone(), parent_names_func, group, &mut covered)
+                    .await?;
+                outcome.merge(prepared_segments);
             }
         }
 
