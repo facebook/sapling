@@ -346,6 +346,11 @@ impl SpanSet {
 
     /// Tests if a given [`Id`] or [`Span`] is covered by this set.
     pub fn contains(&self, value: impl Into<Span>) -> bool {
+        self.span_contains(value).is_some()
+    }
+
+    /// Find the [`Span`] that covers the given `value`.
+    pub fn span_contains(&self, value: impl Into<Span>) -> Option<&Span> {
         let span = value.into();
         let idx = match self.spans.bsearch_by(|probe| span.low.cmp(&probe.low)) {
             Ok(idx) => idx,
@@ -353,10 +358,11 @@ impl SpanSet {
         };
         if let Some(existing_span) = self.spans.get(idx) {
             debug_assert!(existing_span.low <= span.low);
-            existing_span.high >= span.high
-        } else {
-            false
+            if existing_span.high >= span.high {
+                return Some(existing_span);
+            }
         }
+        None
     }
 
     /// Skip the first `n` items.
@@ -1261,6 +1267,22 @@ mod tests {
                 let mut set = set.clone();
                 set.push(low..=high);
                 assert_eq!(set.as_spans(), expected.as_spans());
+            }
+        }
+    }
+
+    #[test]
+    fn test_span_contains_brute_force() {
+        let set = SpanSet::from_spans(vec![5..=10, 15..=16, 18..=20, 23..=23, 26..=30, 35..=40]);
+        for low in 1..=45 {
+            for high in low..=45 {
+                let span = Span::from(low..=high);
+                let result1 = set.span_contains(span);
+                let result2 = set
+                    .as_spans()
+                    .iter()
+                    .find(|s| s.contains(Id(low)) && s.contains(Id(high)));
+                assert_eq!(result1, result2);
             }
         }
     }
