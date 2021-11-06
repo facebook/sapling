@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include <fmt/core.h>
 
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
@@ -21,24 +22,51 @@ using std::string;
 namespace facebook::eden {
 
 HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash20& hgRevHash) {
-  auto [hash, buf] = prepareToStore(path, hgRevHash);
+  auto [hash, buf] = prepareToStoreLegacy(path, hgRevHash);
   value_ = std::move(buf);
+}
+
+std::optional<HgProxyHash> HgProxyHash::tryParseEmbeddedProxyHash(
+    const ObjectId& edenObjectId) {
+  if (edenObjectId.size() > Hash20::RAW_SIZE) {
+    auto type = edenObjectId[0];
+    if (edenObjectId.size() == Hash20::RAW_SIZE + 1 &&
+        type == TYPE_HG_ID_NO_PATH) {
+      auto hash = Hash20{edenObjectId.getBytes().subpiece(1, Hash20::RAW_SIZE)};
+      return HgProxyHash{RelativePathPiece{}, hash};
+    } else {
+      throw std::invalid_argument(fmt::format(
+          "Unknown proxy hash type: size {}, type {}",
+          edenObjectId.size(),
+          type));
+    }
+  }
+  return std::nullopt;
 }
 
 folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     LocalStore* store,
     ObjectIdRange blobHashes) {
+  std::vector<HgProxyHash> embedded_results;
   std::vector<ByteRange> byteRanges;
   for (const auto& hash : blobHashes) {
-    byteRanges.push_back(hash.getBytes());
+    if (auto embedded = tryParseEmbeddedProxyHash(hash)) {
+      embedded_results.push_back(*embedded);
+    } else {
+      byteRanges.push_back(hash.getBytes());
+    }
+  }
+  if (byteRanges.empty()) {
+    return embedded_results;
   }
   return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
-      .thenValue([blobHashes](std::vector<StoreResult>&& data) {
-        std::vector<HgProxyHash> results;
+      .thenValue([embedded_results,
+                  byteRanges](std::vector<StoreResult>&& data) {
+        std::vector<HgProxyHash> results{embedded_results};
 
-        for (size_t i = 0; i < blobHashes.size(); ++i) {
-          results.emplace_back(
-              HgProxyHash{blobHashes.at(i), data[i], "prefetchFiles getBatch"});
+        for (size_t i = 0; i < byteRanges.size(); ++i) {
+          results.emplace_back(HgProxyHash{
+              ObjectId{byteRanges.at(i)}, data[i], "prefetchFiles getBatch"});
         }
 
         return results;
@@ -49,6 +77,9 @@ HgProxyHash HgProxyHash::load(
     LocalStore* store,
     const ObjectId& edenObjectId,
     StringPiece context) {
+  if (auto embedded = tryParseEmbeddedProxyHash(edenObjectId)) {
+    return *embedded;
+  }
   // Read the path name and file rev hash
   auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenObjectId);
   if (!infoResult.isValid()) {
@@ -63,13 +94,24 @@ HgProxyHash HgProxyHash::load(
 ObjectId HgProxyHash::store(
     RelativePathPiece path,
     Hash20 hgRevHash,
-    LocalStore::WriteBatch* writeBatch) {
-  auto computedPair = prepareToStore(path, hgRevHash);
-  HgProxyHash::store(computedPair, writeBatch);
+    std::optional<LocalStore::WriteBatch*> writeBatch) {
+  if (!writeBatch) {
+    return makeEmbeddedProxyHash(hgRevHash);
+  }
+  auto computedPair = prepareToStoreLegacy(path, hgRevHash);
+  HgProxyHash::storeLegacy(computedPair, *writeBatch);
   return computedPair.first;
 }
 
-std::pair<ObjectId, std::string> HgProxyHash::prepareToStore(
+ObjectId HgProxyHash::makeEmbeddedProxyHash(Hash20 hgRevHash) {
+  folly::fbstring str;
+  str.reserve(Hash20::RAW_SIZE + 1);
+  str.push_back(TYPE_HG_ID_NO_PATH);
+  str += hgRevHash.toByteString();
+  return ObjectId{std::move(str)};
+}
+
+std::pair<ObjectId, std::string> HgProxyHash::prepareToStoreLegacy(
     RelativePathPiece path,
     Hash20 hgRevHash) {
   // Serialize the (path, hgRevHash) tuple into a buffer.
@@ -81,7 +123,7 @@ std::pair<ObjectId, std::string> HgProxyHash::prepareToStore(
   return std::make_pair(edenBlobHash, std::move(buf));
 }
 
-void HgProxyHash::store(
+void HgProxyHash::storeLegacy(
     const std::pair<ObjectId, std::string>& computedPair,
     LocalStore::WriteBatch* writeBatch) {
   writeBatch->put(

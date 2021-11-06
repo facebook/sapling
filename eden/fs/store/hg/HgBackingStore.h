@@ -58,11 +58,13 @@ class HgBackingStore {
   HgBackingStore(
       AbsolutePathPiece repository,
       HgImporter* importer,
+      std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<EdenStats>);
   HgBackingStore(
       AbsolutePathPiece repository,
       HgImporter* importer,
+      std::shared_ptr<ReloadableConfig> config,
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<EdenStats>,
       MetadataImporterFactory metadataImporter);

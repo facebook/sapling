@@ -148,6 +148,9 @@ bool LocalStore::hasKey(KeySpace keySpace, const ObjectId& id) const {
 }
 
 void LocalStore::putTree(const Tree& tree) {
+  if (!tree.isGitTreeCompatible()) {
+    return;
+  }
   auto serialized = LocalStore::serializeTree(tree);
   ByteRange treeData = serialized.coalesce();
 
@@ -155,6 +158,9 @@ void LocalStore::putTree(const Tree& tree) {
 }
 
 void LocalStore::WriteBatch::putTree(const Tree& tree) {
+  if (!tree.isGitTreeCompatible()) {
+    return;
+  }
   auto serialized = LocalStore::serializeTree(tree);
   ByteRange treeData = serialized.coalesce();
 

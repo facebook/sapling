@@ -121,6 +121,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       std::make_unique<HgBackingStore>(
           repo.path(),
           &importer,
+          edenConfig,
           localStore,
           stats,
           MetadataImporter::getMetadataImporterFactory<TestMetadataImporter>()),

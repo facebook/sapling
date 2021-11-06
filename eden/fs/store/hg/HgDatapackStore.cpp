@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 
+#include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -42,7 +43,7 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
 TreeEntry fromRawTreeEntry(
     RustTreeEntry entry,
     RelativePathPiece path,
-    LocalStore::WriteBatch* writeBatch) {
+    std::optional<LocalStore::WriteBatch*> writeBatch) {
   std::optional<uint64_t> size;
   std::optional<Hash20> contentSha1;
 
@@ -72,7 +73,7 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
     const RustTree* tree,
     const ObjectId& edenTreeId,
     RelativePathPiece path,
-    LocalStore::WriteBatch* writeBatch) {
+    LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
   std::vector<TreeEntry> entries;
 
   for (uintptr_t i = 0; i < tree->length; i++) {
@@ -83,8 +84,9 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
       XLOG(WARN) << "Ignoring directory entry: " << ex.what();
     }
   }
-  writeBatch->flush();
-
+  if (writeBatch) {
+    writeBatch->flush();
+  }
   return std::make_unique<Tree>(std::move(entries), edenTreeId);
 }
 } // namespace
@@ -106,12 +108,13 @@ std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
     const HgProxyHash& proxyHash,
     LocalStore& localStore) {
   auto tree = store_.getTree(proxyHash.byteHash(), /*local=*/true);
+  auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
   if (tree) {
     return fromRawTree(
         tree.get(),
         edenTreeId,
         proxyHash.path(),
-        localStore.beginWrite().get());
+        directObjectId ? NULL : localStore.beginWrite().get());
   }
 
   return nullptr;
@@ -163,11 +166,12 @@ void HgDatapackStore::getTreeBatch(
     requests.emplace_back(
         folly::ByteRange{proxyHash.path().stringPiece()}, proxyHash.byteHash());
   }
+  auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
 
   store_.getTreeBatch(
       requests,
       false,
-      [promises, &requests, &importRequests, writeBatch](
+      [directObjectId, promises, &requests, &importRequests, writeBatch](
           size_t index, std::shared_ptr<RustTree> content) mutable {
         auto& promise = (*promises)[index];
         promise.setWith([&] {
@@ -185,7 +189,7 @@ void HgDatapackStore::getTreeBatch(
               content.get(),
               treeRequest->hash,
               treeRequest->proxyHash.path(),
-              writeBatch);
+              directObjectId ? NULL : writeBatch);
         });
       });
 }
@@ -210,7 +214,9 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
     tree = store_.getTree(manifestId.getBytes(), false);
   }
   if (tree) {
-    return fromRawTree(tree.get(), edenTreeId, path, writeBatch);
+    auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
+    return fromRawTree(
+        tree.get(), edenTreeId, path, directObjectId ? NULL : writeBatch);
   }
   return nullptr;
 }

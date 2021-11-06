@@ -136,15 +136,6 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
       const ObjectId& id) const;
 
   /**
-   * Compute the serialized version of the tree in a (not coalesced) IOBuf.
-   * This does not modify the contents of the store; it is the method
-   * used by the putTree method to compute the data that it stores.
-   * This is useful when computing the overall set of data during a
-   * two phase import.
-   */
-  static folly::IOBuf serializeTree(const Tree& tree);
-
-  /**
    * Test whether the key is stored.
    */
   virtual bool hasKey(KeySpace keySpace, folly::ByteRange key) const = 0;
@@ -263,6 +254,15 @@ class LocalStore : public std::enable_shared_from_this<LocalStore> {
   std::atomic<bool> enableBlobCaching = true;
 
  private:
+  /**
+   * Compute the serialized version of the tree in a (not coalesced) IOBuf.
+   * This does not modify the contents of the store; it is the method
+   * used by the putTree method to compute the data that it stores.
+   * This is useful when computing the overall set of data during a
+   * two phase import.
+   */
+  static folly::IOBuf serializeTree(const Tree& tree);
+
   /**
    * Store metadata for each of the entries in the Tree. This stores the
    * blob metadata for each entry under the identifing hash of that entry and

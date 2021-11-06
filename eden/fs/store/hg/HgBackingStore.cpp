@@ -176,7 +176,8 @@ HgBackingStore::HgBackingStore(
       serverThreadPool_(serverThreadPool),
       datapackStore_(
           repository,
-          config->getEdenConfig()->useEdenApi.getValue()) {
+          config->getEdenConfig()->useEdenApi.getValue(),
+          config) {
   HgImporter importer(repository, stats);
   const auto& options = importer.getOptions();
   repoName_ = options.repoName;
@@ -191,12 +192,14 @@ HgBackingStore::HgBackingStore(
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     HgImporter* importer,
+    std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
     std::shared_ptr<EdenStats> stats)
     : HgBackingStore(
           repository,
-          importer,
-          localStore,
+          std::move(importer),
+          std::move(config),
+          std::move(localStore),
           stats,
           MetadataImporter::getMetadataImporterFactory<
               DefaultMetadataImporter>()) {}
@@ -204,14 +207,16 @@ HgBackingStore::HgBackingStore(
 HgBackingStore::HgBackingStore(
     AbsolutePathPiece repository,
     HgImporter* importer,
+    std::shared_ptr<ReloadableConfig> config,
     std::shared_ptr<LocalStore> localStore,
     std::shared_ptr<EdenStats> stats,
     MetadataImporterFactory metadataImporterFactory)
     : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
+      config_(std::move(config)),
       serverThreadPool_{importThreadPool_.get()},
-      datapackStore_(repository, false) {
+      datapackStore_(repository, false, config_) {
   const auto& options = importer->getOptions();
   repoName_ = options.repoName;
   metadataImporter_ = metadataImporterFactory(config_, repoName_, localStore_);
@@ -563,13 +568,17 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
     LocalStore::WriteBatch* writeBatch) {
   auto manifest = Manifest(std::move(content));
   std::vector<TreeEntry> entries;
+  auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
 
   for (auto& entry : manifest) {
     XLOG(DBG9) << "tree: " << manifestNode << " " << entry.name
                << " node: " << entry.node << " flag: " << entry.type;
 
     auto relPath = path + entry.name;
-    auto proxyHash = HgProxyHash::store(relPath, entry.node, writeBatch);
+    auto proxyHash = HgProxyHash::store(
+        relPath,
+        entry.node,
+        directObjectId ? std::nullopt : std::optional{writeBatch});
 
     entries.emplace_back(proxyHash, std::move(entry.name), entry.type);
   }
@@ -631,17 +640,29 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifestImpl(
     bool prefetchMetadata) {
   // Record that we are at the root for this node
   RelativePathPiece path{};
-  auto proxyInfo = HgProxyHash::prepareToStore(path, manifestNode);
-  auto futTree =
-      importTreeImpl(manifestNode, proxyInfo.first, path, prefetchMetadata);
-  return std::move(futTree).thenValue([batch = localStore_->beginWrite(),
-                                       info = std::move(proxyInfo)](auto tree) {
-    // Only write the proxy hash value for this once we've imported
-    // the root.
-    HgProxyHash::store(info, batch.get());
-    batch->flush();
-    return tree;
-  });
+  auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
+  ObjectId objectId;
+  std::pair<ObjectId, std::string> computedPair;
+  if (directObjectId) { // unfortunately we have to know about internals of
+                        // proxy hash here
+    objectId = HgProxyHash::makeEmbeddedProxyHash(manifestNode);
+  } else {
+    computedPair = HgProxyHash::prepareToStoreLegacy(path, manifestNode);
+    objectId = computedPair.first;
+  }
+  auto futTree = importTreeImpl(manifestNode, objectId, path, prefetchMetadata);
+  if (directObjectId) {
+    return futTree;
+  } else {
+    return std::move(futTree).thenValue(
+        [computedPair, batch = localStore_->beginWrite()](auto tree) {
+          // Only write the proxy hash value for this once we've imported
+          // the root.
+          HgProxyHash::storeLegacy(computedPair, batch.get());
+          batch->flush();
+          return tree;
+        });
+  }
 }
 
 unique_ptr<Tree> HgBackingStore::getTreeFromHgCache(

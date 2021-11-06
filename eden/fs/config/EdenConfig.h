@@ -501,6 +501,12 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> enforceParents{"hg:enforce-parents", true, this};
 
   /**
+   * If this config is set, embed HgId into ObjectId, instead of using proxy
+   * hash.
+   */
+  ConfigSetting<bool> directObjectId{"hg:use-direct-object-id", false, this};
+
+  /**
    * Controls the number of blob or prefetch import requests we batch in
    * HgBackingStore
    */

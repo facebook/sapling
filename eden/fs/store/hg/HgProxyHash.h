@@ -125,7 +125,7 @@ class HgProxyHash {
   static ObjectId store(
       RelativePathPiece path,
       Hash20 hgRevHash,
-      LocalStore::WriteBatch* writeBatch);
+      std::optional<LocalStore::WriteBatch*> writeBatch);
 
   /**
    * Compute the proxy hash information, but do not store it.
@@ -136,7 +136,7 @@ class HgProxyHash {
    * the caller is responsible for passing the pair to the HgProxyHash::store()
    * method below at the appropriate time.
    */
-  static std::pair<ObjectId, std::string> prepareToStore(
+  static std::pair<ObjectId, std::string> prepareToStoreLegacy(
       RelativePathPiece path,
       Hash20 hgRevHash);
 
@@ -144,9 +144,14 @@ class HgProxyHash {
    * Store precomputed proxy hash information.
    * Stores the data computed by prepareToStore().
    */
-  static void store(
+  static void storeLegacy(
       const std::pair<ObjectId, std::string>& computedPair,
       LocalStore::WriteBatch* writeBatch);
+
+  /**
+   * Make ObjectId that contains hgRevHash directly
+   */
+  static ObjectId makeEmbeddedProxyHash(Hash20 hgRevHash);
 
  private:
   HgProxyHash(
@@ -169,6 +174,11 @@ class HgProxyHash {
    * Note there will be an exception being thrown if `value_` is invalid.
    */
   void validate(ObjectId edenBlobHash);
+
+  static constexpr char TYPE_HG_ID_NO_PATH = 0x01;
+
+  static std::optional<HgProxyHash> tryParseEmbeddedProxyHash(
+      const ObjectId& edenObjectId);
 
   /**
    * The serialized data as written in the LocalStore.

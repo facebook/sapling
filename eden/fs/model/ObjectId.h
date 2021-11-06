@@ -65,6 +65,10 @@ class ObjectId : boost::totally_ordered<ObjectId> {
     return folly::ByteRange{folly::StringPiece{bytes_}};
   }
 
+  char operator[](size_t pos) const {
+    return bytes_[pos];
+  }
+
   /**
    * Returns size of this ObjectId
    */

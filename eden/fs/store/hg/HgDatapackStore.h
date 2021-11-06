@@ -19,11 +19,16 @@ namespace facebook::eden {
 
 class HgProxyHash;
 class HgImportRequest;
+class ReloadableConfig;
 
 class HgDatapackStore {
  public:
-  HgDatapackStore(AbsolutePathPiece repository, bool useEdenApi)
-      : store_{repository.stringPiece(), useEdenApi} {}
+  HgDatapackStore(
+      AbsolutePathPiece repository,
+      bool useEdenApi,
+      std::shared_ptr<ReloadableConfig> config)
+      : store_{repository.stringPiece(), useEdenApi},
+        config_{std::move(config)} {}
 
   /**
    * Imports the blob identified by the given hash from the local store.
@@ -71,6 +76,7 @@ class HgDatapackStore {
 
  private:
   HgNativeBackingStore store_;
+  std::shared_ptr<ReloadableConfig> config_;
 };
 
 } // namespace facebook::eden

@@ -84,6 +84,15 @@ class Tree {
     return results;
   }
 
+  bool isGitTreeCompatible() const {
+    for (const auto& entry : entries_) {
+      if (entry.getHash().size() != Hash20::RAW_SIZE) {
+        return false;
+      }
+    }
+    return true;
+  }
+
  private:
   const ObjectId hash_;
   const std::vector<TreeEntry> entries_;
