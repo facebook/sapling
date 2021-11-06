@@ -404,9 +404,6 @@ def smartlognodes(repo, headnodes, masternodes):
         lambda: parents(draftnodes) | draftnodes | headnodes | masternodes
     )
 
-    # Include the ancestor of above commits to make the graph connected.
-    nodes = repo.dageval(lambda: gcaall(public() & nodes) | nodes)
-
     # Protection to avoid running into "very slow" cases. This does not
     # usually happen. But wrong visibleheads might trigger it (ex. large
     # draft() size). Note this is tested before "collapse-obsolete", because
@@ -421,6 +418,9 @@ def smartlognodes(repo, headnodes, masternodes):
             _("(consider running '@prog@ doctor' to hide unrelated commits)\n")
         )
         nodes = nodes.take(limit)
+
+    # Include the ancestor of above commits to make the graph connected.
+    nodes = repo.dageval(lambda: gcaall(public() & nodes) | nodes)
 
     # Collapse long obsoleted stack - only keep their heads and roots.
     # This is incompatible with automation (namely, nuclide-core) yet.
