@@ -50,13 +50,20 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     /// `IdMap` itself might not be able to provide that information
     /// efficiently because it might be lazy. `covered_ids` will be updated
     /// to cover newly inserted `Id`s.
+    ///
+    /// `reserved_ids` specifies what ranges are reserved for future growth
+    /// of other important heads (usually a couple of mainline branches that
+    /// are long-lived, growing, and used by many people). This is useful
+    /// to reduce fragmentation.
     async fn assign_head(
         &mut self,
         head: VertexName,
         parents_by_name: &dyn Parents,
         group: Group,
         covered_ids: &mut IdSet,
+        reserved_ids: &IdSet,
     ) -> Result<PreparedFlatSegments> {
+        assert!(reserved_ids.is_empty());
         // Use `covered_ids` to calculate next free id.
         let mut next_free_id = match covered_ids
             .intersection(&IdSet::from(group.min_id()..=group.max_id()))

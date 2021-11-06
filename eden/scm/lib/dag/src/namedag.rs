@@ -380,7 +380,7 @@ where
         for head in heads.iter() {
             if !self.contains_vertex_name(head).await? {
                 let prepared_segments = self
-                    .assign_head(head.clone(), parents, group, &mut covered)
+                    .assign_head(head.clone(), parents, group, &mut covered, &IdSet::empty())
                     .await?;
                 outcome.merge(prepared_segments);
                 self.pending_heads.push(head.clone());
@@ -2041,6 +2041,7 @@ where
         // Update IdMap.
         let mut outcome = PreparedFlatSegments::default();
         let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
+        let reserved = IdSet::empty();
         for (nodes, group) in [
             (master_heads, Group::MASTER),
             (non_master_heads, Group::NON_MASTER),
@@ -2049,7 +2050,13 @@ where
                 // Important: do not call self.map.assign_head. It does not trigger
                 // remote protocol properly.
                 let prepared_segments = self
-                    .assign_head(node.clone(), parent_names_func, group, &mut covered)
+                    .assign_head(
+                        node.clone(),
+                        parent_names_func,
+                        group,
+                        &mut covered,
+                        &reserved,
+                    )
                     .await?;
                 outcome.merge(prepared_segments);
             }
