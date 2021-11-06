@@ -65,14 +65,6 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
         reserved_ids: &IdSet,
     ) -> Result<PreparedFlatSegments> {
         assert!(reserved_ids.is_empty());
-        // Use `covered_ids` to calculate next free id.
-        let mut next_free_id = match covered_ids
-            .intersection(&IdSet::from(group.min_id()..=group.max_id()))
-            .max()
-        {
-            Some(id) => id + 1,
-            None => group.min_id(),
-        };
 
         // There are some interesting cases to optimize the numbers:
         //
@@ -182,8 +174,6 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                                 break;
                             }
                             let id = candidate_id;
-                            assert_eq!(id, next_free_id);
-                            next_free_id = next_free_id + 1;
                             if id.group() != group {
                                 return Err(Error::IdOverflow(group));
                             }
