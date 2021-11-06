@@ -320,6 +320,14 @@ mod tests {
         )
     }
 
+    fn fmt<T: fmt::Debug>(value: T) -> String {
+        format!("{:?}", value)
+    }
+
+    fn fmt_iter<T: fmt::Debug>(iter: impl Iterator<Item = Result<T>>) -> Vec<String> {
+        iter.map(|i| fmt(i.unwrap())).collect()
+    }
+
     fn insert_segments(store: &mut dyn IdDagStore, segments: Vec<&Segment>) {
         for segment in segments {
             store.insert_segment(segment.clone()).unwrap();
@@ -449,6 +457,56 @@ mod tests {
         store.remove_non_master().unwrap();
         assert_eq!(all_id_str(store, &[N]), "");
         assert_eq!(all_id_str(store, &[M, N]), "0..=70");
+    }
+
+    fn test_discontinuous_merges(store: &mut dyn IdDagStore) {
+        insert_segments(
+            store,
+            vec![
+                &seg(ROOT, M, 0, 10, &[]),
+                &seg(EMPTY, M, 20, 30, &[5]),
+                &seg(EMPTY, M, 11, 15, &[10]),
+                &seg(EMPTY, M, 31, 35, &[30]),
+            ],
+        );
+
+        let iter = store.iter_segments_descending(Id(25), 0).unwrap();
+        assert_eq!(fmt_iter(iter), ["11-15[10]", "R0-10[]"]);
+
+        // 0-10 and 11-15 are not merged.
+        let seg = store.find_segment_by_head_and_level(Id(10), 0).unwrap();
+        assert_eq!(fmt(seg), "Some(R0-10[])");
+        let seg = store.find_segment_by_head_and_level(Id(15), 0).unwrap();
+        assert_eq!(fmt(seg), "Some(11-15[10])");
+
+        // 20-30 and 31-35 are merged.
+        let seg = store.find_segment_by_head_and_level(Id(30), 0).unwrap();
+        assert_eq!(fmt(seg), "None");
+        let seg = store.find_segment_by_head_and_level(Id(35), 0).unwrap();
+        assert_eq!(fmt(seg), "Some(20-35[5])");
+
+        // 0-10 and 11-15 are not merged.
+        let seg = store.find_flat_segment_including_id(Id(9)).unwrap();
+        assert_eq!(fmt(seg), "Some(R0-10[])");
+        let seg = store.find_flat_segment_including_id(Id(14)).unwrap();
+        assert_eq!(fmt(seg), "Some(11-15[10])");
+        let seg = store.find_flat_segment_including_id(Id(16)).unwrap();
+        // Different stores return different results.
+        // assert_eq!(fmt(seg), "None");
+
+        // 20-30 and 31-35 are merged.
+        let seg = store.find_flat_segment_including_id(Id(35)).unwrap();
+        assert_eq!(fmt(seg), "Some(20-35[5])");
+        let seg = store.find_flat_segment_including_id(Id(36)).unwrap();
+        assert_eq!(fmt(seg), "None");
+
+        // Parent lookup.
+        let iter = store.iter_flat_segments_with_parent(Id(5)).unwrap();
+        assert_eq!(fmt_iter(iter), ["20-x[5]"]);
+        let iter = store.iter_flat_segments_with_parent(Id(10)).unwrap();
+        assert_eq!(fmt_iter(iter), ["11-x[10]"]);
+        let iter = store.iter_flat_segments_with_parent(Id(30)).unwrap();
+        assert_eq!(fmt_iter(iter), [] as [String; 0]);
     }
 
     fn test_next_free_id(store: &dyn IdDagStore) {
@@ -741,5 +799,10 @@ mod tests {
     #[test]
     fn test_multi_stores_remove_non_master() {
         for_each_store(|store| test_remove_non_master(store));
+    }
+
+    #[test]
+    fn test_multi_stores_discontinuous_merges() {
+        for_each_empty_store(|store| test_discontinuous_merges(store));
     }
 }
