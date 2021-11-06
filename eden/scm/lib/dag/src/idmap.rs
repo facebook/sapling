@@ -140,9 +140,9 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                     let id = match self.vertex_id_with_max_group(&head, group).await? {
                         Some(id) => id,
                         None => {
-                            let id = self.next_free_id(group)?;
+                            let id = self.next_free_id(group).await?;
                             tracing::trace!(target: "dag::assign", "assign {:?} = {:?}", &head, id);
-                            self.insert(id, head.as_ref())?;
+                            self.insert(id, head.as_ref()).await?;
                             let parents = &parent_ids[parent_start..];
                             outcome.push_edge(id, parents);
                             id
@@ -165,11 +165,12 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
 impl<T> IdMapAssignHead for T where T: IdConvert + IdMapWrite {}
 
 /// Write operations for IdMap.
+#[async_trait::async_trait]
 pub trait IdMapWrite {
-    fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
-    fn next_free_id(&self, group: Group) -> Result<Id>;
-    fn remove_non_master(&mut self) -> Result<()>;
-    fn need_rebuild_non_master(&self) -> bool;
+    async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
+    async fn next_free_id(&self, group: Group) -> Result<Id>;
+    async fn remove_non_master(&mut self) -> Result<()>;
+    async fn need_rebuild_non_master(&self) -> bool;
 }
 
 #[cfg(test)]

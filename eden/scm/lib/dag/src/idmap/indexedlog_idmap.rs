@@ -373,14 +373,15 @@ impl IdConvert for IdMap {
     }
 }
 
+#[async_trait::async_trait]
 impl IdMapWrite for IdMap {
-    fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
+    async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         IdMap::insert(self, id, name)
     }
-    fn next_free_id(&self, group: Group) -> Result<Id> {
+    async fn next_free_id(&self, group: Group) -> Result<Id> {
         IdMap::next_free_id(self, group)
     }
-    fn remove_non_master(&mut self) -> Result<()> {
+    async fn remove_non_master(&mut self) -> Result<()> {
         self.log.append(IdMap::MAGIC_CLEAR_NON_MASTER)?;
         self.map_version = VerLink::new();
         self.need_rebuild_non_master = false;
@@ -391,7 +392,7 @@ impl IdMapWrite for IdMap {
         }
         Ok(())
     }
-    fn need_rebuild_non_master(&self) -> bool {
+    async fn need_rebuild_non_master(&self) -> bool {
         self.need_rebuild_non_master
     }
 }

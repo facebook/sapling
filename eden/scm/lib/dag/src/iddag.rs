@@ -1539,7 +1539,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     ) -> Result<()> {
         for id in self.universal_ids()? {
             let name = full_idmap.vertex_name(id).await?;
-            sparse_idmap.insert(id, name.as_ref())?
+            sparse_idmap.insert(id, name.as_ref()).await?
         }
         Ok(())
     }

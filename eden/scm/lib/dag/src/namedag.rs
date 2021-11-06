@@ -296,7 +296,7 @@ where
                 }
             }
             tracing::debug!(target: "dag::cache", "insert {:?}-{} to IdMap", &name, id);
-            new.map.insert(id, name.as_ref())?;
+            new.map.insert(id, name.as_ref()).await?;
         }
 
         new.map.persist(&map_lock)?;
@@ -391,6 +391,7 @@ where
     }
 }
 
+#[async_trait::async_trait]
 impl<IS, M, P, S> IdMapWrite for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
@@ -399,20 +400,20 @@ where
     P: TryClone + Send + Sync,
     S: TryClone + Send + Sync,
 {
-    fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
-        self.map.insert(id, name)
+    async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
+        self.map.insert(id, name).await
     }
 
-    fn next_free_id(&self, group: Group) -> Result<Id> {
-        self.map.next_free_id(group)
+    async fn next_free_id(&self, group: Group) -> Result<Id> {
+        self.map.next_free_id(group).await
     }
 
-    fn remove_non_master(&mut self) -> Result<()> {
-        self.map.remove_non_master()
+    async fn remove_non_master(&mut self) -> Result<()> {
+        self.map.remove_non_master().await
     }
 
-    fn need_rebuild_non_master(&self) -> bool {
-        self.map.need_rebuild_non_master()
+    async fn need_rebuild_non_master(&self) -> bool {
+        self.map.need_rebuild_non_master().await
     }
 }
 
@@ -435,7 +436,7 @@ where
         }
         for (id, name) in clone_data.idmap {
             tracing::debug!(target: "dag::clone", "insert IdMap: {:?}-{:?}", &name, id);
-            self.map.insert(id, name.as_ref())?;
+            self.map.insert(id, name.as_ref()).await?;
         }
         self.dag
             .build_segments_volatile_from_prepared_flat_segments(&clone_data.flat_segments)?;
@@ -587,7 +588,7 @@ where
                 if let Ok(id) = id {
                     if !new.map.contains_vertex_name(&name).await? {
                         tracing::debug!(target: "dag::pull", "insert IdMap: {:?}-{:?}", &name, id);
-                        new.map.insert(id, name.as_ref())?;
+                        new.map.insert(id, name.as_ref()).await?;
                     }
                 }
             }
@@ -661,7 +662,7 @@ where
             for (server_id, name) in new_server_ids {
                 let client_id = Id((server_id.0 as i64 + server_to_client_offset) as u64);
                 tracing::debug!(target: "dag::pull", "insert IdMap: {:?}-{:?}", &name, client_id);
-                new.map.insert(client_id, name.as_ref())?;
+                new.map.insert(client_id, name.as_ref()).await?;
             }
         }
 
@@ -2014,7 +2015,7 @@ where
 
             // Remove existing non-master data.
             self.dag.remove_non_master()?;
-            self.map.remove_non_master()?;
+            self.map.remove_non_master().await?;
 
             // Populate vertex negative cache to reduce round-trips doing remote lookups.
             if self.is_vertex_lazy() {
@@ -2062,7 +2063,7 @@ where
         self.update_overlay_map_next_id()?;
 
         // Rebuild non-master ids and segments.
-        if self.need_rebuild_non_master() {
+        if self.need_rebuild_non_master().await {
             self.rebuild_non_master().await?;
         }
 
