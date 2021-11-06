@@ -57,12 +57,14 @@ impl Open for IndexedLogNameDagPath {
         let dag = IdDag::open_from_store(IndexedLogStore::open_from_clean_log(dag_log)?)?;
         let state = NameDagState { mlog: Some(mlog) };
         let overlay_map_next_id = map.next_free_id(Group::MASTER)?;
+        let persisted_id_set = dag.all_ids_in_groups(&Group::ALL)?;
         Ok(AbstractNameDag {
             dag,
             map,
             path: self.clone(),
             snapshot: Default::default(),
             pending_heads: Default::default(),
+            persisted_id_set,
             state,
             id: format!("ilog:{}", self.0.display()),
             overlay_map: Default::default(),

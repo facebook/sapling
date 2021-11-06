@@ -109,6 +109,9 @@ where
     /// Identity of the dag. Derived from `path`.
     id: String,
 
+    /// `Id`s that are persisted on disk. Used to answer `dirty()`.
+    persisted_id_set: IdSet,
+
     /// Overlay IdMap. Used to store IdMap results resolved using remote
     /// protocols.
     overlay_map: Arc<RwLock<CoreMemIdMap>>,
@@ -205,6 +208,7 @@ where
         drop(map_lock);
         drop(lock);
 
+        self.persisted_id_set = self.dag.all_ids_in_groups(&Group::ALL)?;
         debug_assert_eq!(self.dirty().await?.count().await?, 0);
         Ok(())
     }
@@ -489,6 +493,7 @@ where
         self.state.persist(&lock)?;
 
         self.invalidate_overlay_map()?;
+        self.persisted_id_set = self.dag.all_ids_in_groups(&Group::ALL)?;
 
         Ok(())
     }
@@ -838,6 +843,7 @@ where
                     map: self.map.try_clone()?,
                     snapshot: Default::default(),
                     pending_heads: self.pending_heads.clone(),
+                    persisted_id_set: self.persisted_id_set.clone(),
                     path: self.path.try_clone()?,
                     state: self.state.try_clone()?,
                     id: self.id.clone(),
@@ -1667,7 +1673,12 @@ where
 
     /// Vertexes buffered in memory, not yet written to disk.
     async fn dirty(&self) -> Result<NameSet> {
-        let spans = self.dag().dirty()?;
+        let all = self.dag().all()?;
+        let spans = all.difference(&self.persisted_id_set);
+        if cfg!(debug_assertions) {
+            let spans2 = self.dag().dirty()?;
+            assert_eq!(spans.as_spans(), spans2.as_spans());
+        }
         let set = NameSet::from_spans_dag(spans, self)?;
         Ok(set)
     }

@@ -16,6 +16,7 @@ use crate::idmap::MemIdMap;
 use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Persist;
+use crate::Group;
 use crate::Id;
 use crate::Result;
 
@@ -49,12 +50,14 @@ impl Open for MemNameDagPath {
     fn open(&self) -> Result<Self::OpenTarget> {
         let dag = IdDag::new_in_process();
         let map = MemIdMap::new();
+        let persisted_id_set = dag.all_ids_in_groups(&Group::ALL)?;
         let result = AbstractNameDag {
             dag,
             map,
             path: self.clone(),
             snapshot: Default::default(),
             pending_heads: Default::default(),
+            persisted_id_set,
             state: MemNameDagState::default(),
             id: format!("mem:{}", next_id()),
             overlay_map: Default::default(),
