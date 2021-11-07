@@ -1,0 +1,11 @@
+[package]
+name = "tokio_shim"
+edition = "2021"
+version = "0.0.0"
+include = ["lib.rs"]
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
