@@ -7,6 +7,7 @@
 /external
 # cmake
 /_build
+/CMakeFiles
 
 # Rust libraries and extensions
 Cargo.lock
