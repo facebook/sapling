@@ -96,12 +96,12 @@ edition = "2021"
 anyhow = "1"
 async-trait = "0.1"
 const-cstr = "0.3.0"
-fbthrift = {{ path = "../../../../../thrift/lib/rust"" }}
+fbthrift = {{ version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }}
 futures = "0.3"
 serde = {{ version = "1", features = ["derive"] }}
 serde_derive = "1.0"
 thiserror = "1"
-tokio_shim = {{ path = "../../../../../common/rust/shed/tokio_shim" }}
+tokio_shim = {{ version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }}
 tracing = "0.1"
 {}"#,
                 "g", unit.name, deps

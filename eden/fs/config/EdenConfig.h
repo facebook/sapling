@@ -17,7 +17,7 @@
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
 
-#include "common/rust/shed/hostcaps/hostcaps.h"
+//#include "common/rust/shed/hostcaps/hostcaps.h"
 #include "eden/fs/config/ConfigSetting.h"
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/config/MountProtocol.h"
@@ -781,23 +781,10 @@ class EdenConfig : private ConfigSettingManager {
       folly::kIsWindows ? MountProtocol::PRJFS : MountProtocol::FUSE,
       this};
 
-  // [facebook]
-  // Facebook internal
-
-  /**
-   * (Facebook Internal) Determines if EdenFS should use ServiceRouter.
-   */
-#ifdef EDEN_HAVE_SERVICEROUTER
-  ConfigSetting<bool> enableServiceRouter{
-      "facebook:enable-service-router",
-      fb_has_servicerouter(),
-      this};
-#else
   ConfigSetting<bool> enableServiceRouter{
       "facebook:enable-service-router",
       false,
       this};
-#endif
 };
 
 } // namespace facebook::eden
