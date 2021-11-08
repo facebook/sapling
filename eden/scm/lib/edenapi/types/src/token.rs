@@ -27,9 +27,17 @@ pub struct FileContentTokenMetadata {
 
 /// Token metadata. Could be different for different token types.
 /// A signed token guarantee the metadata has been verified.
+#[auto_wire]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UploadTokenMetadata {
+    #[id(1)]
     FileContentTokenMetadata(FileContentTokenMetadata),
+}
+
+impl Default for UploadTokenMetadata {
+    fn default() -> Self {
+        Self::FileContentTokenMetadata(Default::default())
+    }
 }
 
 impl From<FileContentTokenMetadata> for UploadTokenMetadata {

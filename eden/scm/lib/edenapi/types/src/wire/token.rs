@@ -5,53 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use serde::Deserialize;
-use serde::Serialize;
-
-use crate::token::UploadTokenMetadata;
 pub use crate::token::WireFileContentTokenMetadata;
 pub use crate::token::WireIndexableId;
 pub use crate::token::WireUploadToken;
 pub use crate::token::WireUploadTokenData;
+pub use crate::token::WireUploadTokenMetadata;
 pub use crate::token::WireUploadTokenSignature;
-use crate::wire::ToApi;
-use crate::wire::ToWire;
-use crate::wire::WireToApiConversionError;
-
-/// Token metadata. Could be different for different token types.
-/// A signed token guarantee the metadata has been verified.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum WireUploadTokenMetadata {
-    #[serde(rename = "1")]
-    WireFileContentTokenMetadata(WireFileContentTokenMetadata),
-}
-
-impl ToWire for UploadTokenMetadata {
-    type Wire = WireUploadTokenMetadata;
-
-    fn to_wire(self) -> Self::Wire {
-        use UploadTokenMetadata::*;
-        match self {
-            FileContentTokenMetadata(meta) => {
-                WireUploadTokenMetadata::WireFileContentTokenMetadata(meta.to_wire())
-            }
-        }
-    }
-}
-
-impl ToApi for WireUploadTokenMetadata {
-    type Api = UploadTokenMetadata;
-    type Error = WireToApiConversionError;
-
-    fn to_api(self) -> Result<Self::Api, Self::Error> {
-        use WireUploadTokenMetadata::*;
-        Ok(match self {
-            WireFileContentTokenMetadata(meta) => {
-                UploadTokenMetadata::FileContentTokenMetadata(meta.to_api()?)
-            }
-        })
-    }
-}
 
 #[cfg(test)]
 mod tests {

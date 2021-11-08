@@ -22,12 +22,18 @@ use crate::UploadToken;
 
 blake2_hash!(BonsaiChangesetId);
 
+#[auto_wire]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum AnyId {
+    #[id(1)]
     AnyFileContentId(AnyFileContentId),
+    #[id(2)]
     HgFilenodeId(HgId),
+    #[id(3)]
     HgTreeId(HgId),
+    #[id(4)]
     HgChangesetId(HgId),
+    #[id(5)]
     BonsaiChangesetId(BonsaiChangesetId),
 }
 

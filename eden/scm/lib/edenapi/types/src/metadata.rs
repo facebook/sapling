@@ -99,17 +99,31 @@ sized_hash!(Sha256, 32);
 blake2_hash!(ContentId);
 blake2_hash!(FsnodeId);
 
+#[auto_wire]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FileType {
+    #[id(1)]
     Regular,
+    #[id(2)]
     Executable,
+    #[id(3)]
     Symlink,
 }
 
+impl Default for FileType {
+    fn default() -> Self {
+        Self::Regular
+    }
+}
+
+#[auto_wire]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum AnyFileContentId {
+    #[id(1)]
     ContentId(ContentId),
+    #[id(2)]
     Sha1(Sha1),
+    #[id(3)]
     Sha256(Sha256),
 }
 
