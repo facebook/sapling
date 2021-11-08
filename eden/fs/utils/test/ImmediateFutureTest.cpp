@@ -325,6 +325,7 @@ TEST(ImmediateFuture, collectAllMixed) {
 
 TEST(ImmediateFuture, collectUncopyable) {
   struct Uncopyable {
+    Uncopyable() {}
     Uncopyable(Uncopyable&&) = default;
     Uncopyable(const Uncopyable&) = delete;
 
