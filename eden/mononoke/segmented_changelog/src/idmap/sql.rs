@@ -53,15 +53,37 @@ queries! {
         "
     }
 
-    read SelectChangesetId(
+    write CopyIdMap(
+        values: (repo_id: RepositoryId, new_version: IdMapVersion, source_version: IdMapVersion, copy_limit: u64)
+    ) {
+        insert_or_ignore,
+        "
+        {insert_or_ignore} INTO segmented_changelog_idmap_copy_mappings (repo_id, idmap_version, copied_version, copy_limit)
+        VALUES {values}
+        "
+    }
+
+    read GetIdMapCopySource(
         repo_id: RepositoryId,
         version: IdMapVersion,
-        dag_id: u64
-    ) -> (ChangesetId) {
+    ) -> (IdMapVersion, u64) {
         "
-        SELECT idmap.cs_id as cs_id
-        FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.vertex = {dag_id}
+        SELECT copied_version, copy_limit
+        FROM segmented_changelog_idmap_copy_mappings
+        WHERE repo_id = {repo_id} AND idmap_version = {version}
+        "
+    }
+
+    read CheckCopyMapping(
+        repo_id: RepositoryId,
+        version: IdMapVersion,
+        dag_id: u64,
+    ) -> (IdMapVersion) {
+        "
+        SELECT idmap_version
+        FROM segmented_changelog_idmap_copy_mappings
+        WHERE repo_id = {repo_id} AND copied_version = {version} AND copy_limit >= {dag_id}
+        LIMIT 1
         "
     }
 
@@ -73,7 +95,13 @@ queries! {
         "
         SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.vertex IN {dag_ids}
+            LEFT JOIN segmented_changelog_idmap_copy_mappings AS copy_mappings
+            ON (idmap.repo_id = copy_mappings.repo_id AND idmap.version = copy_mappings.copied_version)
+        WHERE
+            idmap.repo_id = {repo_id} AND
+            (idmap.version = {version} OR copy_mappings.idmap_version = {version}) AND
+            (copy_mappings.copy_limit IS NULL OR copy_mappings.copy_limit >= idmap.vertex) AND
+            idmap.vertex IN {dag_ids}
         "
     }
 
@@ -85,7 +113,13 @@ queries! {
         "
         SELECT idmap.cs_id as cs_id, idmap.vertex as vertex
         FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.cs_id in {cs_ids}
+            LEFT JOIN segmented_changelog_idmap_copy_mappings AS copy_mappings
+            ON (idmap.repo_id = copy_mappings.repo_id AND idmap.version = copy_mappings.copied_version)
+        WHERE
+            idmap.repo_id = {repo_id} AND
+            (idmap.version = {version} OR copy_mappings.idmap_version = {version}) AND
+            (copy_mappings.copy_limit IS NULL OR copy_mappings.copy_limit >= idmap.vertex) AND
+            idmap.cs_id in {cs_ids}
         "
     }
 
@@ -93,11 +127,20 @@ queries! {
         "
         SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.vertex = (
-            SELECT MAX(inx.vertex)
-            FROM segmented_changelog_idmap AS inx
-            WHERE inx.repo_id = {repo_id} AND inx.version = {version}
-        )
+            LEFT JOIN segmented_changelog_idmap_copy_mappings AS copy_mappings
+            ON (idmap.repo_id = copy_mappings.repo_id AND idmap.version = copy_mappings.copied_version)
+        WHERE
+            idmap.repo_id = {repo_id} AND
+            (idmap.version = {version} OR copy_mappings.idmap_version = {version}) AND
+            idmap.vertex = (
+                SELECT MAX(COALESCE(copy_mappings.copy_limit, inx.vertex))
+                FROM segmented_changelog_idmap AS inx
+                    LEFT JOIN segmented_changelog_idmap_copy_mappings AS copy_mappings
+                    ON (inx.repo_id = copy_mappings.repo_id AND inx.version = copy_mappings.copied_version)
+                WHERE
+                    inx.repo_id = {repo_id} AND
+                    (inx.version = {version} OR copy_mappings.idmap_version = {version})
+              )
         "
     }
 }
@@ -140,6 +183,62 @@ impl SqlIdMap {
         }
         let rows = SelectManyDagIds::query(conn, &self.repo_id, &self.version, cs_ids).await?;
         Ok(rows.into_iter().map(|row| (row.0, DagId(row.1))).collect())
+    }
+
+    #[allow(dead_code)]
+    pub async fn copy(&self, dag_limit: DagId, new_version: IdMapVersion) -> Result<Self, Error> {
+        // Check that this version *has* a DagId at `dag_limit`
+        if self
+            .select_many_changesetids(&self.connections.write_connection, &[dag_limit.0])
+            .await?
+            .is_empty()
+        {
+            return Err(format_err!(
+                "repo {} {:?} does not have DagId {}",
+                self.repo_id,
+                self.version,
+                dag_limit.0
+            ));
+        }
+        let new_self = Self::new(
+            self.connections.clone(),
+            self.replica_lag_monitor.clone(),
+            self.repo_id,
+            new_version,
+        );
+        let transaction = self
+            .connections
+            .write_connection
+            .start_transaction()
+            .await?;
+
+        // Check copy sources for this version, and create new copy sources for new_version
+        let (mut transaction, copy_sources) =
+            GetIdMapCopySource::query_with_transaction(transaction, &self.repo_id, &self.version)
+                .await?;
+        for (version, limit) in copy_sources {
+            let limit = dag_limit.0.min(limit);
+            let (t, _) = CopyIdMap::query_with_transaction(
+                transaction,
+                &[(&self.repo_id, &new_version, &version, &limit)],
+            )
+            .await?;
+            transaction = t;
+            if limit == dag_limit.0 {
+                // Copying existing copy mappings has covered everything. Stop copying here.
+                transaction.commit().await?;
+                return Ok(new_self);
+            }
+        }
+
+        // Then, if not everything is covered, add this version as a copy source for new_version
+        let (transaction, _) = CopyIdMap::query_with_transaction(
+            transaction,
+            &[(&self.repo_id, &new_version, &self.version, &dag_limit.0)],
+        )
+        .await?;
+        transaction.commit().await?;
+        Ok(new_self)
     }
 }
 
@@ -198,8 +297,9 @@ impl IdMap for SqlIdMap {
                 None => {
                     if first.0 != 0 {
                         return Err(format_err!(
-                            "repo {}: first dag_id being inserted into idmap is not 0 ({})",
+                            "repo {}: first dag_id being inserted into idmap {:?} is not 0 ({})",
                             self.repo_id,
+                            self.version,
                             first,
                         ));
                     }
@@ -207,9 +307,10 @@ impl IdMap for SqlIdMap {
                 Some((last_stored, _)) => {
                     if first != last_stored + 1 {
                         return Err(format_err!(
-                            "repo {}: smallest dag_id being inserted does not follow last entry \
+                            "repo {}: smallest dag_id being inserted into idmap {:?} does not follow last entry \
                              ({} + 1 != {})",
                             self.repo_id,
+                            self.version,
                             last_stored,
                             first
                         ));
@@ -218,6 +319,28 @@ impl IdMap for SqlIdMap {
             }
         }
 
+        // Sanity check for copy mappings - we want to reject inserts to vertex IDs that are
+        // referenced by a copy mapping. The checks above ensure that `first` is the lowest
+        // ID number, so just check first is not a copy referenced ID.
+        // This is not perfect (races, replication lag), but should show bugs in tests
+        if let Some(&(first, _)) = mappings.first() {
+            let copy_source = CheckCopyMapping::query(
+                &self.connections.read_connection,
+                &self.repo_id,
+                &self.version,
+                &first.0,
+            )
+            .await?;
+            if let Some(copy_source) = copy_source.first() {
+                return Err(format_err!(
+                    "repo {}: dag_ig {} in version {:?} is a copy baseline for version {:?}",
+                    self.repo_id,
+                    first,
+                    self.version,
+                    copy_source
+                ));
+            }
+        }
 
         // With validation passed, we split the mappings into batches that we write in separate
         // transactions.
@@ -732,6 +855,95 @@ mod tests {
                 .is_empty()
         );
 
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_copy_map(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+
+        let idmap1 = SqlIdMap::new(
+            conns.0.clone(),
+            Arc::new(NoReplicaLagMonitor()),
+            RepositoryId::new(1),
+            IdMapVersion(1),
+        );
+        idmap1.insert(&ctx, DagId(0), AS_CSID).await?;
+        // This way, if we don't truncate correctly, things will go wrong.
+        idmap1.insert(&ctx, DagId(1), THREES_CSID).await?;
+        idmap1.insert(&ctx, DagId(2), FOURS_CSID).await?;
+
+        let idmap2 = idmap1.copy(DagId(0), IdMapVersion(2)).await?;
+        // Check the copy didn't go too deep
+        assert!(idmap2.get_changeset_id(&ctx, DagId(1)).await.is_err());
+        assert!(idmap2.get_changeset_id(&ctx, DagId(2)).await.is_err());
+        assert!(idmap2.get_dag_id(&ctx, THREES_CSID).await.is_err());
+        assert!(idmap2.get_dag_id(&ctx, FOURS_CSID).await.is_err());
+
+        idmap2.insert(&ctx, DagId(1), ONES_CSID).await?;
+        idmap2.insert(&ctx, DagId(2), FIVES_CSID).await?;
+
+        let idmap3 = idmap2.copy(DagId(1), IdMapVersion(3)).await?;
+        // Check the copy didn't go too deep
+        assert!(idmap3.get_changeset_id(&ctx, DagId(2)).await.is_err());
+        assert!(idmap3.get_dag_id(&ctx, FOURS_CSID).await.is_err());
+
+        idmap3.insert(&ctx, DagId(2), TWOS_CSID).await?;
+
+        let idmap4 = idmap3.copy(DagId(2), IdMapVersion(4)).await?;
+        idmap4.insert(&ctx, DagId(3), THREES_CSID).await?;
+
+        // Check native table still works
+        assert_eq!(idmap3.get_changeset_id(&ctx, DagId(2)).await?, TWOS_CSID);
+        assert_eq!(idmap3.get_dag_id(&ctx, TWOS_CSID).await?, DagId(2));
+        assert_eq!(idmap2.get_changeset_id(&ctx, DagId(1)).await?, ONES_CSID);
+        assert_eq!(idmap2.get_dag_id(&ctx, ONES_CSID).await?, DagId(1));
+        assert_eq!(idmap1.get_changeset_id(&ctx, DagId(0)).await?, AS_CSID);
+        assert_eq!(idmap1.get_dag_id(&ctx, AS_CSID).await?, DagId(0));
+
+        // And both levels of copy
+        assert_eq!(idmap3.get_changeset_id(&ctx, DagId(1)).await?, ONES_CSID);
+        assert_eq!(idmap3.get_dag_id(&ctx, ONES_CSID).await?, DagId(1));
+        assert_eq!(idmap3.get_changeset_id(&ctx, DagId(0)).await?, AS_CSID);
+        assert_eq!(idmap3.get_dag_id(&ctx, AS_CSID).await?, DagId(0));
+        assert_eq!(idmap2.get_changeset_id(&ctx, DagId(0)).await?, AS_CSID);
+        assert_eq!(idmap2.get_dag_id(&ctx, AS_CSID).await?, DagId(0));
+
+        // IdMap 4 is needed to catch cases where the copy doesn't go deep enough
+        // Just check that it's fine
+        assert_eq!(idmap4.get_changeset_id(&ctx, DagId(0)).await?, AS_CSID);
+        assert_eq!(idmap4.get_dag_id(&ctx, AS_CSID).await?, DagId(0));
+        assert_eq!(idmap4.get_changeset_id(&ctx, DagId(1)).await?, ONES_CSID);
+        assert_eq!(idmap4.get_dag_id(&ctx, ONES_CSID).await?, DagId(1));
+        assert_eq!(idmap4.get_changeset_id(&ctx, DagId(2)).await?, TWOS_CSID);
+        assert_eq!(idmap4.get_dag_id(&ctx, TWOS_CSID).await?, DagId(2));
+        assert_eq!(idmap4.get_changeset_id(&ctx, DagId(3)).await?, THREES_CSID);
+        assert_eq!(idmap4.get_dag_id(&ctx, THREES_CSID).await?, DagId(3));
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_insert_fail_after_copy_map(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+
+        let idmap1 = SqlIdMap::new(
+            conns.0.clone(),
+            Arc::new(NoReplicaLagMonitor()),
+            RepositoryId::new(1),
+            IdMapVersion(1),
+        );
+        idmap1.insert(&ctx, DagId(0), AS_CSID).await?;
+
+        let idmap2 = idmap1.copy(DagId(0), IdMapVersion(2)).await?;
+        idmap2.insert(&ctx, DagId(1), ONES_CSID).await?;
+
+        assert!(
+            idmap1.insert(&ctx, DagId(2), TWOS_CSID).await.is_err(),
+            "Inserted into a copy base table"
+        );
         Ok(())
     }
 }

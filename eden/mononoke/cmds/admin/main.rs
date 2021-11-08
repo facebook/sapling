@@ -65,6 +65,7 @@ mod subcommand_deleted_manifest;
 mod subcommand_fsnodes;
 mod subcommand_skeleton_manifests;
 mod subcommand_unodes;
+mod truncate_segmented_changelog;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Mononoke admin command line tool")
@@ -102,6 +103,7 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(pushrebase::build_subcommand())
         .subcommand(subcommand_skeleton_manifests::build_subcommand())
         .subcommand(split_commit::build_subcommand())
+        .subcommand(truncate_segmented_changelog::build_subcommand())
 }
 
 #[fbinit::main]
@@ -209,6 +211,12 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (split_commit::SPLIT_COMMIT, Some(sub_m)) => {
                 split_commit::subcommand_split_commit(fb, logger, &matches, sub_m).await
+            }
+            (truncate_segmented_changelog::TRUNCATE_SEGMENTED_CHANGELOG, Some(sub_m)) => {
+                truncate_segmented_changelog::subcommand_truncate_segmented_changelog(
+                    fb, logger, &matches, sub_m,
+                )
+                .await
             }
             _ => Err(SubcommandError::InvalidArgs),
         }
