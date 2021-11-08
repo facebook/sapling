@@ -29,7 +29,7 @@ use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::{FileId, FileType};
 use crate::path::MononokePath;
-use crate::repo_write::RepoWriteContext;
+use crate::repo::RepoContext;
 use crate::specifiers::ChangesetSpecifier;
 
 #[derive(Clone)]
@@ -280,7 +280,8 @@ async fn verify_prefix_files_deleted(
         .await
 }
 
-impl RepoWriteContext {
+impl RepoContext {
+    // TODO(T105334556): This should require draft_write permission
     /// Create a new changeset in the repository.
     ///
     /// The new changeset is created with the given metadata by unioning the
@@ -316,7 +317,6 @@ impl RepoWriteContext {
         // normal commit to a bubble, though can be easily added.
         bubble: Option<&Bubble>,
     ) -> Result<ChangesetContext, MononokeError> {
-        self.check_method_permitted("create_changeset")?;
         let allowed_no_parents = self
             .config()
             .source_control_service
@@ -517,6 +517,6 @@ impl RepoWriteContext {
             )
             .await?;
         }
-        Ok(ChangesetContext::new(self.repo.clone(), new_changeset_id))
+        Ok(ChangesetContext::new(self.clone(), new_changeset_id))
     }
 }

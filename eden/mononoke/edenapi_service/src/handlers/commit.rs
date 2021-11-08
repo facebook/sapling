@@ -323,7 +323,6 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let bubble_id = query.bubble_id.map(BubbleId::new);
         let cs = request.changeset;
-        let repo_write = repo.clone().write().await?;
         let repo = &repo;
         let parents = stream::iter(cs.hg_parents)
             .then(|hgid| async move {
@@ -333,7 +332,8 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
             })
             .try_collect()
             .await?;
-        let cs_id = repo_write
+        let cs_id = repo
+            .repo()
             .create_changeset(
                 parents,
                 cs.author,

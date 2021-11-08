@@ -28,6 +28,7 @@ use metaconfig_parser::RepoConfigs;
 pub mod changeset;
 pub mod changeset_path;
 pub mod changeset_path_diff;
+pub mod create_changeset;
 pub mod errors;
 pub mod file;
 pub mod path;
@@ -48,13 +49,13 @@ pub use crate::changeset_path::{
     UnifiedDiff, UnifiedDiffMode,
 };
 pub use crate::changeset_path_diff::ChangesetPathDiffContext;
+pub use crate::create_changeset::{CreateChange, CreateChangeFile, CreateCopyInfo};
 pub use crate::errors::MononokeError;
 pub use crate::file::{
     headerless_unified_diff, FileContext, FileId, FileMetadata, FileType, HeaderlessUnifiedDiff,
 };
 pub use crate::path::MononokePath;
 pub use crate::repo::{BookmarkFreshness, Repo, RepoContext};
-pub use crate::repo_write::create_changeset::{CreateChange, CreateChangeFile, CreateCopyInfo};
 pub use crate::repo_write::land_stack::PushrebaseOutcome;
 pub use crate::repo_write::RepoWriteContext;
 pub use crate::specifiers::{

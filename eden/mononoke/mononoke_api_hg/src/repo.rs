@@ -65,7 +65,7 @@ impl HgRepoContext {
     }
 
     /// The `RepoContext` for this query.
-    pub(crate) fn repo(&self) -> &RepoContext {
+    pub fn repo(&self) -> &RepoContext {
         &self.repo
     }
 
