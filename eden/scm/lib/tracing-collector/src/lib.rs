@@ -66,7 +66,7 @@ impl<S: Subscriber> Layer<S> for TracingCollector {
         metadata.level() <= &self.level
     }
 
-    fn new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+    fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         let callsite_id = attrs.metadata().callsite();
         let mut data = self.data.lock();
         let count = data.callsite_entered.entry(callsite_id).or_default();

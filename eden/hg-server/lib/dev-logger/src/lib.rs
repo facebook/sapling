@@ -45,7 +45,7 @@ pub fn traced(filter: &str, func: impl FnOnce()) -> Vec<String> {
     #[derive(Clone, Default)]
     struct Output(Arc<Mutex<Vec<String>>>);
 
-    impl MakeWriter for Output {
+    impl MakeWriter<'_> for Output {
         type Writer = Output;
         fn make_writer(&self) -> Self::Writer {
             self.clone()

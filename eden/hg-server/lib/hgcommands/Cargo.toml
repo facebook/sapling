@@ -39,7 +39,7 @@ taggederror = { path = "../taggederror" }
 term_size = "0.3"
 tracing = "0.1.27"
 tracing-collector = { path = "../tracing-collector" }
-tracing-subscriber = { version = "0.2.22", features = ["parking_lot"] }
+tracing-subscriber = { version = "0.3.1", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
 types = { path = "../types" }
 util = { path = "../util" }
 version = { path = "../version" }
