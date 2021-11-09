@@ -25,6 +25,9 @@ def _snapshot2ctx(repo, snapshot):
     # Once merges/conflicted states are supported, we'll need to support more
     # than one parent
     assert isinstance(parent, bytes)
+    # Fetch parent if not present locally
+    if parent not in repo:
+        repo.pull(headnodes=(parent,))
 
     parents = (parent, nullid)
     path2filechange = {f[0]: f[1] for f in snapshot["file_changes"]}
