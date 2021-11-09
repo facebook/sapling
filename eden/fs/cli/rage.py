@@ -101,6 +101,8 @@ def print_diagnostic_info(
 
     print_env_variables(out)
 
+    print_system_mount_table(out)
+
 
 def print_rpm_version(out: IO[bytes]) -> None:
     try:
@@ -334,6 +336,17 @@ def print_env_variables(out: IO[bytes]) -> None:
             out.write(f"{k}={v}\n".encode())
     except Exception as e:
         out.write(f"Error getting environment variables: {e}\n".encode())
+
+
+def print_system_mount_table(out: IO[bytes]) -> None:
+    if sys.platform == "win32":
+        return
+    try:
+        section_title("Mount table:", out)
+        output = subprocess.check_output(["mount"])
+        out.write(output)
+    except Exception as e:
+        out.write(f"Error printing system mount table: {e}\n".encode())
 
 
 def print_eden_config(instance: EdenInstance, out: IO[bytes]) -> None:
