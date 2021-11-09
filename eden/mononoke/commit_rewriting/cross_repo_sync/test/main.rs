@@ -1952,30 +1952,54 @@ async fn prepare_commit_syncer_with_mapping_change(
 /// Build a test CommitSyncDataProvider for merge
 /// testing purposes.
 fn get_merge_sync_data_provider(
-    source_repo_id: RepositoryId,
-    target_repo_id: RepositoryId,
-) -> CommitSyncDataProvider {
+    large_repo_id: RepositoryId,
+    small_repo_id: RepositoryId,
+) -> Result<CommitSyncDataProvider, Error> {
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let v2 = CommitSyncConfigVersion("v2".to_string());
-    let idrn = Arc::new(identity_renamer);
-    CommitSyncDataProvider::test_new(
-        v1.clone(),
-        Source(source_repo_id),
-        Target(target_repo_id),
-        hashmap! {
-            v1 => SyncData {
-                mover: Arc::new(identity_mover),
-                reverse_mover: Arc::new(identity_mover),
-            },
-            v2 => SyncData {
-                mover: Arc::new(identity_mover),
-                reverse_mover: Arc::new(identity_mover),
+
+    let small_repo_config = SmallRepoCommitSyncConfig {
+        default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+        map: hashmap! {},
+        bookmark_prefix: AsciiString::new(),
+        direction: CommitSyncDirection::LargeToSmall,
+    };
+    let commit_sync_config_v1 = CommitSyncConfig {
+        large_repo_id,
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            small_repo_id => small_repo_config.clone(),
+        },
+        version_name: v1.clone(),
+    };
+    let commit_sync_config_v2 = CommitSyncConfig {
+        large_repo_id,
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            small_repo_id => small_repo_config,
+        },
+        version_name: v2.clone(),
+    };
+
+    let common_config = CommonCommitSyncConfig {
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            small_repo_id => SmallRepoPermanentConfig {
+                bookmark_prefix: "".to_string(),
             }
         },
-        vec![BookmarkName::new("master").unwrap()],
-        idrn.clone(),
-        idrn,
-    )
+        large_repo_id,
+    };
+
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    source.add_config(commit_sync_config_v1.clone());
+    source.add_config(commit_sync_config_v2.clone());
+    source.add_current_version(v1);
+    source.add_common_config(common_config);
+
+    let live_commit_sync_config = Arc::new(sync_config);
+
+    Ok(CommitSyncDataProvider::Live(live_commit_sync_config))
 }
 
 /// This function sets up scene for syncing merges
@@ -2020,7 +2044,7 @@ async fn merge_test_setup(
             large_repo: large_repo.clone(),
         };
         lts_syncer.commit_sync_data_provider =
-            get_merge_sync_data_provider(large_repo.get_repoid(), small_repo.get_repoid());
+            get_merge_sync_data_provider(large_repo.get_repoid(), small_repo.get_repoid())?;
         lts_syncer
     };
 
