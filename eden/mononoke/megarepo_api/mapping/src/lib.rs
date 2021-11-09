@@ -162,7 +162,10 @@ impl CommitRemappingState {
 
         let fc = FileChange::tracked(content_id, FileType::Regular, size, None);
         if bcs.file_changes.insert(path, fc).is_some() {
-            return Err(anyhow!("New bonsai changeset already has {} file"));
+            return Err(anyhow!(
+                "New bonsai changeset already has {} file",
+                REMAPPING_STATE_FILE,
+            ));
         }
 
         Ok(())

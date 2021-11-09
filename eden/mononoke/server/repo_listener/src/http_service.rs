@@ -212,7 +212,10 @@ where
         let compression = match req.headers().get(HEADER_CLIENT_COMPRESSION) {
             Some(header_value) => match header_value.as_bytes() {
                 b"zstd=stdin" if zstd_level > 0 => Ok(Some(zstd_level)),
-                _ => Err(anyhow!("'{}' is not a recognized compression value")),
+                header_value_bytes => Err(anyhow!(
+                    "'{}' is not a recognized compression value",
+                    String::from_utf8_lossy(header_value_bytes),
+                )),
             },
             None => Ok(None),
         }

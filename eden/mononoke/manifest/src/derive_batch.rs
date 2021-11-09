@@ -303,7 +303,8 @@ where
                             FoldState::CreateLeaves(path, name, parent, leaves) => {
                                 if !subentries.is_empty() {
                                     anyhow::bail!(
-                                        "Can't create entries for {:?} - have unexpected subentries"
+                                        "Can't create entries for {:?} - have unexpected subentries",
+                                        path,
                                     );
                                 }
 

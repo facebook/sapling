@@ -647,7 +647,7 @@ mod test {
                     }
                 }
                 None => {
-                    return Err(anyhow!("{} should be in the index"));
+                    return Err(anyhow!("{} should be in the index", cur));
                 }
             }
         }

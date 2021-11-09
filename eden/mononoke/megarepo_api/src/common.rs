@@ -1126,7 +1126,9 @@ fn create_relative_symlink(path: &MPath, base: &MPath) -> Result<Bytes, Error> {
 
     if path_no_prefix.is_empty() || base_no_prefix.is_empty() {
         return Err(anyhow!(
-            "Can't create symlink for {} and {}: one path is a parent of another"
+            "Can't create symlink for {} and {}: one path is a parent of another",
+            path,
+            base,
         ));
     }
 
