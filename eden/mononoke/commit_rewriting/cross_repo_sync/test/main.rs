@@ -893,28 +893,12 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-fn maybe_replace_prefix(
-    path: &MPath,
-    potential_prefix: &MPath,
-    replacement: &MPath,
-) -> Option<MPath> {
-    if potential_prefix.is_prefix_of(path) {
-        let elements: Vec<_> = path
-            .into_iter()
-            .skip(potential_prefix.num_components())
-            .collect();
-        Some(replacement.join(elements))
-    } else {
-        None
-    }
-}
-
 #[fbinit::test]
 async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
     many_files_dirs::initrepo(fb, &small_repo).await;
-    let repo = small_repo;
+    let repo = small_repo.clone();
 
     let mut commit_syncer = create_small_to_large_commit_syncer(
         &ctx,
@@ -924,57 +908,48 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         mapping.clone(),
     )?;
 
-    // Note: this mover relies on non-prefix-free path map, which may
-    // or may not be allowed in repo configs. We want commit syncing to work
-    // in this case, regardless of whether such config is allowed
-    let mover = Arc::new(move |path: &MPath| -> Result<Option<MPath>, Error> {
-        let longer_path = mpath("dir1/subdir1/subsubdir1");
-        let prefix1: MPath = mpath("prefix1");
-        let shorter_path = mpath("dir1");
-        let prefix2: MPath = mpath("prefix2");
-        if let Some(changed_path) = maybe_replace_prefix(path, &longer_path, &prefix1) {
-            return Ok(Some(changed_path));
-        }
-        if let Some(changed_path) = maybe_replace_prefix(path, &shorter_path, &prefix2) {
-            return Ok(Some(changed_path));
-        }
-        Ok(Some(path.clone()))
-    });
+    let small_repo_config = SmallRepoCommitSyncConfig {
+        default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+        map: hashmap! {
+            MPath::new("dir1/subdir1/subsubdir1")? => MPath::new("prefix1")?,
+            MPath::new("dir1")? => MPath::new("prefix2")?,
+        },
+        bookmark_prefix: AsciiString::new(),
+        direction: CommitSyncDirection::SmallToLarge,
+    };
 
-    let reverse_mover = Arc::new(move |path: &MPath| -> Result<Option<MPath>, Error> {
-        let longer_path = mpath("dir1/subdir1/subsubdir1");
-        let prefix1: MPath = mpath("prefix1");
-        let shorter_path = mpath("dir1");
-        let prefix2: MPath = mpath("prefix2");
+    let commit_sync_config = CommitSyncConfig {
+        large_repo_id: megarepo.get_repoid(),
+        common_pushrebase_bookmarks: vec![],
+        small_repos: hashmap! {
+            small_repo.get_repoid() => small_repo_config,
+        },
+        version_name: version_name_with_small_repo(),
+    };
 
-        if let Some(changed_path) = maybe_replace_prefix(path, &prefix1, &longer_path) {
-            return Ok(Some(changed_path));
-        }
-        if let Some(changed_path) = maybe_replace_prefix(path, &prefix2, &shorter_path) {
-            return Ok(Some(changed_path));
-        }
-        Ok(Some(path.clone()))
-    });
+    let common_config = CommonCommitSyncConfig {
+        common_pushrebase_bookmarks: vec![],
+        small_repos: hashmap! {
+            small_repo.get_repoid() => SmallRepoPermanentConfig {
+                bookmark_prefix: "".to_string(),
+            }
+        },
+        large_repo_id: megarepo.get_repoid(),
+    };
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+
+    source.add_config(commit_sync_config.clone());
+    source.add_current_version(commit_sync_config.version_name);
+    source.add_common_config(common_config);
+
+    let live_commit_sync_config = Arc::new(sync_config);
 
     let commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: repo.clone(),
         large_repo: megarepo.clone(),
     };
     let version = version_name_with_small_repo();
-    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        version.clone(),
-        Source(commit_sync_repos.get_source_repo().get_repoid()),
-        Target(commit_sync_repos.get_target_repo().get_repoid()),
-        hashmap! {
-            version.clone() => SyncData {
-                mover,
-                reverse_mover,
-            }
-        },
-        vec![BookmarkName::new("master")?],
-        Arc::new(identity_renamer),
-        Arc::new(identity_renamer),
-    );
+    let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
     commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
     commit_syncer.repos = commit_sync_repos;
 
