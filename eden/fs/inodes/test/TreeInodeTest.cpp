@@ -83,75 +83,7 @@ TEST(TreeInode, findEntryDifferencesWithOneAddition) {
   EXPECT_EQ((std::vector<std::string>{"+ three"}), *differences);
 }
 
-#ifdef _WIN32
-
-TEST(TreeInode, readdirTest) {
-  FakeTreeBuilder builder;
-  builder.setFiles({{"file", ""}});
-  TestMount mount{builder};
-
-  auto root = mount.getEdenMount()->getRootInode();
-  auto result = root->readdir();
-
-  ASSERT_EQ(2, result.size());
-  EXPECT_EQ(L".eden", result[0].getName());
-  EXPECT_EQ(L"file", result[1].getName());
-}
-
-TEST(TreeInode, updateAndReaddir) {
-  FakeTreeBuilder builder;
-  builder.setFile("somedir/file1", "test\n");
-  builder.setFile("somedir/file2", "test\n");
-  builder.setFile("somedir/file3", "test\n");
-  TestMount mount{builder};
-
-  // Test creating a new file
-  auto somedir = mount.getTreeInode("somedir"_relpath);
-  auto result = somedir->readdir();
-
-  ASSERT_EQ(3, result.size());
-  EXPECT_EQ(L"file1", result[0].getName());
-  EXPECT_EQ(L"file2", result[1].getName());
-  EXPECT_EQ(L"file3", result[2].getName());
-
-  auto resultInode =
-      somedir->mknod("newfile.txt"_pc, S_IFREG, 0, InvalidationRequired::No);
-  result = somedir->readdir();
-  ASSERT_EQ(4, result.size());
-  EXPECT_EQ(L"file1", result[0].getName());
-  EXPECT_EQ(L"file2", result[1].getName());
-  EXPECT_EQ(L"file3", result[2].getName());
-  EXPECT_EQ(L"newfile.txt", result[3].getName());
-
-  somedir
-      ->unlink(
-          "file2"_pc,
-          InvalidationRequired::No,
-          ObjectFetchContext::getNullContext())
-      .get(0ms);
-  result = somedir->readdir();
-  ASSERT_EQ(3, result.size());
-  EXPECT_EQ(L"file1", result[0].getName());
-  EXPECT_EQ(L"file3", result[1].getName());
-  EXPECT_EQ(L"newfile.txt", result[2].getName());
-
-  somedir
-      ->rename(
-          "file3"_pc,
-          somedir,
-          "renamedfile.txt"_pc,
-          InvalidationRequired::No,
-          ObjectFetchContext::getNullContext())
-      .get(0ms);
-  result = somedir->readdir();
-  ASSERT_EQ(3, result.size());
-  EXPECT_EQ(L"file1", result[0].getName());
-  EXPECT_EQ(L"newfile.txt", result[1].getName());
-  EXPECT_EQ(L"renamedfile.txt", result[2].getName());
-}
-
-#else
-
+#ifndef _WIN32
 TEST(TreeInode, fuseReaddirReturnsSelfAndParentBeforeEntries) {
   // libfuse's documentation says returning . and .. is optional, but the FUSE
   // kernel module does not synthesize them, so not returning . and .. would be
@@ -381,8 +313,7 @@ TEST(TreeInode, fuzzConcurrentModificationAndReaddir) {
   }
   std::cout << "Ran " << iterations << " iterations" << std::endl;
 }
-
-#endif // _WIN32
+#endif
 
 TEST(TreeInode, create) {
   FakeTreeBuilder builder;

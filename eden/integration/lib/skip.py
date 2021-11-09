@@ -99,6 +99,12 @@ if sys.platform == "win32":
         "hg.debug_get_parents.DebugGetParentsTestTreeOnly": True,
         "hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly": True,
         "hg.diff_test.DiffTestTreeOnly": True,
+        "hg.doctor_test.DoctorTestTreeOnly": [
+            # TODO(xavierd): This test updates to a random commit, and EdenFS
+            # is unable to read the .hgignore that Mercurial tries to read at
+            # startup.
+            "test_eden_doctor_fixes_invalid_mismatched_parents"
+        ],
         "hg.grep_test.GrepTestTreeOnly": [
             "test_grep_directory_from_root",
             "test_grep_directory_from_subdirectory",

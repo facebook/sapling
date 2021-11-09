@@ -169,16 +169,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   std::tuple<NfsDirList, bool>
   nfsReaddir(NfsDirList&& list, off_t off, ObjectFetchContext& context);
-#else
-  /**
-   * The following readdir() is for responding to Projected FS's directory
-   * enumeration requests. This API populates the list with the wide char names,
-   * dtype, and size for the non-materialized files. The size field for
-   * materialized files is stored in the ProjectedFS and there is no efficient
-   * way to get it, so in this function as an optimization we don't populate the
-   * size of materialized files.
-   */
-  FOLLY_NODISCARD std::vector<PrjfsDirEntry> readdir();
 #endif
 
   const folly::Synchronized<TreeInodeState>& getContents() const {

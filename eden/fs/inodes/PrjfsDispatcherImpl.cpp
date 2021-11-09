@@ -17,6 +17,7 @@
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
@@ -25,7 +26,9 @@ namespace facebook::eden {
 
 namespace {
 
-const RelativePath kDotEdenConfigPath{".eden/config"};
+const PathComponentPiece kDotEdenPathComponent{kDotEdenName};
+const RelativePathPiece kDotEdenRelativePath{kDotEdenName};
+const RelativePathPiece kDotEdenConfigPath{".eden/config"};
 const std::string kConfigRootPath{"root"};
 const std::string kConfigSocketPath{"socket"};
 const std::string kConfigClientPath{"client"};
@@ -58,38 +61,96 @@ PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
 ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
     RelativePath path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context).thenValue([](const InodePtr inode) {
-    auto treePtr = inode.asTreePtr();
-    return treePtr->readdir();
-  });
+  bool isRoot = path.empty();
+  return mount_->getTreeOrTreeEntry(path, context)
+      .thenValue([isRoot, objectStore = mount_->getObjectStore()](
+                     std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                         treeOrTreeEntry) {
+        auto& tree = std::get<std::shared_ptr<const Tree>>(treeOrTreeEntry);
+        auto& treeEntries = tree->getTreeEntries();
+
+        std::vector<PrjfsDirEntry> ret;
+        ret.reserve(treeEntries.size() + isRoot);
+        for (const auto& treeEntry : treeEntries) {
+          if (treeEntry.isTree()) {
+            ret.emplace_back(
+                treeEntry.getName(), true, ImmediateFuture<uint64_t>(0));
+          } else {
+            // Since the sizeFut may complete after the context is destroyed,
+            // let's create a separate context.
+            static ObjectFetchContext* sizeContext =
+                ObjectFetchContext::getNullContextWithCauseDetail(
+                    "PrjfsDispatcherImpl::opendir");
+            auto sizeFut =
+                objectStore->getBlobSize(treeEntry.getHash(), *sizeContext);
+            ret.emplace_back(treeEntry.getName(), false, std::move(sizeFut));
+          }
+        }
+
+        if (isRoot) {
+          ret.emplace_back(
+              kDotEdenPathComponent, true, ImmediateFuture<uint64_t>(0));
+        }
+
+        return ret;
+      })
+      .thenTry([this, path = std::move(path)](
+                   folly::Try<std::vector<PrjfsDirEntry>> dirEntries) {
+        if (auto* exc = dirEntries.tryGetExceptionObject<std::system_error>()) {
+          if (isEnoent(*exc)) {
+            if (path == kDotEdenRelativePath) {
+              std::vector<PrjfsDirEntry> ret;
+              ret.emplace_back(
+                  PathComponent{kConfigTable},
+                  false,
+                  ImmediateFuture<uint64_t>(dotEdenConfig_.size()));
+            }
+          }
+        }
+        return dirEntries;
+      });
 }
 
 ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
     RelativePath path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context)
-      .thenValue(
-          [&context](const InodePtr inode) mutable
-          -> ImmediateFuture<std::optional<LookupResult>> {
-            return inode->stat(context).thenValue(
-                [inode = std::move(inode)](struct stat&& stat) {
-                  size_t size = stat.st_size;
-                  // Ensure that the OS has a record of the canonical
-                  // file name, and not just whatever case was used to
-                  // lookup the file
-                  auto inodeMetadata =
-                      InodeMetadata{*inode->getPath(), size, inode->isDir()};
-                  auto incFsRefcount = [inode = std::move(inode)] {
-                    inode->incFsRefcount();
-                  };
-                  return std::optional{LookupResult{
-                      std::move(inodeMetadata), std::move(incFsRefcount)}};
-                });
-          })
+  return mount_->getTreeOrTreeEntry(path, context)
+      .thenValue([this, &context, path](
+                     std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                         treeOrTreeEntry) {
+        bool isDir = std::holds_alternative<std::shared_ptr<const Tree>>(
+            treeOrTreeEntry);
+        auto pathFut = mount_->canonicalizePathFromTree(path, context);
+        auto sizeFut = isDir
+            ? ImmediateFuture<uint64_t>{0}
+            : mount_->getObjectStore()->getBlobSize(
+                  std::get<TreeEntry>(treeOrTreeEntry).getHash(), context);
+
+        return collectAllSafe(pathFut, sizeFut)
+            .thenValue([this, isDir, &context](
+                           std::tuple<RelativePath, uint64_t> res) {
+              auto [path, size] = std::move(res);
+              auto inodeMetadata = InodeMetadata{path, size, isDir};
+
+              // Finally, let's tell the TreeInode that this file needs
+              // invalidation during update.
+              return mount_->getInode(path, context)
+                  .thenValue([inodeMetadata =
+                                  std::move(inodeMetadata)](InodePtr inode) {
+                    // Since a lookup is needed prior to any file operation,
+                    // this getInode call shouldn't race with concurrent file
+                    // removal/move
+                    return std::optional{LookupResult{
+                        std::move(inodeMetadata), [inode = std::move(inode)] {
+                          inode->incFsRefcount();
+                        }}};
+                  });
+            });
+      })
       .thenTry(
-          [path = std::move(path),
-           this](folly::Try<std::optional<LookupResult>> result) mutable
-          -> folly::Try<std::optional<LookupResult>> {
+          [this, path = std::move(path)](
+              folly::Try<std::optional<LookupResult>> result)
+              -> folly::Try<std::optional<LookupResult>> {
             if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
               if (isEnoent(*exc)) {
                 if (path == kDotEdenConfigPath) {
@@ -97,6 +158,9 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
                       InodeMetadata{
                           std::move(path), dotEdenConfig_.length(), false},
                       [] {}}}};
+                } else if (path == kDotEdenRelativePath) {
+                  return folly::Try{std::optional{LookupResult{
+                      InodeMetadata{std::move(path), 0, true}, [] {}}}};
                 } else {
                   XLOG(DBG6) << path << ": File not found";
                   return folly::Try<std::optional<LookupResult>>{std::nullopt};
@@ -110,12 +174,12 @@ ImmediateFuture<std::optional<LookupResult>> PrjfsDispatcherImpl::lookup(
 ImmediateFuture<bool> PrjfsDispatcherImpl::access(
     RelativePath path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context)
-      .thenValue([](const InodePtr) { return true; })
+  return mount_->getTreeOrTreeEntry(path, context)
+      .thenValue([](auto&&) { return true; })
       .thenTry([path = std::move(path)](folly::Try<bool> result) {
         if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
           if (isEnoent(*exc)) {
-            if (path == kDotEdenConfigPath) {
+            if (path == kDotEdenRelativePath || path == kDotEdenConfigPath) {
               return folly::Try<bool>{true};
             } else {
               return folly::Try<bool>{false};
@@ -129,12 +193,21 @@ ImmediateFuture<bool> PrjfsDispatcherImpl::access(
 ImmediateFuture<std::string> PrjfsDispatcherImpl::read(
     RelativePath path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context)
-      .thenValue([&context](const InodePtr inode) {
-        auto fileInode = inode.asFilePtr();
-        return fileInode->readAll(context).semi();
+  return mount_->getTreeOrTreeEntry(path, context)
+      .thenValue([&context, objectStore = mount_->getObjectStore()](
+                     std::variant<std::shared_ptr<const Tree>, TreeEntry>
+                         treeOrTreeEntry) {
+        auto& treeEntry = std::get<TreeEntry>(treeOrTreeEntry);
+        return ImmediateFuture{
+            objectStore->getBlob(treeEntry.getHash(), context).semi()}
+            .thenValue([](std::shared_ptr<const Blob> blob) {
+              // TODO(xavierd): directly return the Blob to the caller.
+              std::string res;
+              blob->getContents().appendTo(res);
+              return res;
+            });
       })
-      .thenTry([path = std::move(path), this](folly::Try<std::string> result) {
+      .thenTry([this, path = std::move(path)](folly::Try<std::string> result) {
         if (auto* exc = result.tryGetExceptionObject<std::system_error>()) {
           if (isEnoent(*exc) && path == kDotEdenConfigPath) {
             return folly::Try<std::string>{std::string(dotEdenConfig_)};

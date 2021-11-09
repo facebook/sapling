@@ -1943,40 +1943,6 @@ std::tuple<NfsDirList, bool> TreeInode::nfsReaddir(
 
   return {std::move(list), isEof};
 }
-
-#else
-
-std::vector<PrjfsDirEntry> TreeInode::readdir() {
-  vector<PrjfsDirEntry> ret;
-
-  auto dir = contents_.rlock();
-  auto& entries = dir->entries;
-  ret.reserve(entries.size());
-
-  for (auto& [name, entry] : entries) {
-    auto isDir = entry.getDtype() == dtype_t::Dir;
-
-    if (!isDir) {
-      // We only populates the file size for non-materialized files. For
-      // the materialized files, ProjectedFS will use the on-disk size.
-      auto hash = entry.getOptionalHash();
-      if (hash.has_value()) {
-        static ObjectFetchContext* context =
-            ObjectFetchContext::getNullContextWithCauseDetail(
-                "TreeInode::readdir");
-        ret.emplace_back(
-            name,
-            isDir,
-            getMount()->getObjectStore()->getBlobSize(hash.value(), *context));
-        continue;
-      }
-    }
-
-    ret.emplace_back(name, isDir, ImmediateFuture<uint64_t>(0));
-  }
-
-  return ret;
-}
 #endif // _WIN32
 
 InodeMap* TreeInode::getInodeMap() const {
