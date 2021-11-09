@@ -17,10 +17,8 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::{
-    rewrite_commit,
-    types::{Source, Target},
-    update_mapping_with_version, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos,
-    CommitSyncer, SyncData, Syncers,
+    rewrite_commit, update_mapping_with_version, CommitSyncContext, CommitSyncDataProvider,
+    CommitSyncRepos, CommitSyncer, Syncers,
 };
 use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
 use maplit::hashmap;
@@ -116,10 +114,6 @@ where
     Ok(target_bcs.get_changeset_id())
 }
 
-fn identity_mover(p: &MPath) -> Result<Option<MPath>, Error> {
-    Ok(Some(p.clone()))
-}
-
 pub async fn init_small_large_repo(
     ctx: &CoreContext,
 ) -> Result<(Syncers<SqlSyncedCommitMapping>, CommitSyncConfig), Error> {
@@ -137,57 +131,56 @@ pub async fn init_small_large_repo(
         large_repo: megarepo.clone(),
     };
 
-    let version_with_small_repo = xrepo_mapping_version_with_small_repo();
+
     let noop_version = CommitSyncConfigVersion("noop".to_string());
-    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        version_with_small_repo.clone(),
-        Source(repos.get_source_repo().get_repoid()),
-        Target(repos.get_target_repo().get_repoid()),
-        hashmap! {
-            noop_version.clone() => SyncData {
-                mover: Arc::new(identity_mover),
-                reverse_mover: Arc::new(identity_mover),
-            },
-            version_with_small_repo.clone() => SyncData {
-                mover: Arc::new(prefix_mover),
-                reverse_mover: Arc::new(reverse_prefix_mover),
+    let version_with_small_repo = xrepo_mapping_version_with_small_repo();
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+
+    let noop_version_config = CommitSyncConfig {
+        large_repo_id: RepositoryId::new(1),
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            RepositoryId::new(0) => get_small_repo_sync_config_noop("".to_string()),
+        },
+        version_name: noop_version.clone(),
+    };
+
+    let version_with_small_repo_config = CommitSyncConfig {
+        large_repo_id: RepositoryId::new(1),
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            RepositoryId::new(0) => get_small_repo_sync_config_1("".to_string()),
+        },
+        version_name: version_with_small_repo.clone(),
+    };
+
+    source.add_config(noop_version_config);
+    source.add_config(version_with_small_repo_config);
+
+    source.add_common_config(CommonCommitSyncConfig {
+        common_pushrebase_bookmarks: vec![],
+        small_repos: hashmap! {
+            RepositoryId::new(0) => SmallRepoPermanentConfig {
+                bookmark_prefix: "".to_string(),
             }
         },
-        vec![BookmarkName::new("master")?],
-        Arc::new(identity_renamer),
-        Arc::new(identity_renamer),
-    );
+        large_repo_id: RepositoryId::new(1),
+    });
+
+
+    let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(sync_config));
 
     let small_to_large_commit_syncer = CommitSyncer::new_with_provider(
         ctx,
         mapping.clone(),
         repos.clone(),
-        commit_sync_data_provider,
+        commit_sync_data_provider.clone(),
     );
 
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: smallrepo.clone(),
         large_repo: megarepo.clone(),
     };
-
-    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        version_with_small_repo.clone(),
-        Source(repos.get_source_repo().get_repoid()),
-        Target(repos.get_target_repo().get_repoid()),
-        hashmap! {
-            noop_version.clone() =>  SyncData {
-                mover: Arc::new(identity_mover),
-                reverse_mover: Arc::new(identity_mover),
-            },
-            version_with_small_repo.clone() => SyncData {
-                mover: Arc::new(reverse_prefix_mover),
-                reverse_mover: Arc::new(prefix_mover),
-            }
-        },
-        vec![BookmarkName::new("master")?],
-        Arc::new(identity_renamer),
-        Arc::new(identity_renamer),
-    );
 
     let large_to_small_commit_syncer = CommitSyncer::new_with_provider(
         ctx,
@@ -323,32 +316,20 @@ pub fn base_commit_sync_config(large_repo: &BlobRepo, small_repo: &BlobRepo) -> 
     }
 }
 
-fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
-    Some(b.clone())
-}
-
 fn prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
     let prefix = MPath::new("prefix").unwrap();
     Ok(Some(MPath::join(&prefix, v)))
 }
 
-fn reverse_prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
-    let prefix = MPath::new("prefix").unwrap();
-    if prefix.is_prefix_of(v) {
-        Ok(v.remove_prefix_component(&prefix))
-    } else {
-        Ok(None)
-    }
-}
-
 pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
 
+    let bookmark_prefix = "small".to_string();
     let first_version = CommitSyncConfig {
         large_repo_id: RepositoryId::new(0),
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
-            RepositoryId::new(1) => get_small_repo_sync_config_1(),
+            RepositoryId::new(1) => get_small_repo_sync_config_1(bookmark_prefix.clone()),
         },
         version_name: CommitSyncConfigVersion("first_version".to_string()),
     };
@@ -357,7 +338,7 @@ pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
         large_repo_id: RepositoryId::new(0),
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
-            RepositoryId::new(1) => get_small_repo_sync_config_2(),
+            RepositoryId::new(1) => get_small_repo_sync_config_2(bookmark_prefix.clone()),
         },
         version_name: CommitSyncConfigVersion("second_version".to_string()),
     };
@@ -370,7 +351,7 @@ pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
             RepositoryId::new(1) => SmallRepoPermanentConfig {
-                bookmark_prefix: "small".to_string(),
+                bookmark_prefix: bookmark_prefix,
             }
         },
         large_repo_id: RepositoryId::new(0),
@@ -379,18 +360,27 @@ pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
     Arc::new(sync_config)
 }
 
-fn get_small_repo_sync_config_1() -> SmallRepoCommitSyncConfig {
+fn get_small_repo_sync_config_noop(bookmark_prefix: String) -> SmallRepoCommitSyncConfig {
+    SmallRepoCommitSyncConfig {
+        default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+        map: hashmap! {},
+        bookmark_prefix: AsciiString::from_ascii(bookmark_prefix).unwrap(),
+        direction: CommitSyncDirection::SmallToLarge,
+    }
+}
+
+fn get_small_repo_sync_config_1(bookmark_prefix: String) -> SmallRepoCommitSyncConfig {
     SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
             MPath::new("prefix").unwrap(),
         ),
         map: hashmap! {},
-        bookmark_prefix: AsciiString::from_ascii("small".to_string()).unwrap(),
+        bookmark_prefix: AsciiString::from_ascii(bookmark_prefix).unwrap(),
         direction: CommitSyncDirection::SmallToLarge,
     }
 }
 
-fn get_small_repo_sync_config_2() -> SmallRepoCommitSyncConfig {
+fn get_small_repo_sync_config_2(bookmark_prefix: String) -> SmallRepoCommitSyncConfig {
     SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
             MPath::new("prefix").unwrap(),
@@ -398,7 +388,7 @@ fn get_small_repo_sync_config_2() -> SmallRepoCommitSyncConfig {
         map: hashmap! {
             MPath::new("special").unwrap() => MPath::new("special").unwrap(),
         },
-        bookmark_prefix: AsciiString::from_ascii("small".to_string()).unwrap(),
+        bookmark_prefix: AsciiString::from_ascii(bookmark_prefix).unwrap(),
         direction: CommitSyncDirection::SmallToLarge,
     }
 }
