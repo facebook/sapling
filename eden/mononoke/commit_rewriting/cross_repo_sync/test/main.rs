@@ -57,7 +57,6 @@ use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 use tunables::{with_tunables_async, MononokeTunables};
 
 use cross_repo_sync::{
-    get_plural_commit_sync_outcome,
     types::{Source, Target},
     CandidateSelectionHint, CommitSyncRepos, CommitSyncer, PluralCommitSyncOutcome,
 };
@@ -1159,23 +1158,20 @@ async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-async fn check_rewritten_multiple(
+async fn check_rewritten_multiple<M>(
     ctx: &CoreContext,
-    source_repo: &BlobRepo,
-    target_repo: &BlobRepo,
-    mapping: &SqlSyncedCommitMapping,
+    syncer: &CommitSyncer<M>,
     cs_id: ChangesetId,
     expected_rewrite_count: usize,
-) -> Result<(), Error> {
-    let plural_commit_sync_outcome = get_plural_commit_sync_outcome(
-        ctx,
-        Source(source_repo.get_repoid()),
-        Target(target_repo.get_repoid()),
-        Source(cs_id),
-        mapping,
-    )
-    .await?
-    .expect("should've been remapped");
+) -> Result<(), Error>
+where
+    M: SyncedCommitMapping + Clone + 'static,
+{
+    let plural_commit_sync_outcome = syncer
+        .get_plural_commit_sync_outcome(ctx, cs_id)
+        .await?
+        .expect("should've been remapped");
+
     if let PluralCommitSyncOutcome::RewrittenAs(v) = plural_commit_sync_outcome {
         assert_eq!(v.len(), expected_rewrite_count);
     } else {
@@ -1306,15 +1302,7 @@ async fn get_multiple_master_mapping_setup(
 
     // 3. Sanity-check that the small repo master is indeed rewritten
     // into two different commits in the large repo
-    check_rewritten_multiple(
-        &ctx,
-        &small_repo,
-        &megarepo,
-        &mapping,
-        small_repo_master_cs_id,
-        2,
-    )
-    .await?;
+    check_rewritten_multiple(&ctx, &small_to_large_syncer, small_repo_master_cs_id, 2).await?;
 
     // Re-query megarepo master bookmark, as its localtion has changed due
     // to a cross-repo sync
