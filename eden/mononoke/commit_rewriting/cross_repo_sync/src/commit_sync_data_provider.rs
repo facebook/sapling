@@ -256,20 +256,6 @@ impl CommitSyncDataProvider {
         }
     }
 
-    pub fn test_set_current_version(&self, version: CommitSyncConfigVersion) -> Result<(), Error> {
-        match self {
-            Self::Live(_) => Err(anyhow!(
-                "test_set_current_version is not suported for CommitSyncDataProvider::Live"
-            )),
-            Self::Test {
-                current_version, ..
-            } => {
-                *current_version.lock().unwrap() = version;
-                Ok(())
-            }
-        }
-    }
-
     pub async fn version_exists(
         &self,
         repo_id: RepositoryId,
