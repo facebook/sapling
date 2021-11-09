@@ -67,6 +67,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/PathLoader.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
@@ -1532,7 +1533,7 @@ folly::Future<std::unique_ptr<Glob>>
 EdenServiceHandler::future_predictiveGlobFiles(
     std::unique_ptr<GlobParams> params) {
 #ifdef EDEN_HAVE_USAGE_SERVICE
-  // TODO: since we call INSTRUMENT_THRIFT_CALL in globFilesImpl, the time
+  // TODO: since we call INSTRUMENT_THRIFT_CALL in _globFiles, the time
   // of getTopUsedDirs won't be taken into account
   auto& mountPoint = *params->mountPoint_ref();
   auto& revisions = *params->revisions_ref();
@@ -1556,10 +1557,10 @@ EdenServiceHandler::future_predictiveGlobFiles(
     throw std::runtime_error(folly::to<std::string>(
         "mount must use HgQueuedBackingStore, type is ", typeid(r).name()));
   }
+
   auto repo = repo_optional.value();
-  // currently, predictiveGlobFiles is only supported on Linux
-  // TODO: infer default OS from current OS
-  folly::StringPiece os = "Linux";
+  auto os = getOperatingSystemName();
+
   // sandcastleAlias, startTime, and endTime are optional parameters
   std::optional<std::string> sandcastleAlias;
   std::optional<uint64_t> startTime;
