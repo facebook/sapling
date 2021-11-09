@@ -66,10 +66,6 @@ fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
     Some(b.clone())
 }
 
-fn identity_mover(mpath: &MPath) -> Result<Option<MPath>, Error> {
-    Ok(Some(mpath.clone()))
-}
-
 fn mpath(p: &str) -> MPath {
     MPath::new(p).unwrap()
 }
@@ -2290,20 +2286,40 @@ async fn test_no_accidental_preserved_roots(
             )?,
         };
 
-        let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-            version.clone(),
-            Source(commit_sync_repos.get_source_repo().get_repoid()),
-            Target(commit_sync_repos.get_target_repo().get_repoid()),
-            hashmap! {
-                version.clone() => SyncData {
-                    mover: Arc::new(identity_mover),
-                    reverse_mover: Arc::new(identity_mover),
+        let small_repo_config = SmallRepoCommitSyncConfig {
+            default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+            map: hashmap! {},
+            bookmark_prefix: AsciiString::new(),
+            // TODO(stash): remove `direction` field since it's unused
+            direction: CommitSyncDirection::LargeToSmall,
+        };
+        let commit_sync_config = CommitSyncConfig {
+            large_repo_id: commit_syncer.get_large_repo().get_repoid(),
+            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            small_repos: hashmap! {
+                commit_syncer.get_small_repo().get_repoid() => small_repo_config.clone(),
+            },
+            version_name: version.clone(),
+        };
+
+        let common_config = CommonCommitSyncConfig {
+            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            small_repos: hashmap! {
+                commit_syncer.get_small_repo().get_repoid() => SmallRepoPermanentConfig {
+                    bookmark_prefix: "".to_string(),
                 }
             },
-            vec![BookmarkName::new("master")?],
-            Arc::new(identity_renamer),
-            Arc::new(identity_renamer),
-        );
+            large_repo_id: commit_syncer.get_large_repo().get_repoid(),
+        };
+
+        let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+        source.add_config(commit_sync_config.clone());
+        source.add_current_version(version.clone());
+        source.add_common_config(common_config);
+
+        let live_commit_sync_config = Arc::new(sync_config);
+
+        let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
         commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
         commit_syncer.repos = commit_sync_repos.clone();
 
