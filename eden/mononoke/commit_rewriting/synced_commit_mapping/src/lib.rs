@@ -36,6 +36,15 @@ pub enum ErrorKind {
         actual_bcs_id: Option<ChangesetId>,
         actual_config_version: Option<CommitSyncConfigVersion>,
     },
+    #[error(
+        "tried to insert inconsistent version for {large_cs_id} in repo {large_repo_id}: tried to insert {expected_version_name}, found {actual_version_name}"
+    )]
+    InconsistentLargeRepoCommitVersion {
+        large_repo_id: RepositoryId,
+        large_cs_id: ChangesetId,
+        expected_version_name: CommitSyncConfigVersion,
+        actual_version_name: CommitSyncConfigVersion,
+    },
 }
 
 // TODO(simonfar): Once we've proven the concept, we want to cache these
@@ -211,6 +220,14 @@ pub trait SyncedCommitMapping: Send + Sync {
         source_bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
     ) -> Result<Option<WorkingCopyEquivalence>, Error>;
+
+    /// Get version for large repo commit
+    async fn get_large_repo_commit_version(
+        &self,
+        ctx: &CoreContext,
+        large_repo_id: RepositoryId,
+        large_repo_cs_id: ChangesetId,
+    ) -> Result<Option<CommitSyncConfigVersion>, Error>;
 }
 
 #[derive(Clone)]
@@ -271,6 +288,27 @@ queries! {
           LIMIT 1
           "
     }
+
+    write InsertVersionForLargeRepoCommit(values: (
+        large_repo_id: RepositoryId,
+        large_bcs_id: ChangesetId,
+        sync_map_version_name: CommitSyncConfigVersion,
+    )) {
+        insert_or_ignore,
+        "{insert_or_ignore}
+        INTO version_for_large_repo_commit
+        (large_repo_id, large_bcs_id, sync_map_version_name)
+        VALUES {values}"
+    }
+
+    read SelectVersionForLargeRepoCommit(
+        large_repo_id: RepositoryId,
+        cs_id: ChangesetId,
+    ) -> (CommitSyncConfigVersion,) {
+        "SELECT sync_map_version_name
+          FROM version_for_large_repo_commit
+          WHERE large_repo_id = {large_repo_id} AND large_bcs_id = {cs_id}"
+    }
 }
 
 impl SqlConstruct for SqlSyncedCommitMapping {
@@ -302,6 +340,43 @@ impl SqlSyncedCommitMapping {
         let (txn, affected_rows) = add_many_in_txn(txn, entries).await?;
         txn.commit().await?;
         Ok(affected_rows)
+    }
+
+    async fn insert_version_for_large_repo_commit(
+        &self,
+        ctx: &CoreContext,
+        write_connection: &Connection,
+        large_repo_id: RepositoryId,
+        large_cs_id: ChangesetId,
+        version_name: &CommitSyncConfigVersion,
+    ) -> Result<bool, Error> {
+        let result = InsertVersionForLargeRepoCommit::query(
+            &write_connection,
+            &[(&large_repo_id, &large_cs_id, &version_name)],
+        )
+        .await?;
+
+        if result.affected_rows() == 1 {
+            Ok(true)
+        } else {
+            // Check that db stores consistent entry
+            let maybe_large_repo_version = self
+                .get_large_repo_commit_version(ctx, large_repo_id, large_cs_id)
+                .await?;
+
+            if let Some(actual_version_name) = maybe_large_repo_version {
+                if &actual_version_name != version_name {
+                    let err = ErrorKind::InconsistentLargeRepoCommitVersion {
+                        large_repo_id,
+                        large_cs_id,
+                        expected_version_name: version_name.clone(),
+                        actual_version_name,
+                    };
+                    return Err(err.into());
+                }
+            }
+            Ok(false)
+        }
     }
 }
 
@@ -403,7 +478,17 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
 
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let version_name_clone = version_name.clone();
+        if let Some(ref version_name) = version_name {
+            // TODO(stash): make version non-optional
+            self.insert_version_for_large_repo_commit(
+                &ctx,
+                &self.write_connection,
+                large_repo_id,
+                large_bcs_id,
+                version_name,
+            )
+            .await?;
+        }
         let result = InsertWorkingCopyEquivalence::query(
             &self.write_connection,
             &[(
@@ -430,12 +515,12 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                     WorkingCopy(wc, mapping) => (Some(wc), mapping),
                     NoWorkingCopy(mapping) => (None, mapping),
                 };
-                if (expected_bcs_id != small_bcs_id) || (expected_version != version_name_clone) {
+                if (expected_bcs_id != small_bcs_id) || (expected_version != version_name) {
                     let err = ErrorKind::InconsistentWorkingCopyEntry {
                         expected_bcs_id,
                         expected_config_version: expected_version,
                         actual_bcs_id: small_bcs_id,
-                        actual_config_version: version_name_clone,
+                        actual_config_version: version_name,
                     };
                     return Err(err.into());
                 }
@@ -506,6 +591,39 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
             None => None,
         })
     }
+
+    async fn get_large_repo_commit_version(
+        &self,
+        ctx: &CoreContext,
+        large_repo_id: RepositoryId,
+        large_repo_cs_id: ChangesetId,
+    ) -> Result<Option<CommitSyncConfigVersion>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+        let maybe_version = SelectVersionForLargeRepoCommit::query(
+            &self.read_connection,
+            &large_repo_id,
+            &large_repo_cs_id,
+        )
+        .await?
+        .pop()
+        .map(|x| x.0);
+
+        if let Some(version) = maybe_version {
+            return Ok(Some(version));
+        }
+
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsMaster);
+        Ok(SelectVersionForLargeRepoCommit::query(
+            &self.read_master_connection,
+            &large_repo_id,
+            &large_repo_cs_id,
+        )
+        .await?
+        .pop()
+        .map(|x| x.0))
+    }
 }
 
 pub async fn add_many_in_txn(
@@ -533,6 +651,20 @@ pub async fn add_many_in_txn(
         .into_iter()
         .map(|entry| entry.into_equivalent_working_copy_entry())
         .collect();
+
+    let mut large_repo_commit_versions = vec![];
+    for entry in &owned_entries {
+        if let Some(version_name) = &entry.version_name {
+            large_repo_commit_versions.push((
+                &entry.large_repo_id,
+                &entry.large_bcs_id,
+                version_name,
+            ));
+        }
+    }
+    let (txn, _result) =
+        InsertVersionForLargeRepoCommit::query_with_transaction(txn, &large_repo_commit_versions)
+            .await?;
 
     let ref_entries: Vec<_> = owned_entries
         .iter()

@@ -11,6 +11,7 @@
 
 use fbinit::FacebookInit;
 
+use anyhow::Error;
 use context::CoreContext;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types_mocks::changesetid as bonsai;
@@ -221,4 +222,76 @@ async fn test_missing(fb: FacebookInit) {
 #[fbinit::test]
 async fn test_equivalent_working_copy(fb: FacebookInit) {
     equivalent_working_copy(fb, SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap()).await
+}
+
+#[fbinit::test]
+async fn test_version_for_large_repo_commit(fb: FacebookInit) -> Result<(), Error> {
+    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+    let ctx = CoreContext::test_mock(fb);
+    // Check that at first we don't have a version for a given large repo commit
+    assert!(
+        mapping
+            .get_large_repo_commit_version(&ctx, REPO_ZERO, bonsai::ONES_CSID)
+            .await?
+            .is_none()
+    );
+
+    // Insert working copy equivalence, version for the large commit
+    let version_name = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let entry = EquivalentWorkingCopyEntry {
+        large_repo_id: REPO_ZERO,
+        large_bcs_id: bonsai::ONES_CSID,
+        small_repo_id: REPO_ONE,
+        small_bcs_id: Some(bonsai::TWOS_CSID),
+        version_name: Some(version_name.clone()),
+    };
+    let result = mapping
+        .insert_equivalent_working_copy(&ctx, entry.clone())
+        .await?;
+    assert!(result);
+
+    assert_eq!(
+        mapping
+            .get_large_repo_commit_version(&ctx, REPO_ZERO, bonsai::ONES_CSID)
+            .await?,
+        Some(version_name.clone())
+    );
+
+    // Now try bulk insertion
+
+    let new_version_name = CommitSyncConfigVersion("NEW_TEST_VERSION_NAME".to_string());
+    let ctx = CoreContext::test_mock(fb);
+    let entry_1 = SyncedCommitMappingEntry::new(
+        REPO_ZERO,
+        bonsai::THREES_CSID,
+        REPO_ONE,
+        bonsai::THREES_CSID,
+        new_version_name.clone(),
+        SyncedCommitSourceRepo::Large,
+    );
+    let entry_2 = SyncedCommitMappingEntry::new(
+        REPO_ZERO,
+        bonsai::FOURS_CSID,
+        REPO_ONE,
+        bonsai::FOURS_CSID,
+        new_version_name.clone(),
+        SyncedCommitSourceRepo::Large,
+    );
+
+    mapping.add_bulk(&ctx, vec![entry_1, entry_2]).await?;
+
+    assert_eq!(
+        mapping
+            .get_large_repo_commit_version(&ctx, REPO_ZERO, bonsai::THREES_CSID)
+            .await?,
+        Some(new_version_name.clone())
+    );
+    assert_eq!(
+        mapping
+            .get_large_repo_commit_version(&ctx, REPO_ZERO, bonsai::FOURS_CSID)
+            .await?,
+        Some(new_version_name)
+    );
+
+    Ok(())
 }

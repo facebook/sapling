@@ -30,3 +30,11 @@ CREATE TABLE IF NOT EXISTS `synced_working_copy_equivalence` (
  -- Small bcs id can map to multiple large bcs ids
  CREATE INDEX IF NOT EXISTS small_bcs_key ON synced_working_copy_equivalence
   (`large_repo_id`,`small_repo_id`,`small_bcs_id`);
+
+CREATE TABLE IF NOT EXISTS `version_for_large_repo_commit` (
+  `mapping_id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL ,
+  `large_repo_id` int(11) NOT NULL,
+  `large_bcs_id` binary(32) NOT NULL,
+  `sync_map_version_name` varchar(255) NOT NULL,
+  UNIQUE (`large_repo_id`,`large_bcs_id`)
+);

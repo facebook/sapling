@@ -1335,14 +1335,14 @@ async fn init_merged_repos(
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
         };
-        let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+        let after_merge_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
         let noop_version = CommitSyncConfigVersion("noop".to_string());
         let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-            current_version.clone(),
+            noop_version.clone(),
             Source(large_repo.get_repoid()),
             Target(small_repo.get_repoid()),
             hashmap! {
-                current_version => SyncData {
+                after_merge_version => SyncData {
                     mover: mover_type.get_reverse_mover(),
                     reverse_mover: mover_type.get_mover(),
                 },
