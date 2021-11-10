@@ -11,6 +11,8 @@ use stack_config::StackConfig;
 #[derive(Deserialize, StackConfig, Debug, PartialEq)]
 struct ConfigNested {
     field: String,
+    remainder: bool,
+    another: String,
 }
 
 #[derive(Deserialize, StackConfig, Debug, PartialEq)]
@@ -34,7 +36,8 @@ fn default_list() -> Vec<String> {
     vec!["default".into(), "list".into()]
 }
 
-fn main() {
+#[test]
+fn basic_test() {
     let mut config_loader = Config::loader();
     config_loader.load(
         toml::from_str(
@@ -45,6 +48,7 @@ flag = false
 
 [nested]
 field = "1234"
+remainder = true
 "#,
         )
         .unwrap(),
@@ -58,6 +62,7 @@ unknown = "12345"
 
 [nested]
 field = "hello"
+another = "world"
 "#,
         )
         .unwrap(),
@@ -67,12 +72,14 @@ field = "hello"
     assert_eq!(
         result,
         Config {
-            field: "1234".to_string(),
+            field: "1234".into(),
             flag: true,
             list: default_list(),
             opt: None,
             nested: ConfigNested {
-                field: "hello".into()
+                field: "hello".into(),
+                remainder: true,
+                another: "world".into(),
             }
         }
     );
