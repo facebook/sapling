@@ -1208,7 +1208,7 @@ async fn tail_batch_iteration(
                         scuba.add_future_stats(&stats).log_with_msg("Warmup", None);
                         let timestamp = Instant::now();
 
-                        let (stats, _) = deriver
+                        let job = deriver
                             .backfill_batch_dangerous(
                                 get_batch_ctx(&ctx, parallel || gap_size.is_some()).await,
                                 repo.clone(),
@@ -1216,8 +1216,8 @@ async fn tail_batch_iteration(
                                 parallel,
                                 gap_size,
                             )
-                            .try_timed()
-                            .await?;
+                            .try_timed();
+                        let (stats, _) = tokio::spawn(job).await??;
 
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
                             slog::info!(
