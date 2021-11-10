@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use stack_config::StackConfig;
-use tracing::{event, Level};
+use tracing::{event, trace, Level};
 
 use edenfs_error::EdenFsError;
 
@@ -26,17 +26,36 @@ pub struct EdenFsConfig {
     #[stack(nested)]
     core: Core,
 
-    #[stack(merge = "merge_hashmap")]
+    #[stack(merge = "merge_table")]
     #[serde(flatten)]
-    other: HashMap<String, toml::Value>,
+    other: toml::value::Table,
 }
 
-fn merge_hashmap(lhs: &mut HashMap<String, toml::Value>, rhs: HashMap<String, toml::Value>) {
-    lhs.extend(rhs);
+fn merge_table(lhs: &mut toml::value::Table, rhs: toml::value::Table) {
+    for (key, value) in rhs.into_iter() {
+        if let Some(lhs_value) = lhs.get_mut(&key) {
+            // Key exists
+            if let (Some(lhs_table), true) = (lhs_value.as_table_mut(), value.is_table()) {
+                // Both value are table, we merge them
+                // SAFETY: unwrap here is guaranteed by `value.is_table()`. This
+                // is awkward because try_into will consume the value, making
+                // the else-clause not able to use it later.
+                merge_table(lhs_table, value.try_into::<toml::value::Table>().unwrap());
+            } else {
+                // Otherwise, either the values are not table type, or they have
+                // different types. In both case we prefer rhs value.
+                *lhs_value = value;
+            }
+        } else {
+            // Key does not exist in lhs
+            lhs.insert(key, value);
+        }
+    }
 }
 
 fn load_path(loader: &mut EdenFsConfigLoader, path: &Path) -> Result<()> {
     let content = String::from_utf8(std::fs::read(&path)?)?;
+    trace!(?content, ?path, "Loading config");
     loader.load(toml::from_str(&content)?);
     Ok(())
 }
