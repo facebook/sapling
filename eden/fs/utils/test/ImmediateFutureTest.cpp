@@ -407,7 +407,7 @@ TEST(ImmediateFuture, collectAllTupleSemiReady) {
   EXPECT_EQ(std::get<1>(res).value(), 43);
 }
 
-TEST(ImmediateFuture, collectAllSafe) {
+TEST(ImmediateFuture, collectAllSafeTuple) {
   auto f1 = ImmediateFuture<int>{42};
   auto f2 = ImmediateFuture<float>{
       folly::Try<float>{std::logic_error("Test exception")}};
@@ -418,7 +418,7 @@ TEST(ImmediateFuture, collectAllSafe) {
   EXPECT_THROW_RE(std::move(future).get(), std::logic_error, "Test exception");
 }
 
-TEST(ImmediateFuture, collectAllSafeError) {
+TEST(ImmediateFuture, collectAllSafeTupleError) {
   auto [promise1, semiFut1] = folly::makePromiseContract<int>();
   auto [promise2, semiFut2] = folly::makePromiseContract<int>();
 
@@ -440,7 +440,7 @@ TEST(ImmediateFuture, collectAllSafeError) {
   EXPECT_THROW_RE(res.value(), std::logic_error, "Test");
 }
 
-TEST(ImmediateFuture, collectAllSafeValid) {
+TEST(ImmediateFuture, collectAllSafeTupleValid) {
   auto f1 = ImmediateFuture<int>{42};
   auto f2 = ImmediateFuture<float>{42.};
 
@@ -450,4 +450,52 @@ TEST(ImmediateFuture, collectAllSafeValid) {
   auto res = std::move(future).get();
   EXPECT_EQ(std::get<int>(res), 42);
   EXPECT_EQ(std::get<float>(res), 42.);
+}
+
+TEST(ImmediateFuture, collectAllSafeVector) {
+  std::vector<ImmediateFuture<int>> vec;
+  vec.push_back(ImmediateFuture<int>{42});
+  vec.push_back(makeImmediateFuture<int>(std::logic_error("Test exception")));
+
+  auto fut = collectAllSafe(std::move(vec));
+  EXPECT_TRUE(fut.isReady());
+
+  EXPECT_THROW_RE(std::move(fut).get(), std::logic_error, "Test exception");
+}
+
+TEST(ImmediateFuture, collectAllSafeVectorError) {
+  auto [promise1, semiFut1] = folly::makePromiseContract<int>();
+  auto [promise2, semiFut2] = folly::makePromiseContract<int>();
+
+  std::vector<ImmediateFuture<int>> vec;
+  vec.emplace_back(std::move(semiFut1));
+  vec.emplace_back(std::move(semiFut2));
+
+  auto future = collectAllSafe(std::move(vec))
+                    .semi()
+                    .via(&folly::QueuedImmediateExecutor::instance());
+  EXPECT_FALSE(future.isReady());
+
+  promise1.setException(std::logic_error("Test"));
+  EXPECT_FALSE(future.isReady());
+
+  promise2.setValue(42);
+  EXPECT_TRUE(future.isReady());
+
+  auto res = std::move(future).getTry();
+  EXPECT_THROW_RE(res.value(), std::logic_error, "Test");
+}
+
+TEST(ImmediateFuture, collectAllSafeVectorValid) {
+  std::vector<ImmediateFuture<int>> vec;
+  vec.push_back(ImmediateFuture<int>{42});
+  vec.push_back(ImmediateFuture<int>{43});
+
+  auto future = collectAllSafe(std::move(vec));
+  EXPECT_TRUE(future.isReady());
+
+  auto res = std::move(future).get();
+  EXPECT_EQ(res.size(), 2);
+  EXPECT_EQ(res[0], 42);
+  EXPECT_EQ(res[1], 43);
 }

@@ -289,6 +289,25 @@ ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
           });
 }
 
+template <typename T>
+ImmediateFuture<std::vector<T>> collectAllSafe(
+    std::vector<ImmediateFuture<T>> futures) {
+  return collectAll(std::move(futures))
+      .thenValue(
+          [](std::vector<folly::Try<T>> futures) -> folly::Try<std::vector<T>> {
+            std::vector<T> res;
+            res.reserve(futures.size());
+
+            for (auto& try_ : futures) {
+              if (try_.hasException()) {
+                return folly::Try<std::vector<T>>{try_.exception()};
+              }
+              res.push_back(std::move(try_).value());
+            }
+            return folly::Try{res};
+          });
+}
+
 template <typename... Fs>
 ImmediateFuture<
     std::tuple<folly::Try<typename folly::remove_cvref_t<Fs>::value_type>...>>

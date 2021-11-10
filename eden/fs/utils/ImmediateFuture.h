@@ -268,6 +268,20 @@ ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
 /**
  * Run all the passed in ImmediateFuture to completion.
  *
+ * This behaves similarly to the collectAll from above, but unwraps all the
+ * individual folly::Try. In that case, the returned ImmediateFuture will hold
+ * the error.
+ *
+ * Even in the case of errors, the returned ImmediateFuture will only complete
+ * when all the passed in ImmediateFuture have completed.
+ */
+template <typename T>
+ImmediateFuture<std::vector<T>> collectAllSafe(
+    std::vector<ImmediateFuture<T>> futures);
+
+/**
+ * Run all the passed in ImmediateFuture to completion.
+ *
  * This has the same behavior as the version taking a vector but returning a
  * tuple of folly::Try.
  */
