@@ -12,6 +12,8 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/String.h>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
 #include <iosfwd>
 #include <optional>
 
@@ -121,12 +123,29 @@ class TreeEntry {
    */
   size_t getIndirectSizeBytes() const;
 
+  /**
+   * Computes exact serialized size of this entry.
+   */
+  size_t serializedSize() const;
+
+  /**
+   * Serializes entry into appender, consuming exactly serializedSize() bytes.
+   */
+  void serialize(folly::io::Appender& appender) const;
+
+  /**
+   * Deserialize tree entry.
+   */
+  static std::optional<TreeEntry> deserialize(folly::StringPiece& data);
+
  private:
   TreeEntryType type_;
   ObjectId hash_;
   PathComponent name_;
   std::optional<uint64_t> size_;
   std::optional<Hash20> contentSha1_;
+
+  static constexpr uint64_t NO_SIZE = std::numeric_limits<uint64_t>::max();
 };
 
 std::ostream& operator<<(std::ostream& os, TreeEntryType type);

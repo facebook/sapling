@@ -90,18 +90,16 @@ folly::Future<std::vector<StoreResult>> LocalStore::getBatch(
   });
 }
 
-// TODO(mbolin): Currently, all objects in our RocksDB are Git objects. We
-// probably want to namespace these by column family going forward, at which
-// point we might want to have a GitLocalStore that delegates to an
-// LocalStore so a vanilla LocalStore has no knowledge of deserializeGitTree()
-// or deserializeGitBlob().
-
 folly::Future<std::unique_ptr<Tree>> LocalStore::getTree(
     const ObjectId& id) const {
   return getFuture(KeySpace::TreeFamily, id.getBytes())
       .thenValue([id](StoreResult&& data) {
         if (!data.isValid()) {
           return std::unique_ptr<Tree>(nullptr);
+        }
+        auto try_tree = Tree::tryDeserialize(id, StringPiece{data.bytes()});
+        if (try_tree) {
+          return std::make_unique<Tree>(*try_tree);
         }
         return deserializeGitTree(id, data.bytes());
       });
@@ -136,6 +134,9 @@ folly::Future<optional<BlobMetadata>> LocalStore::getBlobMetadata(
 }
 
 folly::IOBuf LocalStore::serializeTree(const Tree& tree) {
+  if (!tree.isGitTreeCompatible()) {
+    return tree.serialize();
+  }
   GitTreeSerializer serializer;
   for (auto& entry : tree.getTreeEntries()) {
     serializer.addEntry(std::move(entry));
@@ -148,9 +149,6 @@ bool LocalStore::hasKey(KeySpace keySpace, const ObjectId& id) const {
 }
 
 void LocalStore::putTree(const Tree& tree) {
-  if (!tree.isGitTreeCompatible()) {
-    return;
-  }
   auto serialized = LocalStore::serializeTree(tree);
   ByteRange treeData = serialized.coalesce();
 
@@ -158,9 +156,6 @@ void LocalStore::putTree(const Tree& tree) {
 }
 
 void LocalStore::WriteBatch::putTree(const Tree& tree) {
-  if (!tree.isGitTreeCompatible()) {
-    return;
-  }
   auto serialized = LocalStore::serializeTree(tree);
   ByteRange treeData = serialized.coalesce();
 

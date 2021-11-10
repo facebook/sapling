@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/io/IOBuf.h>
 #include <algorithm>
 #include <vector>
 #include "eden/fs/model/Hash.h"
@@ -93,9 +94,29 @@ class Tree {
     return true;
   }
 
+  /**
+   * Serialize tree using custom format.
+   */
+  folly::IOBuf serialize() const;
+
+  /**
+   * Deserialize tree if possible.
+   * Returns nullopt if serialization format is not supported.
+   *
+   * First byte is used to identify serialization format.
+   * Git tree starts with 'tree', so we can use any bytes other then 't' as a
+   * version identifier. Currently only V1_VERSION is supported, along with git
+   * tree format.
+   */
+  static std::optional<Tree> tryDeserialize(
+      ObjectId hash,
+      folly::StringPiece data);
+
  private:
   const ObjectId hash_;
   const std::vector<TreeEntry> entries_;
+
+  static constexpr uint32_t V1_VERSION = 1u;
 };
 
 bool operator==(const Tree& tree1, const Tree& tree2);
