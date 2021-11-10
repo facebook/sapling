@@ -25,3 +25,11 @@ CREATE TABLE IF NOT EXISTS segmented_changelog_version (
   iddag_version VARBINARY(32) NOT NULL,
   idmap_version INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS segmented_changelog_idmap_copy_mappings (
+  repo_id INTEGER NOT NULL,
+  idmap_version INTEGER NOT NULL,
+  copied_version INTEGER NOT NULL,
+  copy_limit BIGINT NOT NULL,
+  PRIMARY KEY (repo_id, copied_version, idmap_version)
+);
