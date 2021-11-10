@@ -6,9 +6,9 @@
 
 import contextlib
 import errno
-import fcntl
 import logging
 import os
+import platform
 import shutil
 import stat
 import struct
@@ -21,6 +21,10 @@ from typing import BinaryIO, Iterator, Optional, Tuple
 from facebook.eden.overlay.ttypes import OverlayDir, OverlayEntry
 
 from .util import fdatasync
+
+
+if platform.system() != "Windows":
+    import fcntl
 
 
 class InvalidOverlayFile(Exception):

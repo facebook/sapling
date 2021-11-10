@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from typing import Callable
 
-from eden.integration.lib import edenclient
+from eden.integration.lib import edenclient, skip
 
 from . import snapshot as snapshot_mod, verify as verify_mod
 
@@ -21,6 +21,10 @@ class Test(unittest.TestCase):
 
     All of the test functions in this class are dynamically added by register_tests()
     """
+
+    def setUp(self) -> None:
+        skip.skip_if_disabled(self)
+        super().setUp()
 
     def _test_snapshot(self, snapshot_path: Path) -> None:
         with snapshot_mod.create_tmp_dir() as tmp_dir:
@@ -42,6 +46,10 @@ class InfraTests(unittest.TestCase):
     """Tests for the snapshot generation/verification code itself."""
 
     NUM_SNAPSHOTS = 0
+
+    def setUp(self) -> None:
+        skip.skip_if_disabled(self)
+        super().setUp()
 
     def test_snapshot_list(self) -> None:
         # Ensure that at least one snapshot file was found, so that the tests will
