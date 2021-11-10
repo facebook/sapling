@@ -744,15 +744,6 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
-   * Only used in CLI to control if new clones are using TreeOverlay by default.
-   * Adding here to avoid unknown configuration warning.
-   */
-  ConfigSetting<bool> cliOnlyOverlayEnableTreeOverlay{
-      "overlay:enable_tree_overlay",
-      false,
-      this};
-
-  /**
    * DANGER: this option will put overlay into memory and skip persisting any
    * actual data to disk. This will guarantee to cause EdenFS corruption after
    * restart. Use with caution.

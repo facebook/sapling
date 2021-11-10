@@ -85,14 +85,6 @@ std::pair<StringPiece, StringPiece> parseKey(StringPiece fullKey) {
       EDEN_BUG() << "not a valid section name: " << fullKey;
     }
   }
-  // This one slipped in:
-  if (key != "enable_tree_overlay") {
-    for (char c : key) {
-      if (!isConfigChar(c)) {
-        EDEN_BUG() << "not a valid key name: " << fullKey;
-      }
-    }
-  }
 
   return {section, key};
 }

@@ -815,13 +815,9 @@ class CloneCmd(Subcmd):
     def _get_enable_tree_overlay(
         self, instance: EdenInstance, overlay_type: Optional[str]
     ) -> bool:
-        if sys.platform != "win32":
-            # Tree overlay does not support non-Windows platform yet
-            return False
-
         if overlay_type is None:
-            # If no flag is specified from the user, follow system configuration
-            return instance.get_config_bool("overlay.enable_tree_overlay", False)
+            # Tree overlay does not support non-Windows platform yet
+            return sys.platform == "win32"
 
         return overlay_type == "tree"
 
