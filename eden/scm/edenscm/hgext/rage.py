@@ -23,6 +23,7 @@ import threading
 import time
 import traceback
 from functools import partial
+from pathlib import Path
 
 from edenscm.mercurial import (
     bookmarks,
@@ -294,6 +295,20 @@ x2pagentd logs (might be truncated):
     )
 
 
+def sksagentrage(ui):
+    sksagentpath = ui.config("rage", "sks-agent-path")
+    if not sksagentpath:
+        return "Agent not configured for this platform"
+
+    agentbinary = Path(sksagentpath)
+    if not agentbinary.is_file():
+        return f"Agent's binary not present in {sksagentpath}"
+
+    status = shcmd(f"{sksagentpath} rage --stdout --verbose=false")
+
+    return "sks-agent status:\n\n{}".format(status)
+
+
 def _makerage(ui, repo, **opts):
     configoverrides = {
         # Make graphlog shorter.
@@ -453,6 +468,7 @@ def _makerage(ui, repo, **opts):
         ("ssh config", lambda: shcmd("ssh -G hg.vip.facebook.com", check=False)),
         ("debuglocks", lambda: hgcmd("debuglocks")),
         ("x2pagentd info", lambda: checkproxyagentstate(ui)),
+        ("sks-agent rage", lambda: sksagentrage(ui)),
     ]
 
     msg = ""
