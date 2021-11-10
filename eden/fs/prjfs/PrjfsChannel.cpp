@@ -159,6 +159,20 @@ HRESULT notification(
   }
 }
 
+/**
+ * Detach the passed in future onto the global CPU executor.
+ */
+void detachAndCompleteCallback(
+    ImmediateFuture<folly::Unit> future,
+    std::shared_ptr<PrjfsRequestContext> context) {
+  auto completionFuture = context->catchErrors(std::move(future))
+                              .ensure([context = std::move(context)] {});
+  if (!completionFuture.isReady()) {
+    folly::futures::detachOnGlobalCPUExecutor(
+        std::move(completionFuture).semi());
+  }
+}
+
 } // namespace
 
 PrjfsChannelInner::PrjfsChannelInner(
@@ -194,10 +208,7 @@ HRESULT PrjfsChannelInner::startEnumeration(
         });
   });
 
-  context->catchErrors(std::move(fut))
-      .ensure([context = std::move(context)] {})
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  detachAndCompleteCallback(std::move(fut), std::move(context));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -315,10 +326,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
         });
   });
 
-  context->catchErrors(std::move(fut))
-      .ensure([context = std::move(context)] {})
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  detachAndCompleteCallback(std::move(fut), std::move(context));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -376,10 +384,7 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
         });
   });
 
-  context->catchErrors(std::move(fut))
-      .ensure([context = std::move(context)] {})
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  detachAndCompleteCallback(std::move(fut), std::move(context));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -407,10 +412,7 @@ HRESULT PrjfsChannelInner::queryFileName(
         });
   });
 
-  context->catchErrors(std::move(fut))
-      .ensure([context = std::move(context)] {})
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  detachAndCompleteCallback(std::move(fut), std::move(context));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -593,10 +595,7 @@ HRESULT PrjfsChannelInner::getFileData(
             });
       });
 
-  context->catchErrors(std::move(fut))
-      .ensure([context = std::move(context)] {})
-      .semi()
-      .via(&folly::QueuedImmediateExecutor::instance());
+  detachAndCompleteCallback(std::move(fut), std::move(context));
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -848,10 +847,7 @@ HRESULT PrjfsChannelInner::notification(
           });
     });
 
-    context->catchErrors(std::move(fut))
-        .ensure([context = std::move(context)] {})
-        .semi()
-        .via(&folly::QueuedImmediateExecutor::instance());
+    detachAndCompleteCallback(std::move(fut), std::move(context));
 
     return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   }
