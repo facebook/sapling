@@ -43,7 +43,7 @@ impl SqlConstruct for NewFilenodesBuilder {
         } = connections;
         let chunk_size = match read_connection {
             Connection::Sqlite(_) => SQLITE_INSERT_CHUNK_SIZE,
-            Connection::DeprecatedMysql(_) | Connection::Mysql(_) => MYSQL_INSERT_CHUNK_SIZE,
+            Connection::Mysql(_) => MYSQL_INSERT_CHUNK_SIZE,
         };
 
         let reader =
@@ -74,9 +74,7 @@ impl SqlShardedConstruct for NewFilenodesBuilder {
             write_connections,
         } = shard_connections;
         let chunk_size = match read_connections.get(0) {
-            Some(Connection::DeprecatedMysql(_)) | Some(Connection::Mysql(_)) => {
-                MYSQL_INSERT_CHUNK_SIZE
-            }
+            Some(Connection::Mysql(_)) => MYSQL_INSERT_CHUNK_SIZE,
             _ => SQLITE_INSERT_CHUNK_SIZE,
         };
 
