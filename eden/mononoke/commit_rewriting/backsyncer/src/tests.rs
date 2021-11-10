@@ -48,7 +48,8 @@ use synced_commit_mapping::{
 };
 use test_repo_factory::TestRepoFactory;
 use tests_utils::{
-    bookmark, create_commit, list_working_copy_utf8, store_files, store_rename, CreateCommitContext,
+    bookmark, create_commit, list_working_copy_utf8, resolve_cs_id, store_files, store_rename,
+    CreateCommitContext,
 };
 use tokio::runtime::Runtime;
 use tunables::with_tunables_async;
@@ -62,13 +63,62 @@ const REPOMERGE_FILE: &str = "repomergefile";
 const BRANCHMERGE_FILE: &str = "branchmerge";
 
 #[fbinit::test]
-fn backsync_linear(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = Runtime::new()?;
-    runtime.block_on(async move {
-        let (commit_syncer, target_repo_dbs) =
-            init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
-        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
-    })
+async fn backsync_linear_simple(fb: FacebookInit) -> Result<(), Error> {
+    let (commit_syncer, target_repo_dbs) =
+        init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
+    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
+
+    let ctx = CoreContext::test_mock(fb);
+    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "3\n".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("10")? => "modified10\n".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+        }
+    );
+
+    let target_cs_id =
+        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "merged 3".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("10")? => "modified10\n".to_string(),
+                MPath::new("files")? => "branchmerge files content".to_string(),
+                MPath::new("branchmerge")? => "new branch merge content".to_string(),
+                MPath::new("repomergefile")? => "some content".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+                MPath::new("repomerge/first")? => "new repo content".to_string(),
+                MPath::new("repomerge/movedest")? => "moved content".to_string(),
+                MPath::new("repomerge/second")? => "new repo second content".to_string(),
+                MPath::new("repomerge/toremove")? => "new repo content".to_string(),
+
+        }
+    );
+
+    Ok(())
 }
 
 #[fbinit::test]
@@ -152,7 +202,24 @@ async fn backsync_linear_with_mover_that_removes_some_files(fb: FacebookInit) ->
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
+    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
+    let ctx = CoreContext::test_mock(fb);
+    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map,
+        hashmap! {MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string()}
+    );
+
+    let target_cs_id =
+        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map,
+        hashmap! {MPath::new("files")? => "branchmerge files content".to_string()}
+    );
+    Ok(())
 }
 
 #[fbinit::test]
@@ -166,7 +233,57 @@ async fn backsync_linear_with_mover_that_removes_single_file(
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
+    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
+
+    let ctx = CoreContext::test_mock(fb);
+    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "3\n".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+        }
+    );
+
+    let target_cs_id =
+        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "merged 3".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("files")? => "branchmerge files content".to_string(),
+                MPath::new("branchmerge")? => "new branch merge content".to_string(),
+                MPath::new("repomergefile")? => "some content".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+                MPath::new("repomerge/first")? => "new repo content".to_string(),
+                MPath::new("repomerge/movedest")? => "moved content".to_string(),
+                MPath::new("repomerge/second")? => "new repo second content".to_string(),
+                MPath::new("repomerge/toremove")? => "new repo content".to_string(),
+
+        }
+    );
+
+    Ok(())
 }
 
 #[fbinit::test]
@@ -175,7 +292,40 @@ async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Resul
     let (commit_syncer, target_repo_dbs) =
         init_repos(fb, MoverType::Noop, BookmarkRenamerType::Only(master)).await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
+    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
+
+    let ctx = CoreContext::test_mock(fb);
+    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "3\n".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("10")? => "modified10\n".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+        }
+    );
+
+    // Bookmark should be deleted
+    assert_eq!(
+        commit_syncer
+            .get_target_repo()
+            .get_bookmark(ctx, &BookmarkName::new("anotherbookmark")?)
+            .await?,
+        None
+    );
+
+    Ok(())
 }
 
 #[fbinit::test]
@@ -187,7 +337,27 @@ async fn backsync_linear_bookmark_renamer_prefix(fb: FacebookInit) -> Result<(),
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
+    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
+
+    let ctx = CoreContext::test_mock(fb);
+    // Bookmarks should be deleted
+    assert_eq!(
+        commit_syncer
+            .get_target_repo()
+            .get_bookmark(ctx.clone(), &BookmarkName::new("master")?)
+            .await?,
+        None
+    );
+
+    assert_eq!(
+        commit_syncer
+            .get_target_repo()
+            .get_bookmark(ctx, &BookmarkName::new("anotherbookmark")?)
+            .await?,
+        None
+    );
+
+    Ok(())
 }
 
 #[fbinit::test]
@@ -195,7 +365,27 @@ async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result
     let (commit_syncer, target_repo_dbs) =
         init_repos(fb, MoverType::Noop, BookmarkRenamerType::RemoveAll).await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
+    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
+
+    let ctx = CoreContext::test_mock(fb);
+    // Bookmarks should be deleted
+    assert_eq!(
+        commit_syncer
+            .get_target_repo()
+            .get_bookmark(ctx.clone(), &BookmarkName::new("master")?)
+            .await?,
+        None
+    );
+
+    assert_eq!(
+        commit_syncer
+            .get_target_repo()
+            .get_bookmark(ctx, &BookmarkName::new("anotherbookmark")?)
+            .await?,
+        None
+    );
+
+    Ok(())
 }
 
 #[fbinit::test]
@@ -266,7 +456,53 @@ async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
+    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
+
+    let ctx = CoreContext::test_mock(fb);
+    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "3\n".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("10")? => "modified10\n".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+        }
+    );
+
+    let target_cs_id =
+        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "merged 3".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("10")? => "modified10\n".to_string(),
+                MPath::new("files")? => "branchmerge files content".to_string(),
+                MPath::new("branchmerge")? => "new branch merge content".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+        }
+    );
+
+    Ok(())
 }
 
 #[fbinit::test]
@@ -292,7 +528,54 @@ async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), 
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
+    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
+
+    let ctx = CoreContext::test_mock(fb);
+    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "3\n".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("10")? => "modified10\n".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+        }
+    );
+
+    let target_cs_id =
+        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "merged 3".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("10")? => "modified10\n".to_string(),
+                MPath::new("files")? => "branchmerge files content".to_string(),
+                MPath::new("branchmerge")? => "new branch merge content".to_string(),
+                MPath::new("repomergefile")? => "some content".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+        }
+    );
+
+    Ok(())
 }
 
 #[fbinit::test]
@@ -304,7 +587,58 @@ async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Res
     )
     .await?;
 
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
+    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
+
+    let ctx = CoreContext::test_mock(fb);
+    let target_cs_id = resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "master").await?;
+
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "3\n".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("10")? => "modified10\n".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+                MPath::new("files")? => "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n".to_string(),
+        }
+    );
+
+    let target_cs_id =
+        resolve_cs_id(&ctx, commit_syncer.get_target_repo(), "anotherbookmark").await?;
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map.into_iter().collect::<BTreeMap<_, _>>(),
+        btreemap! {
+                MPath::new("1")? => "1\n".to_string(),
+                MPath::new("2")? => "2\n".to_string(),
+                MPath::new("3")? => "merged 3".to_string(),
+                MPath::new("4")? => "4\n".to_string(),
+                MPath::new("5")? => "5\n".to_string(),
+                MPath::new("6")? => "6\n".to_string(),
+                MPath::new("7")? => "7\n".to_string(),
+                MPath::new("8")? => "8\n".to_string(),
+                MPath::new("9")? => "9\n".to_string(),
+                MPath::new("10")? => "modified10\n".to_string(),
+                MPath::new("files")? => "branchmerge files content".to_string(),
+                MPath::new("repomergefile")? => "some content".to_string(),
+                MPath::new("randomfile")? => "some other content".to_string(),
+                MPath::new("repomerge/first")? => "new repo content".to_string(),
+                MPath::new("repomerge/movedest")? => "moved content".to_string(),
+                MPath::new("repomerge/second")? => "new repo second content".to_string(),
+                MPath::new("repomerge/toremove")? => "new repo content".to_string(),
+
+        }
+    );
+
+    Ok(())
 }
 
 #[fbinit::test]
