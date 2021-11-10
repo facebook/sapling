@@ -599,8 +599,6 @@ class UpdateTest(EdenHgTestCase):
             os.unlink(self.get_path("foo/bar.txt"))
             self.eden.start()
 
-            self.assert_status({"foo/bar.txt": "M"})
-            self.repo.update(".", clean=True)
             self.assert_status_empty()
             self.assertEqual(self.read_file("foo/bar.txt"), "updated in commit 3\n")
 

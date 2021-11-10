@@ -24,15 +24,6 @@ namespace facebook::eden {
 
 namespace {
 
-#define BAIL_ON_RECURSIVE_CALL(callbackData)                               \
-  do {                                                                     \
-    if (callbackData->TriggeringProcessId == GetCurrentProcessId()) {      \
-      auto __path = RelativePath(callbackData->FilePathName);              \
-      XLOG(ERR) << "Recursive EdenFS call are disallowed for: " << __path; \
-      return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);                      \
-    }                                                                      \
-  } while (false)
-
 detail::RcuLockedPtr getChannel(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
   XDCHECK(callbackData);
@@ -62,10 +53,27 @@ HRESULT runCallback(
   }
 }
 
+/**
+ * Log on callbacks triggered by EdenFS.
+ *
+ * All callbacks besides the "notification" one are allowed to be called from
+ * EdenFS itself, this is due to these only accessing data from the ObjectStore
+ * which will never perform any disk IO to the working copy. To handle out of
+ * order notifications about file/directory changes, the "notification"
+ * callback may need to read the working copy, which may trigger some callbacks
+ * to be triggered. These are OK due to the property described above.
+ */
+void allowRecursiveCallbacks(const PRJ_CALLBACK_DATA* callbackData) {
+  if (callbackData->TriggeringProcessId == GetCurrentProcessId()) {
+    XLOG(DBG6) << "Recursive EdenFS call for: "
+               << RelativePath(callbackData->FilePathName);
+  }
+}
+
 HRESULT startEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
-  BAIL_ON_RECURSIVE_CALL(callbackData);
+  allowRecursiveCallbacks(callbackData);
   return runCallback(
       &PrjfsChannelInner::startEnumeration, callbackData, enumerationId);
 }
@@ -73,7 +81,7 @@ HRESULT startEnumeration(
 HRESULT endEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
-  BAIL_ON_RECURSIVE_CALL(callbackData);
+  allowRecursiveCallbacks(callbackData);
   return runCallback(
       &PrjfsChannelInner::endEnumeration, callbackData, enumerationId);
 }
@@ -83,7 +91,7 @@ HRESULT getEnumerationData(
     const GUID* enumerationId,
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept {
-  BAIL_ON_RECURSIVE_CALL(callbackData);
+  allowRecursiveCallbacks(callbackData);
   return runCallback(
       &PrjfsChannelInner::getEnumerationData,
       callbackData,
@@ -93,12 +101,12 @@ HRESULT getEnumerationData(
 }
 
 HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
-  BAIL_ON_RECURSIVE_CALL(callbackData);
+  allowRecursiveCallbacks(callbackData);
   return runCallback(&PrjfsChannelInner::getPlaceholderInfo, callbackData);
 }
 
 HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
-  BAIL_ON_RECURSIVE_CALL(callbackData);
+  allowRecursiveCallbacks(callbackData);
   return runCallback(&PrjfsChannelInner::queryFileName, callbackData);
 }
 
@@ -106,12 +114,13 @@ HRESULT getFileData(
     const PRJ_CALLBACK_DATA* callbackData,
     UINT64 byteOffset,
     UINT32 length) noexcept {
-  BAIL_ON_RECURSIVE_CALL(callbackData);
+  allowRecursiveCallbacks(callbackData);
   return runCallback(
       &PrjfsChannelInner::getFileData, callbackData, byteOffset, length);
 }
 
-void cancelCommand(const PRJ_CALLBACK_DATA* /*callbackData*/) noexcept {
+void cancelCommand(const PRJ_CALLBACK_DATA* callbackData) noexcept {
+  allowRecursiveCallbacks(callbackData);
   // TODO(T67329233): Interrupt the future.
 }
 
@@ -121,8 +130,6 @@ HRESULT notification(
     PRJ_NOTIFICATION notificationType,
     PCWSTR destinationFileName,
     PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept {
-  BAIL_ON_RECURSIVE_CALL(callbackData);
-
   try {
     auto channel = getChannel(callbackData);
     if (!channel) {
@@ -811,6 +818,15 @@ HRESULT PrjfsChannelInner::notification(
 
     auto relPath = RelativePath(callbackData->FilePathName);
     auto destPath = RelativePath(destinationFileName);
+
+    // The underlying handlers may call into the inode code and since this
+    // notification may have been triggered by the inode code itself, we may
+    // end up in a deadlock. To prevent this, let's simply bail here when this
+    // happens.
+    if (callbackData->TriggeringProcessId == GetCurrentProcessId()) {
+      XLOG(ERR) << "Recursive EdenFS call are disallowed for: " << relPath;
+      return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);
+    }
 
     auto fut = makeImmediateFutureWith([this,
                                         context,
