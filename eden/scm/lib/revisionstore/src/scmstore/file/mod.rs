@@ -158,83 +158,90 @@ impl FileStore {
     ) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
         let mut state = FetchState::new(keys, attrs, &self);
 
-        if let Some(ref aux_cache) = self.aux_cache {
-            state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
-        }
-
-        if let Some(ref aux_local) = self.aux_local {
-            state.fetch_aux_indexedlog(aux_local, StoreType::Local);
-        }
-
-        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            state.fetch_indexedlog(indexedlog_cache, StoreType::Shared);
-        }
-
-        if let Some(ref indexedlog_local) = self.indexedlog_local {
-            state.fetch_indexedlog(indexedlog_local, StoreType::Local);
-        }
-
-        if let Some(ref lfs_cache) = self.lfs_cache {
-            state.fetch_lfs(lfs_cache, StoreType::Shared);
-        }
-
-        if let Some(ref lfs_local) = self.lfs_local {
-            state.fetch_lfs(lfs_local, StoreType::Local);
-        }
-
-        if self.use_memcache() {
-            if let Some(ref memcache) = self.memcache {
-                state.fetch_memcache(memcache, self.indexedlog_cache.as_ref().map(|s| s.as_ref()));
+        let aux_cache = self.aux_cache.clone();
+        let aux_local = self.aux_local.clone();
+        let indexedlog_cache = self.indexedlog_cache.clone();
+        let indexedlog_local = self.indexedlog_local.clone();
+        let lfs_cache = self.lfs_cache.clone();
+        let lfs_local = self.lfs_local.clone();
+        let memcache = self.memcache.clone();
+        let edenapi = self.edenapi.clone();
+        let lfs_remote = self.lfs_remote.clone();
+        let contentstore = self.contentstore.clone();
+        let creation_time = self.creation_time;
+        let prefer_computing_aux_data = self.prefer_computing_aux_data;
+        let cache_to_memcache = self.cache_to_memcache;
+        let metrics = self.metrics.clone();
+        let process_func = move || {
+            if let Some(ref aux_cache) = aux_cache {
+                state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
             }
-        }
 
-        if self.prefer_computing_aux_data {
+            if let Some(ref aux_local) = aux_local {
+                state.fetch_aux_indexedlog(aux_local, StoreType::Local);
+            }
+
+            if let Some(ref indexedlog_cache) = indexedlog_cache {
+                state.fetch_indexedlog(indexedlog_cache, StoreType::Shared);
+            }
+
+            if let Some(ref indexedlog_local) = indexedlog_local {
+                state.fetch_indexedlog(indexedlog_local, StoreType::Local);
+            }
+
+            if let Some(ref lfs_cache) = lfs_cache {
+                state.fetch_lfs(lfs_cache, StoreType::Shared);
+            }
+
+            if let Some(ref lfs_local) = lfs_local {
+                state.fetch_lfs(lfs_local, StoreType::Local);
+            }
+
+            if use_memcache(creation_time) {
+                if let Some(ref memcache) = memcache {
+                    state.fetch_memcache(memcache, indexedlog_cache.as_ref().map(|s| s.as_ref()));
+                }
+            }
+
+            if prefer_computing_aux_data {
+                state.derive_computable(
+                    aux_cache.as_ref().map(|s| s.as_ref()),
+                    aux_local.as_ref().map(|s| s.as_ref()),
+                );
+            }
+
+            if let Some(ref edenapi) = edenapi {
+                state.fetch_edenapi(
+                    edenapi,
+                    indexedlog_cache.clone(),
+                    lfs_cache.clone(),
+                    aux_cache.clone(),
+                    if cache_to_memcache && use_memcache(creation_time) {
+                        memcache.clone()
+                    } else {
+                        None
+                    },
+                );
+            }
+
+            if let Some(ref lfs_remote) = lfs_remote {
+                state.fetch_lfs_remote(&lfs_remote.remote, lfs_local.clone(), lfs_cache.clone());
+            }
+
+            if let Some(ref contentstore) = contentstore {
+                state.fetch_contentstore(contentstore);
+            }
+
             state.derive_computable(
-                self.aux_cache.as_ref().map(|s| s.as_ref()),
-                self.aux_local.as_ref().map(|s| s.as_ref()),
+                aux_cache.as_ref().map(|s| s.as_ref()),
+                aux_local.as_ref().map(|s| s.as_ref()),
             );
-        }
 
-        if let Some(ref edenapi) = self.edenapi {
-            state.fetch_edenapi(
-                edenapi,
-                self.indexedlog_cache.clone(),
-                self.lfs_cache.clone(),
-                self.aux_cache.clone(),
-                if self.cache_to_memcache && self.use_memcache() {
-                    self.memcache.clone()
-                } else {
-                    None
-                },
-            );
-        }
-
-        if let Some(ref lfs_remote) = self.lfs_remote {
-            state.fetch_lfs_remote(
-                &lfs_remote.remote,
-                self.lfs_local.clone(),
-                self.lfs_cache.clone(),
-            );
-        }
-
-        if let Some(ref contentstore) = self.contentstore {
-            state.fetch_contentstore(contentstore);
-        }
-
-        state.derive_computable(
-            self.aux_cache.as_ref().map(|s| s.as_ref()),
-            self.aux_local.as_ref().map(|s| s.as_ref()),
-        );
-
-        let fetched = state.finish();
-        self.metrics.write().fetch += fetched.metrics().clone();
-        fetched
-    }
-
-    fn use_memcache(&self) -> bool {
-        // Only use memcache if the process has been around a while. It takes 2s to setup, which
-        // hurts responiveness for short commands.
-        self.creation_time.elapsed() > MEMCACHE_DELAY
+            let fetched = state.finish();
+            metrics.write().fetch += fetched.metrics().clone();
+            fetched
+        };
+        process_func()
     }
 
     fn write_lfsptr(&self, key: Key, bytes: Bytes, meta: Metadata) -> Result<()> {
@@ -442,6 +449,12 @@ impl FileStore {
     }
 }
 
+fn use_memcache(creation_time: Instant) -> bool {
+    // Only use memcache if the process has been around a while. It takes 2s to setup, which
+    // hurts responiveness for short commands.
+    creation_time.elapsed() > MEMCACHE_DELAY
+}
+
 impl LegacyStore for FileStore {
     /// Returns only the local cache / shared stores, in place of the local-only stores, such that writes will go directly to the local cache.
     /// For compatibility with ContentStore::get_shared_mutable
@@ -609,7 +622,7 @@ impl RemoteDataStore for FileStore {
         if let Some(ref lfs_remote) = self.lfs_remote {
             let mut multiplex = MultiplexDeltaStore::new();
             multiplex.add_store(self.get_shared_mutable());
-            if self.use_memcache() {
+            if use_memcache(self.creation_time) {
                 if let Some(ref memcache) = self.memcache {
                     multiplex.add_store(memcache.clone());
                 }

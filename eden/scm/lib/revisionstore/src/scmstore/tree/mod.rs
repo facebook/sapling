@@ -96,151 +96,156 @@ impl TreeStore {
         let mut write_to_local_cache = HashSet::new();
         let mut write_to_memcache = HashSet::new();
 
-        if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-            let pending: Vec<_> = common
-                .pending(TreeAttributes::CONTENT, false)
-                .map(|(key, _attrs)| key.clone())
-                .collect();
-            for key in pending.into_iter() {
-                if let Some(entry) = indexedlog_cache.get_entry(key)? {
-                    common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
-                }
-            }
-        }
-
-        if let Some(ref indexedlog_local) = self.indexedlog_local {
-            let pending: Vec<_> = common
-                .pending(TreeAttributes::CONTENT, false)
-                .map(|(key, _attrs)| key.clone())
-                .collect();
-            for key in pending.into_iter() {
-                if let Some(entry) = indexedlog_local.get_entry(key)? {
-                    common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
-                }
-            }
-        }
-
-        if self.use_memcache() {
-            if let Some(ref memcache) = self.memcache {
+        let indexedlog_cache = self.indexedlog_cache.clone();
+        let indexedlog_local = self.indexedlog_local.clone();
+        let memcache = self.memcache.clone();
+        let edenapi = self.edenapi.clone();
+        let contentstore = self.contentstore.clone();
+        let creation_time = self.creation_time;
+        let cache_to_memcache = self.cache_to_memcache;
+        let cache_to_local_cache = self.cache_to_local_cache;
+        let process_func = move || -> Result<FetchResults<StoreTree, ()>> {
+            if let Some(ref indexedlog_cache) = indexedlog_cache {
                 let pending: Vec<_> = common
                     .pending(TreeAttributes::CONTENT, false)
                     .map(|(key, _attrs)| key.clone())
                     .collect();
+                for key in pending.into_iter() {
+                    if let Some(entry) = indexedlog_cache.get_entry(key)? {
+                        common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
+                    }
+                }
+            }
 
+            if let Some(ref indexedlog_local) = indexedlog_local {
+                let pending: Vec<_> = common
+                    .pending(TreeAttributes::CONTENT, false)
+                    .map(|(key, _attrs)| key.clone())
+                    .collect();
+                for key in pending.into_iter() {
+                    if let Some(entry) = indexedlog_local.get_entry(key)? {
+                        common.found(entry.key().clone(), LazyTree::IndexedLog(entry).into());
+                    }
+                }
+            }
+
+            if use_memcache(creation_time) {
+                if let Some(ref memcache) = memcache {
+                    let pending: Vec<_> = common
+                        .pending(TreeAttributes::CONTENT, false)
+                        .map(|(key, _attrs)| key.clone())
+                        .collect();
+
+                    if !pending.is_empty() {
+                        for entry in memcache.get_data_iter(&pending)? {
+                            let entry = entry?;
+                            if indexedlog_cache.is_some() && cache_to_local_cache {
+                                write_to_local_cache.insert(entry.key.clone());
+                            }
+                            common.found(entry.key.clone(), LazyTree::Memcache(entry).into());
+                        }
+                    }
+                }
+            }
+
+            if let Some(ref edenapi) = edenapi {
+                let pending: Vec<_> = common
+                    .pending(TreeAttributes::CONTENT, false)
+                    .map(|(key, _attrs)| key.clone())
+                    .collect();
                 if !pending.is_empty() {
-                    for entry in memcache.get_data_iter(&pending)? {
+                    let span = tracing::info_span!(
+                        "fetch_edenapi",
+                        downloaded = field::Empty,
+                        uploaded = field::Empty,
+                        requests = field::Empty,
+                        time = field::Empty,
+                        latency = field::Empty,
+                        download_speed = field::Empty,
+                    );
+                    let _enter = span.enter();
+                    let response = edenapi.trees_blocking(pending, None)?;
+                    for entry in response.entries {
                         let entry = entry?;
-                        if self.indexedlog_cache.is_some() && self.cache_to_local_cache {
-                            write_to_local_cache.insert(entry.key.clone());
+                        if indexedlog_cache.is_some() && cache_to_local_cache {
+                            write_to_local_cache.insert(entry.key().clone());
                         }
-                        common.found(entry.key.clone(), LazyTree::Memcache(entry).into());
+                        if memcache.is_some() && cache_to_memcache && use_memcache(creation_time) {
+                            write_to_memcache.insert(entry.key().clone());
+                        }
+                        common.found(entry.key().clone(), LazyTree::EdenApi(entry).into());
                     }
+                    util::record_edenapi_stats(&span, &response.stats);
                 }
             }
-        }
 
-        if let Some(ref edenapi) = self.edenapi {
-            let pending: Vec<_> = common
-                .pending(TreeAttributes::CONTENT, false)
-                .map(|(key, _attrs)| key.clone())
-                .collect();
-            if !pending.is_empty() {
-                let span = tracing::info_span!(
-                    "fetch_edenapi",
-                    downloaded = field::Empty,
-                    uploaded = field::Empty,
-                    requests = field::Empty,
-                    time = field::Empty,
-                    latency = field::Empty,
-                    download_speed = field::Empty,
-                );
-                let _enter = span.enter();
-                let response = edenapi.trees_blocking(pending, None)?;
-                for entry in response.entries {
-                    let entry = entry?;
-                    if self.indexedlog_cache.is_some() && self.cache_to_local_cache {
-                        write_to_local_cache.insert(entry.key().clone());
-                    }
-                    if self.memcache.is_some() && self.cache_to_memcache && self.use_memcache() {
-                        write_to_memcache.insert(entry.key().clone());
-                    }
-                    common.found(entry.key().clone(), LazyTree::EdenApi(entry).into());
-                }
-                util::record_edenapi_stats(&span, &response.stats);
-            }
-        }
+            if let Some(ref contentstore) = contentstore {
+                let pending: Vec<_> = common
+                    .pending(TreeAttributes::CONTENT, false)
+                    .map(|(key, _attrs)| StoreKey::HgId(key.clone()))
+                    .collect();
+                if !pending.is_empty() {
+                    contentstore.prefetch(&pending)?;
 
-        if let Some(ref contentstore) = self.contentstore {
-            let pending: Vec<_> = common
-                .pending(TreeAttributes::CONTENT, false)
-                .map(|(key, _attrs)| StoreKey::HgId(key.clone()))
-                .collect();
-            if !pending.is_empty() {
-                contentstore.prefetch(&pending)?;
+                    let pending = pending.into_iter().map(|key| match key {
+                        StoreKey::HgId(key) => key,
+                        // Safe because we constructed pending with only StoreKey::HgId above
+                        // we're just re-using the already allocated paths in the keys
+                        _ => unreachable!("unexpected non-HgId StoreKey"),
+                    });
 
-                let pending = pending.into_iter().map(|key| match key {
-                    StoreKey::HgId(key) => key,
-                    // Safe because we constructed pending with only StoreKey::HgId above
-                    // we're just re-using the already allocated paths in the keys
-                    _ => unreachable!("unexpected non-HgId StoreKey"),
-                });
+                    for key in pending {
+                        let store_key = StoreKey::HgId(key.clone());
+                        let blob = match contentstore.get(store_key.clone())? {
+                            StoreResult::Found(v) => Some(v),
+                            StoreResult::NotFound(_k) => None,
+                        };
+                        let meta = match contentstore.get_meta(store_key)? {
+                            StoreResult::Found(v) => Some(v),
+                            StoreResult::NotFound(_k) => None,
+                        };
 
-                for key in pending {
-                    let store_key = StoreKey::HgId(key.clone());
-                    let blob = match contentstore.get(store_key.clone())? {
-                        StoreResult::Found(v) => Some(v),
-                        StoreResult::NotFound(_k) => None,
-                    };
-                    let meta = match contentstore.get_meta(store_key)? {
-                        StoreResult::Found(v) => Some(v),
-                        StoreResult::NotFound(_k) => None,
-                    };
-
-                    if let (Some(blob), Some(meta)) = (blob, meta) {
-                        // We don't write to local indexedlog or memcache for contentstore fallbacks because
-                        // contentstore handles that internally.
-                        common.found(key, LazyTree::ContentStore(blob.into(), meta).into());
-                    }
-                }
-            }
-        }
-
-        // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
-        let results = common.results(FetchErrors::new(), ());
-
-        // TODO(meyer): We can do this in the background if we actually want to make this implementation perform well.
-        // TODO(meyer): We shouldn't fail the batch on write failures here.
-        if self.cache_to_local_cache {
-            if let Some(ref indexedlog_cache) = self.indexedlog_cache {
-                for key in write_to_local_cache.into_iter() {
-                    if let Some(ref content) = results.complete[&key].content {
-                        if let Some(entry) = content.indexedlog_cache_entry(key)? {
-                            indexedlog_cache.put_entry(entry)?;
+                        if let (Some(blob), Some(meta)) = (blob, meta) {
+                            // We don't write to local indexedlog or memcache for contentstore fallbacks because
+                            // contentstore handles that internally.
+                            common.found(key, LazyTree::ContentStore(blob.into(), meta).into());
                         }
                     }
                 }
             }
-        }
 
-        if self.cache_to_memcache {
-            if let Some(ref memcache) = self.memcache {
-                for key in write_to_memcache.into_iter() {
-                    if let Some(ref content) = results.complete[&key].content {
-                        if let Some(entry) = content.indexedlog_cache_entry(key)? {
-                            memcache.add_mcdata(entry.try_into()?);
+            // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
+            let results = common.results(FetchErrors::new(), ());
+
+            // TODO(meyer): We can do this in the background if we actually want to make this implementation perform well.
+            // TODO(meyer): We shouldn't fail the batch on write failures here.
+            if cache_to_local_cache {
+                if let Some(ref indexedlog_cache) = indexedlog_cache {
+                    for key in write_to_local_cache.into_iter() {
+                        if let Some(ref content) = results.complete[&key].content {
+                            if let Some(entry) = content.indexedlog_cache_entry(key)? {
+                                indexedlog_cache.put_entry(entry)?;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Ok(results)
-    }
+            if cache_to_memcache {
+                if let Some(ref memcache) = memcache {
+                    for key in write_to_memcache.into_iter() {
+                        if let Some(ref content) = results.complete[&key].content {
+                            if let Some(entry) = content.indexedlog_cache_entry(key)? {
+                                memcache.add_mcdata(entry.try_into()?);
+                            }
+                        }
+                    }
+                }
+            }
 
-    fn use_memcache(&self) -> bool {
-        // Only use memcache if the process has been around a while. It takes 2s to setup, which
-        // hurts responiveness for short commands.
-        self.creation_time.elapsed() > MEMCACHE_DELAY
+            Ok(results)
+        };
+        process_func()
     }
 
     fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {
@@ -304,6 +309,12 @@ impl TreeStore {
 
         result
     }
+}
+
+fn use_memcache(creation_time: Instant) -> bool {
+    // Only use memcache if the process has been around a while. It takes 2s to setup, which
+    // hurts responiveness for short commands.
+    creation_time.elapsed() > MEMCACHE_DELAY
 }
 
 impl LegacyStore for TreeStore {
