@@ -132,33 +132,6 @@ impl FileStore {
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
     ) -> FetchResults<StoreFile> {
-        let start_instant = Instant::now();
-
-        let result = self.fetch_inner(keys, attrs);
-
-        if let Some(activity_logger) = &self.activity_logger {
-            if let Err(err) = activity_logger.lock().log_file_fetch(
-                result
-                    .complete
-                    .keys()
-                    .chain(result.incomplete.keys())
-                    .cloned()
-                    .collect(),
-                attrs,
-                start_instant.elapsed(),
-            ) {
-                tracing::error!("Error writing activity log: {}", err);
-            }
-        }
-
-        result
-    }
-
-    fn fetch_inner(
-        &self,
-        keys: impl Iterator<Item = Key>,
-        attrs: FileAttributes,
-    ) -> FetchResults<StoreFile> {
         let (found_tx, found_rx) = unbounded();
         let mut state = FetchState::new(keys, attrs, &self, found_tx);
 
@@ -176,7 +149,12 @@ impl FileStore {
         let prefer_computing_aux_data = self.prefer_computing_aux_data;
         let cache_to_memcache = self.cache_to_memcache;
         let metrics = self.metrics.clone();
+        let activity_logger = self.activity_logger.clone();
         std::thread::spawn(move || {
+            let start_instant = Instant::now();
+
+            let all_keys: Vec<Key> = state.pending();
+
             if let Some(ref aux_cache) = aux_cache {
                 state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
             }
@@ -243,6 +221,16 @@ impl FileStore {
 
             metrics.write().fetch += state.metrics().clone();
             state.finish();
+
+            if let Some(activity_logger) = activity_logger {
+                if let Err(err) =
+                    activity_logger
+                        .lock()
+                        .log_file_fetch(all_keys, attrs, start_instant.elapsed())
+                {
+                    tracing::error!("Error writing activity log: {}", err);
+                }
+            }
         });
 
         // Temporary: Consume the thread results and transform it into the expected output type. A

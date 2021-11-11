@@ -105,6 +105,10 @@ impl FetchState {
         }
     }
 
+    pub(crate) fn pending(&self) -> Vec<Key> {
+        self.common.pending.iter().cloned().collect()
+    }
+
     pub(crate) fn metrics(&self) -> &FileStoreFetchMetrics {
         &self.metrics
     }
