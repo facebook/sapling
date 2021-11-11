@@ -14,6 +14,7 @@ use anyhow::Result;
 use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
+use crossbeam::channel::Sender;
 use edenapi_types::FileEntry;
 use edenapi_types::FileSpec;
 use futures::StreamExt;
@@ -39,7 +40,7 @@ use crate::memcache::McData;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
-use crate::scmstore::fetch::FetchResults;
+use crate::scmstore::fetch::FetchResult;
 use crate::scmstore::file::metrics::FileStoreFetchMetrics;
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;
@@ -57,7 +58,7 @@ use crate::Metadata;
 use crate::StoreKey;
 
 pub struct FetchState {
-    common: CommonFetchState<StoreFile>,
+    common: CommonFetchState<StoreFile, FileStoreFetchMetrics>,
 
     /// Errors encountered during fetching.
     errors: FetchErrors,
@@ -87,9 +88,10 @@ impl FetchState {
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
         file_store: &FileStore,
+        found_tx: Sender<FetchResult<StoreFile, FileStoreFetchMetrics>>,
     ) -> Self {
         FetchState {
-            common: CommonFetchState::new(keys, attrs),
+            common: CommonFetchState::new(keys, attrs, found_tx),
             errors: FetchErrors::new(),
             metrics: FileStoreFetchMetrics::default(),
 
@@ -101,6 +103,10 @@ impl FetchState {
             extstored_policy: file_store.extstored_policy,
             compute_aux_data: true,
         }
+    }
+
+    pub(crate) fn metrics(&self) -> &FileStoreFetchMetrics {
+        &self.metrics
     }
 
     /// Return all incomplete requested Keys for which additional attributes may be gathered by querying a store which provides the specified attributes.
@@ -695,48 +701,60 @@ impl FetchState {
             return;
         }
 
-        for (key, value) in self.common.found.iter_mut() {
-            let span = tracing::debug_span!("checking derivations", %key);
-            let _guard = span.enter();
+        for key in self.common.pending.iter().cloned().collect::<Vec<_>>() {
+            if let Some(value) = self.common.found.get_mut(&key) {
+                let span = tracing::debug_span!("checking derivations", %key);
+                let _guard = span.enter();
 
-            let missing = self.common.request_attrs - value.attrs();
-            let actionable = value.attrs().with_computable() & missing;
+                let existing_attrs = value.attrs();
+                let missing = self.common.request_attrs - existing_attrs;
+                let actionable = existing_attrs.with_computable() & missing;
 
-            if actionable.aux_data {
-                tracing::debug!("computing aux data");
-                if let Err(err) = value.compute_aux_data() {
-                    self.errors.keyed_error(key.clone(), err);
-                    continue;
-                }
+                if actionable.aux_data {
+                    let mut new = std::mem::take(value);
 
-                tracing::debug!("computed aux data");
+                    tracing::debug!("computing aux data");
+                    if let Err(err) = new.compute_aux_data() {
+                        self.errors.keyed_error(key.clone(), err);
+                    } else {
+                        tracing::debug!("computed aux data");
 
-                // mark complete if applicable
-                if value.attrs().has(self.common.request_attrs) {
-                    tracing::debug!("marking complete");
+                        // mark complete if applicable
+                        if new.attrs().has(self.common.request_attrs) {
+                            tracing::debug!("marking complete");
 
-                    match self.key_origin.get(key).unwrap_or(&StoreType::Shared) {
-                        StoreType::Shared => {
-                            if let Some(ref aux_cache) = aux_cache {
-                                if let Some(aux_data) = value.aux_data {
-                                    let _ = aux_cache.put(key.hgid, &aux_data.into());
+                            match self.key_origin.get(&key).unwrap_or(&StoreType::Shared) {
+                                StoreType::Shared => {
+                                    if let Some(ref aux_cache) = aux_cache {
+                                        if let Some(aux_data) = new.aux_data {
+                                            let _ = aux_cache.put(key.hgid, &aux_data.into());
+                                        }
+                                    }
+                                }
+                                StoreType::Local => {
+                                    if let Some(ref aux_local) = aux_local {
+                                        if let Some(aux_data) = new.aux_data {
+                                            let _ = aux_local.put(key.hgid, &aux_data.into());
+                                        }
+                                    }
                                 }
                             }
-                        }
-                        StoreType::Local => {
-                            if let Some(ref aux_local) = aux_local {
-                                if let Some(aux_data) = value.aux_data {
-                                    let _ = aux_local.put(key.hgid, &aux_data.into());
-                                }
-                            }
-                        }
-                    }
 
-                    // TODO(meyer): Extract out a "FetchPending" object like FetchErrors, or otherwise make it possible
-                    // to share a "mark complete" implementation while holding a mutable reference to self.found.
-                    self.common.pending.remove(key);
-                    if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
-                        self.pointer_origin.write().remove(&ptr.sha256());
+                            // TODO(meyer): Extract out a "FetchPending" object like FetchErrors, or otherwise make it possible
+                            // to share a "mark complete" implementation while holding a mutable reference to self.found.
+                            self.common.pending.remove(&key);
+                            self.common.found.remove(&key);
+                            let new = new.mask(self.common.request_attrs);
+                            let _ = self
+                                .common
+                                .found_tx
+                                .send(FetchResult::Value((key.clone(), new)));
+                            if let Some((ptr, _)) = self.lfs_pointers.remove(&key) {
+                                self.pointer_origin.write().remove(&ptr.sha256());
+                            }
+                        } else {
+                            *value = new;
+                        }
                     }
                 }
             }
@@ -744,7 +762,7 @@ impl FetchState {
     }
 
     #[instrument(skip(self))]
-    pub(crate) fn finish(self) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
-        self.common.results(self.errors, self.metrics)
+    pub(crate) fn finish(self) {
+        self.common.results(self.errors, self.metrics);
     }
 }

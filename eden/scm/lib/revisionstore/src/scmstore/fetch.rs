@@ -12,13 +12,14 @@ use std::collections::HashSet;
 use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
+use crossbeam::channel::Sender;
 use tracing::instrument;
 use types::Key;
 
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::value::StoreValue;
 
-pub(crate) struct CommonFetchState<T: StoreValue> {
+pub(crate) struct CommonFetchState<T: StoreValue, M> {
     /// Requested keys for which at least some attributes haven't been found.
     pub pending: HashSet<Key>,
 
@@ -27,15 +28,22 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
 
     /// All attributes which have been found so far
     pub found: HashMap<Key, T>,
+
+    pub found_tx: Sender<FetchResult<T, M>>,
 }
 
-impl<T: StoreValue> CommonFetchState<T> {
+impl<T: StoreValue, M> CommonFetchState<T, M> {
     #[instrument(skip(keys))]
-    pub(crate) fn new(keys: impl Iterator<Item = Key>, attrs: T::Attrs) -> Self {
+    pub(crate) fn new(
+        keys: impl Iterator<Item = Key>,
+        attrs: T::Attrs,
+        found_tx: Sender<FetchResult<T, M>>,
+    ) -> Self {
         Self {
             pending: keys.collect(),
             request_attrs: attrs,
             found: HashMap::new(),
+            found_tx,
         }
     }
 
@@ -64,17 +72,26 @@ impl<T: StoreValue> CommonFetchState<T> {
                 // Combine the existing and newly-found attributes, overwriting existing attributes with the new ones
                 // if applicable (so that we can re-use this function to replace in-memory files with mmap-ed files)
                 let available = entry.get_mut();
-                *available = value | std::mem::take(available);
+                let new = value | std::mem::take(available);
 
-                if available.attrs().has(self.request_attrs) {
+                if new.attrs().has(self.request_attrs) {
+                    self.found.remove(&key);
                     self.pending.remove(&key);
+                    let new = new.mask(self.request_attrs);
+                    let _ = self.found_tx.send(FetchResult::Value((key, new)));
                     return true;
+                } else {
+                    *available = new;
                 }
             }
             Vacant(entry) => {
-                if entry.insert(value).attrs().has(self.request_attrs) {
+                if value.attrs().has(self.request_attrs) {
                     self.pending.remove(&key);
+                    let value = value.mask(self.request_attrs);
+                    let _ = self.found_tx.send(FetchResult::Value((key, value)));
                     return true;
+                } else {
+                    entry.insert(value);
                 }
             }
         };
@@ -83,7 +100,7 @@ impl<T: StoreValue> CommonFetchState<T> {
     }
 
     #[instrument(skip(self, errors, metrics))]
-    pub(crate) fn results<M>(mut self, errors: FetchErrors, metrics: M) -> FetchResults<T, M> {
+    pub(crate) fn results(mut self, errors: FetchErrors, metrics: M) {
         // Combine and collect errors
         let mut incomplete = errors.fetch_errors;
         for key in self.pending.into_iter() {
@@ -91,20 +108,16 @@ impl<T: StoreValue> CommonFetchState<T> {
             incomplete.entry(key).or_insert_with(Vec::new);
         }
 
-        for (key, value) in self.found.iter_mut() {
-            // Remove attributes that weren't requested (content only used to compute attributes)
-            *value = std::mem::take(value).mask(self.request_attrs);
-
+        for (key, _) in self.found.iter_mut() {
             // Don't return errors for keys we eventually found.
             incomplete.remove(key);
         }
 
-        FetchResults {
-            complete: self.found,
+        let _ = self.found_tx.send(FetchResult::Finished(FetchFinish {
             incomplete,
             other_errors: errors.other_errors,
             metrics,
-        }
+        }));
     }
 
     #[instrument(level = "trace", skip(self))]
@@ -158,6 +171,19 @@ impl FetchErrors {
     pub(crate) fn other_error(&mut self, err: Error) {
         self.other_errors.push(err);
     }
+}
+
+#[derive(Debug)]
+pub enum FetchResult<T, M> {
+    Value((Key, T)),
+    Finished(FetchFinish<M>),
+}
+
+#[derive(Debug)]
+pub struct FetchFinish<M> {
+    pub incomplete: HashMap<Key, Vec<Error>>,
+    pub other_errors: Vec<Error>,
+    pub metrics: M,
 }
 
 #[derive(Debug)]

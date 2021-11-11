@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -12,8 +13,10 @@ use std::time::Instant;
 
 use ::types::Key;
 use ::types::RepoPathBuf;
+use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
+use crossbeam::channel::unbounded;
 use minibytes::Bytes;
 use tracing::field;
 
@@ -26,6 +29,8 @@ use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::memcache::MEMCACHE_DELAY;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
+use crate::scmstore::fetch::FetchFinish;
+use crate::scmstore::fetch::FetchResult;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::StoreTree;
@@ -91,8 +96,11 @@ impl TreeStore {
         &self,
         reqs: impl Iterator<Item = Key>,
     ) -> Result<FetchResults<StoreTree, ()>> {
-        let mut common: CommonFetchState<StoreTree> =
-            CommonFetchState::new(reqs, TreeAttributes::CONTENT);
+        let (found_tx, found_rx) = unbounded();
+        let found_tx2 = found_tx.clone();
+        let mut common: CommonFetchState<StoreTree, ()> =
+            CommonFetchState::new(reqs, TreeAttributes::CONTENT, found_tx);
+
         let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
         let memcache = self.memcache.clone();
@@ -101,7 +109,7 @@ impl TreeStore {
         let creation_time = self.creation_time;
         let cache_to_memcache = self.cache_to_memcache;
         let cache_to_local_cache = self.cache_to_local_cache;
-        let process_func = move || -> Result<FetchResults<StoreTree, ()>> {
+        let process_func = move || -> Result<()> {
             if let Some(ref indexedlog_cache) = indexedlog_cache {
                 let pending: Vec<_> = common
                     .pending(TreeAttributes::CONTENT, false)
@@ -222,11 +230,44 @@ impl TreeStore {
             }
 
             // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
-            let results = common.results(FetchErrors::new(), ());
-
-            Ok(results)
+            common.results(FetchErrors::new(), ());
+            Ok(())
         };
-        process_func()
+        std::thread::spawn(move || {
+            if let Err(err) = process_func() {
+                let _ = found_tx2.send(FetchResult::Finished(FetchFinish {
+                    incomplete: HashMap::new(),
+                    other_errors: vec![err],
+                    metrics: (),
+                }));
+            }
+        });
+
+        // Temporary: Consume the thread results and transform it into the expected output type. A
+        // later change will change the output type to allow returning the iterator.
+        let mut complete = HashMap::new();
+        for result in found_rx.into_iter() {
+            match result {
+                FetchResult::Value((key, value)) => {
+                    let _ = complete.insert(key, value);
+                }
+                FetchResult::Finished(finished) => {
+                    return Ok(FetchResults {
+                        complete,
+                        incomplete: finished.incomplete,
+                        other_errors: finished.other_errors,
+                        metrics: finished.metrics,
+                    });
+                }
+            }
+        }
+
+        Ok(FetchResults {
+            complete: HashMap::new(),
+            incomplete: HashMap::new(),
+            other_errors: vec![anyhow!("tree fetch did not complete")],
+            metrics: Default::default(),
+        })
     }
 
     fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {

@@ -9,6 +9,7 @@ mod fetch;
 mod metrics;
 mod types;
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -20,6 +21,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Result;
+use crossbeam::channel::unbounded;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
@@ -47,6 +49,7 @@ use crate::lfs::LfsStore;
 use crate::memcache::MEMCACHE_DELAY;
 use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::activitylogger::ActivityLogger;
+use crate::scmstore::fetch::FetchResult;
 use crate::scmstore::fetch::FetchResults;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
@@ -156,7 +159,8 @@ impl FileStore {
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
     ) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
-        let mut state = FetchState::new(keys, attrs, &self);
+        let (found_tx, found_rx) = unbounded();
+        let mut state = FetchState::new(keys, attrs, &self, found_tx);
 
         let aux_cache = self.aux_cache.clone();
         let aux_local = self.aux_local.clone();
@@ -172,7 +176,7 @@ impl FileStore {
         let prefer_computing_aux_data = self.prefer_computing_aux_data;
         let cache_to_memcache = self.cache_to_memcache;
         let metrics = self.metrics.clone();
-        let process_func = move || {
+        std::thread::spawn(move || {
             if let Some(ref aux_cache) = aux_cache {
                 state.fetch_aux_indexedlog(aux_cache, StoreType::Shared);
             }
@@ -237,11 +241,35 @@ impl FileStore {
                 aux_local.as_ref().map(|s| s.as_ref()),
             );
 
-            let fetched = state.finish();
-            metrics.write().fetch += fetched.metrics().clone();
-            fetched
-        };
-        process_func()
+            metrics.write().fetch += state.metrics().clone();
+            state.finish();
+        });
+
+        // Temporary: Consume the thread results and transform it into the expected output type. A
+        // later change will change the output type to allow returning the iterator.
+        let mut complete = HashMap::new();
+        for result in found_rx.into_iter() {
+            match result {
+                FetchResult::Value((key, value)) => {
+                    let _ = complete.insert(key, value);
+                }
+                FetchResult::Finished(finished) => {
+                    return FetchResults {
+                        complete,
+                        incomplete: finished.incomplete,
+                        other_errors: finished.other_errors,
+                        metrics: finished.metrics,
+                    };
+                }
+            }
+        }
+
+        FetchResults {
+            complete: HashMap::new(),
+            incomplete: HashMap::new(),
+            other_errors: vec![anyhow!("file fetch did not complete")],
+            metrics: Default::default(),
+        }
     }
 
     fn write_lfsptr(&self, key: Key, bytes: Bytes, meta: Metadata) -> Result<()> {
