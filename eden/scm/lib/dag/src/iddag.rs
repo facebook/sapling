@@ -184,11 +184,14 @@ impl<Store: IdDagStore> IdDag<Store> {
         F: Fn(Id) -> Result<Vec<Id>>,
     {
         let mut count = 0;
+        let old_ids = self.all_ids_in_segment_level(0)?;
         count += self.build_flat_segments(high, get_parents, 0)?;
         if self.next_free_id(0, high.group())? <= high {
             return bug("internal error: flat segments are not built as expected");
         }
-        count += self.build_all_high_level_segments(Level::MAX)?;
+        let new_ids = self.all_ids_in_segment_level(0)?;
+        let inserted_ids = new_ids.difference(&old_ids);
+        count += self.build_all_high_level_segments(Level::MAX, inserted_ids)?;
         Ok(count)
     }
 
@@ -198,8 +201,8 @@ impl<Store: IdDagStore> IdDag<Store> {
         &mut self,
         outcome: &PreparedFlatSegments,
     ) -> Result<usize> {
-        let (count, _set) = self.build_flat_segments_from_prepared_flat_segments(outcome)?;
-        let count = count + self.build_all_high_level_segments(Level::MAX)?;
+        let (count, set) = self.build_flat_segments_from_prepared_flat_segments(outcome)?;
+        let count = count + self.build_all_high_level_segments(Level::MAX, set)?;
         Ok(count)
     }
 
@@ -503,10 +506,17 @@ impl<Store: IdDagStore> IdDag<Store> {
 
     /// Build high level segments using default setup.
     ///
+    /// `new_flat_id_set` covers the flat segments newly inserted.
+    ///
     /// Return number of segments inserted.
-    fn build_all_high_level_segments(&mut self, max_level: Level) -> Result<usize> {
+    fn build_all_high_level_segments(
+        &mut self,
+        max_level: Level,
+        new_flat_id_set: IdSet,
+    ) -> Result<usize> {
         let mut total = 0;
         let max_level = max_level.min(MAX_MEANINGFUL_LEVEL);
+        let _ = new_flat_id_set;
         for level in 1..=max_level {
             let (count, new_ids) = self.build_high_level_segments(level)?;
             tracing::debug!("new {} lv{} segments: {:?}", count, level, &new_ids);
