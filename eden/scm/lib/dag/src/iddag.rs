@@ -8,7 +8,6 @@
 use std::collections::BTreeSet;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::fmt::{self};
@@ -173,26 +172,44 @@ impl<Store: IdDagStore> IdDag<Store> {
 
 // Build segments.
 impl<Store: IdDagStore> IdDag<Store> {
-    /// Make sure the [`IdDag`] contains the given id (and all ids smaller than
-    /// `high`) by building up segments on demand.
+    /// Make sure the [`IdDag`] contains the given id (and all its ancestor ids)
+    /// by building up segments on demand.
     ///
     /// `get_parents` describes the DAG. Its input and output are `Id`s.
     ///
     /// This is often used together with [`crate::idmap::IdMap`].
+    ///
+    /// This is inefficient. If you have `PreparedFlatSegments`, call
+    /// `build_flat_segments_from_prepared_flat_segments` instead.
     pub fn build_segments<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
     where
         F: Fn(Id) -> Result<Vec<Id>>,
     {
-        let mut count = 0;
+        // Step 1, figure out id ranges to be inserted using DFS.
+        // We cannot call `push_edge` like step 2 here, because the
+        // `id`s are in DESC order. `push_edge` really need ASC order.
         let old_ids = self.all_ids_in_segment_level(0)?;
-        count += self.build_flat_segments(high, get_parents, 0)?;
-        if self.next_free_id(0, high.group())? <= high {
-            return bug("internal error: flat segments are not built as expected");
+        let mut to_insert_ids = IdSet::empty();
+        let mut to_visit = vec![high];
+        while let Some(id) = to_visit.pop() {
+            if old_ids.contains(id) || to_insert_ids.contains(id) {
+                continue;
+            }
+            to_insert_ids.push(id);
+            let parent_ids = get_parents(id)?;
+            to_visit.extend_from_slice(&parent_ids);
         }
-        let new_ids = self.all_ids_in_segment_level(0)?;
-        let inserted_ids = new_ids.difference(&old_ids);
-        count += self.build_all_high_level_segments(Level::MAX, inserted_ids)?;
-        Ok(count)
+
+        // Step 2, convert the to_insert_ids to PreparedFlatSegments.
+        // Iterate them in ascending order so `push_edge` works efficiently.
+        let mut prepared = PreparedFlatSegments::default();
+        for id in to_insert_ids.iter_asc() {
+            let parent_ids = get_parents(id)?;
+            prepared.push_edge(id, &parent_ids);
+        }
+
+        // Step 3, call build_segments_from_prepared_flat_segments.
+        self.build_segments_from_prepared_flat_segments(&prepared)
     }
 
     /// Similar to `build_segments`, but takes `PreparedFlatSegments` instead
@@ -270,79 +287,6 @@ impl<Store: IdDagStore> IdDag<Store> {
             self.insert(flags, 0, seg.low, seg.high, &seg.parents)?;
         }
         Ok((outcome.segments.len(), inserted_id_set))
-    }
-
-    /// Incrementally build flat (level 0) segments towards `high` (inclusive).
-    ///
-    /// `get_parents` describes the DAG. Its input and output are `Id`s.
-    ///
-    /// `last_threshold` decides the minimal size for the last incomplete flat
-    /// segment. Setting it to 0 will makes sure flat segments cover the given
-    /// `high - 1`, with the downside of increasing fragmentation.  Setting it
-    /// to a larger value will reduce fragmentation, with the downside of
-    /// [`IdDag`] covers less ids.
-    ///
-    /// Return number of segments inserted.
-    fn build_flat_segments<F>(
-        &mut self,
-        high: Id,
-        get_parents: &F,
-        last_threshold: u64,
-    ) -> Result<usize>
-    where
-        F: Fn(Id) -> Result<Vec<Id>>,
-    {
-        let group = high.group();
-        let low = self.next_free_id(0, group)?;
-        let mut current_low = None;
-        let mut current_parents = Vec::new();
-        let mut insert_count = 0;
-        let mut head_ids: HashSet<Id> = if group == Group::MASTER && low > Id::MIN {
-            self.heads((Id::MIN..=(low - 1)).into())?
-                .iter_desc()
-                .collect()
-        } else {
-            Default::default()
-        };
-        let mut get_flags = |parents: &Vec<Id>, head: Id| {
-            let mut flags = SegmentFlags::empty();
-            if parents.is_empty() {
-                flags |= SegmentFlags::HAS_ROOT
-            }
-            if group == Group::MASTER {
-                head_ids = &head_ids - &parents.iter().cloned().collect();
-                if head_ids.is_empty() {
-                    flags |= SegmentFlags::ONLY_HEAD;
-                }
-                head_ids.insert(head);
-            }
-            flags
-        };
-        for id in low.to(high) {
-            let parents = get_parents(id)?;
-            if parents.len() != 1 || parents[0] + 1 != id || current_low.is_none() {
-                // Must start a new segment.
-                if let Some(low) = current_low {
-                    debug_assert!(id > Id::MIN);
-                    let flags = get_flags(&current_parents, id - 1);
-                    self.insert(flags, 0, low, id - 1, &current_parents)?;
-                    insert_count += 1;
-                }
-                current_parents = parents;
-                current_low = Some(id);
-            }
-        }
-
-        // For the last flat segment, only build it if its length satisfies the threshold.
-        if let Some(low) = current_low {
-            if low + last_threshold <= high {
-                let flags = get_flags(&current_parents, high);
-                self.insert(flags, 0, low, high, &current_parents)?;
-                insert_count += 1;
-            }
-        }
-
-        Ok(insert_count)
     }
 
     /// Incrementally build high level segments at the given `level`.
@@ -1846,6 +1790,7 @@ mod tests {
 
         let lock = dag.lock().unwrap();
         dag.reload(&lock).unwrap();
+        dag.build_segments(Id(0), &get_parents).unwrap();
         dag.build_segments(Id(1001), &get_parents).unwrap();
 
         dag.persist(&lock).unwrap();
@@ -1867,7 +1812,32 @@ mod tests {
         let mut dag = IdDag::open(dir.path()).unwrap();
         assert!(dag.all().unwrap().is_empty());
         dag.build_segments(Id(1001), &get_parents).unwrap();
-        assert_eq!(dag.all().unwrap().count(), 1002);
+        let all = dag.all().unwrap();
+        // Id 0 is not referred.
+        assert_eq!(format!("{:?}", &all), "1..=1001");
+        assert_eq!(all.count(), 1001);
+
+        // Insert discontinuous segments.
+        let mut dag = IdDag::new_in_process();
+        // 10..=20
+        dag.build_segments(Id(20), &|p| {
+            Ok(if p > Id(10) { vec![p - 1] } else { vec![] })
+        })
+        .unwrap();
+        // 3..=5, and 30..=40
+        dag.build_segments(Id(40), &|p| {
+            Ok(if p == Id(30) {
+                vec![Id(5), Id(20)]
+            } else if p > Id(3) {
+                vec![p - 1]
+            } else {
+                vec![]
+            })
+        })
+        .unwrap();
+        let all = dag.all().unwrap();
+        assert_eq!(format!("{:?}", &all), "3 4 5 10..=20 30..=40");
+        assert_eq!(all.count(), 25);
     }
 
     #[test]
@@ -1883,6 +1853,7 @@ mod tests {
             .unwrap();
         assert!(test_dag.all().unwrap().is_empty());
 
+        dag.build_segments(Id(0), &get_parents).unwrap();
         dag.build_segments(Id(1001), &get_parents).unwrap();
         let flat_segments = dag.flat_segments(Group::MASTER).unwrap();
         test_dag
