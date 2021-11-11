@@ -213,10 +213,9 @@ impl<Store: IdDagStore> IdDag<Store> {
             return Ok(0);
         }
 
-        // TODO: Modify the last segment if it can concat the first new segment.
-
-        let mut head_ids: HashSet<Id> = self.heads(self.master_group()?)?.iter_desc().collect();
-        let mut get_flags = |parents: &[Id], head: Id| {
+        let mut head_ids: BTreeSet<Id> = self.heads(self.master_group()?)?.iter_desc().collect();
+        let mut covered = self.all_ids_in_groups(&[Group::MASTER])?;
+        let mut get_flags = |parents: &[Id], head: Id, covered: &IdSet| {
             let mut flags = SegmentFlags::empty();
             if parents.is_empty() {
                 flags |= SegmentFlags::HAS_ROOT
@@ -225,22 +224,34 @@ impl<Store: IdDagStore> IdDag<Store> {
                 for p in parents.iter() {
                     head_ids.remove(p);
                 }
-                if head_ids.is_empty() {
+                // ONLY_HEAD means it heads(0..=head) = [head], or ancestors([head]) = 0..=head.
+                // The 0..=head range cannot have gaps. Because other segments
+                // might be inserted to the gaps later and they will have heads.
+                let has_no_gap = match covered.iter_span_asc().next() {
+                    Some(span) => span.contains(head),
+                    None => false,
+                };
+                if has_no_gap && head_ids.range(..=head).next().is_none() {
                     flags |= SegmentFlags::ONLY_HEAD;
                 }
                 head_ids.insert(head);
             }
             flags
         };
+        let mut last_high = None;
         for seg in &outcome.segments {
-            // `next_free_id` has cost. Therefore the check is only on debug build.
-            debug_assert_eq!(
-                seg.low,
-                self.next_free_id(0, seg.low.group())?,
-                "outcome low id mismatch"
-            );
+            if let Some(last_high) = last_high {
+                if last_high >= seg.low {
+                    return bug(format!(
+                        "PreparedFlatSegments are not sorted: {:?}",
+                        &outcome.segments
+                    ));
+                }
+            }
+            last_high = Some(seg.high);
+            covered.push(seg.low..=seg.high);
 
-            let flags = get_flags(&seg.parents, seg.high);
+            let flags = get_flags(&seg.parents, seg.high, &covered);
             tracing::trace!(
                 "inserting flat segment {}..={} {:?} {:?}",
                 seg.low,
@@ -1830,5 +1841,40 @@ mod tests {
             .idset_to_flat_segments(IdSet::from_spans(vec![2..=4]))
             .unwrap();
         assert_eq!(subset_flat_segments.segments.len(), 3);
+    }
+
+    #[test]
+    fn test_discontinous_flat_segment_only_head() {
+        let prepared = PreparedFlatSegments {
+            segments: vec![
+                FlatSegment {
+                    low: Id(0),
+                    high: Id(10),
+                    parents: vec![],
+                },
+                FlatSegment {
+                    low: Id(20),
+                    high: Id(30),
+                    parents: vec![Id(10)],
+                },
+            ],
+        };
+
+        // Segment 20..=30 shouldn't have the "ONLY_HEAD" flag because of the gap.
+        // In debug output it does not have "H" prefix.
+        let mut dag = IdDag::new_in_process();
+        dag.build_flat_segments_from_prepared_flat_segments(&prepared)
+            .unwrap();
+        let iter = dag.iter_segments_ascending(Id(0), 0).unwrap();
+        assert_eq!(dbg_iter(iter), "[RH0-10[], 20-30[10]]");
+    }
+
+    fn dbg_iter<'a, T: std::fmt::Debug>(iter: Box<dyn Iterator<Item = Result<T>> + 'a>) -> String {
+        let v = iter.map(|s| s.unwrap()).collect::<Vec<_>>();
+        dbg(v)
+    }
+
+    fn dbg<T: std::fmt::Debug>(t: T) -> String {
+        format!("{:?}", t)
     }
 }
