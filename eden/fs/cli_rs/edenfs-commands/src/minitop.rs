@@ -221,7 +221,7 @@ impl crate::Subcommand for MinitopCmd {
 
         // Setup rendering
         let mut stdout = stdout();
-        execute!(stdout, cursor::Hide, terminal::DisableLineWrap).from_err()?;
+        execute!(stdout, terminal::DisableLineWrap).from_err()?;
 
         loop {
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
