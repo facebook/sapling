@@ -348,11 +348,13 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// flat segment per group to be mutable, because it will not be included
     /// in Level 1 segments.
     ///
-    /// Return number of segments inserted.
-    fn build_high_level_segments(&mut self, level: Level) -> Result<usize> {
+    /// Return `(count, set)`. `count` is the number of segments inserted.
+    /// `set` is an `IdSet` that covers ranges of segments inserted.
+    fn build_high_level_segments(&mut self, level: Level) -> Result<(usize, IdSet)> {
+        let mut inserted_id_set = IdSet::empty();
         if level == 0 {
             // Do nothing. Level 0 is not considered high level.
-            return Ok(0);
+            return Ok((0, inserted_id_set));
         }
         let size = self.new_seg_size;
 
@@ -463,7 +465,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                 .fold(0, |acc, s| acc + s.len())
                 >= lower_segments_len
         {
-            return Ok(0);
+            return Ok((0, inserted_id_set));
         }
 
         for mut new_segments in new_segments_per_group {
@@ -486,11 +488,12 @@ impl<Store: IdDagStore> IdDag<Store> {
                     &parents,
                     &flags
                 );
+                inserted_id_set.push(low..=high);
                 self.insert(flags, level, low, high, &parents)?;
             }
         }
 
-        Ok(insert_count)
+        Ok((insert_count, inserted_id_set))
     }
 
     /// Build high level segments using default setup.
@@ -500,8 +503,8 @@ impl<Store: IdDagStore> IdDag<Store> {
         let mut total = 0;
         let max_level = max_level.min(MAX_MEANINGFUL_LEVEL);
         for level in 1..=max_level {
-            let count = self.build_high_level_segments(level)?;
-            tracing::debug!("new lv{} segments: {}", level, count);
+            let (count, new_ids) = self.build_high_level_segments(level)?;
+            tracing::debug!("new {} lv{} segments: {:?}", count, level, &new_ids);
             if count == 0 {
                 break;
             }
