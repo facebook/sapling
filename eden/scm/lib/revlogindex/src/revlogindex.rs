@@ -1234,7 +1234,7 @@ impl DagAlgorithm for RevlogIndex {
 
         let max_id = id_set.max().unwrap();
         let dag = self.get_snapshot();
-        let min_parent = id_set.iter().fold(max_id.0 as u32, |min, id| {
+        let min_parent = id_set.iter_desc().fold(max_id.0 as u32, |min, id| {
             let rev = id.0 as u32;
             if let Ok(parent_revs) = dag.parent_revs(rev) {
                 parent_revs.as_revs().iter().fold(min, |min, &p| p.min(min))
@@ -1331,7 +1331,7 @@ impl DagAlgorithm for RevlogIndex {
     /// Use `gca_all` to get all of them.
     async fn gca_one(&self, set: Set) -> dag::Result<Option<Vertex>> {
         let id_set = self.to_id_set(&set).await?;
-        let mut revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
+        let mut revs: Vec<u32> = id_set.iter_desc().map(|id| id.0 as u32).collect();
         while revs.len() > 1 {
             let mut new_revs = Vec::new();
             // gca_revs takes at most 6 revs at one.
@@ -1367,7 +1367,7 @@ impl DagAlgorithm for RevlogIndex {
             ))
             .into());
         }
-        let revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
+        let revs: Vec<u32> = id_set.iter_desc().map(|id| id.0 as u32).collect();
         let gcas = self.gca_revs(&revs, usize::max_value())?;
         let spans = IdSet::from_spans(gcas.into_iter().map(|r| Id(r as _)));
         let result = Set::from_spans_dag(spans, self)?;
@@ -1481,7 +1481,7 @@ impl DagAlgorithm for RevlogIndex {
         let mut bits = BitVec::from_elem(((max_id.0 + 1) * 2) as usize, false);
 
         // set "unreachable" heads.
-        for id in unreachable_ids.iter() {
+        for id in unreachable_ids.iter_desc() {
             bits.set((id.0 * 2 + 1) as usize, true);
         }
 
@@ -1489,7 +1489,7 @@ impl DagAlgorithm for RevlogIndex {
         // been added to the result set yet.  alive == 0 indicates there is no
         // need to check more ids.
         let mut alive = 0;
-        for id in reachable_ids.iter() {
+        for id in reachable_ids.iter_desc() {
             if !bits[(id.0 * 2 + 1) as _] {
                 bits.set((id.0 * 2) as usize, true);
                 alive += 1;
@@ -1755,14 +1755,14 @@ impl DagAlgorithm for RevlogIndex {
         // alive: count of "id"s that have unexplored parents.
         // alive == 0 indicates all parents are checked and iteration can be stopped.
         let mut alive = 0;
-        for rev in id_heads.iter() {
+        for rev in id_heads.iter_desc() {
             let rev = rev.0;
             if rev <= max_rev && rev >= min_rev {
                 reachable.set((rev - min_rev) as _, true);
                 alive += 1;
             }
         }
-        for rev in id_roots.iter() {
+        for rev in id_roots.iter_desc() {
             let rev = rev.0;
             if rev <= max_rev && rev >= min_rev {
                 is_root.set((rev - min_rev) as _, true);

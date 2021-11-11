@@ -18,6 +18,7 @@ use std::collections::BinaryHeap;
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::fmt::{self};
+use std::iter::Rev;
 use std::ops::Bound;
 use std::ops::RangeBounds;
 use std::ops::RangeInclusive;
@@ -515,9 +516,8 @@ impl SpanSet {
         }
     }
 
-    /// Get an iterator for integers in this [`SpanSet`].
-    /// By default, the iteration is in descending order.
-    pub fn iter(&self) -> SpanSetIter<&SpanSet> {
+    /// Iterate `Id`s in descending order.
+    pub fn iter_desc(&self) -> SpanSetIter<&SpanSet> {
         let len = self.spans.len();
         let back = (
             len as isize - 1,
@@ -1164,26 +1164,29 @@ mod tests {
     #[test]
     fn test_iter() {
         let set = SpanSet::empty();
-        assert!(set.iter().next().is_none());
-        assert!(set.iter().rev().next().is_none());
-        assert_eq!(set.iter().size_hint(), (0, Some(0)));
+        assert!(set.iter_desc().next().is_none());
+        assert!(set.iter_desc().rev().next().is_none());
+        assert_eq!(set.iter_desc().size_hint(), (0, Some(0)));
 
         let set = SpanSet::from(0..=1);
-        assert_eq!(set.iter().collect::<Vec<Id>>(), vec![1, 0]);
-        assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![0, 1]);
-        assert_eq!(set.iter().size_hint(), (2, Some(2)));
-        assert_eq!(set.iter().count(), 2);
+        assert_eq!(set.iter_desc().collect::<Vec<Id>>(), vec![1, 0]);
+        assert_eq!(set.iter_desc().rev().collect::<Vec<Id>>(), vec![0, 1]);
+        assert_eq!(set.iter_desc().size_hint(), (2, Some(2)));
+        assert_eq!(set.iter_desc().count(), 2);
 
-        let mut iter = set.iter();
+        let mut iter = set.iter_desc();
         assert!(iter.next().is_some());
         assert!(iter.next_back().is_some());
         assert!(iter.next_back().is_none());
 
         let set = SpanSet::from_spans(vec![3..=5, 7..=8]);
-        assert_eq!(set.iter().collect::<Vec<Id>>(), vec![8, 7, 5, 4, 3]);
-        assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![3, 4, 5, 7, 8]);
-        assert_eq!(set.iter().size_hint(), (5, Some(5)));
-        assert_eq!(set.iter().last(), Some(Id(3)));
+        assert_eq!(set.iter_desc().collect::<Vec<Id>>(), vec![8, 7, 5, 4, 3]);
+        assert_eq!(
+            set.iter_desc().rev().collect::<Vec<Id>>(),
+            vec![3, 4, 5, 7, 8]
+        );
+        assert_eq!(set.iter_desc().size_hint(), (5, Some(5)));
+        assert_eq!(set.iter_desc().last(), Some(Id(3)));
 
         assert_eq!(
             set.clone().into_iter().collect::<Vec<Id>>(),
@@ -1205,7 +1208,7 @@ mod tests {
         );
 
         let set = SpanSet::from_spans(vec![3..=5, 7..=8]);
-        let mut iter = set.iter();
+        let mut iter = set.iter_desc();
         assert_eq!(iter.next().unwrap(), 8);
         assert_eq!(iter.next_back().unwrap(), 3);
 

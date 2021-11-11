@@ -186,7 +186,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     bench("is_ancestor", || {
         elapsed(|| {
             for set in &sample_two_ids {
-                let ids: Vec<_> = set.iter().collect();
+                let ids: Vec<_> = set.iter_desc().collect();
                 dag.is_ancestor(ids[0], ids[1]).unwrap();
             }
         })
@@ -203,7 +203,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     bench("parent_ids", || {
         elapsed(|| {
             for set in &sample_two_ids {
-                for id in set.iter() {
+                for id in set.iter_desc() {
                     dag.parent_ids(id).unwrap();
                 }
             }
@@ -213,7 +213,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     bench("range (2 ids)", || {
         elapsed(|| {
             for set in &sample_two_ids {
-                let ids: Vec<_> = set.iter().collect();
+                let ids: Vec<_> = set.iter_desc().collect();
                 dag.range(ids[0].into(), ids[1].into()).unwrap();
             }
         })

@@ -139,7 +139,7 @@ impl<T> GeneralTestContext<T> {
 
     /// Convert a IdSet (used by IdDag) to plain revs (used by `parents`).
     pub fn to_plain_revs(&self, set: &IdSet) -> Vec<usize> {
-        set.iter().map(|i| self.idmap[&i]).collect()
+        set.iter_desc().map(|i| self.idmap[&i]).collect()
     }
 
     /// Get the IdDag reference.

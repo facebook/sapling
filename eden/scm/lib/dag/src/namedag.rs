@@ -1009,7 +1009,7 @@ where
             // So `root` is non-lazy and the local "contains" check is the same
             // as a remote "contains" check.
             if root_parents_id_set
-                .iter()
+                .iter_desc()
                 .all(|i| i.group() == Group::NON_MASTER)
             {
                 tracing::debug!(target: "dag::definitelymissing", "root {:?} is not assigned (non-lazy parent)", &root);
@@ -1019,7 +1019,11 @@ where
 
             // All children of lazy parents of `root` are known locally.
             // So `root` cannot match an existing vertex in the lazy graph.
-            let children_ids: Vec<Id> = this.dag.children(root_parents_id_set)?.iter().collect();
+            let children_ids: Vec<Id> = this
+                .dag
+                .children(root_parents_id_set)?
+                .iter_desc()
+                .collect();
             if this
                 .map
                 .contains_vertex_id_locally(&children_ids)

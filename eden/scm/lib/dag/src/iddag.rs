@@ -215,7 +215,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 
         // TODO: Modify the last segment if it can concat the first new segment.
 
-        let mut head_ids: HashSet<Id> = self.heads(self.master_group()?)?.iter().collect();
+        let mut head_ids: HashSet<Id> = self.heads(self.master_group()?)?.iter_desc().collect();
         let mut get_flags = |parents: &[Id], head: Id| {
             let mut flags = SegmentFlags::empty();
             if parents.is_empty() {
@@ -279,7 +279,9 @@ impl<Store: IdDagStore> IdDag<Store> {
         let mut current_parents = Vec::new();
         let mut insert_count = 0;
         let mut head_ids: HashSet<Id> = if group == Group::MASTER && low > Id::MIN {
-            self.heads((Id::MIN..=(low - 1)).into())?.iter().collect()
+            self.heads((Id::MIN..=(low - 1)).into())?
+                .iter_desc()
+                .collect()
         } else {
             Default::default()
         };
@@ -576,7 +578,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             trace(&|| format!("simplified to {:?}", &set));
         }
         let mut result = IdSet::empty();
-        let mut to_visit: BinaryHeap<_> = set.iter().collect();
+        let mut to_visit: BinaryHeap<_> = set.iter_desc().collect();
         let max_level = self.max_level()?;
         'outer: while let Some(id) = to_visit.pop() {
             if result.contains(id) {
@@ -633,7 +635,7 @@ pub trait IdDagAlgorithm: IdDagStore {
         }
         debug!(target: "dag::algo::first_ancestors", "first_ancestors({:?})", &set);
         let mut result = IdSet::empty();
-        let mut to_visit: BinaryHeap<_> = set.iter().collect();
+        let mut to_visit: BinaryHeap<_> = set.iter_desc().collect();
         // Lookup flat segments to figure out the first ancestors.
         while let Some(id) = to_visit.pop() {
             if result.contains(id) {
@@ -1053,12 +1055,12 @@ pub trait IdDagAlgorithm: IdDagStore {
     /// Calculate children of the given set.
     fn children(&self, set: IdSet) -> Result<IdSet> {
         if set.count() < 5 {
-            let result =
-                set.iter()
-                    .fold(Ok(IdSet::empty()), |acc: Result<IdSet>, id| match acc {
-                        Ok(acc) => Ok(acc.union(&self.children_id(id)?)),
-                        Err(err) => Err(err),
-                    })?;
+            let result = set
+                .iter_desc()
+                .fold(Ok(IdSet::empty()), |acc: Result<IdSet>, id| match acc {
+                    Ok(acc) => Ok(acc.union(&self.children_id(id)?)),
+                    Err(err) => Err(err),
+                })?;
             #[cfg(test)]
             {
                 let result_set = self.children_set(set)?;
@@ -1248,7 +1250,7 @@ pub trait IdDagAlgorithm: IdDagStore {
             1 => self.ancestors(set)?,
             2 => {
                 // Fast path that does not calculate "heads".
-                let mut iter = set.iter();
+                let mut iter = set.iter_desc();
                 let a = iter.next().unwrap();
                 let b = iter.next().unwrap();
                 self.ancestors(a.into())?
@@ -1258,7 +1260,7 @@ pub trait IdDagAlgorithm: IdDagStore {
                 // Try to reduce the size of `set`.
                 // `common_ancestors(X)` = `common_ancestors(roots(X))`.
                 let set = self.roots(set)?;
-                set.iter()
+                set.iter_desc()
                     .fold(Ok(IdSet::full()), |set: Result<IdSet>, id| {
                         Ok(set?.intersection(&self.ancestors(id.into())?))
                     })?
@@ -1787,7 +1789,7 @@ mod tests {
         assert_eq!(
             dag.children(Id(1000).into())
                 .unwrap()
-                .iter()
+                .iter_desc()
                 .collect::<Vec<Id>>(),
             vec![Id(1001)]
         );

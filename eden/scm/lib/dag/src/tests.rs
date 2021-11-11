@@ -859,8 +859,11 @@ fn test_segment_ancestors_example1() {
         let a = Id(a);
         let b = Id(b);
         assert_eq!(dag.gca_one((a, b).into()).unwrap(), ancestor);
-        assert_eq!(dag.gca_all((a, b).into()).unwrap().iter().nth(0), ancestor);
-        assert_eq!(dag.gca_all((a, b).into()).unwrap().iter().nth(1), None);
+        assert_eq!(
+            dag.gca_all((a, b).into()).unwrap().iter_desc().nth(0),
+            ancestor
+        );
+        assert_eq!(dag.gca_all((a, b).into()).unwrap().iter_desc().nth(1), None);
         assert_eq!(dag.is_ancestor(b, a).unwrap(), ancestor == Some(b));
         assert_eq!(dag.is_ancestor(a, b).unwrap(), ancestor == Some(a));
     }
@@ -873,7 +876,7 @@ fn test_segment_ancestors_example1() {
         assert_eq!(
             dag.gca_all(IdSet::from_spans(spans))
                 .unwrap()
-                .iter()
+                .iter_desc()
                 .collect::<Vec<Id>>(),
             ancestors.into_iter().map(Id).collect::<Vec<Id>>(),
         );
@@ -902,7 +905,7 @@ Lv1: R0-2[]"#
     assert_eq!(
         dag.gca_all((2, 3).into())
             .unwrap()
-            .iter()
+            .iter_desc()
             .collect::<Vec<_>>(),
         vec![1, 0]
     );

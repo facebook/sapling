@@ -209,7 +209,7 @@ impl AsyncNameSetQuery for IdStaticSet {
     }
 
     async fn first(&self) -> Result<Option<VertexName>> {
-        debug_assert_eq!(self.spans.max(), self.spans.iter().nth(0));
+        debug_assert_eq!(self.spans.max(), self.spans.iter_desc().nth(0));
         match self.spans.max() {
             Some(id) => {
                 let map = &self.map;
@@ -221,7 +221,7 @@ impl AsyncNameSetQuery for IdStaticSet {
     }
 
     async fn last(&self) -> Result<Option<VertexName>> {
-        debug_assert_eq!(self.spans.min(), self.spans.iter().rev().nth(0));
+        debug_assert_eq!(self.spans.min(), self.spans.iter_desc().rev().nth(0));
         match self.spans.min() {
             Some(id) => {
                 let map = &self.map;
