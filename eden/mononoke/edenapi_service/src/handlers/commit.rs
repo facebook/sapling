@@ -38,8 +38,7 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{
     cbor_stream_filtered_errors, custom_cbor_stream, get_repo, parse_cbor_request,
-    parse_wire_request, to_create_change, to_hg_path, to_mononoke_path, to_mutation_entry,
-    to_revlog_changeset,
+    parse_wire_request, to_create_change, to_hg_path, to_mononoke_path, to_revlog_changeset,
 };
 
 use super::{EdenApiHandler, EdenApiMethod, HandlerInfo, HandlerResult};
@@ -280,8 +279,8 @@ impl EdenApiHandler for UploadHgChangesetsHandler {
 
         let mutation_data = mutations
             .into_iter()
-            .map(to_mutation_entry)
-            .collect::<Result<Vec<_>, Error>>()?;
+            .map(TryInto::try_into)
+            .collect::<Result<_, _>>()?;
 
         let results = repo
             .store_hg_changesets(changesets_data, mutation_data)

@@ -19,21 +19,16 @@
 //! in implentation, it is possible that conversion failures may occur
 //! in practice.
 
-use anyhow::{bail, Context, Error, Result};
-use smallvec::SmallVec;
+use anyhow::{bail, Context, Result};
 use std::collections::BTreeMap;
-use std::str;
 
 use edenapi_types::{
     commit::BonsaiFileChange,
     token::{UploadToken, UploadTokenData, UploadTokenMetadata},
-    AnyFileContentId, AnyId, HgChangesetContent, HgMutationEntryContent,
+    AnyFileContentId, AnyId, HgChangesetContent,
 };
 use ephemeral_blobstore::BubbleId;
-use mercurial_mutation::HgMutationEntry;
-use mercurial_types::{
-    blobs::Extra, blobs::RevlogChangeset, HgChangesetId, HgManifestId, HgNodeHash,
-};
+use mercurial_types::{blobs::Extra, blobs::RevlogChangeset, HgManifestId, HgNodeHash};
 use mononoke_api::path::MononokePath;
 use mononoke_api::{CreateChange, CreateChangeFile};
 use mononoke_types::DateTime;
@@ -152,44 +147,4 @@ pub fn to_create_change(fc: BonsaiFileChange, bubble_id: Option<BubbleId>) -> Re
         BonsaiFileChange::UntrackedDeletion => Ok(CreateChange::UntrackedDeletion),
         BonsaiFileChange::Deletion => Ok(CreateChange::Deletion),
     }
-}
-
-pub fn to_mutation_entry(mutation: HgMutationEntryContent) -> Result<HgMutationEntry> {
-    let successor = HgChangesetId::new(HgNodeHash::from(mutation.successor));
-    let predecessors = mutation
-        .predecessors
-        .into_iter()
-        .map(HgNodeHash::from)
-        .map(HgChangesetId::new)
-        .collect::<Vec<_>>();
-    let predecessors: SmallVec<[_; 1]> = SmallVec::from_vec(predecessors);
-    let split = mutation
-        .split
-        .into_iter()
-        .map(HgNodeHash::from)
-        .map(HgChangesetId::new)
-        .collect::<Vec<_>>();
-    let op = mutation.op;
-    let user = str::from_utf8(&mutation.user)?.to_string();
-    let time = DateTime::from_timestamp(mutation.time, mutation.tz)?;
-    let exta = mutation
-        .extras
-        .into_iter()
-        .map(|extra| {
-            Ok((
-                str::from_utf8(&extra.key)?.to_string(),
-                str::from_utf8(&extra.value)?.to_string(),
-            ))
-        })
-        .collect::<Result<_, Error>>()?;
-
-    Ok(HgMutationEntry::new(
-        successor,
-        predecessors,
-        split,
-        op,
-        user,
-        time,
-        exta,
-    ))
 }

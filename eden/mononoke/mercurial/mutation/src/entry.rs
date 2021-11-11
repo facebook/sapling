@@ -9,6 +9,7 @@ use std::collections::{hash_map, HashMap, HashSet};
 use std::io::Read;
 
 use anyhow::{anyhow, Error, Result};
+use edenapi_types::HgMutationEntryContent;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::DateTime;
 use smallvec::SmallVec;
@@ -214,6 +215,49 @@ impl Into<MutationEntry> for HgMutationEntry {
                 })
                 .collect(),
         }
+    }
+}
+
+impl TryFrom<HgMutationEntryContent> for HgMutationEntry {
+    type Error = Error;
+    fn try_from(mutation: HgMutationEntryContent) -> Result<Self> {
+        let successor = HgChangesetId::new(HgNodeHash::from(mutation.successor));
+        let predecessors = mutation
+            .predecessors
+            .into_iter()
+            .map(HgNodeHash::from)
+            .map(HgChangesetId::new)
+            .collect::<Vec<_>>();
+        let predecessors: SmallVec<[_; 1]> = SmallVec::from_vec(predecessors);
+        let split = mutation
+            .split
+            .into_iter()
+            .map(HgNodeHash::from)
+            .map(HgChangesetId::new)
+            .collect::<Vec<_>>();
+        let op = mutation.op;
+        let user = std::str::from_utf8(&mutation.user)?.to_string();
+        let time = DateTime::from_timestamp(mutation.time, mutation.tz)?;
+        let exta = mutation
+            .extras
+            .into_iter()
+            .map(|extra| {
+                Ok((
+                    std::str::from_utf8(&extra.key)?.to_string(),
+                    std::str::from_utf8(&extra.value)?.to_string(),
+                ))
+            })
+            .collect::<Result<_, Error>>()?;
+
+        Ok(HgMutationEntry::new(
+            successor,
+            predecessors,
+            split,
+            op,
+            user,
+            time,
+            exta,
+        ))
     }
 }
 
