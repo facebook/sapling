@@ -356,9 +356,16 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// flat segment per group to be mutable, because it will not be included
     /// in Level 1 segments.
     ///
+    /// `inserted_lower_level_id_set` specifies newly inserted segments at the
+    /// lower level.
+    ///
     /// Return `(count, set)`. `count` is the number of segments inserted.
     /// `set` is an `IdSet` that covers ranges of segments inserted.
-    fn build_high_level_segments(&mut self, level: Level) -> Result<(usize, IdSet)> {
+    fn build_high_level_segments(
+        &mut self,
+        level: Level,
+        inserted_lower_level_id_set: &IdSet,
+    ) -> Result<(usize, IdSet)> {
         let mut inserted_id_set = IdSet::empty();
         if level == 0 {
             // Do nothing. Level 0 is not considered high level.
@@ -366,10 +373,39 @@ impl<Store: IdDagStore> IdDag<Store> {
         }
         let size = self.new_seg_size;
 
+        // Figure out lower level segments to consider.
+        //
+        // Legend:
+        //  [...] existing (one or more) segments
+        //  [N] newly inserted (in inserted_lower_level_id_set)
+        //
+        // Flat segments:          [..............] gap [.......] gap [...........]
+        // Lower level segments:   [.......][ N ]       [.....]       [....][ N ]
+        // This level segments:    [.....]              [...]         [..]
+        // missing:                       [     ]            []           [     ]
+        // need_consider:                 [     ]                         [     ]
+
+        let missing = self
+            .all_ids_in_segment_level(level - 1)?
+            .difference(&self.all_ids_in_segment_level(level)?);
+        let need_consider = IdSet::from_sorted_spans(
+            missing
+                .as_spans()
+                .iter()
+                .filter(|s| inserted_lower_level_id_set.contains(s.high))
+                .copied(),
+        );
+        tracing::debug!(
+            "building lv{} segment from lv{} ranges {:?}",
+            level,
+            level - 1,
+            &need_consider
+        );
+
         let mut insert_count = 0;
-        let mut new_segments_per_group = Vec::new();
+        let mut new_segments_per_considering_span = Vec::new();
         let mut lower_segments_len = 0;
-        for &group in Group::ALL.iter() {
+        for considering_span in need_consider.as_spans() {
             // `get_parents` is on the previous level of segments.
             let get_parents = |head: Id| -> Result<Vec<Id>> {
                 if let Some(seg) = self.find_segment_by_head_and_level(head, level - 1)? {
@@ -380,10 +416,9 @@ impl<Store: IdDagStore> IdDag<Store> {
             };
 
             let new_segments = {
-                let low = self.next_free_id(level, group)?;
-
                 // Find all segments on the previous level that haven't been built.
-                let segments: Vec<_> = self.next_segments(low, level - 1)?;
+                let segments: Vec<_> =
+                    self.segments_in_span_ascending(*considering_span, level - 1)?;
                 lower_segments_len += segments.len();
 
                 // Sanity check: They should be sorted and connected.
@@ -462,21 +497,22 @@ impl<Store: IdDagStore> IdDag<Store> {
                 new_segments
             };
 
-            new_segments_per_group.push(new_segments);
+            new_segments_per_considering_span.push(new_segments);
         }
 
         // No point to introduce new levels if it has the same segment count
         // as the lower level.
         if level > self.max_level()?
-            && new_segments_per_group
+            && new_segments_per_considering_span
                 .iter()
-                .fold(0, |acc, s| acc + s.len())
+                .map(|s| s.len())
+                .sum::<usize>()
                 >= lower_segments_len
         {
             return Ok((0, inserted_id_set));
         }
 
-        for mut new_segments in new_segments_per_group {
+        for mut new_segments in new_segments_per_considering_span {
             // Drop the last segment. It could be incomplete.
             new_segments.pop();
 
@@ -516,13 +552,14 @@ impl<Store: IdDagStore> IdDag<Store> {
     ) -> Result<usize> {
         let mut total = 0;
         let max_level = max_level.min(MAX_MEANINGFUL_LEVEL);
-        let _ = new_flat_id_set;
+        let mut new_id_set = new_flat_id_set;
         for level in 1..=max_level {
-            let (count, new_ids) = self.build_high_level_segments(level)?;
+            let (count, new_ids) = self.build_high_level_segments(level, &new_id_set)?;
             tracing::debug!("new {} lv{} segments: {:?}", count, level, &new_ids);
             if count == 0 {
                 break;
             }
+            new_id_set = new_ids;
             total += count;
         }
         Ok(total)
@@ -1881,7 +1918,7 @@ mod tests {
         // Segment 20..=30 shouldn't have the "ONLY_HEAD" flag because of the gap.
         // In debug output it does not have "H" prefix.
         let mut dag = IdDag::new_in_process();
-        dag.build_flat_segments_from_prepared_flat_segments(&prepared)
+        dag.build_segments_volatile_from_prepared_flat_segments(&prepared)
             .unwrap();
         let iter = dag.iter_segments_ascending(Id(0), 0).unwrap();
         assert_eq!(dbg_iter(iter), "[RH0-10[], 20-30[10]]");
