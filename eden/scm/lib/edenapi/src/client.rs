@@ -236,12 +236,12 @@ impl Client {
     where
         K: IntoIterator<Item = T>,
         F: FnMut(Vec<T>) -> R,
-        R: Serialize,
+        R: ToWire,
     {
         split_into_batches(keys, batch_size)
             .into_iter()
             .map(|keys| {
-                let req = make_req(keys);
+                let req = make_req(keys).to_wire();
                 self.configure_request(Request::post(url.clone()))?
                     .cbor(&req)
                     .map_err(EdenApiError::RequestSerializationFailed)
@@ -383,7 +383,7 @@ impl Client {
         let requests = self.prepare_requests(&url, keys, self.config().max_files, |keys| {
             let req = FileRequest { keys, reqs: vec![] };
             self.log_request(&req, "files");
-            req.to_wire()
+            req
         })?;
 
         Ok(self.fetch_guard::<FileEntry>(requests, guards)?)
@@ -408,7 +408,7 @@ impl Client {
                 attributes: attributes.clone().unwrap_or_default(),
             };
             self.log_request(&req, "trees");
-            req.to_wire()
+            req
         })?;
 
         Ok(self.fetch::<Result<TreeEntry, EdenApiServerError>>(requests)?)
@@ -431,7 +431,7 @@ impl Client {
         let requests = self.prepare_requests(&url, reqs, self.config().max_files, |reqs| {
             let req = FileRequest { reqs, keys: vec![] };
             self.log_request(&req, "files");
-            req.to_wire()
+            req
         })?;
 
         Ok(self.fetch_guard::<FileEntry>(requests, guards)?)
@@ -576,7 +576,7 @@ impl EdenApi for Client {
         let requests = self.prepare_requests(&url, keys, self.config().max_history, |keys| {
             let req = HistoryRequest { keys, length };
             self.log_request(&req, "history");
-            req.to_wire()
+            req
         })?;
 
         let Response { entries, stats } = self.fetch::<HistoryResponseChunk>(requests)?;
@@ -638,12 +638,7 @@ impl EdenApi for Client {
             &url,
             prefixes,
             Some(MAX_CONCURRENT_HASH_LOOKUPS_PER_REQUEST),
-            |prefixes| {
-                let req = Batch::<_> {
-                    batch: prefixes.into_iter().map(|prefix| prefix).collect(),
-                };
-                req.to_wire()
-            },
+            |prefixes| Batch::<_> { batch: prefixes },
         )?;
         self.fetch_vec_with_retry::<CommitHashLookupResponse>(requests)
             .await
@@ -715,7 +710,7 @@ impl EdenApi for Client {
             |requests| {
                 let batch = CommitLocationToHashRequestBatch { requests };
                 self.log_request(&batch, "commit_location_to_hash");
-                batch.to_wire()
+                batch
             },
         )?;
 
@@ -748,7 +743,7 @@ impl EdenApi for Client {
                     unfiltered: Some(true),
                 };
                 self.log_request(&batch, "commit_hash_to_location");
-                batch.to_wire()
+                batch
             })?;
 
         self.fetch_vec_with_retry::<CommitHashToLocationResponse>(formatted)
@@ -852,14 +847,11 @@ impl EdenApi for Client {
             &url,
             items,
             Some(MAX_CONCURRENT_LOOKUPS_PER_REQUEST),
-            |ids| {
-                let req = Batch::<LookupRequest> {
-                    batch: ids
-                        .into_iter()
-                        .map(|id| LookupRequest { id, bubble_id })
-                        .collect(),
-                };
-                req.to_wire()
+            |ids| Batch::<LookupRequest> {
+                batch: ids
+                    .into_iter()
+                    .map(|id| LookupRequest { id, bubble_id })
+                    .collect(),
             },
         )?;
 
@@ -970,14 +962,11 @@ impl EdenApi for Client {
             &url,
             items,
             Some(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST),
-            |ids| {
-                let req = Batch::<_> {
-                    batch: ids
-                        .into_iter()
-                        .map(|item| UploadHgFilenodeRequest { data: item })
-                        .collect(),
-                };
-                req.to_wire()
+            |ids| Batch::<_> {
+                batch: ids
+                    .into_iter()
+                    .map(|item| UploadHgFilenodeRequest { data: item })
+                    .collect(),
             },
         )?;
 
@@ -1000,14 +989,11 @@ impl EdenApi for Client {
             &url,
             items,
             Some(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST),
-            |ids| {
-                let req = Batch::<_> {
-                    batch: ids
-                        .into_iter()
-                        .map(|item| UploadTreeRequest { entry: item })
-                        .collect(),
-                };
-                req.to_wire()
+            |ids| Batch::<_> {
+                batch: ids
+                    .into_iter()
+                    .map(|item| UploadTreeRequest { entry: item })
+                    .collect(),
             },
         )?;
 
