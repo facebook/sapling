@@ -93,9 +93,6 @@ impl TreeStore {
     ) -> Result<FetchResults<StoreTree, ()>> {
         let mut common: CommonFetchState<StoreTree> =
             CommonFetchState::new(reqs, TreeAttributes::CONTENT);
-        let mut write_to_local_cache = HashSet::new();
-        let mut write_to_memcache = HashSet::new();
-
         let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
         let memcache = self.memcache.clone();
@@ -139,10 +136,14 @@ impl TreeStore {
                     if !pending.is_empty() {
                         for entry in memcache.get_data_iter(&pending)? {
                             let entry = entry?;
+                            let key = entry.key.clone();
+                            let entry = LazyTree::Memcache(entry);
                             if indexedlog_cache.is_some() && cache_to_local_cache {
-                                write_to_local_cache.insert(entry.key.clone());
+                                if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
+                                    indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
+                                }
                             }
-                            common.found(entry.key.clone(), LazyTree::Memcache(entry).into());
+                            common.found(key, entry.into());
                         }
                     }
                 }
@@ -167,13 +168,19 @@ impl TreeStore {
                     let response = edenapi.trees_blocking(pending, None)?;
                     for entry in response.entries {
                         let entry = entry?;
+                        let key = entry.key.clone();
+                        let entry = LazyTree::EdenApi(entry);
                         if indexedlog_cache.is_some() && cache_to_local_cache {
-                            write_to_local_cache.insert(entry.key().clone());
+                            if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
+                                indexedlog_cache.as_ref().unwrap().put_entry(entry)?;
+                            }
                         }
                         if memcache.is_some() && cache_to_memcache && use_memcache(creation_time) {
-                            write_to_memcache.insert(entry.key().clone());
+                            if let Some(entry) = entry.indexedlog_cache_entry(key.clone())? {
+                                memcache.as_ref().unwrap().add_mcdata(entry.try_into()?);
+                            }
                         }
-                        common.found(entry.key().clone(), LazyTree::EdenApi(entry).into());
+                        common.found(key, entry.into());
                     }
                     util::record_edenapi_stats(&span, &response.stats);
                 }
@@ -216,32 +223,6 @@ impl TreeStore {
 
             // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
             let results = common.results(FetchErrors::new(), ());
-
-            // TODO(meyer): We can do this in the background if we actually want to make this implementation perform well.
-            // TODO(meyer): We shouldn't fail the batch on write failures here.
-            if cache_to_local_cache {
-                if let Some(ref indexedlog_cache) = indexedlog_cache {
-                    for key in write_to_local_cache.into_iter() {
-                        if let Some(ref content) = results.complete[&key].content {
-                            if let Some(entry) = content.indexedlog_cache_entry(key)? {
-                                indexedlog_cache.put_entry(entry)?;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if cache_to_memcache {
-                if let Some(ref memcache) = memcache {
-                    for key in write_to_memcache.into_iter() {
-                        if let Some(ref content) = results.complete[&key].content {
-                            if let Some(entry) = content.indexedlog_cache_entry(key)? {
-                                memcache.add_mcdata(entry.try_into()?);
-                            }
-                        }
-                    }
-                }
-            }
 
             Ok(results)
         };
