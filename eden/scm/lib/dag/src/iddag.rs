@@ -198,19 +198,23 @@ impl<Store: IdDagStore> IdDag<Store> {
         &mut self,
         outcome: &PreparedFlatSegments,
     ) -> Result<usize> {
-        let mut count = self.build_flat_segments_from_prepared_flat_segments(outcome)?;
-        count += self.build_all_high_level_segments(Level::MAX)?;
+        let (count, _set) = self.build_flat_segments_from_prepared_flat_segments(outcome)?;
+        let count = count + self.build_all_high_level_segments(Level::MAX)?;
         Ok(count)
     }
 
     /// Build flat segments using the outcome from `add_head`.
     /// This is not public because it does not keep high-level segments in sync.
+    ///
+    /// Return `(count, set)`. Number of segments inserted, and `IdSet` covered
+    /// by inserted segments.
     fn build_flat_segments_from_prepared_flat_segments(
         &mut self,
         outcome: &PreparedFlatSegments,
-    ) -> Result<usize> {
+    ) -> Result<(usize, IdSet)> {
+        let mut inserted_id_set = IdSet::empty();
         if outcome.segments.is_empty() {
-            return Ok(0);
+            return Ok((0, inserted_id_set));
         }
 
         let mut head_ids: BTreeSet<Id> = self.heads(self.master_group()?)?.iter_desc().collect();
@@ -259,9 +263,10 @@ impl<Store: IdDagStore> IdDag<Store> {
                 &seg.parents,
                 &flags
             );
+            inserted_id_set.push(seg.low..=seg.high);
             self.insert(flags, 0, seg.low, seg.high, &seg.parents)?;
         }
-        Ok(outcome.segments.len())
+        Ok((outcome.segments.len(), inserted_id_set))
     }
 
     /// Incrementally build flat (level 0) segments towards `high` (inclusive).
