@@ -263,6 +263,8 @@ def checkproxyagentstate(ui):
 
     status = "OS not supported"
 
+    version = shcmd("x2pagentd --version")
+
     if pycompat.iswindows:
         os.environ["COMSPEC"] = "powershell"
         status = shcmd(
@@ -285,13 +287,15 @@ def checkproxyagentstate(ui):
             "cat ~/Library/Application\\ Support/fb-x2pagentd/fb-x2pagentd.log | tail -n 100"
         )
 
-    return """x2pagentd status:
+    return """{}
+
+x2pagentd status:
 {}
 
 x2pagentd logs (might be truncated):
 {}
 """.format(
-        status, logs
+        version, status, logs
     )
 
 
