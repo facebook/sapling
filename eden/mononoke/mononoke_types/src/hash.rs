@@ -13,7 +13,7 @@ use abomonation_derive::Abomonation;
 use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use blake2::{
-    digest::{Input, VariableOutput},
+    digest::{Update, VariableOutput},
     VarBlake2b,
 };
 use edenapi_types::{Sha1 as EdenapiSha1, Sha256 as EdenapiSha256};
@@ -148,13 +148,13 @@ impl Context {
     where
         T: AsRef<[u8]>,
     {
-        self.0.input(data.as_ref())
+        self.0.update(data.as_ref())
     }
 
     #[inline]
     pub fn finish(self) -> Blake2 {
         let mut ret = [0u8; BLAKE2_HASH_LENGTH_BYTES];
-        self.0.variable_result(|res| {
+        self.0.finalize_variable(|res| {
             if let Err(e) = ret.as_mut().write_all(res) {
                 panic!(
                     "{}-byte array must work with {}-byte blake2b: {:?}",

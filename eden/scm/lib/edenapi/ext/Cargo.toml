@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-blake2 = "0.8"
+blake2 = "0.9"
 edenapi = { path = ".." }
 edenapi_types = { path = "../types" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

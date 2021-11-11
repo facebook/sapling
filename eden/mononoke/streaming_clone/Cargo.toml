@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-blake2 = "0.8"
+blake2 = "0.9"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }

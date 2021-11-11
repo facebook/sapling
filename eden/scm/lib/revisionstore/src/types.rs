@@ -52,15 +52,15 @@ impl ContentHash {
     }
 
     pub(crate) fn content_id(data: &Bytes) -> ContentId {
-        use blake2::digest::Input;
+        use blake2::digest::Update;
         use blake2::digest::VariableOutput;
         use blake2::VarBlake2b;
 
         // cribbed from pyedenapi
         let mut hash = VarBlake2b::new_keyed(b"content", ContentId::len());
-        hash.input(data);
+        hash.update(data);
         let mut ret = [0u8; ContentId::len()];
-        hash.variable_result(|res| {
+        hash.finalize_variable(|res| {
             if let Err(e) = ret.as_mut().write_all(res) {
                 panic!(
                     "{}-byte array must work with {}-byte blake2b: {:?}",

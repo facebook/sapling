@@ -15,7 +15,7 @@ ascii = "1.0"
 async-trait = "0.1.51"
 bincode = "1.3.3"
 bit-set = "0.5"
-blake2 = "0.8"
+blake2 = "0.9"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
