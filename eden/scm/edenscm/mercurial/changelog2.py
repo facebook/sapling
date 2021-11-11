@@ -142,7 +142,7 @@ class changelog(object):
         svfs = repo.svfs
         segmentsdir = _segmentsdir(svfs)
         gitdir = svfs.readutf8(GIT_DIR_FILE)
-        metalog = svfs.metalog
+        metalog = repo.metalog()
         inner = bindings.dag.commits.opengitsegments(gitdir, segmentsdir, metalog)
         return cls(repo, inner, uiconfig)
 

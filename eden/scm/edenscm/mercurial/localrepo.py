@@ -1183,7 +1183,7 @@ class localrepository(object):
         # Trigger loading of the metalog, before loading changelog.
         # This avoids potential races such as metalog refers to
         # unknown commits.
-        self.svfs.metalog
+        self.metalog()
 
         cl = loadchangelog(self)
 
