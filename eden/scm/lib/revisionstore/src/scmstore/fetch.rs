@@ -19,7 +19,7 @@ use types::Key;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::value::StoreValue;
 
-pub(crate) struct CommonFetchState<T: StoreValue, M> {
+pub(crate) struct CommonFetchState<T: StoreValue> {
     /// Requested keys for which at least some attributes haven't been found.
     pub pending: HashSet<Key>,
 
@@ -29,15 +29,15 @@ pub(crate) struct CommonFetchState<T: StoreValue, M> {
     /// All attributes which have been found so far
     pub found: HashMap<Key, T>,
 
-    pub found_tx: Sender<FetchResult<T, M>>,
+    pub found_tx: Sender<FetchResult<T>>,
 }
 
-impl<T: StoreValue, M> CommonFetchState<T, M> {
+impl<T: StoreValue> CommonFetchState<T> {
     #[instrument(skip(keys))]
     pub(crate) fn new(
         keys: impl Iterator<Item = Key>,
         attrs: T::Attrs,
-        found_tx: Sender<FetchResult<T, M>>,
+        found_tx: Sender<FetchResult<T>>,
     ) -> Self {
         Self {
             pending: keys.collect(),
@@ -99,8 +99,8 @@ impl<T: StoreValue, M> CommonFetchState<T, M> {
         return false;
     }
 
-    #[instrument(skip(self, errors, metrics))]
-    pub(crate) fn results(mut self, errors: FetchErrors, metrics: M) {
+    #[instrument(skip(self, errors))]
+    pub(crate) fn results(mut self, errors: FetchErrors) {
         // Combine and collect errors
         let mut incomplete = errors.fetch_errors;
         for key in self.pending.into_iter() {
@@ -116,7 +116,6 @@ impl<T: StoreValue, M> CommonFetchState<T, M> {
         let _ = self.found_tx.send(FetchResult::Finished(FetchFinish {
             incomplete,
             other_errors: errors.other_errors,
-            metrics,
         }));
     }
 
@@ -174,16 +173,15 @@ impl FetchErrors {
 }
 
 #[derive(Debug)]
-pub enum FetchResult<T, M> {
+pub enum FetchResult<T> {
     Value((Key, T)),
-    Finished(FetchFinish<M>),
+    Finished(FetchFinish),
 }
 
 #[derive(Debug)]
-pub struct FetchFinish<M> {
+pub struct FetchFinish {
     pub incomplete: HashMap<Key, Vec<Error>>,
     pub other_errors: Vec<Error>,
-    pub metrics: M,
 }
 
 #[derive(Debug)]

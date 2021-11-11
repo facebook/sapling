@@ -58,7 +58,7 @@ use crate::Metadata;
 use crate::StoreKey;
 
 pub struct FetchState {
-    common: CommonFetchState<StoreFile, FileStoreFetchMetrics>,
+    common: CommonFetchState<StoreFile>,
 
     /// Errors encountered during fetching.
     errors: FetchErrors,
@@ -88,7 +88,7 @@ impl FetchState {
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
         file_store: &FileStore,
-        found_tx: Sender<FetchResult<StoreFile, FileStoreFetchMetrics>>,
+        found_tx: Sender<FetchResult<StoreFile>>,
     ) -> Self {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx),
@@ -767,6 +767,6 @@ impl FetchState {
 
     #[instrument(skip(self))]
     pub(crate) fn finish(self) {
-        self.common.results(self.errors, self.metrics);
+        self.common.results(self.errors);
     }
 }

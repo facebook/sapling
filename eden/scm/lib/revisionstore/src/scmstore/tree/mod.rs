@@ -95,7 +95,7 @@ impl TreeStore {
     pub fn fetch_batch(&self, reqs: impl Iterator<Item = Key>) -> Result<FetchResults<StoreTree>> {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
-        let mut common: CommonFetchState<StoreTree, ()> =
+        let mut common: CommonFetchState<StoreTree> =
             CommonFetchState::new(reqs, TreeAttributes::CONTENT, found_tx);
 
         let indexedlog_cache = self.indexedlog_cache.clone();
@@ -227,7 +227,7 @@ impl TreeStore {
             }
 
             // TODO(meyer): Report incomplete / not found, handle errors better instead of just always failing the batch, etc
-            common.results(FetchErrors::new(), ());
+            common.results(FetchErrors::new());
             Ok(())
         };
         std::thread::spawn(move || {
@@ -235,7 +235,6 @@ impl TreeStore {
                 let _ = found_tx2.send(FetchResult::Finished(FetchFinish {
                     incomplete: HashMap::new(),
                     other_errors: vec![err],
-                    metrics: (),
                 }));
             }
         });
