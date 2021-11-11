@@ -1,0 +1,105 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License found in the LICENSE file in the root
+# directory of this source tree. 
+
+  $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig ui.ignorerevnum=false
+
+Set up local hgrc and Mononoke config.
+  $ export READ_ONLY_REPO=1
+  $ export MONONOKE_DIRECT_PEER=1
+  $ INFINITEPUSH_ALLOW_WRITES=true \
+  >   ENABLE_PRESERVE_BUNDLE2=true \
+  >   setup_common_config
+  $ cd $TESTTMP
+  $ merge_tunables <<EOF
+  > {
+  >   "killswitches": {
+  >     "mutation_advertise_for_infinitepush": true,
+  >     "mutation_accept_for_infinitepush": true,
+  >     "mutation_generate_for_draft": true
+  >   }
+  > }
+  > EOF
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > amend =
+  > commitcloud =
+  > infinitepush =
+  > rebase =
+  > remotenames =
+  > share =
+  > [commitcloud]
+  > hostname = testhost
+  > servicetype = local
+  > servicelocation = $TESTTMP
+  > token_enforced = False
+  > owner_team = The Test Team
+  > usehttpupload = True
+  > [visibility]
+  > enabled = True
+  > [mutation]
+  > record = True
+  > enabled = True
+  > date = 0 0
+  > [remotefilelog]
+  > reponame=repo
+  > EOF
+
+Initialize test repo.
+  $ hginit_treemanifest repo
+  $ cd repo
+  $ mkcommit base_commit
+  $ hg log -T '{short(node)}\n'
+  8b2dca0c8a72
+
+
+Import and start mononoke
+  $ cd $TESTTMP
+  $ hgclone_treemanifest ssh://user@dummy/repo client1 --noupdate
+  $ blobimport repo/.hg repo
+  $ mononoke
+  $ wait_for_mononoke
+
+Test mutations
+  $ cd client1
+  $ hgedenapi up 8b2dca0c8a72 -q
+  $ hgedenapi cloud join -q
+  $ mkcommit A
+  $ hg log -T{node} -r .
+  929f2b9071cf032d9422b3cce9773cbe1c574822 (no-eol)
+  $ hgedenapi cloud upload -q
+  $ hgedenapi debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
+  []
+  $ hg metaedit -r . -m new_message
+  $ hg log -T{node} -r .
+  f643b098cd183f085ba3e6107b6867ca472e87d1 (no-eol)
+  $ hgedenapi cloud upload -q
+  $ hgedenapi debugapi -e commitmutations -i '["f643b098cd183f085ba3e6107b6867ca472e87d1"]'
+  [{"op": "metaedit",
+    "tz": 0,
+    "time": 0,
+    "user": [116,
+             101,
+             115,
+             116],
+    "split": [],
+    "extras": [],
+    "successor": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
+    "predecessors": [bin("929f2b9071cf032d9422b3cce9773cbe1c574822")]}]
+  $ hgedenapi debugapi -e commitmutations -i '["929f2b9071cf032d9422b3cce9773cbe1c574822"]'
+  []
+  $ hgedenapi debugapi -e commitmutations -i '["f643b098cd183f085ba3e6107b6867ca472e87d1", "929f2b9071cf032d9422b3cce9773cbe1c574822"]'
+  [{"op": "metaedit",
+    "tz": 0,
+    "time": 0,
+    "user": [116,
+             101,
+             115,
+             116],
+    "split": [],
+    "extras": [],
+    "successor": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
+    "predecessors": [bin("929f2b9071cf032d9422b3cce9773cbe1c574822")]}]

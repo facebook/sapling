@@ -416,6 +416,18 @@ py_class!(pub class client |py| {
             .entries;
         Ok(entries.map_ok(Serde).map_err(Into::into).into())
     }
+
+    def commitmutations(
+        &self,
+        repo: String,
+        commits: Serde<Vec<HgId>>,
+    ) -> PyResult<Serde<Vec<HgMutationEntryContent>>> {
+        let inner = self.inner(py).clone();
+        py.allow_threads(|| block_unless_interrupted(inner.commit_mutations(repo, commits.0)))
+            .map_pyerr(py)?
+            .map_pyerr(py)
+            .map(|responses| Serde(responses.into_iter().map(|r| r.mutation).collect()))
+    }
 });
 
 impl ExtractInnerRef for client {
