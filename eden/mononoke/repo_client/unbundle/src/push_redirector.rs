@@ -724,7 +724,7 @@ impl PushRedirector {
 
         if self
             .small_to_large_commit_syncer
-            .get_common_pushrebase_bookmarks(ctx)
+            .get_common_pushrebase_bookmarks()
             .await?
             .contains(&name)
         {

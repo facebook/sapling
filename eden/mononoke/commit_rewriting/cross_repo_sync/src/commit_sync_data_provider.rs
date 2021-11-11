@@ -274,17 +274,14 @@ impl CommitSyncDataProvider {
 
     pub async fn get_common_pushrebase_bookmarks(
         &self,
-        ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<Vec<BookmarkName>, Error> {
         use CommitSyncDataProvider::*;
 
         match self {
             Live(live_commit_sync_config) => {
-                let commit_sync_config = live_commit_sync_config
-                    .get_current_commit_sync_config(ctx, repo_id)
-                    .await?;
-                Ok(commit_sync_config.common_pushrebase_bookmarks)
+                let common_sync_config = live_commit_sync_config.get_common_config(repo_id).await?;
+                Ok(common_sync_config.common_pushrebase_bookmarks)
             }
             Test {
                 common_pushrebase_bookmarks,

@@ -986,12 +986,9 @@ where
         res
     }
 
-    pub async fn get_common_pushrebase_bookmarks(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<Vec<BookmarkName>, Error> {
+    pub async fn get_common_pushrebase_bookmarks(&self) -> Result<Vec<BookmarkName>, Error> {
         self.commit_sync_data_provider
-            .get_common_pushrebase_bookmarks(ctx, self.get_small_repo().get_repoid())
+            .get_common_pushrebase_bookmarks(self.get_small_repo().get_repoid())
             .await
     }
 
