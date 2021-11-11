@@ -71,9 +71,6 @@ pub struct FetchState {
     /// A table tracking if each key is local-only or cache/shared so that computed aux data can be written to the appropriate store
     key_origin: HashMap<Key, StoreType>,
 
-    /// Attributes computed from other attributes, may be cached locally (currently only aux_data may be computed)
-    computed_aux_data: HashMap<Key, StoreType>,
-
     /// Tracks remote fetches which match a specific regex
     fetch_logger: Option<Arc<FetchLogger>>,
 
@@ -99,8 +96,6 @@ impl FetchState {
             lfs_pointers: HashMap::new(),
             key_origin: HashMap::new(),
             pointer_origin: Arc::new(RwLock::new(HashMap::new())),
-
-            computed_aux_data: HashMap::new(),
 
             fetch_logger: file_store.fetch_logger.clone(),
             extstored_policy: file_store.extstored_policy,
@@ -684,8 +679,18 @@ impl FetchState {
         }
     }
 
-    #[instrument(skip(self))]
-    pub(crate) fn derive_computable(&mut self) {
+    // TODO(meyer): Improve how local caching works. At the very least do this in the background.
+    // TODO(meyer): Log errors here instead of just ignoring.
+    #[instrument(
+        skip(self, aux_cache, aux_local),
+        fields(
+            aux_cache = aux_cache.is_some(),
+            aux_local = aux_local.is_some()))]
+    pub(crate) fn derive_computable(
+        &mut self,
+        aux_cache: Option<&AuxStore>,
+        aux_local: Option<&AuxStore>,
+    ) {
         if !self.compute_aux_data {
             return;
         }
@@ -701,53 +706,37 @@ impl FetchState {
                 tracing::debug!("computing aux data");
                 if let Err(err) = value.compute_aux_data() {
                     self.errors.keyed_error(key.clone(), err);
-                } else {
-                    tracing::debug!("computed aux data");
-                    self.computed_aux_data
-                        .insert(key.clone(), self.key_origin[key]);
+                    continue;
                 }
-            }
 
-            // mark complete if applicable
-            if value.attrs().has(self.common.request_attrs) {
-                tracing::debug!("marking complete");
-                // TODO(meyer): Extract out a "FetchPending" object like FetchErrors, or otherwise make it possible
-                // to share a "mark complete" implementation while holding a mutable reference to self.found.
-                self.common.pending.remove(key);
-                if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
-                    self.pointer_origin.write().remove(&ptr.sha256());
-                }
-            }
-        }
-    }
+                tracing::debug!("computed aux data");
 
-    // TODO(meyer): Improve how local caching works. At the very least do this in the background.
-    // TODO(meyer): Log errors here instead of just ignoring.
-    #[instrument(
-        skip(self, aux_cache, aux_local),
-        fields(
-            aux_cache = aux_cache.is_some(),
-            aux_local = aux_local.is_some()))]
-    pub(crate) fn write_to_cache(
-        &mut self,
-        aux_cache: Option<&AuxStore>,
-        aux_local: Option<&AuxStore>,
-    ) {
-        {
-            let span = tracing::trace_span!("computed");
-            let _guard = span.enter();
-            for (key, origin) in self.computed_aux_data.drain() {
-                let entry: AuxDataEntry = self.common.found[&key].aux_data.unwrap().into();
-                match origin {
-                    StoreType::Shared => {
-                        if let Some(ref aux_cache) = aux_cache {
-                            let _ = aux_cache.put(key.hgid, &entry);
+                // mark complete if applicable
+                if value.attrs().has(self.common.request_attrs) {
+                    tracing::debug!("marking complete");
+
+                    match self.key_origin.get(key).unwrap_or(&StoreType::Shared) {
+                        StoreType::Shared => {
+                            if let Some(ref aux_cache) = aux_cache {
+                                if let Some(aux_data) = value.aux_data {
+                                    let _ = aux_cache.put(key.hgid, &aux_data.into());
+                                }
+                            }
+                        }
+                        StoreType::Local => {
+                            if let Some(ref aux_local) = aux_local {
+                                if let Some(aux_data) = value.aux_data {
+                                    let _ = aux_local.put(key.hgid, &aux_data.into());
+                                }
+                            }
                         }
                     }
-                    StoreType::Local => {
-                        if let Some(ref aux_local) = aux_local {
-                            let _ = aux_local.put(key.hgid, &entry);
-                        }
+
+                    // TODO(meyer): Extract out a "FetchPending" object like FetchErrors, or otherwise make it possible
+                    // to share a "mark complete" implementation while holding a mutable reference to self.found.
+                    self.common.pending.remove(key);
+                    if let Some((ptr, _)) = self.lfs_pointers.remove(key) {
+                        self.pointer_origin.write().remove(&ptr.sha256());
                     }
                 }
             }

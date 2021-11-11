@@ -189,7 +189,10 @@ impl FileStore {
         }
 
         if self.prefer_computing_aux_data {
-            state.derive_computable();
+            state.derive_computable(
+                self.aux_cache.as_ref().map(|s| s.as_ref()),
+                self.aux_local.as_ref().map(|s| s.as_ref()),
+            );
         }
 
         if let Some(ref edenapi) = self.edenapi {
@@ -218,9 +221,7 @@ impl FileStore {
             state.fetch_contentstore(contentstore);
         }
 
-        state.derive_computable();
-
-        state.write_to_cache(
+        state.derive_computable(
             self.aux_cache.as_ref().map(|s| s.as_ref()),
             self.aux_local.as_ref().map(|s| s.as_ref()),
         );
