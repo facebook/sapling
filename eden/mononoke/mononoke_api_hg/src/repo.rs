@@ -454,6 +454,17 @@ impl HgRepoContext {
         Ok(results)
     }
 
+    pub async fn fetch_mutations(
+        &self,
+        hg_changesets: HashSet<HgChangesetId>,
+    ) -> Result<Vec<HgMutationEntry>, MononokeError> {
+        Ok(self
+            .blob_repo()
+            .hg_mutation_store()
+            .all_predecessors(self.ctx(), hg_changesets)
+            .await?)
+    }
+
     /// Store bonsai changeset
     pub async fn store_bonsai_changeset(
         &self,

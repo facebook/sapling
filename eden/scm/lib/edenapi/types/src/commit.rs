@@ -607,6 +607,38 @@ impl Arbitrary for FetchSnapshotResponse {
     }
 }
 
+#[auto_wire]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CommitMutationsRequest {
+    #[id(1)]
+    pub commits: Vec<HgId>,
+}
+
+#[auto_wire]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CommitMutationsResponse {
+    #[id(1)]
+    pub mutation: HgMutationEntryContent,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitMutationsRequest {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            commits: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitMutationsResponse {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Self {
+            mutation: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

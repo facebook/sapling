@@ -27,6 +27,8 @@ pub use crate::commit::WireCommitGraphRequest;
 pub use crate::commit::WireCommitLocationToHashRequest;
 pub use crate::commit::WireCommitLocationToHashRequestBatch;
 pub use crate::commit::WireCommitLocationToHashResponse;
+pub use crate::commit::WireCommitMutationsRequest;
+pub use crate::commit::WireCommitMutationsResponse;
 pub use crate::commit::WireEphemeralPrepareRequest;
 pub use crate::commit::WireExtra;
 pub use crate::commit::WireFetchSnapshotRequest;
@@ -473,5 +475,7 @@ mod tests {
         WireUploadHgChangesetsRequest,
         WireFetchSnapshotRequest,
         WireFetchSnapshotResponse,
+        WireCommitMutationsRequest,
+        WireCommitMutationsResponse,
     );
 }

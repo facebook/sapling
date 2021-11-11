@@ -9,7 +9,7 @@ use std::collections::{hash_map, HashMap, HashSet};
 use std::io::Read;
 
 use anyhow::{anyhow, Error, Result};
-use edenapi_types::HgMutationEntryContent;
+use edenapi_types::{Extra, HgMutationEntryContent};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::DateTime;
 use smallvec::SmallVec;
@@ -258,6 +258,46 @@ impl TryFrom<HgMutationEntryContent> for HgMutationEntry {
             time,
             exta,
         ))
+    }
+}
+impl From<HgMutationEntry> for HgMutationEntryContent {
+    fn from(mutation: HgMutationEntry) -> Self {
+        let successor = mutation.successor.into();
+        let predecessors = mutation
+            .predecessors
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<_>>();
+        let split = mutation
+            .split
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<_>>();
+        let op = mutation.op;
+        let user = mutation.user.into_bytes();
+        let (time, tz) = (
+            mutation.time.timestamp_secs(),
+            mutation.time.tz_offset_secs(),
+        );
+        let extras = mutation
+            .extra
+            .into_iter()
+            .map(|(key, value)| Extra {
+                key: key.into_bytes(),
+                value: value.into_bytes(),
+            })
+            .collect();
+
+        Self {
+            successor,
+            predecessors,
+            split,
+            op,
+            user,
+            time,
+            tz,
+            extras,
+        }
     }
 }
 

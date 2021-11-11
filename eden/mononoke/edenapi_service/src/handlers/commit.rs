@@ -23,14 +23,16 @@ use edenapi_types::{
     wire::WireCommitHashToLocationRequestBatch, AnyFileContentId, AnyId, Batch, BonsaiFileChange,
     CommitGraphEntry, CommitGraphRequest, CommitHashLookupRequest, CommitHashLookupResponse,
     CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest,
-    EphemeralPrepareRequest, EphemeralPrepareResponse, FetchSnapshotRequest, FetchSnapshotResponse,
-    UploadBonsaiChangesetRequest, UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
+    CommitLocationToHashResponse, CommitMutationsRequest, CommitMutationsResponse,
+    CommitRevlogData, CommitRevlogDataRequest, EphemeralPrepareRequest, EphemeralPrepareResponse,
+    FetchSnapshotRequest, FetchSnapshotResponse, UploadBonsaiChangesetRequest,
+    UploadHgChangesetsRequest, UploadToken, UploadTokensResponse,
 };
 use ephemeral_blobstore::BubbleId;
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
 use mononoke_types::{ChangesetId, DateTime, FileChange};
+use tunables::tunables;
 use types::{HgId, Parents};
 
 use crate::context::ServerContext;
@@ -527,5 +529,45 @@ impl EdenApiHandler for GraphHandler {
                 })
             });
         Ok(stream::iter(graph_entries).boxed())
+    }
+}
+
+pub struct CommitMutationsHandler;
+
+#[async_trait]
+impl EdenApiHandler for CommitMutationsHandler {
+    type Request = CommitMutationsRequest;
+    type Response = CommitMutationsResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::CommitMutations;
+    const ENDPOINT: &'static str = "/commit/mutations";
+
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        if !tunables().get_mutation_generate_for_draft() {
+            return Ok(stream::empty().boxed());
+        }
+        let commits = request
+            .commits
+            .into_iter()
+            .map(|hg_id| HgChangesetId::new(HgNodeHash::from(hg_id)))
+            .collect();
+
+        let mutations = repo
+            .fetch_mutations(commits)
+            .await?
+            .into_iter()
+            .map(|mutation| {
+                Ok(CommitMutationsResponse {
+                    mutation: mutation.into(),
+                })
+            });
+
+        Ok(stream::iter(mutations).boxed())
     }
 }

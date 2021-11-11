@@ -74,6 +74,8 @@ pub use crate::commit::CommitKnownResponse;
 pub use crate::commit::CommitLocationToHashRequest;
 pub use crate::commit::CommitLocationToHashRequestBatch;
 pub use crate::commit::CommitLocationToHashResponse;
+pub use crate::commit::CommitMutationsRequest;
+pub use crate::commit::CommitMutationsResponse;
 pub use crate::commit::CommitRevlogData;
 pub use crate::commit::CommitRevlogDataRequest;
 pub use crate::commit::EphemeralPrepareRequest;
