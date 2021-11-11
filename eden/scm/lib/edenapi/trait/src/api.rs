@@ -19,6 +19,7 @@ use edenapi_types::CommitHashToLocationResponse;
 use edenapi_types::CommitKnownResponse;
 use edenapi_types::CommitLocationToHashRequest;
 use edenapi_types::CommitLocationToHashResponse;
+use edenapi_types::CommitMutationsResponse;
 use edenapi_types::CommitRevlogData;
 use edenapi_types::EdenApiServerError;
 use edenapi_types::EphemeralPrepareResponse;
@@ -272,6 +273,16 @@ pub trait EdenApi: Send + Sync + 'static {
     /// Download single file from upload token
     async fn download_file(&self, repo: String, token: UploadToken) -> Result<Bytes, EdenApiError> {
         let _ = (repo, token);
+        Err(EdenApiError::NotSupported)
+    }
+
+    /// Download mutation info related to given commits
+    async fn commit_mutations(
+        &self,
+        repo: String,
+        commits: Vec<HgId>,
+    ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
+        let _ = (repo, commits);
         Err(EdenApiError::NotSupported)
     }
 }

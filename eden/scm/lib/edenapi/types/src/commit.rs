@@ -608,7 +608,7 @@ impl Arbitrary for FetchSnapshotResponse {
 }
 
 #[auto_wire]
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct CommitMutationsRequest {
     #[id(1)]
     pub commits: Vec<HgId>,

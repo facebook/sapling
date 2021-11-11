@@ -121,6 +121,7 @@ pub struct HttpClientBuilder {
     max_trees: Option<usize>,
     max_history: Option<usize>,
     max_location_to_hash: Option<usize>,
+    max_commit_mutations: Option<usize>,
     timeout: Option<Duration>,
     debug: bool,
     correlator: Option<String>,
@@ -196,6 +197,7 @@ impl HttpClientBuilder {
         let max_trees = get_config(config, "edenapi", "maxtrees")?;
         let max_history = get_config(config, "edenapi", "maxhistory")?;
         let max_location_to_hash = get_config(config, "edenapi", "maxlocationtohash")?;
+        let max_commit_mutations = get_config(config, "edenapi", "maxcommitmutations")?;
         let timeout = get_config(config, "edenapi", "timeout")?.map(Duration::from_secs);
         let debug = get_config(config, "edenapi", "debug")?.unwrap_or_default();
         let http_version =
@@ -238,6 +240,7 @@ impl HttpClientBuilder {
             max_trees,
             max_history,
             max_location_to_hash,
+            max_commit_mutations,
             timeout,
             debug,
             correlator: None,
@@ -422,6 +425,7 @@ pub(crate) struct Config {
     pub(crate) max_trees: Option<usize>,
     pub(crate) max_history: Option<usize>,
     pub(crate) max_location_to_hash: Option<usize>,
+    pub(crate) max_commit_mutations: Option<usize>,
     pub(crate) timeout: Option<Duration>,
     pub(crate) debug: bool,
     pub(crate) correlator: Option<String>,
@@ -450,6 +454,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_trees,
             max_history,
             max_location_to_hash,
+            max_commit_mutations,
             timeout,
             debug,
             correlator,
@@ -490,6 +495,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             max_trees,
             max_history,
             max_location_to_hash,
+            max_commit_mutations,
             timeout,
             debug,
             correlator,

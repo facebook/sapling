@@ -35,6 +35,8 @@ use edenapi_types::CommitKnownResponse;
 use edenapi_types::CommitLocationToHashRequest;
 use edenapi_types::CommitLocationToHashRequestBatch;
 use edenapi_types::CommitLocationToHashResponse;
+use edenapi_types::CommitMutationsRequest;
+use edenapi_types::CommitMutationsResponse;
 use edenapi_types::CommitRevlogData;
 use edenapi_types::CommitRevlogDataRequest;
 use edenapi_types::EdenApiServerError;
@@ -127,6 +129,7 @@ mod paths {
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
     pub const COMMIT_HASH_LOOKUP: &str = "commit/hash_lookup";
     pub const COMMIT_GRAPH: &str = "commit/graph";
+    pub const COMMIT_MUTATIONS: &str = "commit/mutations";
     pub const BOOKMARKS: &str = "bookmarks";
     pub const LOOKUP: &str = "lookup";
     pub const UPLOAD: &str = "upload/";
@@ -984,6 +987,7 @@ impl EdenApi for Client {
             return Ok(Response::empty());
         }
 
+
         let url = self.build_url(paths::UPLOAD_TREES, Some(&repo))?;
         let requests = self.prepare_requests(
             &url,
@@ -1122,6 +1126,28 @@ impl EdenApi for Client {
             .await?
             .freeze()
             .into())
+    }
+
+    async fn commit_mutations(
+        &self,
+        repo: String,
+        commits: Vec<HgId>,
+    ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
+        tracing::info!("Requesting mutation info for {} commits", commits.len());
+        let url = self.build_url(paths::COMMIT_MUTATIONS, Some(&repo))?;
+        let requests = self.prepare_requests(
+            &url,
+            commits,
+            self.config().max_commit_mutations,
+            |commits| {
+                let req = CommitMutationsRequest { commits };
+                self.log_request(&req, "commit_mutations");
+                req
+            },
+        )?;
+
+        self.fetch_vec_with_retry::<CommitMutationsResponse>(requests)
+            .await
     }
 }
 
