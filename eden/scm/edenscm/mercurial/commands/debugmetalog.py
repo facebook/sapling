@@ -151,3 +151,20 @@ def debugmetalogroots(ui, repo, **opts):
         )
         fm.data(root=hexroot, date=timestamp, desc=desc, index=i)
     fm.end()
+
+
+@command("debugexportmetalog", [], _("debugexportmetalog PATH"))
+def debugexportmetalog(ui, repo, path):
+    """export metalog to a repo for easier investigation"""
+    ml = repo.metalog()
+    ml.exportgit(path)
+    ui.status(
+        _(
+            "metalog exported to git repo at %s\n"
+            "use 'git checkout master' to get a working copy\n"
+            "examples:\n"
+            "  git log -p remotenames     # why remotenames get changed\n"
+            "  git annotate visibleheads  # why a head is added\n"
+        )
+        % path
+    )

@@ -979,6 +979,8 @@ Test list of internal help commands
                  Run post-update hooks for edenfs
    debugexistingcasecollisions
                  check for existing case collisions in a commit
+   debugexportmetalog
+                 export metalog to a repo for easier investigation
    debugextensions
                  show information about active extensions
    debugfilerevision

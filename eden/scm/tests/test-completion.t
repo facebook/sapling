@@ -127,6 +127,7 @@ Show debug commands if there are no other candidates
   debugedenimporthelper
   debugedenrunpostupdatehook
   debugexistingcasecollisions
+  debugexportmetalog
   debugextensions
   debugfilerevision
   debugfileset
@@ -441,6 +442,7 @@ Show all commands + options
   debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, cat-tree, get-file-size, fetch-tree
   debugedenrunpostupdatehook: 
   debugexistingcasecollisions: rev
+  debugexportmetalog: 
   debugextensions: excludedefault, template
   debugfilerevision: rev, include, exclude
   debugfileset: rev
