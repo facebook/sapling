@@ -80,7 +80,7 @@ pub async fn copy_segmented_changelog(
     // as we know that the new IdDag is a subset of the old one.
     let mut new_iddag = InProcessIdDag::new_in_process();
     let get_parents = |id| old_iddag.parent_ids(id);
-    new_iddag.build_segments_volatile(dag_limit, &get_parents)?;
+    new_iddag.build_segments(dag_limit, &get_parents)?;
 
     let iddag_version = iddag_save_store
         .save(&ctx, &new_iddag)
