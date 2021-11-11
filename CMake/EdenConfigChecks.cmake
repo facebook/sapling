@@ -115,6 +115,7 @@ find_package(Sqlite3 REQUIRED)
 set(EDEN_HAVE_SQLITE3 ${SQLITE3_FOUND})
 
 find_package(python-toml REQUIRED)
+find_package(python-filelock REQUIRED)
 
 # pexpect is used by some of the integration tests.
 # If we don't find it we simply won't run those tests.

@@ -14,5 +14,6 @@ add_fb_python_executable(
     eden_service_thrift_py
     FBThrift::thrift_py_inspect
     python-toml::python-toml
+    python-filelock::python-filelock
 )
 install_fb_python_executable(edenfsctl.real)

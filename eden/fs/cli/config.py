@@ -39,6 +39,7 @@ import toml
 from eden.thrift import legacy
 from eden.thrift.legacy import EdenNotRunningError
 from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
+from filelock import FileLock, BaseFileLock
 
 from . import configinterpolator, configutil, telemetry, util, version
 from .util import (
@@ -85,6 +86,7 @@ SYSTEM_CONFIG = "edenfs.rc"
 # These paths are relative to the user's client directory.
 CLIENTS_DIR = "clients"
 CONFIG_JSON = "config.json"
+CONFIG_JSON_LOCK = "config.json.lock"
 
 # These are files in a client directory.
 CLONE_SUCCEEDED = "clone-succeeded"
@@ -892,6 +894,9 @@ figure out which process, please try `handle.exe` from sysinternals:
     def get_hg_repo(self, path: Path) -> util.HgRepo:
         return util.HgRepo(str(path))
 
+    def _directory_map_lock(self) -> BaseFileLock:
+        return FileLock(str(self._config_dir / CONFIG_JSON_LOCK))
+
     def _get_directory_map(self) -> Dict[Path, str]:
         """
         Parse config.json which holds a mapping of mount paths to their
@@ -920,17 +925,19 @@ figure out which process, please try `handle.exe` from sysinternals:
         return result
 
     def _add_path_to_directory_map(self, path: Path, dir_name: str) -> None:
-        config_data = self._get_directory_map()
-        if path in config_data:
-            raise Exception("mount path %s already exists." % path)
-        config_data[path] = dir_name
-        self._write_directory_map(config_data)
+        with self._directory_map_lock():
+            config_data = self._get_directory_map()
+            if path in config_data:
+                raise Exception(f"mount path {path} already exists.")
+            config_data[path] = dir_name
+            self._write_directory_map(config_data)
 
     def _remove_path_from_directory_map(self, path: Path) -> None:
-        config_data = self._get_directory_map()
-        if path in config_data:
-            del config_data[path]
-            self._write_directory_map(config_data)
+        with self._directory_map_lock():
+            config_data = self._get_directory_map()
+            if path in config_data:
+                del config_data[path]
+                self._write_directory_map(config_data)
 
     def _write_directory_map(self, config_data: Dict[Path, str]) -> None:
         json_data = {str(path): name for path, name in config_data.items()}
