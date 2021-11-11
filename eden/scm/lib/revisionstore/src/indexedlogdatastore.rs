@@ -771,14 +771,14 @@ mod tests {
         store.indexedlog_local = Some(Arc::new(log));
         store.extstored_policy = ExtStoredPolicy::Use;
 
-        let mut fetched = store.fetch(
+        let fetched = store.fetch(
             vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),
             FileAttributes::CONTENT,
         );
 
+        let (mut found, missing, errors) = fetched.consume();
         assert_eq!(
-            fetched
-                .complete
+            found
                 .get_mut(&nonlfs_key)
                 .expect("key not found")
                 .file_content()?,
@@ -788,7 +788,7 @@ mod tests {
         // Note: We don't fully respect ExtStoredPolicy in scmstore. We try to resolve the pointer,
         // and if we can't we no longer return the serialized pointer. Thus, this fails with
         // "unknown metadata" trying to deserialize a malformed LFS pointer.
-        assert!(format!("{:#?}", fetched.incomplete[&lfs_key][0]).contains("unknown metadata"));
+        assert!(format!("{:#?}", missing[&lfs_key][0]).contains("unknown metadata"));
         Ok(())
     }
 
@@ -825,21 +825,21 @@ mod tests {
         store.indexedlog_local = Some(Arc::new(log));
         store.extstored_policy = ExtStoredPolicy::Ignore;
 
-        let mut fetched = store.fetch(
+        let fetched = store.fetch(
             vec![lfs_key.clone(), nonlfs_key.clone()].into_iter(),
             FileAttributes::CONTENT,
         );
 
+        let (mut found, missing, errors) = fetched.consume();
         assert_eq!(
-            fetched
-                .complete
+            found
                 .get_mut(&nonlfs_key)
                 .expect("key not found")
                 .file_content()?,
             content
         );
 
-        assert_eq!(fetched.incomplete[&lfs_key].len(), 0);
+        assert_eq!(missing[&lfs_key].len(), 0);
         Ok(())
     }
 }

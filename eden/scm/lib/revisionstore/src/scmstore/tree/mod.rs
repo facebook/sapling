@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -13,7 +12,6 @@ use std::time::Instant;
 
 use ::types::Key;
 use ::types::RepoPathBuf;
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Result;
 use crossbeam::channel::unbounded;
@@ -29,8 +27,6 @@ use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 use crate::memcache::MEMCACHE_DELAY;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
-use crate::scmstore::fetch::FetchFinish;
-use crate::scmstore::fetch::FetchResult;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::StoreTree;
@@ -232,36 +228,11 @@ impl TreeStore {
         };
         std::thread::spawn(move || {
             if let Err(err) = process_func() {
-                let _ = found_tx2.send(FetchResult::Finished(FetchFinish {
-                    incomplete: HashMap::new(),
-                    other_errors: vec![err],
-                }));
+                let _ = found_tx2.send(Err(err));
             }
         });
 
-        // Temporary: Consume the thread results and transform it into the expected output type. A
-        // later change will change the output type to allow returning the iterator.
-        let mut complete = HashMap::new();
-        for result in found_rx.into_iter() {
-            match result {
-                FetchResult::Value((key, value)) => {
-                    let _ = complete.insert(key, value);
-                }
-                FetchResult::Finished(finished) => {
-                    return Ok(FetchResults {
-                        complete,
-                        incomplete: finished.incomplete,
-                        other_errors: finished.other_errors,
-                    });
-                }
-            }
-        }
-
-        Ok(FetchResults {
-            complete: HashMap::new(),
-            incomplete: HashMap::new(),
-            other_errors: vec![anyhow!("tree fetch did not complete")],
-        })
+        Ok(FetchResults::new(Box::new(found_rx.into_iter())))
     }
 
     fn write_batch(&self, entries: impl Iterator<Item = (Key, Bytes, Metadata)>) -> Result<()> {

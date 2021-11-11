@@ -15,6 +15,7 @@ use anyhow::Result;
 use configparser::config::ConfigSet;
 use log::warn;
 use manifest::List;
+use revisionstore::scmstore::FetchError;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileAuxData;
 use revisionstore::scmstore::FileStore;
@@ -140,18 +141,36 @@ impl BackingScmStores {
         } else {
             self.filestore.as_ref()
         }
-        .fetch(indexes.keys().cloned(), attrs)
-        .fetch_results();
+        .fetch(indexes.keys().cloned(), attrs);
 
-        // Handle fetch results
-        for (key, res) in fetch_results {
-            if let Some(index) = indexes.remove(&key) {
-                resolve(index, res)
-            } else {
-                tracing::error!(
-                    "no index found for {}, scmstore returned a key we have no record of requesting",
-                    key
-                );
+        for result in fetch_results {
+            match result {
+                Ok((key, value)) => {
+                    if let Some(index) = indexes.remove(&key) {
+                        resolve(index, Ok(Some(value)));
+                    }
+                }
+                Err(err) => {
+                    match err.downcast::<FetchError>() {
+                        Ok(FetchError { key, mut errors }) => {
+                            if let Some(index) = indexes.remove(&key) {
+                                if let Some(err) = errors.pop() {
+                                    resolve(index, Err(err));
+                                } else {
+                                    resolve(index, Ok(None));
+                                }
+                            } else {
+                                tracing::error!(
+                                    "no index found for {}, scmstore returned a key we have no record of requesting",
+                                    key
+                                );
+                            }
+                        }
+                        Err(_) => {
+                            // TODO: How should we handle normal non-keyed errors?
+                        }
+                    };
+                }
             }
         }
     }
@@ -270,26 +289,41 @@ impl BackingScmStores {
                 }
                 return;
             }
-        }
-        .fetch_results();
+        };
 
         // Handle pey-key fetch results
-        for (key, res) in fetch_results {
-            let res = res.and_then(|opt| {
-                opt.map(|mut tree| {
-                    tree.manifest_tree_entry()
-                        .and_then(|entry| entry.try_into())
-                })
-                .transpose()
-            });
-
-            if let Some(index) = indexes.remove(&key) {
-                resolve(index, res)
-            } else {
-                tracing::error!(
-                    "no index found for {}, scmstore returned a key we have no record of requesting",
-                    key
-                );
+        for result in fetch_results {
+            match result {
+                Ok((key, mut value)) => {
+                    if let Some(index) = indexes.remove(&key) {
+                        resolve(
+                            index,
+                            Some(value.manifest_tree_entry().and_then(|t| t.try_into()))
+                                .transpose(),
+                        );
+                    }
+                }
+                Err(err) => {
+                    match err.downcast::<FetchError>() {
+                        Ok(FetchError { key, mut errors }) => {
+                            if let Some(index) = indexes.remove(&key) {
+                                if let Some(err) = errors.pop() {
+                                    resolve(index, Err(err));
+                                } else {
+                                    resolve(index, Ok(None));
+                                }
+                            } else {
+                                tracing::error!(
+                                    "no index found for {}, scmstore returned a key we have no record of requesting",
+                                    key
+                                );
+                            }
+                        }
+                        Err(_) => {
+                            // TODO: How should we handle normal non-keyed errors?
+                        }
+                    };
+                }
             }
         }
     }

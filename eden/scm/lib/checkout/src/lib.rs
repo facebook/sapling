@@ -306,10 +306,7 @@ impl CheckoutPlan {
                 let store = store.clone();
                 Handle::current().spawn_blocking(move || {
                     let mut data = vec![];
-                    for result in store
-                        .fetch(chunk.iter().cloned(), FileAttributes::CONTENT)
-                        .results()
-                    {
+                    for result in store.fetch(chunk.iter().cloned(), FileAttributes::CONTENT) {
                         let result = match result {
                             Err(err) => Err(err),
                             Ok((key, mut file)) => {

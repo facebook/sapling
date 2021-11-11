@@ -304,8 +304,9 @@ mod tests {
 
         // Attempt fetch.
         let fetched = store.fetch_batch(std::iter::once(k.clone()))?;
-        assert_eq!(fetched.complete.len(), 0);
-        assert_eq!(fetched.incomplete.into_keys().collect::<Vec<_>>(), vec![k]);
+        let (found, missing, errors) = fetched.consume();
+        assert_eq!(found.len(), 0);
+        assert_eq!(missing.into_keys().collect::<Vec<_>>(), vec![k]);
 
         Ok(())
     }

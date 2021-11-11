@@ -9,7 +9,6 @@ mod fetch;
 mod metrics;
 mod types;
 
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -49,7 +48,6 @@ use crate::lfs::LfsStore;
 use crate::memcache::MEMCACHE_DELAY;
 use crate::remotestore::HgIdRemoteStore;
 use crate::scmstore::activitylogger::ActivityLogger;
-use crate::scmstore::fetch::FetchResult;
 use crate::scmstore::fetch::FetchResults;
 use crate::ContentDataStore;
 use crate::ContentMetadata;
@@ -233,29 +231,7 @@ impl FileStore {
             }
         });
 
-        // Temporary: Consume the thread results and transform it into the expected output type. A
-        // later change will change the output type to allow returning the iterator.
-        let mut complete = HashMap::new();
-        for result in found_rx.into_iter() {
-            match result {
-                FetchResult::Value((key, value)) => {
-                    let _ = complete.insert(key, value);
-                }
-                FetchResult::Finished(finished) => {
-                    return FetchResults {
-                        complete,
-                        incomplete: finished.incomplete,
-                        other_errors: finished.other_errors,
-                    };
-                }
-            }
-        }
-
-        FetchResults {
-            complete: HashMap::new(),
-            incomplete: HashMap::new(),
-            other_errors: vec![anyhow!("file fetch did not complete")],
-        }
+        FetchResults::new(Box::new(found_rx.into_iter()))
     }
 
     fn write_lfsptr(&self, key: Key, bytes: Bytes, meta: Metadata) -> Result<()> {

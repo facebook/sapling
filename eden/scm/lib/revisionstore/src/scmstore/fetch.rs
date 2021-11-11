@@ -9,10 +9,10 @@ use std::collections::hash_map;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use anyhow::anyhow;
 use anyhow::Error;
 use anyhow::Result;
 use crossbeam::channel::Sender;
+use thiserror::Error;
 use tracing::instrument;
 use types::Key;
 
@@ -29,7 +29,7 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
     /// All attributes which have been found so far
     pub found: HashMap<Key, T>,
 
-    pub found_tx: Sender<FetchResult<T>>,
+    pub found_tx: Sender<Result<(Key, T)>>,
 }
 
 impl<T: StoreValue> CommonFetchState<T> {
@@ -37,7 +37,7 @@ impl<T: StoreValue> CommonFetchState<T> {
     pub(crate) fn new(
         keys: impl Iterator<Item = Key>,
         attrs: T::Attrs,
-        found_tx: Sender<FetchResult<T>>,
+        found_tx: Sender<Result<(Key, T)>>,
     ) -> Self {
         Self {
             pending: keys.collect(),
@@ -78,7 +78,7 @@ impl<T: StoreValue> CommonFetchState<T> {
                     self.found.remove(&key);
                     self.pending.remove(&key);
                     let new = new.mask(self.request_attrs);
-                    let _ = self.found_tx.send(FetchResult::Value((key, new)));
+                    let _ = self.found_tx.send(Ok((key, new)));
                     return true;
                 } else {
                     *available = new;
@@ -88,7 +88,7 @@ impl<T: StoreValue> CommonFetchState<T> {
                 if value.attrs().has(self.request_attrs) {
                     self.pending.remove(&key);
                     let value = value.mask(self.request_attrs);
-                    let _ = self.found_tx.send(FetchResult::Value((key, value)));
+                    let _ = self.found_tx.send(Ok((key, value)));
                     return true;
                 } else {
                     entry.insert(value);
@@ -113,10 +113,13 @@ impl<T: StoreValue> CommonFetchState<T> {
             incomplete.remove(key);
         }
 
-        let _ = self.found_tx.send(FetchResult::Finished(FetchFinish {
-            incomplete,
-            other_errors: errors.other_errors,
-        }));
+        for (key, errors) in incomplete {
+            let _ = self.found_tx.send(Err(FetchError { key, errors }.into()));
+        }
+
+        for err in errors.other_errors {
+            let _ = self.found_tx.send(Err(err));
+        }
     }
 
     #[instrument(level = "trace", skip(self))]
@@ -140,6 +143,13 @@ impl<T: StoreValue> CommonFetchState<T> {
         let actionable = missing & fetchable;
         actionable
     }
+}
+
+#[derive(Debug, Error)]
+#[error("Key fetch failed: {}", .key)]
+pub struct FetchError {
+    pub key: Key,
+    pub errors: Vec<Error>,
 }
 
 pub(crate) struct FetchErrors {
@@ -172,102 +182,81 @@ impl FetchErrors {
     }
 }
 
-#[derive(Debug)]
-pub enum FetchResult<T> {
-    Value((Key, T)),
-    Finished(FetchFinish),
-}
-
-#[derive(Debug)]
-pub struct FetchFinish {
-    pub incomplete: HashMap<Key, Vec<Error>>,
-    pub other_errors: Vec<Error>,
-}
-
-#[derive(Debug)]
 pub struct FetchResults<T> {
-    pub complete: HashMap<Key, T>,
-    pub incomplete: HashMap<Key, Vec<Error>>,
-    pub other_errors: Vec<Error>,
+    iterator: Box<dyn Iterator<Item = Result<(Key, T)>>>,
+}
+
+impl<T> IntoIterator for FetchResults<T> {
+    type Item = Result<(Key, T)>;
+    type IntoIter = Box<dyn Iterator<Item = Result<(Key, T)>>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iterator
+    }
 }
 
 impl<T> FetchResults<T> {
+    pub fn new(iterator: Box<dyn Iterator<Item = Result<(Key, T)>>>) -> Self {
+        FetchResults { iterator }
+    }
+
+    pub fn consume(self) -> (HashMap<Key, T>, HashMap<Key, Vec<Error>>, Vec<Error>) {
+        let mut found = HashMap::new();
+        let mut missing = HashMap::new();
+        let mut errors = vec![];
+        for result in self {
+            match result {
+                Ok((key, value)) => {
+                    found.insert(key, value);
+                }
+                Err(err) => match err.downcast::<FetchError>() {
+                    Ok(FetchError { key, errors }) => {
+                        missing.insert(key.clone(), errors);
+                    }
+                    Err(err) => {
+                        errors.push(err);
+                    }
+                },
+            };
+        }
+        (found, missing, errors)
+    }
+
     /// Return the list of keys which could not be fetched, or any errors encountered
-    pub fn missing(mut self) -> Result<Vec<Key>> {
-        if let Some(err) = self.other_errors.pop() {
-            return Err(err).into();
+    pub fn missing(self) -> Result<Vec<Key>> {
+        // Don't use self.consume here since it pends all the found results in memory, which can be
+        // expensive.
+        let mut missing = vec![];
+        for result in self {
+            match result {
+                Ok(_) => {}
+                Err(err) => match err.downcast::<FetchError>() {
+                    Ok(FetchError { key, mut errors }) => {
+                        if let Some(err) = errors.pop() {
+                            return Err(err);
+                        } else {
+                            missing.push(key.clone());
+                        }
+                    }
+                    Err(err) => {
+                        return Err(err);
+                    }
+                },
+            };
         }
-
-        let mut not_found = Vec::new();
-        for (key, mut errors) in self.incomplete.drain() {
-            if let Some(err) = errors.pop() {
-                return Err(err).into();
-            }
-            not_found.push(key);
-        }
-
-        Ok(not_found)
+        Ok(missing)
     }
 
     /// Return the single requested file if found, or any errors encountered
-    pub fn single(mut self) -> Result<Option<T>> {
-        if let Some(err) = self.other_errors.pop() {
-            return Err(err).into();
-        }
-
-        for (_key, mut errors) in self.incomplete.drain() {
-            if let Some(err) = errors.pop() {
-                return Err(err).into();
-            } else {
-                return Ok(None);
+    pub fn single(self) -> Result<Option<T>> {
+        let mut first = None;
+        for result in self {
+            let (_, value) = result?;
+            if first.is_none() {
+                first = Some(value)
             }
         }
 
-        Ok(Some(
-            self.complete
-                .drain()
-                .next()
-                .ok_or_else(|| anyhow!("no results found in either incomplete or complete"))?
-                .1,
-        ))
-    }
-
-    /// Returns a stream of all successful fetches and errors, for compatibility with old scmstore
-    pub fn results(self) -> impl Iterator<Item = Result<(Key, T)>> {
-        self.complete
-            .into_iter()
-            .map(Ok)
-            .chain(
-                self.incomplete
-                    .into_iter()
-                    .map(|(key, errors)| {
-                        if errors.len() > 0 {
-                            errors
-                        } else {
-                            vec![anyhow!("key not found: {}", key)]
-                        }
-                    })
-                    .flatten()
-                    .map(Err),
-            )
-            .chain(self.other_errors.into_iter().map(Err))
-    }
-
-    /// Returns a stream of all fetch results, including not found and errors
-    pub fn fetch_results(self) -> impl Iterator<Item = (Key, Result<Option<T>>)> {
-        self.complete
-            .into_iter()
-            .map(|(key, item)| (key, Ok(Some(item))))
-            .chain(self.incomplete.into_iter().map(|(key, mut errors)| {
-                (
-                    key,
-                    // TODO(meyer): Should we make some VecError type or fan out like in results, above?
-                    if let Some(err) = errors.pop() {
-                        Err(err)
-                    } else {
-                        Ok(None)
-                    },
-                )
-            }))
+        Ok(first)
     }
 }

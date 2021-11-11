@@ -1285,10 +1285,12 @@ py_class!(pub class filescmstore |py| {
         let io = IO::main().map_pyerr(py)?;
         let mut stdout = io.output();
 
-        for (_, file) in fetch_result.complete.into_iter() {
+        let (found, missing, _errors) = fetch_result.consume();
+
+        for (_, file) in found.into_iter() {
             write!(stdout, "Successfully fetched file: {:#?}\n", file).map_pyerr(py)?;
         }
-        for (key, _) in fetch_result.incomplete.into_iter() {
+        for (key, _) in missing.into_iter() {
             write!(stdout, "Failed to fetch file: {:#?}\n", key).map_pyerr(py)?;
         }
 
@@ -1302,16 +1304,18 @@ py_class!(pub class filescmstore |py| {
             .collect::<PyResult<Vec<Key>>>()?;
         let results = PyList::new(py, &[]);
         let fetch_result = self.store(py).fetch(keys.into_iter(), FileAttributes { content: false, aux_data: true} );
+
+        let (found, missing, _errors) = fetch_result.consume();
         // TODO(meyer): FileStoreFetch should have utility methods to various consumer cases like this (get complete, get missing, transform to Result<EntireBatch>, transform to iterator of Result<IndividualFetch>, etc)
         // For now we just error with the first incomplete key, passing on the last recorded error if any are available.
-        if let Some((key, mut errors)) = fetch_result.incomplete.into_iter().next() {
+        if let Some((key, mut errors)) = missing.into_iter().next() {
             if let Some(err) = errors.pop() {
                 return Err(err.context(format!("failed to fetch {}, received error", key))).map_pyerr(py);
             } else {
                 return Err(format_err!("failed to fetch {}", key)).map_pyerr(py);
             }
         }
-        for (key, storefile) in fetch_result.complete.into_iter() {
+        for (key, storefile) in found.into_iter() {
             let key_tuple = from_key_to_tuple(py, &key).into_object();
             let content_sha256 = storefile.aux_data().map_pyerr(py)?.content_sha256;
             let content_sha256 = PyBytes::new(py, &content_sha256.into_inner());
@@ -1516,10 +1520,11 @@ py_class!(pub class treescmstore |py| {
         let io = IO::main().map_pyerr(py)?;
         let mut stdout = io.output();
 
-        for complete in fetch_result.complete.into_iter() {
+        let (found, missing, _errors) = fetch_result.consume();
+        for complete in found.into_iter() {
             write!(stdout, "Successfully fetched tree: {:#?}\n", complete).map_pyerr(py)?;
         }
-        for incomplete in fetch_result.incomplete.into_iter() {
+        for incomplete in missing.into_iter() {
             write!(stdout, "Failed to fetch tree: {:#?}\n", incomplete).map_pyerr(py)?;
         }
 

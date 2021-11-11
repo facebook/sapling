@@ -40,7 +40,6 @@ use crate::memcache::McData;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
-use crate::scmstore::fetch::FetchResult;
 use crate::scmstore::file::metrics::FileStoreFetchMetrics;
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;
@@ -88,7 +87,7 @@ impl FetchState {
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
         file_store: &FileStore,
-        found_tx: Sender<FetchResult<StoreFile>>,
+        found_tx: Sender<Result<(Key, StoreFile)>>,
     ) -> Self {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx),
@@ -749,10 +748,7 @@ impl FetchState {
                             self.common.pending.remove(&key);
                             self.common.found.remove(&key);
                             let new = new.mask(self.common.request_attrs);
-                            let _ = self
-                                .common
-                                .found_tx
-                                .send(FetchResult::Value((key.clone(), new)));
+                            let _ = self.common.found_tx.send(Ok((key.clone(), new)));
                             if let Some((ptr, _)) = self.lfs_pointers.remove(&key) {
                                 self.pointer_origin.write().remove(&ptr.sha256());
                             }

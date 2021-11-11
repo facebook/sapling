@@ -78,10 +78,11 @@ fn fetch_files(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
         },
     );
 
-    for (_, file) in fetch_result.complete.into_iter() {
+    let (found, missing, _errors) = fetch_result.consume();
+    for (_, file) in found.into_iter() {
         write!(stdout, "Successfully fetched file: {:#?}\n", file)?;
     }
-    for (key, _) in fetch_result.incomplete.into_iter() {
+    for (key, _) in missing.into_iter() {
         write!(stdout, "Failed to fetch file: {:#?}\n", key)?;
     }
 
@@ -97,10 +98,11 @@ fn fetch_trees(io: &IO, config: &ConfigSet, keys: Vec<Key>) -> Result<()> {
 
     let fetch_result = store.fetch_batch(keys.into_iter())?;
 
-    for complete in fetch_result.complete.into_iter() {
+    let (found, missing, _errors) = fetch_result.consume();
+    for complete in found.into_iter() {
         write!(stdout, "Successfully fetched tree: {:#?}\n", complete)?;
     }
-    for incomplete in fetch_result.incomplete.into_iter() {
+    for incomplete in missing.into_iter() {
         write!(stdout, "Failed to fetch tree: {:#?}\n", incomplete)?;
     }
 
