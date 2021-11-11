@@ -706,6 +706,7 @@ impl DerivedDataManager {
             .await
             .context("backfill batch pre-conditions not satisfied")?;
 
+        let ctx = ctx.clone_and_reset();
         let ctx = self.set_derivation_session_class(ctx.clone());
         borrowed!(ctx);
 
