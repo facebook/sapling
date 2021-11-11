@@ -881,7 +881,6 @@ File count and size data for hg explain is cached in the simplecache extension:
   sparseprofile:profiles__bar__eggs:*:v2 (glob)
   sparseprofile:profiles__bar__ham:*:v2 (glob)
 
-
 Test non-existing profiles are properly reported
   $ newrepo sparsenoprofile
   $ cat > .hg/hgrc <<EOF

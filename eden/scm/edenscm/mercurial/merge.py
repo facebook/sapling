@@ -2587,6 +2587,16 @@ def update(
                 # update completed, clear state
                 util.unlink(repo.localvfs.join("updatestate"))
 
+                # After recordupdates has finished, the checkout is considered
+                # finished and we should persist the sparse profile config
+                # changes.
+                #
+                # Ideally this would be part of some wider transaction framework
+                # that ensures these things all happen atomically, but that
+                # doesn't exist for the dirstate right now.
+                if util.safehasattr(repo, "_persistprofileconfigs"):
+                    repo._persistprofileconfigs()
+
                 if not branchmerge:
                     repo.dirstate.setbranch(p2.branch())
 
@@ -2606,6 +2616,16 @@ def getsparsematchers(repo, fp1, fp2, matcher=None):
     if sparsematch is not None:
         revs = {fp1, fp2}
         revs -= {nullid}
+
+        repo._clearpendingprofileconfig(all=True)
+        oldpatterns = repo.getsparsepatterns(fp1)
+        oldmatcher = sparsematch(fp1)
+
+        repo._creatependingprofileconfigs()
+
+        newpatterns = repo.getsparsepatterns(fp2)
+        newmatcher = sparsematch(fp2)
+
         sparsematcher = sparsematch(*list(revs))
         # Ignore files that are not in either source or target sparse match
         # This is not enough if sparse profile changes, but works for checkout within same sparse profile
@@ -2615,8 +2635,8 @@ def getsparsematchers(repo, fp1, fp2, matcher=None):
         # This signals to nativecheckout that there isn't a sparse
         # profile transition.
         oldnewmatchers = None
-        if not repo.getsparsepatterns(fp1).equivalent(repo.getsparsepatterns(fp2)):
-            oldnewmatchers = (sparsematch(fp1), sparsematch(fp2))
+        if not oldpatterns.equivalent(newpatterns):
+            oldnewmatchers = (oldmatcher, newmatcher)
 
         # This can be optimized - if matchers are same, we can set sparsematchers = None
         # sparse.py does not do it, so we are not making things worse
@@ -2726,6 +2746,16 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
             # update completed, clear state
             repo.localvfs.unlink("updatestate")
             repo.localvfs.unlink("updateprogress")
+
+            # After recordupdates has finished, the checkout is considered
+            # finished and we should persist the sparse profile config
+            # changes.
+            #
+            # Ideally this would be part of some wider transaction framework
+            # that ensures these things all happen atomically, but that
+            # doesn't exist for the dirstate right now.
+            if util.safehasattr(repo, "_persistprofileconfigs"):
+                repo._persistprofileconfigs()
 
     if not partial:
         repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])

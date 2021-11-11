@@ -158,6 +158,7 @@ from edenscm.mercurial import (
     extensions,
     hg,
     hintutil,
+    json,
     localrepo,
     match as matchmod,
     merge as mergemod,
@@ -207,6 +208,8 @@ configitem(
 )
 configitem("sparse", "warnfullcheckout", default=None)
 configitem("sparse", "bypassfullcheckoutwarn", default=False)
+
+profilecachefile = "sparseprofileconfigs"
 
 
 def uisetup(ui):
@@ -309,6 +312,10 @@ def _setupupdates(ui):
         oldrevs = [pctx.rev() for pctx in wctx.parents()]
         oldsparsematch = repo.sparsematch(*oldrevs)
 
+        repo._clearpendingprofileconfig(all=True)
+        oldprofileconfigs = repo._getcachedprofileconfigs()
+        newprofileconfigs = repo._creatependingprofileconfigs()
+
         if branchmerge:
             # If we're merging, use the wctx filter, since we're merging into
             # the wctx.
@@ -364,7 +371,7 @@ def _setupupdates(ui):
                 dirstate.normal(file)
 
         profiles = repo.getactiveprofiles()
-        changedprofiles = profiles & files
+        changedprofiles = (profiles & files) or (oldprofileconfigs != newprofileconfigs)
         # If an active profile changed during the update, refresh the checkout.
         # Don't do this during a branch merge, since all incoming changes should
         # have been handled by the temporary includes above.
@@ -407,12 +414,17 @@ def _setupupdates(ui):
     extensions.wrapfunction(mergemod, "calculateupdates", _calculateupdates)
 
     def _update(orig, repo, node, branchmerge, *args, **kwargs):
-        results = orig(repo, node, branchmerge, *args, **kwargs)
+        try:
+            results = orig(repo, node, branchmerge, *args, **kwargs)
+        except Exception:
+            repo._clearpendingprofileconfig()
+            raise
 
         # If we're updating to a location, clean up any stale temporary includes
         # (ex: this happens during hg rebase --abort).
         if not branchmerge and util.safehasattr(repo, "sparsematch"):
             repo.prunetemporaryincludes()
+
         return results
 
     extensions.wrapfunction(mergemod, "update", _update)
@@ -993,6 +1005,94 @@ def _wraprepo(ui, repo):
             }
             return RawSparseConfig(filename, lines, profiles, metadata)
 
+        def _getlatestprofileconfigs(self):
+            includes = collections.defaultdict(list)
+            excludes = collections.defaultdict(list)
+            for key, value in self.ui.configitems("sparseprofile"):
+                # "exclude:" is the same length as "include.", so no need for
+                # handling both.
+                section = key[: len("include.")]
+                name = key[len("include.") :]
+                if section == "include.":
+                    for include in self.ui.configlist("sparseprofile", key):
+                        includes[name].append(include)
+                elif section == "exclude.":
+                    for exclude in self.ui.configlist("sparseprofile", key):
+                        excludes[name].append(exclude)
+
+            results = {}
+            keys = set(includes.keys())
+            keys.update(excludes.keys())
+            for key in keys:
+                config = ""
+                if key in includes:
+                    config += "[include]\n"
+                    for include in includes[key]:
+                        config += include + "\n"
+                if key in excludes:
+                    config += "[exclude]\n"
+                    for exclude in excludes[key]:
+                        config += exclude + "\n"
+                results[key] = config
+
+            return results
+
+        def _pendingprofileconfigname(self):
+            return "%s.%s" % (profilecachefile, os.getpid())
+
+        def _getcachedprofileconfigs(self):
+            """gets the currently cached sparse profile config value
+
+            This may be a process-local value, if this process is in the middle
+            of a checkout.
+            """
+            # First check for a process-local profilecache. This let's an
+            # ongoing checkout see the new sparse profile before we persist it
+            # for other processes to see.
+            pendingfile = self._pendingprofileconfigname()
+            for name in [pendingfile, profilecachefile]:
+                if self.localvfs.exists(name):
+                    serialized = self.localvfs.readutf8(name)
+                    return json.loads(serialized)
+            return {}
+
+        def _creatependingprofileconfigs(self):
+            """creates a new process-local sparse profile config value
+
+            This will be read for future sparse matchers in this process.
+            """
+            pendingfile = self._pendingprofileconfigname()
+            latest = self._getlatestprofileconfigs()
+            serialized = json.dumps(latest)
+            self.localvfs.writeutf8(pendingfile, serialized)
+            return latest
+
+        def _clearpendingprofileconfig(self, all=False):
+            """deletes all pending sparse profile config files
+
+            all=True causes it delete all the pending profile configs, for all
+            processes. This should only be used while holding the wlock, so you don't
+            accidentally delete a pending file out from under another process.
+            """
+            prefix = "%s." % profilecachefile
+            pid = str(os.getpid())
+            for name in self.localvfs.listdir():
+                if name.startswith(prefix):
+                    suffix = name[len(prefix) :]
+                    if all or suffix == pid:
+                        self.localvfs.unlink(name)
+
+        def _persistprofileconfigs(self):
+            """upgrades the current process-local sparse profile config value to
+            be the global value
+            """
+            # The pending file should exist in all cases when this code path is
+            # hit. But if it does't this will throw an exception. That's
+            # probably fine though, since that indicates something went very
+            # wrong.
+            pendingfile = self._pendingprofileconfigname()
+            self.localvfs.rename(pendingfile, profilecachefile)
+
         def getsparsepatterns(self, rev, rawconfig=None, debugversion=None):
             """Produce the full sparse config for a revision as a SparseConfig
 
@@ -1020,6 +1120,8 @@ def _wraprepo(ui, repo):
                     "be a RawSparseConfig, not: %s" % rawconfig
                 )
 
+            profileconfigs = self._getcachedprofileconfigs()
+
             includes = set()
             excludes = set()
             rules = ["glob:.hg*"]
@@ -1027,7 +1129,7 @@ def _wraprepo(ui, repo):
             onlyv1 = True
             for kind, value in rawconfig.lines:
                 if kind == "profile":
-                    profile = self.readsparseprofile(rev, value)
+                    profile = self.readsparseprofile(rev, value, profileconfigs)
                     if profile is not None:
                         profiles.append(profile)
                         # v1 config's put all includes before all excludes, so
@@ -1072,7 +1174,7 @@ def _wraprepo(ui, repo):
                 rawconfig.metadata,
             )
 
-        def readsparseprofile(self, rev, name):
+        def readsparseprofile(self, rev, name, profileconfigs):
             ctx = self[rev]
             try:
                 raw = self.getrawprofile(name, ctx.hex())
@@ -1095,7 +1197,7 @@ def _wraprepo(ui, repo):
             for kind, value in rawconfig.lines:
                 if kind == "profile":
                     profiles.add(value)
-                    profile = self.readsparseprofile(rev, value)
+                    profile = self.readsparseprofile(rev, value, profileconfigs)
                     if profile is not None:
                         for rule in profile.rules:
                             rules.append(rule)
@@ -1105,6 +1207,18 @@ def _wraprepo(ui, repo):
                     rules.append(value)
                 elif kind == "exclude":
                     rules.append("!" + value)
+
+            if profileconfigs:
+                raw = profileconfigs.get(name)
+                if raw:
+                    rawprofileconfig = self.readsparseconfig(
+                        raw, filename=name + "-hgrc.dynamic"
+                    )
+                    for kind, value in rawprofileconfig.lines:
+                        if kind == "include":
+                            rules.append(value)
+                        elif kind == "exclude":
+                            rules.append("!" + value)
 
             return SparseProfile(name, rules, profiles, rawconfig.metadata)
 
