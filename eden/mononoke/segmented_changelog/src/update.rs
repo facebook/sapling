@@ -213,7 +213,7 @@ pub fn update_iddag(
     // TODO(sfilip, T67731559): Prefetch parents for IdDag from last processed DagId
     debug!(ctx.logger(), "building iddag");
     iddag
-        .build_segments_volatile(head_dag_id, &get_dag_id_parents)
+        .build_segments(head_dag_id, &get_dag_id_parents)
         .context("building iddag")?;
     debug!(ctx.logger(), "successfully finished updating iddag");
     Ok(())

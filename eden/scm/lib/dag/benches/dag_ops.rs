@@ -59,7 +59,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     bench("building segments", || {
         let mut dag = get_empty_iddag();
         elapsed(|| {
-            dag.build_segments_volatile_from_prepared_flat_segments(&outcome)
+            dag.build_segments_from_prepared_flat_segments(&outcome)
                 .unwrap();
         })
     });
@@ -68,7 +68,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     let mut dag = get_empty_iddag();
     let mut syncable = dag.prepare_filesystem_sync().unwrap();
     syncable
-        .build_segments_volatile_from_prepared_flat_segments(&outcome)
+        .build_segments_from_prepared_flat_segments(&outcome)
         .unwrap();
     syncable.sync().unwrap();
 

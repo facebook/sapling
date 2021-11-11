@@ -44,7 +44,7 @@ fn main() {
         nbr(id_map.assign_head(head_name.clone(), &parents_by_name, Group::MASTER)).unwrap();
     let mut iddag = IdDag::new_in_process();
     iddag
-        .build_segments_volatile_from_prepared_flat_segments(&outcome)
+        .build_segments_from_prepared_flat_segments(&outcome)
         .unwrap();
 
 

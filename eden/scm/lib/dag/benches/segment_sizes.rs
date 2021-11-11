@@ -51,7 +51,7 @@ fn main() {
         dag.set_new_segment_size(segment_size);
         let mut syncable = dag.prepare_filesystem_sync().unwrap();
         let segment_len = syncable
-            .build_segments_volatile_from_prepared_flat_segments(&prepared_segments)
+            .build_segments_from_prepared_flat_segments(&prepared_segments)
             .unwrap();
         syncable.sync().unwrap();
 

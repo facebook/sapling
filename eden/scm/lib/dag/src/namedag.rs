@@ -393,7 +393,7 @@ where
 
         // Update segments in the NON_MASTER group.
         self.dag
-            .build_segments_volatile_from_prepared_flat_segments(&outcome)?;
+            .build_segments_from_prepared_flat_segments(&outcome)?;
 
         Ok(())
     }
@@ -443,7 +443,7 @@ where
             self.map.insert(id, name.as_ref()).await?;
         }
         self.dag
-            .build_segments_volatile_from_prepared_flat_segments(&clone_data.flat_segments)?;
+            .build_segments_from_prepared_flat_segments(&clone_data.flat_segments)?;
 
         self.verify_missing().await?;
 
@@ -676,7 +676,7 @@ where
         };
 
         new.dag
-            .build_segments_volatile_from_prepared_flat_segments(&new_client_segments)?;
+            .build_segments_from_prepared_flat_segments(&new_client_segments)?;
 
         if cfg!(debug_assertions) {
             new.verify_missing().await?;
@@ -2075,7 +2075,7 @@ where
 
         // Update segments.
         self.dag
-            .build_segments_volatile_from_prepared_flat_segments(&outcome)?;
+            .build_segments_from_prepared_flat_segments(&outcome)?;
 
         // The master group might have new vertexes inserted, which will
         // affect the `overlay_map_next_id`.

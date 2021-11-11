@@ -179,7 +179,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// `get_parents` describes the DAG. Its input and output are `Id`s.
     ///
     /// This is often used together with [`crate::idmap::IdMap`].
-    pub fn build_segments_volatile<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
+    pub fn build_segments<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
     where
         F: Fn(Id) -> Result<Vec<Id>>,
     {
@@ -195,9 +195,9 @@ impl<Store: IdDagStore> IdDag<Store> {
         Ok(count)
     }
 
-    /// Similar to `build_segments_volatile`, but takes `PreparedFlatSegments` instead
+    /// Similar to `build_segments`, but takes `PreparedFlatSegments` instead
     /// of `get_parents`.
-    pub fn build_segments_volatile_from_prepared_flat_segments(
+    pub fn build_segments_from_prepared_flat_segments(
         &mut self,
         outcome: &PreparedFlatSegments,
     ) -> Result<usize> {
@@ -1846,7 +1846,7 @@ mod tests {
 
         let lock = dag.lock().unwrap();
         dag.reload(&lock).unwrap();
-        dag.build_segments_volatile(Id(1001), &get_parents).unwrap();
+        dag.build_segments(Id(1001), &get_parents).unwrap();
 
         dag.persist(&lock).unwrap();
         drop(lock);
@@ -1866,7 +1866,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let mut dag = IdDag::open(dir.path()).unwrap();
         assert!(dag.all().unwrap().is_empty());
-        dag.build_segments_volatile(Id(1001), &get_parents).unwrap();
+        dag.build_segments(Id(1001), &get_parents).unwrap();
         assert_eq!(dag.all().unwrap().count(), 1002);
     }
 
@@ -1879,14 +1879,14 @@ mod tests {
 
         let empty_dag_segments = dag.flat_segments(Group::MASTER).unwrap();
         test_dag
-            .build_segments_volatile_from_prepared_flat_segments(&empty_dag_segments)
+            .build_segments_from_prepared_flat_segments(&empty_dag_segments)
             .unwrap();
         assert!(test_dag.all().unwrap().is_empty());
 
-        dag.build_segments_volatile(Id(1001), &get_parents).unwrap();
+        dag.build_segments(Id(1001), &get_parents).unwrap();
         let flat_segments = dag.flat_segments(Group::MASTER).unwrap();
         test_dag
-            .build_segments_volatile_from_prepared_flat_segments(&flat_segments)
+            .build_segments_from_prepared_flat_segments(&flat_segments)
             .unwrap();
 
         assert_eq!(test_dag.max_level().unwrap(), 3);
@@ -1918,7 +1918,7 @@ mod tests {
         // Segment 20..=30 shouldn't have the "ONLY_HEAD" flag because of the gap.
         // In debug output it does not have "H" prefix.
         let mut dag = IdDag::new_in_process();
-        dag.build_segments_volatile_from_prepared_flat_segments(&prepared)
+        dag.build_segments_from_prepared_flat_segments(&prepared)
             .unwrap();
         let iter = dag.iter_segments_ascending(Id(0), 0).unwrap();
         assert_eq!(dbg_iter(iter), "[RH0-10[], 20-30[10]]");
