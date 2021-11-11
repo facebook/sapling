@@ -1366,17 +1366,21 @@ Future<Unit> EdenServer::performTakeoverStart(
     FOLLY_MAYBE_UNUSED std::shared_ptr<EdenMount> edenMount,
     FOLLY_MAYBE_UNUSED TakeoverData::MountInfo&& info) {
 #ifndef _WIN32
+  auto mountPath = info.mountPath;
   std::vector<std::string> bindMounts;
   for (const auto& bindMount : info.bindMounts) {
     bindMounts.emplace_back(bindMount.value());
   }
-  auto future = serverState_->getPrivHelper()->takeoverStartup(
-      info.mountPath.stringPiece(), bindMounts);
-  return std::move(future).thenValue([this,
-                                      edenMount = std::move(edenMount),
-                                      info = std::move(info)](auto&&) mutable {
-    return completeTakeoverStart(std::move(edenMount), std::move(info));
-  });
+
+  auto future = completeTakeoverStart(edenMount, std::move(info));
+  return std::move(future).thenValue(
+      [this,
+       edenMount = std::move(edenMount),
+       bindMounts = std::move(bindMounts),
+       mountPath = std::move(mountPath)](auto&&) mutable {
+        return serverState_->getPrivHelper()->takeoverStartup(
+            mountPath.stringPiece(), bindMounts);
+      });
 #else
   NOT_IMPLEMENTED();
 #endif
