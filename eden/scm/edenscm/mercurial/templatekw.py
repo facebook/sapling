@@ -41,13 +41,14 @@ class _hybrid(object):
     - "{files|json}"
     """
 
-    def __init__(self, gen, values, makemap, joinfmt, keytype=None):
+    def __init__(self, gen, values, makemap, joinfmt, keytype=None, fastlen=None):
         if gen is not None:
             self.gen = gen  # generator or function returning generator
         self._values = values
         self._makemap = makemap
         self.joinfmt = joinfmt
         self.keytype = keytype  # hint for 'x in y' where type(x) is unresolved
+        self.fastlen = fastlen
 
     def gen(self):
         """Default generator to stringify this as {join(self, ' ')}"""
@@ -68,7 +69,9 @@ class _hybrid(object):
         return self._values[key]
 
     def __len__(self):
-        return len(self._values)
+        if self.fastlen is None:
+            self.fastlen = len(self._values)
+        return self.fastlen
 
     def __iter__(self):
         return iter(self._values)
@@ -876,13 +879,13 @@ def showrevslist(name, revs, **args):
     be evaluated"""
     args = args
     repo = args["ctx"].repo()
-    f = _showlist(name, ["%d" % r for r in revs], args)
     return _hybrid(
-        f,
+        None,
         revs,
         lambda x: {name: x, "ctx": repo[x], "revcache": {}},
         pycompat.identity,
         keytype=int,
+        fastlen=revs.fastlen(),
     )
 
 

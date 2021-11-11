@@ -1166,14 +1166,12 @@ def revset(context, mapping, args):
     if len(args) > 1:
         formatargs = [evalfuncarg(context, mapping, a) for a in args[1:]]
         revs = query(revsetlang.formatspec(raw, *formatargs))
-        revs = list(revs)
     else:
         revsetcache = mapping["cache"].setdefault("revsetcache", {})
         if raw in revsetcache:
             revs = revsetcache[raw]
         else:
             revs = query(raw)
-            revs = list(revs)
             revsetcache[raw] = revs
 
     return templatekw.showrevslist("revision", revs, **mapping)
