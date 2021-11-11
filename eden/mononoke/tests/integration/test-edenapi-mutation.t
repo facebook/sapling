@@ -5,9 +5,10 @@
 # directory of this source tree. 
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ configure modern
   $ setconfig ui.ignorerevnum=false
 
-Set up local hgrc and Mononoke config.
+Set up local hgrc and Mononoke config, with commit cloud, http pull and upload.
   $ export READ_ONLY_REPO=1
   $ export MONONOKE_DIRECT_PEER=1
   $ INFINITEPUSH_ALLOW_WRITES=true \
@@ -46,7 +47,17 @@ Set up local hgrc and Mononoke config.
   > date = 0 0
   > [remotefilelog]
   > reponame=repo
+  > [pull]
+  > httpcommitgraph = true
+  > httpbookmarks = true
+  > httphashprefix = true
+  > [exchange]
+  > httpcommitlookup = true
   > EOF
+Custom smartlog
+  $ function sl {
+  >  hgedenapi log -G -T "{node|short} '{desc|firstline}' {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" --hidden
+  > }
 
 Initialize test repo.
   $ hginit_treemanifest repo
@@ -59,11 +70,12 @@ Initialize test repo.
 Import and start mononoke
   $ cd $TESTTMP
   $ hgclone_treemanifest ssh://user@dummy/repo client1 --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo client2 --noupdate
   $ blobimport repo/.hg repo
   $ mononoke
   $ wait_for_mononoke
 
-Test mutations
+Test mutations on client 1
   $ cd client1
   $ hgedenapi up 8b2dca0c8a72 -q
   $ hgedenapi cloud join -q
@@ -103,3 +115,22 @@ Test mutations
     "extras": [],
     "successor": bin("f643b098cd183f085ba3e6107b6867ca472e87d1"),
     "predecessors": [bin("929f2b9071cf032d9422b3cce9773cbe1c574822")]}]
+  $ sl
+  @  f643b098cd18 'new_message'
+  │
+  │ x  929f2b9071cf 'A' (Rewritten using metaedit into f643b098cd18)
+  ├─╯
+  o  8b2dca0c8a72 'base_commit'
+  
+Test how they are propagated to client 2
+  $ cd ../client2
+  $ hgedenapi debugchangelog --migrate lazy
+  $ hgedenapi pull -r f643b098cd18 -q
+  $ hgedenapi pull -r 929f2b9071cf -q
+  $ sl
+  o  929f2b9071cf 'A'
+  │
+  │ o  f643b098cd18 'new_message'
+  ├─╯
+  o  8b2dca0c8a72 'base_commit'
+  
