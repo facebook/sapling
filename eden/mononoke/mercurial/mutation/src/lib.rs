@@ -15,7 +15,6 @@
 #![deny(warnings)]
 
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -52,24 +51,4 @@ pub trait HgMutationStore: Send + Sync {
         ctx: &CoreContext,
         changeset_ids: HashSet<HgChangesetId>,
     ) -> Result<Vec<HgMutationEntry>>;
-}
-
-#[async_trait]
-impl HgMutationStore for Arc<dyn HgMutationStore> {
-    async fn add_entries(
-        &self,
-        ctx: &CoreContext,
-        new_changeset_ids: HashSet<HgChangesetId>,
-        entries: Vec<HgMutationEntry>,
-    ) -> Result<()> {
-        (**self).add_entries(ctx, new_changeset_ids, entries).await
-    }
-
-    async fn all_predecessors(
-        &self,
-        ctx: &CoreContext,
-        changeset_ids: HashSet<HgChangesetId>,
-    ) -> Result<Vec<HgMutationEntry>> {
-        (**self).all_predecessors(ctx, changeset_ids).await
-    }
 }
