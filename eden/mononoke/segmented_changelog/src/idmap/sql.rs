@@ -127,21 +127,28 @@ queries! {
         "
         SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
-            LEFT JOIN segmented_changelog_idmap_copy_mappings AS copy_mappings
-            ON (idmap.repo_id = copy_mappings.repo_id AND idmap.version = copy_mappings.copied_version)
         WHERE
             idmap.repo_id = {repo_id} AND
-            (idmap.version = {version} OR copy_mappings.idmap_version = {version}) AND
+            idmap.version = {version} AND
             idmap.vertex = (
-                SELECT MAX(COALESCE(copy_mappings.copy_limit, inx.vertex))
+                SELECT MAX(inx.vertex)
                 FROM segmented_changelog_idmap AS inx
-                    LEFT JOIN segmented_changelog_idmap_copy_mappings AS copy_mappings
-                    ON (inx.repo_id = copy_mappings.repo_id AND inx.version = copy_mappings.copied_version)
                 WHERE
                     inx.repo_id = {repo_id} AND
-                    (inx.version = {version} OR copy_mappings.idmap_version = {version})
+                    inx.version = {version}
               )
         "
+    }
+
+    read SelectHighestCopyLimit(repo_id: RepositoryId, version: IdMapVersion) -> (Option<u64>,) {
+        "
+        SELECT MAX(copy_mappings.copy_limit)
+        FROM segmented_changelog_idmap_copy_mappings AS copy_mappings
+        WHERE
+            copy_mappings.repo_id = {repo_id} AND
+            copy_mappings.idmap_version = {version}
+        "
+
     }
 }
 
@@ -424,8 +431,6 @@ impl IdMap for SqlIdMap {
         Ok(cs_ids)
     }
 
-
-
     async fn find_many_dag_ids(
         &self,
         ctx: &CoreContext,
@@ -486,7 +491,37 @@ impl IdMap for SqlIdMap {
             &self.version,
         )
         .await?;
-        Ok(rows.into_iter().next().map(|r| (DagId(r.0), r.1)))
+        if rows.is_empty() {
+            // This IdMap version doesn't yet have its own entries. Check to see if it's a copy
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            let highest_copy_limit = SelectHighestCopyLimit::query(
+                &self.connections.write_connection,
+                &self.repo_id,
+                &self.version,
+            )
+            .await?
+            .into_iter()
+            .next()
+            .map(|(r,)| r);
+
+            if let Some(Some(highest_copy_limit)) = highest_copy_limit {
+                // It is a copy, so take the last entry from the copy source instead
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
+                let mut res = self
+                    .select_many_changesetids(
+                        &self.connections.write_connection,
+                        &[highest_copy_limit],
+                    )
+                    .await?;
+                Ok(res.remove_entry(&DagId(highest_copy_limit)))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(rows.into_iter().next().map(|r| (DagId(r.0), r.1)))
+        }
     }
 }
 
