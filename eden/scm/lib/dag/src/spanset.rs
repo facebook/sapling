@@ -535,6 +535,21 @@ impl SpanSet {
         }
     }
 
+    /// Iterate `Id`s in ascending order.
+    pub fn iter_asc(&self) -> Rev<SpanSetIter<&Self>> {
+        self.iter_desc().rev()
+    }
+
+    /// Iterate `Span`s in descending order.
+    pub fn iter_span_desc(&self) -> impl Iterator<Item = &Span> {
+        self.as_spans().iter()
+    }
+
+    /// Iterate `Span`s in ascending order.
+    pub fn iter_span_asc(&self) -> impl Iterator<Item = &Span> {
+        self.as_spans().iter().rev()
+    }
+
     /// Get the maximum id in this set.
     pub fn max(&self) -> Option<Id> {
         self.spans.get(0).map(|span| span.high)
