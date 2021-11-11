@@ -133,6 +133,8 @@ impl FileStore {
         let (found_tx, found_rx) = unbounded();
         let mut state = FetchState::new(keys, attrs, &self, found_tx);
 
+        let keys_len = state.pending_len();
+
         let aux_cache = self.aux_cache.clone();
         let aux_local = self.aux_local.clone();
         let indexedlog_cache = self.indexedlog_cache.clone();
@@ -148,7 +150,8 @@ impl FileStore {
         let cache_to_memcache = self.cache_to_memcache;
         let metrics = self.metrics.clone();
         let activity_logger = self.activity_logger.clone();
-        std::thread::spawn(move || {
+
+        let process_func = move || {
             let start_instant = Instant::now();
 
             let all_keys: Vec<Key> = state.pending();
@@ -229,7 +232,14 @@ impl FileStore {
                     tracing::error!("Error writing activity log: {}", err);
                 }
             }
-        });
+        };
+
+        // Only kick off a thread if there's a substantial amount of work.
+        if keys_len > 1000 {
+            std::thread::spawn(process_func);
+        } else {
+            process_func();
+        }
 
         FetchResults::new(Box::new(found_rx.into_iter()))
     }

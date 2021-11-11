@@ -94,6 +94,8 @@ impl TreeStore {
         let mut common: CommonFetchState<StoreTree> =
             CommonFetchState::new(reqs, TreeAttributes::CONTENT, found_tx);
 
+        let keys_len = common.pending_len();
+
         let indexedlog_cache = self.indexedlog_cache.clone();
         let indexedlog_local = self.indexedlog_local.clone();
         let memcache = self.memcache.clone();
@@ -226,11 +228,18 @@ impl TreeStore {
             common.results(FetchErrors::new());
             Ok(())
         };
-        std::thread::spawn(move || {
+        let process_func_errors = move || {
             if let Err(err) = process_func() {
                 let _ = found_tx2.send(Err(err));
             }
-        });
+        };
+
+        // Only kick off a thread if there's a substantial amount of work.
+        if keys_len > 1000 {
+            std::thread::spawn(process_func_errors);
+        } else {
+            process_func_errors();
+        }
 
         Ok(FetchResults::new(Box::new(found_rx.into_iter())))
     }

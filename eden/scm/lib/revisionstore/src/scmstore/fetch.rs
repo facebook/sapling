@@ -47,6 +47,10 @@ impl<T: StoreValue> CommonFetchState<T> {
         }
     }
 
+    pub(crate) fn pending_len(&self) -> usize {
+        self.pending.len()
+    }
+
     #[instrument(skip(self))]
     pub(crate) fn pending<'a>(
         &'a self,

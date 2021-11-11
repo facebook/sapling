@@ -104,6 +104,10 @@ impl FetchState {
         }
     }
 
+    pub(crate) fn pending_len(&self) -> usize {
+        self.common.pending_len()
+    }
+
     pub(crate) fn pending(&self) -> Vec<Key> {
         self.common.pending.iter().cloned().collect()
     }
