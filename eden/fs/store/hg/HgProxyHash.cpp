@@ -94,12 +94,12 @@ HgProxyHash HgProxyHash::load(
 ObjectId HgProxyHash::store(
     RelativePathPiece path,
     Hash20 hgRevHash,
-    std::optional<LocalStore::WriteBatch*> writeBatch) {
+    LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
   if (!writeBatch) {
     return makeEmbeddedProxyHash(hgRevHash);
   }
   auto computedPair = prepareToStoreLegacy(path, hgRevHash);
-  HgProxyHash::storeLegacy(computedPair, *writeBatch);
+  HgProxyHash::storeLegacy(computedPair, writeBatch);
   return computedPair.first;
 }
 

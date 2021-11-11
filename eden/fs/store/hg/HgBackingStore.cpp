@@ -576,9 +576,7 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
 
     auto relPath = path + entry.name;
     auto proxyHash = HgProxyHash::store(
-        relPath,
-        entry.node,
-        directObjectId ? std::nullopt : std::optional{writeBatch});
+        relPath, entry.node, directObjectId ? nullptr : writeBatch);
 
     entries.emplace_back(proxyHash, std::move(entry.name), entry.type);
   }

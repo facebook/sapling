@@ -43,7 +43,7 @@ TreeEntryType fromRawTreeEntryType(RustTreeEntryType type) {
 TreeEntry fromRawTreeEntry(
     RustTreeEntry entry,
     RelativePathPiece path,
-    std::optional<LocalStore::WriteBatch*> writeBatch) {
+    LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch) {
   std::optional<uint64_t> size;
   std::optional<Hash20> contentSha1;
 
@@ -114,7 +114,7 @@ std::unique_ptr<Tree> HgDatapackStore::getTreeLocal(
         tree.get(),
         edenTreeId,
         proxyHash.path(),
-        directObjectId ? NULL : localStore.beginWrite().get());
+        directObjectId ? nullptr : localStore.beginWrite().get());
   }
 
   return nullptr;
@@ -189,7 +189,7 @@ void HgDatapackStore::getTreeBatch(
               content.get(),
               treeRequest->hash,
               treeRequest->proxyHash.path(),
-              directObjectId ? NULL : writeBatch);
+              directObjectId ? nullptr : writeBatch);
         });
       });
 }
@@ -216,7 +216,7 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
   if (tree) {
     auto directObjectId = config_->getEdenConfig()->directObjectId.getValue();
     return fromRawTree(
-        tree.get(), edenTreeId, path, directObjectId ? NULL : writeBatch);
+        tree.get(), edenTreeId, path, directObjectId ? nullptr : writeBatch);
   }
   return nullptr;
 }

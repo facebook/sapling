@@ -125,7 +125,7 @@ class HgProxyHash {
   static ObjectId store(
       RelativePathPiece path,
       Hash20 hgRevHash,
-      std::optional<LocalStore::WriteBatch*> writeBatch);
+      LocalStore::WriteBatch* FOLLY_NULLABLE writeBatch);
 
   /**
    * Compute the proxy hash information, but do not store it.
