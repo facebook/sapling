@@ -1164,48 +1164,6 @@ def _wraprepo(ui, repo):
                     repo.filectx(profile, changeid=changeid).data()
                 )
 
-        def _sparsesignature(self, includetemp=True, config=None, revs=()):
-            """Returns the signature string representing the contents of the
-            current project sparse configuration. This can be used to cache the
-            sparse matcher for a given set of revs."""
-            signaturecache = self.signaturecache
-            sigkey = config.path if config else ".hg/sparse"
-            signature = signaturecache.get(sigkey)
-            if includetemp:
-                tempsignature = signaturecache.get("tempsignature")
-            else:
-                tempsignature = 0
-
-            if signature is None or (includetemp and tempsignature is None):
-                signature = 0
-                if config is None:
-                    try:
-                        sparsedata = self.localvfs.read("sparse")
-                        signature = hashlib.sha1(sparsedata).hexdigest()
-                    except (OSError, IOError):
-                        pass
-                else:
-                    sha1 = hashlib.sha1()
-                    for r in revs:
-                        try:
-                            sha1.update(
-                                pycompat.encodeutf8(self.getrawprofile(config.path, r))
-                            )
-                            signature = sha1.hexdigest()
-                        except KeyError:
-                            pass
-                signaturecache[sigkey] = signature
-
-                tempsignature = 0
-                if includetemp:
-                    try:
-                        tempsparsepath = self.localvfs.read("tempsparse")
-                        tempsignature = hashlib.sha1(tempsparsepath).hexdigest()
-                    except (OSError, IOError):
-                        pass
-                    signaturecache["tempsignature"] = tempsignature
-            return "%s:%s" % (signature, tempsignature)
-
         def invalidatecaches(self):
             self.invalidatesignaturecache()
             return super(SparseRepo, self).invalidatecaches()
@@ -1226,14 +1184,6 @@ def _wraprepo(ui, repo):
             from the default .hg/sparse active profile
 
             """
-            return self._sparsematch_and_key(*revs, **kwargs)[0]
-
-        def _sparsematch_and_key(self, *revs, **kwargs):
-            """Implementation of sparsematch() with the cache key included.
-
-            This lets us reuse the key elsewhere without having to hit each
-            profile file twice.
-            """
             if not revs or revs == (None,):
                 revs = [
                     self.changelog.rev(node)
@@ -1246,15 +1196,6 @@ def _wraprepo(ui, repo):
 
             includetemp = kwargs.get("includetemp", True)
             rawconfig = kwargs.get("config")
-            signature = self._sparsesignature(
-                includetemp=includetemp, config=rawconfig, revs=revs
-            )
-
-            key = "%s:%s" % (signature, ":".join([str(r) for r in revs]))
-
-            result = self.sparsecache.get(key, None)
-            if result:
-                return result, key
 
             result = self._computesparsematcher(revs, rawconfig=rawconfig)
 
@@ -1263,9 +1204,7 @@ def _wraprepo(ui, repo):
                 if tempincludes:
                     result = forceincludematcher(result, tempincludes)
 
-            self.sparsecache[key] = result
-
-            return result, key
+            return result
 
         def _computesparsematcher(self, revs, rawconfig=None, debugversion=None):
             matchers = []
@@ -1518,7 +1457,6 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
 
     results = {}
     matchers = {}
-    to_store = {}
 
     rev = kwargs.get("rev", ".")
     ctx = scmutil.revsingle(repo, rev)
@@ -1530,27 +1468,14 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
         path = path.replace("/", "__")
         return templ.format(":".join((path,) + parts))
 
-    key = _genkey("unfiltered", ctx.hex())
-    cached = cacheget(key)
-    results[None] = cached if cached else [0, None]
-    if cached is None:
-        # gather complete working copy data
-        matchers[None] = matchmod.always(repo.root, repo.root)
-        to_store[None] = key
+    results[None] = [0, None]
+    # gather complete working copy data
+    matchers[None] = matchmod.always(repo.root, repo.root)
 
     for c in config:
-        matcher, key = repo._sparsematch_and_key(ctx.hex(), includetemp=False, config=c)
-        key = _genkey(c.path, key, str(collectsize))
-        cached = cacheget(key)
-        if not cached and not collectsize:
-            # if not collecting the full size, but we have a cached copy
-            # for a full run, use the file count from that
-            cached = cacheget(_genkey(c.path, key, "True"))
-            cached = cached and [cached[0], 0]
-        results[c] = cached or [0, 0]
-        if cached is None:
-            matchers[c] = matcher
-            to_store[c] = key
+        matcher = repo.sparsematch(ctx.hex(), includetemp=False, config=c)
+        results[c] = [0, 0]
+        matchers[c] = matcher
 
     if matchers:
         mf = ctx.manifest()
@@ -1588,8 +1513,6 @@ def _profilesizeinfo(ui, repo, *config, **kwargs):
                             results[c][1] += ctx.filectx(file).size()
 
     results = {k: tuple(v) for k, v in results.items()}
-    for c, key in to_store.items():
-        cacheset(key, results[c])
 
     return results
 

@@ -121,10 +121,7 @@ Verify error checking includes filename and line numbers
   $ hg ci -m 'Adding a broken file'
   $ hg sparse enableprofile broken.sparse
   warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
-  $ hg -q debugstrip . --no-backup
-  warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
-  warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
-  warning: sparse profile cannot use paths starting with /, ignoring /absolute/paths/are/ignored, in broken.sparse:4
+  $ hg -q debugstrip . --no-backup 2>/dev/null
 
 Verify that a profile is updated across multiple commits
 
@@ -883,9 +880,6 @@ File count and size data for hg explain is cached in the simplecache extension:
   $ ls -1 $TESTTMP/cache
   sparseprofile:profiles__bar__eggs:*:v2 (glob)
   sparseprofile:profiles__bar__ham:*:v2 (glob)
-  sparseprofilestats:sparseprofiles:profiles__bar__eggs:*:0:*:False:v2 (glob)
-  sparseprofilestats:sparseprofiles:profiles__bar__ham:*:0:*:False:v2 (glob)
-  sparseprofilestats:sparseprofiles:unfiltered:*:v2 (glob)
 
 
 Test non-existing profiles are properly reported

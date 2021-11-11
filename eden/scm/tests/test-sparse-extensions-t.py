@@ -28,7 +28,6 @@ sh % "printf '[include]\\nfoo\\n.gitignore\\n'" > ".hgsparse"
 sh % "hg add .hgsparse"
 sh % "hg commit -qm 'Add profile'"
 sh % "hg sparse --enable-profile .hgsparse"
-sh % "hg status --debug" == "got value for key sparseprofile:.hgsparse:090ca0df22bcfedb0d8c8cb8c66865529e714404:v2 from local"
 
 if feature.check(["fsmonitor"]):
     # Test fsmonitor integration (if available)
