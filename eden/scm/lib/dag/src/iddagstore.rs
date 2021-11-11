@@ -143,6 +143,23 @@ pub trait IdDagStore: Send + Sync + 'static {
     /// Find segments that covers `id..` range at the given level, within a same group.
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>>;
 
+    /// Find segments that fully covers the given range. Return segments in ascending order.
+    fn segments_in_span_ascending(&self, span: Span, level: Level) -> Result<Vec<Segment>> {
+        let mut iter = self.iter_segments_ascending(span.low, level)?;
+        let mut result = Vec::new();
+        while let Some(item) = iter.next() {
+            let seg = item?;
+            let seg_span = seg.span()?;
+            if seg_span.low >= span.low && seg_span.high <= span.high {
+                result.push(seg);
+            }
+            if seg_span.low > span.high {
+                break;
+            }
+        }
+        Ok(result)
+    }
+
     /// Iterate through segments at the given level in descending order.
     fn iter_segments_descending<'a>(
         &'a self,
