@@ -131,7 +131,7 @@ impl FileStore {
         &self,
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
-    ) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
+    ) -> FetchResults<StoreFile> {
         let start_instant = Instant::now();
 
         let result = self.fetch_inner(keys, attrs);
@@ -158,7 +158,7 @@ impl FileStore {
         &self,
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
-    ) -> FetchResults<StoreFile, FileStoreFetchMetrics> {
+    ) -> FetchResults<StoreFile> {
         let (found_tx, found_rx) = unbounded();
         let mut state = FetchState::new(keys, attrs, &self, found_tx);
 
@@ -258,7 +258,6 @@ impl FileStore {
                         complete,
                         incomplete: finished.incomplete,
                         other_errors: finished.other_errors,
-                        metrics: finished.metrics,
                     };
                 }
             }
@@ -268,7 +267,6 @@ impl FileStore {
             complete: HashMap::new(),
             incomplete: HashMap::new(),
             other_errors: vec![anyhow!("file fetch did not complete")],
-            metrics: Default::default(),
         }
     }
 

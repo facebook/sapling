@@ -92,10 +92,7 @@ impl Drop for TreeStore {
 }
 
 impl TreeStore {
-    pub fn fetch_batch(
-        &self,
-        reqs: impl Iterator<Item = Key>,
-    ) -> Result<FetchResults<StoreTree, ()>> {
+    pub fn fetch_batch(&self, reqs: impl Iterator<Item = Key>) -> Result<FetchResults<StoreTree>> {
         let (found_tx, found_rx) = unbounded();
         let found_tx2 = found_tx.clone();
         let mut common: CommonFetchState<StoreTree, ()> =
@@ -256,7 +253,6 @@ impl TreeStore {
                         complete,
                         incomplete: finished.incomplete,
                         other_errors: finished.other_errors,
-                        metrics: finished.metrics,
                     });
                 }
             }
@@ -266,7 +262,6 @@ impl TreeStore {
             complete: HashMap::new(),
             incomplete: HashMap::new(),
             other_errors: vec![anyhow!("tree fetch did not complete")],
-            metrics: Default::default(),
         })
     }
 

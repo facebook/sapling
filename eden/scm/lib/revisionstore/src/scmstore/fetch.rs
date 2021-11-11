@@ -187,14 +187,13 @@ pub struct FetchFinish<M> {
 }
 
 #[derive(Debug)]
-pub struct FetchResults<T, M> {
+pub struct FetchResults<T> {
     pub complete: HashMap<Key, T>,
     pub incomplete: HashMap<Key, Vec<Error>>,
     pub other_errors: Vec<Error>,
-    pub metrics: M,
 }
 
-impl<T, M> FetchResults<T, M> {
+impl<T> FetchResults<T> {
     /// Return the list of keys which could not be fetched, or any errors encountered
     pub fn missing(mut self) -> Result<Vec<Key>> {
         if let Some(err) = self.other_errors.pop() {
@@ -272,9 +271,5 @@ impl<T, M> FetchResults<T, M> {
                     },
                 )
             }))
-    }
-
-    pub fn metrics(&self) -> &M {
-        &self.metrics
     }
 }
