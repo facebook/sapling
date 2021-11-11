@@ -152,7 +152,7 @@ impl TrackedProcesses {
 
         match self.processes.get_mut(&pid) {
             Some(existing_proc) => {
-                assert!(existing_proc.mount == mount && existing_proc.cmd == cmd);
+                existing_proc.cmd = cmd;
 
                 // We increment access counts, but overwrite fetch counts
                 // (this matches behavior in original python implementation)
