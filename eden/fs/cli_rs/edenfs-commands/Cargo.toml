@@ -10,6 +10,7 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.51"
+comfy-table = "4.0.1"
 crossterm = { version = "0.20.0", features = ["event-stream"] }
 dirs = "2.0"
 edenfs-client = { version = "0.1.0", path = "../edenfs-client" }

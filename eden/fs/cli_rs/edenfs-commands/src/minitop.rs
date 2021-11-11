@@ -8,6 +8,7 @@
 //! edenfsctl minitop
 
 use async_trait::async_trait;
+use comfy_table::Table;
 use crossterm::terminal;
 use crossterm::{cursor, execute, QueueableCommand};
 use std::collections::BTreeMap;
@@ -220,7 +221,7 @@ impl crate::Subcommand for MinitopCmd {
 
         // Setup rendering
         let mut stdout = stdout();
-        execute!(stdout, cursor::Hide, terminal::DisableLineWrap);
+        execute!(stdout, cursor::Hide, terminal::DisableLineWrap).from_err()?;
 
         loop {
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
@@ -252,52 +253,44 @@ impl crate::Subcommand for MinitopCmd {
             }
 
             // Render aggregated processes
-            stdout.queue(cursor::SavePosition).from_err()?;
-
-            stdout
-                .write(format!("{}\n", COLUMN_TITLES.join("\t")).as_bytes())
-                .from_err()?;
+            let mut table = Table::new();
+            table.set_header(COLUMN_TITLES);
             for aggregated_process in tracked_processes.aggregated_processes() {
-                stdout
-                    .write(
-                        format!(
-                            "{top_pid}\t \
-                            {mount}\t \
-                            {fuse_reads}\t \
-                            {fuse_writes}\t \
-                            {fuse_total}\t \
-                            {fuse_fetch}\t \
-                            {fuse_memory_cache_imports}\t \
-                            {fuse_disk_cache_imports}\t \
-                            {fuse_backing_store_imports}\t \
-                            {fuse_duration}\t \
-                            {fuse_last_access}\t \
-                            {command}\n",
-                            top_pid = aggregated_process.pid,
-                            mount = aggregated_process.mount,
-                            fuse_reads = aggregated_process.access_counts.fsChannelReads,
-                            fuse_writes = aggregated_process.access_counts.fsChannelWrites,
-                            fuse_total = aggregated_process.access_counts.fsChannelTotal,
-                            fuse_fetch = aggregated_process.fetch_counts,
-                            fuse_memory_cache_imports =
-                                aggregated_process.access_counts.fsChannelMemoryCacheImports,
-                            fuse_disk_cache_imports =
-                                aggregated_process.access_counts.fsChannelDiskCacheImports,
-                            fuse_backing_store_imports = aggregated_process
-                                .access_counts
-                                .fsChannelBackingStoreImports,
-                            fuse_duration = aggregated_process.access_counts.fsChannelDurationNs,
-                            fuse_last_access = aggregated_process
-                                .last_access_time
-                                .elapsed()
-                                .from_err()?
-                                .as_nanos(),
-                            command = aggregated_process.cmd,
-                        )
-                        .as_bytes(),
-                    )
-                    .from_err()?;
+                table.add_row(vec![
+                    aggregated_process.pid.to_string(),
+                    aggregated_process.mount,
+                    aggregated_process.access_counts.fsChannelReads.to_string(),
+                    aggregated_process.access_counts.fsChannelWrites.to_string(),
+                    aggregated_process.access_counts.fsChannelTotal.to_string(),
+                    aggregated_process.fetch_counts.to_string(),
+                    aggregated_process
+                        .access_counts
+                        .fsChannelMemoryCacheImports
+                        .to_string(),
+                    aggregated_process
+                        .access_counts
+                        .fsChannelDiskCacheImports
+                        .to_string(),
+                    aggregated_process
+                        .access_counts
+                        .fsChannelBackingStoreImports
+                        .to_string(),
+                    aggregated_process
+                        .access_counts
+                        .fsChannelDurationNs
+                        .to_string(),
+                    aggregated_process
+                        .last_access_time
+                        .elapsed()
+                        .from_err()?
+                        .as_nanos()
+                        .to_string(),
+                    aggregated_process.cmd,
+                ]);
             }
+
+            stdout.queue(cursor::SavePosition).from_err()?;
+            stdout.write(table.to_string().as_bytes()).from_err()?;
             stdout.queue(cursor::RestorePosition).from_err()?;
             stdout.flush().from_err()?;
 
