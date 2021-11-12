@@ -144,24 +144,22 @@ pub(super) async fn run(
 
     let placeholder_only = matches.is_present(ARG_PLACEHOLDERS_ONLY);
     let paths_sizes = response.diff_files.iter().map(|diff_file| {
+        let pair_size = diff_file.base_file.as_ref().map_or(0, |f| f.info.file_size)
+            + diff_file
+                .other_file
+                .as_ref()
+                .map_or(0, |f| f.info.file_size);
         (
             thrift::CommitFileDiffsParamsPathPair {
                 base_path: diff_file.base_file.as_ref().map(|f| f.path.clone()),
                 other_path: diff_file.other_file.as_ref().map(|f| f.path.clone()),
                 copy_info: diff_file.copy_info,
-                generate_placeholder_diff: Some(placeholder_only),
+                generate_placeholder_diff: Some(
+                    placeholder_only || pair_size > thrift::COMMIT_FILE_DIFFS_SIZE_LIMIT,
+                ),
                 ..Default::default()
             },
-            (diff_file
-                .base_file
-                .as_ref()
-                .map(|f| f.info.file_size)
-                .unwrap_or(0)
-                + diff_file
-                    .other_file
-                    .as_ref()
-                    .map(|f| f.info.file_size)
-                    .unwrap_or(0)),
+            pair_size,
         )
     });
     diff_files(
