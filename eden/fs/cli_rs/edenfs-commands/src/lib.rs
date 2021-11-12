@@ -19,6 +19,7 @@ use util::path::expand_path;
 mod config;
 mod debug;
 mod gc;
+mod humantime;
 mod minitop;
 mod pid;
 mod status;
