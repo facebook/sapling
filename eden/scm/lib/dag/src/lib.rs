@@ -30,6 +30,7 @@ pub mod segment;
 mod spanset;
 pub mod utils;
 mod verlink;
+mod vertex_options;
 
 pub use dag_types::clone;
 pub use dag_types::id;
@@ -49,6 +50,8 @@ pub use ops::DagAlgorithm;
 pub use segment::FlatSegment;
 pub use segment::PreparedFlatSegments;
 pub use verlink::VerLink;
+pub use vertex_options::VertexListWithOptions;
+pub use vertex_options::VertexOptions;
 
 pub type Level = u8;
 pub type InProcessIdDag = IdDag<iddagstore::InProcessStore>;
