@@ -259,7 +259,9 @@ mod tests {
         assert_eq!(stream.next().await.map(|v| v.unwrap()), Some(9));
 
         let err = stream.next().await.unwrap().unwrap_err();
-        assert!(format!("{}", err).contains("dislike this number"));
+        with_py(|py| {
+            assert!(format!("{}", err).contains("dislike this number"));
+        });
 
         // The traceback includes the nested (3) functions.
         let traceback: String = with_py(|py| {

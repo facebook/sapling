@@ -14,6 +14,7 @@ pub use anyhow::Error;
 pub use anyhow::Result;
 use cpython::exc;
 use cpython::FromPyObject;
+use cpython::GILGuard;
 use cpython::ObjectProtocol;
 use cpython::PyClone;
 use cpython::PyList;
@@ -198,21 +199,31 @@ impl From<PyErr> for cpython::PyErr {
 
 impl fmt::Display for PyErr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-        let repr = self
-            .inner
-            .pvalue
-            .as_ref()
-            .unwrap_or_else(|| &self.inner.ptype)
-            .repr(py)
-            .map(|s| s.to_string_lossy(py).to_string())
-            .unwrap_or_else(|_| "<error in repr>".into());
-        write!(f, "{}", repr)?;
-        if std::env::var("RUST_BACKTRACE").is_ok() {
-            if let Ok(s) = format_py_error(py, &self.inner) {
-                write!(f, "\n{}", s)?;
+        // To read the python error info, we need the gil. It's not safe to blindly acquire the
+        // gil, since it may be held by another thread and we could deadlock if other Rust locks
+        // are taken and the lock ordering is inconsistent. So let's only produce a meaningful
+        // message if we have the gil already.
+        // This mostly affects tracing collectors, since they may choose to format the error at any
+        // point.
+        if GILGuard::check() {
+            let gil = Python::acquire_gil();
+            let py = gil.python();
+            let repr = self
+                .inner
+                .pvalue
+                .as_ref()
+                .unwrap_or_else(|| &self.inner.ptype)
+                .repr(py)
+                .map(|s| s.to_string_lossy(py).to_string())
+                .unwrap_or_else(|_| "<error in repr>".into());
+            write!(f, "{}", repr)?;
+            if std::env::var("RUST_BACKTRACE").is_ok() {
+                if let Ok(s) = format_py_error(py, &self.inner) {
+                    write!(f, "\n{}", s)?;
+                }
             }
+        } else {
+            write!(f, "<unable to print PyErr - GIL is not held>")?;
         }
         Ok(())
     }
@@ -228,6 +239,10 @@ impl std::error::Error for PyErr {}
 
 impl serde::ser::Error for PyErr {
     fn custom<T: std::fmt::Display>(msg: T) -> Self {
+        // We should generally not be acquiring the gil here, since we may encounter lock-order
+        // races with other Rust locks. But in this case we know serde logic is being invoked from
+        // the cpython-ext Serializer and Deserializer classes, which ensure the GIL is held
+        // already.
         let gil = Python::acquire_gil();
         let py = gil.python();
         let err = cpython::PyErr::new::<cpython::exc::TypeError, _>(py, msg.to_string());
@@ -237,6 +252,7 @@ impl serde::ser::Error for PyErr {
 
 impl serde::de::Error for PyErr {
     fn custom<T: std::fmt::Display>(msg: T) -> Self {
+        // See comment in ser implementation above for info about acquiring the gil here.
         let gil = Python::acquire_gil();
         let py = gil.python();
         let err = cpython::PyErr::new::<cpython::exc::TypeError, _>(py, msg.to_string());
