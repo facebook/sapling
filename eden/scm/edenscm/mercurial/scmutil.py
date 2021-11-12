@@ -148,7 +148,7 @@ def callcatch(ui, func):
             ui.traceback()
 
             # Log error info for all non-zero exits.
-            _uploadtraceback(ui, str(ex), traceback.format_exc())
+            _uploadtraceback(ui, str(ex), util.smartformatexc())
             raise
         finally:
             # Print 'remote:' messages before 'abort:' messages.

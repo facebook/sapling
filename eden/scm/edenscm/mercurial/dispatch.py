@@ -691,7 +691,7 @@ def _runcatch(req):
                 with demandimport.deactivated():
                     import ipdb
 
-                traceback.print_exc()
+                ui.write_err(util.smartformatexc())
                 ipdb.post_mortem(sys.exc_info()[2])
                 os._exit(255)
             raise
@@ -779,7 +779,7 @@ def _callcatch(ui, func):
                 import ipdb
 
             if not ui.tracebackflag:
-                traceback.print_exc()
+                ui.write_err(util.smartformatexc())
             ipdb.post_mortem(sys.exc_info()[2])
             os._exit(255)
         if not handlecommandexception(ui):
@@ -1353,7 +1353,7 @@ def handlecommandexception(ui):
     this function returns False, ignored otherwise.
     """
     warning = _exceptionwarning(ui)
-    ui.log("command_exception", "%s\n%s\n", warning, traceback.format_exc())
+    ui.log("command_exception", "%s\n%s\n", warning, util.smartformatexc())
     ui.warn(warning)
     return False  # re-raise the exception
 
