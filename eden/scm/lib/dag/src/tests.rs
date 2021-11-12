@@ -9,6 +9,7 @@ use nonblocking::non_blocking_result as r;
 use tempfile::tempdir;
 pub use test_dag::TestDag;
 
+pub use self::drawdag::DrawDag;
 use crate::id::Group;
 use crate::id::VertexName;
 use crate::nameset::SyncNameSetQuery;
@@ -23,6 +24,7 @@ use crate::NameDag;
 use crate::NameSet;
 use crate::Result;
 
+mod drawdag;
 mod test_dag;
 
 #[cfg(test)]
@@ -1371,7 +1373,7 @@ impl IdMap {
 }
 
 fn get_parents_func_from_ascii(text: &str) -> impl Fn(VertexName) -> Result<Vec<VertexName>> {
-    let parents = drawdag::parse(&text);
+    let parents = ::drawdag::parse(&text);
     move |name: VertexName| -> Result<Vec<VertexName>> {
         Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
             .iter()

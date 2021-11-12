@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use futures::StreamExt;
@@ -27,6 +25,7 @@ use crate::ops::IdConvert;
 use crate::protocol;
 use crate::protocol::RemoteIdConvertProtocol;
 use crate::render::render_namedag;
+use crate::tests::DrawDag;
 use crate::Group;
 use crate::Level;
 use crate::NameDag;
@@ -308,21 +307,8 @@ impl RemoteIdConvertProtocol for ProtocolMonitor {
     }
 }
 
-fn get_heads_and_parents_func_from_ascii(
-    text: &str,
-) -> (Vec<Vertex>, HashMap<Vertex, Vec<Vertex>>) {
-    let parents = drawdag::parse(&text);
-    let mut heads = parents
-        .keys()
-        .collect::<HashSet<_>>()
-        .difference(&parents.values().flat_map(|ps| ps.into_iter()).collect())
-        .map(|&v| Vertex::copy_from(v.as_bytes()))
-        .collect::<Vec<_>>();
-    heads.sort();
-    let v = |s: String| Vertex::copy_from(s.as_bytes());
-    let parents = parents
-        .into_iter()
-        .map(|(k, vs)| (v(k), vs.into_iter().map(v).collect()))
-        .collect();
-    (heads, parents)
+fn get_heads_and_parents_func_from_ascii(text: &str) -> (Vec<Vertex>, DrawDag) {
+    let dag = DrawDag::from(text);
+    let heads = dag.heads();
+    (heads, dag)
 }
