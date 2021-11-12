@@ -830,8 +830,12 @@ def _unshelverestorecommit(ui, repo, basename):
         try:
             shelvectx = repo[shelvenode]
         except error.RepoLookupError:
-            m = _("shelved node %s not found in repo")
-            raise error.Abort(m % md["node"])
+            m = _(
+                "shelved node %s not found in repo\nIf you think this shelve "
+                "should exist, try running '@prog@ import --no-commit .hg/shelved/%s.patch' "
+                "from the root of the repository."
+            )
+            raise error.Abort(m % (md["node"], basename))
     return repo, shelvectx
 
 

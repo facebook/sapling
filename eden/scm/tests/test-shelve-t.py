@@ -1250,6 +1250,7 @@ sh % "hg debugstrip -r 1 --config 'experimental.evolution=!' --hidden" == ""
 sh % "hg unshelve" == r"""
     unshelving change 'default'
     abort: shelved node 49351a7ca59142b32064896a48f50bdecccf8ea0 not found in repo
+    If you think this shelve should exist, try running 'hg import --no-commit .hg/shelved/default.patch' from the root of the repository.
     [255]"""
 sh % "cd .."
 
