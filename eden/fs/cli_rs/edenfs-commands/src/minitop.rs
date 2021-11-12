@@ -209,7 +209,9 @@ impl TrackedProcesses {
             }
         }
 
-        aggregated_processes.into_values().collect()
+        let mut sorted_processes = aggregated_processes.into_values().collect::<Vec<Process>>();
+        sorted_processes.sort_by(|a, b| b.last_access_time.cmp(&a.last_access_time));
+        sorted_processes
     }
 }
 
