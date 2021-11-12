@@ -398,6 +398,8 @@ class mononokepeer(stdiopeer.stdiopeer):
                 httpstatus = b" ".join(headerparts[2:])
                 bodylength = 0
                 apeadvice = b""
+                x2pagentderrortype = b""
+                x2pagentderrormsg = b""
 
                 # Strip away all headers so we can start decoding Mercurial
                 # wire protocol or read HTTP response body
@@ -411,16 +413,29 @@ class mononokepeer(stdiopeer.stdiopeer):
                         bodylength = int(line.split(b" ", 1)[1])
                     elif line.lower().startswith(b"x-fb-validated-x2pauth-advice"):
                         apeadvice = line.split(b" ", 1)[1]
+                    elif line.lower().startswith(b"x-x2pagentd-error-type:"):
+                        x2pagentderrortype = line.split(b" ", 1)[1]
+                    elif line.lower().startswith(b"x-x2pagentd-error-msg:"):
+                        x2pagentderrormsg = line.split(b" ", 1)[1]
 
                 if httpcode != b"101":
                     bodyerrmsg = self.handle.read(bodylength)
+                    x2pagentderr = (
+                        "x2pagentd: {}. {}".format(
+                            decodeutf8(x2pagentderrortype),
+                            decodeutf8(x2pagentderrormsg),
+                        )
+                        if x2pagentderrortype
+                        else ""
+                    )
                     self._abort(
                         error.BadResponseError(
-                            'unexpected server response: "{} {}": {}{}'.format(
+                            'unexpected server response: "{} {}": {}\n{}\n{}'.format(
                                 decodeutf8(httpcode),
                                 decodeutf8(httpstatus),
                                 decodeutf8(bodyerrmsg),
                                 decodeutf8(apeadvice),
+                                x2pagentderr,
                             )
                         )
                     )
