@@ -9,8 +9,8 @@
 
 use async_trait::async_trait;
 use comfy_table::Table;
+use crossterm::execute;
 use crossterm::terminal;
-use crossterm::{cursor, execute, QueueableCommand};
 use std::collections::BTreeMap;
 use std::io::{stdout, Write};
 use std::path::Path;
@@ -291,10 +291,8 @@ impl crate::Subcommand for MinitopCmd {
                 ]);
             }
 
-            stdout.queue(cursor::SavePosition).from_err()?;
             stdout.write(table.to_string().as_bytes()).from_err()?;
-            stdout.queue(cursor::RestorePosition).from_err()?;
-            stdout.flush().from_err()?;
+            stdout.write("\n\n".as_bytes()).from_err()?;
 
             tokio::time::sleep(self.refresh_rate).await;
         }
