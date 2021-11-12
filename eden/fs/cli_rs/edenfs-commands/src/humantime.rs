@@ -15,6 +15,20 @@ pub(crate) struct HumanTime {
     seconds: u64,
 }
 
+impl HumanTime {
+    pub(crate) fn simple_human_time(&self) -> String {
+        if self.days > 0 {
+            format!("{}d", self.days)
+        } else if self.hours > 0 {
+            format!("{}h", self.hours)
+        } else if self.minutes > 0 {
+            format!("{}m", self.minutes)
+        } else {
+            format!("{}s", self.seconds)
+        }
+    }
+}
+
 impl From<Duration> for HumanTime {
     fn from(duration: Duration) -> HumanTime {
         let seconds_in_minutes = 60;

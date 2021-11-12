@@ -25,6 +25,7 @@ use edenfs_error::{Result, ResultExt};
 
 use thrift_types::edenfs::types::{pid_t, AccessCounts, GetAccessCountsResult};
 
+use crate::humantime::HumanTime;
 use crate::ExitCode;
 
 #[derive(StructOpt, Debug)]
@@ -139,27 +140,6 @@ struct Process {
 impl Process {
     fn is_running(&self) -> bool {
         Path::new(&format!("/proc/{}", self.pid)).is_dir()
-    }
-
-    fn formatted_last_access(&self) -> Result<String> {
-        let elapsed = self.last_access_time.elapsed().from_err()?.as_secs_f32();
-        const MODULOS: &[f32; 3] = &[60.0, 60.0, 24.0];
-        const SUFFIXES: &[&str] = &["s", "m", "h", "d"];
-
-        Ok(Process::format_time(elapsed, MODULOS, SUFFIXES))
-    }
-
-    fn format_time(mut elapsed: f32, modulos: &[f32], suffixes: &[&str]) -> String {
-        assert!(suffixes.len() - 1 == modulos.len());
-
-        for i in 0..modulos.len() {
-            if elapsed < modulos[i] {
-                return format!("{}{}", elapsed.floor(), suffixes[i]);
-            }
-            elapsed = (elapsed / modulos[i]).floor();
-        }
-
-        format!("{}{}", elapsed, suffixes[suffixes.len() - 1])
     }
 }
 
@@ -333,7 +313,8 @@ impl crate::Subcommand for MinitopCmd {
                         .access_counts
                         .fsChannelDurationNs
                         .to_string(),
-                    aggregated_process.formatted_last_access()?,
+                    HumanTime::from(aggregated_process.last_access_time.elapsed().from_err()?)
+                        .simple_human_time(),
                     aggregated_process.cmd,
                 ]);
             }
