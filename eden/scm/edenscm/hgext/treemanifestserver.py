@@ -2556,7 +2556,7 @@ def _generatepackstream(
         if linknodefixup is not None:
             validlinknodes, linknodemap = linknodefixup
             rootlinknode = linknodemap.get(node)
-        for subname, subnode, subtext, x, x, x in subtrees:
+        for subname, subnode, subtext, _x, _x in subtrees:
             # Append data
             data = [(subnode, nullid, subtext, 0)]
 

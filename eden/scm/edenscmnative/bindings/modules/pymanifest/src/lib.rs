@@ -587,16 +587,18 @@ pub fn subdir_diff(
     )
     .map_pyerr(py)?;
     let mut result = vec![];
-    for (path, node, bytes) in diff {
+    for (path, node, others, bytes) in diff {
+        use types::HgId;
+        let p1 = others.get(0).unwrap_or(HgId::null_id()).clone();
+        let p2 = others.get(1).unwrap_or(HgId::null_id()).clone();
         let tuple = PyTuple::new(
             py,
             &[
                 PyPathBuf::from(path).to_py_object(py).into_object(),
                 node_to_pybytes(py, node).into_object(),
                 PyBytes::new(py, &bytes).into_object(),
-                py.None(),
-                py.None(),
-                py.None(),
+                node_to_pybytes(py, p1).into_object(),
+                node_to_pybytes(py, p2).into_object(),
             ],
         );
         result.push(tuple);

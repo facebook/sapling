@@ -105,16 +105,10 @@ def _uploadfilenodes(repo, fctxs):
         raise error.Abort(e)
 
 
-def _uploadtrees(repo, treesbase):
+def _uploadtrees(repo, trees):
     """Upload trees"""
-    if not treesbase:
+    if not trees:
         return
-    trees = []
-    for treenode, subdir, treetext in treesbase:
-        p1, p2, _link, _copy = repo.manifestlog.historystore.getnodeinfo(
-            subdir, treenode
-        )
-        trees.append((treenode, p1, p2, treetext))
 
     try:
         with repo.ui.timesection("http.edenapi.upload_trees"):
@@ -188,8 +182,8 @@ def _gettrees(repo, nodes):
         difftrees = bindings.manifest.subdirdiff(
             repo.manifestlog.datastore, "", mfnode, basemfnodes, treedepth
         )
-        for subdir, treenode, treetext, _x, _x, _x in difftrees:
-            yield treenode, subdir, treetext
+        for subdir, treenode, treetext, p1, p2 in difftrees:
+            yield treenode, p1, p2, treetext
 
 
 def _torevs(repo, uploadednodes, failednodes):

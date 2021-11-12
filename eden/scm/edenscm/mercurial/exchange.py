@@ -548,10 +548,6 @@ def _findblobs(pushop):
         # subdir does not matter here - use ""
         return get("", node).read()
 
-    def mfparents(subdir, node, get=repo.manifestlog.historystore.getnodeinfo):
-        p1, p2, _link, _copy = get(subdir, node)
-        return p1, p2
-
     commitnodes = dag.sort(pushop.outgoing.missing)
     for node in commitnodes.iterrev():
         parentnodes = parentnames(node)
@@ -578,8 +574,7 @@ def _findblobs(pushop):
 
         # changed trees
         difftrees = subdirdiff(mfstore, "", mfnode, basemfnodes, treedepth)
-        for subdir, treenode, treetext, _x, _x, _x in difftrees:
-            p1, p2 = mfparents(subdir, treenode)
+        for subdir, treenode, treetext, p1, p2 in difftrees:
             yield "tree", treenode, (p1, p2), treetext
 
         # commit

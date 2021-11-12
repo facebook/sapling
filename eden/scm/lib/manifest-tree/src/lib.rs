@@ -583,11 +583,11 @@ pub fn compat_subtree_diff(
     hgid: HgId,
     other_nodes: Vec<HgId>,
     depth: i32,
-) -> Result<Vec<(RepoPathBuf, HgId, Bytes)>> {
+) -> Result<Vec<(RepoPathBuf, HgId, Vec<HgId>, Bytes)>> {
     struct State {
         store: InnerStore,
         path: RepoPathBuf,
-        result: Vec<(RepoPathBuf, HgId, Bytes)>,
+        result: Vec<(RepoPathBuf, HgId, Vec<HgId>, Bytes)>,
         depth_remaining: i32,
     }
     impl State {
@@ -599,7 +599,7 @@ pub fn compat_subtree_diff(
                 // We use BTreeMap for convenience only, it is more efficient to use an array since
                 // the entries are already sorted.
                 let mut others_map = BTreeMap::new();
-                for other_hgid in other_nodes {
+                for other_hgid in other_nodes.clone() {
                     let other_entry = self.store.get_entry(&self.path, other_hgid)?;
                     for other_element_result in other_entry.elements() {
                         let other_element = other_element_result?;
@@ -632,7 +632,7 @@ pub fn compat_subtree_diff(
             }
             // NOTE: order in the result set matters for a lot of the integration tests
             self.result
-                .push((self.path.clone(), hgid, entry.to_bytes()));
+                .push((self.path.clone(), hgid, other_nodes, entry.to_bytes()));
             Ok(())
         }
     }
@@ -1347,11 +1347,13 @@ mod tests {
                 (
                     repo_path_buf("foo"),
                     hgid("11"),
+                    vec![hgid("12")],
                     foo_11_entry.clone().to_bytes()
                 ),
                 (
                     RepoPathBuf::new(),
                     hgid("1"),
+                    vec![hgid("2")],
                     root_1_entry.clone().to_bytes()
                 ),
             ]
@@ -1368,6 +1370,7 @@ mod tests {
             vec![(
                 RepoPathBuf::new(),
                 hgid("1"),
+                vec![hgid("2")],
                 root_1_entry.clone().to_bytes()
             ),]
         );
@@ -1383,6 +1386,7 @@ mod tests {
             vec![(
                 repo_path_buf("foo"),
                 hgid("11"),
+                vec![hgid("12")],
                 foo_11_entry.clone().to_bytes()
             ),]
         );
@@ -1467,11 +1471,13 @@ mod tests {
                 (
                     repo_path_buf("foo"),
                     hgid("12"),
+                    vec![],
                     foo_12_entry.clone().to_bytes()
                 ),
                 (
                     RepoPathBuf::new(),
                     hgid("2"),
+                    vec![hgid("1")],
                     root_2_entry.clone().to_bytes()
                 ),
             ]
