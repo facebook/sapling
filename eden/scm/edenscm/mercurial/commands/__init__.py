@@ -6244,6 +6244,9 @@ def _ensurebaserev(ui, repo, fname):
             _("pulling missing base commits: %s\n")
             % (", ".join(hex(n) for n in missingnodes))
         )
+        # First pull everything, so the subsequent pull doesn't accidentally
+        # bring in public commits as draft.
+        pull(ui, repo)
         repo.pull(headnodes=missingnodes)
 
 

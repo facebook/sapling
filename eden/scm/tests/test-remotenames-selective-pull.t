@@ -423,7 +423,13 @@ Check the repo.pull API
   $ setconfig paths.default=ssh://user@dummy/remoterepo
   $ hg unbundle ../bundle.hg
   pulling missing base commits: 0238718db2b174d2622ae9c4c75d61745eb12b25
+  pulling from ssh://user@dummy/remoterepo
+  requesting all changes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 5 changesets with 5 changes to 2 files
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 1 files
