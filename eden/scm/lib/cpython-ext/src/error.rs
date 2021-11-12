@@ -178,6 +178,12 @@ pub struct PyErr {
     inner: cpython::PyErr,
 }
 
+impl PyErr {
+    pub fn clone(&self, py: Python) -> Self {
+        self.inner.clone_ref(py).into()
+    }
+}
+
 impl From<cpython::PyErr> for PyErr {
     fn from(e: cpython::PyErr) -> PyErr {
         PyErr { inner: e }

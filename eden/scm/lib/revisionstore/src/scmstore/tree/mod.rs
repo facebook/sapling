@@ -28,6 +28,7 @@ use crate::memcache::MEMCACHE_DELAY;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::fetch::FetchResults;
+use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::StoreTree;
 use crate::scmstore::tree::types::TreeAttributes;
@@ -230,7 +231,7 @@ impl TreeStore {
         };
         let process_func_errors = move || {
             if let Err(err) = process_func() {
-                let _ = found_tx2.send(Err(err));
+                let _ = found_tx2.send(Err(KeyFetchError::Other(err)));
             }
         };
 

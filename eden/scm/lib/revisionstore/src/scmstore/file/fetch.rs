@@ -40,6 +40,7 @@ use crate::memcache::McData;
 use crate::scmstore::attrs::StoreAttrs;
 use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
+use crate::scmstore::fetch::KeyFetchError;
 use crate::scmstore::file::metrics::FileStoreFetchMetrics;
 use crate::scmstore::file::LazyFile;
 use crate::scmstore::value::StoreValue;
@@ -87,7 +88,7 @@ impl FetchState {
         keys: impl Iterator<Item = Key>,
         attrs: FileAttributes,
         file_store: &FileStore,
-        found_tx: Sender<Result<(Key, StoreFile)>>,
+        found_tx: Sender<Result<(Key, StoreFile), KeyFetchError>>,
     ) -> Self {
         FetchState {
             common: CommonFetchState::new(keys, attrs, found_tx),

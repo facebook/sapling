@@ -29,7 +29,7 @@ pub(crate) struct CommonFetchState<T: StoreValue> {
     /// All attributes which have been found so far
     pub found: HashMap<Key, T>,
 
-    pub found_tx: Sender<Result<(Key, T)>>,
+    pub found_tx: Sender<Result<(Key, T), KeyFetchError>>,
 }
 
 impl<T: StoreValue> CommonFetchState<T> {
@@ -37,7 +37,7 @@ impl<T: StoreValue> CommonFetchState<T> {
     pub(crate) fn new(
         keys: impl Iterator<Item = Key>,
         attrs: T::Attrs,
-        found_tx: Sender<Result<(Key, T)>>,
+        found_tx: Sender<Result<(Key, T), KeyFetchError>>,
     ) -> Self {
         Self {
             pending: keys.collect(),
@@ -118,11 +118,13 @@ impl<T: StoreValue> CommonFetchState<T> {
         }
 
         for (key, errors) in incomplete {
-            let _ = self.found_tx.send(Err(FetchError { key, errors }.into()));
+            let _ = self
+                .found_tx
+                .send(Err(KeyFetchError::KeyedError { key, errors }.into()));
         }
 
         for err in errors.other_errors {
-            let _ = self.found_tx.send(Err(err));
+            let _ = self.found_tx.send(Err(KeyFetchError::Other(err)));
         }
     }
 
@@ -150,10 +152,11 @@ impl<T: StoreValue> CommonFetchState<T> {
 }
 
 #[derive(Debug, Error)]
-#[error("Key fetch failed: {}", .key)]
-pub struct FetchError {
-    pub key: Key,
-    pub errors: Vec<Error>,
+pub enum KeyFetchError {
+    #[error("Key fetch failed: {key}")]
+    KeyedError { key: Key, errors: Vec<Error> },
+    #[error(transparent)]
+    Other(Error),
 }
 
 pub(crate) struct FetchErrors {
@@ -187,12 +190,12 @@ impl FetchErrors {
 }
 
 pub struct FetchResults<T> {
-    iterator: Box<dyn Iterator<Item = Result<(Key, T)>>>,
+    iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>>>,
 }
 
 impl<T> IntoIterator for FetchResults<T> {
-    type Item = Result<(Key, T)>;
-    type IntoIter = Box<dyn Iterator<Item = Result<(Key, T)>>>;
+    type Item = Result<(Key, T), KeyFetchError>;
+    type IntoIter = Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iterator
@@ -200,7 +203,7 @@ impl<T> IntoIterator for FetchResults<T> {
 }
 
 impl<T> FetchResults<T> {
-    pub fn new(iterator: Box<dyn Iterator<Item = Result<(Key, T)>>>) -> Self {
+    pub fn new(iterator: Box<dyn Iterator<Item = Result<(Key, T), KeyFetchError>>>) -> Self {
         FetchResults { iterator }
     }
 
@@ -213,11 +216,11 @@ impl<T> FetchResults<T> {
                 Ok((key, value)) => {
                     found.insert(key, value);
                 }
-                Err(err) => match err.downcast::<FetchError>() {
-                    Ok(FetchError { key, errors }) => {
+                Err(err) => match err {
+                    KeyFetchError::KeyedError { key, errors } => {
                         missing.insert(key.clone(), errors);
                     }
-                    Err(err) => {
+                    KeyFetchError::Other(err) => {
                         errors.push(err);
                     }
                 },
@@ -234,15 +237,15 @@ impl<T> FetchResults<T> {
         for result in self {
             match result {
                 Ok(_) => {}
-                Err(err) => match err.downcast::<FetchError>() {
-                    Ok(FetchError { key, mut errors }) => {
+                Err(err) => match err {
+                    KeyFetchError::KeyedError { key, mut errors } => {
                         if let Some(err) = errors.pop() {
                             return Err(err);
                         } else {
                             missing.push(key.clone());
                         }
                     }
-                    Err(err) => {
+                    KeyFetchError::Other(err) => {
                         return Err(err);
                     }
                 },

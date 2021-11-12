@@ -16,6 +16,7 @@ use taggederror_util::AnyhowEdenExt;
 
 py_exception!(error, CertificateError);
 py_exception!(error, CommitLookupError, exc::KeyError);
+py_exception!(error, FetchError);
 py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
 py_exception!(error, LockContendedError);
@@ -81,6 +82,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     m.add(py, "CertificateError", py.get_type::<CertificateError>())?;
     m.add(py, "CommitLookupError", py.get_type::<CommitLookupError>())?;
+    m.add(py, "FetchError", py.get_type::<FetchError>())?;
     m.add(py, "HttpError", py.get_type::<HttpError>())?;
     m.add(py, "IndexedLogError", py.get_type::<IndexedLogError>())?;
     m.add(
@@ -229,6 +231,18 @@ fn register_error_handlers() {
                 py,
                 cpython_ext::Str::from(format!("{}", e)),
             ))
+        } else if let Some(e) = e.downcast_ref::<revisionstore::scmstore::KeyFetchError>() {
+            use revisionstore::scmstore::KeyFetchError::*;
+            if let Other(ref e) = e {
+                specific_error_handler(py, e, m)
+            } else {
+                Some(PyErr::new::<FetchError, _>(
+                    py,
+                    cpython_ext::Str::from(format!("{}", e)),
+                ))
+            }
+        } else if let Some(e) = e.downcast_ref::<cpython_ext::PyErr>() {
+            Some(e.clone(py).into())
         } else {
             None
         }

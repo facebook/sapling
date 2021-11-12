@@ -308,7 +308,7 @@ impl CheckoutPlan {
                     let mut data = vec![];
                     for result in store.fetch(chunk.iter().cloned(), FileAttributes::CONTENT) {
                         let result = match result {
-                            Err(err) => Err(err),
+                            Err(err) => Err(err.into()),
                             Ok((key, mut file)) => {
                                 file.file_content().map(|content| (content, key))
                             }

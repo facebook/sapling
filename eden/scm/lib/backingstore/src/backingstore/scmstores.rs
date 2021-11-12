@@ -15,11 +15,11 @@ use anyhow::Result;
 use configparser::config::ConfigSet;
 use log::warn;
 use manifest::List;
-use revisionstore::scmstore::FetchError;
 use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileAuxData;
 use revisionstore::scmstore::FileStore;
 use revisionstore::scmstore::FileStoreBuilder;
+use revisionstore::scmstore::KeyFetchError;
 use revisionstore::scmstore::StoreFile;
 use revisionstore::scmstore::TreeStore;
 use revisionstore::scmstore::TreeStoreBuilder;
@@ -151,8 +151,8 @@ impl BackingScmStores {
                     }
                 }
                 Err(err) => {
-                    match err.downcast::<FetchError>() {
-                        Ok(FetchError { key, mut errors }) => {
+                    match err {
+                        KeyFetchError::KeyedError { key, mut errors } => {
                             if let Some(index) = indexes.remove(&key) {
                                 if let Some(err) = errors.pop() {
                                     resolve(index, Err(err));
@@ -166,7 +166,7 @@ impl BackingScmStores {
                                 );
                             }
                         }
-                        Err(_) => {
+                        KeyFetchError::Other(_) => {
                             // TODO: How should we handle normal non-keyed errors?
                         }
                     };
@@ -304,8 +304,8 @@ impl BackingScmStores {
                     }
                 }
                 Err(err) => {
-                    match err.downcast::<FetchError>() {
-                        Ok(FetchError { key, mut errors }) => {
+                    match err {
+                        KeyFetchError::KeyedError { key, mut errors } => {
                             if let Some(index) = indexes.remove(&key) {
                                 if let Some(err) = errors.pop() {
                                     resolve(index, Err(err));
@@ -319,7 +319,7 @@ impl BackingScmStores {
                                 );
                             }
                         }
-                        Err(_) => {
+                        KeyFetchError::Other(_) => {
                             // TODO: How should we handle normal non-keyed errors?
                         }
                     };
