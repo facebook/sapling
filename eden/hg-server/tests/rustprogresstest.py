@@ -52,7 +52,7 @@ def rustprogresstest(ui, loops, total):
         halfway = None
     else:
         # We will update the total halfway through.
-        halfway = total / 2
+        halfway = int(total / 2)
 
     with rustprogress.bar(ui, "progress bar test", halfway, "cycles") as prog:
         for i in range(loops + 1):

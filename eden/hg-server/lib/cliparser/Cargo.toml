@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-cpython = { version = "0.5", optional = true, default-features = false }
+cpython = { version = "0.7", optional = true, default-features = false }
 cpython_ext = { path = "../cpython-ext", optional = true, default-features = false }
 lazy_static = "1.0"
 shlex = "1.0"

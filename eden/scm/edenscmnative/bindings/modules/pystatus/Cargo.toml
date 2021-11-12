@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
-cpython = { version = "0.5", default-features = false }
+cpython = { version = "0.7", default-features = false }
 status = { path = "../../../../lib/status" }
 types = { path = "../../../../lib/types" }
 
