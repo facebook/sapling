@@ -778,56 +778,29 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{CommitSyncDataProvider, CommitSyncRepos, SyncData};
-    use bookmark_renaming::BookmarkRenamer;
+    use crate::{CommitSyncDataProvider, CommitSyncRepos};
+    use ascii::AsciiString;
     use bookmarks::BookmarkName;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::compat::Future01CompatExt;
     use futures_old::stream::Stream;
+    use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::hashmap;
-    use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
+    use metaconfig_types::{
+        CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+        SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
+    };
     use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
+    use std::str::FromStr;
     use std::sync::Arc;
     // To support async tests
     use cross_repo_sync_test_utils::get_live_commit_sync_config;
     use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMappingEntry};
     use test_repo_factory::TestRepoFactory;
     use tests_utils::{bookmark, CreateCommitContext};
-
-    fn identity_mover(v: &MPath) -> Result<Option<MPath>, Error> {
-        Ok(Some(v.clone()))
-    }
-
-    fn get_small_to_large_renamer() -> BookmarkRenamer {
-        Arc::new(|bookmark_name: &BookmarkName| -> Option<BookmarkName> {
-            let master = BookmarkName::new("master").unwrap();
-            if bookmark_name == &master {
-                Some(master)
-            } else {
-                Some(BookmarkName::new(format!("prefix/{}", bookmark_name)).unwrap())
-            }
-        })
-    }
-
-    fn get_large_to_small_renamer() -> BookmarkRenamer {
-        Arc::new(|bookmark_name: &BookmarkName| -> Option<BookmarkName> {
-            let master = BookmarkName::new("master").unwrap();
-            if bookmark_name == &master {
-                Some(master)
-            } else {
-                let prefix = "prefix/";
-                let name = format!("{}", bookmark_name);
-                if name.starts_with(prefix) {
-                    Some(BookmarkName::new(&name[prefix.len()..]).unwrap())
-                } else {
-                    None
-                }
-            }
-        })
-    }
 
     #[fbinit::test]
     fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
@@ -837,13 +810,7 @@ mod test {
 
     async fn test_bookmark_diff_with_renamer_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let commit_syncer = init(
-            fb,
-            get_large_to_small_renamer(),
-            get_small_to_large_renamer(),
-            CommitSyncDirection::LargeToSmall,
-        )
-        .await?;
+        let commit_syncer = init(fb, CommitSyncDirection::LargeToSmall).await?;
 
         let small_repo = commit_syncer.get_small_repo();
         let large_repo = commit_syncer.get_large_repo();
@@ -879,13 +846,7 @@ mod test {
 
     async fn test_bookmark_small_to_large_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let commit_syncer = init(
-            fb,
-            get_small_to_large_renamer(),
-            get_large_to_small_renamer(),
-            CommitSyncDirection::SmallToLarge,
-        )
-        .await?;
+        let commit_syncer = init(fb, CommitSyncDirection::SmallToLarge).await?;
 
         let large_repo = commit_syncer.get_large_repo();
 
@@ -908,13 +869,7 @@ mod test {
 
     async fn test_bookmark_no_sync_outcome_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let commit_syncer = init(
-            fb,
-            get_small_to_large_renamer(),
-            get_large_to_small_renamer(),
-            CommitSyncDirection::LargeToSmall,
-        )
-        .await?;
+        let commit_syncer = init(fb, CommitSyncDirection::LargeToSmall).await?;
 
         let large_repo = commit_syncer.get_large_repo();
 
@@ -1156,8 +1111,6 @@ mod test {
 
     async fn init(
         fb: FacebookInit,
-        bookmark_renamer: BookmarkRenamer,
-        reverse_bookmark_renamer: BookmarkRenamer,
         direction: CommitSyncDirection,
     ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
         let ctx = CoreContext::test_mock(fb);
@@ -1204,20 +1157,37 @@ mod test {
                 .await?;
         }
 
-        let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-            current_version.clone(),
-            Source(repos.get_source_repo().get_repoid()),
-            Target(repos.get_target_repo().get_repoid()),
-            hashmap! {
-                current_version => SyncData {
-                    mover: Arc::new(identity_mover),
-                    reverse_mover: Arc::new(identity_mover),
+        let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+
+        let common_config = CommonCommitSyncConfig {
+            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            small_repos: hashmap! {
+                small_repo.get_repoid() => SmallRepoPermanentConfig {
+                    bookmark_prefix: "prefix/".to_string(),
                 }
             },
-            vec![BookmarkName::new("master")?],
-            bookmark_renamer,
-            reverse_bookmark_renamer,
-        );
+            large_repo_id: large_repo.get_repoid(),
+        };
+
+        let current_version_config = CommitSyncConfig {
+            large_repo_id: large_repo.get_repoid(),
+            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            small_repos: hashmap! {
+                small_repo.get_repoid() => SmallRepoCommitSyncConfig {
+                    default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+                    map: hashmap! { },
+                    bookmark_prefix: AsciiString::from_str("prefix/")?,
+                    direction: CommitSyncDirection::LargeToSmall,
+                },
+            },
+            version_name: current_version.clone(),
+        };
+
+        lv_cfg_src.add_common_config(common_config);
+        lv_cfg_src.add_config(current_version_config);
+        lv_cfg_src.add_current_version(current_version.clone());
+
+        let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
 
         Ok(CommitSyncer::new_with_provider(
             &ctx,

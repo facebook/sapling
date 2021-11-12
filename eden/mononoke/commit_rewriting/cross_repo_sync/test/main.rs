@@ -9,7 +9,7 @@
 
 #![deny(warnings)]
 
-use anyhow::{anyhow, bail, Error};
+use anyhow::{anyhow, Error};
 use ascii::AsciiString;
 use assert_matches::assert_matches;
 use bytes::Bytes;
@@ -27,7 +27,7 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
     update_mapping_with_version, validation::verify_working_copy, CommitSyncContext,
-    CommitSyncDataProvider, CommitSyncOutcome, ErrorKind, SyncData,
+    CommitSyncDataProvider, CommitSyncOutcome, ErrorKind,
 };
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use fixtures::{linear, many_files_dirs};
@@ -57,14 +57,9 @@ use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 use tunables::{with_tunables_async, MononokeTunables};
 
 use cross_repo_sync::{
-    types::{Source, Target},
-    CandidateSelectionHint, CommitSyncRepos, CommitSyncer, PluralCommitSyncOutcome,
+    types::Target, CandidateSelectionHint, CommitSyncRepos, CommitSyncer, PluralCommitSyncOutcome,
 };
 use sql::rusqlite::Connection as SqliteConnection;
-
-fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
-    Some(b.clone())
-}
 
 fn mpath(p: &str) -> MPath {
     MPath::new(p).unwrap()
@@ -770,121 +765,6 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     };
     assert_eq!(*copy_source, mpath("1"));
     assert_eq!(*copy_bcs, linear_master_bcs_id);
-
-    Ok(())
-}
-
-#[fbinit::test]
-async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let megarepo: BlobRepo = TestRepoFactory::new()?
-        .with_id(RepositoryId::new(1))
-        .build()?;
-    let linear = linear::getrepo(fb).await;
-    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
-
-    let mut fail_config = create_large_to_small_commit_syncer(
-        &ctx,
-        linear.clone(),
-        megarepo.clone(),
-        // This is ignored
-        "linear",
-        mapping.clone(),
-    )?;
-    let fail_repos = CommitSyncRepos::LargeToSmall {
-        small_repo: linear.clone(),
-        large_repo: megarepo.clone(),
-    };
-    let source_repo_id = Source(fail_repos.get_source_repo().get_repoid());
-    let target_repo_id = Target(fail_repos.get_target_repo().get_repoid());
-    fail_config.repos = fail_repos;
-    let version = version_name_with_small_repo();
-    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        version.clone(),
-        source_repo_id,
-        target_repo_id,
-        hashmap! {
-            version.clone() => SyncData {
-                mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
-                reverse_mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
-            }
-        },
-        vec![BookmarkName::new("master")?],
-        Arc::new(identity_renamer),
-        Arc::new(identity_renamer),
-    );
-    fail_config.commit_sync_data_provider = commit_sync_data_provider;
-
-    let stl_config = create_small_to_large_commit_syncer(
-        &ctx,
-        linear.clone(),
-        megarepo.clone(),
-        "linear",
-        mapping.clone(),
-    )?;
-
-    let mut copyfrom_fail_config = create_large_to_small_commit_syncer(
-        &ctx,
-        linear.clone(),
-        megarepo.clone(),
-        // This is ignored
-        "linear",
-        mapping.clone(),
-    )?;
-    let linear_path_in_megarepo = mpath("linear");
-    let copyfrom_fail_repos = CommitSyncRepos::LargeToSmall {
-        small_repo: linear.clone(),
-        large_repo: megarepo.clone(),
-    };
-    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        version.clone(),
-        Source(copyfrom_fail_repos.get_source_repo().get_repoid()),
-        Target(copyfrom_fail_repos.get_target_repo().get_repoid()),
-        hashmap! {
-            version => SyncData {
-                mover: Arc::new(move |path: &MPath| {
-                    match path.basename().as_ref() {
-                        b"1" => bail!("This only fails if the file is named '1'"),
-                        _ => Ok(path.remove_prefix_component(&linear_path_in_megarepo)),
-                    }
-                }),
-                reverse_mover: Arc::new(move |path: &MPath| {
-                    match path.basename().as_ref() {
-                        b"1" => bail!("This only fails if the file is named '1'"),
-                        _ => Ok(Some(mpath("linear").join(path))),
-                    }
-                }),
-            }
-        },
-        vec![BookmarkName::new("master")?],
-        Arc::new(identity_renamer),
-        Arc::new(identity_renamer),
-    );
-    copyfrom_fail_config.commit_sync_data_provider = commit_sync_data_provider;
-    copyfrom_fail_config.repos = copyfrom_fail_repos;
-
-    create_initial_commit(ctx.clone(), &megarepo).await;
-
-    // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
-    // As this is the first commit from linear, it'll rewrite cleanly
-    let linear_base_bcs_id = get_bcs_id(
-        ctx.clone(),
-        &stl_config,
-        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-    )
-    .await;
-    let megarepo_linear_base_bcs_id =
-        rebase_root_on_master(ctx.clone(), &stl_config, linear_base_bcs_id).await?;
-
-    let megarepo_copyinfo_commit =
-        megarepo_copy_file(ctx.clone(), &megarepo, megarepo_linear_base_bcs_id).await;
-
-    let always_fail = sync_to_master(ctx.clone(), &fail_config, megarepo_copyinfo_commit).await;
-    assert!(always_fail.is_err());
-
-    let copyfrom_fail =
-        sync_to_master(ctx.clone(), &copyfrom_fail_config, megarepo_copyinfo_commit).await;
-    assert!(copyfrom_fail.is_err(), "{:#?}", copyfrom_fail);
 
     Ok(())
 }

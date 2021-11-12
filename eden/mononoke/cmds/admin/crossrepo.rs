@@ -1412,31 +1412,22 @@ async fn get_large_to_small_commit_syncer<'a>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use ascii::AsciiString;
     use bookmarks::BookmarkName;
-    use cross_repo_sync::{
-        types::{Source, Target},
-        validation::find_bookmark_diff,
-        CommitSyncDataProvider, SyncData,
-    };
+    use cross_repo_sync::{validation::find_bookmark_diff, CommitSyncDataProvider};
     use fixtures::{linear, set_bookmark};
     use futures::{compat::Stream01CompatExt, TryStreamExt};
+    use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::{hashmap, hashset};
     use metaconfig_types::{
-        CommitSyncConfigVersion, CommitSyncDirection, SmallRepoPermanentConfig,
+        CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+        SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
     };
-    use mononoke_types::{MPath, RepositoryId};
+    use mononoke_types::RepositoryId;
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
     use std::{collections::HashSet, sync::Arc};
     use synced_commit_mapping::SyncedCommitMappingEntry;
-
-    fn noop_book_renamer(bookmark_name: &BookmarkName) -> Option<BookmarkName> {
-        Some(bookmark_name.clone())
-    }
-
-    fn identity_mover(p: &MPath) -> Result<Option<MPath>, Error> {
-        Ok(Some(p.clone()))
-    }
 
     #[fbinit::test]
     fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
@@ -1603,20 +1594,38 @@ mod test {
                 .await?;
         }
 
-        let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-            current_version.clone(),
-            Source(repos.get_source_repo().get_repoid()),
-            Target(repos.get_target_repo().get_repoid()),
-            hashmap! {
-                current_version => SyncData {
-                    mover: Arc::new(identity_mover),
-                    reverse_mover: Arc::new(identity_mover),
+        let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+
+        let common_config = CommonCommitSyncConfig {
+            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            small_repos: hashmap! {
+                small_repo.get_repoid() => SmallRepoPermanentConfig {
+                    bookmark_prefix: "".to_string(),
                 }
             },
-            vec![BookmarkName::new("master")?],
-            Arc::new(noop_book_renamer),
-            Arc::new(noop_book_renamer),
-        );
+            large_repo_id: large_repo.get_repoid(),
+        };
+
+        let current_version_config = CommitSyncConfig {
+            large_repo_id: large_repo.get_repoid(),
+            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            small_repos: hashmap! {
+                small_repo.get_repoid() => SmallRepoCommitSyncConfig {
+                    default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+                    map: hashmap! { },
+                    bookmark_prefix: AsciiString::new(),
+                    direction: CommitSyncDirection::LargeToSmall,
+                },
+            },
+            version_name: current_version.clone(),
+        };
+
+        lv_cfg_src.add_common_config(common_config);
+        lv_cfg_src.add_config(current_version_config);
+        lv_cfg_src.add_current_version(current_version.clone());
+
+        let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
+
         Ok(CommitSyncer::new_with_provider(
             &ctx,
             mapping,
