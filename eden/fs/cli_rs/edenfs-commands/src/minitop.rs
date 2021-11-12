@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use comfy_table::Table;
 use crossterm::execute;
 use crossterm::terminal;
+use shlex::quote;
 use std::collections::BTreeMap;
 use std::io::{stdout, Write};
 use std::path::Path;
@@ -73,7 +74,37 @@ trait GetAccessCountsResultExt {
 impl GetAccessCountsResultExt for GetAccessCountsResult {
     fn get_cmd_for_pid(&self, pid: &i32) -> Result<String> {
         match self.cmdsByPid.get(pid) {
-            Some(cmd) => Ok(String::from_utf8(cmd.to_vec()).from_err()?),
+            Some(cmd) => {
+                let cmd = String::from_utf8(cmd.to_vec()).from_err()?;
+
+                // remove trailing null which would cause the command to show up with an
+                // extra empty string on the end
+                let cmd = cmd.trim_end_matches(char::from(0));
+
+                let mut parts: Vec<&str> = cmd.split(char::from(0)).collect();
+                let path = Path::new(parts[0]);
+                if path.is_absolute() {
+                    parts[0] = path
+                        .file_name()
+                        .ok_or_else(|| anyhow!("cmd filename is missing"))?
+                        .to_str()
+                        .ok_or_else(|| anyhow!("cmd is not UTF-8"))?;
+                }
+
+                Ok(parts
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, part)| {
+                        if i == 0 {
+                            // the first item is the cmd
+                            String::from(part)
+                        } else {
+                            quote(part).into_owned()
+                        }
+                    })
+                    .collect::<Vec<String>>()
+                    .join(" "))
+            }
             None => Ok(String::from(UNKNOWN_COMMAND)),
         }
     }
