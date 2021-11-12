@@ -114,7 +114,7 @@ impl Connection {
         client_id: String,
         tier: impl AsRef<str>,
     ) -> Result<Self, Error> {
-        let env = x2pclient::get_env_from_default_certs(fb);
+        let env = x2pclient::get_env(fb);
         match env.as_str() {
             "PROD" => Self::from_tier_name_via_sr(fb, client_id, tier),
             "CORP" => Self::from_tier_name_via_x2p(fb, client_id, tier),
