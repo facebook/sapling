@@ -6,19 +6,18 @@
  */
 
 use anyhow::{anyhow, Error};
+use ascii::AsciiString;
 use assert_matches::assert_matches;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmark_renaming::BookmarkRenamer;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
 use cloned::cloned;
 use commit_transformation::upload_commits;
 use context::CoreContext;
-use cross_repo_sync::types::{Source, Target};
 use cross_repo_sync::{rewrite_commit, CommitSyncOutcome, CommitSyncer};
 use cross_repo_sync::{
-    CandidateSelectionHint, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos, SyncData,
+    CandidateSelectionHint, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos,
     CHANGE_XREPO_MAPPING_EXTRA,
 };
 use fbinit::FacebookInit;
@@ -28,10 +27,14 @@ use futures::{
     FutureExt, TryFutureExt, TryStreamExt,
 };
 use futures_ext::FbTryFutureExt;
+use live_commit_sync_config::TestLiveCommitSyncConfig;
 use manifest::{Entry, ManifestOps};
 use maplit::{btreemap, hashmap};
 use mercurial_types::HgChangesetId;
-use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::{
+    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+    DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
+};
 use mononoke_types::RepositoryId;
 use mononoke_types::{ChangesetId, MPath};
 use movers::Mover;
@@ -182,18 +185,6 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn backsync_linear_with_prefix_mover(fb: FacebookInit) -> Result<(), Error> {
-    let (commit_syncer, target_repo_dbs) = init_repos(
-        fb,
-        MoverType::Prefix("prefix".to_string()),
-        BookmarkRenamerType::Noop,
-    )
-    .await?;
-
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
-}
-
-#[fbinit::test]
 async fn backsync_linear_with_mover_that_removes_some_files(fb: FacebookInit) -> Result<(), Error> {
     let (commit_syncer, target_repo_dbs) = init_repos(
         fb,
@@ -228,7 +219,7 @@ async fn backsync_linear_with_mover_that_removes_single_file(
 ) -> Result<(), Error> {
     let (commit_syncer, target_repo_dbs) = init_repos(
         fb,
-        MoverType::Except("10".to_string()),
+        MoverType::Except(vec!["10".to_string()]),
         BookmarkRenamerType::Noop,
     )
     .await?;
@@ -329,38 +320,6 @@ async fn backsync_linear_bookmark_renamer_only_master(fb: FacebookInit) -> Resul
 }
 
 #[fbinit::test]
-async fn backsync_linear_bookmark_renamer_prefix(fb: FacebookInit) -> Result<(), Error> {
-    let (commit_syncer, target_repo_dbs) = init_repos(
-        fb,
-        MoverType::Noop,
-        BookmarkRenamerType::Prefix("prefix".to_string()),
-    )
-    .await?;
-
-    backsync_and_verify_master_wc(fb, commit_syncer.clone(), target_repo_dbs).await?;
-
-    let ctx = CoreContext::test_mock(fb);
-    // Bookmarks should be deleted
-    assert_eq!(
-        commit_syncer
-            .get_target_repo()
-            .get_bookmark(ctx.clone(), &BookmarkName::new("master")?)
-            .await?,
-        None
-    );
-
-    assert_eq!(
-        commit_syncer
-            .get_target_repo()
-            .get_bookmark(ctx, &BookmarkName::new("anotherbookmark")?)
-            .await?,
-        None
-    );
-
-    Ok(())
-}
-
-#[fbinit::test]
 async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result<(), Error> {
     let (commit_syncer, target_repo_dbs) =
         init_repos(fb, MoverType::Noop, BookmarkRenamerType::RemoveAll).await?;
@@ -386,18 +345,6 @@ async fn backsync_linear_bookmark_renamer_remove_all(fb: FacebookInit) -> Result
     );
 
     Ok(())
-}
-
-#[fbinit::test]
-async fn backsync_linear_bookmark_renamer_and_mover(fb: FacebookInit) -> Result<(), Error> {
-    let (commit_syncer, target_repo_dbs) = init_repos(
-        fb,
-        MoverType::Except("10".to_string()),
-        BookmarkRenamerType::Prefix("prefix".to_string()),
-    )
-    .await?;
-
-    backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
 }
 
 #[fbinit::test]
@@ -435,23 +382,13 @@ async fn backsync_two_small_repos(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(), Error> {
-    let no_newrepo_mover = Arc::new(|path: &MPath| {
-        let prefix = MPath::new(REPOMERGE_FOLDER)?;
-        let merge_commit_file = MPath::new(REPOMERGE_FILE)?;
-        if prefix.is_prefix_of(path) || path == &merge_commit_file {
-            Ok(None)
-        } else {
-            Ok(Some(path.clone()))
-        }
-    });
-
+    // Remove all files from new repo except for the file in the merge commit itself
     let (commit_syncer, target_repo_dbs) = init_repos(
         fb,
-        MoverType::Custom {
-            mover: no_newrepo_mover.clone(),
-            // reverse mover is identical to forward mover
-            reverse_mover: no_newrepo_mover.clone(),
-        },
+        MoverType::Except(vec![
+            REPOMERGE_FOLDER.to_string(),
+            REPOMERGE_FILE.to_string(),
+        ]),
         BookmarkRenamerType::Noop,
     )
     .await?;
@@ -508,22 +445,9 @@ async fn backsync_merge_new_repo_all_files_removed(fb: FacebookInit) -> Result<(
 #[fbinit::test]
 async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), Error> {
     // Remove all files from new repo except for the file in the merge commit itself
-    let no_newrepo_mover = Arc::new(|path: &MPath| {
-        let prefix = MPath::new(REPOMERGE_FOLDER)?;
-        if prefix.is_prefix_of(path) {
-            Ok(None)
-        } else {
-            Ok(Some(path.clone()))
-        }
-    });
-
     let (commit_syncer, target_repo_dbs) = init_repos(
         fb,
-        MoverType::Custom {
-            mover: no_newrepo_mover.clone(),
-            // reverse mover is identical to forward mover
-            reverse_mover: no_newrepo_mover.clone(),
-        },
+        MoverType::Except(vec![REPOMERGE_FOLDER.to_string()]),
         BookmarkRenamerType::Noop,
     )
     .await?;
@@ -582,7 +506,7 @@ async fn backsync_merge_new_repo_branch_removed(fb: FacebookInit) -> Result<(), 
 async fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Result<(), Error> {
     let (commit_syncer, target_repo_dbs) = init_repos(
         fb,
-        MoverType::Except(BRANCHMERGE_FILE.to_string()),
+        MoverType::Except(vec![BRANCHMERGE_FILE.to_string()]),
         BookmarkRenamerType::Noop,
     )
     .await?;
@@ -646,7 +570,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     let master = BookmarkName::new("master")?;
     let (commit_syncer, target_repo_dbs) = init_repos(
         fb,
-        MoverType::Except("unrelated_branch".to_string()),
+        MoverType::Except(vec!["unrelated_branch".to_string()]),
         BookmarkRenamerType::Only(master),
     )
     .await?;
@@ -735,30 +659,54 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     };
 
     let current_version = CommitSyncConfigVersion("current_version".to_string());
-    let current_mover_type = MoverType::Prefix("current_prefix".to_string());
-
     let new_version = CommitSyncConfigVersion("new_version".to_string());
-    let new_mover_type = MoverType::Prefix("new_prefix".to_string());
 
     let bookmark_renamer_type = BookmarkRenamerType::Noop;
-    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        current_version.clone(),
-        Source(source_repo.get_repoid()),
-        Target(target_repo.get_repoid()),
-        hashmap! {
-            current_version.clone() => SyncData {
-                mover: current_mover_type.get_mover(),
-                reverse_mover: current_mover_type.get_reverse_mover(),
+
+    let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+
+    let current_version_config = CommitSyncConfig {
+        large_repo_id: source_repo.get_repoid(),
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            target_repo.get_repoid() => SmallRepoCommitSyncConfig {
+                default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
+                    MPath::new("current_prefix").unwrap(),
+                ),
+                map: hashmap! { },
+                bookmark_prefix: AsciiString::new(),
+                direction: CommitSyncDirection::LargeToSmall,
             },
-            new_version.clone() => SyncData{
-                mover: new_mover_type.get_mover(),
-                reverse_mover: new_mover_type.get_reverse_mover(),
-            }
         },
-        vec![BookmarkName::new("master")?],
-        bookmark_renamer_type.get_bookmark_renamer(),
-        bookmark_renamer_type.get_reverse_bookmark_renamer(),
-    );
+        version_name: current_version.clone(),
+    };
+
+    lv_cfg_src.add_config(current_version_config);
+    lv_cfg_src.add_current_version(current_version.clone());
+
+    let new_version_config = CommitSyncConfig {
+        large_repo_id: source_repo.get_repoid(),
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            target_repo.get_repoid() => SmallRepoCommitSyncConfig {
+                default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
+                    MPath::new("new_prefix").unwrap(),
+                ),
+                map: hashmap! { },
+                bookmark_prefix: AsciiString::new(),
+                direction: CommitSyncDirection::LargeToSmall,
+            },
+        },
+        version_name: new_version.clone(),
+    };
+    lv_cfg_src.add_config(new_version_config);
+
+    let common = bookmark_renamer_type
+        .get_common_repo_config(target_repo.get_repoid(), source_repo.get_repoid());
+    lv_cfg_src.add_common_config(common);
+
+    let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
+
     let commit_syncer =
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
 
@@ -795,7 +743,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
 
     let after_mapping_change_commit =
         CreateCommitContext::new(&ctx, &source_repo, vec![change_mapping_commit])
-            .add_file("file", "content")
+            .add_file("new_prefix/file", "content")
             .commit()
             .await?;
 
@@ -847,10 +795,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     });
 
     let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
-    assert_eq!(
-        map,
-        hashmap! {MPath::new("new_prefix/file")? => "content".to_string()}
-    );
+    assert_eq!(map, hashmap! {MPath::new("file")? => "content".to_string()});
 
     Ok(())
 }
@@ -899,10 +844,6 @@ async fn new_commit<T: AsRef<str>>(
         store_files(&ctx, contents, &repo).await,
     )
     .await
-}
-
-fn noop_book_renamer(bookmark_name: &BookmarkName) -> Option<BookmarkName> {
-    Some(bookmark_name.clone())
 }
 
 async fn backsync_and_verify_master_wc(
@@ -1185,124 +1126,104 @@ async fn list_content(
     Ok(actual)
 }
 
-fn identity_mover(v: &MPath) -> Result<Option<MPath>, Error> {
-    Ok(Some(v.clone()))
-}
-
 enum BookmarkRenamerType {
+    CommonAndPrefix(BookmarkName, String),
     Only(BookmarkName),
     RemoveAll,
     Noop,
-    Prefix(String),
 }
 
 impl BookmarkRenamerType {
-    fn get_bookmark_renamer(&self) -> BookmarkRenamer {
+    fn get_common_repo_config(
+        &self,
+        small_repo_id: RepositoryId,
+        large_repo_id: RepositoryId,
+    ) -> CommonCommitSyncConfig {
         use BookmarkRenamerType::*;
 
         match self {
-            Only(allowed_name) => {
-                let allowed_name = allowed_name.clone();
-                Arc::new(
-                    move |bookmark_name: &BookmarkName| -> Option<BookmarkName> {
-                        if bookmark_name == &allowed_name {
-                            Some(bookmark_name.clone())
-                        } else {
-                            None
-                        }
-                    },
-                )
-            }
-            RemoveAll => Arc::new(|_bookmark_name: &BookmarkName| -> Option<BookmarkName> { None }),
-            Noop => Arc::new(noop_book_renamer),
-            Prefix(prefix) => {
-                let prefix = prefix.clone();
-                Arc::new(
-                    move |bookmark_name: &BookmarkName| -> Option<BookmarkName> {
-                        Some(BookmarkName::new(format!("{}/{}", prefix, bookmark_name)).unwrap())
-                    },
-                )
-            }
-        }
-    }
-
-    fn get_reverse_bookmark_renamer(&self) -> BookmarkRenamer {
-        use BookmarkRenamerType::*;
-
-        match self {
-            Only(..) | RemoveAll | Noop => {
-                // All these three cases have bookmark_renamer == reverse_bookmark_renamer
-                self.get_bookmark_renamer()
-            }
-            Prefix(prefix) => {
-                let prefix = prefix.clone();
-                Arc::new(
-                    move |bookmark_name: &BookmarkName| -> Option<BookmarkName> {
-                        if bookmark_name.as_str().starts_with(prefix.as_str()) {
-                            let unprefixed = &bookmark_name.as_ascii()[prefix.len()..];
-                            Some(BookmarkName::new_ascii(unprefixed.into()))
-                        } else {
-                            None
-                        }
-                    },
-                )
-            }
+            CommonAndPrefix(common, bookmark_prefix) => CommonCommitSyncConfig {
+                common_pushrebase_bookmarks: vec![common.clone()],
+                small_repos: hashmap! {
+                    small_repo_id => SmallRepoPermanentConfig {
+                        bookmark_prefix: bookmark_prefix.clone(),
+                    }
+                },
+                large_repo_id,
+            },
+            Only(name) => CommonCommitSyncConfig {
+                common_pushrebase_bookmarks: vec![name.clone()],
+                small_repos: hashmap! {
+                    small_repo_id => SmallRepoPermanentConfig {
+                        bookmark_prefix: "nonexistentprefix".to_string(),
+                    }
+                },
+                large_repo_id,
+            },
+            RemoveAll => CommonCommitSyncConfig {
+                common_pushrebase_bookmarks: vec![],
+                small_repos: hashmap! {
+                    small_repo_id => SmallRepoPermanentConfig {
+                        bookmark_prefix: "nonexistentprefix".to_string(),
+                    }
+                },
+                large_repo_id,
+            },
+            Noop => CommonCommitSyncConfig {
+                common_pushrebase_bookmarks: vec![],
+                small_repos: hashmap! {
+                    small_repo_id => SmallRepoPermanentConfig {
+                        bookmark_prefix: "".to_string(),
+                    }
+                },
+                large_repo_id,
+            },
         }
     }
 }
 
 enum MoverType {
     Noop,
-    Except(String),
-    Prefix(String),
+    Except(Vec<String>),
     Only(String),
-    Custom { mover: Mover, reverse_mover: Mover },
 }
 
 impl MoverType {
-    fn get_mover(&self) -> Mover {
+    fn get_small_repo_config(&self) -> SmallRepoCommitSyncConfig {
         use MoverType::*;
 
         match self {
-            Noop => Arc::new(identity_mover),
-            Prefix(prefix) => {
-                let prefix = MPath::new(prefix).unwrap();
-                Arc::new(move |path: &MPath| Ok(Some(MPath::join(&prefix, path))))
+            Noop => SmallRepoCommitSyncConfig {
+                default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+                map: hashmap! {},
+                bookmark_prefix: AsciiString::new(),
+                direction: CommitSyncDirection::LargeToSmall,
+            },
+            Except(files) => {
+                let mut map = hashmap! {};
+                for file in files {
+                    map.insert(
+                        MPath::new(file).unwrap(),
+                        MPath::new(format!("nonexistentpath{}", file)).unwrap(),
+                    );
+                }
+                SmallRepoCommitSyncConfig {
+                    default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+                    map,
+                    bookmark_prefix: AsciiString::new(),
+                    direction: CommitSyncDirection::LargeToSmall,
+                }
             }
-            Except(file) => {
-                let forbidden = MPath::new(file).unwrap();
-                Arc::new(move |path: &MPath| {
-                    if path == &forbidden {
-                        Ok(None)
-                    } else {
-                        Ok(Some(path.clone()))
-                    }
-                })
-            }
-            Only(file) => {
-                let allowed = MPath::new(file).unwrap();
-                Arc::new(move |path: &MPath| {
-                    if path == &allowed {
-                        Ok(Some(path.clone()))
-                    } else {
-                        Ok(None)
-                    }
-                })
-            }
-            Custom { mover, .. } => mover.clone(),
-        }
-    }
-
-    fn get_reverse_mover(&self) -> Mover {
-        use MoverType::*;
-
-        match self {
-            Noop | Only(..) | Except(..) => self.get_mover(),
-            Prefix(prefix) => {
-                let prefix = MPath::new(prefix).unwrap();
-                Arc::new(move |path: &MPath| Ok(path.remove_prefix_component(&prefix)))
-            }
-            Custom { reverse_mover, .. } => reverse_mover.clone(),
+            Only(path) => SmallRepoCommitSyncConfig {
+                default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
+                    MPath::new("nonexistentpath").unwrap(),
+                ),
+                map: hashmap! {
+                    MPath::new(path).unwrap() => MPath::new(path).unwrap(),
+                },
+                bookmark_prefix: AsciiString::new(),
+                direction: CommitSyncDirection::LargeToSmall,
+            },
         }
     }
 }
@@ -1346,21 +1267,25 @@ async fn init_repos(
     )
     .await;
 
-    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
-    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-        current_version.clone(),
-        Source(source_repo.get_repoid()),
-        Target(target_repo.get_repoid()),
-        hashmap! {
-            current_version => SyncData {
-                mover: mover_type.get_mover(),
-                reverse_mover: mover_type.get_reverse_mover(),
-            }
+    let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+
+    let version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let version_config = CommitSyncConfig {
+        large_repo_id: source_repo.get_repoid(),
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            target_repo.get_repoid() => mover_type.get_small_repo_config(),
         },
-        vec![BookmarkName::new("master")?],
-        bookmark_renamer_type.get_bookmark_renamer(),
-        bookmark_renamer_type.get_reverse_bookmark_renamer(),
-    );
+        version_name: version.clone(),
+    };
+
+    lv_cfg_src.add_config(version_config);
+    lv_cfg_src.add_current_version(version.clone());
+    let common = bookmark_renamer_type
+        .get_common_repo_config(target_repo.get_repoid(), source_repo.get_repoid());
+    lv_cfg_src.add_common_config(common);
+
+    let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
     let commit_syncer =
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
 
@@ -1382,7 +1307,7 @@ async fn init_repos(
             &ctx,
             first_bcs_mut,
             &empty_map,
-            mover_type.get_mover(),
+            commit_syncer.get_mover_by_version(&version).await?,
             source_repo,
         )
         .await
@@ -1636,59 +1561,57 @@ async fn init_merged_repos(
             )
             .compat()
             .await?;
-        let bookmark_renamer = Arc::new(
-            move |bookmark_name: &BookmarkName| -> Option<BookmarkName> {
-                let master = BookmarkName::new("master").unwrap();
-                let name = format!("{}", bookmark_name);
-                let prefix = format!("smallrepo{}", repoid.id());
-                if bookmark_name == &master {
-                    Some(master)
-                } else if name.starts_with(&prefix) {
-                    Some(BookmarkName::new(&name[prefix.len()..]).unwrap())
-                } else {
-                    None
-                }
+
+
+        let after_merge_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+        let noop_version = CommitSyncConfigVersion("noop".to_string());
+
+        let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+
+        let new_version_config = CommitSyncConfig {
+            large_repo_id: large_repo.get_repoid(),
+            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            small_repos: hashmap! {
+                small_repo.get_repoid() => SmallRepoCommitSyncConfig {
+                    default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
+                        MPath::new(format!("smallrepo{}", small_repo.get_repoid().id())).unwrap(),
+                    ),
+                    map: hashmap! { },
+                    bookmark_prefix: AsciiString::new(),
+                    direction: CommitSyncDirection::LargeToSmall,
+                },
             },
+            version_name: after_merge_version.clone(),
+        };
+
+        lv_cfg_src.add_config(new_version_config);
+
+        let mover_type = MoverType::Noop;
+        let noop_version_config = CommitSyncConfig {
+            large_repo_id: large_repo.get_repoid(),
+            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            small_repos: hashmap! {
+                small_repo.get_repoid() => mover_type.get_small_repo_config(),
+            },
+            version_name: noop_version.clone(),
+        };
+        lv_cfg_src.add_config(noop_version_config);
+        lv_cfg_src.add_current_version(noop_version.clone());
+
+        let bookmark_renamer_type = BookmarkRenamerType::CommonAndPrefix(
+            BookmarkName::new("master")?,
+            format!("smallrepo{}", repoid.id()),
         );
 
-        let reverse_bookmark_renamer = Arc::new(
-            move |bookmark_name: &BookmarkName| -> Option<BookmarkName> {
-                let master = BookmarkName::new("master").unwrap();
-                let name = format!("{}", bookmark_name);
-                let prefix = format!("smallrepo{}", repoid.id());
-                if bookmark_name == &master {
-                    Some(master)
-                } else {
-                    Some(BookmarkName::new(format!("{}{}", prefix, name)).unwrap())
-                }
-            },
-        );
+        let common = bookmark_renamer_type
+            .get_common_repo_config(small_repo.get_repoid(), large_repo.get_repoid());
+        lv_cfg_src.add_common_config(common);
 
-        let mover_type = MoverType::Prefix(format!("smallrepo{}", small_repo.get_repoid().id()));
+        let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
         let repos = CommitSyncRepos::LargeToSmall {
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
         };
-        let after_merge_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
-        let noop_version = CommitSyncConfigVersion("noop".to_string());
-        let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-            noop_version.clone(),
-            Source(large_repo.get_repoid()),
-            Target(small_repo.get_repoid()),
-            hashmap! {
-                after_merge_version => SyncData {
-                    mover: mover_type.get_reverse_mover(),
-                    reverse_mover: mover_type.get_mover(),
-                },
-                noop_version => SyncData {
-                    mover: Arc::new(identity_mover),
-                    reverse_mover: Arc::new(identity_mover),
-                }
-            },
-            vec![BookmarkName::new("master")?],
-            bookmark_renamer.clone(),
-            reverse_bookmark_renamer.clone(),
-        );
 
         let commit_syncer = CommitSyncer::new_with_provider(
             &ctx,
@@ -1934,28 +1857,34 @@ async fn preserve_premerge_commit(
     );
 
     // Doesn't matter what mover to use - we are going to preserve the commit anyway
-    let bookmark_renamer = Arc::new(noop_book_renamer);
     let small_to_large_sync_config = {
         let repos = CommitSyncRepos::SmallToLarge {
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
         };
 
-        let noop_version = CommitSyncConfigVersion("noop".to_string());
-        let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-            noop_version.clone(),
-            Source(small_repo.get_repoid()),
-            Target(large_repo.get_repoid()),
-            hashmap! {
-                noop_version => SyncData {
-                    mover: Arc::new(identity_mover),
-                    reverse_mover: Arc::new(identity_mover),
-                }
+        let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
+
+        let bookmark_renamer_type = BookmarkRenamerType::Noop;
+        let mover_type = MoverType::Noop;
+
+        let version = CommitSyncConfigVersion("noop".to_string());
+        let version_config = CommitSyncConfig {
+            large_repo_id: large_repo.get_repoid(),
+            common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+            small_repos: hashmap! {
+                small_repo.get_repoid() => mover_type.get_small_repo_config(),
             },
-            vec![BookmarkName::new("master")?],
-            bookmark_renamer.clone(),
-            bookmark_renamer.clone(),
-        );
+            version_name: version.clone(),
+        };
+
+        lv_cfg_src.add_config(version_config);
+        lv_cfg_src.add_current_version(version);
+        let common = bookmark_renamer_type
+            .get_common_repo_config(small_repo.get_repoid(), large_repo.get_repoid());
+        lv_cfg_src.add_common_config(common);
+
+        let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider)
     };
 
