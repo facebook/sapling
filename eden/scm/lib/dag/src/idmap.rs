@@ -64,8 +64,6 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
         covered_ids: &mut IdSet,
         reserved_ids: &IdSet,
     ) -> Result<PreparedFlatSegments> {
-        assert!(reserved_ids.is_empty());
-
         // There are some interesting cases to optimize the numbers:
         //
         // C     For a merge C, it has choice to assign numbers to A or B
