@@ -32,6 +32,7 @@ use crate::Level;
 use crate::NameDag;
 use crate::Result;
 use crate::Vertex;
+use crate::VertexListWithOptions;
 
 /// Dag structure for testing purpose.
 pub struct TestDag {
@@ -138,12 +139,23 @@ impl TestDag {
             .collect::<Vec<_>>();
         let need_flush = !master_heads.is_empty();
         if need_flush {
-            self.dag.flush(&master_heads.into()).await.unwrap();
+            let heads = VertexListWithOptions::from(master_heads).with_highest_group(Group::MASTER);
+            self.dag.flush(&heads).await.unwrap();
         }
         if validate {
             self.validate().await;
         }
         assert_eq!(self.dag.check_segments().await.unwrap(), [] as [String; 0]);
+    }
+
+    /// Flush space-separated master heads.
+    pub async fn flush(&mut self, master_heads: &str) {
+        let heads: Vec<Vertex> = master_heads
+            .split_whitespace()
+            .map(|v| Vertex::copy_from(v.as_bytes()))
+            .collect();
+        let heads = VertexListWithOptions::from(heads).with_highest_group(Group::MASTER);
+        self.dag.flush(&heads).await.unwrap();
     }
 
     /// Replace ASCII with Ids in the graph.

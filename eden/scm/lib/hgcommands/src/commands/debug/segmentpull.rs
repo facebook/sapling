@@ -15,6 +15,8 @@ use dag::ops::DagImportPullData;
 use dag::ops::DagPersistent;
 use dag::ops::Open;
 use dag::CloneData;
+use dag::Group;
+use dag::VertexListWithOptions;
 use dag::VertexName;
 use types::HgId;
 
@@ -70,8 +72,8 @@ pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
         .context("error importing segmented changelog")??;
 
     let master = VertexName::copy_from(&to.into_byte_array());
-    block_on(namedag.flush(&vec![master.clone()].into()))
-        .context("error writing segmented changelog to disk")??;
+    let heads = VertexListWithOptions::from(vec![master.clone()]).with_highest_group(Group::MASTER);
+    block_on(namedag.flush(&heads)).context("error writing segmented changelog to disk")??;
 
     Ok(0)
 }

@@ -320,8 +320,7 @@ pub trait DagPersistent {
     async fn add_heads_and_flush(
         &mut self,
         parent_names_func: &dyn Parents,
-        master_names: &VertexListWithOptions,
-        non_master_names: &VertexListWithOptions,
+        heads: &VertexListWithOptions,
     ) -> Result<()>;
 
     /// Import from another (potentially large) DAG. Write to disk immediately.
@@ -339,12 +338,10 @@ pub trait DagPersistent {
             .await?
             .try_collect::<Vec<_>>()
             .await?;
-        self.add_heads_and_flush(
-            &dag.dag_snapshot()?,
-            &master_heads.into(),
-            &non_master_heads.into(),
-        )
-        .await
+        let heads = VertexListWithOptions::from(master_heads)
+            .with_highest_group(Group::MASTER)
+            .chain(non_master_heads);
+        self.add_heads_and_flush(&dag.dag_snapshot()?, &heads).await
     }
 }
 

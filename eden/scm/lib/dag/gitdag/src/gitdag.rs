@@ -12,8 +12,10 @@ use std::path::Path;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::Dag;
+use dag::Group;
 use dag::Set;
 use dag::Vertex;
+use dag::VertexListWithOptions;
 use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 
@@ -136,11 +138,10 @@ fn sync_from_git(
     };
     let parents: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
         Box::new(parent_func);
-    non_blocking_result(dag.add_heads_and_flush(
-        &parents,
-        &master_heads.clone().into(),
-        &non_master_heads.clone().into(),
-    ))?;
+    let heads = VertexListWithOptions::from(master_heads.clone())
+        .with_highest_group(Group::MASTER)
+        .chain(non_master_heads.clone());
+    non_blocking_result(dag.add_heads_and_flush(&parents, &heads))?;
 
     let possible_heads =
         Set::from_static_names(master_heads.into_iter().chain(non_master_heads.into_iter()));

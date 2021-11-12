@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
+use crate::Group;
 use crate::VertexName;
 
 /// A list of [`VertexName`]s (usually heads) with options attached to each vertex.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct VertexListWithOptions {
     list: Vec<(VertexName, VertexOptions)>,
 }
@@ -16,7 +19,7 @@ pub struct VertexListWithOptions {
 /// Options attached to a vertex. Usually the vertex is a head. The head and its
 /// ancestors are going to be inserted to the graph. The options controls some
 /// details about the insertion.
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct VertexOptions {
     /// How many ids to reserve for this vertex. Suppose this vertex has id `n`,
@@ -27,6 +30,20 @@ pub struct VertexOptions {
     /// taken, then the reserve range becomes `n+1..j` instead. This avoids
     /// fragmentation.
     pub reserve_size: u32,
+
+    /// The highest [`Group`] for this vertex. If set to `NON_MASTER` then
+    /// this vertex could end up in `MASTER` or `NON_MASTER`. If set to
+    /// `MASTER` then this vertex will end up in `MASTER` group.
+    pub highest_group: Group,
+}
+
+impl Default for VertexOptions {
+    fn default() -> Self {
+        Self {
+            reserve_size: 0,
+            highest_group: Group::NON_MASTER,
+        }
+    }
 }
 
 impl<'a> From<&'a [VertexName]> for VertexListWithOptions {
@@ -68,5 +85,25 @@ impl VertexListWithOptions {
     /// Get the vertexes.
     pub fn vertexes(&self) -> Vec<VertexName> {
         self.list.iter().map(|i| i.0.clone()).collect()
+    }
+
+    /// Set the `highest_group` option for all vertexes.
+    pub fn with_highest_group(mut self, group: Group) -> Self {
+        for (_v, opts) in self.list.iter_mut() {
+            opts.highest_group = group;
+        }
+        self
+    }
+
+    /// Chain another list. Vertexes that are already in this list are skipped.
+    pub fn chain(mut self, other: impl Into<Self>) -> Self {
+        let other = other.into();
+        let existed: HashSet<_> = self.vertexes().into_iter().collect();
+        for (v, o) in other.list {
+            if !existed.contains(&v) {
+                self.list.push((v, o))
+            }
+        }
+        self
     }
 }

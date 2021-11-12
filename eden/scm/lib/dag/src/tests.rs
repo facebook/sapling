@@ -56,6 +56,8 @@ use crate::protocol::RequestNameToLocation;
 use crate::render::render_segment_dag;
 #[cfg(test)]
 use crate::Id;
+#[cfg(test)]
+use crate::VertexListWithOptions;
 
 // Example from segmented-changelog.pdf
 // - DAG1: page 10
@@ -777,7 +779,9 @@ fn test_namedag_reassign_master() -> crate::Result<()> {
     assert_eq!(format!("{:?}", r(dag.vertex_id("C".into()))?), "N2");
 
     // Second flush, making B master without adding new vertexes.
-    r(dag.flush(&["B".into()][..].into())).unwrap();
+    let heads =
+        VertexListWithOptions::from(vec![VertexName::from("B")]).with_highest_group(Group::MASTER);
+    r(dag.flush(&heads)).unwrap();
     assert_eq!(format!("{:?}", r(dag.vertex_id("A".into()))?), "0");
     assert_eq!(format!("{:?}", r(dag.vertex_id("B".into()))?), "1");
     assert_eq!(format!("{:?}", r(dag.vertex_id("C".into()))?), "N0");

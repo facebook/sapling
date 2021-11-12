@@ -19,6 +19,8 @@ use dag::ops::DagImportCloneData;
 use dag::ops::DagPersistent;
 use dag::ops::Open;
 use dag::CloneData;
+use dag::Group;
+use dag::VertexListWithOptions;
 use dag::VertexName;
 use progress_model::ProgressBar;
 
@@ -80,8 +82,9 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
         block_on(namedag.import_clone_data(vertex_clone_data))
             .context("error importing segmented changelog")?;
 
-        block_on(namedag.flush(&vec![master.clone()].into()))
-            .context("error writing segmented changelog to disk")?;
+        let heads =
+            VertexListWithOptions::from(vec![master.clone()]).with_highest_group(Group::MASTER);
+        block_on(namedag.flush(&heads)).context("error writing segmented changelog to disk")?;
 
         fs::write(
             destination.join(".hg/store/remotenames"),

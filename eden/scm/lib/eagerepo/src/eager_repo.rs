@@ -13,7 +13,9 @@ use std::path::PathBuf;
 use dag::ops::DagAddHeads;
 use dag::ops::DagPersistent;
 use dag::Dag;
+use dag::Group;
 use dag::Vertex;
+use dag::VertexListWithOptions;
 use metalog::CommitOptions;
 use metalog::MetaLog;
 use minibytes::Bytes;
@@ -125,9 +127,9 @@ impl EagerRepo {
                     break;
                 }
             }
-            heads
+            VertexListWithOptions::from(heads).with_highest_group(Group::MASTER)
         };
-        self.dag.flush(&master_heads.into()).await?;
+        self.dag.flush(&master_heads).await?;
         let opts = CommitOptions::default();
         self.metalog.commit(opts)?;
         Ok(())

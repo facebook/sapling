@@ -154,8 +154,7 @@ where
     async fn add_heads_and_flush(
         &mut self,
         parent_names_func: &dyn Parents,
-        master_names: &VertexListWithOptions,
-        non_master_names: &VertexListWithOptions,
+        heads: &VertexListWithOptions,
     ) -> Result<()> {
         if !self.pending_heads.is_empty() {
             return programming(format!(
@@ -188,18 +187,13 @@ where
         // Populate vertex negative cache to reduce round-trips doing remote lookups.
         // Release `self` from being mut borrowed while keeping the lock.
         if self.is_vertex_lazy() {
-            let heads: Vec<VertexName> = master_names
-                .vertexes()
-                .into_iter()
-                .chain(non_master_names.vertexes())
-                .collect();
+            let heads: Vec<VertexName> = heads.vertexes();
             self.populate_missing_vertexes_for_add_heads(parent_names_func, &heads)
                 .await?;
         }
 
         // Build.
-        self.build(parent_names_func, master_names, non_master_names)
-            .await?;
+        self.build(parent_names_func, heads).await?;
 
         // Write to disk.
         self.map.persist(&map_lock)?;
@@ -222,10 +216,24 @@ where
     /// internal structures (ex. dag and map) directly, or introducing
     /// lazy vertexes, then avoid this function. Instead, lock and
     /// flush directly (see `add_heads_and_flush`, `import_clone_data`).
-    async fn flush(&mut self, master_heads: &VertexListWithOptions) -> Result<()> {
+    ///
+    /// `heads` specify additional options for spacial vertexes such as
+    /// requiring the master group. For other pending heads they will
+    /// be written using default `VertexOptions`.
+    async fn flush(&mut self, heads: &VertexListWithOptions) -> Result<()> {
         // Sanity check.
-        for result in self.vertex_id_batch(&master_heads.vertexes()).await? {
+        for result in self.vertex_id_batch(&heads.vertexes()).await? {
             result?;
+        }
+        // Previous version of the API requires `master_heads: &[Vertex]`.
+        // Warn about possible misuses.
+        for (_head, opts) in heads.vertex_options() {
+            if opts.highest_group != Group::MASTER {
+                return programming(format!(
+                    "NameDag::flush({:?}) is probably misused (group is not master)",
+                    heads
+                ));
+            }
         }
 
         // Write cached IdMap to disk.
@@ -235,14 +243,13 @@ where
         let mut new_name_dag: Self = self.path.open()?;
 
         let parents: &(dyn DagAlgorithm + Send + Sync) = self;
-        let non_master_heads = self.pending_heads[..].into();
+        let non_master_heads: VertexListWithOptions = self.pending_heads[..].into();
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag.set_remote_protocol(self.remote_protocol.clone());
         new_name_dag.maybe_reuse_caches_from(self);
-        new_name_dag
-            .add_heads_and_flush(&parents, master_heads, &non_master_heads)
-            .await?;
+        let heads = heads.clone().chain(non_master_heads);
+        new_name_dag.add_heads_and_flush(&parents, &heads).await?;
         *self = new_name_dag;
         Ok(())
     }
@@ -2036,8 +2043,14 @@ where
             }
 
             // Rebuild them.
-            self.build(&parents, &Default::default(), &heads[..].into())
-                .await?;
+            let heads: VertexListWithOptions = heads[..].into();
+            debug_assert!(
+                heads
+                    .vertex_options()
+                    .iter()
+                    .all(|(_, o)| o.highest_group == Group::NON_MASTER)
+            );
+            self.build(&parents, &heads).await?;
 
             Ok(())
         };
@@ -2048,23 +2061,22 @@ where
     async fn build(
         &mut self,
         parent_names_func: &dyn Parents,
-        master_heads: &VertexListWithOptions,
-        non_master_heads: &VertexListWithOptions,
+        heads: &VertexListWithOptions,
     ) -> Result<()> {
         // Update IdMap.
         let mut outcome = PreparedFlatSegments::default();
         let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
         let reserved = IdSet::empty();
-        for (nodes, group) in [
-            (master_heads, Group::MASTER),
-            (non_master_heads, Group::NON_MASTER),
-        ] {
-            for node in nodes.vertexes() {
+        for group in [Group::MASTER, Group::NON_MASTER] {
+            for (vertex, opts) in heads.vertex_options() {
+                if opts.highest_group != group {
+                    continue;
+                }
                 // Important: do not call self.map.assign_head. It does not trigger
-                // remote protocol properly.
+                // remote protocol properly. Call self.assign_head instead.
                 let prepared_segments = self
                     .assign_head(
-                        node.clone(),
+                        vertex.clone(),
                         parent_names_func,
                         group,
                         &mut covered,

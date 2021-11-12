@@ -13,10 +13,12 @@ use dag::nameset::SyncNameSetQuery;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::IdConvert;
+use dag::Group;
 use dag::Id;
 use dag::IdSet;
 use dag::NameDag;
 use dag::OnDiskIdDag;
+use dag::VertexListWithOptions;
 use dag::VertexName;
 use nonblocking::non_blocking_result;
 use tempfile::TempDir;
@@ -97,12 +99,10 @@ impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
         let mut dag = NameDag::open(dir.path()).unwrap();
         let parents_map: Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync> =
             Box::new(parents_by_name);
-        non_blocking_result(dag.add_heads_and_flush(
-            &parents_map,
-            &master_names.into(),
-            &head_names.into(),
-        ))
-        .unwrap();
+        let heads = VertexListWithOptions::from(master_names)
+            .with_highest_group(Group::MASTER)
+            .chain(head_names);
+        non_blocking_result(dag.add_heads_and_flush(&parents_map, &heads)).unwrap();
 
         // Prepare idmap
         let idmap: HashMap<Id, usize> = non_blocking_result(dag.all())

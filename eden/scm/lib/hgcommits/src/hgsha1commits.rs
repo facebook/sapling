@@ -19,8 +19,10 @@ use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::Dag;
+use dag::Group;
 use dag::Set;
 use dag::Vertex;
+use dag::VertexListWithOptions;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
@@ -144,7 +146,8 @@ impl AppendCommits for HgCommits {
 
     async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
         self.flush_commit_data().await?;
-        self.dag.flush(&master_heads.into()).await?;
+        let heads = VertexListWithOptions::from(master_heads).with_highest_group(Group::MASTER);
+        self.dag.flush(&heads).await?;
         Ok(())
     }
 

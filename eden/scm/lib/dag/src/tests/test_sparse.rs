@@ -19,6 +19,7 @@ use crate::ops::DagPullFastForwardMasterData;
 use crate::ops::IdConvert;
 use crate::Group;
 use crate::Id;
+use crate::VertexListWithOptions;
 use crate::VertexName;
 
 #[tokio::test]
@@ -144,13 +145,16 @@ async fn test_add_heads() {
         ]
     );
 
-    client.dag.flush(&["G".into()][..].into()).await.unwrap();
+    client.flush("G").await;
     assert_eq!(client.output(), ["resolve names: [I], heads: [B]"]);
 
     let mut client = server.client_cloned_data().await;
+    let heads = VertexListWithOptions::from(&["K".into()][..])
+        .with_highest_group(Group::MASTER)
+        .chain(&["G".into()][..]);
     client
         .dag
-        .add_heads_and_flush(&parents, &["K".into()][..].into(), &["G".into()][..].into())
+        .add_heads_and_flush(&parents, &heads)
         .await
         .unwrap();
     assert_eq!(
@@ -349,7 +353,7 @@ async fn test_flush_reassign_master() {
     // The rest (H, ::L) will also be reassigned, but remain in the
     // non-master group.
     client.drawdag("B-X-Y-Z-F D-F-G-H B-I-J-K-L", &[]);
-    client.dag.flush(&Default::default()).await.unwrap();
+    client.flush("").await;
 
     // The server needs to have the new master group vertexes (up to G)
     // for the client to be able to assign them in the master group.
@@ -360,7 +364,7 @@ async fn test_flush_reassign_master() {
     client.reopen();
 
     // Force reassign of vertexes in the non-master group.
-    client.dag.flush(&["G".into()][..].into()).await.unwrap();
+    client.flush("G").await;
 
     assert_eq!(
         client.output(),
@@ -495,7 +499,7 @@ async fn test_flush_lazy_vertex() {
     // Test flushing with main vertex set to a lazy vertex.
     let server = TestDag::draw("A-B-C-D # master: D");
     let mut client = server.client_cloned_data().await;
-    client.dag.flush(&["B".into()][..].into()).await.unwrap();
+    client.flush("B").await;
 }
 
 async fn client_for_local_cache_test() -> TestDag {

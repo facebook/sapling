@@ -33,6 +33,7 @@ use dag::CloneData;
 use dag::Dag;
 use dag::DagAlgorithm;
 use dag::Vertex;
+use dag::VertexListWithOptions;
 use hgcommits::AppendCommits;
 use hgcommits::DescribeBackend;
 use hgcommits::DoubleWriteCommits;
@@ -275,7 +276,8 @@ py_class!(pub class commits |py| {
         let src_snapshot = src.dag_snapshot().map_pyerr(py)?;
         dst.set_remote_protocol(Arc::new(src));
         let src_dag: &dyn Parents = &src_snapshot;
-        py.allow_threads(|| block_on(dst.add_heads_and_flush(src_dag, &Default::default(), &heads.into()))).map_pyerr(py)?;
+        let heads = VertexListWithOptions::from(heads);
+        py.allow_threads(|| block_on(dst.add_heads_and_flush(src_dag, &heads))).map_pyerr(py)?;
 
         Ok(PyNone)
     }
