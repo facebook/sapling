@@ -1451,9 +1451,7 @@ class ui(object):
                 )
             else:
                 if fancy:
-                    tb = util.smarttraceback(exc[2])
-                    output = traceback.format_exception(exc[0], exc[1], None)
-                    data = tb + r"".join(output)
+                    data = util.smartformatexc(exc)
                 else:
                     output = traceback.format_exception(exc[0], exc[1], exc[2])
                     data = r"".join(output)

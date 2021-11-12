@@ -4686,6 +4686,17 @@ def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
 
     Based on some methods in the traceback.format_stack.
     The friendly traceback shows some local variables.
+
+    This function returns the "traceback" part as a string,
+    without the last "exception" line, like:
+
+        Traceback (most recent call last):
+          File ...
+            ...
+          File ...
+            ...
+
+    If the exception line is needed, use `smartformatexc`.
     """
     # No need to pay the import overhead for other use-cases.
     import linecache
@@ -4742,6 +4753,18 @@ def smarttraceback(frameortb=None, skipboring=True, shortfilename=False):
     result.append("Traceback (most recent call last):\n")
     result.reverse()
     return "".join(result)
+
+
+def smartformatexc(exc=None, skipboring=True, shortfilename=False):
+    """Format an exception tuple (usually sys.exc_info()) into a string
+
+    Using smarttraceback to include local variable details.
+    """
+    if exc is None:
+        exc = sys.exc_info()
+    tb = smarttraceback(exc[2], skipboring=skipboring, shortfilename=shortfilename)
+    exclines = traceback.format_exception(exc[0], exc[1], None)
+    return tb + "".join(exclines)
 
 
 def shorttraceback(frameortb=None):
