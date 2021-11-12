@@ -38,7 +38,13 @@ import sys
 import time
 import traceback
 
-from edenscm.mercurial import dispatch, encoding, extensions, pycompat
+from edenscm.mercurial import dispatch, encoding, extensions, pycompat, util, registrar
+
+
+configtable = {}
+configitem = registrar.configitem(configtable)
+
+configitem("errorredirect", "fancy-traceback", default=True)
 
 
 def _printtrace(ui, warning):
@@ -49,7 +55,10 @@ def _printtrace(ui, warning):
 
 def _handlecommandexception(orig, ui):
     warning = dispatch._exceptionwarning(ui)
-    trace = traceback.format_exc()
+    if ui.configbool("errorredirect", "fancy-traceback"):
+        trace = util.smartformatexc()
+    else:
+        trace = traceback.format_exc()
 
     # let blackbox log it (if it is configured to do so)
     ui.log("command_exception", "%s\n%s\n", warning, trace)
