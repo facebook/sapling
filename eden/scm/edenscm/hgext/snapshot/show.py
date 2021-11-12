@@ -90,7 +90,7 @@ def show(ui, repo, csid, **opts):
     else:
         ctx = _snapshot2ctx(repo, snapshot)
         match = scmutil.matchall(repo)
-        printeropt = {"patch": True}
+        printeropt = {"patch": not opts["stat"], "stat": opts["stat"]}
         buffered = False
         if opts["json"] is True:
             displayer = jsonchangeset(ui, repo, match, printeropt, buffered)

@@ -67,7 +67,10 @@ def updatecmd(*args, **kwargs):
 
 @subcmd(
     "show|info",
-    [("", "json", None, _("Print info about snapshot in json format"))],
+    [
+        ("", "json", None, _("output in json format instead of human-readable")),
+        ("", "stat", None, _("output diffstat-style summary of changes")),
+    ],
     _("ID"),
 )
 def showcmd(*args, **kwargs):
