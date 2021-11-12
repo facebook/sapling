@@ -109,6 +109,27 @@ impl Process {
     fn is_running(&self) -> bool {
         Path::new(&format!("/proc/{}", self.pid)).is_dir()
     }
+
+    fn formatted_last_access(&self) -> Result<String> {
+        let elapsed = self.last_access_time.elapsed().from_err()?.as_secs_f32();
+        const MODULOS: &[f32; 3] = &[60.0, 60.0, 24.0];
+        const SUFFIXES: &[&str] = &["s", "m", "h", "d"];
+
+        Ok(Process::format_time(elapsed, MODULOS, SUFFIXES))
+    }
+
+    fn format_time(mut elapsed: f32, modulos: &[f32], suffixes: &[&str]) -> String {
+        assert!(suffixes.len() - 1 == modulos.len());
+
+        for i in 0..modulos.len() {
+            if elapsed < modulos[i] {
+                return format!("{}{}", elapsed.floor(), suffixes[i]);
+            }
+            elapsed = (elapsed / modulos[i]).floor();
+        }
+
+        format!("{}{}", elapsed, suffixes[suffixes.len() - 1])
+    }
 }
 
 struct TrackedProcesses {
@@ -260,7 +281,7 @@ impl crate::Subcommand for MinitopCmd {
             for aggregated_process in tracked_processes.aggregated_processes() {
                 table.add_row(vec![
                     aggregated_process.pid.to_string(),
-                    aggregated_process.mount,
+                    aggregated_process.mount.clone(),
                     aggregated_process.access_counts.fsChannelReads.to_string(),
                     aggregated_process.access_counts.fsChannelWrites.to_string(),
                     aggregated_process.access_counts.fsChannelTotal.to_string(),
@@ -281,12 +302,7 @@ impl crate::Subcommand for MinitopCmd {
                         .access_counts
                         .fsChannelDurationNs
                         .to_string(),
-                    aggregated_process
-                        .last_access_time
-                        .elapsed()
-                        .from_err()?
-                        .as_nanos()
-                        .to_string(),
+                    aggregated_process.formatted_last_access()?,
                     aggregated_process.cmd,
                 ]);
             }
