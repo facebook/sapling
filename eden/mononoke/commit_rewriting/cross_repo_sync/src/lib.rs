@@ -70,7 +70,7 @@ pub use crate::commit_sync_outcome::{
     get_plural_commit_sync_outcome, CandidateSelectionHint, CommitSyncOutcome,
     PluralCommitSyncOutcome,
 };
-pub use commit_sync_data_provider::{CommitSyncDataProvider, SyncData};
+pub use commit_sync_data_provider::CommitSyncDataProvider;
 
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 

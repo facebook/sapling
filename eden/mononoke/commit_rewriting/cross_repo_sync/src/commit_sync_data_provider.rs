@@ -16,105 +16,14 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use movers::{get_movers, Mover, Movers};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-
-use crate::types::{Source, Target};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub enum CommitSyncDataProvider {
     Live(Arc<dyn LiveCommitSyncConfig>),
-    Test {
-        current_version: Arc<Mutex<CommitSyncConfigVersion>>,
-        map: HashMap<CommitSyncConfigVersion, SyncData>,
-        source_repo_id: RepositoryId,
-        target_repo_id: RepositoryId,
-        common_pushrebase_bookmarks: Vec<BookmarkName>,
-        bookmark_renamer: BookmarkRenamer,
-        reverse_bookmark_renamer: BookmarkRenamer,
-    },
-}
-
-#[derive(Clone)]
-pub struct SyncData {
-    pub mover: Mover,
-    pub reverse_mover: Mover,
-}
-
-impl SyncData {
-    fn reverse(self) -> Self {
-        let Self {
-            mover,
-            reverse_mover,
-        } = self;
-
-        Self {
-            mover: reverse_mover,
-            reverse_mover: mover,
-        }
-    }
 }
 
 impl CommitSyncDataProvider {
-    pub fn test_new(
-        current_version: CommitSyncConfigVersion,
-        source_repo_id: Source<RepositoryId>,
-        target_repo_id: Target<RepositoryId>,
-        map: HashMap<CommitSyncConfigVersion, SyncData>,
-        common_pushrebase_bookmarks: Vec<BookmarkName>,
-        bookmark_renamer: BookmarkRenamer,
-        reverse_bookmark_renamer: BookmarkRenamer,
-    ) -> Self {
-        Self::Test {
-            current_version: Arc::new(Mutex::new(current_version)),
-            map,
-            source_repo_id: source_repo_id.0,
-            target_repo_id: target_repo_id.0,
-            common_pushrebase_bookmarks,
-            bookmark_renamer,
-            reverse_bookmark_renamer,
-        }
-    }
-
-    fn get_sync_data(
-        &self,
-        version: &CommitSyncConfigVersion,
-        source_repo_id: RepositoryId,
-        target_repo_id: RepositoryId,
-    ) -> Result<SyncData, Error> {
-        match self {
-            Self::Live(_) => Err(anyhow!(
-                "calling CommitSyncDataProvide::get_sync_data on Live variant is not supported"
-            )),
-            Self::Test {
-                map,
-                source_repo_id: stored_source_repo_id,
-                target_repo_id: stored_target_repo_id,
-                ..
-            } => {
-                let sync_data = map
-                    .get(version)
-                    .ok_or_else(|| anyhow!("sync data not found for {}", version))?;
-
-                if source_repo_id == *stored_source_repo_id
-                    && target_repo_id == *stored_target_repo_id
-                {
-                    Ok(sync_data.clone())
-                } else if source_repo_id == *stored_target_repo_id
-                    && target_repo_id == *stored_source_repo_id
-                {
-                    Ok(sync_data.clone().reverse())
-                } else {
-                    Err(anyhow!(
-                        "repos unknown to CommitSyncDataProvider: {}->{}",
-                        source_repo_id,
-                        target_repo_id
-                    ))
-                }
-            }
-        }
-    }
-
     pub async fn get_mover(
         &self,
         version: &CommitSyncConfigVersion,
@@ -139,10 +48,6 @@ impl CommitSyncDataProvider {
                     target_repo_id,
                 )?;
                 Ok(mover)
-            }
-            Test { .. } => {
-                let sync_data = self.get_sync_data(version, source_repo_id, target_repo_id)?;
-                Ok(sync_data.mover)
             }
         }
     }
@@ -172,10 +77,6 @@ impl CommitSyncDataProvider {
                 )?;
                 Ok(reverse_mover)
             }
-            Test { .. } => {
-                let sync_data = self.get_sync_data(version, source_repo_id, target_repo_id)?;
-                Ok(sync_data.reverse_mover)
-            }
         }
     }
 
@@ -201,9 +102,6 @@ impl CommitSyncDataProvider {
                 )?;
                 Ok(bookmark_renamer)
             }
-            Test {
-                bookmark_renamer, ..
-            } => Ok(bookmark_renamer.clone()),
         }
     }
 
@@ -230,10 +128,6 @@ impl CommitSyncDataProvider {
                 )?;
                 Ok(reverse_bookmark_renamer)
             }
-            Test {
-                reverse_bookmark_renamer,
-                ..
-            } => Ok(reverse_bookmark_renamer.clone()),
         }
     }
 
@@ -250,9 +144,6 @@ impl CommitSyncDataProvider {
                     .get_current_commit_sync_config_version(ctx, repo_id)
                     .await
             }
-            Test {
-                current_version, ..
-            } => Ok(current_version.lock().unwrap().clone()),
         }
     }
 
@@ -268,7 +159,6 @@ impl CommitSyncDataProvider {
                     .await?;
                 Ok(versions.contains_key(version))
             }
-            Self::Test { map, .. } => Ok(map.contains_key(version)),
         }
     }
 
@@ -283,10 +173,6 @@ impl CommitSyncDataProvider {
                 let common_sync_config = live_commit_sync_config.get_common_config(repo_id).await?;
                 Ok(common_sync_config.common_pushrebase_bookmarks)
             }
-            Test {
-                common_pushrebase_bookmarks,
-                ..
-            } => Ok(common_pushrebase_bookmarks.clone()),
         }
     }
 }
