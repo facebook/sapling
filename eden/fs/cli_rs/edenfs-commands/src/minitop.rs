@@ -343,9 +343,5 @@ impl crate::Subcommand for MinitopCmd {
 
             tokio::time::sleep(self.refresh_rate).await;
         }
-
-        unreachable!("minitop is unable to start");
-
-        Ok(0)
     }
 }
