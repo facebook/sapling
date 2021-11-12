@@ -71,6 +71,7 @@ use crate::IdSet;
 use crate::Level;
 use crate::Result;
 use crate::VerLink;
+use crate::VertexListWithOptions;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
 mod indexedlog_namedag;
@@ -153,8 +154,8 @@ where
     async fn add_heads_and_flush(
         &mut self,
         parent_names_func: &dyn Parents,
-        master_names: &[VertexName],
-        non_master_names: &[VertexName],
+        master_names: &VertexListWithOptions,
+        non_master_names: &VertexListWithOptions,
     ) -> Result<()> {
         if !self.pending_heads.is_empty() {
             return programming(format!(
@@ -188,9 +189,9 @@ where
         // Release `self` from being mut borrowed while keeping the lock.
         if self.is_vertex_lazy() {
             let heads: Vec<VertexName> = master_names
-                .iter()
-                .cloned()
-                .chain(non_master_names.iter().cloned())
+                .vertexes()
+                .into_iter()
+                .chain(non_master_names.vertexes())
                 .collect();
             self.populate_missing_vertexes_for_add_heads(parent_names_func, &heads)
                 .await?;
@@ -221,9 +222,9 @@ where
     /// internal structures (ex. dag and map) directly, or introducing
     /// lazy vertexes, then avoid this function. Instead, lock and
     /// flush directly (see `add_heads_and_flush`, `import_clone_data`).
-    async fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
+    async fn flush(&mut self, master_heads: &VertexListWithOptions) -> Result<()> {
         // Sanity check.
-        for result in self.vertex_id_batch(&master_heads).await? {
+        for result in self.vertex_id_batch(&master_heads.vertexes()).await? {
             result?;
         }
 
@@ -234,13 +235,13 @@ where
         let mut new_name_dag: Self = self.path.open()?;
 
         let parents: &(dyn DagAlgorithm + Send + Sync) = self;
-        let non_master_heads = &self.pending_heads;
+        let non_master_heads = self.pending_heads[..].into();
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag.set_remote_protocol(self.remote_protocol.clone());
         new_name_dag.maybe_reuse_caches_from(self);
         new_name_dag
-            .add_heads_and_flush(&parents, master_heads, non_master_heads)
+            .add_heads_and_flush(&parents, master_heads, &non_master_heads)
             .await?;
         *self = new_name_dag;
         Ok(())
@@ -2035,7 +2036,8 @@ where
             }
 
             // Rebuild them.
-            self.build(&parents, &[], &heads[..]).await?;
+            self.build(&parents, &Default::default(), &heads[..].into())
+                .await?;
 
             Ok(())
         };
@@ -2046,8 +2048,8 @@ where
     async fn build(
         &mut self,
         parent_names_func: &dyn Parents,
-        master_heads: &[VertexName],
-        non_master_heads: &[VertexName],
+        master_heads: &VertexListWithOptions,
+        non_master_heads: &VertexListWithOptions,
     ) -> Result<()> {
         // Update IdMap.
         let mut outcome = PreparedFlatSegments::default();
@@ -2057,7 +2059,7 @@ where
             (master_heads, Group::MASTER),
             (non_master_heads, Group::NON_MASTER),
         ] {
-            for node in nodes.iter() {
+            for node in nodes.vertexes() {
                 // Important: do not call self.map.assign_head. It does not trigger
                 // remote protocol properly.
                 let prepared_segments = self

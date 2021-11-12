@@ -127,7 +127,7 @@ impl EagerRepo {
             }
             heads
         };
-        self.dag.flush(&master_heads).await?;
+        self.dag.flush(&master_heads.into()).await?;
         let opts = CommitOptions::default();
         self.metalog.commit(opts)?;
         Ok(())

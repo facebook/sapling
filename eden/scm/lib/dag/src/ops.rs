@@ -25,6 +25,7 @@ use crate::nameset::NameSet;
 use crate::IdSet;
 use crate::Result;
 use crate::VerLink;
+use crate::VertexListWithOptions;
 
 /// DAG related read-only algorithms.
 #[async_trait::async_trait]
@@ -309,7 +310,7 @@ pub trait DagPullFastForwardMasterData {
 pub trait DagPersistent {
     /// Write in-memory DAG to disk. This might also pick up changes to
     /// the DAG by other processes.
-    async fn flush(&mut self, master_heads: &[VertexName]) -> Result<()>;
+    async fn flush(&mut self, master_heads: &VertexListWithOptions) -> Result<()>;
 
     /// Write in-memory IdMap that caches Id <-> Vertex translation from
     /// remote service to disk.
@@ -319,8 +320,8 @@ pub trait DagPersistent {
     async fn add_heads_and_flush(
         &mut self,
         parent_names_func: &dyn Parents,
-        master_names: &[VertexName],
-        non_master_names: &[VertexName],
+        master_names: &VertexListWithOptions,
+        non_master_names: &VertexListWithOptions,
     ) -> Result<()>;
 
     /// Import from another (potentially large) DAG. Write to disk immediately.
@@ -338,8 +339,12 @@ pub trait DagPersistent {
             .await?
             .try_collect::<Vec<_>>()
             .await?;
-        self.add_heads_and_flush(&dag.dag_snapshot()?, &master_heads, &non_master_heads)
-            .await
+        self.add_heads_and_flush(
+            &dag.dag_snapshot()?,
+            &master_heads.into(),
+            &non_master_heads.into(),
+        )
+        .await
     }
 }
 

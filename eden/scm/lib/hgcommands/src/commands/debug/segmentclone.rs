@@ -80,7 +80,7 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
         block_on(namedag.import_clone_data(vertex_clone_data))
             .context("error importing segmented changelog")?;
 
-        block_on(namedag.flush(&[master.clone()]))
+        block_on(namedag.flush(&vec![master.clone()].into()))
             .context("error writing segmented changelog to disk")?;
 
         fs::write(

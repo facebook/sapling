@@ -97,8 +97,12 @@ impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
         let mut dag = NameDag::open(dir.path()).unwrap();
         let parents_map: Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync> =
             Box::new(parents_by_name);
-        non_blocking_result(dag.add_heads_and_flush(&parents_map, &master_names, &head_names))
-            .unwrap();
+        non_blocking_result(dag.add_heads_and_flush(
+            &parents_map,
+            &master_names.into(),
+            &head_names.into(),
+        ))
+        .unwrap();
 
         // Prepare idmap
         let idmap: HashMap<Id, usize> = non_blocking_result(dag.all())

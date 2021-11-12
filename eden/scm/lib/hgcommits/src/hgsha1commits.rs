@@ -144,7 +144,7 @@ impl AppendCommits for HgCommits {
 
     async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
         self.flush_commit_data().await?;
-        self.dag.flush(master_heads).await?;
+        self.dag.flush(&master_heads.into()).await?;
         Ok(())
     }
 

@@ -771,13 +771,13 @@ fn test_namedag_reassign_master() -> crate::Result<()> {
     assert_eq!(format!("{:?}", r(dag.parent_names("C".into()))?), "[B]");
 
     // First flush, A, B, C are non-master.
-    r(dag.flush(&[])).unwrap();
+    r(dag.flush(&Default::default())).unwrap();
 
     assert_eq!(format!("{:?}", r(dag.vertex_id("A".into()))?), "N0");
     assert_eq!(format!("{:?}", r(dag.vertex_id("C".into()))?), "N2");
 
     // Second flush, making B master without adding new vertexes.
-    r(dag.flush(&["B".into()])).unwrap();
+    r(dag.flush(&["B".into()][..].into())).unwrap();
     assert_eq!(format!("{:?}", r(dag.vertex_id("A".into()))?), "0");
     assert_eq!(format!("{:?}", r(dag.vertex_id("B".into()))?), "1");
     assert_eq!(format!("{:?}", r(dag.vertex_id("C".into()))?), "N0");

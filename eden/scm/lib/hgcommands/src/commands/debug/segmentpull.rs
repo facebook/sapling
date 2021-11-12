@@ -70,7 +70,7 @@ pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
         .context("error importing segmented changelog")??;
 
     let master = VertexName::copy_from(&to.into_byte_array());
-    block_on(namedag.flush(&[master.clone()]))
+    block_on(namedag.flush(&vec![master.clone()].into()))
         .context("error writing segmented changelog to disk")??;
 
     Ok(0)

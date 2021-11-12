@@ -136,7 +136,11 @@ fn sync_from_git(
     };
     let parents: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
         Box::new(parent_func);
-    non_blocking_result(dag.add_heads_and_flush(&parents, &master_heads, &non_master_heads))?;
+    non_blocking_result(dag.add_heads_and_flush(
+        &parents,
+        &master_heads.clone().into(),
+        &non_master_heads.clone().into(),
+    ))?;
 
     let possible_heads =
         Set::from_static_names(master_heads.into_iter().chain(non_master_heads.into_iter()));

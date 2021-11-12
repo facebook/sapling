@@ -271,11 +271,11 @@ py_class!(pub class commits |py| {
         py.allow_threads(|| block_on(dst.import_clone_data(clone_data))).map_pyerr(py)?;
 
         // Also migrate specified heads and their ancestors.
-        let heads = heads.into_iter().map(|h| h.data(py).to_vec().into()).collect::<Vec<_>>();
+        let heads: Vec<Vertex> = heads.into_iter().map(|h| h.data(py).to_vec().into()).collect::<Vec<_>>();
         let src_snapshot = src.dag_snapshot().map_pyerr(py)?;
         dst.set_remote_protocol(Arc::new(src));
         let src_dag: &dyn Parents = &src_snapshot;
-        py.allow_threads(|| block_on(dst.add_heads_and_flush(src_dag, &[], &heads))).map_pyerr(py)?;
+        py.allow_threads(|| block_on(dst.add_heads_and_flush(src_dag, &Default::default(), &heads.into()))).map_pyerr(py)?;
 
         Ok(PyNone)
     }

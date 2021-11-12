@@ -138,7 +138,7 @@ impl TestDag {
             .collect::<Vec<_>>();
         let need_flush = !master_heads.is_empty();
         if need_flush {
-            self.dag.flush(&master_heads).await.unwrap();
+            self.dag.flush(&master_heads.into()).await.unwrap();
         }
         if validate {
             self.validate().await;
