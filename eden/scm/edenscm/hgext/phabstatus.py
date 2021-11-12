@@ -269,7 +269,9 @@ def showsyncstatus(repo, ctx, templ, **args):
         return "sync"
     elif count == 1:
         precursors = list(mutation.allpredecessors(repo, [ctx.node()]))
-        hashes = [repo[h].hex() for h in precursors if h in repo]
+        hashes = [
+            repo[h].hex() for h in repo.changelog.filternodes(precursors, local=True)
+        ]
         # hashes[0] is the current
         # hashes[1] is the previous
         if len(hashes) > 1 and hashes[1] == remote:
