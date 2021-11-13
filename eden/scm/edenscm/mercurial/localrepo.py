@@ -404,6 +404,7 @@ class localrepository(object):
     _lockfreeprefix = set()
 
     def __init__(self, baseui, path, create=False):
+        self._containscount = 0
         self.requirements = set()
         self.storerequirements = set()
         # wvfs: rooted at the repository root, used to access the working copy
@@ -1337,6 +1338,10 @@ class localrepository(object):
 
         error.LookupError is raised if an ambiguous node specified.
         """
+        if self._containscount == 500:
+            self.ui.develwarn("excess usage of repo.__contains__")
+        self._containscount += 1
+
         try:
             self[changeid]
             return True

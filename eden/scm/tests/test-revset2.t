@@ -471,6 +471,7 @@ test that chained `or` operations never eat up stack (issue4624)
 (uses `0:1` instead of `0` to avoid future optimization of trivial revisions)
 
   $ hg log -T '{node}\n' -r `hg debugsh -c "ui.write('+'.join(['0:1'] * 500))"`
+  devel-warn: excess usage of repo.__contains__ at: * (glob)
   2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
   d75937da8da0322d18c3771fb029ffd88b996c89
 
@@ -478,6 +479,7 @@ test that repeated `-r` options never eat up stack (issue4565)
 (uses `-r 0::1` to avoid possible optimization at old-style parser)
 
   $ hg log -T '{node}\n' `hg debugsh -c "for i in range(500): ui.write('-r 0::1 '),"`
+  devel-warn: excess usage of repo.__contains__ at: * (glob)
   2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
   d75937da8da0322d18c3771fb029ffd88b996c89
 
