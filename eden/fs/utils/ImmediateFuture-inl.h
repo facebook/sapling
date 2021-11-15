@@ -245,6 +245,11 @@ typename std::
   return ImmediateFuture<T>{folly::Try<T>{e}};
 }
 
+template <typename T>
+ImmediateFuture<T> makeImmediateFuture(folly::exception_wrapper e) {
+  return ImmediateFuture<T>{folly::Try<T>{std::move(e)}};
+}
+
 template <typename Func>
 auto makeImmediateFutureWith(Func&& func) {
   return ImmediateFuture<folly::Unit>().thenTry(

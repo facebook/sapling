@@ -243,6 +243,16 @@ typename std::
     makeImmediateFuture(E const& e);
 
 /**
+ * Build an ImmediateFuture from an exception wrapper.
+ *
+ * The ImmediateFuture type must be exclicitely passed in like:
+ *
+ *   makeImmediateFuture<int>(tryValue.exception());
+ */
+template <typename T>
+ImmediateFuture<T> makeImmediateFuture(folly::exception_wrapper e);
+
+/**
  * Build an ImmediateFuture from func.
  *
  * Exceptions thrown by func will be captured in the returned ImmediateFuture.
