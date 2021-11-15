@@ -30,6 +30,7 @@ class HgRepository(repobase.Repository):
     hg_bin: str
     hg_environment: Dict[str, str]
     temp_mgr: TempFileManager
+    staged_files: List[str]
 
     def __init__(
         self,
@@ -61,6 +62,7 @@ class HgRepository(repobase.Repository):
         else:
             self.hg_environment["HGRCPATH"] = ""
         self.hg_bin = FindExe.HG
+        self.staged_files = []
 
     @classmethod
     def get_system_hgrc_contents(cls) -> str:
@@ -236,9 +238,14 @@ class HgRepository(repobase.Repository):
         return self.path
 
     def add_files(self, paths: List[str]) -> None:
+        self.staged_files += paths
+
+    def add_staged_files(self) -> None:
         # add_files() may be called for files that are already tracked.
         # hg will print a warning, but this is fine.
-        self.hg("add", *paths)
+        if self.staged_files:
+            self.hg("add", *self.staged_files)
+            self.staged_files = []
 
     def remove_files(self, paths: List[str], force: bool = False) -> None:
         if force:
@@ -262,6 +269,8 @@ class HgRepository(repobase.Repository):
           self.get_commit_time().
         - amend If true, adds the `--amend` argument.
         """
+        self.add_staged_files()
+
         if author_name is None:
             author_name = self.author_name
         if author_email is None:
