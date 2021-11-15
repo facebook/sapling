@@ -15,7 +15,8 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Error};
 pub use bookmarks::BookmarkName;
 use ephemeral_blobstore::BubbleId;
-use futures::future;
+use ephemeral_blobstore::RepoEphemeralBlobstore;
+use futures::{future, Future};
 use futures_watchdog::WatchdogExt;
 use metaconfig_types::{CommonCommitSyncConfig, SmallRepoPermanentConfig};
 use mononoke_types::RepositoryId;
@@ -133,19 +134,24 @@ impl Mononoke {
         ctx: CoreContext,
         name: impl AsRef<str>,
     ) -> Result<Option<RepoContext>, MononokeError> {
-        self.repo_with_bubble(ctx, name, None).await
+        self.repo_with_bubble(ctx, name, |_| async { Ok(None) })
+            .await
     }
 
-    pub async fn repo_with_bubble(
+    pub async fn repo_with_bubble<F, R>(
         &self,
         ctx: CoreContext,
         name: impl AsRef<str>,
-        bubble: Option<BubbleId>,
-    ) -> Result<Option<RepoContext>, MononokeError> {
+        bubble_fetcher: F,
+    ) -> Result<Option<RepoContext>, MononokeError>
+    where
+        F: FnOnce(RepoEphemeralBlobstore) -> R,
+        R: Future<Output = anyhow::Result<Option<BubbleId>>>,
+    {
         match self.repos.get(name.as_ref()) {
             None => Ok(None),
             Some(repo) => Ok(Some(
-                RepoContext::new_with_bubble(ctx, repo.clone(), bubble).await?,
+                RepoContext::new_with_bubble(ctx, repo.clone(), bubble_fetcher).await?,
             )),
         }
     }

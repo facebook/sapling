@@ -29,6 +29,7 @@ pub(crate) const ARG_GIT_SHA1: &str = "GIT_SHA1";
 pub(crate) const ARG_GLOBALREV: &str = "GLOBALREV";
 pub(crate) const ARG_SVNREV: &str = "SVNREV";
 pub(crate) const ARG_BUBBLE_ID: &str = "BUBBLE_ID";
+pub(crate) const ARG_SNAPSHOT_ID: &str = "SNAPSHOT_ID";
 
 pub(crate) const ARG_GROUP_COMMIT_ID: &str = "GROUP_COMMIT_ID";
 
@@ -146,6 +147,14 @@ fn add_commit_id_args_impl<'a, 'b>(
             .help("Bonsai ID to query"),
     )
     .arg(
+        Arg::with_name(ARG_SNAPSHOT_ID)
+            .long("snapshot-id")
+            .takes_value(true)
+            .multiple(multiple)
+            .number_of_values(1)
+            .help("Snapshot ID to query"),
+    )
+    .arg(
         Arg::with_name(ARG_GIT_SHA1)
             .long("git")
             .takes_value(true)
@@ -184,6 +193,7 @@ fn add_commit_id_args_impl<'a, 'b>(
                 ARG_BOOKMARK,
                 ARG_HG_COMMIT_ID,
                 ARG_BONSAI_ID,
+                ARG_SNAPSHOT_ID,
                 ARG_GIT_SHA1,
                 ARG_GLOBALREV,
                 ARG_SVNREV,
@@ -217,7 +227,7 @@ pub(crate) enum CommitId {
     BonsaiId([u8; 32]),
 
     /// Bonsai ID with bubble
-    EphemeralBonsai([u8; 32], NonZeroU64),
+    EphemeralBonsai([u8; 32], Option<NonZeroU64>),
 
     /// Hg commit ID.
     HgId([u8; 20]),
@@ -248,7 +258,7 @@ impl fmt::Display for CommitId {
                 f,
                 "bonsai id '{}' on bubble {}",
                 hex_string(bonsai).expect("hex_string should not fail"),
-                bubble_id,
+                bubble_id.map_or_else(|| "unknown".to_string(), |id| id.to_string()),
             ),
             CommitId::HgId(id) => write!(
                 f,
@@ -299,12 +309,17 @@ pub(crate) fn get_commit_ids(matches: &ArgMatches<'_>) -> Result<Vec<CommitId>, 
         for (index, value) in indices.zip(values) {
             let mut id = [0; 32];
             hex_decode(value.as_bytes(), &mut id)?;
-            let cid = if let Some(bubble_id) = bubble_id {
-                CommitId::EphemeralBonsai(id, bubble_id)
-            } else {
-                CommitId::BonsaiId(id)
-            };
-            commit_ids.insert(index, cid);
+            commit_ids.insert(index, CommitId::BonsaiId(id));
+        }
+    }
+    if let (Some(indices), Some(values)) = (
+        matches.indices_of(ARG_SNAPSHOT_ID),
+        matches.values_of(ARG_SNAPSHOT_ID),
+    ) {
+        for (index, value) in indices.zip(values) {
+            let mut id = [0; 32];
+            hex_decode(value.as_bytes(), &mut id)?;
+            commit_ids.insert(index, CommitId::EphemeralBonsai(id, bubble_id));
         }
     }
     if let (Some(indices), Some(values)) = (
@@ -553,7 +568,7 @@ pub(crate) async fn resolve_commit_ids(
                     CommitId::EphemeralBonsai(bonsai, bubble) => Ok(
                         thrift::CommitId::ephemeral_bonsai(thrift::EphemeralBonsai {
                             bonsai_id: bonsai.to_vec(),
-                            bubble_id: bubble.get().try_into()?,
+                            bubble_id: bubble.map_or(0, NonZeroU64::get).try_into()?,
                             ..Default::default()
                         }),
                     ),

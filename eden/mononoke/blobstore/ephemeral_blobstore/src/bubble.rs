@@ -34,6 +34,30 @@ use crate::error::EphemeralBlobstoreError;
 use crate::handle::EphemeralHandle;
 use crate::view::EphemeralRepoView;
 
+pub enum StorageLocation {
+    // This is not ephemeral
+    Persistent,
+    // This is ephemeral, but its bubble is not yet known
+    UnknownBubble,
+    // This is ephemeral and located at given bubble
+    Bubble(BubbleId),
+}
+
+impl From<BubbleId> for StorageLocation {
+    fn from(bubble_id: BubbleId) -> Self {
+        Self::Bubble(bubble_id)
+    }
+}
+
+impl StorageLocation {
+    pub fn ephemeral(maybe_bubble: Option<BubbleId>) -> Self {
+        match maybe_bubble {
+            None => Self::UnknownBubble,
+            Some(id) => Self::Bubble(id),
+        }
+    }
+}
+
 /// Ephemeral Blobstore Bubble ID.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BubbleId(NonZeroU64);

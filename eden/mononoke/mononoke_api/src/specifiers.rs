@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use ephemeral_blobstore::BubbleId;
+use anyhow::{Context, Result};
+use ephemeral_blobstore::{BubbleId, RepoEphemeralBlobstore};
 use std::fmt;
 
 /// A changeset ID.  This is the canonical ID for a changeset.
@@ -30,7 +31,7 @@ pub type Svnrev = mononoke_types::Svnrev;
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub enum ChangesetSpecifier {
     Bonsai(ChangesetId),
-    EphemeralBonsai(ChangesetId, BubbleId),
+    EphemeralBonsai(ChangesetId, Option<BubbleId>),
     Hg(HgChangesetId),
     Globalrev(Globalrev),
     GitSha1(GitSha1),
@@ -68,12 +69,21 @@ impl From<GitSha1> for ChangesetSpecifier {
 }
 
 impl ChangesetSpecifier {
-    pub fn bubble_id(&self) -> Option<BubbleId> {
+    pub async fn bubble_id(
+        &self,
+        ephemeral_blobstore: RepoEphemeralBlobstore,
+    ) -> Result<Option<BubbleId>> {
         use ChangesetSpecifier::*;
-        match self {
-            EphemeralBonsai(_, bubble_id) => Some(*bubble_id),
+        Ok(match self {
+            EphemeralBonsai(cs_id, bubble_id) => Some(match bubble_id {
+                Some(id) => id.clone(),
+                None => ephemeral_blobstore
+                    .bubble_from_changeset(cs_id)
+                    .await?
+                    .with_context(|| format!("changeset {} does not belong to bubble", cs_id))?,
+            }),
             Bonsai(_) | Hg(_) | Globalrev(_) | GitSha1(_) | Svnrev(_) => None,
-        }
+        })
     }
 }
 
@@ -173,7 +183,12 @@ impl fmt::Display for ChangesetSpecifier {
         match self {
             ChangesetSpecifier::Bonsai(cs_id) => write!(f, "changeset {}", cs_id),
             ChangesetSpecifier::EphemeralBonsai(cs_id, bubble_id) => {
-                write!(f, "ephemeral changeset {} in bubble {}", cs_id, bubble_id)
+                write!(
+                    f,
+                    "ephemeral changeset {} in bubble {}",
+                    cs_id,
+                    bubble_id.map_or_else(|| "unknown".to_string(), |b| b.to_string())
+                )
             }
             ChangesetSpecifier::Hg(hg_cs_id) => write!(f, "hg changeset {}", hg_cs_id),
             ChangesetSpecifier::Globalrev(rev) => write!(f, "globalrev {}", rev.id()),

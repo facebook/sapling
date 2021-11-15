@@ -13,7 +13,7 @@ use edenapi_types::{
     AnyId, Batch, FileContentTokenMetadata, IndexableId, LookupRequest, LookupResponse,
     LookupResult, UploadToken, UploadTokenMetadata,
 };
-use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::{BubbleId, StorageLocation};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash};
 use mononoke_api_hg::{HgDataId, HgRepoContext};
 
@@ -75,7 +75,13 @@ async fn check_request_item(
             }
         }
         AnyId::BonsaiChangesetId(id) => repo
-            .changeset_exists_by_bonsai(id.into(), bubble_id)
+            .changeset_exists_by_bonsai(
+                id.into(),
+                match bubble_id {
+                    Some(id) => StorageLocation::Bubble(id),
+                    None => StorageLocation::Persistent,
+                },
+            )
             .await?
             .into(),
         // Hg derived data does not exist on bubbles, let's fail fast

@@ -29,12 +29,12 @@ use cross_repo_sync::{
 };
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use ephemeral_blobstore::RepoEphemeralBlobstore;
-use ephemeral_blobstore::{Bubble, BubbleId};
+use ephemeral_blobstore::{Bubble, BubbleId, StorageLocation};
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::Stream01CompatExt;
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
-use futures::{try_join, FutureExt};
+use futures::{try_join, Future, FutureExt};
 use futures_watchdog::WatchdogExt;
 use hook_manager_factory::make_hook_manager;
 use hooks::HookManager;
@@ -737,17 +737,23 @@ pub struct Stack {
 /// A context object representing a query to a particular repo.
 impl RepoContext {
     pub async fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
-        Self::new_with_bubble(ctx, repo, None).await
+        Self::new_with_bubble(ctx, repo, |_| async { Ok(None) }).await
     }
 
-    pub async fn new_with_bubble(
+    pub async fn new_with_bubble<F, R>(
         ctx: CoreContext,
         repo: Arc<Repo>,
-        bubble: Option<BubbleId>,
-    ) -> Result<Self, MononokeError> {
+        bubble_fetcher: F,
+    ) -> Result<Self, MononokeError>
+    where
+        F: FnOnce(RepoEphemeralBlobstore) -> R,
+        R: Future<Output = anyhow::Result<Option<BubbleId>>>,
+    {
         // Check the user is permitted to access this repo.
         repo.check_permissions(&ctx, "read").await?;
-        let blob_repo = if let Some(bubble_id) = bubble {
+        let blob_repo = if let Some(bubble_id) =
+            bubble_fetcher((**repo.ephemeral_blobstore()).clone()).await?
+        {
             let bubble = repo.ephemeral_blobstore().open_bubble(bubble_id).await?;
             repo.blob_repo().with_bubble(bubble)
         } else {
@@ -879,8 +885,22 @@ impl RepoContext {
     pub async fn changeset_exists_by_bonsai(
         &self,
         changeset_id: ChangesetId,
-        bubble_id: Option<BubbleId>,
+        storage_location: StorageLocation,
     ) -> Result<bool, MononokeError> {
+        use StorageLocation::*;
+        let bubble_id = match storage_location {
+            Persistent => None,
+            Bubble(id) => Some(id),
+            UnknownBubble => match self
+                .repo
+                .ephemeral_blobstore()
+                .bubble_from_changeset(&changeset_id)
+                .await?
+            {
+                Some(id) => Some(id),
+                None => return Ok(false),
+            },
+        };
         Ok(self
             .changesets(bubble_id)
             .await?
@@ -896,11 +916,11 @@ impl RepoContext {
     ) -> Result<Option<ChangesetId>, MononokeError> {
         let id = match specifier {
             ChangesetSpecifier::Bonsai(cs_id) => self
-                .changeset_exists_by_bonsai(cs_id, None)
+                .changeset_exists_by_bonsai(cs_id, StorageLocation::Persistent)
                 .await?
                 .then(|| cs_id),
             ChangesetSpecifier::EphemeralBonsai(cs_id, bubble_id) => self
-                .changeset_exists_by_bonsai(cs_id, Some(bubble_id))
+                .changeset_exists_by_bonsai(cs_id, StorageLocation::ephemeral(bubble_id))
                 .await?
                 .then(|| cs_id),
             ChangesetSpecifier::Hg(hg_cs_id) => {

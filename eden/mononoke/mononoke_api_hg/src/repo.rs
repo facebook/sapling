@@ -17,7 +17,7 @@ use bytes::Bytes;
 use changesets::{ChangesetInsert, Changesets};
 use context::{CoreContext, SessionClass};
 use edenapi_types::{AnyId, UploadToken};
-use ephemeral_blobstore::{Bubble, BubbleId, RepoEphemeralBlobstore};
+use ephemeral_blobstore::{Bubble, BubbleId, RepoEphemeralBlobstore, StorageLocation};
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
@@ -313,11 +313,11 @@ impl HgRepoContext {
     pub async fn changeset_exists_by_bonsai(
         &self,
         changeset_id: ChangesetId,
-        bubble_id: Option<BubbleId>,
+        storage_location: StorageLocation,
     ) -> Result<bool, MononokeError> {
         Ok(self
             .repo
-            .changeset_exists_by_bonsai(changeset_id, bubble_id)
+            .changeset_exists_by_bonsai(changeset_id, storage_location)
             .await?)
     }
 

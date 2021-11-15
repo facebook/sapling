@@ -20,7 +20,7 @@ mod handle;
 mod store;
 mod view;
 
-pub use crate::bubble::{Bubble, BubbleId};
+pub use crate::bubble::{Bubble, BubbleId, StorageLocation};
 pub use crate::builder::RepoEphemeralBlobstoreBuilder;
 pub use crate::changesets::EphemeralChangesets;
 pub use crate::error::EphemeralBlobstoreError;

@@ -58,7 +58,7 @@ enum CommitIdentityScheme {
 struct EphemeralBonsai {
   1: binary bonsai_id;
 
-  /// Needs to be positive.
+  /// If 0, means the bubble is unknown and should be fetched
   2: i64 bubble_id;
 }
 

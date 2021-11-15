@@ -138,9 +138,16 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                         e
                     ))
                 })?;
-                let bubble_id = BubbleId::try_from(ephemeral.bubble_id).map_err(|_| {
-                    errors::invalid_request(format!("invalid bubble id {}", ephemeral.bubble_id))
-                })?;
+                let bubble_id = if ephemeral.bubble_id == 0 {
+                    None
+                } else {
+                    Some(BubbleId::try_from(ephemeral.bubble_id).map_err(|_| {
+                        errors::invalid_request(format!(
+                            "invalid bubble id {}",
+                            ephemeral.bubble_id
+                        ))
+                    })?)
+                };
                 Ok(ChangesetSpecifier::EphemeralBonsai(cs_id, bubble_id))
             }
             thrift::CommitId::UnknownField(_) => Err(errors::invalid_request(format!(

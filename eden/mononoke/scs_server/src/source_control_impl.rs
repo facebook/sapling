@@ -10,7 +10,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use ephemeral_blobstore::BubbleId;
+use ephemeral_blobstore::{BubbleId, RepoEphemeralBlobstore};
 use fbinit::FacebookInit;
 use futures::try_join;
 use futures_ext::FbFutureExt;
@@ -211,18 +211,23 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
     ) -> Result<RepoContext, errors::ServiceError> {
-        self.repo_with_bubble(ctx, repo, None).await
+        self.repo_with_bubble(ctx, repo, |_| async { Ok(None) })
+            .await
     }
 
-    async fn repo_with_bubble(
+    async fn repo_with_bubble<F, R>(
         &self,
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
-        bubble: Option<BubbleId>,
-    ) -> Result<RepoContext, errors::ServiceError> {
+        bubble_fetcher: F,
+    ) -> Result<RepoContext, errors::ServiceError>
+    where
+        F: FnOnce(RepoEphemeralBlobstore) -> R,
+        R: Future<Output = anyhow::Result<Option<BubbleId>>>,
+    {
         let repo = self
             .mononoke
-            .repo_with_bubble(ctx, &repo.name, bubble)
+            .repo_with_bubble(ctx, &repo.name, bubble_fetcher)
             .await?
             .ok_or_else(|| errors::repo_not_found(repo.description()))?;
         Ok(repo)
@@ -235,8 +240,12 @@ impl SourceControlServiceImpl {
         commit: &thrift::CommitSpecifier,
     ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
+        let bubble_fetcher = {
+            let specifier = changeset_specifier.clone();
+            move |ephemeral| async move { specifier.bubble_id(ephemeral).await }
+        };
         let repo = self
-            .repo_with_bubble(ctx, &commit.repo, changeset_specifier.bubble_id())
+            .repo_with_bubble(ctx, &commit.repo, bubble_fetcher)
             .await?;
         let changeset = repo
             .changeset(changeset_specifier)
