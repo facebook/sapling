@@ -292,7 +292,7 @@ ImmediateFuture<std::vector<folly::Try<T>>> collectAll(
 template <typename T>
 ImmediateFuture<std::vector<T>> collectAllSafe(
     std::vector<ImmediateFuture<T>> futures) {
-  return collectAll(std::move(futures))
+  return facebook::eden::collectAll(std::move(futures))
       .thenValue(
           [](std::vector<folly::Try<T>> futures) -> folly::Try<std::vector<T>> {
             std::vector<T> res;
@@ -359,7 +359,7 @@ collectAll(Fs&&... fs) {
 template <typename... Fs>
 ImmediateFuture<std::tuple<typename folly::remove_cvref_t<Fs>::value_type...>>
 collectAllSafe(Fs&&... fs) {
-  return collectAll(static_cast<Fs&&>(fs)...)
+  return facebook::eden::collectAll(static_cast<Fs&&>(fs)...)
       .thenValue(
           [](std::tuple<
               folly::Try<typename folly::remove_cvref_t<Fs>::value_type>...>&&
