@@ -7,6 +7,8 @@
 
 mod filestore;
 
+#[cfg(unix)]
+use std::os::unix::prelude::MetadataExt;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -35,7 +37,9 @@ impl Logger {
         let mut storage: Option<Mutex<FileStore>> = None;
 
         if let Some(repo) = repo {
-            if repo.config().get_or("runlog", "enable", || false)? {
+            if repo.config().get_or("runlog", "enable", || false)?
+                && !accidentally_running_as_root(repo)
+            {
                 let dir = repo.shared_dot_hg_path().join("runlog");
 
                 // Probabilistically clean up old entries to avoid doing the work every time.
@@ -88,6 +92,26 @@ impl Logger {
 
         Ok(())
     }
+}
+
+#[cfg(unix)]
+fn accidentally_running_as_root(repo: &Repo) -> bool {
+    // Check if we are root and repo is not owned by root.
+
+    if unsafe { libc::geteuid() } != 0 {
+        return false;
+    }
+
+    match std::fs::metadata(repo.shared_dot_hg_path()) {
+        Ok(m) => m.uid() != 0,
+        // err on side of not writing files as root
+        Err(_) => true,
+    }
+}
+
+#[cfg(not(unix))]
+fn accidentally_running_as_root(repo: &Repo) -> bool {
+    false
 }
 
 /// Entry represents one runlog entry (i.e. a single hg command
