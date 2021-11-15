@@ -12,7 +12,9 @@ use std::sync::Arc;
 
 use ephemeral_blobstore::{BubbleId, RepoEphemeralBlobstore};
 use fbinit::FacebookInit;
+use futures::future::BoxFuture;
 use futures::try_join;
+use futures::FutureExt;
 use futures_ext::FbFutureExt;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
@@ -233,6 +235,14 @@ impl SourceControlServiceImpl {
         Ok(repo)
     }
 
+    fn bubble_fetcher_for_changeset(
+        &self,
+        specifier: ChangesetSpecifier,
+    ) -> impl FnOnce(RepoEphemeralBlobstore) -> BoxFuture<'static, anyhow::Result<Option<BubbleId>>>
+    {
+        move |ephemeral| async move { specifier.bubble_id(ephemeral).await }.boxed()
+    }
+
     /// Get the repo and changeset specified by a `thrift::CommitSpecifier`.
     pub(crate) async fn repo_changeset(
         &self,
@@ -240,12 +250,12 @@ impl SourceControlServiceImpl {
         commit: &thrift::CommitSpecifier,
     ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
-        let bubble_fetcher = {
-            let specifier = changeset_specifier.clone();
-            move |ephemeral| async move { specifier.bubble_id(ephemeral).await }
-        };
         let repo = self
-            .repo_with_bubble(ctx, &commit.repo, bubble_fetcher)
+            .repo_with_bubble(
+                ctx,
+                &commit.repo,
+                self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
+            )
             .await?;
         let changeset = repo
             .changeset(changeset_specifier)
@@ -262,11 +272,23 @@ impl SourceControlServiceImpl {
         commit: &thrift::CommitSpecifier,
         other_commit: &thrift::CommitId,
     ) -> Result<(RepoContext, ChangesetContext, ChangesetContext), errors::ServiceError> {
-        let repo = self.repo(ctx, &commit.repo).await?;
         let changeset_specifier =
             ChangesetSpecifier::from_request(&commit.id).context("invalid target commit id")?;
         let other_changeset_specifier = ChangesetSpecifier::from_request(other_commit)
             .context("invalid or missing other commit id")?;
+        if other_changeset_specifier.in_bubble() {
+            Err(errors::invalid_request(format!(
+                "Can't compare against a snapshot: {}",
+                other_changeset_specifier
+            )))?
+        }
+        let repo = self
+            .repo_with_bubble(
+                ctx,
+                &commit.repo,
+                self.bubble_fetcher_for_changeset(changeset_specifier.clone()),
+            )
+            .await?;
         let (changeset, other_changeset) = try_join!(
             async {
                 Ok::<_, errors::ServiceError>(

@@ -69,6 +69,14 @@ impl From<GitSha1> for ChangesetSpecifier {
 }
 
 impl ChangesetSpecifier {
+    pub fn in_bubble(&self) -> bool {
+        use ChangesetSpecifier::*;
+        match self {
+            EphemeralBonsai(_, _) => true,
+            Bonsai(_) | Hg(_) | Globalrev(_) | GitSha1(_) | Svnrev(_) => false,
+        }
+    }
+
     pub async fn bubble_id(
         &self,
         ephemeral_blobstore: RepoEphemeralBlobstore,
