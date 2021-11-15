@@ -90,12 +90,7 @@ struct ThreadLocalBucket {
     ProcessAccessLog* owner;
   };
 
-  struct InitedMicroLock : folly::MicroLock {
-    InitedMicroLock() {
-      init();
-    }
-  };
-  folly::Synchronized<State, InitedMicroLock> state_;
+  folly::Synchronized<State, folly::MicroLock> state_;
 };
 
 namespace {
