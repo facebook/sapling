@@ -533,9 +533,9 @@ void EdenServiceHandler::getSHA1(
     out.emplace_back();
     SHA1Result& sha1Result = out.back();
     if (result.hasValue()) {
-      sha1Result.set_sha1(thriftHash20(result.value()));
+      sha1Result.sha1_ref() = thriftHash20(result.value());
     } else {
-      sha1Result.set_error(newEdenError(result.exception()));
+      sha1Result.error_ref() = newEdenError(result.exception());
     }
   }
 }
@@ -1206,11 +1206,11 @@ EdenServiceHandler::semifuture_getEntryInformation(
             for (auto& item : done) {
               EntryInformationOrError result;
               if (item.hasException()) {
-                result.set_error(newEdenError(item.exception()));
+                result.error_ref() = newEdenError(item.exception());
               } else {
                 EntryInformation info;
                 info.dtype_ref() = static_cast<Dtype>(item.value());
-                result.set_info(info);
+                result.info_ref() = info;
               }
               out->emplace_back(std::move(result));
             }
@@ -1247,7 +1247,7 @@ EdenServiceHandler::semifuture_getFileInformation(
                              info.mode_ref() = st.st_mode;
 
                              FileInformationOrError result;
-                             result.set_info(info);
+                             result.info_ref() = info;
 
                              return result;
                            })
@@ -1260,7 +1260,7 @@ EdenServiceHandler::semifuture_getFileInformation(
             for (auto& item : done) {
               if (item.hasException()) {
                 FileInformationOrError result;
-                result.set_error(newEdenError(item.exception()));
+                result.error_ref() = newEdenError(item.exception());
                 out->emplace_back(std::move(result));
               } else {
                 out->emplace_back(item.value());
