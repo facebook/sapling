@@ -27,12 +27,12 @@ pub enum BackingStore {
 use BackingStore::*;
 
 impl BackingStore {
-    pub fn new<P: AsRef<Path>>(repository: P, use_edenapi: bool) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(repository: P, use_edenapi: bool, aux_data: bool) -> Result<Self> {
         let hg = repository.as_ref().join(".hg");
         let config = configparser::hg::load::<String, String>(Some(&hg), None)?;
 
         Ok(if config.get_or_default("scmstore", "backingstore")? {
-            New(BackingScmStores::new(&config, &hg, use_edenapi)?)
+            New(BackingScmStores::new(&config, &hg, use_edenapi, aux_data)?)
         } else {
             Old(BackingContentStores::new(&config, &hg, use_edenapi)?)
         })

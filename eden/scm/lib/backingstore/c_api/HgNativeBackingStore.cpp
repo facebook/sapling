@@ -91,7 +91,8 @@ HgNativeBackingStore::HgNativeBackingStore(
     folly::StringPiece repository,
     bool useEdenApi) {
   RustCFallible<RustBackingStore> store(
-      rust_backingstore_new(repository.data(), repository.size(), useEdenApi),
+      rust_backingstore_new(
+          repository.data(), repository.size(), useEdenApi, false),
       rust_backingstore_free);
 
   if (store.isError()) {

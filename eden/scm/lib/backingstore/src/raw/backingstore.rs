@@ -36,12 +36,13 @@ fn backingstore_new(
     repository: *const c_char,
     repository_len: size_t,
     use_edenapi: bool,
+    aux_data: bool,
 ) -> Result<*mut BackingStore> {
     super::init::backingstore_global_init();
 
     let repository = stringpiece_to_slice(repository, repository_len)?;
     let repo = str::from_utf8(repository)?;
-    let store = Box::new(BackingStore::new(repo, use_edenapi)?);
+    let store = Box::new(BackingStore::new(repo, use_edenapi, aux_data)?);
 
     Ok(Box::into_raw(store))
 }
@@ -51,8 +52,9 @@ pub extern "C" fn rust_backingstore_new(
     repository: *const c_char,
     repository_len: size_t,
     use_edenapi: bool,
+    aux_data: bool,
 ) -> CFallible<BackingStore> {
-    backingstore_new(repository, repository_len, use_edenapi).into()
+    backingstore_new(repository, repository_len, use_edenapi, aux_data).into()
 }
 
 #[no_mangle]
