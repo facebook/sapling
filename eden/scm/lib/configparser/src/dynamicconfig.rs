@@ -128,8 +128,7 @@ pub struct Generator {
     tiers: HashSet<String>,
     repo: Repo,
     group: HgGroup,
-    shard: u8,
-    user_shard: u8,
+    shards: Shards,
     pub(crate) config: ConfigSet,
     platform: Platform,
     domain: Domain,
@@ -172,10 +171,9 @@ impl Generator {
             .flatten()
             .map_or("".to_string(), |m| m.as_str().to_string());
 
-        let shard = get_shard(&hostname);
-        let user_shard = get_shard(&user_name);
+        let shards = Shards::new(&hostname, &user_name);
 
-        let group = get_hg_group(&tiers, shard);
+        let group = get_hg_group(&tiers, &shards);
 
         let platform = get_platform();
 
@@ -192,8 +190,7 @@ impl Generator {
             tiers,
             repo,
             group,
-            shard,
-            user_shard,
+            shards,
             config: ConfigSet::new(),
             platform,
             domain,
@@ -222,10 +219,10 @@ impl Generator {
     }
 
     #[cfg(test)]
-    pub(crate) fn set_inputs(&mut self, tiers: HashSet<String>, group: HgGroup, shard: u8) {
+    pub(crate) fn set_inputs(&mut self, tiers: HashSet<String>, group: HgGroup, shards: Shards) {
         self.tiers = tiers;
         self.group = group;
-        self.shard = shard;
+        self.shards = shards;
     }
 
     #[allow(dead_code)]
@@ -259,7 +256,7 @@ impl Generator {
             return true;
         }
 
-        self.shard < shard
+        self.shards.host_shard < shard
     }
 
     #[allow(dead_code)]
@@ -268,7 +265,7 @@ impl Generator {
             return true;
         }
 
-        self.user_shard < shard
+        self.shards.user_shard < shard
     }
 
     #[allow(dead_code)]
@@ -285,7 +282,7 @@ impl Generator {
 
         let rollout = (end - start).num_seconds() as f64;
         let now = (now - start).num_seconds() as f64;
-        let shard_ratio = self.shard as f64 / 100.0;
+        let shard_ratio = self.shards.time_shard as f64 / 100.0;
 
         Ok(now >= (rollout * shard_ratio))
     }
@@ -352,10 +349,29 @@ impl Generator {
     }
 }
 
-fn get_shard(input: &str) -> u8 {
-    let mut hasher = DefaultHasher::new();
-    input.hash(&mut hasher);
-    (hasher.finish() % 100).try_into().unwrap()
+pub(crate) struct Shards {
+    pub(crate) host_shard: u8,
+    pub(crate) user_shard: u8,
+    pub(crate) time_shard: u8,
+}
+
+impl Shards {
+    pub(crate) fn new(host: &str, user: &str) -> Self {
+        let mut hasher = DefaultHasher::new();
+        let current = |hasher: &DefaultHasher| (hasher.finish() % 100).try_into().unwrap();
+        host.hash(&mut hasher);
+        let host_shard = current(&hasher);
+        "time".hash(&mut hasher);
+        let time_shard = current(&hasher);
+        let mut hasher = DefaultHasher::new();
+        user.hash(&mut hasher);
+        let user_shard = current(&hasher);
+        Self {
+            host_shard,
+            time_shard,
+            user_shard,
+        }
+    }
 }
 
 pub(crate) fn get_platform() -> Platform {
@@ -380,7 +396,7 @@ pub(crate) fn get_platform() -> Platform {
     }
 }
 
-fn get_hg_group(tiers: &HashSet<String>, shard: u8) -> HgGroup {
+fn get_hg_group(tiers: &HashSet<String>, shards: &Shards) -> HgGroup {
     let sandcastle = tiers.contains("sandcastle")
         || tiers.contains("sandcastlefog")
         || tiers.contains("sandcastle.releng")
@@ -401,7 +417,7 @@ fn get_hg_group(tiers: &HashSet<String>, shard: u8) -> HgGroup {
         || alpha_file_exists
     {
         HgGroup::Alpha
-    } else if shard < 20 && !sandcastle {
+    } else if shards.host_shard < 20 && !sandcastle {
         HgGroup::Beta
     } else {
         HgGroup::Stable
@@ -423,6 +439,54 @@ pub(crate) mod tests {
     use super::*;
 
     #[test]
+    fn test_timeshard() {
+        let repo_name = "test_repo";
+        let username = "username";
+
+        let gen_with_shard = move |host_shard: u8, time_shard: u8| {
+            let mut gen =
+                Generator::new(repo_name.to_string(), PathBuf::new(), username.to_string())
+                    .unwrap();
+            gen.set_inputs(
+                Default::default(),
+                HgGroup::Stable,
+                Shards {
+                    user_shard: 0,
+                    host_shard,
+                    time_shard,
+                },
+            );
+            gen
+        };
+        fn test_rules(gen: &mut Generator, _canary_remote: Option<String>) -> Result<()> {
+            let range = Range {
+                start: HgTime::parse("2000-10-01").unwrap(),
+                end: HgTime::parse("2000-10-11").unwrap(),
+            };
+            if gen.in_timeshard(range).unwrap() && gen.in_shard(20) {
+                gen.set_config("a", "b", "c");
+            }
+            Ok(())
+        }
+        HgTime::parse("2000-10-06")
+            .unwrap()
+            .set_as_now_for_testing();
+        let mut in_shards = 0;
+        for host in 0..10 {
+            for time in 0..10 {
+                let mut gen = gen_with_shard(host * 10 + 1, time * 10 + 1);
+                gen._execute(test_rules, None).unwrap();
+                let in_shard = gen.config.get("a", "b").is_some();
+                if in_shard {
+                    in_shards += 1;
+                }
+                assert_eq!(in_shard, host < 2 && time < 5);
+            }
+        }
+        assert_eq!(in_shards, 10);
+    }
+
+    #[test]
     fn test_basic() {
         let repo_name = "test_repo";
         let username = "username";
@@ -431,8 +495,15 @@ pub(crate) mod tests {
 
         let tiers = HashSet::from_iter(["in_tier1", "in_tier2"].iter().map(|s| s.to_string()));
         let group = HgGroup::Alpha;
-        let shard = 10;
-        generator.set_inputs(tiers, group, shard);
+        generator.set_inputs(
+            tiers,
+            group,
+            Shards {
+                user_shard: 10,
+                time_shard: 10,
+                host_shard: 10,
+            },
+        );
 
         fn test_rules(gen: &mut Generator, _canary_remote: Option<String>) -> Result<()> {
             if gen.in_tiers(&["in_tier1"]) {
