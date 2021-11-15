@@ -513,7 +513,7 @@ def dispatch(req):
             output = bindings.tracing.singleton.ascii(
                 # Minimum resolution = 1% of max(duration, threshold)
                 # It's in microseconds (1e6) to divide it by 100 = 1e4
-                (max([duration, threshold]) * 1e4)
+                int((max([duration, threshold]) * 1e4))
             )
             if req.ui.configbool("tracing", "stderr"):
                 req.ui.warn("%s\n" % output)
