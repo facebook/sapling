@@ -227,8 +227,11 @@ Future<shared_ptr<const Blob>> ObjectStore::getBlob(
         }
         // Quick check in-memory cache first, before doing expensive
         // calculations. If metadata is present in cache, it most certainly
-        // exists in local store too
-        if (!self->metadataCache_.rlock()->exists(id)) {
+        // exists in local store too.
+        // Additionally check if we use aux metadata from mercurial, and do not
+        // compute it in this case.
+        if (!self->edenConfig_->useAuxMetadata.getValue() &&
+            !self->metadataCache_.rlock()->exists(id)) {
           auto metadata =
               self->localStore_->putBlobMetadata(id, result.blob.get());
           self->metadataCache_.wlock()->set(id, metadata);
