@@ -259,6 +259,20 @@ ImmediateFuture<BlobMetadata> ObjectStore::getBlobMetadata(
     }
   }
 
+  if (edenConfig_->useAuxMetadata.getValue()) {
+    // if configured, check hg cache for aux metadata
+    auto localMetadata = backingStore_->getLocalBlobMetadata(id, context);
+    if (localMetadata) {
+      metadataCache_.wlock()->set(id, *localMetadata);
+      context.didFetch(
+          ObjectFetchContext::BlobMetadata,
+          id,
+          ObjectFetchContext::FromDiskCache);
+      updateProcessFetch(context);
+      return *localMetadata;
+    }
+  }
+
   auto self = shared_from_this();
 
   // Check local store

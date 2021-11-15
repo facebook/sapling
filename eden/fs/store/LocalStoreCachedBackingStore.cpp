@@ -70,6 +70,13 @@ LocalStoreCachedBackingStore::getTree(
       });
 }
 
+std::unique_ptr<BlobMetadata>
+LocalStoreCachedBackingStore::getLocalBlobMetadata(
+    const ObjectId& id,
+    ObjectFetchContext& context) {
+  return backingStore_->getLocalBlobMetadata(id, context);
+}
+
 folly::SemiFuture<BackingStore::GetBlobRes>
 LocalStoreCachedBackingStore::getBlob(
     const ObjectId& id,

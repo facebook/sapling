@@ -221,6 +221,16 @@ std::unique_ptr<Tree> HgDatapackStore::getTree(
   return nullptr;
 }
 
+std::unique_ptr<BlobMetadata> HgDatapackStore::getLocalBlobMetadata(
+    const Hash20& id) {
+  auto metadata = store_.getBlobMetadata(id.getBytes(), true /*local_only*/);
+  if (metadata) {
+    return std::make_unique<BlobMetadata>(
+        BlobMetadata{Hash20{metadata->content_sha1}, metadata->total_size});
+  }
+  return nullptr;
+}
+
 void HgDatapackStore::flush() {
   store_.flush();
 }

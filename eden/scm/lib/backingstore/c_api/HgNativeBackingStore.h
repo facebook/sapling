@@ -20,10 +20,17 @@ namespace facebook::eden {
 
 class HgNativeBackingStore {
  public:
-  HgNativeBackingStore(folly::StringPiece repository, bool useEdenApi);
+  HgNativeBackingStore(
+      folly::StringPiece repository,
+      bool useEdenApi,
+      bool useAuxData);
 
   std::unique_ptr<folly::IOBuf>
   getBlob(folly::ByteRange name, folly::ByteRange node, bool local);
+
+  std::shared_ptr<RustFileAuxData> getBlobMetadata(
+      folly::ByteRange node,
+      bool local);
 
   /**
    * Imports a list of files from Rust contentstore. `names` and `nodes` are

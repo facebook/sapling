@@ -11,6 +11,7 @@
 #include <folly/futures/Promise.h>
 
 #include "eden/fs/model/Blob.h"
+#include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"
@@ -26,8 +27,9 @@ class HgDatapackStore {
   HgDatapackStore(
       AbsolutePathPiece repository,
       bool useEdenApi,
+      bool useAuxData,
       std::shared_ptr<ReloadableConfig> config)
-      : store_{repository.stringPiece(), useEdenApi},
+      : store_{repository.stringPiece(), useEdenApi, useAuxData},
         config_{std::move(config)} {}
 
   /**
@@ -65,6 +67,11 @@ class HgDatapackStore {
       const Hash20& manifestId,
       const ObjectId& edenTreeId,
       LocalStore::WriteBatch* writeBatch);
+
+  /**
+   * Reads blob metadata from hg cache.
+   */
+  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(const Hash20& id);
 
   /**
    * Flush any pending writes to disk.

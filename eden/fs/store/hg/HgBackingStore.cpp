@@ -177,6 +177,7 @@ HgBackingStore::HgBackingStore(
       datapackStore_(
           repository,
           config->getEdenConfig()->useEdenApi.getValue(),
+          config->getEdenConfig()->useAuxMetadata.getValue(),
           config) {
   HgImporter importer(repository, stats);
   const auto& options = importer.getOptions();
@@ -216,7 +217,7 @@ HgBackingStore::HgBackingStore(
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
       config_(std::move(config)),
       serverThreadPool_{importThreadPool_.get()},
-      datapackStore_(repository, false, config_) {
+      datapackStore_(repository, false, false, config_) {
   const auto& options = importer->getOptions();
   repoName_ = options.repoName;
   metadataImporter_ = metadataImporterFactory(config_, repoName_, localStore_);
@@ -273,8 +274,11 @@ void HgBackingStore::getTreeBatch(
   std::vector<folly::SemiFuture<std::unique_ptr<TreeMetadata>>> metadataFutures;
   metadataFutures.reserve(requests.size());
 
-  bool metadataEnabled =
-      metadataImporter_->metadataFetchingAvailable() && prefetchMetadata;
+  // When aux metadata is enabled hg fetches file metadata along with get tree
+  // request, no need for separate network call!
+  bool useAuxMetadata = config_->getEdenConfig()->useAuxMetadata.getValue();
+  bool metadataEnabled = metadataImporter_->metadataFetchingAvailable() &&
+      prefetchMetadata && !useAuxMetadata;
 
   // Kick off all the fetching
   for (const auto& request : requests) {
@@ -334,7 +338,11 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
   auto treeMetadataFuture =
       folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
-  if (metadataImporter_->metadataFetchingAvailable() && prefetchMetadata) {
+  // When aux metadata is enabled hg fetches file metadata along with get tree
+  // request, no need for separate network call!
+  bool useAuxMetadata = config_->getEdenConfig()->useAuxMetadata.getValue();
+  if (metadataImporter_->metadataFetchingAvailable() && prefetchMetadata &&
+      !useAuxMetadata) {
     treeMetadataFuture =
         metadataImporter_->getTreeMetadata(edenTreeID, manifestNode);
   }

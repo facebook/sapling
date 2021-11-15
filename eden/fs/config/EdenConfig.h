@@ -501,6 +501,11 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> enforceParents{"hg:enforce-parents", true, this};
 
   /**
+   * Controls whether EdenFS reads blob metadata directly from hg
+   */
+  ConfigSetting<bool> useAuxMetadata{"hg:use-aux-metadata", false, this};
+
+  /**
    * If this config is set, embed HgId into ObjectId, instead of using proxy
    * hash.
    */

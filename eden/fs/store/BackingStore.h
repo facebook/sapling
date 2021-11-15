@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "eden/fs/model/RootId.h"
+#include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -97,6 +98,15 @@ class BackingStore : public RootIdCodec {
   virtual folly::SemiFuture<GetBlobRes> getBlob(
       const ObjectId& id,
       ObjectFetchContext& context) = 0;
+
+  /**
+   * Fetch blob metadata if available locally.
+   */
+  virtual std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
+      const ObjectId& /*id*/,
+      ObjectFetchContext& /*context*/) {
+    return nullptr;
+  }
 
   /**
    * Prefetch all the blobs represented by the HashRange.

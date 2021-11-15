@@ -195,6 +195,10 @@ class HgQueuedBackingStore final : public BackingStore {
       const HgProxyHash& proxyHash,
       ObjectFetchContext& context);
 
+  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
+      const ObjectId& id,
+      ObjectFetchContext& context) override;
+
   /**
    * Fetch a tree from Mercurial.
    *

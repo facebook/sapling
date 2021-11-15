@@ -89,10 +89,11 @@ void getTreeBatchCallback(
 
 HgNativeBackingStore::HgNativeBackingStore(
     folly::StringPiece repository,
-    bool useEdenApi) {
+    bool useEdenApi,
+    bool useAuxData) {
   RustCFallible<RustBackingStore> store(
       rust_backingstore_new(
-          repository.data(), repository.size(), useEdenApi, false),
+          repository.data(), repository.size(), useEdenApi, useAuxData),
       rust_backingstore_free);
 
   if (store.isError()) {
@@ -126,6 +127,26 @@ std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
   }
 
   return bytesToIOBuf(result.unwrap().release());
+}
+
+std::shared_ptr<RustFileAuxData> HgNativeBackingStore::getBlobMetadata(
+    folly::ByteRange node,
+    bool local) {
+  XLOG(DBG7) << "Importing blob metadata"
+             << " node=" << folly::hexlify(node) << " from hgcache";
+  RustCFallible<RustFileAuxData> result(
+      rust_backingstore_get_file_aux(
+          store_.get(), node.data(), node.size(), local),
+      rust_file_aux_free);
+
+  if (result.isError()) {
+    XLOG(DBG5) << "Error while getting blob metadata"
+               << " node=" << folly::hexlify(node)
+               << " from backingstore: " << result.getError();
+    return nullptr;
+  }
+
+  return result.unwrap();
 }
 
 void HgNativeBackingStore::getBlobBatch(

@@ -49,6 +49,10 @@ class LocalStoreCachedBackingStore : public BackingStore {
       const ObjectId& id,
       ObjectFetchContext& context) override;
 
+  std::unique_ptr<BlobMetadata> getLocalBlobMetadata(
+      const ObjectId& id,
+      ObjectFetchContext& context) override;
+
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
       ObjectIdRange ids,
       ObjectFetchContext& context) override;

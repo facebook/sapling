@@ -284,6 +284,21 @@ folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTree(
   return getTreeImpl(id, proxyHash, context);
 }
 
+std::unique_ptr<BlobMetadata> HgQueuedBackingStore::getLocalBlobMetadata(
+    const ObjectId& id,
+    ObjectFetchContext& /*context*/) {
+  HgProxyHash proxyHash;
+  try {
+    proxyHash =
+        HgProxyHash::load(localStore_.get(), id, "getLocalBlobMetadata");
+  } catch (const std::exception&) {
+    logMissingProxyHash();
+    throw;
+  }
+  return backingStore_->getDatapackStore().getLocalBlobMetadata(
+      proxyHash.revHash());
+}
+
 folly::SemiFuture<BackingStore::GetTreeRes> HgQueuedBackingStore::getTreeImpl(
     const ObjectId& id,
     const HgProxyHash& proxyHash,
