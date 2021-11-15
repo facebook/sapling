@@ -64,9 +64,12 @@ impl BackingScmStores {
             }
         }
 
+        let filestore = Arc::new(filestore.build()?);
+        let treestore = treestore.filestore(filestore.clone());
+
         Ok(Self {
-            filestore: Arc::new(filestore.build()?),
             treestore: Arc::new(treestore.build()?),
+            filestore,
         })
     }
 
