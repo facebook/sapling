@@ -414,6 +414,7 @@ pub struct TreeStoreBuilder<'a> {
     edenapi: Option<Arc<EdenApiTreeStore>>,
     memcache: Option<Arc<MemcacheStore>>,
     contentstore: Option<Arc<ContentStore>>,
+    filestore: Option<Arc<FileStore>>,
 }
 
 impl<'a> TreeStoreBuilder<'a> {
@@ -428,6 +429,7 @@ impl<'a> TreeStoreBuilder<'a> {
             edenapi: None,
             memcache: None,
             contentstore: None,
+            filestore: None,
         }
     }
 
@@ -473,6 +475,11 @@ impl<'a> TreeStoreBuilder<'a> {
 
     pub fn override_edenapi(mut self, use_edenapi: bool) -> Self {
         self.override_edenapi = Some(use_edenapi);
+        self
+    }
+
+    pub fn filestore(mut self, filestore: Arc<FileStore>) -> Self {
+        self.filestore = Some(filestore);
         self
     }
 
@@ -568,6 +575,7 @@ impl<'a> TreeStoreBuilder<'a> {
             edenapi,
 
             contentstore,
+            filestore: self.filestore,
 
             creation_time: Instant::now(),
             flush_on_drop: true,

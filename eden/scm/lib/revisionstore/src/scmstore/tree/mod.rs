@@ -29,6 +29,7 @@ use crate::scmstore::fetch::CommonFetchState;
 use crate::scmstore::fetch::FetchErrors;
 use crate::scmstore::fetch::FetchResults;
 use crate::scmstore::fetch::KeyFetchError;
+use crate::scmstore::file::FileStore;
 use crate::scmstore::tree::types::LazyTree;
 use crate::scmstore::tree::types::StoreTree;
 use crate::scmstore::tree::types::TreeAttributes;
@@ -74,6 +75,9 @@ pub struct TreeStore {
     /// should alert / log something, as this should never happen if TreeStore is implemented
     /// correctly.
     pub contentstore: Option<Arc<ContentStore>>,
+
+    /// A FileStore, which can be used for fetching and caching file aux data for a tree.
+    pub filestore: Option<Arc<FileStore>>,
 
     pub creation_time: Instant,
 
@@ -265,6 +269,8 @@ impl TreeStore {
             edenapi: None,
             contentstore: None,
             creation_time: Instant::now(),
+            // TODO(meyer): Do we actually need the outer FileStore / TreeStore to be Arc'd?
+            filestore: self.filestore.as_ref().map(|store| Arc::new(store.local())),
             flush_on_drop: false,
         }
     }
@@ -283,6 +289,7 @@ impl TreeStore {
 
             contentstore: None,
 
+            filestore: None,
             creation_time: Instant::now(),
             flush_on_drop: true,
         }
@@ -333,6 +340,8 @@ impl LegacyStore for TreeStore {
 
             edenapi: None,
             contentstore: None,
+
+            filestore: None,
             creation_time: Instant::now(),
             flush_on_drop: true,
         })
