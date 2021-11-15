@@ -417,7 +417,8 @@ def _setupupdates(ui):
         try:
             results = orig(repo, node, branchmerge, *args, **kwargs)
         except Exception:
-            repo._clearpendingprofileconfig()
+            if _hassparse(repo):
+                repo._clearpendingprofileconfig()
             raise
 
         # If we're updating to a location, clean up any stale temporary includes

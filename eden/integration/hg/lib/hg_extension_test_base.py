@@ -52,6 +52,7 @@ def get_default_hgrc() -> configparser.ConfigParser:
         "purge": "",
         "rebase": "",
         "reset": "",
+        "sparse": "",
         "strip": "",
         "tweakdefaults": "",
         "undo": "",
