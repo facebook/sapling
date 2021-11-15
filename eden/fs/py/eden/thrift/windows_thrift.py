@@ -178,23 +178,21 @@ class WindowsSocketHandle(object):
         if retcode == -1:
             errcode = WSAGetLastError()
             if errcode == WSAECONNREFUSED:
-                # This error will be returned when Edenfs is not running
-                raise TTransportException(
-                    type=TTransportException.NOT_OPEN, message="eden not running"
+                raise OSError(
+                    errno.ECONNREFUSED,
+                    "Windows UDS: Connection refused",
                 )
             elif errcode == WSAETIMEDOUT:
                 raise socket.timeout()
             elif errcode == WSAEWOULDBLOCK:
                 raise OSError(
                     errno.EWOULDBLOCK,
-                    strerror="Resource temporarily unavailable",
-                    winerror=WSAEWOULDBLOCK,
+                    "Windows UDS: Resource temporarily unavailable",
                 )
             elif errcode == WSATRY_AGAIN:
                 raise OSError(
                     errno.EAGAIN,
-                    strerror="Resource temporarily unavailable",
-                    winerror=WSATRY_AGAIN,
+                    "Windows UDS: Resource temporarily unavailable",
                 )
             else:
                 raise WindowsSocketException(errcode)
@@ -322,6 +320,14 @@ class WinTSocket(TSocket):
         self.setHandle(handle)
         try:
             handle.connect(self._unix_socket)
+        except OSError as e:
+            self.close()
+            if e.errno == errno.ECONNREFUSED:
+                # This error will be returned when Edenfs is not running
+                raise TTransportException(
+                    type=TTransportException.NOT_OPEN, message="eden not running"
+                )
+            raise e
         except Exception:
             self.close()
             raise
