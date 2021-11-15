@@ -127,86 +127,7 @@ Make sure runlog works with progress disabled.
     "exit_code": 0,
     "progress": []
   } (no-eol)
-Make sure runlog works with non-rust renderer.
-  $ hg progresstest --waitfile=$TESTTMP/go --config progress.renderer=classic 2 &
-  $ waitforrunlog
-  {
-    "id": ".*", (re)
-    "command": [
-      "progresstest",
-      "--waitfile=$TESTTMP/go",
-      "--config",
-      "progress.renderer=classic",
-      "2"
-    ],
-    "pid": \d+, (re)
-    "start_time": ".*", (re)
-    "end_time": null,
-    "exit_code": null,
-    "progress": []
-  } (no-eol)
-  $ waitforrunlog
-  {
-    "id": ".*", (re)
-    "command": [
-      "progresstest",
-      "--waitfile=$TESTTMP/go",
-      "--config",
-      "progress.renderer=classic",
-      "2"
-    ],
-    "pid": \d+, (re)
-    "start_time": ".*", (re)
-    "end_time": null,
-    "exit_code": null,
-    "progress": [
-      {
-        "topic": "eating",
-        "unit": "apples",
-        "total": 2,
-        "position": 1
-      }
-    ]
-  } (no-eol)
-  $ waitforrunlog
-  {
-    "id": ".*", (re)
-    "command": [
-      "progresstest",
-      "--waitfile=$TESTTMP/go",
-      "--config",
-      "progress.renderer=classic",
-      "2"
-    ],
-    "pid": \d+, (re)
-    "start_time": ".*", (re)
-    "end_time": null,
-    "exit_code": null,
-    "progress": [
-      {
-        "topic": "eating",
-        "unit": "apples",
-        "total": 2,
-        "position": 2
-      }
-    ]
-  } (no-eol)
-  $ waitforrunlog
-  {
-    "id": ".*", (re)
-    "command": [
-      "progresstest",
-      "--waitfile=$TESTTMP/go",
-      "--config",
-      "progress.renderer=classic",
-      "2"
-    ],
-    "pid": \d+, (re)
-    "start_time": ".*", (re)
-    "end_time": ".*", (re)
-    "exit_code": 0,
-    "progress": []
-  } (no-eol)
+
 Make sure runlog works with rust renderer.
   $ rm $TESTTMP/go
   $ hg progresstest --waitfile=$TESTTMP/go --config progress.renderer=rust:simple 2 &
@@ -339,3 +260,10 @@ Show only running commands (i.e. "debugrunlog" command itself)
       exit_code: None,
       progress: [],
   }
+
+Test we don't bail out if we can't write runlog.
+  $ rm -rf .hg/runlog
+  $ touch .hg/runlog
+  $ hg root
+  Error creating runlogger: * (glob)
+  $TESTTMP/repo

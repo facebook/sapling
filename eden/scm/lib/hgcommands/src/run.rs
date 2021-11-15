@@ -128,7 +128,13 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                 let config = dispatcher.config();
                 let global_opts = dispatcher.global_opts();
 
-                run_logger = Some(runlog::Logger::new(dispatcher.repo(), args[1..].to_vec())?);
+                run_logger = match runlog::Logger::new(dispatcher.repo(), args[1..].to_vec()) {
+                    Ok(logger) => Some(logger),
+                    Err(err) => {
+                        let _ = io.write_err(format!("Error creating runlogger: {}\n", err));
+                        None
+                    }
+                };
 
                 setup_http(config, global_opts);
 
@@ -136,7 +142,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
                     config,
                     global_opts,
                     io,
-                    run_logger.as_ref().unwrap().clone(),
+                    run_logger.clone(),
                     Arc::downgrade(&in_scope),
                 );
 
@@ -195,10 +201,10 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // so we need to flush now.
     blackbox::sync();
 
-    if let Some(rl) = run_logger {
+    if let Some(rl) = &run_logger {
         if let Err(err) = rl.close(exit_code) {
             // Command has already finished - not worth bailing due to this error.
-            let _ = write!(io.error(), "Error writing final runlog: {}\n", err);
+            let _ = io.write_err(format!("Error writing final runlog: {}\n", err));
         }
     }
 
@@ -294,7 +300,7 @@ fn spawn_progress_thread(
     config: &ConfigSet,
     global_opts: &HgGlobalOpts,
     io: &IO,
-    run_logger: Arc<runlog::Logger>,
+    run_logger: Option<Arc<runlog::Logger>>,
     in_scope: Weak<()>,
 ) -> Result<()> {
     // See 'hg help config.progress' for the config options.
@@ -369,15 +375,17 @@ fn spawn_progress_thread(
                 }
             }
 
-            if last_runlog_time.map_or(true, |i| now - i >= runlog_interval) {
-                let progress = registry
-                    .list_progress_bar()
-                    .into_iter()
-                    .map(runlog::Progress::new)
-                    .collect();
+            if let Some(run_logger) = &run_logger {
+                if last_runlog_time.map_or(true, |i| now - i >= runlog_interval) {
+                    let progress = registry
+                        .list_progress_bar()
+                        .into_iter()
+                        .map(runlog::Progress::new)
+                        .collect();
 
-                if let Err(err) = run_logger.update_progress(progress) {
-                    let _ = write!(stderr, "Error updating runlog progress: {}\n", err);
+                    if let Err(err) = run_logger.update_progress(progress) {
+                        let _ = write!(stderr, "Error updating runlog progress: {}\n", err);
+                    }
                 }
 
                 last_runlog_time = Some(now);
