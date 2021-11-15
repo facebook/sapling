@@ -74,10 +74,10 @@ Test that 'hg doctor' can fix them:
     Checking roots at "*": (glob)
     Processing IndexedLog: Filesystem("*") (glob)
     Rebuilt metadata
-    Verified 6 entries, 168 bytes in log
+    Verified 3 entries, 90 bytes in log
     Index "reverse" passed integrity check
     
-    Checking blobs referred by 7 Roots:
+    Checking blobs referred by 4 Roots:
     All Roots are verified.
   
   

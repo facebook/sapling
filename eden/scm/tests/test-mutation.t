@@ -783,12 +783,15 @@ Successors Sets
   a3d17304151f
       2f9a29935e68
       5236c38a7e4b 6583166b698f
+      5236c38a7e4b f6c9a27925b0
   54fe561aeb5b
       54fe561aeb5b
   a3a02814b8b7
       2f9a29935e68
   02f5790aa53c
+      2f9a29935e68
       5236c38a7e4b 6583166b698f
+      5236c38a7e4b f6c9a27925b0
   e67cd4473b7c
       e67cd4473b7c
   2f9a29935e68
@@ -798,6 +801,7 @@ Successors Sets
   131b22b23838
       131b22b23838
   f6c9a27925b0
+      5236c38a7e4b 6583166b698f
       6583166b698f
   5236c38a7e4b
       5236c38a7e4b
@@ -814,6 +818,8 @@ Successors Sets
   a3a02814b8b7
       2f9a29935e68
   02f5790aa53c
+      2f9a29935e68
+      8bab98b2a161 6583166b698f
       8bab98b2a161 f6c9a27925b0
   e67cd4473b7c
       e67cd4473b7c
@@ -825,6 +831,7 @@ Successors Sets
       131b22b23838
   f6c9a27925b0
       6583166b698f
+      8bab98b2a161 6583166b698f
   5236c38a7e4b
       5236c38a7e4b
   6583166b698f
@@ -963,9 +970,12 @@ Successors Sets
   48b9aae0607f
       48b9aae0607f
   ac2f7407182b
+      22d356388a54
       5f50ab0b5b00
-      a50d498b7a3c
       c784f3cd8bdc
+      c784f3cd8bdc 22d356388a54
+      c784f3cd8bdc 5f50ab0b5b00
+      c784f3cd8bdc a50d498b7a3c
   847007ced9a7
       9e63cfda1f79
       e0ad3106c6e7
@@ -980,6 +990,9 @@ Successors Sets
   e0ad3106c6e7
       e0ad3106c6e7
   ecd3acbeabe4
+      22d356388a54
+      5f50ab0b5b00
+      a50d498b7a3c
       c784f3cd8bdc
   9e63cfda1f79
       9e63cfda1f79
@@ -1029,7 +1042,10 @@ Successors Sets
   e0ad3106c6e7
       e0ad3106c6e7
   ecd3acbeabe4
+      22d356388a54
       4411f298bdd6
+      5f50ab0b5b00
+      a50d498b7a3c
   9e63cfda1f79
       9e63cfda1f79
   da7ad28f0dba
@@ -1085,8 +1101,10 @@ Many splits and folds:
   $ hg debugsuccessorssets $A --hidden
   ac2f7407182b
       6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
-      d91873bbc3e2 096075241d66 c3cd5a5aad51 b5712e65f604
+      d91873bbc3e2 096075241d66 b5712e65f604
       d91873bbc3e2 444227ba9301 114f9718bb14
+      d91873bbc3e2 7acf57a544c8
+      d91873bbc3e2 cfe3132d4f90
   $ hg debugsuccessorssets $A --closest --hidden
   ac2f7407182b
       45724aa2168b 34d53c2267d8 70dd76fd55e1
@@ -1095,10 +1113,14 @@ Many splits and folds:
   $ hg debugsuccessorssets $A
   ac2f7407182b
       6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
-      d91873bbc3e2 096075241d66 c3cd5a5aad51 b5712e65f604
+      d91873bbc3e2
+      d91873bbc3e2 096075241d66 b5712e65f604
       d91873bbc3e2 444227ba9301 114f9718bb14
+      d91873bbc3e2 7acf57a544c8
   $ hg debugsuccessorssets $A --closest
   ac2f7407182b
+      45724aa2168b 34d53c2267d8
+      45724aa2168b 34d53c2267d8 096075241d66 b5712e65f604
       45724aa2168b 34d53c2267d8 444227ba9301 114f9718bb14
       45724aa2168b 34d53c2267d8 7acf57a544c8
       6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
@@ -1108,22 +1130,24 @@ Many splits and folds:
   $ hg debugsuccessorssets $A
   ac2f7407182b
       6c7c301750f1 7cd6c6978add 5ac9f6030240 4c1829ae45a4
-      d91873bbc3e2 096075241d66 c3cd5a5aad51
+      d91873bbc3e2
+      d91873bbc3e2 096075241d66
       d91873bbc3e2 444227ba9301 114f9718bb14
+      d91873bbc3e2 7acf57a544c8
   $ hg log -r "all()" -T "{desc} {mutation_descs}\n"
   Z 
-  A (Rewritten using split into H, I, Q, R) (Rewritten using split into H, I, L) (Rewritten using split into D, E, F, G)
+  A (Rewritten using split into H, I) (Rewritten using split into H, I, M) (Rewritten using split into H, I, Q, R) (Rewritten using split into H, I, L) (Rewritten using split into D, E, F, G)
   H (Rewritten using fold into K)
   D 
   I (Rewritten using fold into K)
   E 
   K 
   F 
-  L (Rewritten using split into M, O)
+  L (Rewritten using split into M, O) (Rewritten using rewrite into O)
   Q 
   G 
   M 
-  R 
+  R (Rewritten using rewrite into M)
   O 
 
 Metaedit with descendant amended commits

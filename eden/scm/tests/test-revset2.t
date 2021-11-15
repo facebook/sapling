@@ -1631,6 +1631,7 @@ Test obsstore related revsets
   Z
 
   $ hg log -r "successors($F)" -T '{desc}\n' --hidden
+  D
   F
   G
 
@@ -1667,15 +1668,18 @@ Test obsstore related revsets
   B
   C
   D
+  F
 
   $ hg log -r "predecessors($D)" -T '{desc}\n' --hidden
   B
   C
   D
+  F
 
   $ hg log -r "predecessors($D,1)" -T '{desc}\n' --hidden
   C
   D
+  F
 
   $ hg log -r "successors($B)-obsolete()" -T '{desc}\n' --hidden
   E
