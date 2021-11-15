@@ -195,6 +195,13 @@ function mononoke_blobstore_healer {
     "$@" 2>&1 | grep -v "Could not connect to a replica"
 }
 
+function mononoke_sqlblob_gc {
+  GLOG_minloglevel=5 "$MONONOKE_SQLBLOB_GC" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    "$@" 2>&1 | grep -v "Could not connect to a replica"
+}
+
 function mononoke_x_repo_sync() {
   source_repo_id=$1
   target_repo_id=$2
