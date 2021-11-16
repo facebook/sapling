@@ -21,7 +21,7 @@ anyhow = "1.0"
 eventsource = "0.5"
 filetime = "0.2.9"
 lazy_static = "1.0"
-log = { version = "0.4.8", features = ["kv_unstable"] }
+log = { version = "0.4.14", features = ["kv_unstable", "kv_unstable_std"] }
 regex = "1.5.4"
 reqwest = { version = "0.11.4", features = ["blocking", "json", "rustls-tls", "stream"] }
 rust-ini = { version = "0.17", features = ["inline-comment"] }
