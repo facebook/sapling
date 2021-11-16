@@ -57,7 +57,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         res,
         Some(WorkingCopyEquivalence::WorkingCopy(
             bonsai::TWOS_CSID,
-            Some(version_name.clone()),
+            version_name.clone(),
         ))
     );
 
@@ -87,7 +87,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         res,
         Some(WorkingCopyEquivalence::WorkingCopy(
             bonsai::FOURS_CSID,
-            Some(version_name.clone()),
+            version_name.clone(),
         ))
     );
 
@@ -169,7 +169,7 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
         res,
         Some(WorkingCopyEquivalence::WorkingCopy(
             bonsai::TWOS_CSID,
-            Some(version_name)
+            version_name
         ))
     );
 
@@ -186,13 +186,6 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
         .await
         .expect("Failed to insert working copy");
     assert_eq!(result, true);
-
-    let res = mapping
-        .get_equivalent_working_copy(&ctx, REPO_ZERO, bonsai::THREES_CSID, REPO_ONE)
-        .await
-        .expect("get equivalent wc failed, should succeed");
-
-    assert_eq!(res, Some(WorkingCopyEquivalence::NoWorkingCopy(None)));
 
     let should_fail = EquivalentWorkingCopyEntry {
         large_repo_id: REPO_ZERO,

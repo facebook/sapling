@@ -1856,6 +1856,7 @@ async fn preserve_premerge_commit(
         bcs_id
     );
 
+    let version = CommitSyncConfigVersion("noop".to_string());
     // Doesn't matter what mover to use - we are going to preserve the commit anyway
     let small_to_large_sync_config = {
         let repos = CommitSyncRepos::SmallToLarge {
@@ -1868,7 +1869,6 @@ async fn preserve_premerge_commit(
         let bookmark_renamer_type = BookmarkRenamerType::Noop;
         let mover_type = MoverType::Noop;
 
-        let version = CommitSyncConfigVersion("noop".to_string());
         let version_config = CommitSyncConfig {
             large_repo_id: large_repo.get_repoid(),
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
@@ -1879,7 +1879,7 @@ async fn preserve_premerge_commit(
         };
 
         lv_cfg_src.add_config(version_config);
-        lv_cfg_src.add_current_version(version);
+        lv_cfg_src.add_current_version(version.clone());
         let common = bookmark_renamer_type
             .get_common_repo_config(small_repo.get_repoid(), large_repo.get_repoid());
         lv_cfg_src.add_common_config(common);
@@ -1907,7 +1907,7 @@ async fn preserve_premerge_commit(
                     large_bcs_id: bcs_id,
                     small_repo_id: another_repo_id,
                     small_bcs_id: None,
-                    version_name: None,
+                    version_name: Some(version.clone()),
                 },
             )
             .await?;

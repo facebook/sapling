@@ -11,7 +11,7 @@ use sql::{Connection, Transaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use context::{CoreContext, PerfCounterType};
@@ -163,9 +163,9 @@ pub struct EquivalentWorkingCopyEntry {
 pub enum WorkingCopyEquivalence {
     /// There's no matching working copy. It can happen if a pre-big-merge commit from one small
     /// repo is mapped into another small repo
-    NoWorkingCopy(Option<CommitSyncConfigVersion>),
+    NoWorkingCopy(CommitSyncConfigVersion),
     /// ChangesetId of matching working copy and CommitSyncConfigVersion that was used for mapping
-    WorkingCopy(ChangesetId, Option<CommitSyncConfigVersion>),
+    WorkingCopy(ChangesetId, CommitSyncConfigVersion),
 }
 
 #[async_trait]
@@ -515,6 +515,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                     WorkingCopy(wc, mapping) => (Some(wc), mapping),
                     NoWorkingCopy(mapping) => (None, mapping),
                 };
+                let expected_version = Some(expected_version);
                 if (expected_bcs_id != small_bcs_id) || (expected_version != version_name) {
                     let err = ErrorKind::InconsistentWorkingCopyEntry {
                         expected_bcs_id,
@@ -573,18 +574,22 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                     maybe_mapping,
                 ) = row;
 
+                let mapping = maybe_mapping.ok_or_else(|| {
+                    anyhow!(
+                        "unexpected empty mapping for {}, {}->{}",
+                        source_bcs_id,
+                        source_repo_id,
+                        target_repo_id
+                    )
+                })?;
                 if target_repo_id == large_repo_id {
-                    Some(WorkingCopyEquivalence::WorkingCopy(
-                        large_bcs_id,
-                        maybe_mapping,
-                    ))
+                    Some(WorkingCopyEquivalence::WorkingCopy(large_bcs_id, mapping))
                 } else {
                     match maybe_small_bcs_id {
-                        Some(small_bcs_id) => Some(WorkingCopyEquivalence::WorkingCopy(
-                            small_bcs_id,
-                            maybe_mapping,
-                        )),
-                        None => Some(WorkingCopyEquivalence::NoWorkingCopy(maybe_mapping)),
+                        Some(small_bcs_id) => {
+                            Some(WorkingCopyEquivalence::WorkingCopy(small_bcs_id, mapping))
+                        }
+                        None => Some(WorkingCopyEquivalence::NoWorkingCopy(mapping)),
                     }
                 }
             }

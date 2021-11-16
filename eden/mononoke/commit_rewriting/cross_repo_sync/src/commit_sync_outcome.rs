@@ -227,19 +227,9 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         Some(WorkingCopyEquivalence::NoWorkingCopy(_version)) => {
             Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate))
         }
-        Some(WorkingCopyEquivalence::WorkingCopy(cs_id, maybe_version)) => {
-            let version = maybe_version.ok_or_else(|| {
-                anyhow!(
-                    "no sync commit version specified for equivalent working copy {} -> {} (source repo {}, target repo {})",
-                    source_cs_id.0, cs_id,
-                    source_repo_id,
-                    target_repo_id,
-                )
-            })?;
-            Ok(Some(
-                PluralCommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
-            ))
-        }
+        Some(WorkingCopyEquivalence::WorkingCopy(cs_id, version)) => Ok(Some(
+            PluralCommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
+        )),
     }
 }
 
