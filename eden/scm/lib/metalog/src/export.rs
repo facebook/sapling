@@ -43,11 +43,12 @@ impl MetaLog {
             // From the implicit "Parent: " messages.
             // They might include pending changes. See D30970502.
             for root_id in root_ids.iter().copied() {
-                let root = load_root(&self.blobs, root_id)?;
+                let root = load_root(&self.blobs.read(), root_id)?;
                 for line in root.message.lines() {
                     if let Some(hex_parent) = line.strip_prefix("Parent: ") {
                         if let Ok(parent_root_id) = Id20::from_hex(hex_parent.as_bytes()) {
-                            if let Ok(_parent_root) = load_root(&self.blobs, parent_root_id) {
+                            if let Ok(_parent_root) = load_root(&self.blobs.read(), parent_root_id)
+                            {
                                 let parents = parents.entry(root_id).or_default();
                                 if !parents.contains(&parent_root_id) {
                                     parents.push(parent_root_id);
@@ -90,7 +91,7 @@ impl MetaLog {
                 }
             }
 
-            let root = load_root(&self.blobs, root_id)?;
+            let root = load_root(&self.blobs.read(), root_id)?;
 
             // Add blobs.
             for (_key, SerId20(value_id)) in root.map.iter() {
@@ -100,6 +101,7 @@ impl MetaLog {
                 let mut writer = repo.blob_writer(None)?;
                 let value = self
                     .blobs
+                    .read()
                     .get(*value_id)?
                     .ok_or_else(|| self.error(format!("cannot read {:?}", value_id)))?;
                 writer.write_all(&value)?;

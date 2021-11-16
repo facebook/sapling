@@ -11,6 +11,7 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Context;
 use indexedlog::lock::ScopedDirLock;
@@ -18,6 +19,7 @@ use indexedlog::log as ilog;
 use indexedlog::Repair;
 use lazy_static::lazy_static;
 use minibytes::Bytes;
+use parking_lot::RwLock;
 use serde::Deserialize;
 use serde::Serialize;
 pub use zstore::Id20;
@@ -54,10 +56,10 @@ pub struct MetaLog {
 
     /// An append-only store - each entry contains a plain Id20
     /// to an object that should be a root.
-    log: ilog::Log,
+    log: Arc<RwLock<ilog::Log>>,
 
     /// General purposed blob store, keyed by Id20.
-    pub(crate) blobs: Zstore,
+    pub(crate) blobs: Arc<RwLock<Zstore>>,
 
     /// The Id20 of root that has been written to disk.
     pub(crate) orig_root_id: Id20,
@@ -112,8 +114,8 @@ impl MetaLog {
             path: path.to_path_buf(),
             store_path,
             compaction_epoch,
-            log,
-            blobs,
+            log: Arc::new(RwLock::new(log)),
+            blobs: Arc::new(RwLock::new(blobs)),
             orig_root_id,
             root,
         };
@@ -193,7 +195,7 @@ impl MetaLog {
     pub fn get(&self, name: &str) -> Result<Option<Bytes>> {
         tracing::trace!("get {}", name);
         match self.root.map.get(name) {
-            Some(SerId20(id)) => Ok(self.blobs.get(*id)?),
+            Some(SerId20(id)) => Ok(self.blobs.read().get(*id)?),
             None => Ok(None),
         }
     }
@@ -207,7 +209,7 @@ impl MetaLog {
             Some(SerId20(id)) => vec![*id],
             None => Vec::new(),
         };
-        let new_id = self.blobs.insert(value, &delta_base_candidates)?;
+        let new_id = self.blobs.write().insert(value, &delta_base_candidates)?;
         self.root.map.insert(name.to_string(), SerId20(new_id));
         Ok(new_id)
     }
@@ -253,7 +255,7 @@ impl MetaLog {
                 actual_compaction_epoch.unwrap_or(0)
             )));
         }
-        if self.log.is_changed() && !options.detached {
+        if self.log.read().is_changed() && !options.detached {
             // If 'detached' is set, then just write it in a conflict-free way,
             // since the final root object is not committed yet.
             let ancestor = Self::open(&self.path, Some(self.orig_root_id))?;
@@ -265,11 +267,13 @@ impl MetaLog {
         self.root.timestamp = options.timestamp;
         let bytes = mincode::serialize(&self.root)?;
         let orig_root_id = self.orig_root_id;
-        let id = self.blobs.insert(&bytes, &vec![self.orig_root_id])?;
-        self.blobs.flush()?;
+        let mut blobs = self.blobs.write();
+        let id = blobs.insert(&bytes, &vec![self.orig_root_id])?;
+        blobs.flush()?;
         if !options.detached {
-            self.log.append(id.as_ref())?;
-            self.log.sync()?;
+            let mut log = self.log.write();
+            log.append(id.as_ref())?;
+            log.sync()?;
             self.orig_root_id = id;
         }
         let current_store_paths = match self.compaction_epoch {
