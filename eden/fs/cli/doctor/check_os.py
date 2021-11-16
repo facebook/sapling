@@ -27,11 +27,13 @@ def _parse_os_kernel_version(version: str) -> Tuple[int, ...]:
     parsed_kernel_version = tuple(map(int, split_version))
     if len(parsed_kernel_version) < 4:
         # right pad with zeros if the kernel version isn't 4 numbers
+        # pyre-fixme[60]: Concatenation not yet support for multiple variadic
+        #  tuples: `*parsed_kernel_version,
+        #  *[0].__mul__(4.__sub__(len(parsed_kernel_version)))`.
         parsed_kernel_version = (
             *parsed_kernel_version,
             *[0] * (4 - len(parsed_kernel_version)),
         )
-    # pyre-fixme[7]: Expected `Tuple[int, ...]` but got `Tuple[object, ...]`.
     return parsed_kernel_version
 
 

@@ -118,7 +118,9 @@ class localrepository(object):
     _wlockfreeprefix: Set[str]
     _wlockref: Optional[_weakref.ReferenceType[Any]]
     auditor: edenscm.mercurial.pathutil.pathauditor
+    # pyre-fixme[11]: Annotation `ui` is not defined as a type.
     baseui: edenscm.mercurial.ui.ui
+    # pyre-fixme[11]: Annotation `vfs` is not defined as a type.
     cachevfs: edenscm.mercurial.vfs.vfs
     changelog: edenscm.mercurial.changelog.changelog
     connectionpool: edenscm.mercurial.connectionpool.connectionpool
