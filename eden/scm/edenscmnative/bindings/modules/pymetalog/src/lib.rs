@@ -49,9 +49,9 @@ py_class!(pub class metalog |py| {
 
     /// Check out a "root".
     def checkout(&self, root: Bytes) -> PyResult<Self> {
-        let path = self.fspath(py);
         let root = Id20::from_slice(root.as_ref()).map_pyerr(py)?;
-        let log = MetaLog::open(&path, Some(root)).map_pyerr(py)?;
+        let log = self.log(py).borrow().checkout(root).map_pyerr(py)?;
+        let path = self.fspath(py);
         Self::create_instance(py, RefCell::new(log), path.clone())
     }
 
