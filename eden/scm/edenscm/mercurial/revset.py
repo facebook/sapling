@@ -34,6 +34,7 @@ from . import (
     scmutil,
     smartset,
     util,
+    visibility,
 )
 from .i18n import _
 
@@ -2387,6 +2388,30 @@ def successors(repo, subset, x):
     startdepth, stopdepth = _getdepthargs("successors", args)
 
     return _successors(repo, subset, args["set"], startdepth, stopdepth)
+
+
+@predicate("lost()")
+def lost(repo, subset, x):
+    def yieldlost(repo):
+        metalog = repo.metalog()
+        roots = metalog.roots()
+        lostrevs = set()
+        tonode = repo.changelog.node
+        for root in reversed(roots):
+            meta = metalog.checkout(root)
+            heads = visibility.decodeheads(meta["visibleheads"] or b"")
+            # ignore heads no longer in the repo
+            heads = repo.changelog.filternodes(heads, local=True)
+            invisible = repo.revs("ancestors(%ln) - all()", heads)
+            for rev in invisible:
+                if (
+                    rev not in lostrevs
+                    and len(mutation.lookupsuccessors(repo, tonode(rev))) == 0
+                ):
+                    lostrevs.add(rev)
+                    yield rev
+
+    return subset & generatorset(yieldlost(repo), repo=repo, iterasc=True)
 
 
 def _successors(repo, subset, targetset, startdepth, stopdepth):
