@@ -6,9 +6,7 @@
  */
 
 use std::collections::HashSet;
-use std::num::NonZeroU64;
 use std::sync::Arc;
-use std::time::Duration;
 
 use configmodel::Config;
 use configmodel::ConfigExt;
@@ -23,9 +21,6 @@ use dag::Vertex;
 use dag::VertexName;
 use edenapi::configmodel;
 use edenapi::types::make_hash_lookup_request;
-use edenapi::types::AnyFileContentId;
-use edenapi::types::AnyId;
-use edenapi::types::BonsaiChangesetContent;
 use edenapi::types::BookmarkEntry;
 use edenapi::types::CommitGraphEntry;
 use edenapi::types::CommitHashLookupResponse;
@@ -34,28 +29,17 @@ use edenapi::types::CommitKnownResponse;
 use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
 use edenapi::types::CommitRevlogData;
-use edenapi::types::EphemeralPrepareResponse;
-use edenapi::types::FetchSnapshotRequest;
-use edenapi::types::FetchSnapshotResponse;
 use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
 use edenapi::types::FileSpec;
-use edenapi::types::HgFilenodeData;
 use edenapi::types::HgId;
-use edenapi::types::HgMutationEntryContent;
 use edenapi::types::HistoryEntry;
 use edenapi::types::Key;
-use edenapi::types::LookupResponse;
 use edenapi::types::NodeInfo;
 use edenapi::types::Parents;
 use edenapi::types::RepoPathBuf;
 use edenapi::types::TreeAttributes;
 use edenapi::types::TreeEntry;
-use edenapi::types::UploadHgChangeset;
-use edenapi::types::UploadToken;
-use edenapi::types::UploadTokensResponse;
-use edenapi::types::UploadTreeEntry;
-use edenapi::types::UploadTreeResponse;
 use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use edenapi::Response;
@@ -66,7 +50,6 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use http::StatusCode;
 use http::Version;
-use minibytes::Bytes;
 use nonblocking::non_blocking_result;
 use tracing::debug;
 use tracing::trace;
@@ -427,88 +410,6 @@ impl EdenApi for EagerRepo {
         Ok(values)
     }
 
-    async fn lookup_batch(
-        &self,
-        _repo: String,
-        _items: Vec<AnyId>,
-        _bubble_id: Option<NonZeroU64>,
-    ) -> Result<Vec<LookupResponse>, EdenApiError> {
-        Err(not_implemented_error(
-            "EagerRepo does not support lookup_batch endpoint".to_string(),
-        ))
-    }
-
-    async fn process_files_upload(
-        &self,
-        _repo: String,
-        _data: Vec<(AnyFileContentId, Bytes)>,
-        _bubble_id: Option<NonZeroU64>,
-    ) -> Result<Response<UploadToken>, EdenApiError> {
-        Err(not_implemented_error(
-            "EagerRepo does not support process_file_upload endpoint".to_string(),
-        ))
-    }
-
-    async fn upload_filenodes_batch(
-        &self,
-        _repo: String,
-        _items: Vec<HgFilenodeData>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        Err(not_implemented_error(
-            "EagerRepo does not support upload_filenodes_batch endpoint".to_string(),
-        ))
-    }
-
-    async fn upload_trees_batch(
-        &self,
-        _repo: String,
-        _items: Vec<UploadTreeEntry>,
-    ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
-        Err(not_implemented_error(
-            "EagerRepo does not support upload_trees_batch endpoint".to_string(),
-        ))
-    }
-
-    async fn upload_changesets(
-        &self,
-        _repo: String,
-        _changesets: Vec<UploadHgChangeset>,
-        _mutations: Vec<HgMutationEntryContent>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        Err(not_implemented_error(
-            "EagerRepo does not support upload_changesets endpoint".to_string(),
-        ))
-    }
-
-    async fn upload_bonsai_changeset(
-        &self,
-        _repo: String,
-        _changeset: BonsaiChangesetContent,
-        _bubble_id: Option<std::num::NonZeroU64>,
-    ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        Err(not_implemented_error(
-            "EagerRepo does not support upload_bonsai_changeset endpoint".to_string(),
-        ))
-    }
-
-    async fn ephemeral_prepare(
-        &self,
-        _repo: String,
-        _custom_duration: Option<Duration>,
-    ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
-        Err(not_implemented_error(
-            "EagerRepo does not support ephemeral_prepare endpoint".to_string(),
-        ))
-    }
-
-    async fn fetch_snapshot(
-        &self,
-        _repo: String,
-        _request: FetchSnapshotRequest,
-    ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
-        unimplemented!()
-    }
-
     async fn hash_prefixes_lookup(
         &self,
         _repo: String,
@@ -538,14 +439,6 @@ impl EdenApi for EagerRepo {
                 },
             )
             .collect()
-    }
-
-    async fn download_file(
-        &self,
-        _repo: String,
-        _token: UploadToken,
-    ) -> Result<Bytes, EdenApiError> {
-        unimplemented!()
     }
 }
 
