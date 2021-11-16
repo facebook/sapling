@@ -123,6 +123,21 @@ impl MetaLog {
         Ok(metalog)
     }
 
+    /// Obtain a new `MetaLog` with a different `root_id`.
+    pub fn checkout(&self, root_id: Id20) -> Result<Self> {
+        let root = load_root(&self.blobs.read(), root_id)?;
+        let metalog = Self {
+            path: self.path.clone(),
+            store_path: self.store_path.clone(),
+            compaction_epoch: self.compaction_epoch,
+            log: self.log.clone(),
+            blobs: self.blobs.clone(),
+            orig_root_id: root_id,
+            root,
+        };
+        Ok(metalog)
+    }
+
     /// Compact the metalog. Compaction reclaims storage by retaining only blobs
     /// reachable from the current root. All other roots (and blobs) are
     /// discarded.
@@ -579,6 +594,11 @@ mod tests {
         assert_eq!(metalog.get("foo").unwrap().unwrap(), b"bar2");
         assert_eq!(metalog.message(), "commit 2");
         assert_eq!(metalog.timestamp(), 22);
+
+        let metalog = metalog.checkout(root_ids[1]).unwrap();
+        assert_eq!(metalog.get("foo").unwrap().unwrap(), b"bar");
+        assert_eq!(metalog.message(), "commit 1");
+        assert_eq!(metalog.timestamp(), 11);
     }
 
     #[test]
