@@ -64,6 +64,7 @@ use skeleton_manifest::RootSkeletonManifestId;
 use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use sql::{rusqlite::Connection as SqliteConnection, Connection, SqlConnectionsWithSchema};
 use sql_construct::SqlConstruct;
+use synced_commit_mapping::SqlSyncedCommitMapping;
 use unodes::RootUnodeManifestId;
 
 /// Factory to construct test repositories.
@@ -152,6 +153,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
         let metadata_db =
             SqlConnectionsWithSchema::new_single(Connection::with_sqlite(metadata_con));
 

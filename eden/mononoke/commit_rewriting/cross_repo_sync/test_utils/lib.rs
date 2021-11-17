@@ -29,7 +29,6 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use mononoke_types::{ChangesetId, DateTime, MPath};
-use sql::rusqlite::Connection as SqliteConnection;
 use sql_construct::SqlConstruct;
 use std::{collections::HashMap, sync::Arc};
 use synced_commit_mapping::{
@@ -117,10 +116,7 @@ where
 pub async fn init_small_large_repo(
     ctx: &CoreContext,
 ) -> Result<(Syncers<SqlSyncedCommitMapping>, CommitSyncConfig), Error> {
-    let metadata_con = SqliteConnection::open_in_memory()?;
-    metadata_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
-    let hg_mutation_con = SqliteConnection::open_in_memory()?;
-    let mut factory = TestRepoFactory::with_sqlite_connection(metadata_con, hg_mutation_con)?;
+    let mut factory = TestRepoFactory::new()?;
     let megarepo: BlobRepo = factory.with_id(RepositoryId::new(1)).build()?;
     let mapping =
         SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());
