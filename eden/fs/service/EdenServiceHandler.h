@@ -86,6 +86,11 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
+  ImmediateFuture<off_t> getFileSizeForPath(
+      AbsolutePathPiece mountPoint,
+      folly::StringPiece path,
+      ObjectFetchContext& fetchContext);
+
   void getCurrentJournalPosition(
       JournalPosition& out,
       std::unique_ptr<std::string> mountPoint) override;
@@ -117,6 +122,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   semifuture_getFileInformation(
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths) override;
+
+  folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
+  semifuture_getAttributesFromFiles(
+      std::unique_ptr<GetAttributesFromFilesParams> params) override;
 
   folly::Future<std::unique_ptr<Glob>> future_globFiles(
       std::unique_ptr<GlobParams> params) override;

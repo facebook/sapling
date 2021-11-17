@@ -7,6 +7,7 @@
 
 #include "eden/fs/service/EdenServiceHandler.h"
 
+#include <sys/types.h>
 #include <algorithm>
 #include <optional>
 #include <typeinfo>
@@ -264,6 +265,13 @@ folly::SemiFuture<ReturnType> wrapSemiFuture(
       [logHelper = std::move(logHelper)](folly::Try<ReturnType>&& ret) {
         return std::forward<folly::Try<ReturnType>>(ret);
       });
+}
+
+template <typename ReturnType>
+ImmediateFuture<ReturnType> wrapImmediateFuture(
+    std::unique_ptr<ThriftLogHelper> logHelper,
+    ImmediateFuture<ReturnType>&& f) {
+  return std::move(f).ensure([logHelper = std::move(logHelper)]() {});
 }
 
 #undef EDEN_MICRO
@@ -572,6 +580,34 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
         }
         return fileInode->getSha1(fetchContext);
       });
+}
+
+ImmediateFuture<off_t> EdenServiceHandler::getFileSizeForPath(
+    AbsolutePathPiece mountPoint,
+    StringPiece path,
+    ObjectFetchContext& fetchContext) {
+  if (path.empty()) {
+    return ImmediateFuture<off_t>(newEdenError(
+        EINVAL,
+        EdenErrorType::ARGUMENT_ERROR,
+        "path cannot be the empty string"));
+  }
+
+  try {
+    auto edenMount = server_->getMount(mountPoint);
+    auto relativePath = RelativePathPiece{path};
+    return edenMount->getInode(relativePath, fetchContext)
+        .thenValue([&fetchContext](const InodePtr& inode) {
+          return inode.asFilePtr()
+              ->stat(fetchContext)
+              .thenValue([](const struct stat& s) {
+                return ImmediateFuture<off_t>(s.st_size);
+              });
+        });
+  } catch (const std::exception& e) {
+    return ImmediateFuture<off_t>(
+        newEdenError(EINVAL, EdenErrorType::ARGUMENT_ERROR, e.what()));
+  }
 }
 
 void EdenServiceHandler::getBindMounts(
@@ -1271,6 +1307,81 @@ EdenServiceHandler::semifuture_getFileInformation(
           }));
 }
 
+#define ATTR_BITMASK(req, attr) \
+  ((req) & static_cast<uint64_t>((FileAttributes::attr)))
+
+folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
+EdenServiceHandler::semifuture_getAttributesFromFiles(
+    std::unique_ptr<GetAttributesFromFilesParams> params) {
+  auto mountPoint = params->get_mountPoint();
+  auto mountPath = AbsolutePathPiece{mountPoint};
+  auto paths = params->get_paths();
+  auto req_bitmask = params->get_requestedAttributes();
+  auto size_is_req = ATTR_BITMASK(req_bitmask, FILE_SIZE);
+  auto sha1_is_req = ATTR_BITMASK(req_bitmask, SHA1_HASH);
+
+  // Get requested attributes for each path
+  vector<ImmediateFuture<Hash20>> sha1_futures;
+  vector<ImmediateFuture<off_t>> size_futures;
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, mountPoint, toLogArg(paths));
+  for (auto& p : paths) {
+    if (size_is_req) {
+      size_futures.emplace_back(
+          getFileSizeForPath(mountPath, p, helper->getFetchContext()));
+    }
+    if (sha1_is_req) {
+      sha1_futures.emplace_back(
+          getSHA1ForPathDefensively(mountPath, p, helper->getFetchContext()));
+    }
+  }
+
+  // Collect all futures into a single tuple
+  auto sha1_res = collectAll(std::move(sha1_futures));
+  auto size_res = collectAll(std::move(size_futures));
+  auto all_res =
+      facebook::eden::collectAll(std::move(sha1_res), std::move(size_res));
+  return wrapImmediateFuture(
+             std::move(helper),
+             std::move(all_res).thenValue(
+                 [paths = std::move(paths), size_is_req, sha1_is_req](
+                     std::tuple<
+                         folly::Try<std::vector<folly::Try<Hash20>>>,
+                         folly::Try<std::vector<folly::Try<off_t>>>>&&
+                         res_tup) {
+                   auto res = std::make_unique<GetAttributesFromFilesResult>();
+
+                   // Associate each path with a FileAttributeDataOrEdenError
+                   for (auto& p : paths) {
+                     auto i = &p - paths.data();
+                     auto sha1 = sha1_is_req ? std::get<0>(res_tup)->at(i)
+                                             : folly::Try(Hash20());
+                     auto file_size = size_is_req ? std::get<1>(res_tup)->at(i)
+                                                  : folly::Try(off_t(0));
+                     FileAttributeDataOrError file_res;
+
+                     // check for exceptions. if found, return EdenError early
+                     if (sha1_is_req && sha1.hasException()) {
+                       file_res.set_error(newEdenError(sha1.exception()));
+                     } else if (size_is_req && file_size.hasException()) {
+                       file_res.set_error(newEdenError(file_size.exception()));
+                     } else { /* No exceptions, fill in data */
+                       FileAttributeData file_data;
+                       // Only fill in fields if requested
+                       if (sha1_is_req) {
+                         file_data.sha1_ref() = thriftHash20(sha1.value());
+                       }
+                       if (size_is_req) {
+                         file_data.fileSize_ref() = file_size.value();
+                       }
+                       file_res.data_ref() = file_data;
+                     }
+                     res->res_ref()->emplace_back(file_res);
+                   }
+                   return res;
+                 }))
+      .semi();
+}
+
 folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
     folly::StringPiece mountPoint,
     std::vector<std::string> globs,
@@ -1833,7 +1944,6 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
 }
 
 namespace {
-
 class InodeStatusCallbacks : public TraversalCallbacks {
  public:
   explicit InodeStatusCallbacks(

@@ -6,6 +6,7 @@
 
 import configparser
 import errno
+import hashlib
 import inspect
 import logging
 import os
@@ -279,6 +280,18 @@ class EdenTestCase(EdenTestCaseBase):
         fullpath = self.get_path(path)
         with open(fullpath, "r") as f:
             return f.read()
+
+    def get_expected_file_attributes(self, path: str) -> Tuple[bytes, int]:
+        """Get attributes for the file with the specified path inside
+        the eden repository. For now, just sha1 and file size.
+        """
+        fullpath = self.get_path(path)
+        file_size = os.stat(fullpath).st_size
+        ifile = open(fullpath, "rb")
+        file_contents = ifile.read()
+        sha1_hash = hashlib.sha1(file_contents).digest()
+        ifile.close()
+        return (sha1_hash, file_size)
 
     def mkdir(self, path: str) -> None:
         """Call mkdir for the specified path relative to the clone."""

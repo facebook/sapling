@@ -10,11 +10,22 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import Pattern, Union
+from typing import Pattern, Union, TypeVar, List
 
-from facebook.eden.ttypes import ScmFileStatus, SHA1Result, TimeSpec
+from facebook.eden.ttypes import (
+    ScmFileStatus,
+    SHA1Result,
+    TimeSpec,
+    FileAttributeData,
+    FileAttributeDataOrError,
+    FileAttributes,
+    GetAttributesFromFilesParams,
+    GetAttributesFromFilesResult,
+)
 
 from .lib import testcase
+
+EdenThriftResult = TypeVar("EdenThriftResult", FileAttributeDataOrError, SHA1Result)
 
 
 @testcase.eden_repo_test
@@ -105,7 +116,7 @@ class ThriftTest(testcase.EdenRepoTest):
         with self.get_thrift_client() as client:
             results = client.getSHA1(self.mount_path_bytes, [b"./hello"])
         self.assertEqual(1, len(results))
-        self.assert_error(
+        self.assert_sha1_error(
             results[0],
             re.compile(
                 r".*PathComponentValidationError.*: PathComponent must not be \."
@@ -116,40 +127,205 @@ class ThriftTest(testcase.EdenRepoTest):
         with self.get_thrift_client() as client:
             results = client.getSHA1(self.mount_path_bytes, [b""])
         self.assertEqual(1, len(results))
-        self.assert_error(results[0], "path cannot be the empty string")
+        self.assert_sha1_error(results[0], "path cannot be the empty string")
 
     def test_get_sha1_throws_for_directory(self) -> None:
         with self.get_thrift_client() as client:
             results = client.getSHA1(self.mount_path_bytes, [b"adir"])
         self.assertEqual(1, len(results))
-        self.assert_error(results[0], "adir: Is a directory")
+        self.assert_sha1_error(results[0], "adir: Is a directory")
 
     def test_get_sha1_throws_for_non_existent_file(self) -> None:
         with self.get_thrift_client() as client:
             results = client.getSHA1(self.mount_path_bytes, [b"i_do_not_exist"])
         self.assertEqual(1, len(results))
-        self.assert_error(results[0], "i_do_not_exist: No such file or directory")
+        self.assert_sha1_error(results[0], "i_do_not_exist: No such file or directory")
 
     def test_get_sha1_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
         with self.get_thrift_client() as client:
             results = client.getSHA1(self.mount_path_bytes, [b"slink"])
         self.assertEqual(1, len(results))
-        self.assert_error(results[0], "slink: file is a symlink: Invalid argument")
+        self.assert_sha1_error(results[0], "slink: file is a symlink: Invalid argument")
 
-    def assert_error(
+    def assert_eden_error(
+        self, result: EdenThriftResult, error_message: Union[str, Pattern]
+    ) -> None:
+        error = result.get_error()
+        self.assertIsNotNone(error)
+        if isinstance(error_message, str):
+            self.assertEqual(error_message, error.message)
+        else:
+            self.assertRegex(error.message, error_message)
+
+    def assert_sha1_error(
         self, sha1result: SHA1Result, error_message: Union[str, Pattern]
     ) -> None:
         self.assertIsNotNone(sha1result, msg="Must pass a SHA1Result")
         self.assertEqual(
             SHA1Result.ERROR, sha1result.getType(), msg="SHA1Result must be an error"
         )
-        error = sha1result.get_error()
-        self.assertIsNotNone(error)
-        if isinstance(error_message, str):
-            self.assertEqual(error_message, error.message)
-        else:
-            self.assertRegex(error.message, error_message)
+        self.assert_eden_error(sha1result, error_message)
+
+    def get_attributes(
+        self, files: List[bytes], req_attr: int
+    ) -> GetAttributesFromFilesResult:
+        with self.get_thrift_client() as client:
+            thrift_params = GetAttributesFromFilesParams(
+                self.mount_path_bytes,
+                files,
+                req_attr,
+            )
+            return client.getAttributesFromFiles(thrift_params)
+
+    # Change this if more attributes are added
+    ALL_ATTRIBUTES = FileAttributes.FILE_SIZE | FileAttributes.SHA1_HASH
+
+    def get_all_attributes(self, files: List[bytes]) -> GetAttributesFromFilesResult:
+        return self.get_attributes(files, self.ALL_ATTRIBUTES)
+
+    def test_get_attributes(self) -> None:
+        # expected results for file named "hello"
+        expected_hello_sha1, expected_hello_size = self.get_expected_file_attributes(
+            "hello"
+        )
+        expected_hello_data = FileAttributeData(
+            expected_hello_sha1, expected_hello_size
+        )
+        expected_hello_result = FileAttributeDataOrError(expected_hello_data)
+
+        # expected results for file "adir/file"
+        expected_adir_sha1, expected_adir_size = self.get_expected_file_attributes(
+            "adir/file"
+        )
+        expected_adir_data = FileAttributeData(expected_adir_sha1, expected_adir_size)
+        expected_adir_result = FileAttributeDataOrError(expected_adir_data)
+
+        # list of expected_results
+        result_list = [
+            expected_hello_result,
+            expected_adir_result,
+        ]
+        expected_result = GetAttributesFromFilesResult(result_list)
+
+        # Run assertions
+        self.assertEqual(
+            expected_result,
+            self.get_all_attributes([b"hello", b"adir/file"]),
+        )
+
+    def test_get_size_only(self) -> None:
+        # expected size result for file
+        expected_hello_size = self.get_expected_file_attributes("hello")[1]
+        expected_hello_data = FileAttributeData(None, expected_hello_size)
+        expected_hello_result = FileAttributeDataOrError(expected_hello_data)
+
+        # create result object for "hello"
+        result_list = [
+            expected_hello_result,
+        ]
+        expected_result = GetAttributesFromFilesResult(result_list)
+
+        # get actual result
+        results = self.get_attributes([b"hello"], FileAttributes.FILE_SIZE)
+
+        # ensure expected and actual results match
+        self.assertEqual(1, len(results.res))
+        self.assertEqual(expected_result, results)
+
+    def test_get_attributes_throws_for_non_existent_file(self) -> None:
+        results = self.get_all_attributes([b"i_do_not_exist"])
+        self.assertEqual(1, len(results.res))
+        self.assert_attribute_error(
+            results, "i_do_not_exist: No such file or directory", 0
+        )
+
+    """
+    def test_get_sha1_only(self) -> None:
+        # expected sha1 result for file
+        expected_hello_sha1 = self.get_expected_file_attributes("hello")[0]
+        expected_hello_data = FileAttributeData(expected_hello_sha1, None)
+        expected_hello_result = FileAttributeDataOrError(expected_hello_data)
+
+        # create result object for "hello"
+        result_list = [
+            expected_hello_result,
+        ]
+        expected_result = GetAttributesFromFilesResult(result_list)
+
+        # get actual result
+        results = self.get_attributes([b"hello"], FileAttributes.SHA1_HASH)
+
+        # ensure expected and actual results match
+        self.assertEqual(1, len(results.res))
+        self.assertEqual(expected_result, results)
+
+    def test_get_attributes_throws_for_path_with_dot_components(self) -> None:
+        results = self.get_all_attributes([b"./hello"])
+        self.assertEqual(1, len(results.res))
+        self.assert_attribute_error(
+            results,
+            re.compile(
+                r".*PathComponentValidationError.*: PathComponent must not be \."
+            ),
+            0,
+        )
+
+    def test_get_attributes_throws_for_empty_string(self) -> None:
+        results = self.get_all_attributes([b""])
+        self.assertEqual(1, len(results.res))
+        self.assert_attribute_error(results, "path cannot be the empty string", 0)
+
+    def test_get_attributes_throws_for_directory(self) -> None:
+        results = self.get_all_attributes([b"adir"])
+        self.assertEqual(1, len(results.res))
+        self.assert_attribute_error(results, "adir: Is a directory", 0)
+
+    def test_get_attributes_throws_for_symlink(self) -> None:
+        # Fails because caller should resolve the symlink themselves.
+        results = self.get_all_attributes([b"slink"])
+        self.assertEqual(1, len(results.res))
+        self.assert_attribute_error(
+            results, "slink: file is a symlink: Invalid argument", 0
+        )
+
+    def test_get_attributes_no_files(self) -> None:
+        results = self.get_all_attributes([])
+        self.assertEqual(0, len(results.res))
+
+    def test_get_no_attributes(self) -> None:
+        expected_hello_result = FileAttributeDataOrError(FileAttributeData())
+
+        # create result object for "hello"
+        result_list = [
+            expected_hello_result,
+        ]
+        expected_result = GetAttributesFromFilesResult(result_list)
+
+        # get actual result
+        results = self.get_attributes([b"hello"], 0)
+
+        # ensure expected and actual results match
+        self.assertEqual(1, len(results.res))
+        self.assertEqual(expected_result, results)
+    """
+
+    def assert_attribute_error(
+        self,
+        attribute_result: GetAttributesFromFilesResult,
+        error_message: Union[str, Pattern],
+        map_entry: int,
+    ) -> None:
+        self.assertIsNotNone(
+            attribute_result, msg="Must pass a GetAttributesFromFilesResult"
+        )
+        attr_or_err = attribute_result.res[map_entry]
+        self.assertEqual(
+            FileAttributeDataOrError.ERROR,
+            attr_or_err.getType(),
+            msg="GetAttributesFromFilesResult must be an error",
+        )
+        self.assert_eden_error(attr_or_err, error_message)
 
     def test_unload_free_inodes(self) -> None:
         for i in range(100):
