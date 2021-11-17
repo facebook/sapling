@@ -716,8 +716,8 @@ ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
           state->nonMaterializedState->hash, fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
 #ifdef _WIN32
-      auto pathToFile = getMaterializedFilePath();
       return makeImmediateFutureWith([this] {
+        auto pathToFile = getMaterializedFilePath();
         struct stat st = getMount()->initStatData();
         return BlobMetadata(
             getFileSha1(pathToFile), getMaterializedFileSize(st, pathToFile));
