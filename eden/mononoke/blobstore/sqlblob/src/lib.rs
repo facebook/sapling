@@ -21,7 +21,7 @@ use crate::delay::BlobDelay;
 use crate::facebook::myadmin_delay;
 #[cfg(not(fbcode_build))]
 use crate::myadmin_delay_dummy as myadmin_delay;
-use crate::store::{ChunkSqlStore, ChunkingMethod, DataSqlStore};
+use crate::store::{ChunkGenerationState, ChunkSqlStore, ChunkingMethod, DataSqlStore};
 use anyhow::{bail, format_err, Error, Result};
 use async_trait::async_trait;
 use blobstore::{
@@ -91,7 +91,7 @@ fn get_gc_config_handle(config_store: &ConfigStore) -> Result<ConfigHandle<XdbGc
 const DEFAULT_ALLOW_INLINE_PUT: bool = true;
 
 // base64 encoding for inline hash has an overhead
-pub const MAX_INLINE_LEN: usize = 255 * 3 / 4;
+pub const MAX_INLINE_LEN: u64 = 255 * 3 / 4;
 
 impl Sqlblob {
     pub async fn with_mysql(
@@ -365,6 +365,10 @@ impl Sqlblob {
         self.chunk_store.set_initial_generation(shard_num).await
     }
 
+    pub async fn set_missing_value_len(&self, shard_num: usize) -> Result<()> {
+        self.chunk_store.set_missing_value_len(shard_num).await
+    }
+
     #[cfg(test)]
     pub async fn get_chunk_generations(&self, key: &str) -> Result<Vec<Option<u64>>> {
         let chunked = self.data_store.get(key).await?;
@@ -492,7 +496,9 @@ impl BlobstorePutOps for Sqlblob {
             return Ok(OverwriteStatus::Prevented);
         }
 
-        let chunking_method = if self.allow_inline_put && value.len() <= MAX_INLINE_LEN {
+        let value_len: u64 = value.len().try_into()?;
+
+        let chunking_method = if self.allow_inline_put && value_len <= MAX_INLINE_LEN {
             ChunkingMethod::InlineBase64
         } else {
             ChunkingMethod::ByContentHashBlake2
@@ -505,7 +511,7 @@ impl BlobstorePutOps for Sqlblob {
                     Err(negative) => negative.duration().as_secs().try_into().map(|v: i64| -v),
                 }
             }?;
-            let (chunk_key, chunk_count) = match chunking_method {
+            let (chunk_key, chunk_count, chunk_gen_insert_shard_id) = match chunking_method {
                 ChunkingMethod::ByContentHashBlake2 => {
                     let chunk_key = {
                         let mut hash_context = HashContext::new(b"sqlblob");
@@ -514,21 +520,39 @@ impl BlobstorePutOps for Sqlblob {
                     };
                     let chunks = value.as_bytes().chunks(CHUNK_SIZE);
                     let chunk_count = chunks.len().try_into()?;
-                    for (chunk_num, value) in chunks.enumerate() {
-                        self.chunk_store
+                    let mut updated_gen = false;
+                    let mut chunk_gen_insert_shard_id = None;
+                    for (chunk_num, chunk_value) in chunks.enumerate() {
+                        let chunk_gen_state = self
+                            .chunk_store
                             .put(
                                 chunk_key.as_str(),
                                 chunk_num.try_into()?,
                                 chunking_method,
-                                value,
+                                chunk_value,
+                                value_len,
                             )
                             .await?;
+                        match chunk_gen_state {
+                            Some(ChunkGenerationState::Updated) => {
+                                updated_gen = true;
+                                // Seen an update, no need to insert later
+                                chunk_gen_insert_shard_id = None;
+                            }
+                            Some(ChunkGenerationState::NeedsInsertToShard(shard_id)) => {
+                                if !updated_gen {
+                                    chunk_gen_insert_shard_id = Some(shard_id);
+                                }
+                            }
+                            None => {}
+                        };
                     }
-                    (chunk_key, chunk_count)
+                    (chunk_key, chunk_count, chunk_gen_insert_shard_id)
                 }
                 ChunkingMethod::InlineBase64 => (
                     base64::encode_config(value.as_bytes().as_ref(), base64::STANDARD_NO_PAD),
                     0,
+                    None,
                 ),
             };
 
@@ -540,8 +564,17 @@ impl BlobstorePutOps for Sqlblob {
                     chunk_count,
                     chunking_method,
                 )
-                .await
-                .map(|()| OverwriteStatus::NotChecked)
+                .await?;
+
+            // Called after data_store.put to maintain invariant that chunk and data put complete
+            // successfully before a generation is inserted (aka no dangling generations)
+            if let Some(shard_id) = chunk_gen_insert_shard_id {
+                self.chunk_store
+                    .put_chunk_generation(&chunk_key, shard_id, value_len)
+                    .await?
+            }
+
+            Ok(OverwriteStatus::NotChecked)
         };
 
         match put_behaviour {
@@ -564,6 +597,7 @@ impl BlobstorePutOps for Sqlblob {
                                         &chunked.id,
                                         chunk_num,
                                         chunked.chunking_method,
+                                        value_len,
                                     )
                                     .await?;
                             }

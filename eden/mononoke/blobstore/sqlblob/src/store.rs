@@ -123,11 +123,19 @@ queries! {
         ) VALUES {values}"
     }
 
-    write UpdateGeneration(id: &str, generation: u64) {
+    write UpdateGeneration(id: &str, generation: u64, value_len: u64) {
         none,
         "UPDATE chunk_generation
-            SET last_seen_generation = {generation}
+            SET last_seen_generation = {generation}, value_len = {value_len}
             WHERE id = {id} AND last_seen_generation < {generation}"
+    }
+
+    write PopulateGenerationValueLen(id: &str, value_len: u64) {
+        none,
+        "UPDATE chunk_generation
+            SET value_len = {value_len}
+            WHERE id = {id}
+                AND value_len IS NULL"
     }
 
     read SelectData(id: &str) -> (i64, Vec<u8>, u32, ChunkingMethod) {
@@ -149,13 +157,27 @@ queries! {
            AND chunk_num = {chunk_num}"
     }
 
-    read GetChunkGeneration(id: &str) -> (u64) {
-        "SELECT last_seen_generation
+    read SelectChunkLen(id: &str) -> (u64) {
+        "SELECT CAST(SUM(LENGTH(value)) AS UNSIGNED)
+         FROM chunk
+         WHERE id = {id}
+         GROUP BY id"
+    }
+
+    read GetChunkGeneration(id: &str) -> (u64, Option<u64>) {
+        "SELECT last_seen_generation, value_len
         FROM chunk_generation
         WHERE id = {id}"
     }
 
-    write InsertGeneration(values: (id: &str, generation: u64)) {
+    read GetChunkGenerationsMissingValueLen(limit: u64) -> (Vec<u8>) {
+        "SELECT id
+        FROM chunk_generation
+        WHERE value_len IS NULL and last_seen_generation IS NOT NULL
+        LIMIT {limit}"
+    }
+
+    write InsertGeneration(values: (id: &str, generation: u64, value_len: u64)) {
         insert_or_ignore,
         "{insert_or_ignore} INTO chunk_generation VALUES {values}"
     }
@@ -163,7 +185,7 @@ queries! {
     write SetInitialGeneration(generation: u64) {
         insert_or_ignore,
         "{insert_or_ignore} INTO chunk_generation
-            SELECT chunk.id, {generation}
+            SELECT chunk.id, {generation}, chunk_generation.value_len
             FROM chunk LEFT JOIN chunk_generation ON chunk.id = chunk_generation.id
             WHERE chunk_generation.last_seen_generation IS NULL"
     }
@@ -172,9 +194,9 @@ queries! {
         "SELECT id FROM data"
     }
 
-    read GetGenerationSizes() -> (Option<u64>, u64) {
-        "SELECT chunk_generation.last_seen_generation, CAST(SUM(LENGTH(chunk.value)) AS UNSIGNED)
-        FROM chunk LEFT JOIN chunk_generation ON chunk.id = chunk_generation.id
+    read GetGenerationSizes() -> (Option<u64>, Option<u64>) {
+        "SELECT chunk_generation.last_seen_generation, CAST(SUM(chunk_generation.value_len) AS UNSIGNED)
+        FROM chunk_generation
         GROUP BY chunk_generation.last_seen_generation"
     }
 }
@@ -318,6 +340,10 @@ impl DataSqlStore {
         (hasher.finish() % self.shard_count.get() as u64) as usize
     }
 }
+pub(crate) enum ChunkGenerationState {
+    NeedsInsertToShard(usize),
+    Updated,
+}
 
 #[derive(Clone)]
 pub(crate) struct ChunkSqlStore {
@@ -379,27 +405,43 @@ impl ChunkSqlStore {
         }
     }
 
+    /// Returns the shard and number of chunk_generation rows updated
     pub(crate) async fn put(
         &self,
         key: &str,
         chunk_num: u32,
         chunking_method: ChunkingMethod,
         value: &[u8],
-    ) -> Result<(), Error> {
+        full_value_len: u64,
+    ) -> Result<Option<ChunkGenerationState>, Error> {
         if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
             self.delay.delay(shard_id).await;
-            UpdateGeneration::query(
-                &self.write_connection[shard_id],
-                &key,
-                &(self.gc_generations.get().put_generation as u64),
-            )
-            .await?;
-            InsertChunk::query(
-                &self.write_connection[shard_id],
-                &[(&key, &chunk_num, &value)],
-            )
-            .await?;
+            let generation = self.gc_generations.get().put_generation as u64;
+            let conn = &self.write_connection[shard_id];
+            // Update generation incase it already exists
+            let updated = UpdateGeneration::query(conn, &key, &generation, &full_value_len).await?;
+            InsertChunk::query(conn, &[(&key, &chunk_num, &value)]).await?;
+            if updated.affected_rows() > 0 {
+                Ok(Some(ChunkGenerationState::Updated))
+            } else {
+                Ok(Some(ChunkGenerationState::NeedsInsertToShard(shard_id)))
+            }
+        } else {
+            Ok(None)
         }
+    }
+
+    // Store an entry for value_len eagerly if it was missing on ChunkSqlStore::put()'s UpdateGeneration
+    // Saves lazy computing it with associated MySQL read bandwidth from length(chunk.value) later.
+    pub(crate) async fn put_chunk_generation(
+        &self,
+        key: &str,
+        shard_id: usize,
+        full_value_len: u64,
+    ) -> Result<(), Error> {
+        let generation = self.gc_generations.get().put_generation as u64;
+        let conn = &self.write_connection[shard_id];
+        InsertGeneration::query(conn, &[(&key, &generation, &full_value_len)]).await?;
         Ok(())
     }
 
@@ -408,6 +450,7 @@ impl ChunkSqlStore {
         key: &str,
         chunk_num: u32,
         chunking_method: ChunkingMethod,
+        value_len: u64,
     ) -> Result<(), Error> {
         if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
             self.delay.delay(shard_id).await;
@@ -415,6 +458,7 @@ impl ChunkSqlStore {
                 &self.write_connection[shard_id],
                 &key,
                 &(self.gc_generations.get().put_generation as u64),
+                &value_len,
             )
             .await?;
         }
@@ -437,10 +481,25 @@ impl ChunkSqlStore {
                     rows
                 }
             };
-            Ok(rows.into_iter().next().map(|(v,)| v))
+            Ok(rows.into_iter().next().map(|(v, _value_len)| v))
         } else {
             Ok(None)
         }
+    }
+
+    async fn get_len(&self, shard_id: usize, key: &str) -> Result<u64, Error> {
+        let rows = {
+            let rows = SelectChunkLen::query(&self.read_connection[shard_id], &key).await?;
+            if rows.is_empty() {
+                SelectChunkLen::query(&self.read_master_connection[shard_id], &key).await?
+            } else {
+                rows
+            }
+        };
+        rows.into_iter()
+            .next()
+            .map(|(value_len,)| value_len)
+            .ok_or_else(|| format_err!("Missing chunk with id {} shard {}", key, shard_id))
     }
 
     pub(crate) async fn set_generation(
@@ -453,29 +512,61 @@ impl ChunkSqlStore {
             let put_generation = self.gc_generations.get().put_generation as u64;
             let mark_generation = self.gc_generations.get().mark_generation as u64;
 
-            // Short-circuit if we have a generation in replica, and that generation is >=
-            // mark_generation
-            let replica_generation =
-                GetChunkGeneration::query(&self.read_connection[shard_id], &key)
-                    .await?
-                    .into_iter()
-                    .next();
-            if replica_generation.is_some() && replica_generation >= Some((mark_generation,)) {
-                return Ok(());
-            }
+            // Short-circuit if we have a generation and that generation is >= mark_generation
+            let found_generation = GetChunkGeneration::query(&self.read_connection[shard_id], &key)
+                .await?
+                .into_iter()
+                .next();
+            let (found_generation, value_len) =
+                if let Some((found_generation, value_len)) = found_generation {
+                    if found_generation >= mark_generation {
+                        return Ok(());
+                    }
+                    (Some(found_generation), value_len)
+                } else {
+                    let found_generation =
+                        GetChunkGeneration::query(&self.read_master_connection[shard_id], &key)
+                            .await?
+                            .into_iter()
+                            .next();
 
+                    if let Some((found_generation, value_len)) = found_generation {
+                        if found_generation >= mark_generation {
+                            return Ok(());
+                        }
+                        (Some(found_generation), value_len)
+                    } else {
+                        (None, None)
+                    }
+                };
+
+            // Make sure we know how large the value is
+            let value_len: u64 = if let Some(value_len) = value_len {
+                value_len
+            } else {
+                // This chunk has never had value_len populated so get it from chunk.value
+                self.get_len(shard_id, key).await?
+            };
+
+            // About to start writing so delay
             self.delay.delay(shard_id).await;
-            // First set the generation if unset, so that future writers will update it.
-            if replica_generation.is_none() {
+
+            if found_generation.is_none() {
+                // First set the generation if unset, so that future writers will update it.
                 InsertGeneration::query(
                     &self.write_connection[shard_id],
-                    &[(&key, &put_generation)],
+                    &[(&key, &put_generation, &value_len)],
                 )
                 .await?;
             }
             // Then update it in case it already existed
-            UpdateGeneration::query(&self.write_connection[shard_id], &key, &mark_generation)
-                .await?;
+            UpdateGeneration::query(
+                &self.write_connection[shard_id],
+                &key,
+                &mark_generation,
+                &value_len,
+            )
+            .await?;
         }
         Ok(())
     }
@@ -486,7 +577,11 @@ impl ChunkSqlStore {
     ) -> Result<HashMap<Option<u64>, u64>, Error> {
         GetGenerationSizes::query(&self.read_master_connection[shard_num])
             .await
-            .map(|s| s.into_iter().collect::<HashMap<_, _>>())
+            .map(|s| {
+                s.into_iter()
+                    .map(|(gen, size)| (gen, size.unwrap_or(0)))
+                    .collect::<HashMap<_, _>>()
+            })
     }
 
     pub(crate) async fn set_initial_generation(&self, shard_num: usize) -> Result<(), Error> {
@@ -496,6 +591,25 @@ impl ChunkSqlStore {
 
         SetInitialGeneration::query(&self.write_connection[shard_num], &put_generation).await?;
         Ok(())
+    }
+
+    pub(crate) async fn set_missing_value_len(&self, shard_num: usize) -> Result<(), Error> {
+        // sqlite 3.26 doesn't have UPDATE FROM, so we have to take the ids from the DB and then update them
+        loop {
+            self.delay.delay(shard_num).await;
+            let conn = &self.write_connection[shard_num];
+            let chunks_missing_len =
+                GetChunkGenerationsMissingValueLen::query(conn, &10000).await?;
+
+            if chunks_missing_len.is_empty() {
+                return Ok(());
+            }
+            for (id,) in chunks_missing_len {
+                let id = String::from_utf8_lossy(&id);
+                let value_len = self.get_len(shard_num, &id).await?;
+                PopulateGenerationValueLen::query(conn, &id.as_ref(), &value_len).await?;
+            }
+        }
     }
 
     // Returns None if the value is stored inline without needing chunk table lookup

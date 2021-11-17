@@ -82,8 +82,9 @@ async fn read_write_size(
 async fn read_write(fb: FacebookInit) -> Result<(), Error> {
     for put_behaviour in PutBehaviour::iter() {
         // test a range of sizes that are inlineable and not inlineable
-        for size in &[0, 1, 2, 3, 64, MAX_INLINE_LEN, 254, 255, 256, 512] {
-            read_write_size(fb, put_behaviour, *size)
+        for size in [0, 1, 2, 3, 64, MAX_INLINE_LEN, 254, 255, 256, 512] {
+            let blob_size: usize = size.try_into()?;
+            read_write_size(fb, put_behaviour, blob_size)
                 .await
                 .with_context(|| format_err!("while testing size {}", size))?;
         }
@@ -312,17 +313,20 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
             // Write a fresh blob
             bs.put(ctx, key1.clone(), blobstore_bytes.clone()).await?;
 
-            // Inspect, and determine that the generation number is missing
+            // Inspect, and determine that the generation number is present
             let generations = bs.get_chunk_generations(&key1).await?;
-            assert_eq!(generations, vec![None], "Generation appeared unexpectedly");
+            assert_eq!(generations, vec![Some(2)], "Generation set to 2");
+
+            set_test_generations(test_source.as_ref(), 4, 3, 0, INITIAL_VERSION + 1);
+            tokio::time::sleep(UPDATE_WAIT_TIME).await;
 
             // Set the generation and confirm
             bs.set_generation(&key1).await?;
             let generations = bs.get_chunk_generations(&key1).await?;
-            assert_eq!(generations, vec![Some(2)], "Generation set to 2");
+            assert_eq!(generations, vec![Some(3)], "Generation set to 3");
 
             // Update via another key, confirm both have put generation
-            set_test_generations(test_source.as_ref(), 5, 4, 2, INITIAL_VERSION + 1);
+            set_test_generations(test_source.as_ref(), 5, 4, 2, INITIAL_VERSION + 2);
             tokio::time::sleep(UPDATE_WAIT_TIME).await;
             bs.put(ctx, key2.clone(), blobstore_bytes.clone()).await?;
             let generations = bs.get_chunk_generations(&key1).await?;
@@ -332,7 +336,7 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
 
             // Now update via the route GC uses, confirm it updates nicely and doesn't leap to
             // the wrong version.
-            set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 2);
+            set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 3);
             tokio::time::sleep(UPDATE_WAIT_TIME).await;
             bs.set_generation(&key1).await?;
             let generations = bs.get_chunk_generations(&key1).await?;
