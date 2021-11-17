@@ -116,8 +116,11 @@ impl<T: Changesets + Clone + 'static> Changesets for MemWritesChangesets<T> {
         &self,
         ctx: &CoreContext,
         read_from_master: bool,
+        known_heads: Vec<ChangesetId>,
     ) -> Result<Option<(u64, u64)>, Error> {
-        self.inner.enumeration_bounds(ctx, read_from_master).await
+        self.inner
+            .enumeration_bounds(ctx, read_from_master, known_heads)
+            .await
     }
 
     fn list_enumeration_range(

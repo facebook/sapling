@@ -186,9 +186,10 @@ impl Changesets for CachingChangesets {
         &self,
         ctx: &CoreContext,
         read_from_master: bool,
+        known_heads: Vec<ChangesetId>,
     ) -> Result<Option<(u64, u64)>, Error> {
         self.changesets
-            .enumeration_bounds(ctx, read_from_master)
+            .enumeration_bounds(ctx, read_from_master, known_heads)
             .await
     }
 

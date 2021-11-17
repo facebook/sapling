@@ -91,9 +91,18 @@ impl PublicChangesetBulkFetch {
         ctx: &'a CoreContext,
         d: Direction,
     ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
+        self.fetch_bounded(ctx, d, None)
+    }
+
+    pub fn fetch_bounded<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        d: Direction,
+        repo_bounds: Option<(u64, u64)>,
+    ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
         async move {
             let s = self
-                .fetch_ids(ctx, d, None)
+                .fetch_ids(ctx, d, repo_bounds)
                 .chunks(BLOBSTORE_CHUNK_SIZE)
                 .then(move |results| {
                     future::ready(async move {
@@ -215,9 +224,22 @@ impl PublicChangesetBulkFetch {
 
     /// Get the repo bounds as max/min observed suitable for rust ranges
     pub async fn get_repo_bounds(&self, ctx: &CoreContext) -> Result<(u64, u64), Error> {
+        self.get_repo_bounds_after_commits(ctx, vec![]).await
+    }
+
+    /// Get repo bounds for commits that arrived after the *newest* of the given
+    /// commits. This is useful for getting a batch for a PrefetchedChangesetsFetcher
+    /// used by a tailer.
+    ///
+    /// Note that this is permitted to not return all commits in that range
+    pub async fn get_repo_bounds_after_commits(
+        &self,
+        ctx: &CoreContext,
+        known_heads: Vec<ChangesetId>,
+    ) -> Result<(u64, u64), Error> {
         let bounds = self
             .changesets
-            .enumeration_bounds(ctx, self.read_from_master)
+            .enumeration_bounds(ctx, self.read_from_master, known_heads)
             .await?;
         match bounds {
             // Add one to make the range half-open: [min, max).
@@ -363,6 +385,67 @@ mod tests {
                 dir
             );
         }
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_find_bounds_after_commits(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobrepo = get_test_repo(&ctx, fb).await?;
+
+        let fetcher =
+            PublicChangesetBulkFetch::new(blobrepo.get_changesets_object(), blobrepo.get_phases());
+        // If we give empty known heads, we expect all IDs in the repo
+        assert_eq!(
+            (1, 8),
+            fetcher.get_repo_bounds_after_commits(&ctx, vec![]).await?
+        );
+
+        // If I give it changeset 1 as known, I get 2 to 8
+        assert_eq!(
+            (2, 8),
+            fetcher
+                .get_repo_bounds_after_commits(
+                    &ctx,
+                    vec![ChangesetId::from_str(
+                        "56c0203d7a9a83f14a47a17d3a10e55b1d08feb106fd72f28275e603c6e59625"
+                    )?]
+                )
+                .await?
+        );
+
+        // If I give it changeset 3 as known, I get 4 to 8
+        assert_eq!(
+            (4, 8),
+            fetcher
+                .get_repo_bounds_after_commits(
+                    &ctx,
+                    vec![ChangesetId::from_str(
+                        "624aba5e7f94c9319d949bce9f0dc87f25067f01f2ca1e41b620aff0625439c8"
+                    )?]
+                )
+                .await?
+        );
+
+        // If I give it changesets 1 and 3 as known, I get 4 to 8
+        // This misses out changeset 2, which is deliberate because changeset ID 3 is later.
+        assert_eq!(
+            (4, 8),
+            fetcher
+                .get_repo_bounds_after_commits(
+                    &ctx,
+                    vec![
+                        ChangesetId::from_str(
+                            "56c0203d7a9a83f14a47a17d3a10e55b1d08feb106fd72f28275e603c6e59625"
+                        )?,
+                        ChangesetId::from_str(
+                            "624aba5e7f94c9319d949bce9f0dc87f25067f01f2ca1e41b620aff0625439c8"
+                        )?
+                    ]
+                )
+                .await?
+        );
+
         Ok(())
     }
 }

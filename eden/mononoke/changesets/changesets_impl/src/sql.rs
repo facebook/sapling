@@ -365,13 +365,26 @@ impl Changesets for SqlChangesets {
         &self,
         _ctx: &CoreContext,
         read_from_master: bool,
+        known_heads: Vec<ChangesetId>,
     ) -> Result<Option<(u64, u64)>, Error> {
         let conn = self.read_conn(read_from_master);
         let rows = SelectChangesetsIdsBounds::query(conn, &self.repo_id).await?;
         if rows.is_empty() {
             Ok(None)
         } else {
-            Ok(Some((rows[0].0, rows[0].1)))
+            let (mut lo, hi) = (rows[0].0, rows[0].1);
+            if !known_heads.is_empty() {
+                let rows = SelectChangesets::query(&conn, &self.repo_id, &known_heads).await?;
+                let max_id = rows
+                    .into_iter()
+                    .map(|(id, _cs, _gen)| id)
+                    .max()
+                    // We want to skip the commits we've been given
+                    .map(|i| i + 1)
+                    .unwrap_or(lo);
+                lo = lo.max(max_id);
+            }
+            Ok(Some((lo, hi)))
         }
     }
 

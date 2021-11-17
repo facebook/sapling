@@ -217,6 +217,7 @@ impl Changesets for EphemeralChangesets {
         &self,
         _ctx: &CoreContext,
         _read_from_master: bool,
+        _known_heads: Vec<ChangesetId>,
     ) -> Result<Option<(u64, u64)>> {
         unimplemented!()
     }

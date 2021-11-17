@@ -245,7 +245,7 @@ impl AliasVerification {
         let (min_id, max_id) = self
             .blobrepo
             .changesets()
-            .enumeration_bounds(ctx, true)
+            .enumeration_bounds(ctx, true, vec![])
             .await?
             .unwrap();
 

@@ -75,10 +75,16 @@ pub trait Changesets: Send + Sync {
     /// must be for the repository associated with this `Changesets`.
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]);
 
-    /// Enumerate all public changesets in the repository.
+    /// Enumerate public changesets that are after all commits in `known_heads`
     ///
-    /// This returns a pair of unique integers that are the minimum and
-    /// maximum unique changeset ids for this repository.
+    /// This returns a pair of unique integers that are the largest unique
+    /// changeset ID for anything in `known_heads` in this repo, and the
+    /// maximum so far assigned. If `known_heads` is empty, you will
+    /// get the minimum ID in this repo.
+    ///
+    /// Note that this may result in your enumeration not covering all commits
+    /// since any entry in `known_heads` if `known_heads` is not empty.
+    /// You are expected to handle this case.
     ///
     /// This range can be used in subsequent calls to `list_enumeration_range`
     /// to enumerate the changesets.
@@ -86,6 +92,7 @@ pub trait Changesets: Send + Sync {
         &self,
         ctx: &CoreContext,
         read_from_master: bool,
+        known_heads: Vec<ChangesetId>,
     ) -> Result<Option<(u64, u64)>>;
 
     /// Enumerate a range of public changesets in the repository.
