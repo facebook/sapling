@@ -11,7 +11,7 @@
 #include <atomic>
 #include <memory>
 #include <optional>
-#include "eden/fs/store/BlobMetadata.h"
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/utils/PathFuncs.h"
 

@@ -7,8 +7,8 @@
 
 #pragma once
 #include <folly/Range.h>
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 
 namespace facebook::eden {

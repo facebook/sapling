@@ -11,8 +11,8 @@
 #include <folly/futures/Future.h>
 #include <memory>
 
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/RootId.h"
-#include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"

@@ -9,8 +9,8 @@
 #include <variant>
 #include <vector>
 
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/SerializedBlobMetadata.h"

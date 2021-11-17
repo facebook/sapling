@@ -13,7 +13,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/store/BlobMetadata.h"
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/store/Diff.h"
 #include "eden/fs/store/DiffCallback.h"
 #include "eden/fs/store/DiffContext.h"

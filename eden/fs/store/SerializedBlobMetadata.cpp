@@ -11,8 +11,8 @@
 #include <folly/Range.h>
 #include <folly/lang/Bits.h>
 
+#include <eden/fs/model/BlobMetadata.h>
 #include <eden/fs/model/Hash.h>
-#include <eden/fs/store/BlobMetadata.h>
 
 namespace facebook::eden {
 

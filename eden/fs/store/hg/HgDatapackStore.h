@@ -11,7 +11,7 @@
 #include <folly/futures/Promise.h>
 
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/store/BlobMetadata.h"
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/scm/lib/backingstore/c_api/HgNativeBackingStore.h"

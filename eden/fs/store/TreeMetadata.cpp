@@ -12,7 +12,7 @@
 #include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/store/BlobMetadata.h"
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
 
 namespace facebook::eden {
