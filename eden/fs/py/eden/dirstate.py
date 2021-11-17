@@ -11,8 +11,6 @@ import struct
 import sys
 from typing import IO, Callable, Dict, Tuple
 
-from six import iteritems
-
 
 # Version number for the format of the .hg/dirstate file that is read/written by
 # this library.
@@ -69,12 +67,12 @@ def write(file, parents, tuples_dict, copymap):
     hashing_write(parents[0])
     hashing_write(parents[1])
     hashing_write(struct.pack(">I", CURRENT_DIRSTATE_VERSION))
-    for path, dirstate_tuple in iteritems(tuples_dict):
+    for path, dirstate_tuple in tuples_dict.items():
         status, mode, merge_state = dirstate_tuple
         hashing_write(b"\x01")
         hashing_write(struct.pack(">BIb", ord(status), mode, merge_state))
         _write_path(hashing_write, path)
-    for dest, source in iteritems(copymap):
+    for dest, source in copymap.items():
         hashing_write(b"\x02")
         _write_path(hashing_write, dest)
         _write_path(hashing_write, source)
