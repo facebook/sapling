@@ -40,7 +40,7 @@ TEST(Utf8String, ensureValidUtf8) {
     EXPECT_EQ(str, ensureValidUtf8(str));
   }
 
-  EXPECT_EQ(u8"\uFFFD", ensureValidUtf8("\xff"));
+  EXPECT_EQ(reinterpret_cast<const char*>(u8"\uFFFD"), ensureValidUtf8("\xff"));
   // overlong
   EXPECT_EQ(
       reinterpret_cast<const char*>(u8"foo\uFFFD\uFFFD\uFFFD\uFFFDbar"),
