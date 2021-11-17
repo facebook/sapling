@@ -149,7 +149,7 @@ std::string toLogArg(const std::vector<std::string>& args) {
 
 namespace /* anonymous namespace for helper functions */ {
 
-#define EDEN_MICRO u8"\u00B5s"
+#define EDEN_MICRO reinterpret_cast<const char*>(u8"\u00B5s")
 
 class ThriftFetchContext : public ObjectFetchContext {
  public:
@@ -225,9 +225,10 @@ class ThriftLogHelper {
     // Logging completion time for the request
     // The line number points to where the object was originally created
     TLOG(itcLogger_, level_, itcFileName_, itcLineNumber_) << fmt::format(
-        "{}() took {} " EDEN_MICRO,
+        "{}() took {} {}",
         itcFunctionName_,
-        itcTimer_.elapsed().count());
+        itcTimer_.elapsed().count(),
+        EDEN_MICRO);
   }
 
   ThriftFetchContext& getFetchContext() {
