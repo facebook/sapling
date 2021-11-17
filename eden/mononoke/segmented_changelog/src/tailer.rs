@@ -22,14 +22,15 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
+use crate::dag::idmap::IdMapAssignHead;
+use crate::dag::IdSet;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::CacheHandlers;
-use crate::idmap::IdMapFactory;
+use crate::idmap::{vertex_name_from_cs_id, CacheHandlers, IdMapFactory, IdMapWrapper};
 use crate::owned::OwnedSegmentedChangelog;
+use crate::parents::FetchParents;
 use crate::types::SegmentedChangelogVersion;
-use crate::update::build_incremental;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{DagId, Group, SegmentedChangelogSqlConnections};
+use crate::{Group, SegmentedChangelogSqlConnections};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.tailer.update";
@@ -112,7 +113,7 @@ impl SegmentedChangelogTailer {
             scuba.add("success", update_result.is_ok());
 
             let msg = match update_result {
-                Ok((_, _, head_cs)) => {
+                Ok((_, head_cs)) => {
                     STATS::success.add_value(1);
                     STATS::success_per_repo.add_value(1, (self.repo_id.id(),));
                     scuba.add("changeset_id", format!("{}", head_cs));
@@ -134,10 +135,7 @@ impl SegmentedChangelogTailer {
         }
     }
 
-    pub async fn once(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<(OwnedSegmentedChangelog, DagId, ChangesetId)> {
+    pub async fn once(&self, ctx: &CoreContext) -> Result<(OwnedSegmentedChangelog, ChangesetId)> {
         info!(
             ctx.logger(),
             "repo {}: starting incremental update to segmented changelog", self.repo_id,
@@ -159,21 +157,7 @@ impl SegmentedChangelogTailer {
                     self.repo_id
                 )
             })?;
-        let iddag = self
-            .iddag_save_store
-            .load(&ctx, sc_version.iddag_version)
-            .await
-            .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
         let idmap = self.idmap_factory.for_writer(ctx, sc_version.idmap_version);
-        let mut owned = OwnedSegmentedChangelog::new(iddag, idmap);
-        debug!(
-            ctx.logger(),
-            "segmented changelog dag successfully loaded - repo_id: {}, idmap_version: {}, \
-            iddag_version: {} ",
-            self.repo_id,
-            sc_version.idmap_version,
-            sc_version.iddag_version,
-        );
 
         let head = self
             .bookmarks
@@ -185,34 +169,50 @@ impl SegmentedChangelogTailer {
             ctx.logger(),
             "repo {}: bookmark {} resolved to {}", self.repo_id, self.bookmark_name, head
         );
-        let old_master_dag_id = owned
-            .iddag
-            .next_free_id(0, Group::MASTER)
-            .context("fetching next free id")?;
 
-        // This updates the IdMap common storage and also updates the dag we loaded.
-        let head_dag_id = build_incremental(&ctx, &mut owned, &self.changeset_fetcher, head)
+        let mut iddag = self
+            .iddag_save_store
+            .load(&ctx, sc_version.iddag_version)
             .await
-            .context("error incrementally building segmented changelog")?;
+            .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
 
-        if old_master_dag_id > head_dag_id {
+        let mut covered_ids = iddag.all()?;
+        let flat_segments =
+            IdMapWrapper::run(ctx.clone(), idmap.clone(), move |mut idmap| async move {
+                idmap
+                    .assign_head(
+                        vertex_name_from_cs_id(&head),
+                        &FetchParents::new(ctx.clone(), self.changeset_fetcher.clone()),
+                        Group::MASTER,
+                        &mut covered_ids,
+                        &IdSet::empty(),
+                    )
+                    .await
+                    .map_err(anyhow::Error::from)
+            })
+            .await?;
+
+        if flat_segments.segment_count() == 0 {
             info!(
                 ctx.logger(),
                 "repo {}: segmented changelog already up to date, skipping update to iddag",
                 self.repo_id
             );
-            return Ok((owned, head_dag_id, head));
-        } else {
-            info!(
-                ctx.logger(),
-                "repo {}: IdMap updated, IdDag updated", self.repo_id
-            );
+            let owned = OwnedSegmentedChangelog::new(iddag, idmap);
+            return Ok((owned, head));
         }
+
+        iddag.build_segments_from_prepared_flat_segments(&flat_segments)?;
+
+        info!(
+            ctx.logger(),
+            "repo {}: IdMap updated, IdDag updated", self.repo_id
+        );
 
         // Save the IdDag
         let iddag_version = self
             .iddag_save_store
-            .save(&ctx, &owned.iddag)
+            .save(&ctx, &iddag)
             .await
             .with_context(|| format!("repo {}: error saving iddag", self.repo_id))?;
 
@@ -233,6 +233,7 @@ impl SegmentedChangelogTailer {
             "repo {}: successful incremental update to segmented changelog", self.repo_id,
         );
 
-        Ok((owned, head_dag_id, head))
+        let owned = OwnedSegmentedChangelog::new(iddag, idmap);
+        Ok((owned, head))
     }
 }

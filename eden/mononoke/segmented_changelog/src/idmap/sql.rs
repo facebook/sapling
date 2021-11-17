@@ -31,6 +31,7 @@ define_stats! {
     find_changeset_id: timeseries(Sum),
     find_dag_id: timeseries(Sum),
     get_last_entry: timeseries(Sum),
+    find_by_changeset_id_prefix: timeseries(Sum),
 }
 
 const INSERT_MAX: usize = 1_000;
@@ -150,6 +151,21 @@ queries! {
         "
 
     }
+
+    read SelectHexPrefix(repo_id: RepositoryId, version: IdMapVersion, prefix: &[u8], limit: usize) -> (ChangesetId, u64) {
+        "
+        SELECT idmap.cs_id as cs_id, idmap.vertex as vertex
+        FROM segmented_changelog_idmap AS idmap
+            LEFT JOIN segmented_changelog_idmap_copy_mappings AS copy_mappings
+            ON (idmap.repo_id = copy_mappings.repo_id AND idmap.version = copy_mappings.copied_version)
+        WHERE
+            idmap.repo_id = {repo_id} AND
+            (idmap.version = {version} OR copy_mappings.idmap_version = {version}) AND
+            (copy_mappings.copy_limit IS NULL OR copy_mappings.copy_limit >= idmap.vertex) AND
+            HEX(cs_id) LIKE CONCAT({prefix}, '%')
+        LIMIT {limit}
+        "
+    }
 }
 
 impl SqlIdMap {
@@ -192,7 +208,6 @@ impl SqlIdMap {
         Ok(rows.into_iter().map(|row| (row.0, DagId(row.1))).collect())
     }
 
-    #[allow(dead_code)]
     pub async fn copy(&self, dag_limit: DagId, new_version: IdMapVersion) -> Result<Self, Error> {
         // Check that this version *has* a DagId at `dag_limit`
         if self
@@ -246,6 +261,21 @@ impl SqlIdMap {
         .await?;
         transaction.commit().await?;
         Ok(new_self)
+    }
+
+    async fn check_copy_mapping(&self, conn: &Connection, lowest_id: &DagId) -> Result<()> {
+        let copy_source =
+            CheckCopyMapping::query(conn, &self.repo_id, &self.version, &lowest_id.0).await?;
+        if let Some(copy_source) = copy_source.first() {
+            return Err(format_err!(
+                "repo {}: dag_ig {} in version {:?} is a copy baseline for version {:?}",
+                self.repo_id,
+                lowest_id,
+                self.version,
+                copy_source
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -331,22 +361,8 @@ impl IdMap for SqlIdMap {
         // ID number, so just check first is not a copy referenced ID.
         // This is not perfect (races, replication lag), but should show bugs in tests
         if let Some(&(first, _)) = mappings.first() {
-            let copy_source = CheckCopyMapping::query(
-                &self.connections.read_connection,
-                &self.repo_id,
-                &self.version,
-                &first.0,
-            )
-            .await?;
-            if let Some(copy_source) = copy_source.first() {
-                return Err(format_err!(
-                    "repo {}: dag_ig {} in version {:?} is a copy baseline for version {:?}",
-                    self.repo_id,
-                    first,
-                    self.version,
-                    copy_source
-                ));
-            }
+            self.check_copy_mapping(&self.connections.read_connection, &first)
+                .await?;
         }
 
         // With validation passed, we split the mappings into batches that we write in separate

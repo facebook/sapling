@@ -17,7 +17,6 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::{IdMap, MemIdMap};
-use crate::owned::OwnedSegmentedChangelog;
 use crate::{dag, DagId, InProcessIdDag};
 
 // TODO(sfilip): use a dedicated parents structure which specializes the case where
@@ -217,31 +216,6 @@ pub fn update_iddag(
         .context("building iddag")?;
     debug!(ctx.logger(), "successfully finished updating iddag");
     Ok(())
-}
-
-// The goal is to update the Dag. We need a parents function, provided by changeset_fetcher, and a
-// place to start, provided by head. The IdMap assigns DagIds and the IdDag constructs Segments
-// in the DagId space using the parents function. `Dag::build` expects to be given all the data
-// that is needs to do assignments and construct Segments in `StartState`. Special care is taken
-// for situations where IdMap has more commits processed than the IdDag. Note that parents of
-// commits that are unassigned may have been assigned. This means that IdMap assignments are
-// expected in `StartState` whenever we are not starting from scratch.
-pub async fn build_incremental(
-    ctx: &CoreContext,
-    sc: &mut OwnedSegmentedChangelog,
-    changeset_fetcher: &dyn ChangesetFetcher,
-    head: ChangesetId,
-) -> Result<DagId> {
-    let (head_dag_id, maybe_iddag_update) =
-        prepare_incremental_iddag_update(ctx, &sc.iddag, &sc.idmap, changeset_fetcher, head)
-            .await
-            .context("error preparing an incremental update for iddag")?;
-
-    if let Some((start_state, mem_idmap)) = maybe_iddag_update {
-        update_iddag(ctx, &mut sc.iddag, &start_state, &mem_idmap, head_dag_id)?;
-    }
-
-    Ok(head_dag_id)
 }
 
 pub async fn prepare_incremental_iddag_update<'a>(

@@ -7,11 +7,13 @@
 
 mod cache;
 mod mem;
+mod shared_traits;
 mod sql;
 mod version;
 
 pub use self::cache::{CacheHandlers, CachedIdMap};
 pub use self::mem::{ConcurrentMemIdMap, MemIdMap};
+pub use self::shared_traits::{cs_id_from_vertex_name, vertex_name_from_cs_id, IdMapWrapper};
 pub use self::sql::SqlIdMap;
 pub use self::version::SqlIdMapVersionStore;
 
@@ -31,6 +33,7 @@ use crate::types::IdMapVersion;
 use crate::{DagId, Group, InProcessIdDag};
 
 #[async_trait]
+#[auto_impl::auto_impl(&, Arc)]
 pub trait IdMap: Send + Sync {
     async fn insert_many(
         &self,
@@ -108,45 +111,6 @@ pub trait IdMap: Send + Sync {
         self.find_dag_id(ctx, cs_id)
             .await?
             .ok_or_else(|| format_err!("Failed to find changeset id {} in IdMap", cs_id))
-    }
-}
-
-#[async_trait]
-impl IdMap for Arc<dyn IdMap> {
-    async fn insert_many(
-        &self,
-        ctx: &CoreContext,
-        mappings: Vec<(DagId, ChangesetId)>,
-    ) -> Result<()> {
-        (**self).insert_many(ctx, mappings).await
-    }
-
-    async fn find_many_changeset_ids(
-        &self,
-        ctx: &CoreContext,
-        dag_ids: Vec<DagId>,
-    ) -> Result<HashMap<DagId, ChangesetId>> {
-        (**self).find_many_changeset_ids(ctx, dag_ids).await
-    }
-
-    async fn find_many_dag_ids(
-        &self,
-        ctx: &CoreContext,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, DagId>> {
-        (**self).find_many_dag_ids(ctx, cs_ids).await
-    }
-
-    async fn find_many_dag_ids_maybe_stale(
-        &self,
-        ctx: &CoreContext,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, DagId>> {
-        (**self).find_many_dag_ids_maybe_stale(ctx, cs_ids).await
-    }
-
-    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
-        (**self).get_last_entry(ctx).await
     }
 }
 

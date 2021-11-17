@@ -26,6 +26,7 @@ mod logging;
 mod manager;
 mod on_demand;
 mod owned;
+mod parents;
 mod periodic_reload;
 mod read_only;
 mod seeder;
