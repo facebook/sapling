@@ -1075,6 +1075,7 @@ def _wraprepo(ui, repo):
             processes. This should only be used while holding the wlock, so you don't
             accidentally delete a pending file out from under another process.
             """
+            self.invalidatesparsecache()
             prefix = "%s." % profilecachefile
             pid = str(os.getpid())
             for name in self.localvfs.listdir():
@@ -1093,6 +1094,7 @@ def _wraprepo(ui, repo):
             # wrong.
             pendingfile = self._pendingprofileconfigname()
             self.localvfs.rename(pendingfile, profilecachefile)
+            self.invalidatesparsecache()
 
         def getsparsepatterns(self, rev, rawconfig=None, debugversion=None):
             """Produce the full sparse config for a revision as a SparseConfig
@@ -1280,11 +1282,11 @@ def _wraprepo(ui, repo):
                 )
 
         def invalidatecaches(self):
-            self.invalidatesignaturecache()
+            self.invalidatesparsecache()
             return super(SparseRepo, self).invalidatecaches()
 
-        def invalidatesignaturecache(self):
-            self.signaturecache.clear()
+        def invalidatesparsecache(self):
+            self._sparsecache.clear()
 
         def sparsematch(self, *revs, **kwargs):
             """Returns the sparse match function for the given revs
@@ -1312,6 +1314,17 @@ def _wraprepo(ui, repo):
             includetemp = kwargs.get("includetemp", True)
             rawconfig = kwargs.get("config")
 
+            cachekey = self._cachekey(revs, includetemp=includetemp)
+
+            # The raw config could be anything, which kinda circumvents the
+            # expectation that we could deterministically load a sparse matcher
+            # give some revs. rawconfig is only set during some debug commands,
+            # so let's just not use the cache when it is present.
+            if rawconfig is None:
+                result = self._sparsecache.get(cachekey, None)
+                if result is not None:
+                    return result
+
             result = self._computesparsematcher(revs, rawconfig=rawconfig)
 
             if kwargs.get("includetemp", True):
@@ -1319,7 +1332,21 @@ def _wraprepo(ui, repo):
                 if tempincludes:
                     result = forceincludematcher(result, tempincludes)
 
+            if rawconfig is None:
+                self._sparsecache[cachekey] = result
+
             return result
+
+        def _cachekey(self, revs, includetemp=False):
+            sha1 = hashlib.sha1()
+            for rev in revs:
+                sha1.update(self[rev].hex().encode("utf8"))
+            if includetemp:
+                try:
+                    sha1.update(self.localvfs.read("tempsparse"))
+                except (OSError, IOError):
+                    pass
+            return sha1.hexdigest()
 
         def _computesparsematcher(self, revs, rawconfig=None, debugversion=None):
             matchers = []
@@ -1384,7 +1411,7 @@ def _wraprepo(ui, repo):
                 "\n".join(sorted(exclude)),
             )
             self.localvfs.writeutf8("sparse", raw)
-            self.invalidatesignaturecache()
+            self.invalidatesparsecache()
 
         def addtemporaryincludes(self, files):
             includes = self.gettemporaryincludes()
@@ -1402,7 +1429,7 @@ def _wraprepo(ui, repo):
         def _writetemporaryincludes(self, includes):
             raw = "\n".join(sorted(includes))
             self.localvfs.writeutf8("tempsparse", raw)
-            self.invalidatesignaturecache()
+            self.invalidatesparsecache()
 
         def prunetemporaryincludes(self):
             if self.localvfs.exists("tempsparse"):
@@ -1432,7 +1459,7 @@ def _wraprepo(ui, repo):
                     dirstate.untrack(file)
 
                 self.localvfs.unlink("tempsparse")
-                self.invalidatesignaturecache()
+                self.invalidatesparsecache()
                 msg = _(
                     "cleaned up %d temporarily added file(s) from the "
                     "sparse checkout\n"
@@ -1441,8 +1468,7 @@ def _wraprepo(ui, repo):
 
     if "dirstate" in repo._filecache:
         repo.dirstate.repo = repo
-    repo.sparsecache = {}
-    repo.signaturecache = {}
+    repo._sparsecache = {}
     repo._warnedfullcheckout = False
     repo.__class__ = SparseRepo
 
