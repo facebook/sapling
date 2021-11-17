@@ -8,6 +8,7 @@
 use fbinit::FacebookInit;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_types::RepositoryId;
+use pretty_assertions::assert_eq;
 
 use crate::{
     get_ctx_source_store_and_live_config, CURRENT_COMMIT_SYNC_CONFIG_V1, EMPTY_PUSHREDIRECTOR,
@@ -64,7 +65,19 @@ const ALL_COMMIT_SYNC_CONFIG_V1: &str = r#"{
                     "version_name": "TEST_VERSION_NAME_LIVE_2"
                 }
             ],
-            "current_version": "TEST_VERSION_NAME_LIVE_2"
+            "current_version": "TEST_VERSION_NAME_LIVE_2",
+            "common": {
+                "large_repo_id": 0,
+                "common_pushrebase_bookmarks": ["b1"],
+                "small_repos": {
+                    1: {
+                        "bookmark_prefix": "bp1/"
+                    },
+                    2: {
+                        "bookmark_prefix": "bp2/"
+                    }
+                }
+            }
         },
         "large_repo_2": {
             "versions": [
@@ -84,7 +97,16 @@ const ALL_COMMIT_SYNC_CONFIG_V1: &str = r#"{
                     "version_name": "TEST_VERSION_NAME_R3_1"
                 }
             ],
-            "current_version": "TEST_VERSION_NAME_R3_1"
+            "current_version": "TEST_VERSION_NAME_R3_1,",
+            "common": {
+                "large_repo_id": 3,
+                "common_pushrebase_bookmarks": ["b3"],
+                "small_repos": {
+                    4: {
+                        "bookmark_prefix": "bp3/"
+                    }
+                }
+            }
         }
     }
 }"#;

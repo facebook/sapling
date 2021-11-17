@@ -10,12 +10,13 @@
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use cached_config::{ConfigHandle, ConfigStore};
-use commitsync::types::{RawCommitSyncAllVersions, RawCommitSyncCurrentVersions};
+use commitsync::types::{
+    RawCommitSyncAllVersions, RawCommitSyncConfigAllVersionsOneRepo, RawCommitSyncCurrentVersions,
+};
 use metaconfig_parser::Convert;
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig};
 use mononoke_types::RepositoryId;
 use pushredirect_enable::types::{MononokePushRedirectEnable, PushRedirectEnableState};
-use repos::types::RawCommitSyncConfig;
 use slog::{debug, error, info, Logger};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -137,14 +138,14 @@ impl CfgrLiveCommitSyncConfig {
     }
 
     fn related_to_repo(
-        raw_commit_sync_config: &RawCommitSyncConfig,
+        raw_all_versions: &RawCommitSyncConfigAllVersionsOneRepo,
         repo_id: RepositoryId,
     ) -> bool {
-        raw_commit_sync_config.large_repo_id == repo_id.id()
-            || raw_commit_sync_config
+        raw_all_versions.common.large_repo_id == repo_id.id()
+            || raw_all_versions
+                .common
                 .small_repos
-                .iter()
-                .any(|small_repo| small_repo.repoid == repo_id.id())
+                .contains_key(&repo_id.id())
     }
 }
 
@@ -188,10 +189,12 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
         let mut interesting_configs: Vec<_> = vec![];
 
         for (_, config_version_set) in large_repo_config_version_sets.iter() {
+            if !Self::related_to_repo(config_version_set, repo_id) {
+                continue;
+            }
+
             for raw_commit_sync_config in config_version_set.versions.iter() {
-                if Self::related_to_repo(&raw_commit_sync_config, repo_id) {
-                    interesting_configs.push(raw_commit_sync_config.clone());
-                }
+                interesting_configs.push(raw_commit_sync_config.clone());
             }
         }
 
@@ -218,10 +221,10 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
 
         let mut version = None;
         for (_, config_version_set) in large_repo_config_version_sets.iter() {
+            if !Self::related_to_repo(&config_version_set, repo_id) {
+                continue;
+            }
             for config in &config_version_set.versions {
-                if !Self::related_to_repo(&config, repo_id) {
-                    continue;
-                }
                 if config.version_name.as_ref() == Some(&version_name.0) {
                     if version.is_some() {
                         return Err(
