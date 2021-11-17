@@ -138,6 +138,8 @@ pub struct MononokeTunables {
     disable_commit_scribe_logging_scs: AtomicBool,
     xrepo_sync_disable_all_syncs: AtomicBool,
     xrepo_disable_commit_sync_lease: AtomicBool,
+    // TODO(stash): remove after initial rollout
+    xrepo_disable_new_not_commit_sync_candidate_logic: AtomicBool,
 
     // Use Background session class while deriving data. This makes derived data not write
     // data to blobstore sync queue if a write was successful to the main blobstore.

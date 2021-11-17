@@ -227,6 +227,11 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
 
     match maybe_wc_equivalence {
         None => {
+            // TODO(stash): remove after initial rollout
+            if tunables::tunables().get_xrepo_disable_new_not_commit_sync_candidate_logic() {
+                return Ok(None);
+            }
+
             if direction == CommitSyncDirection::LargeToSmall {
                 let maybe_version = mapping
                     .get_large_repo_commit_version(ctx, source_repo_id.0, source_cs_id.0)
