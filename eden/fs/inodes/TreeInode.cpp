@@ -1146,6 +1146,49 @@ ImmediateFuture<folly::Unit> TreeInode::rmdir(
       });
 }
 
+ImmediateFuture<folly::Unit> TreeInode::removeRecursively(
+    PathComponentPiece name,
+    InvalidationRequired invalidate,
+    ObjectFetchContext& context) {
+  return getOrLoadChild(name, context)
+      .thenValue([self = inodePtrFromThis(),
+                  name = name.copy(),
+                  invalidate,
+                  &context](InodePtr child) mutable {
+        auto asFileInode = child.asSubclassPtrOrNull<FileInodePtr>();
+        if (asFileInode) {
+          return self->removeImpl<FileInodePtr>(
+              std::move(name), std::move(child), invalidate, 1, context);
+        } else {
+          auto tree = child.asTreePtr();
+
+          std::vector<PathComponent> names;
+          {
+            auto contents = tree->contents_.rlock();
+            for (const auto& entry : contents->entries) {
+              names.emplace_back(entry.first);
+            }
+          }
+
+          std::vector<ImmediateFuture<folly::Unit>> childRemovalFutures;
+          childRemovalFutures.reserve(names.size());
+          for (const auto& name : names) {
+            childRemovalFutures.push_back(
+                tree->removeRecursively(name, invalidate, context));
+          }
+          return collectAllSafe(std::move(childRemovalFutures))
+              .thenValue([self,
+                          name = std::move(name),
+                          invalidate,
+                          child = std::move(child),
+                          &context](std::vector<folly::Unit>&&) mutable {
+                return self->removeImpl<TreeInodePtr>(
+                    std::move(name), std::move(child), invalidate, 1, context);
+              });
+        }
+      });
+}
+
 template <typename InodePtrType>
 ImmediateFuture<folly::Unit> TreeInode::removeImpl(
     PathComponent name,

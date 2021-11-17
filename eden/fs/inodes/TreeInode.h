@@ -195,6 +195,21 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       ObjectFetchContext& context);
 
   /**
+   * Remove the file or directory starting at name.
+   *
+   * In the case where name is a directory, this does a recursive removal of
+   * all of its children too.
+   *
+   * Note that this may fail if a concurrent file/directory creation is being
+   * performed in that hierarchy. The caller is responsible for handling this
+   * and potentially calling this function again.
+   */
+  ImmediateFuture<folly::Unit> removeRecursively(
+      PathComponentPiece name,
+      InvalidationRequired invalidate,
+      ObjectFetchContext& context);
+
+  /**
    * Create a filesystem node.
    * Only unix domain sockets and regular files are supported; attempting to
    * create any other kind of node will fail.
