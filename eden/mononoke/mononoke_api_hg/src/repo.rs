@@ -31,7 +31,7 @@ use mononoke_api::RepoWriteContext;
 use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
 use mononoke_types::{
     hash::{Sha1, Sha256},
-    BonsaiChangeset, ChangesetId, ContentId, MPath, MononokeId, RepoPath,
+    BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId, RepoPath,
 };
 use repo_blobstore::RepoBlobstore;
 use repo_client::{
@@ -185,26 +185,6 @@ impl HgRepoContext {
             .await
     }
 
-    /// Store file into blobstore by `ContentId`
-    pub async fn store_file_by_contentid(
-        &self,
-        content_id: ContentId,
-        size: u64,
-        data: impl Stream<Item = Result<Bytes, Error>> + Send,
-        bubble_id: Option<BubbleId>,
-    ) -> Result<(), MononokeError> {
-        filestore::store(
-            &self.bubble_blobstore(bubble_id).await?,
-            self.blob_repo().filestore_config(),
-            self.ctx(),
-            &StoreRequest::with_canonical(size, content_id),
-            data,
-        )
-        .await
-        .map_err(MononokeError::from)?;
-        Ok(())
-    }
-
     /// Look up in blobstore by `Sha1 alias`
     pub async fn is_file_present_by_sha1(&self, sha1: Sha1) -> Result<bool, MononokeError> {
         self.is_key_present_in_blobstore(&Alias::Sha1(sha1).blobstore_key())
@@ -230,24 +210,23 @@ impl HgRepoContext {
         }
     }
 
-    /// Store file into blobstore by `Sha1 alias`
-    pub async fn store_file_by_sha1(
+    /// Store file into blobstore
+    pub async fn store_file(
         &self,
-        sha1: Sha1,
+        key: impl Into<FetchKey>,
         size: u64,
         data: impl Stream<Item = Result<Bytes, Error>> + Send,
         bubble_id: Option<BubbleId>,
-    ) -> Result<(), MononokeError> {
+    ) -> Result<ContentMetadata, MononokeError> {
         filestore::store(
             &self.bubble_blobstore(bubble_id).await?,
             self.blob_repo().filestore_config(),
             self.ctx(),
-            &StoreRequest::with_sha1(size, sha1),
+            &StoreRequest::with_fetch_key(size, key.into()),
             data,
         )
         .await
-        .map_err(MononokeError::from)?;
-        Ok(())
+        .map_err(MononokeError::from)
     }
 
     /// Look up in blobstore by `Sha256 alias`
@@ -256,25 +235,6 @@ impl HgRepoContext {
             .await
     }
 
-    /// Store file into blobstore by `Sha256 alias`
-    pub async fn store_file_by_sha256(
-        &self,
-        sha256: Sha256,
-        size: u64,
-        data: impl Stream<Item = Result<Bytes, Error>> + Send,
-        bubble_id: Option<BubbleId>,
-    ) -> Result<(), MononokeError> {
-        filestore::store(
-            &self.bubble_blobstore(bubble_id).await?,
-            self.blob_repo().filestore_config(),
-            self.ctx(),
-            &StoreRequest::with_sha256(size, sha256),
-            data,
-        )
-        .await
-        .map_err(MononokeError::from)?;
-        Ok(())
-    }
 
     /// Download file contents
     pub async fn download_file(

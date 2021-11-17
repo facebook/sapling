@@ -27,7 +27,6 @@ use ephemeral_blobstore::BubbleId;
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext};
-use mononoke_types::{hash::Sha1, hash::Sha256, ContentId};
 use rate_limiting::Metric;
 use types::Key;
 
@@ -181,20 +180,7 @@ async fn store_file(
     content_size: u64,
     bubble_id: Option<BubbleId>,
 ) -> Result<(), Error> {
-    match id {
-        AnyFileContentId::ContentId(id) => {
-            repo.store_file_by_contentid(ContentId::from(id), content_size, data, bubble_id)
-                .await?
-        }
-        AnyFileContentId::Sha1(id) => {
-            repo.store_file_by_sha1(Sha1::from(id), content_size, data, bubble_id)
-                .await?
-        }
-        AnyFileContentId::Sha256(id) => {
-            repo.store_file_by_sha256(Sha256::from(id), content_size, data, bubble_id)
-                .await?
-        }
-    };
+    repo.store_file(id, content_size, data, bubble_id).await?;
     Ok(())
 }
 

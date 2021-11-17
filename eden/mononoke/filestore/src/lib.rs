@@ -147,6 +147,18 @@ impl StoreRequest {
             git_sha1: Some(git_sha1),
         }
     }
+
+    pub fn with_fetch_key(size: u64, key: FetchKey) -> Self {
+        use FetchKey::*;
+        match key {
+            Canonical(id) => Self::with_canonical(size, id),
+            Aliased(Alias::Sha1(id)) => Self::with_sha1(size, id),
+            Aliased(Alias::GitSha1(id)) => {
+                Self::with_git_sha1(size, hash::RichGitSha1::from_sha1(id, "blob", size))
+            }
+            Aliased(Alias::Sha256(id)) => Self::with_sha256(size, id),
+        }
+    }
 }
 
 /// Fetch the metadata for the underlying content. This will return None if the content does
