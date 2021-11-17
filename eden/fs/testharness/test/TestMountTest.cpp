@@ -185,6 +185,7 @@ TEST(TestMount, addFileDoesNotLeakFuseRefcount) {
   EXPECT_EQ(0, f->debugGetFsRefcount());
 }
 
+#ifndef _WIN32
 TEST(TestMount, addSymlinkDoesNotLeakFuseRefcount) {
   FakeTreeBuilder builder;
   TestMount testMount{builder};
@@ -192,6 +193,7 @@ TEST(TestMount, addSymlinkDoesNotLeakFuseRefcount) {
   auto link = testMount.getFileInode("l");
   EXPECT_EQ(0, link->debugGetFsRefcount());
 }
+#endif
 
 TEST(TestMount, mkdirDoesNotLeakFuseRefcount) {
   FakeTreeBuilder builder;
