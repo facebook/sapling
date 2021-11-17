@@ -177,6 +177,17 @@ class ObjectStore : public IObjectStore,
       ObjectFetchContext& context) const override;
 
   /**
+   * Get metadata about a Blob.
+   *
+   * This returns an ImmediateFuture object that will produce the BlobMetadata
+   * when it is ready.  It may result in a std::domain_error if the specified
+   * blob does not exist, or possibly other exceptions on error.
+   */
+  ImmediateFuture<BlobMetadata> getBlobMetadata(
+      const ObjectId& id,
+      ObjectFetchContext& context) const;
+
+  /**
    * Returns the size of the contents of the blob with the given ID.
    */
   ImmediateFuture<uint64_t> getBlobSize(
@@ -226,17 +237,6 @@ class ObjectStore : public IObjectStore,
   // Forbidden copy constructor and assignment operator
   ObjectStore(ObjectStore const&) = delete;
   ObjectStore& operator=(ObjectStore const&) = delete;
-
-  /**
-   * Get metadata about a Blob.
-   *
-   * This returns an ImmediateFuture object that will produce the BlobMetadata
-   * when it is ready.  It may result in a std::domain_error if the specified
-   * blob does not exist, or possibly other exceptions on error.
-   */
-  ImmediateFuture<BlobMetadata> getBlobMetadata(
-      const ObjectId& id,
-      ObjectFetchContext& context) const;
 
   static constexpr size_t kCacheSize = 1000000;
 

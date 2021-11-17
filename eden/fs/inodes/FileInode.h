@@ -13,6 +13,7 @@
 #include <optional>
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/IObjectStore.h"
@@ -178,6 +179,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 #endif
 
   ImmediateFuture<Hash20> getSha1(ObjectFetchContext& fetchContext);
+
+  ImmediateFuture<BlobMetadata> getBlobMetadata(
+      ObjectFetchContext& fetchContext);
 
   /**
    * Check to see if the file has the same contents as the specified blob

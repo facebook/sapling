@@ -16,7 +16,6 @@
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
-#include "eden/fs/model/BlobMetadata.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/IHiveLogger.h"
@@ -26,6 +25,7 @@
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/FileHash.h"
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifndef _WIN32
@@ -678,6 +678,7 @@ AbsolutePath FileInode::getMaterializedFilePath() {
   }
   return getMount()->getPath() + filePath.value();
 }
+
 #endif
 
 ImmediateFuture<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
@@ -702,6 +703,35 @@ ImmediateFuture<Hash20> FileInode::getSha1(ObjectFetchContext& fetchContext) {
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
 }
 
+ImmediateFuture<BlobMetadata> FileInode::getBlobMetadata(
+    ObjectFetchContext& fetchContext) {
+  auto state = LockedState{this};
+
+  logAccess(fetchContext);
+  switch (state->tag) {
+    case State::BLOB_NOT_LOADING:
+    case State::BLOB_LOADING:
+      // If a file is not materialized, it should have a hash value.
+      return getObjectStore()->getBlobMetadata(
+          state->nonMaterializedState->hash, fetchContext);
+    case State::MATERIALIZED_IN_OVERLAY:
+#ifdef _WIN32
+      auto pathToFile = getMaterializedFilePath();
+      return makeImmediateFutureWith([this] {
+        struct stat st = getMount()->initStatData();
+        return BlobMetadata(
+            getFileSha1(pathToFile), getMaterializedFileSize(st, pathToFile));
+      });
+#else
+      auto sha1 = getOverlayFileAccess(state)->getSha1(*this);
+      auto fileSize = getOverlayFileAccess(state)->getFileSize(*this);
+      return BlobMetadata(sha1, fileSize);
+#endif // _WIN32
+  }
+
+  XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
+}
+
 ImmediateFuture<struct stat> FileInode::stat(ObjectFetchContext& context) {
   auto st = getMount()->initStatData();
   st.st_nlink = 1; // Eden does not support hard links yet.
@@ -717,15 +747,8 @@ ImmediateFuture<struct stat> FileInode::stat(ObjectFetchContext& context) {
 
   if (state->isMaterialized()) {
 #ifdef _WIN32
-    auto filePath = getPath();
-    if (!filePath.has_value()) {
-      throw InodeError(ENOENT, inodePtrFromThis(), "not a symlink");
-    }
-    AbsolutePath pathToFile = getMount()->getPath() + filePath.value();
-    struct stat targetStat;
-    if (::stat(pathToFile.c_str(), &targetStat) == 0) {
-      st.st_size = targetStat.st_size;
-    }
+    auto pathToFile = getMaterializedFilePath();
+    getMaterializedFileSize(st, pathToFile);
 #else
     st.st_size = getOverlayFileAccess(state)->getFileSize(*this);
 #endif

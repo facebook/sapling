@@ -34,5 +34,12 @@ FOLLY_NODISCARD folly::Try<void> writeFileAtomic(
     AbsolutePathPiece path,
     folly::ByteRange data);
 
+#ifdef _WIN32
+/**
+ * For Windows only, returns the file size of the materialized file.
+ */
+off_t getMaterializedFileSize(struct stat& st, AbsolutePath& pathToFile);
+#endif // _WIN32
+
 } // namespace eden
 } // namespace facebook

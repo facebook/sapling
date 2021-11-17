@@ -55,6 +55,14 @@ folly::Try<void> writeFileAtomic(
 
 #else
 
+off_t getMaterializedFileSize(struct stat& st, AbsolutePath& pathToFile) {
+  struct stat targetStat;
+  if (::stat(pathToFile.c_str(), &targetStat) == 0) {
+    st.st_size = targetStat.st_size;
+  }
+  return st.st_size;
+}
+
 namespace {
 /*
  * Following is a traits class for File System handles with its handle value and
