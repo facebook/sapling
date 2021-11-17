@@ -13,6 +13,12 @@ use context::CoreContext;
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
 use std::{any::Any, collections::HashMap, sync::Arc};
 
+mod prefetched;
+pub use prefetched::PrefetchedChangesetsFetcher;
+
+#[cfg(test)]
+mod tests;
+
 /// Trait that knows how to fetch DAG info about commits. Primary user is revsets
 /// Concrete implementation may add more efficient caching logic to make request faster
 #[facet::facet]
