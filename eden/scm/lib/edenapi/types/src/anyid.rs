@@ -74,26 +74,8 @@ impl Default for LookupResult {
 #[auto_wire]
 #[derive(Clone, Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct LookupResponse {
-    #[id(1)]
-    pub index: usize,
-    #[id(2)]
-    pub old_token: Option<UploadToken>,
     #[id(3)]
     pub result: LookupResult,
-}
-
-impl LookupResponse {
-    // TODO(yancouto): This considers old servers, cleanup once it's rolled out for a while.
-    pub fn into_result_consider_old(self, ids: &[IndexableId]) -> LookupResult {
-        if self.result == LookupResult::default() {
-            match self.old_token {
-                None => LookupResult::NotPresent(ids[self.index].clone()),
-                Some(token) => LookupResult::Present(token),
-            }
-        } else {
-            self.result
-        }
-    }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -138,8 +120,6 @@ impl Arbitrary for LookupResult {
 impl Arbitrary for LookupResponse {
     fn arbitrary(g: &mut Gen) -> Self {
         Self {
-            index: 0,
-            old_token: None,
             result: Arbitrary::arbitrary(g),
         }
     }

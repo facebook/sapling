@@ -765,15 +765,6 @@ impl EdenApi for Client {
             .collect();
         let entries = self.lookup_batch(repo, anyids.clone(), None).await?;
 
-        let ids: Vec<_> = anyids
-            .iter()
-            .cloned()
-            .map(|id| IndexableId {
-                id,
-                bubble_id: None,
-            })
-            .collect();
-
         let into_hgid = |id: IndexableId| match id.id {
             AnyId::HgChangesetId(hgid) => Ok(hgid),
             _ => Err(EdenApiError::Other(format_err!("Invalid id returned"))),
@@ -781,14 +772,10 @@ impl EdenApi for Client {
 
         let id_to_token: HashMap<HgId, Option<UploadToken>> = entries
             .into_iter()
-            .map(
-                |response| match response.into_result_consider_old(ids.as_slice()) {
-                    LookupResult::NotPresent(id) => Ok((into_hgid(id)?, None)),
-                    LookupResult::Present(token) => {
-                        Ok((into_hgid(token.indexable_id())?, Some(token)))
-                    }
-                },
-            )
+            .map(|response| match response.result {
+                LookupResult::NotPresent(id) => Ok((into_hgid(id)?, None)),
+                LookupResult::Present(token) => Ok((into_hgid(token.indexable_id())?, Some(token))),
+            })
             .collect::<Result<_, EdenApiError>>()?;
 
         Ok(hgids
@@ -883,13 +870,8 @@ impl EdenApi for Client {
         let entries = self
             .lookup_batch(repo.clone(), anyids.clone(), bubble_id)
             .await?;
-        let ids: Vec<_> = anyids
-            .iter()
-            .cloned()
-            .map(|id| IndexableId { id, bubble_id })
-            .collect();
         for entry in entries {
-            if let LookupResult::Present(token) = entry.into_result_consider_old(ids.as_slice()) {
+            if let LookupResult::Present(token) = entry.result {
                 uploaded_ids.insert(token.indexable_id());
                 uploaded_tokens.push(token);
             }

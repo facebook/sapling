@@ -31,7 +31,6 @@ const MAX_CONCURRENT_LOOKUPS_PER_REQUEST: usize = 10000;
 async fn check_request_item(
     repo: HgRepoContext,
     item: LookupRequest,
-    index: usize,
 ) -> Result<LookupResponse, Error> {
     enum Lookup {
         NotPresent,
@@ -107,17 +106,14 @@ async fn check_request_item(
         })
         .into(),
     };
-    let (old_token, result) = match lookup {
-        Lookup::NotPresent => (
-            None,
-            LookupResult::NotPresent(IndexableId {
-                id: item.id,
-                bubble_id: old_bubble_id,
-            }),
-        ),
+    let result = match lookup {
+        Lookup::NotPresent => LookupResult::NotPresent(IndexableId {
+            id: item.id,
+            bubble_id: old_bubble_id,
+        }),
         Lookup::Present(None) => {
             let token = UploadToken::new_fake_token(item.id.clone(), item.bubble_id);
-            (Some(token.clone()), LookupResult::Present(token))
+            LookupResult::Present(token)
         }
         Lookup::Present(Some(metadata)) => {
             let token = UploadToken::new_fake_token_with_metadata(
@@ -125,15 +121,11 @@ async fn check_request_item(
                 item.bubble_id,
                 metadata,
             );
-            (Some(token.clone()), LookupResult::Present(token))
+            LookupResult::Present(token)
         }
     };
 
-    Ok(LookupResponse {
-        index,
-        old_token,
-        result,
-    })
+    Ok(LookupResponse { result })
 }
 
 /// Process lookup (batched) request.
@@ -157,8 +149,7 @@ impl EdenApiHandler for LookupHandler {
         let tokens = request
             .batch
             .into_iter()
-            .enumerate()
-            .map(move |(i, item)| check_request_item(repo.clone(), item, i));
+            .map(move |item| check_request_item(repo.clone(), item));
 
         Ok(stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_LOOKUPS_PER_REQUEST)

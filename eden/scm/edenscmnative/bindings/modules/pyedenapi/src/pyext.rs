@@ -431,28 +431,24 @@ pub trait EdenApiPyExt: EdenApi {
                             map.entry(id).or_default().push(idx);
                             map
                         });
-                    let request_ids: Vec<_> =
-                        indexable_ids.iter().map(|(id, _)| id.clone()).collect();
                     self.lookup_batch(
                         repo,
-                        request_ids.iter().map(|id| id.id.clone()).collect(),
+                        indexable_ids.iter().map(|(id, _)| id.id.clone()).collect(),
                         None,
                     )
                     .await
                     .map(|responses| {
                         responses
                             .into_iter()
-                            .flat_map(|r| {
-                                match r.into_result_consider_old(request_ids.as_slice()) {
-                                    LookupResult::Present(token) => indexable_ids
-                                        .get(&token.indexable_id())
-                                        .cloned()
-                                        .unwrap_or_default()
-                                        .into_iter()
-                                        .map(|idx| (idx, token.clone()))
-                                        .collect(),
-                                    LookupResult::NotPresent(_) => vec![],
-                                }
+                            .flat_map(|r| match r.result {
+                                LookupResult::Present(token) => indexable_ids
+                                    .get(&token.indexable_id())
+                                    .cloned()
+                                    .unwrap_or_default()
+                                    .into_iter()
+                                    .map(|idx| (idx, token.clone()))
+                                    .collect(),
+                                LookupResult::NotPresent(_) => vec![],
                             })
                             .collect()
                     })
