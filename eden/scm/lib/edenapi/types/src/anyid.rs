@@ -50,6 +50,10 @@ pub struct LookupRequest {
     pub id: AnyId,
     #[id(2)]
     pub bubble_id: Option<NonZeroU64>,
+    /// If present and the original id is not, lookup will also look into this
+    /// bubble, and if the id is present, copy it to the requested bubble.
+    #[id(3)]
+    pub copy_from_bubble_id: Option<NonZeroU64>,
 }
 
 #[auto_wire]
@@ -101,6 +105,7 @@ impl Arbitrary for LookupRequest {
         Self {
             id: Arbitrary::arbitrary(g),
             bubble_id: Arbitrary::arbitrary(g),
+            copy_from_bubble_id: Arbitrary::arbitrary(g),
         }
     }
 }

@@ -36,10 +36,35 @@ impl From<bool> for Lookup {
     }
 }
 
+async fn maybe_copy_file(
+    repo: HgRepoContext,
+    id: AnyFileContentId,
+    bubble_id: Option<BubbleId>,
+    copy_from_bubble_id: BubbleId,
+) -> Result<Lookup> {
+    let copy_blobstore = repo.bubble_blobstore(Some(copy_from_bubble_id)).await?;
+    let lookup = match filestore::fetch_with_size(&copy_blobstore, repo.ctx(), &id.into()).await? {
+        Some((file_data, content_size)) => {
+            // Possible improvement: Use linking/copying instead, so we don't need to
+            // load the file on memory. There are plenty of difficulties:
+            // - Blobstore trait doesn't support linking
+            // - This is actually linking from one blobstore to a different one by
+            // changing the prefix (or even to persistent blobstore)
+            // - We'd also need to care about metadata/aliases, not only the blob.
+            repo.store_file(id, content_size, file_data, bubble_id)
+                .await?;
+            Lookup::Present(Some(FileContentTokenMetadata { content_size }.into()))
+        }
+        None => Lookup::NotPresent,
+    };
+    Ok(lookup)
+}
+
 async fn check_file(
     repo: HgRepoContext,
     id: AnyFileContentId,
     bubble_id: Option<BubbleId>,
+    copy_from_bubble: Option<BubbleId>,
 ) -> Result<Lookup> {
     let content_id = repo.convert_file_to_content_id(id, bubble_id).await?;
     let lookup = if let Some(content_id) = content_id {
@@ -61,6 +86,12 @@ async fn check_file(
     } else {
         Lookup::NotPresent
     };
+    let lookup = match (lookup, copy_from_bubble) {
+        (Lookup::NotPresent, Some(copy_bid)) => maybe_copy_file(repo, id, bubble_id, copy_bid)
+            .await
+            .unwrap_or(Lookup::NotPresent),
+        (l, _) => l,
+    };
     Ok(lookup)
 }
 
@@ -75,8 +106,19 @@ async fn check_request_item(repo: HgRepoContext, item: LookupRequest) -> Result<
     let old_bubble_id = item.bubble_id;
     let bubble_id = old_bubble_id.map(BubbleId::new);
     let hg_on_bubble_error = "Hg derived data cannot be stored in bubbles";
+    if item.copy_from_bubble_id.is_some() && !matches!(item.id, AnyId::AnyFileContentId(_)) {
+        bail!("copy_from_bubble_id is only supported with files")
+    }
     let lookup = match item.id {
-        AnyId::AnyFileContentId(id) => check_file(repo, id, bubble_id).await?,
+        AnyId::AnyFileContentId(id) => {
+            check_file(
+                repo,
+                id,
+                bubble_id,
+                item.copy_from_bubble_id.map(BubbleId::new),
+            )
+            .await?
+        }
         AnyId::BonsaiChangesetId(id) => repo
             .changeset_exists_by_bonsai(
                 id.into(),

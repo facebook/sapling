@@ -840,7 +840,11 @@ impl EdenApi for Client {
             |ids| Batch::<LookupRequest> {
                 batch: ids
                     .into_iter()
-                    .map(|id| LookupRequest { id, bubble_id })
+                    .map(|id| LookupRequest {
+                        id,
+                        bubble_id,
+                        copy_from_bubble_id: None,
+                    })
                     .collect(),
             },
         )?;
