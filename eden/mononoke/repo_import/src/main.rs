@@ -292,7 +292,7 @@ async fn wait_until_backsynced_and_return_version(
                 let maybe_version = match sync_outcome {
                     RewrittenAs(_, version) => Some(version),
                     EquivalentWorkingCopyAncestor(_, version) => Some(version),
-                    NotSyncCandidate => None,
+                    NotSyncCandidate(_) => None,
                 };
 
                 return Ok(maybe_version);

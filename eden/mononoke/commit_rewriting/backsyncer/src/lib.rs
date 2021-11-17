@@ -294,7 +294,7 @@ where
             Some((outcome, cs_id)) => {
                 use CommitSyncOutcome::*;
                 match outcome {
-                    NotSyncCandidate => Err(format_err!(
+                    NotSyncCandidate(_) => Err(format_err!(
                         "invalid bookmark move: {:?} should not be synced to target repo",
                         cs_id
                     )),

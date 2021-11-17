@@ -16,7 +16,7 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use movers::{get_movers, Mover, Movers};
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 #[derive(Clone)]
 pub enum CommitSyncDataProvider {
@@ -143,6 +143,24 @@ impl CommitSyncDataProvider {
                 live_commit_sync_config
                     .get_current_commit_sync_config_version(ctx, repo_id)
                     .await
+            }
+        }
+    }
+
+    pub async fn get_small_repos_for_version(
+        &self,
+        repo_id: RepositoryId,
+        version: &CommitSyncConfigVersion,
+    ) -> Result<HashSet<RepositoryId>, Error> {
+        use CommitSyncDataProvider::*;
+
+        match self {
+            Live(live_commit_sync_config) => {
+                let commit_sync_config = live_commit_sync_config
+                    .get_commit_sync_config_by_version(repo_id, &version)
+                    .await?;
+
+                Ok(commit_sync_config.small_repos.keys().cloned().collect())
             }
         }
     }

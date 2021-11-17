@@ -29,7 +29,9 @@ use futures::{
 };
 use live_commit_sync_config::LiveCommitSyncConfig;
 use maplit::{hashmap, hashset};
-use metaconfig_types::{CommitSyncConfigVersion, CommonCommitSyncConfig, PushrebaseFlags};
+use metaconfig_types::{
+    CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig, PushrebaseFlags,
+};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
@@ -157,7 +159,7 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
         use CommitSyncOutcome::*;
         let remapped_parent = match sync_outcome {
             RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => cs_id,
-            NotSyncCandidate => {
+            NotSyncCandidate(_) => {
                 return Err(ErrorKind::ParentNotSyncCandidate(*commit).into());
             }
         };
@@ -251,7 +253,7 @@ where
             Some(plural) => {
                 use PluralCommitSyncOutcome::*;
                 match plural {
-                    NotSyncCandidate => {
+                    NotSyncCandidate(_) => {
                         synced_ancestors_versions.has_not_sync_candidate = true;
                     }
                     RewrittenAs(cs_ids_versions) => {
@@ -474,6 +476,10 @@ where
         &self.mapping
     }
 
+    pub fn get_commit_sync_data_provider(&self) -> &CommitSyncDataProvider {
+        &self.commit_sync_data_provider
+    }
+
     pub async fn version_exists(&self, version: &CommitSyncConfigVersion) -> Result<bool, Error> {
         self.commit_sync_data_provider
             .version_exists(self.get_target_repo_id(), version)
@@ -546,6 +552,8 @@ where
             Target(self.repos.get_target_repo().get_repoid()),
             Source(source_cs_id),
             &self.mapping,
+            self.repos.get_direction(),
+            &self.commit_sync_data_provider,
         )
         .await
     }
@@ -561,6 +569,8 @@ where
             Target(self.repos.get_target_repo().get_repoid()),
             Source(source_cs_id),
             &self.mapping,
+            self.repos.get_direction(),
+            &self.commit_sync_data_provider,
         )
         .await
     }
@@ -576,6 +586,8 @@ where
             Target(self.repos.get_target_repo().get_repoid()),
             source_cs_id,
             &self.mapping,
+            self.repos.get_direction(),
+            &self.commit_sync_data_provider,
         )
         .await
     }
@@ -593,6 +605,8 @@ where
             source_cs_id,
             &self.mapping,
             hint,
+            self.repos.get_direction(),
+            &self.commit_sync_data_provider,
         )
         .await
     }
@@ -729,7 +743,7 @@ where
             ))?;
         use CommitSyncOutcome::*;
         let res = match commit_sync_outcome {
-            NotSyncCandidate => None,
+            NotSyncCandidate(_) => None,
             RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => Some(cs_id),
         };
         Ok(res)
@@ -935,7 +949,8 @@ where
         .await?;
         match rewritten_commit {
             None => {
-                self.set_no_sync_candidate(ctx, source_cs_id).await?;
+                self.set_no_sync_candidate(ctx, source_cs_id, sync_config_version.clone())
+                    .await?;
                 Ok(None)
             }
             Some(rewritten) => {
@@ -1034,7 +1049,7 @@ where
                 use CommitSyncOutcome::*;
 
                 let version_name = match sync_outcome {
-                    NotSyncCandidate => {
+                    NotSyncCandidate(_) => {
                         return Err(ErrorKind::ParentNotSyncCandidate(hash).into());
                     }
                     RewrittenAs(_, version_name)
@@ -1074,13 +1089,14 @@ where
         match rewritten {
             None => {
                 if remapped_parents_outcome.is_empty() {
-                    self.set_no_sync_candidate(ctx, hash).await?;
+                    self.set_no_sync_candidate(ctx, hash, version_name).await?;
                 } else if remapped_parents_outcome.len() == 1 {
                     use CommitSyncOutcome::*;
                     let (sync_outcome, _) = &remapped_parents_outcome[0];
                     match sync_outcome {
-                        NotSyncCandidate => {
-                            self.set_no_sync_candidate(ctx, hash).await?;
+                        NotSyncCandidate(version) => {
+                            self.set_no_sync_candidate(ctx, hash, version.clone())
+                                .await?;
                         }
                         RewrittenAs(cs_id, version)
                         | EquivalentWorkingCopyAncestor(cs_id, version) => {
@@ -1220,10 +1236,11 @@ where
 
         use CommitSyncOutcome::*;
         match parent_sync_outcome {
-            NotSyncCandidate => {
+            NotSyncCandidate(version) => {
                 // If there's not working copy for parent commit then there's no working
                 // copy for child either.
-                self.set_no_sync_candidate(ctx, source_cs_id).await?;
+                self.set_no_sync_candidate(ctx, source_cs_id, version)
+                    .await?;
                 Ok(None)
             }
             RewrittenAs(remapped_p, version)
@@ -1365,6 +1382,9 @@ where
         //
         // This parents will be completely removed. However when these parents are removed
         // we also need to be careful to strip all copy info
+
+        let mut not_sync_candidate_versions = HashSet::new();
+
         let new_parents: HashMap<_, _> = sync_outcomes
             .iter()
             .filter_map(|(p, outcome)| {
@@ -1373,7 +1393,10 @@ where
                     EquivalentWorkingCopyAncestor(cs_id, _) | RewrittenAs(cs_id, _) => {
                         Some((*p, *cs_id))
                     }
-                    NotSyncCandidate => None,
+                    NotSyncCandidate(version) => {
+                        not_sync_candidate_versions.insert(version);
+                        None
+                    }
                 }
             })
             .collect();
@@ -1433,7 +1456,26 @@ where
         } else {
             // All parents of the merge commit are NotSyncCandidate, mark it as NotSyncCandidate
             // as well
-            self.set_no_sync_candidate(ctx, source_cs_id).await?;
+            let mut iter = not_sync_candidate_versions.iter();
+            let version = match (iter.next(), iter.next()) {
+                (Some(_v1), Some(_v2)) => {
+                    return Err(format_err!(
+                        "Too many parent NotSyncCandidate versions: {:?} while syncing {}",
+                        not_sync_candidate_versions,
+                        source_cs_id
+                    ));
+                }
+                (Some(version), None) => version,
+                _ => {
+                    return Err(format_err!(
+                        "Can't find parent version for merge commit {}",
+                        source_cs_id
+                    ));
+                }
+            };
+
+            self.set_no_sync_candidate(ctx, source_cs_id, (*version).clone())
+                .await?;
             Ok(None)
         }
     }
@@ -1511,9 +1553,8 @@ where
         &'a self,
         ctx: &'a CoreContext,
         source_bcs_id: ChangesetId,
+        version_name: CommitSyncConfigVersion,
     ) -> Result<(), Error> {
-        // TODO(stash, ikostia): use the real version that was used to remap a commit
-        let version_name = self.get_current_version(&ctx).await?;
         self.update_wc_equivalence_with_version(ctx, source_bcs_id, None, version_name)
             .await
     }
@@ -1608,6 +1649,13 @@ impl CommitSyncRepos {
         match self {
             CommitSyncRepos::LargeToSmall { .. } => SyncedCommitSourceRepo::Large,
             CommitSyncRepos::SmallToLarge { .. } => SyncedCommitSourceRepo::Small,
+        }
+    }
+
+    fn get_direction(&self) -> CommitSyncDirection {
+        match self {
+            CommitSyncRepos::LargeToSmall { .. } => CommitSyncDirection::LargeToSmall,
+            CommitSyncRepos::SmallToLarge { .. } => CommitSyncDirection::SmallToLarge,
         }
     }
 }

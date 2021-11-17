@@ -67,7 +67,7 @@ fn extract_cs_id_from_sync_outcome(
 
     match maybe_sync_outcome {
         Some(RewrittenAs(cs_id, _)) => Ok(Some(cs_id)),
-        Some(NotSyncCandidate) => Ok(None),
+        Some(NotSyncCandidate(_)) => Ok(None),
         Some(EquivalentWorkingCopyAncestor(cs_id, _)) => Ok(Some(cs_id)),
         None => Err(format_err!(
             "sync outcome is not available for {}",

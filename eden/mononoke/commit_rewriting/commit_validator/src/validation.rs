@@ -16,7 +16,7 @@ use cross_repo_sync::{
     get_commit_sync_outcome,
     types::{Large, Small, Source, Target},
     validation::report_different,
-    CommitSyncOutcome,
+    CommitSyncDataProvider, CommitSyncOutcome,
 };
 use futures::compat::Stream01CompatExt;
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
@@ -165,6 +165,7 @@ struct ValidationHelper {
     large_repo: Large<BlobRepo>,
     small_repo: Small<BlobRepo>,
     scuba_sample: MononokeScubaSampleBuilder,
+    live_commit_sync_config: CfgrLiveCommitSyncConfig,
 }
 
 impl ValidationHelper {
@@ -172,11 +173,13 @@ impl ValidationHelper {
         large_repo: Large<BlobRepo>,
         small_repo: Small<BlobRepo>,
         scuba_sample: MononokeScubaSampleBuilder,
+        live_commit_sync_config: CfgrLiveCommitSyncConfig,
     ) -> Self {
         Self {
             large_repo,
             small_repo,
             scuba_sample,
+            live_commit_sync_config,
         }
     }
 
@@ -188,18 +191,23 @@ impl ValidationHelper {
     ) -> Result<Option<(Small<ChangesetId>, CommitSyncConfigVersion)>, Error> {
         let large_repo_id = self.large_repo.0.get_repoid();
         let small_repo_id = self.small_repo.0.get_repoid();
+
+        let commit_sync_data_provider =
+            CommitSyncDataProvider::Live(Arc::new(self.live_commit_sync_config.clone()));
         let maybe_commit_sync_outcome: Option<CommitSyncOutcome> = get_commit_sync_outcome(
             &ctx,
             Source(large_repo_id),
             Target(small_repo_id),
             Source(hash.0),
             mapping,
+            CommitSyncDirection::LargeToSmall,
+            &commit_sync_data_provider,
         )
         .await?;
 
         use CommitSyncOutcome::*;
         Ok(match maybe_commit_sync_outcome {
-            None | Some(NotSyncCandidate) | Some(EquivalentWorkingCopyAncestor(_, _)) => None,
+            None | Some(NotSyncCandidate(_)) | Some(EquivalentWorkingCopyAncestor(_, _)) => None,
             Some(RewrittenAs(cs_id, version_name)) => Some((Small(cs_id), version_name)),
         })
     }
@@ -463,7 +471,12 @@ impl ValidationHelpers {
                 .map(|(repo_id, (large_repo, small_repo, scuba_sample))| {
                     (
                         Small(repo_id),
-                        ValidationHelper::new(large_repo, small_repo, scuba_sample),
+                        ValidationHelper::new(
+                            large_repo,
+                            small_repo,
+                            scuba_sample,
+                            live_commit_sync_config.clone(),
+                        ),
                     )
                 })
                 .collect(),
@@ -901,6 +914,7 @@ async fn validate_topological_order<'a>(
     small_cs_id: Small<ChangesetId>,
     large_repo_lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     mapping: &'a SqlSyncedCommitMapping,
+    commit_sync_data_provider: &'a CommitSyncDataProvider,
 ) -> Result<(), Error> {
     debug!(
         ctx.logger(),
@@ -916,7 +930,7 @@ async fn validate_topological_order<'a>(
 
     let remapped_small_parents: Vec<(ChangesetId, ChangesetId)> =
         try_join_all(small_parents.into_iter().map(|small_parent| {
-            cloned!(ctx);
+            cloned!(ctx, commit_sync_data_provider);
             async move {
                 let maybe_commit_sync_outcome = get_commit_sync_outcome(
                     &ctx,
@@ -924,6 +938,8 @@ async fn validate_topological_order<'a>(
                     Target(large_repo_id),
                     Source(small_parent),
                     mapping,
+                    CommitSyncDirection::SmallToLarge,
+                    &commit_sync_data_provider,
                 )
                 .await?;
 
@@ -937,7 +953,7 @@ async fn validate_topological_order<'a>(
                 use CommitSyncOutcome::*;
                 let remapping_of_small_parent = match commit_sync_outcome {
                     RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => cs_id,
-                    NotSyncCandidate => {
+                    NotSyncCandidate(_) => {
                         return Err(format_err!(
                             "Parent of synced {} is NotSyncCandidate in {}->{}",
                             small_cs_id,
@@ -1308,6 +1324,7 @@ async fn validate_in_a_single_repo(
         small_cs_id,
         large_repo_lca_hint,
         &mapping,
+        &CommitSyncDataProvider::Live(Arc::new(validation_helper.live_commit_sync_config.clone())),
     )
     .await
 }
@@ -1598,6 +1615,7 @@ mod tests {
             Small(small_commits[small_index_to_test].clone()),
             lca_hint,
             &small_to_large_commit_syncer.mapping,
+            &small_to_large_commit_syncer.get_commit_sync_data_provider(),
         )
         .await?;
 

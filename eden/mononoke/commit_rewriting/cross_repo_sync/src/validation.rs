@@ -671,7 +671,7 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
 
     use CommitSyncOutcome::*;
     match sync_outcome {
-        NotSyncCandidate => {
+        NotSyncCandidate(_) => {
             return Err(format_err!("{} does not remap in small repo", hash).into());
         }
         RewrittenAs(cs_id, mapping_version)
@@ -739,7 +739,7 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
                     let maybe_remapped_cs_id = match maybe_sync_outcome {
                         Some(RewrittenAs(cs_id, _))
                         | Some(EquivalentWorkingCopyAncestor(cs_id, _)) => Some(cs_id),
-                        Some(NotSyncCandidate) => {
+                        Some(NotSyncCandidate(_)) => {
                             return Err(format_err!("{} is not a sync candidate", cs_id));
                         }
                         None => None,

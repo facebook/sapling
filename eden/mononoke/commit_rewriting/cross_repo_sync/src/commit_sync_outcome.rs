@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::commit_sync_data_provider::CommitSyncDataProvider;
 use crate::types::{Source, Target};
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
@@ -12,7 +13,7 @@ use bookmarks::BookmarkName;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::Future;
-use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
 use mononoke_types::{ChangesetId, RepositoryId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use slog::debug;
@@ -27,7 +28,7 @@ use synced_commit_mapping::{SyncedCommitMapping, WorkingCopyEquivalence};
 #[derive(Debug, PartialEq)]
 pub enum CommitSyncOutcome {
     /// Not suitable for syncing to this repo
-    NotSyncCandidate,
+    NotSyncCandidate(CommitSyncConfigVersion),
     /// This commit is a 1:1 semantic mapping, but sync process rewrote it to a new ID.
     RewrittenAs(ChangesetId, CommitSyncConfigVersion),
     /// This commit is removed by the sync process, and the commit with the given ID has same content
@@ -39,7 +40,7 @@ pub enum CommitSyncOutcome {
 #[derive(Debug, PartialEq)]
 pub enum PluralCommitSyncOutcome {
     /// Not suitable for syncing to this repo
-    NotSyncCandidate,
+    NotSyncCandidate(CommitSyncConfigVersion),
     /// This commit maps to several other commits in the target repo
     RewrittenAs(Vec<(ChangesetId, CommitSyncConfigVersion)>),
     /// This commit is removed by the sync process, and the commit with the given ID has same content
@@ -195,6 +196,8 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     target_repo_id: Target<RepositoryId>,
     source_cs_id: Source<ChangesetId>,
     mapping: &'a M,
+    direction: CommitSyncDirection,
+    commit_sync_data_provider: &CommitSyncDataProvider,
 ) -> Result<Option<PluralCommitSyncOutcome>, Error> {
     let remapped = mapping
         .get(ctx, source_repo_id.0, source_cs_id.0, target_repo_id.0)
@@ -223,9 +226,27 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         .await?;
 
     match maybe_wc_equivalence {
-        None => Ok(None),
-        Some(WorkingCopyEquivalence::NoWorkingCopy(_version)) => {
-            Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate))
+        None => {
+            if direction == CommitSyncDirection::LargeToSmall {
+                let maybe_version = mapping
+                    .get_large_repo_commit_version(ctx, source_repo_id.0, source_cs_id.0)
+                    .await?;
+
+                if let Some(version) = maybe_version {
+                    let small_repos = commit_sync_data_provider
+                        .get_small_repos_for_version(source_repo_id.0, &version)
+                        .await?;
+                    if !small_repos.contains(&target_repo_id.0) {
+                        return Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate(version)));
+                    }
+                }
+                Ok(None)
+            } else {
+                Ok(None)
+            }
+        }
+        Some(WorkingCopyEquivalence::NoWorkingCopy(version)) => {
+            Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate(version)))
         }
         Some(WorkingCopyEquivalence::WorkingCopy(cs_id, version)) => Ok(Some(
             PluralCommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
@@ -244,12 +265,20 @@ pub async fn commit_sync_outcome_exists<'a, M: SyncedCommitMapping>(
     target_repo_id: Target<RepositoryId>,
     source_cs_id: Source<ChangesetId>,
     mapping: &'a M,
+    direction: CommitSyncDirection,
+    commit_sync_data_provider: &CommitSyncDataProvider,
 ) -> Result<bool, Error> {
-    Ok(
-        get_plural_commit_sync_outcome(ctx, source_repo_id, target_repo_id, source_cs_id, mapping)
-            .await?
-            .is_some(),
+    Ok(get_plural_commit_sync_outcome(
+        ctx,
+        source_repo_id,
+        target_repo_id,
+        source_cs_id,
+        mapping,
+        direction,
+        commit_sync_data_provider,
     )
+    .await?
+    .is_some())
 }
 
 /// Get `CommitSyncOutcome` for `source_cs_id`
@@ -261,6 +290,8 @@ pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     target_repo_id: Target<RepositoryId>,
     source_cs_id: Source<ChangesetId>,
     mapping: &'a M,
+    direction: CommitSyncDirection,
+    commit_sync_data_provider: &CommitSyncDataProvider,
 ) -> Result<Option<CommitSyncOutcome>, Error> {
     get_commit_sync_outcome_with_hint(
         ctx,
@@ -269,6 +300,8 @@ pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         source_cs_id,
         mapping,
         CandidateSelectionHint::Only,
+        direction,
+        commit_sync_data_provider,
     )
     .await
 }
@@ -292,10 +325,19 @@ pub async fn get_commit_sync_outcome_with_hint<'a, M: SyncedCommitMapping>(
     source_cs_id: Source<ChangesetId>,
     mapping: &'a M,
     hint: CandidateSelectionHint,
+    direction: CommitSyncDirection,
+    commit_sync_data_provider: &CommitSyncDataProvider,
 ) -> Result<Option<CommitSyncOutcome>, Error> {
-    let maybe_plural_commit_sync_outcome =
-        get_plural_commit_sync_outcome(ctx, source_repo_id, target_repo_id, source_cs_id, mapping)
-            .await?;
+    let maybe_plural_commit_sync_outcome = get_plural_commit_sync_outcome(
+        ctx,
+        source_repo_id,
+        target_repo_id,
+        source_cs_id,
+        mapping,
+        direction,
+        commit_sync_data_provider,
+    )
+    .await?;
     debug!(
         ctx.logger(),
         "get_commit_sync_outcome_with_hint called for {}->{}, cs {}, hint {:?}",
@@ -573,7 +615,7 @@ impl PluralCommitSyncOutcome {
     ) -> Result<CommitSyncOutcome, Error> {
         use PluralCommitSyncOutcome::*;
         match self {
-            NotSyncCandidate => Ok(CommitSyncOutcome::NotSyncCandidate),
+            NotSyncCandidate(version) => Ok(CommitSyncOutcome::NotSyncCandidate(version)),
             EquivalentWorkingCopyAncestor(cs_id, version) => Ok(
                 CommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
             ),
@@ -619,6 +661,7 @@ mod tests {
     use super::*;
     use bookmarks::BookmarkUpdateReason;
     use fbinit::FacebookInit;
+    use live_commit_sync_config::TestLiveCommitSyncConfig;
     use mononoke_types_mocks::changesetid::{FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID};
     use skiplist::SkiplistIndex;
     use sql::rusqlite::Connection as SqliteConnection;
@@ -677,6 +720,9 @@ mod tests {
             .map(|large_cs_id| (ONES_CSID, *large_cs_id))
             .collect();
         let mapping = get_new_mapping(ctx, entries, SMALL_REPO_ID, LARGE_REPO_ID).await?;
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+        let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
+
         get_commit_sync_outcome_with_hint(
             ctx,
             Source(SMALL_REPO_ID),
@@ -684,6 +730,8 @@ mod tests {
             Source(ONES_CSID),
             &mapping,
             hint,
+            CommitSyncDirection::SmallToLarge,
+            &commit_sync_data_provider,
         )
         .await
     }

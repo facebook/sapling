@@ -1177,7 +1177,7 @@ async fn find_mover_for_commit(
     let sync_outcome = maybe_sync_outcome.context("source commit was not remapped yet")?;
     use CommitSyncOutcome::*;
     let mover = match sync_outcome {
-        NotSyncCandidate => {
+        NotSyncCandidate(_) => {
             return Err(format_err!(
                 "commit is a not sync candidate, can't get a mover for this commit"
             ));

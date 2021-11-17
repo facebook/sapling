@@ -67,4 +67,4 @@ Now insert not sync candidate entry
   > --large-repo-hash "$NOT_SYNC_CANDIDATE_HASH" --version-name TEST_VERSION_NAME 2>&1 | grep 'successfully inserted'
   * successfully inserted not sync candidate entry (glob)
   $ mononoke_admin_source_target 0 1 crossrepo map "$NOT_SYNC_CANDIDATE_HASH" 2>&1 | grep NotSyncCandidate
-  NotSyncCandidate
+  NotSyncCandidate(CommitSyncConfigVersion("TEST_VERSION_NAME"))

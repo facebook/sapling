@@ -50,7 +50,7 @@ fn get_version_for_merge_impl<'a>(
         parent_outcomes
             .into_iter()
             .filter_map(|parent_outcome| match parent_outcome {
-                NotSyncCandidate => None,
+                NotSyncCandidate(_) => None,
                 RewrittenAs(_, version) | EquivalentWorkingCopyAncestor(_, version) => {
                     Some(version)
                 }
@@ -139,7 +139,7 @@ mod tests {
         use CommitSyncOutcome::*;
         let v1 = CommitSyncConfigVersion("TEST_VERSION_1".to_string());
         let parent_outcomes = [
-            NotSyncCandidate,
+            NotSyncCandidate(v1.clone()),
             RewrittenAs(bonsai::FOURS_CSID, v1.clone()),
         ];
 
@@ -184,7 +184,8 @@ mod tests {
     fn test_merge_version_determinator_failure_all_not_candidates(_fb: FacebookInit) {
         // All parents are preserved, this function should not have been called
         use CommitSyncOutcome::*;
-        let parent_outcomes = [NotSyncCandidate, NotSyncCandidate];
+        let v1 = CommitSyncConfigVersion("TEST_VERSION_1".to_string());
+        let parent_outcomes = [NotSyncCandidate(v1.clone()), NotSyncCandidate(v1)];
 
         let e = get_version_for_merge_impl(bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
         assert!(format!("{}", e).contains("unexpected absence of rewritten parents"));

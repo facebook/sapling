@@ -312,7 +312,7 @@ async fn remap<M: SyncedCommitMapping + Clone + 'static>(
     use CommitSyncOutcome::*;
 
     match maybe_commit_sync_outcome {
-        None | Some(NotSyncCandidate) => Ok(None),
+        None | Some(NotSyncCandidate(_)) => Ok(None),
         Some(RewrittenAs(cs_id, _)) | Some(EquivalentWorkingCopyAncestor(cs_id, _)) => {
             Ok(Some(cs_id))
         }

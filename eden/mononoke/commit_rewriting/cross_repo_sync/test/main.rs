@@ -2245,3 +2245,112 @@ async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> 
     };
     test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping).await
 }
+
+#[fbinit::test]
+async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mut factory = TestRepoFactory::new()?;
+    let mapping =
+        SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone().into());
+
+    let large_repo_id = RepositoryId::new(0);
+    let large_repo: BlobRepo = factory.with_id(large_repo_id).build()?;
+    let first_small_repo_id = RepositoryId::new(1);
+    let first_smallrepo: BlobRepo = factory.with_id(first_small_repo_id).build()?;
+    let second_small_repo_id = RepositoryId::new(2);
+    let second_smallrepo: BlobRepo = factory.with_id(second_small_repo_id).build()?;
+
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+
+    // First create common config that have two small repos in it
+    source.add_common_config(CommonCommitSyncConfig {
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            first_small_repo_id => SmallRepoPermanentConfig {
+                bookmark_prefix: "".to_string(),
+            },
+            second_small_repo_id => SmallRepoPermanentConfig {
+                bookmark_prefix: "".to_string(),
+            },
+        },
+        large_repo_id,
+    });
+
+    // Then create config version that has only a first config repo
+    let noop_version_first_small_repo = CommitSyncConfigVersion("noop_first".to_string());
+    let noop_first_version_config = CommitSyncConfig {
+        large_repo_id,
+        common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
+        small_repos: hashmap! {
+            first_small_repo_id => SmallRepoCommitSyncConfig {
+                default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
+                map: hashmap! {},
+                bookmark_prefix: AsciiString::from_ascii("").unwrap(),
+                direction: CommitSyncDirection::SmallToLarge,
+            },
+        },
+        version_name: noop_version_first_small_repo.clone(),
+    };
+    source.add_config(noop_first_version_config);
+
+    // Now create commit in large repo and sync it to the first small repo with the config
+    // created above.
+    let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(sync_config));
+    let repos = CommitSyncRepos::LargeToSmall {
+        small_repo: first_smallrepo.clone(),
+        large_repo: large_repo.clone(),
+    };
+    let large_to_first_small_commit_syncer = CommitSyncer::new_with_provider(
+        &ctx,
+        mapping.clone(),
+        repos.clone(),
+        commit_sync_data_provider.clone(),
+    );
+
+    let first_bcs_id = CreateCommitContext::new_root(&ctx, &large_repo)
+        .add_file("file", "content")
+        .commit()
+        .await?;
+    large_to_first_small_commit_syncer
+        .unsafe_always_rewrite_sync_commit(
+            &ctx,
+            first_bcs_id,
+            None, // parents override
+            &noop_version_first_small_repo,
+            CommitSyncContext::Tests,
+        )
+        .await?;
+
+
+    // Now try to sync it to the other small repo, it should return NotSyncCandidate
+    let repos = CommitSyncRepos::LargeToSmall {
+        small_repo: second_smallrepo.clone(),
+        large_repo: large_repo.clone(),
+    };
+    let large_to_second_small_commit_syncer = CommitSyncer::new_with_provider(
+        &ctx,
+        mapping.clone(),
+        repos.clone(),
+        commit_sync_data_provider.clone(),
+    );
+    large_to_second_small_commit_syncer
+        .sync_commit(
+            &ctx,
+            first_bcs_id,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::Tests,
+        )
+        .await?;
+
+    assert_eq!(
+        large_to_second_small_commit_syncer
+            .get_commit_sync_outcome(&ctx, first_bcs_id)
+            .await?,
+        Some(CommitSyncOutcome::NotSyncCandidate(
+            noop_version_first_small_repo
+        ))
+    );
+    Ok(())
+}

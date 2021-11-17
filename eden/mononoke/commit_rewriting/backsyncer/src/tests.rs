@@ -935,7 +935,7 @@ async fn verify_mapping_and_all_wc(
         use CommitSyncOutcome::*;
 
         let (target_cs_id, mover_to_use) = match outcome {
-            NotSyncCandidate => {
+            NotSyncCandidate(_) => {
                 continue;
             }
             EquivalentWorkingCopyAncestor(target_cs_id, ref version)
@@ -1031,7 +1031,7 @@ async fn verify_bookmarks(
 
                 use CommitSyncOutcome::*;
                 let mover = match commit_sync_outcome {
-                    NotSyncCandidate => {
+                    NotSyncCandidate(_) => {
                         panic!("commit should not point to NotSyncCandidate");
                     }
                     EquivalentWorkingCopyAncestor(_, version) | RewrittenAs(_, version) => {
