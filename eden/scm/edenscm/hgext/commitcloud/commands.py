@@ -684,24 +684,24 @@ def cloudhide(ui, repo, *revs, **opts):
     nodeinfos = slinfo.nodeinfos
     dag = slinfo.dag
     drafts = set(slinfo.draft)
+    hexdrafts = set(nodemod.hex(d) for d in slinfo.draft)
 
     removenodes = set()
 
     for rev in list(revs) + opts.get("rev", []):
-        rev = pycompat.encodeutf8(rev)
-        if rev in drafts:
-            removenodes.add(rev)
+        if rev in hexdrafts:
+            removenodes.add(nodemod.bin(rev))
         else:
             candidate = None
-            for draft in drafts:
-                if draft.startswith(rev):
+            for hexdraft in hexdrafts:
+                if hexdraft.startswith(rev):
                     if candidate is None:
-                        candidate = draft
+                        candidate = hexdraft
                     else:
                         raise error.Abort(_("ambiguous commit hash prefix: %s") % rev)
             if candidate is None:
                 raise error.Abort(_("commit not in workspace: %s") % rev)
-            removenodes.add(candidate)
+            removenodes.add(nodemod.bin(candidate))
 
     # Find the bookmarks we need to remove
     removebookmarks = set()
@@ -731,18 +731,17 @@ def cloudhide(ui, repo, *revs, **opts):
 
     # Find the heads and bookmarks we need to remove
     allremovenodes = dag.descendants(removenodes)
-    removeheads = set(allremovenodes & map(pycompat.encodeutf8, cloudrefs.heads))
+    removeheads = set(allremovenodes & map(nodemod.bin, cloudrefs.heads))
     for node in allremovenodes:
         removebookmarks.update(nodeinfos[node].bookmarks)
 
     # Find the heads we need to remove because we are removing the last bookmark
     # to it.
     remainingheads = set(
-        set(map(pycompat.encodeutf8, cloudrefs.heads)) & dag.all() - removeheads
+        set(map(nodemod.bin, cloudrefs.heads)) & dag.all() - removeheads
     )
     for bookmark in removebookmarks:
-        nodeutf8 = cloudrefs.bookmarks[bookmark]
-        node = pycompat.encodeutf8(nodeutf8)
+        node = nodemod.bin(cloudrefs.bookmarks[bookmark])
         info = nodeinfos.get(node)
         if node in remainingheads and info:
             if removebookmarks.issuperset(set(info.bookmarks)):
@@ -757,18 +756,18 @@ def cloudhide(ui, repo, *revs, **opts):
     if removeheads:
         ui.status(_("removing heads:\n"))
         for head in sorted(removeheads):
-            headutf8 = pycompat.decodeutf8(head)
+            hexhead = nodemod.hex(head)
             ui.status(
                 "    %s  %s\n"
-                % (headutf8[:12], templatefilters.firstline(nodeinfos[head].message))
+                % (hexhead[:12], templatefilters.firstline(nodeinfos[head].message))
             )
     if addheads:
         ui.status(_("adding heads:\n"))
         for head in sorted(addheads):
-            headutf8 = pycompat.decodeutf8(head)
+            hexhead = nodemod.hex(head)
             ui.status(
                 "    %s  %s\n"
-                % (headutf8[:12], templatefilters.firstline(nodeinfos[head].message))
+                % (hexhead[:12], templatefilters.firstline(nodeinfos[head].message))
             )
     if removebookmarks:
         ui.status(_("removing bookmarks:\n"))
@@ -779,9 +778,9 @@ def cloudhide(ui, repo, *revs, **opts):
         for remote in sorted(removeremotes):
             ui.status("    %s: %s\n" % (remote, cloudrefs.remotebookmarks[remote][:12]))
 
-    # Normalize back to strings. (The DAG wants bytes, the cloudrefs wants str)
-    removeheads = list(map(pycompat.decodeutf8, removeheads))
-    addheads = list(map(pycompat.decodeutf8, addheads))
+    # Hexify all the head, as cloudrefs works with hex strings.
+    removeheads = list(map(nodemod.hex, removeheads))
+    addheads = list(map(nodemod.hex, addheads))
 
     if removeheads or addheads or removebookmarks or removeremotes:
         if opts.get("dry_run"):

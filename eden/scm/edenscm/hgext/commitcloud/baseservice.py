@@ -10,7 +10,7 @@ import abc
 import collections
 
 import bindings
-from edenscm.mercurial import pycompat
+from edenscm.mercurial import node as nodemod, pycompat
 from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, PARENT
 from edenscm.mercurial.pycompat import encodeutf8, ensurestr
 
@@ -66,7 +66,7 @@ class FakeCtx(object):
         return False
 
     def hex(self):
-        return self._nodeinfo.node
+        return nodemod.hex(self._nodeinfo.node)
 
     def phasestr(self):
         return self._nodeinfo.phase
@@ -346,8 +346,8 @@ class BaseService(pycompat.ABC):
 def _makenodes(data):
     nodes = {}
     for nodeinfo in data["nodes"]:
-        node = ensurestr(nodeinfo["node"])
-        parents = [encodeutf8(ensurestr(p)) for p in nodeinfo["parents"]]
+        node = nodemod.bin(ensurestr(nodeinfo["node"]))
+        parents = [nodemod.bin(ensurestr(p)) for p in nodeinfo["parents"]]
         bookmarks = [ensurestr(b) for b in nodeinfo["bookmarks"]]
         author = ensurestr(nodeinfo["author"])
         date = int(nodeinfo["date"])
@@ -358,12 +358,10 @@ def _makenodes(data):
                 "%s/%s" % (ensurestr(bm["remote"]), ensurestr(bm["name"]))
                 for bm in nodeinfo["remote_bookmarks"] or []
             )
-        nodes[encodeutf8(node)] = NodeInfo(
-            node, bookmarks, parents, author, date, message, phase
-        )
+        nodes[node] = NodeInfo(node, bookmarks, parents, author, date, message, phase)
     return nodes
 
 
 def _getpublic(nodeinfos):
     """Get binary public nodes"""
-    return [hexnode for hexnode, info in nodeinfos.items() if info.phase == PUBLICPHASE]
+    return [node for node, info in nodeinfos.items() if info.phase == PUBLICPHASE]
