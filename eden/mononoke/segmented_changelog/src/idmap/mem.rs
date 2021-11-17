@@ -42,6 +42,12 @@ impl MemIdMap {
             .map(|(&dag_id, &cs_id)| (dag_id, cs_id))
     }
 
+    pub fn drain(&mut self) -> impl Iterator<Item = (DagId, ChangesetId)> + '_ {
+        self.last_entry = None;
+        self.cs2dag_id.clear();
+        self.dag_id2cs.drain()
+    }
+
     pub fn insert(&mut self, dag_id: DagId, cs_id: ChangesetId) {
         self.dag_id2cs.insert(dag_id, cs_id);
         self.cs2dag_id.insert(cs_id, dag_id);
@@ -84,6 +90,16 @@ impl ConcurrentMemIdMap {
         Self {
             inner: RwLock::new(MemIdMap::new()),
         }
+    }
+
+    pub fn len(&self) -> usize {
+        let inner = self.inner.read();
+        inner.len()
+    }
+
+    pub fn drain(&self) -> Vec<(DagId, ChangesetId)> {
+        let mut inner = self.inner.write();
+        inner.drain().collect()
     }
 }
 

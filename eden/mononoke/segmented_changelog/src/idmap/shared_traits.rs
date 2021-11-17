@@ -8,6 +8,7 @@
 use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
+use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 
@@ -16,7 +17,20 @@ use crate::dag::id::{Group, Id};
 use crate::dag::idmap::IdMapWrite;
 use crate::dag::ops::{IdConvert, PrefixLookup};
 use crate::dag::{Result, VerLink, VertexName};
-use crate::IdMap;
+use crate::idmap::ConcurrentMemIdMap;
+use crate::{DagId, IdMap};
+
+use stats::prelude::*;
+
+define_stats! {
+    prefix = "mononoke.segmented_changelog.idmap.memory";
+    insert_many: timeseries(Sum),
+    flush_writes: timeseries(Sum),
+}
+
+/// When the wrapper has this many entries to write out, stop waiting for more
+/// and write immediately
+const WRITE_BATCH_SIZE: usize = 1000;
 
 /// Type conversion - `VertexName` is used in the `dag` crate to abstract over different ID types
 /// such as Mercurial IDs, Bonsai, a theoretical git ID and more.
@@ -40,6 +54,133 @@ pub fn vertex_name_from_cs_id(cs_id: &ChangesetId) -> VertexName {
     VertexName::copy_from(cs_id.blake2().as_ref())
 }
 
+struct IdMapMemWrites {
+    /// The actual IdMap
+    inner: Arc<dyn IdMap>,
+    /// Stores recent writes that haven't yet been persisted to the backing store
+    mem: ConcurrentMemIdMap,
+}
+
+impl IdMapMemWrites {
+    pub fn new(inner: Arc<dyn IdMap>) -> Self {
+        Self {
+            inner,
+            mem: ConcurrentMemIdMap::new(),
+        }
+    }
+
+    pub async fn flush_writes(&self, ctx: &CoreContext) -> anyhow::Result<()> {
+        let writes = self.mem.drain();
+        STATS::flush_writes.add_value(
+            writes
+                .len()
+                .try_into()
+                .expect("More than an i64 of writes before a flush!"),
+        );
+        self.inner.insert_many(ctx, writes).await
+    }
+}
+
+#[async_trait]
+impl IdMap for IdMapMemWrites {
+    async fn insert_many(
+        &self,
+        ctx: &CoreContext,
+        mappings: Vec<(DagId, ChangesetId)>,
+    ) -> anyhow::Result<()> {
+        STATS::insert_many.add_value(
+            mappings
+                .len()
+                .try_into()
+                .expect("More than an i64 of writes in one go!"),
+        );
+        let res = self.mem.insert_many(ctx, mappings).await;
+        if self.mem.len() >= WRITE_BATCH_SIZE {
+            self.flush_writes(ctx).await?;
+        }
+        res
+    }
+
+    async fn find_many_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        dag_ids: Vec<DagId>,
+    ) -> anyhow::Result<HashMap<DagId, ChangesetId>> {
+        let mut result = self
+            .mem
+            .find_many_changeset_ids(ctx, dag_ids.clone())
+            .await?;
+        let missing: Vec<_> = dag_ids
+            .iter()
+            .filter(|v| !result.contains_key(v))
+            .copied()
+            .collect();
+        if !missing.is_empty() {
+            let inner_result = self.inner.find_many_changeset_ids(ctx, missing).await?;
+            result.extend(inner_result);
+        }
+        Ok(result)
+    }
+
+
+    async fn find_many_dag_ids(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> anyhow::Result<HashMap<ChangesetId, DagId>> {
+        let mut result = self.mem.find_many_dag_ids(ctx, cs_ids.clone()).await?;
+        let missing: Vec<_> = cs_ids
+            .iter()
+            .filter(|id| !result.contains_key(id))
+            .copied()
+            .collect();
+        if !missing.is_empty() {
+            let inner_result = self.inner.find_many_dag_ids(ctx, missing).await?;
+            result.extend(inner_result);
+        }
+        Ok(result)
+    }
+
+    /// Finds the dag ID for given changeset - if possible to do so quickly.
+    /// Might return no answers for changesets that have dag ids assigned.
+    ///
+    /// Should be used by callers that can deal with missing information.
+    async fn find_many_dag_ids_maybe_stale(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> anyhow::Result<HashMap<ChangesetId, DagId>> {
+        let mut result = self
+            .mem
+            .find_many_dag_ids_maybe_stale(ctx, cs_ids.clone())
+            .await?;
+        let missing: Vec<_> = cs_ids
+            .iter()
+            .filter(|id| !result.contains_key(id))
+            .copied()
+            .collect();
+        if !missing.is_empty() {
+            let inner_result = self
+                .inner
+                .find_many_dag_ids_maybe_stale(ctx, missing)
+                .await?;
+            result.extend(inner_result);
+        }
+        Ok(result)
+    }
+
+    async fn get_last_entry(
+        &self,
+        ctx: &CoreContext,
+    ) -> anyhow::Result<Option<(DagId, ChangesetId)>> {
+        let mem_last = self.mem.get_last_entry(ctx).await?;
+        match mem_last {
+            Some(_) => return Ok(mem_last),
+            None => self.inner.get_last_entry(ctx).await,
+        }
+    }
+}
+
 /// The server needs metadata that isn't normally available in the `dag` crate
 /// for normal operation.
 ///
@@ -57,7 +198,7 @@ pub fn vertex_name_from_cs_id(cs_id: &ChangesetId) -> VertexName {
 /// passed out to the enclosing scope
 pub struct IdMapWrapper {
     verlink: VerLink,
-    inner: Arc<dyn IdMap>,
+    inner: Arc<IdMapMemWrites>,
     ctx: CoreContext,
 }
 
@@ -72,12 +213,15 @@ impl IdMapWrapper {
     where
         Fut: Future<Output = anyhow::Result<T>>,
     {
+        let idmap_memwrites = Arc::new(IdMapMemWrites::new(idmap));
         let wrapper = Self {
             verlink: VerLink::new(),
-            inner: idmap,
-            ctx,
+            inner: idmap_memwrites.clone(),
+            ctx: ctx.clone(),
         };
-        closure(wrapper).await
+        let res = closure(wrapper).await;
+        idmap_memwrites.flush_writes(&ctx).await?;
+        res
     }
 }
 
