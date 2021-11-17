@@ -22,6 +22,7 @@ namespace facebook {
 namespace eden {
 
 class Hash20;
+class BlobMetadata;
 class EdenMount;
 class EdenServer;
 class TreeInode;
@@ -86,7 +87,7 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
-  ImmediateFuture<off_t> getFileSizeForPath(
+  ImmediateFuture<BlobMetadata> getBlobMetadataForPath(
       AbsolutePathPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext);

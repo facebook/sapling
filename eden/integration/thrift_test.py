@@ -265,9 +265,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(1, len(results.res))
         self.assert_attribute_error(
             results,
-            re.compile(
-                r".*PathComponentValidationError.*: PathComponent must not be \."
-            ),
+            re.compile(r"PathComponent must not be \."),
             0,
         )
 

@@ -582,12 +582,12 @@ ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPath(
       });
 }
 
-ImmediateFuture<off_t> EdenServiceHandler::getFileSizeForPath(
+ImmediateFuture<BlobMetadata> EdenServiceHandler::getBlobMetadataForPath(
     AbsolutePathPiece mountPoint,
     StringPiece path,
     ObjectFetchContext& fetchContext) {
   if (path.empty()) {
-    return ImmediateFuture<off_t>(newEdenError(
+    return ImmediateFuture<BlobMetadata>(newEdenError(
         EINVAL,
         EdenErrorType::ARGUMENT_ERROR,
         "path cannot be the empty string"));
@@ -598,14 +598,16 @@ ImmediateFuture<off_t> EdenServiceHandler::getFileSizeForPath(
     auto relativePath = RelativePathPiece{path};
     return edenMount->getInode(relativePath, fetchContext)
         .thenValue([&fetchContext](const InodePtr& inode) {
-          return inode.asFilePtr()
-              ->stat(fetchContext)
-              .thenValue([](const struct stat& s) {
-                return ImmediateFuture<off_t>(s.st_size);
-              });
+          auto fileInode = inode.asFilePtr();
+          if (fileInode->getType() != dtype_t::Regular) {
+            // We intentionally want to refuse to get the metadata of symlinks
+            return makeImmediateFuture<BlobMetadata>(
+                InodeError(EINVAL, fileInode, "file is a symlink"));
+          }
+          return fileInode->getBlobMetadata(fetchContext);
         });
   } catch (const std::exception& e) {
-    return ImmediateFuture<off_t>(
+    return ImmediateFuture<BlobMetadata>(
         newEdenError(EINVAL, EdenErrorType::ARGUMENT_ERROR, e.what()));
   }
 }
@@ -1316,62 +1318,40 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
   auto mountPoint = params->get_mountPoint();
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto paths = params->get_paths();
-  auto req_bitmask = params->get_requestedAttributes();
-  auto size_is_req = ATTR_BITMASK(req_bitmask, FILE_SIZE);
-  auto sha1_is_req = ATTR_BITMASK(req_bitmask, SHA1_HASH);
-
+  auto reqBitmask = params->get_requestedAttributes();
   // Get requested attributes for each path
-  vector<ImmediateFuture<Hash20>> sha1_futures;
-  vector<ImmediateFuture<off_t>> size_futures;
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, mountPoint, toLogArg(paths));
-  for (auto& p : paths) {
-    if (size_is_req) {
-      size_futures.emplace_back(
-          getFileSizeForPath(mountPath, p, helper->getFetchContext()));
-    }
-    if (sha1_is_req) {
-      sha1_futures.emplace_back(
-          getSHA1ForPathDefensively(mountPath, p, helper->getFetchContext()));
-    }
+  vector<ImmediateFuture<BlobMetadata>> futures;
+  for (const auto& p : paths) {
+    futures.emplace_back(
+        getBlobMetadataForPath(mountPath, p, helper->getFetchContext()));
   }
 
   // Collect all futures into a single tuple
-  auto sha1_res = collectAll(std::move(sha1_futures));
-  auto size_res = collectAll(std::move(size_futures));
-  auto all_res =
-      facebook::eden::collectAll(std::move(sha1_res), std::move(size_res));
+  auto allRes = facebook::eden::collectAll(std::move(futures));
   return wrapImmediateFuture(
              std::move(helper),
-             std::move(all_res).thenValue(
-                 [paths = std::move(paths), size_is_req, sha1_is_req](
-                     std::tuple<
-                         folly::Try<std::vector<folly::Try<Hash20>>>,
-                         folly::Try<std::vector<folly::Try<off_t>>>>&&
-                         res_tup) {
+             std::move(allRes).thenValue(
+                 [paths = std::move(paths),
+                  reqBitmask](std::vector<folly::Try<BlobMetadata>>&& allRes) {
                    auto res = std::make_unique<GetAttributesFromFilesResult>();
-
-                   // Associate each path with a FileAttributeDataOrEdenError
-                   for (auto& p : paths) {
-                     auto i = &p - paths.data();
-                     auto sha1 = sha1_is_req ? std::get<0>(res_tup)->at(i)
-                                             : folly::Try(Hash20());
-                     auto file_size = size_is_req ? std::get<1>(res_tup)->at(i)
-                                                  : folly::Try(off_t(0));
+                   auto sizeRequested = ATTR_BITMASK(reqBitmask, FILE_SIZE);
+                   auto sha1Requested = ATTR_BITMASK(reqBitmask, SHA1_HASH);
+                   for (const auto& tryMetadata : allRes) {
                      FileAttributeDataOrError file_res;
-
                      // check for exceptions. if found, return EdenError early
-                     if (sha1_is_req && sha1.hasException()) {
-                       file_res.set_error(newEdenError(sha1.exception()));
-                     } else if (size_is_req && file_size.hasException()) {
-                       file_res.set_error(newEdenError(file_size.exception()));
+                     if (tryMetadata.hasException()) {
+                       file_res.set_error(
+                           newEdenError(tryMetadata.exception()));
                      } else { /* No exceptions, fill in data */
                        FileAttributeData file_data;
-                       // Only fill in fields if requested
-                       if (sha1_is_req) {
-                         file_data.sha1_ref() = thriftHash20(sha1.value());
+                       const auto& metadata = tryMetadata.value();
+                       // Only fill in requested fields
+                       if (sha1Requested) {
+                         file_data.sha1_ref() = thriftHash20(metadata.sha1);
                        }
-                       if (size_is_req) {
-                         file_data.fileSize_ref() = file_size.value();
+                       if (sizeRequested) {
+                         file_data.fileSize_ref() = metadata.size;
                        }
                        file_res.data_ref() = file_data;
                      }
