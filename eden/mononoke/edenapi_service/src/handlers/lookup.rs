@@ -105,9 +105,16 @@ async fn check_file(
 async fn check_request_item(repo: HgRepoContext, item: LookupRequest) -> Result<LookupResponse> {
     let old_bubble_id = item.bubble_id;
     let bubble_id = old_bubble_id.map(BubbleId::new);
-    let hg_on_bubble_error = "Hg derived data cannot be stored in bubbles";
     if item.copy_from_bubble_id.is_some() && !matches!(item.id, AnyId::AnyFileContentId(_)) {
         bail!("copy_from_bubble_id is only supported with files")
+    }
+    if item.bubble_id.is_some()
+        && matches!(
+            item.id,
+            AnyId::HgFilenodeId(_) | AnyId::HgTreeId(_) | AnyId::HgChangesetId(_)
+        )
+    {
+        bail!("Hg derived data cannot be stored in bubbles")
     }
     let lookup = match item.id {
         AnyId::AnyFileContentId(id) => {
@@ -130,27 +137,18 @@ async fn check_request_item(repo: HgRepoContext, item: LookupRequest) -> Result<
             .await?
             .into(),
         // Hg derived data does not exist on bubbles, let's fail fast
-        AnyId::HgFilenodeId(id) => (if bubble_id.is_none() {
-            repo.filenode_exists(HgFileNodeId::from_node_hash(HgNodeHash::from(id)))
-                .await?
-        } else {
-            bail!(hg_on_bubble_error)
-        })
-        .into(),
-        AnyId::HgTreeId(id) => (if bubble_id.is_none() {
-            repo.tree_exists(HgManifestId::new(HgNodeHash::from(id)))
-                .await?
-        } else {
-            bail!(hg_on_bubble_error)
-        })
-        .into(),
-        AnyId::HgChangesetId(id) => (if bubble_id.is_none() {
-            repo.changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
-                .await?
-        } else {
-            bail!(hg_on_bubble_error)
-        })
-        .into(),
+        AnyId::HgFilenodeId(id) => repo
+            .filenode_exists(HgFileNodeId::from_node_hash(HgNodeHash::from(id)))
+            .await?
+            .into(),
+        AnyId::HgTreeId(id) => repo
+            .tree_exists(HgManifestId::new(HgNodeHash::from(id)))
+            .await?
+            .into(),
+        AnyId::HgChangesetId(id) => repo
+            .changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
+            .await?
+            .into(),
     };
     let result = match lookup {
         Lookup::NotPresent => LookupResult::NotPresent(IndexableId {
