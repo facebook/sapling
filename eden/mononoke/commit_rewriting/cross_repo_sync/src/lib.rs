@@ -174,27 +174,18 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
 pub struct SyncedAncestorsVersions {
     // Versions of all synced ancestors
     versions: HashSet<CommitSyncConfigVersion>,
-    // Whether there was at least one NotSyncCandidate ancestor (i.e.
-    // this ancestor was "synced" but no commits were created in target repo)
-    has_not_sync_candidate: bool,
 }
 
 impl SyncedAncestorsVersions {
     pub fn has_ancestor_with_a_known_outcome(&self) -> bool {
-        !self.versions.is_empty() || self.has_not_sync_candidate
+        !self.versions.is_empty()
     }
 
     pub fn get_only_version(&self) -> Result<Option<CommitSyncConfigVersion>, Error> {
         let mut iter = self.versions.iter();
         match (iter.next(), iter.next()) {
             (Some(v1), None) => Ok(Some(v1.clone())),
-            (None, None) => {
-                if self.has_not_sync_candidate {
-                    Ok(None)
-                } else {
-                    Err(format_err!("no ancestor version found"))
-                }
-            }
+            (None, None) => Err(format_err!("no ancestor version found")),
             _ => Err(format_err!(
                 "cannot find single ancestor version: {:?}",
                 self.versions
@@ -253,8 +244,8 @@ where
             Some(plural) => {
                 use PluralCommitSyncOutcome::*;
                 match plural {
-                    NotSyncCandidate(_) => {
-                        synced_ancestors_versions.has_not_sync_candidate = true;
+                    NotSyncCandidate(version) => {
+                        synced_ancestors_versions.versions.insert(version);
                     }
                     RewrittenAs(cs_ids_versions) => {
                         for (_, version) in cs_ids_versions {
