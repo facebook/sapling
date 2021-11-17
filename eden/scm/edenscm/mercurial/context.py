@@ -1674,7 +1674,7 @@ class workingctx(committablectx):
             or (missing and self.deleted())
         )
 
-    def add(self, list, prefix=""):
+    def add(self, list, prefix="", quiet=False):
         with self._repo.wlock():
             ui, ds = self._repo.ui, self._repo.dirstate
             uipath = lambda f: ds.pathto(pathutil.join(prefix, f))
@@ -1688,34 +1688,38 @@ class workingctx(committablectx):
                 try:
                     st = lstat(f)
                 except OSError:
-                    ui.warn(_("%s does not exist!\n") % uipath(f))
+                    if not quiet:
+                        ui.warn(_("%s does not exist!\n") % uipath(f))
                     rejected.append(f)
                     continue
                 if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
-                    ui.warn(
-                        _(
-                            "%s not added: only files and symlinks "
-                            "supported currently\n"
+                    if not quiet:
+                        ui.warn(
+                            _(
+                                "%s not added: only files and symlinks "
+                                "supported currently\n"
+                            )
+                            % uipath(f)
                         )
-                        % uipath(f)
-                    )
                     rejected.append(f)
                 elif ds[f] in "amn":
-                    ui.warn(_("%s already tracked!\n") % uipath(f))
+                    if not quiet:
+                        ui.warn(_("%s already tracked!\n") % uipath(f))
                 elif ds[f] == "r":
                     ds.normallookup(f)
                 else:
                     ds.add(f)
             return rejected
 
-    def forget(self, files, prefix=""):
+    def forget(self, files, prefix="", quiet=False):
         with self._repo.wlock():
             ds = self._repo.dirstate
             uipath = lambda f: ds.pathto(pathutil.join(prefix, f))
             rejected = []
             for f in files:
                 if f not in self._repo.dirstate:
-                    self._repo.ui.warn(_("%s not tracked!\n") % uipath(f))
+                    if not quiet:
+                        self._repo.ui.warn(_("%s not tracked!\n") % uipath(f))
                     rejected.append(f)
                 elif self._repo.dirstate[f] != "a":
                     self._repo.dirstate.remove(f)

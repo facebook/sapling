@@ -17,7 +17,7 @@ def _hasanychanges(repo):
     )
 
 
-def _fullclean(ui, repo):
+def _fullclean(ui, repo, exclude):
     ui.status(_("cleaning up uncommitted code\n"), component="snapshot")
     # Remove "tracked changes"
     cmdutil.revert(
@@ -27,10 +27,11 @@ def _fullclean(ui, repo):
         repo.dirstate.parents(),
         all=True,
         no_backup=True,
+        exclude=exclude,
     )
     # Remove "untracked changes" (e.g. untracked files)
     repo.dirstate._fs.purge(
-        scmutil.match(repo[None]),
+        scmutil.match(repo[None], opts={"exclude": exclude}),
         removefiles=True,
         removedirs=True,
         removeignored=False,
@@ -53,62 +54,64 @@ def update(ui, repo, csid, clean=False):
     assert isinstance(snapshot["hg_parents"], bytes)
 
     with repo.wlock(), repo.lock(), repo.transaction("snapshot-restore"):
-        if _hasanychanges(repo):
-            if clean:
-                _fullclean(ui, repo)
-            else:
-                raise error.Abort(
-                    _(
-                        "Can't restore snapshot with unclean working copy, unless --clean is specified"
-                    )
+        haschanges = _hasanychanges(repo)
+        if haschanges and not clean:
+            raise error.Abort(
+                _(
+                    "Can't restore snapshot with unclean working copy, unless --clean is specified"
                 )
-
-        ui.status(
-            _("Updating to parent {}\n").format(snapshot["hg_parents"].hex()),
-            component="snapshot",
-        )
+            )
 
         parent = snapshot["hg_parents"]
-        # This will resolve the parent revision even if it's not available locally
-        # and needs pulling from server.
-        if parent not in repo:
-            repo.pull(headnodes=(parent,))
+        if parent != repo.dirstate.p1():
+            if haschanges:
+                _fullclean(ui, repo, [])
+            ui.status(
+                _("Updating to parent {}\n").format(parent.hex()),
+                component="snapshot",
+            )
 
-        hg.updatetotally(ui, repo, parent, None, clean=False, updatecheck="abort")
+            # This will resolve the parent revision even if it's not available locally
+            # and needs pulling from server.
+            if parent not in repo:
+                repo.pull(headnodes=(parent,))
+
+            hg.updatetotally(ui, repo, parent, None, clean=False, updatecheck="abort")
+        else:
+            if haschanges:
+                # We might be able to reuse files that were already downloaded locally,
+                # so let's not delete files related to the snapshot
+                _fullclean(ui, repo, [path for (path, _) in snapshot["file_changes"]])
 
         files2download = []
-        files2hgadd = []
 
+        wctx = repo[None]
         for (path, fc) in snapshot["file_changes"]:
-            matcher = scmutil.matchfiles(repo, [path])
-            fctx = repo[None][path]
-            # fc is either a string or a dict, can't use "Deletion" in fc because
+            fctx = wctx[path]
+            # fc is either a string or a dict, can't use `"Deletion" in fc` because
             # that applies to "UntrackedDeletion" as well
             if fc == "Deletion":
-                cmdutil.remove(ui, repo, matcher, "", False, False)
-            elif fc == "UntrackedDeletion":
-                if not fctx.exists():
-                    # File was hg added and is now missing. Let's add an empty file first
-                    repo.wwrite(path, b"", "")
-                    cmdutil.add(ui, repo, matcher, prefix="", explicitonly=True)
-                fctx.remove()
-            elif "Change" in fc:
+                wctx.forget([path], quiet=True)
                 if fctx.exists():
-                    # File exists, was modified
                     fctx.remove()
-                else:
-                    # File was created and added
-                    files2hgadd.append(path)
+            elif fc == "UntrackedDeletion":
+                # Untracked deletion means the file was tracked, so add it, in case it
+                # was hg added and then deleted
+                # Using dirstate directly so we don't need to create a dummy file
+                if repo.dirstate[path] == "?":
+                    repo.dirstate.add(path)
+                if fctx.exists():
+                    fctx.remove()
+            elif "Change" in fc:
                 files2download.append((path, fc["Change"]["upload_token"]))
             elif "UntrackedChange" in fc:
-                if fctx.exists():
-                    # File was hg rm'ed and then overwritten
-                    cmdutil.remove(
-                        ui, repo, matcher, prefix="", after=False, force=False
-                    )
+                wctx.forget([path], quiet=True)
                 files2download.append((path, fc["UntrackedChange"]["upload_token"]))
 
         repo.edenapi.downloadfiles(getreponame(repo), repo.root, files2download)
 
-        for path in files2hgadd:
-            cmdutil.add(ui, repo, scmutil.matchfiles(repo, [path]), "", True)
+        # Need to add changed files after they are populated in the working dir
+        wctx.add(
+            [path for (path, fc) in snapshot["file_changes"] if "Change" in fc],
+            quiet=True,
+        )
