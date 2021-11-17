@@ -11,7 +11,6 @@ use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use cached_config::{ConfigHandle, ConfigStore};
 use commitsync::types::{RawCommitSyncAllVersions, RawCommitSyncCurrentVersions};
-use context::CoreContext;
 use metaconfig_parser::Convert;
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig};
 use mononoke_types::RepositoryId;
@@ -65,48 +64,6 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     ///       as this queries  config source
     fn push_redirector_enabled_for_public(&self, repo_id: RepositoryId) -> bool;
 
-
-    /// Return current version for a given repository
-    ///
-    /// NOTE: two subsequent calls may return different results
-    ///       as this queries  config source
-    async fn get_current_commit_sync_config_version(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<CommitSyncConfigVersion> {
-        let commit_sync_config = self.get_current_commit_sync_config(ctx, repo_id).await?;
-
-        let version_name = commit_sync_config.version_name;
-        Ok(version_name)
-    }
-
-    /// Return current version of `CommitSyncConfig` struct
-    /// for a given repository. Returns None if no config was found
-    ///
-    /// NOTE: two subsequent calls may return different results
-    ///       as this queries  config source
-    async fn get_current_commit_sync_config_if_exists(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<Option<CommitSyncConfig>>;
-
-    /// Return current version of `CommitSyncConfig` struct
-    /// for a given repository
-    ///
-    /// NOTE: two subsequent calls may return different results
-    ///       as this queries  config source
-    async fn get_current_commit_sync_config(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<CommitSyncConfig> {
-        self.get_current_commit_sync_config_if_exists(ctx, repo_id)
-            .await?
-            .ok_or(ErrorKind::NotPartOfAnyCommitSyncConfig(repo_id).into())
-    }
-
     /// Return all historical versions of `CommitSyncConfig`
     /// structs for a given repository
     ///
@@ -116,7 +73,6 @@ pub trait LiveCommitSyncConfig: Send + Sync {
         &self,
         repo_id: RepositoryId,
     ) -> Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>>;
-
 
     /// Return `CommitSyncConfig` for repo `repo_id` of version `version_name`
     async fn get_commit_sync_config_by_version(
@@ -215,41 +171,6 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
         match self.get_push_redirection_repo_state(repo_id) {
             Some(config) => config.public_push,
             None => false,
-        }
-    }
-
-    /// Return current version of `CommitSyncConfig` struct
-    /// for a given repository. Returns None if no config was found
-    ///
-    /// NOTE: two subsequent calls may return different results
-    ///       as this queries  config source
-    async fn get_current_commit_sync_config_if_exists(
-        &self,
-        _ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<Option<CommitSyncConfig>> {
-        let config = self.config_handle_for_current_versions.get();
-        let maybe_raw_commit_sync_config = {
-            let interesting_top_level_configs = config
-                .repos
-                .iter()
-                .filter(|(_, raw_commit_sync_config)| {
-                    Self::related_to_repo(raw_commit_sync_config, repo_id)
-                })
-                .map(|(_, commit_sync_config)| commit_sync_config);
-
-            let mut iter = interesting_top_level_configs;
-            match (iter.next(), iter.next()) {
-                (None, _) => Ok(None),
-                (Some(config), None) => Ok(Some(config)),
-                (Some(_), Some(_)) => Err(ErrorKind::PartOfMultipleCommitSyncConfigs(repo_id)),
-            }?
-        };
-
-        if let Some(config) = maybe_raw_commit_sync_config {
-            Ok(Some(config.clone().convert()?))
-        } else {
-            Ok(None)
         }
     }
 
@@ -491,22 +412,6 @@ impl TestLiveCommitSyncConfigSource {
             .unwrap_or(&false)
     }
 
-    fn get_current_commit_sync_config_if_exists(
-        &self,
-        _ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<Option<CommitSyncConfig>> {
-        self.get_commit_sync_config_for_repo_if_exists(repo_id)
-    }
-
-    fn get_current_commit_sync_config(
-        &self,
-        _ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<CommitSyncConfig> {
-        self.get_commit_sync_config_for_repo(repo_id)
-    }
-
     fn get_all_commit_sync_config_versions(
         &self,
         repo_id: RepositoryId,
@@ -599,23 +504,6 @@ impl LiveCommitSyncConfig for TestLiveCommitSyncConfig {
 
     fn push_redirector_enabled_for_public(&self, repo_id: RepositoryId) -> bool {
         self.source.push_redirector_enabled_for_public(repo_id)
-    }
-
-    async fn get_current_commit_sync_config_if_exists(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<Option<CommitSyncConfig>> {
-        self.source
-            .get_current_commit_sync_config_if_exists(ctx, repo_id)
-    }
-
-    async fn get_current_commit_sync_config(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<CommitSyncConfig> {
-        self.source.get_current_commit_sync_config(ctx, repo_id)
     }
 
     async fn get_all_commit_sync_config_versions(

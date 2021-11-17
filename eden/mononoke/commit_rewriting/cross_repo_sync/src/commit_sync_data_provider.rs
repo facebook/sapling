@@ -8,7 +8,6 @@
 use anyhow::{anyhow, Error};
 use bookmark_renaming::{get_bookmark_renamers, BookmarkRenamer, BookmarkRenamers};
 use bookmarks::BookmarkName;
-use context::CoreContext;
 use futures::future::try_join;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::{
@@ -127,22 +126,6 @@ impl CommitSyncDataProvider {
                     target_repo_id,
                 )?;
                 Ok(reverse_bookmark_renamer)
-            }
-        }
-    }
-
-    pub async fn get_current_version(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> Result<CommitSyncConfigVersion, Error> {
-        use CommitSyncDataProvider::*;
-
-        match self {
-            Live(live_commit_sync_config) => {
-                live_commit_sync_config
-                    .get_current_commit_sync_config_version(ctx, repo_id)
-                    .await
             }
         }
     }

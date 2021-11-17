@@ -513,18 +513,6 @@ where
             .await
     }
 
-    pub async fn get_current_version(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<CommitSyncConfigVersion, Error> {
-        let version_name = self
-            .commit_sync_data_provider
-            .get_current_version(ctx, self.repos.get_source_repo().get_repoid())
-            .await?;
-
-        Ok(version_name)
-    }
-
     pub async fn rename_bookmark(
         &self,
         bookmark: &BookmarkName,

@@ -30,8 +30,6 @@ macro_rules! is_error_kind {
 
 mod all_changes;
 mod all_simple;
-mod current_changes;
-mod current_invalid;
 mod current_simple;
 mod push_redirection;
 
