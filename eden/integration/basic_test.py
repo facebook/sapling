@@ -240,6 +240,16 @@ class BasicTest(BasicTestBase):
         if sys.platform != "win32":
             self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
+    def test_hardlink_fails(self) -> None:
+        with self.assertRaises(OSError) as context:
+            os.link(
+                os.path.join(self.mount, "adir", "file"),
+                os.path.join(self.mount, "adir", "hardlink"),
+            )
+
+            expected_error = errno.EPERM if sys.platform != "win32" else errno.EACCES
+            self.assertEqual(context.exception.errno, expected_error)
+
 
 @testcase.eden_repo_test
 class PosixTest(BasicTestBase):
