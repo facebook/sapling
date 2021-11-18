@@ -863,7 +863,7 @@ sh % "hg shelve --patch default" == r"""
     +patch a"""
 # No-argument --patch should also work
 sh % "hg shelve --patch" == r"""
-    default-01      (*s ago)    shelve changes to: create conflict (glob)
+    default-01      (*)*shelve changes to: create conflict (glob)
 
     diff --git a/shelf-patch-b b/shelf-patch-b
     new file mode 100644
