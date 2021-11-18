@@ -16,7 +16,7 @@ use taggederror_util::AnyhowEdenExt;
 
 py_exception!(error, CertificateError);
 py_exception!(error, CommitLookupError, exc::KeyError);
-py_exception!(error, FetchError);
+py_exception!(error, FetchError, exc::KeyError);
 py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
 py_exception!(error, LockContendedError);
