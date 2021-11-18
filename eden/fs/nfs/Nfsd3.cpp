@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include "eden/fs/nfs/rpc/Server.h"
 #ifndef _WIN32
 
 #include "eden/fs/nfs/Nfsd3.h"
@@ -2021,6 +2022,14 @@ void Nfsd3::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
   if (registerWithRpcbind) {
     server_->registerService(kNfsdProgNumber, kNfsd3ProgVersion);
   }
+}
+
+void Nfsd3::initialize(folly::File&& connectedSocket) {
+  XLOG(DBG7) << "Initializing nfsd3 with connected socket: "
+             << connectedSocket.fd();
+  server_->initialize(
+      std::move(connectedSocket),
+      RpcServer::InitialSocketType::CONNECTED_SOCKET);
 }
 
 void Nfsd3::invalidate(AbsolutePath path) {

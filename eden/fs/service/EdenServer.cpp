@@ -1397,7 +1397,10 @@ Future<Unit> EdenServer::completeTakeoverStart(
     // Start up the fuse workers.
     return folly::makeFutureWith(
         [&] { edenMount->takeoverFuse(std::move(*channelData)); });
-  } else { // TODO: takeover for NFS
+  } else if (
+      auto nfsMountInfo = std::get_if<NfsChannelData>(&info.channelInfo)) {
+    return edenMount->takeoverNfs(std::move(*nfsMountInfo));
+  } else {
     return folly::makeFuture<Unit>(std::runtime_error(fmt::format(
         "Unsupported ChannelInfo Type: {}", info.channelInfo.index())));
   }

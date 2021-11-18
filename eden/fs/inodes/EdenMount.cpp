@@ -46,6 +46,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/Future.h"
 #include "eden/fs/utils/ImmediateFuture.h"
 #include "eden/fs/utils/NfsSocket.h"
@@ -1602,6 +1603,54 @@ std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
       mount->getCheckoutConfig()->getRequireUtf8Path(),
       edenConfig->fuseMaximumRequests.getValue())};
 }
+
+folly::Future<NfsServer::NfsMountInfo> makeNfsChannel(
+    EdenMount* mount,
+    std::optional<folly::File> connectedSocket = std::nullopt) {
+  auto edenConfig = mount->getEdenConfig();
+  auto nfsServer = mount->getServerState()->getNfsServer();
+  auto iosize = edenConfig->nfsIoSize.getValue();
+  auto mountPath = mount->getPath();
+  // Make sure that we are running on the EventBase while registering
+  // the mount point.
+  return via(nfsServer->getEventBase(),
+             [mount, mountPath, nfsServer, iosize, edenConfig]() {
+               return nfsServer->registerMount(
+                   mountPath,
+                   mount->getRootInode()->getNodeId(),
+                   EdenDispatcherFactory::makeNfsDispatcher(mount),
+                   &mount->getStraceLogger(),
+                   mount->getServerState()->getProcessNameCache(),
+                   mount->getServerState()->getFsEventLogger(),
+                   std::chrono::duration_cast<folly::Duration>(
+                       edenConfig->nfsRequestTimeout.getValue()),
+                   mount->getServerState()->getNotifications(),
+                   mount->getCheckoutConfig()->getCaseSensitive(),
+                   iosize);
+             })
+      .thenValue([mount, connectedSocket = std::move(connectedSocket)](
+                     NfsServer::NfsMountInfo mountInfo) mutable {
+        auto [channel, mountdAddr] = std::move(mountInfo);
+
+        if (connectedSocket) {
+          XLOG(DBG4) << "Mount takeover: Initiating nfsd with socket: "
+                     << connectedSocket.value().fd();
+          channel->initialize(std::move(connectedSocket.value()));
+        } else {
+          XLOG(DBG4) << "Normal Start: Initiating nfsd from scratch: ";
+          std::optional<AbsolutePath> unixSocketPath;
+          if (mount->getServerState()
+                  ->getEdenConfig()
+                  ->useUnixSocket.getValue()) {
+            unixSocketPath = mount->getCheckoutConfig()->getClientDirectory() +
+                kNfsdSocketName;
+          }
+          channel->initialize(makeNfsSocket(std::move(unixSocketPath)), false);
+        }
+        return NfsServer::NfsMountInfo{
+            std::move(channel), std::move(mountdAddr)};
+      });
+}
 } // namespace
 #endif
 
@@ -1642,28 +1691,11 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
             });
 #else
         if (shouldUseNFSMount_) {
-          auto nfsServer = serverState_->getNfsServer();
-
           auto iosize = edenConfig->nfsIoSize.getValue();
 
           // Make sure that we are running on the EventBase while registering
           // the mount point.
-          auto fut =
-              via(nfsServer->getEventBase(),
-                  [this, mountPath, nfsServer, iosize, edenConfig]() {
-                    return nfsServer->registerMount(
-                        mountPath,
-                        getRootInode()->getNodeId(),
-                        EdenDispatcherFactory::makeNfsDispatcher(this),
-                        &getStraceLogger(),
-                        serverState_->getProcessNameCache(),
-                        serverState_->getFsEventLogger(),
-                        std::chrono::duration_cast<folly::Duration>(
-                            edenConfig->nfsRequestTimeout.getValue()),
-                        serverState_->getNotifications(),
-                        checkoutConfig_->getCaseSensitive(),
-                        iosize);
-                  });
+          auto fut = makeNfsChannel(this);
           return std::move(fut).thenValue(
               [this,
                readOnly,
@@ -1672,14 +1704,6 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                mountPath = std::move(mountPath)](
                   NfsServer::NfsMountInfo mountInfo) mutable {
                 auto [channel, mountdAddr] = std::move(mountInfo);
-
-                std::optional<AbsolutePath> unixSocketPath;
-                if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
-                  unixSocketPath = getCheckoutConfig()->getClientDirectory() +
-                      kNfsdSocketName;
-                }
-                channel->initialize(
-                    makeNfsSocket(std::move(unixSocketPath)), false);
 
                 return serverState_->getPrivHelper()
                     ->nfsMount(
@@ -1920,7 +1944,7 @@ void EdenMount::channelInitSuccessful(
 void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
 #ifndef _WIN32
   transitionState(State::INITIALIZED, State::STARTING);
-
+  shouldUseNFSMount_ = false;
   try {
     beginMount().setValue();
 
@@ -1940,6 +1964,37 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
   }
 #else
   throw std::runtime_error("Fuse not supported on this platform.");
+#endif
+}
+
+folly::Future<folly::Unit> EdenMount::takeoverNfs(NfsChannelData takeoverData) {
+#ifndef _WIN32
+  transitionState(State::INITIALIZED, State::STARTING);
+  shouldUseNFSMount_ = true;
+  try {
+    beginMount().setValue();
+
+    return makeNfsChannel(this, std::move(takeoverData.nfsdSocketFd))
+        .thenValue([this](NfsServer::NfsMountInfo mountInfo) {
+          auto& channel = mountInfo.nfsd;
+
+          auto stopFuture = channel->getStopFuture().deferValue(
+              [](Nfsd3::StopData&& stopData) -> EdenMount::ChannelStopData {
+                return std::move(stopData);
+              });
+          this->channel_ = std::move(channel);
+          this->channelInitSuccessful(std::move(stopFuture));
+        })
+        .thenError([this](auto&& err) {
+          this->transitionToFuseInitializationErrorState();
+          return folly::makeFuture<folly::Unit>(std::move(err));
+        });
+  } catch (const std::exception& err) {
+    transitionToFuseInitializationErrorState();
+    return folly::makeFuture<folly::Unit>(err);
+  }
+#else
+  throw std::runtime_error("Nfs not supported on this platform.");
 #endif
 }
 

@@ -676,6 +676,19 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   void takeoverFuse(FuseChannelData takeoverData);
 
   /**
+   * Takeover an NFSd3 channel for an existing mount point.
+   *
+   * This starts listening on the socket and the future completes
+   * when the channel is completely setup.
+   *
+   * If unmount() is called before takeoverNfs() is called, then takeoverNfs()
+   * throws an EdenMountCancelled exception.
+   *
+   * throws a runtime_error if NFS is not supported on this platform.
+   */
+  folly::Future<folly::Unit> takeoverNfs(NfsChannelData connectedSocket);
+
+  /**
    * Obtains a future that will complete once the channel has wound down.
    *
    * This method may be called at any time, but the returned future will only be
@@ -851,6 +864,8 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Postconditions:
    * - If `getState()` was STARTING, `getState()` is now FUSE_ERROR.
    * - If `getState()` was not STARTING, `getState()` is unchanged.
+   *
+   * TODO: we should make this a bit more channel type agnostic.
    */
   void transitionToFuseInitializationErrorState();
 

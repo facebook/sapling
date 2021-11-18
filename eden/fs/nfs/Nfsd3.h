@@ -144,6 +144,7 @@ class Nfsd3 {
   ~Nfsd3();
 
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
+  void initialize(folly::File&& connectedSocket);
 
   /**
    * Trigger an invalidation for the given path.
