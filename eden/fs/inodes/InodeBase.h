@@ -401,6 +401,12 @@ class InodeBase {
   virtual InodeMetadata getMetadata() const = 0;
 #endif
 
+  /**
+   * Acquire the content lock and update the inode metadata. This method is used
+   * to make the kernel refresh it's caches on NFS.
+   */
+  virtual void forceMetadataUpdate() = 0;
+
  protected:
   /**
    * Returns current time from EdenMount's clock.

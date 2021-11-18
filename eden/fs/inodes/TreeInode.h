@@ -419,6 +419,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   InodeMetadata getMetadata() const override;
 #endif
 
+  void forceMetadataUpdate() override;
+
  private:
   class TreeRenameLocks;
   class IncompleteInodeLoad;

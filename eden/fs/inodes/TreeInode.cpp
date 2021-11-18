@@ -3472,6 +3472,11 @@ void TreeInode::updateAtime() {
   InodeBaseMetadata::updateAtimeLocked(lock->entries);
 }
 
+void TreeInode::forceMetadataUpdate() {
+  auto contents = contents_.wlock();
+  InodeBaseMetadata::updateMtimeAndCtimeLocked(contents->entries, getNow());
+}
+
 #ifndef _WIN32
 size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
   // Unloading children by criteria is a bit of an intricate operation. The

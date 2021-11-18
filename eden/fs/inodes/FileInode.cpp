@@ -629,6 +629,11 @@ mode_t FileInode::getMode() const {
 }
 #endif // !_WIN32
 
+void FileInode::forceMetadataUpdate() {
+  auto state = state_.wlock();
+  InodeBaseMetadata::updateMtimeAndCtimeLocked(*state, getNow());
+}
+
 std::optional<ObjectId> FileInode::getBlobHash() const {
   if (auto state = state_.rlock(); state->nonMaterializedState) {
     return state->nonMaterializedState->hash;

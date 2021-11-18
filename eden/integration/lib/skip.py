@@ -172,11 +172,10 @@ if sys.platform.startswith("linux"):
     # fail for both if they fail.
     NFS_TEST_DISABLED = {
         "takeover_test.TakeoverTest": [
-            "test_takeover_doesnt_send_ping",  # this test uses protocol 3 of
+            "test_takeover_doesnt_send_ping"  # this test uses protocol 3 of
             # graceful restart. Version 3 does not support restarting
             # NFS mounts. So we inherently expect this test to fail on
             # NFS.
-            "test_contents_are_the_same_if_handle_is_held_open",
         ],
         # These won't be fixed anytime soon, this requires NFSv4
         "xattr_test.XattrTest": [  # T89439481

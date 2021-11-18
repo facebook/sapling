@@ -2434,26 +2434,50 @@ Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
   auto edenMount = server_->getMount(mountPath);
   InodePtr inode =
       inodeFromUserPath(*edenMount, *path, helper->getFetchContext());
-  auto* fuseChannel = edenMount->getFuseChannel();
-  if (!fuseChannel) {
-    EDEN_BUG() << "Invalidating the inode cache isn't supported on NFS";
-  }
 
-  // Invalidate cached pages and attributes
-  fuseChannel->invalidateInode(inode->getNodeId(), 0, 0);
+  if (auto* fuseChannel = edenMount->getFuseChannel()) {
+    // Invalidate cached pages and attributes
+    fuseChannel->invalidateInode(inode->getNodeId(), 0, 0);
 
-  const auto treePtr = inode.asTreePtrOrNull();
+    const auto treePtr = inode.asTreePtrOrNull();
 
-  // Invalidate all parent/child relationships potentially cached.
-  if (treePtr != nullptr) {
-    const auto& dir = treePtr->getContents().rlock();
-    for (const auto& entry : dir->entries) {
-      fuseChannel->invalidateEntry(inode->getNodeId(), entry.first);
+    // Invalidate all parent/child relationships potentially cached.
+    if (treePtr != nullptr) {
+      const auto& dir = treePtr->getContents().rlock();
+      for (const auto& entry : dir->entries) {
+        fuseChannel->invalidateEntry(inode->getNodeId(), entry.first);
+      }
     }
+
+    // Wait for all of the invalidations to complete
+    return fuseChannel->flushInvalidations();
   }
 
-  // Wait for all of the invalidations to complete
-  return fuseChannel->flushInvalidations();
+  if (auto* nfsChannel = edenMount->getNfsdChannel()) {
+    auto canonicalMountPoint = canonicalPath(*mountPoint);
+    inode->forceMetadataUpdate();
+    nfsChannel->invalidate(canonicalMountPoint + RelativePath{*path});
+    const auto treePtr = inode.asTreePtrOrNull();
+    // Invalidate all children as well. There isn't really a way to invalidate
+    // the entry cache for nfs so we settle for invalidating the children
+    // themselves.
+    if (treePtr != nullptr) {
+      const auto& dir = treePtr->getContents().rlock();
+      for (const auto& entry : dir->entries) {
+        auto childPath = RelativePath{*path} + entry.first;
+        auto childInode = inodeFromUserPath(
+            *edenMount,
+            childPath.stringPiece().str(),
+            helper->getFetchContext());
+        childInode->forceMetadataUpdate();
+        nfsChannel->invalidate(canonicalMountPoint + childPath);
+      }
+    }
+
+    return nfsChannel->flushInvalidations();
+  }
+
+  return EDEN_BUG_FUTURE(folly::Unit) << "Unsupported Channel type.";
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
