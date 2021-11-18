@@ -476,9 +476,12 @@ ImmediateFuture<struct fuse_kstatfs> FuseDispatcherImpl::statfs(
   // otherwise.  This is important because eg: Finder on macOS inspects disk
   // space prior to initiating a copy and will refuse to start a copy if
   // the disk appears to be full.
+  // The only exception is bfree as users are misinterpreting the data and
+  // think that EdenFS is consumming 100+ GB of disk space. We thus expose that
+  // EdenFS free space is the same as the overlay capacity.
   auto overlayStats = mount_->getOverlay()->statFs();
   info.blocks = overlayStats.f_blocks;
-  info.bfree = overlayStats.f_bfree;
+  info.bfree = overlayStats.f_blocks;
   info.bavail = overlayStats.f_bavail;
   info.files = overlayStats.f_files;
   info.ffree = overlayStats.f_ffree;
