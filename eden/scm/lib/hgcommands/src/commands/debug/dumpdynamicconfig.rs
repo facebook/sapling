@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use configparser::dynamicconfig::Generator;
+#[cfg(feature = "fb")]
+use configparser::hg::calculate_dynamicconfig;
 
 use super::define_flags;
 use super::ConfigSet;
@@ -29,28 +30,32 @@ define_flags! {
 }
 
 pub fn run(opts: DebugDumpConfigOpts, io: &IO, config: ConfigSet) -> Result<u8> {
-    let reponame = opts.reponame;
-    let mut username = opts.username;
-    if username.is_empty() {
-        username = config.get_opt("ui", "username")?.unwrap_or_default();
-    }
-    let canary = opts.canary;
+    #[cfg(feature = "fb")]
+    {
+        let reponame = opts.reponame;
+        let mut username = opts.username;
+        if username.is_empty() {
+            username = config.get_opt("ui", "username")?.unwrap_or_default();
+        }
+        let canary = opts.canary;
 
-    let temp_dir = std::env::temp_dir();
-    let gen = Generator::new(reponame, temp_dir, username)?;
-    let generated = gen.execute(canary)?;
+        let temp_dir = std::env::temp_dir();
+        let generated = calculate_dynamicconfig(temp_dir, reponame, canary, username)?;
 
-    if opts.args.is_empty() {
-        io.write(generated.to_string())?;
-    } else {
-        for arg in opts.args {
-            let split: Vec<_> = arg.splitn(2, ".").collect();
-            if let [section, name] = split[..] {
-                let value: String = generated.get_opt(section, name)?.unwrap_or_default();
-                io.write(format!("{}\n", value))?;
+        if opts.args.is_empty() {
+            io.write(generated.to_string())?;
+        } else {
+            for arg in opts.args {
+                let split: Vec<_> = arg.splitn(2, ".").collect();
+                if let [section, name] = split[..] {
+                    let value: String = generated.get_opt(section, name)?.unwrap_or_default();
+                    io.write(format!("{}\n", value))?;
+                }
             }
         }
     }
+    #[cfg(not(feature = "fb"))]
+    let _ = (opts, io, config);
 
     Ok(0)
 }

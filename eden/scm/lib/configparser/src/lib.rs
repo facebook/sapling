@@ -68,7 +68,6 @@
 
 pub mod c_api;
 pub mod config;
-pub mod dynamicconfig;
 pub mod hg;
 pub mod parser;
 
