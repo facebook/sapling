@@ -117,7 +117,9 @@ void loopWithTimeout(EventBase* evb, std::chrono::milliseconds timeout = 300s) {
 folly::Try<TakeoverData> runTakeover(
     const TemporaryDirectory& tmpDir,
     TakeoverHandler* handler,
-    const std::set<int32_t>& supportedVersions = kSupportedTakeoverVersions) {
+    const std::set<int32_t>& supportedVersions = kSupportedTakeoverVersions,
+    const std::set<int32_t>& serverSupportedVersions =
+        kSupportedTakeoverVersions) {
   // Ignore SIGPIPE so that sendmsg() will fail with an error code instead
   // of terminating the program if the remote side has closed the connection.
   signal(SIGPIPE, SIG_IGN);
@@ -127,7 +129,8 @@ folly::Try<TakeoverData> runTakeover(
   EventBase evb;
 
   FaultInjector faultInjector{/*enabled=*/false};
-  TakeoverServer server(&evb, socketPath, handler, &faultInjector);
+  TakeoverServer server(
+      &evb, socketPath, handler, &faultInjector, serverSupportedVersions);
 
   auto future =
       takeoverViaEventBase(&evb, socketPath, supportedVersions).ensure([&] {
@@ -195,6 +198,10 @@ TEST(Takeover, simple) {
   serverData.thriftSocket =
       folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
+  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
+  serverData.mountdServerSocket =
+      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
   auto mount1Path = tmpDirPath + "mount1"_pc;
   auto client1Path = tmpDirPath + "client1"_pc;
   auto mount1FusePath = tmpDirPath + "fuse1"_pc;
@@ -202,8 +209,9 @@ TEST(Takeover, simple) {
       mount1Path,
       client1Path,
       std::vector<AbsolutePath>{},
-      folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
-      fuse_init_out{},
+      FuseChannelData{
+          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          fuse_init_out{}},
       SerializedInodeMap{});
 
   auto mount2Path = tmpDirPath + "mount2"_pc;
@@ -218,8 +226,9 @@ TEST(Takeover, simple) {
       mount2Path,
       client2Path,
       mount2BindMounts,
-      folly::File{mount2FusePath.stringPiece(), O_RDWR | O_CREAT},
-      fuse_init_out{},
+      FuseChannelData{
+          folly::File{mount2FusePath.stringPiece(), O_RDWR | O_CREAT},
+          fuse_init_out{}},
       SerializedInodeMap{});
 
   // Perform the takeover
@@ -240,14 +249,18 @@ TEST(Takeover, simple) {
   EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).mountPath);
   EXPECT_EQ(client1Path, clientData.mountPoints.at(0).stateDirectory);
   EXPECT_THAT(clientData.mountPoints.at(0).bindMounts, ElementsAre());
-  checkExpectedFile(clientData.mountPoints.at(0).fuseFD.fd(), mount1FusePath);
+  auto& fuseChannelData0 =
+      std::get<FuseChannelData>(clientData.mountPoints.at(0).channelInfo);
+  checkExpectedFile(fuseChannelData0.fd.fd(), mount1FusePath);
 
   EXPECT_EQ(mount2Path, clientData.mountPoints.at(1).mountPath);
   EXPECT_EQ(client2Path, clientData.mountPoints.at(1).stateDirectory);
   EXPECT_THAT(
       clientData.mountPoints.at(1).bindMounts,
       ElementsAreArray(mount2BindMounts));
-  checkExpectedFile(clientData.mountPoints.at(1).fuseFD.fd(), mount2FusePath);
+  auto& fuseChannelData1 =
+      std::get<FuseChannelData>(clientData.mountPoints.at(1).channelInfo);
+  checkExpectedFile(fuseChannelData1.fd.fd(), mount2FusePath);
 }
 
 TEST(Takeover, noMounts) {
@@ -262,6 +275,9 @@ TEST(Takeover, noMounts) {
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
       folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
+  serverData.mountdServerSocket =
+      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
   // Perform the takeover
   auto serverSendFuture = serverData.takeoverComplete.getFuture();
@@ -292,6 +308,9 @@ TEST(Takeover, manyMounts) {
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
       folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
+  serverData.mountdServerSocket =
+      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
   // Build info for 10,000 mounts
   // This exercises the code where we send more FDs than ControlMsg::kMaxFDs.
@@ -318,8 +337,9 @@ TEST(Takeover, manyMounts) {
         mountPath,
         stateDirectory,
         bindMounts,
-        folly::File{fusePath.stringPiece(), O_RDWR | O_CREAT},
-        fuse_init_out{},
+        FuseChannelData{
+            folly::File{fusePath.stringPiece(), O_RDWR | O_CREAT},
+            fuse_init_out{}},
         SerializedInodeMap{});
   }
 
@@ -357,7 +377,8 @@ TEST(Takeover, manyMounts) {
 
     auto expectedFusePath =
         tmpDirPath + PathComponentPiece{folly::to<string>("fuse", n)};
-    checkExpectedFile(mountInfo.fuseFD.fd(), expectedFusePath);
+    auto& fuseChannelData = std::get<FuseChannelData>(mountInfo.channelInfo);
+    checkExpectedFile(fuseChannelData.fd.fd(), expectedFusePath);
   }
 }
 
@@ -444,6 +465,9 @@ TEST(Takeover, oneToTwo) {
   auto thriftSocketPath = tmpDirPath + "thrift"_pc;
   serverData.thriftSocket =
       folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
+  serverData.mountdServerSocket =
+      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
 
   // Perform the takeover, explicitly using the older version
   // of the takeover protocol
@@ -461,7 +485,147 @@ TEST(Takeover, oneToTwo) {
   // expected files.
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
+  // version 1 and 2 are not able to receive the mountd socket
+  EXPECT_EQ(clientData.mountdServerSocket.fd(), -1);
 
   // Make sure the received mount information is empty
   EXPECT_EQ(0, clientData.mountPoints.size());
+}
+
+TEST(Takeover, nfs) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+
+  // Build the TakeoverData object to send
+  TakeoverData serverData;
+
+  auto lockFilePath = tmpDirPath + "lock"_pc;
+  serverData.lockFile =
+      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
+  serverData.mountdServerSocket =
+      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto mount1Path = tmpDirPath + "mount1"_pc;
+  auto client1Path = tmpDirPath + "client1"_pc;
+  auto mount1FusePath = tmpDirPath + "fuse1"_pc;
+  serverData.mountPoints.emplace_back(
+      mount1Path,
+      client1Path,
+      std::vector<AbsolutePath>{},
+      FuseChannelData{
+          folly::File{mount1FusePath.stringPiece(), O_RDWR | O_CREAT},
+          fuse_init_out{}},
+      SerializedInodeMap{});
+
+  auto mount2Path = tmpDirPath + "mount2"_pc;
+  auto client2Path = tmpDirPath + "client2"_pc;
+  auto mount2NfsPath = tmpDirPath + "nfs"_pc;
+  std::vector<AbsolutePath> mount2BindMounts = {
+      mount2Path + "test/test2"_relpath,
+      AbsolutePath{"/foo/bar"},
+      mount2Path + "a/b/c/d/e/f"_relpath,
+  };
+  serverData.mountPoints.emplace_back(
+      mount2Path,
+      client2Path,
+      mount2BindMounts,
+      NfsChannelData{
+          folly::File{mount2NfsPath.stringPiece(), O_RDWR | O_CREAT}},
+      SerializedInodeMap{});
+
+  // Perform the takeover
+  auto serverSendFuture = serverData.takeoverComplete.getFuture();
+  TestHandler handler{std::move(serverData)};
+  auto result = runTakeover(
+      tmpDir,
+      &handler,
+      std::set<int32_t>{
+          TakeoverData::kTakeoverProtocolVersionFour,
+          TakeoverData::kTakeoverProtocolVersionFive},
+      std::set<int32_t>{
+          TakeoverData::kTakeoverProtocolVersionFour,
+          TakeoverData::kTakeoverProtocolVersionFive});
+  ASSERT_TRUE(serverSendFuture.hasValue());
+  EXPECT_TRUE(result.hasValue());
+  const auto& clientData = result.value();
+
+  // Make sure the received lock file refers to the expected file.
+  checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
+  // And the thrift socket FD
+  checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket.fd(), mountdSocketPath);
+
+  // Make sure the received mount information is correct
+  ASSERT_EQ(2, clientData.mountPoints.size());
+  EXPECT_EQ(mount1Path, clientData.mountPoints.at(0).mountPath);
+  EXPECT_EQ(client1Path, clientData.mountPoints.at(0).stateDirectory);
+  EXPECT_THAT(clientData.mountPoints.at(0).bindMounts, ElementsAre());
+  auto& fuseChannelData =
+      std::get<FuseChannelData>(clientData.mountPoints.at(0).channelInfo);
+  checkExpectedFile(fuseChannelData.fd.fd(), mount1FusePath);
+
+  EXPECT_EQ(mount2Path, clientData.mountPoints.at(1).mountPath);
+  EXPECT_EQ(client2Path, clientData.mountPoints.at(1).stateDirectory);
+  EXPECT_THAT(
+      clientData.mountPoints.at(1).bindMounts,
+      ElementsAreArray(mount2BindMounts));
+  auto& nfsChannelData =
+      std::get<NfsChannelData>(clientData.mountPoints.at(1).channelInfo);
+  checkExpectedFile(nfsChannelData.nfsdSocketFd.fd(), mount2NfsPath);
+}
+
+TEST(Takeover, nfsOldVersion) {
+  TemporaryDirectory tmpDir("eden_takeover_test");
+  AbsolutePathPiece tmpDirPath{tmpDir.path().string()};
+
+  // Build the TakeoverData object to send
+  TakeoverData serverData;
+
+  auto lockFilePath = tmpDirPath + "lock"_pc;
+  serverData.lockFile =
+      folly::File{lockFilePath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto thriftSocketPath = tmpDirPath + "thrift"_pc;
+  serverData.thriftSocket =
+      folly::File{thriftSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto mountdSocketPath = tmpDirPath + "mountd"_pc;
+  serverData.mountdServerSocket =
+      folly::File{mountdSocketPath.stringPiece(), O_RDWR | O_CREAT};
+
+  auto mountPath = tmpDirPath + "mount2"_pc;
+  auto clientPath = tmpDirPath + "client2"_pc;
+  auto mountNfsPath = tmpDirPath + "nfs"_pc;
+  std::vector<AbsolutePath> mountBindMounts = {
+      mountPath + "test/test2"_relpath,
+      AbsolutePath{"/foo/bar"},
+      mountPath + "a/b/c/d/e/f"_relpath,
+  };
+  serverData.mountPoints.emplace_back(
+      mountPath,
+      clientPath,
+      mountBindMounts,
+      NfsChannelData{folly::File{mountNfsPath.stringPiece(), O_RDWR | O_CREAT}},
+      SerializedInodeMap{});
+
+  // Perform the takeover
+  auto serverSendFuture = serverData.takeoverComplete.getFuture();
+  TestHandler handler{std::move(serverData)};
+  auto result = runTakeover(
+      tmpDir,
+      &handler,
+      std::set<int32_t>{TakeoverData::kTakeoverProtocolVersionFour});
+  EXPECT_TRUE(result.hasException());
+  EXPECT_THROW_RE(
+      result.exception().throw_exception(),
+      std::runtime_error,
+      "protocol does not support serializing/deserializing this type of "
+      "mounts. protocol capabilities: 14. problem mount: .*mount2. mount "
+      "protocol: 2");
 }

@@ -71,6 +71,7 @@
 #include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/NfsSocket.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -572,9 +573,12 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
             [self = this,
              edenMount = info.edenMount](TakeoverData::MountInfo takeover)
                 -> Future<optional<TakeoverData::MountInfo>> {
-              if (!takeover.fuseFD) {
+              auto fuseChannelInfo =
+                  std::get_if<FuseChannelData>(&takeover.channelInfo);
+              if (!fuseChannelInfo || !fuseChannelInfo->fd) {
                 return std::nullopt;
               }
+              // TODO: takeover for NFS
               return self->serverState_->getPrivHelper()
                   ->takeoverShutdown(edenMount->getPath().stringPiece())
                   .thenValue([takeover = std::move(takeover)](auto&&) mutable {
@@ -1389,17 +1393,14 @@ Future<Unit> EdenServer::performTakeoverStart(
 Future<Unit> EdenServer::completeTakeoverStart(
     FOLLY_MAYBE_UNUSED std::shared_ptr<EdenMount> edenMount,
     FOLLY_MAYBE_UNUSED TakeoverData::MountInfo&& info) {
-#ifndef _WIN32
-  FuseChannelData channelData;
-  channelData.fd = std::move(info.fuseFD);
-  channelData.connInfo = info.connInfo;
-
-  // Start up the fuse workers.
-  return folly::makeFutureWith(
-      [&] { edenMount->takeoverFuse(std::move(channelData)); });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
+  if (auto channelData = std::get_if<FuseChannelData>(&info.channelInfo)) {
+    // Start up the fuse workers.
+    return folly::makeFutureWith(
+        [&] { edenMount->takeoverFuse(std::move(*channelData)); });
+  } else { // TODO: takeover for NFS
+    return folly::makeFuture<Unit>(std::runtime_error(fmt::format(
+        "Unsupported ChannelInfo Type: {}", info.channelInfo.index())));
+  }
 }
 
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(

@@ -86,11 +86,12 @@ TEST(FuseTest, initMount) {
     testMount.drainServerExecutor();
   } while (!fuseCompletionFuture.isReady());
 
-  auto mountInfo = std::move(fuseCompletionFuture.value());
+  auto mountInfo = std::get<FuseChannelData>(
+      std::move(fuseCompletionFuture.value()).channelInfo);
 
   // Since we closed the FUSE device from the "kernel" side the returned
   // MountInfo should not contain a valid FUSE device any more.
-  EXPECT_FALSE(mountInfo.fuseFD);
+  EXPECT_FALSE(mountInfo.fd);
 }
 
 // Test destroying the EdenMount object while FUSE initialization is still
@@ -180,11 +181,12 @@ TEST(FuseTest, destroyWithInitRace) {
   if (initFuseSuccessful) {
     // The FUSE completion future should also be signalled when the FuseChannel
     // is destroyed.
-    auto mountInfo = std::move(completionFuture).get(250ms);
+    auto mountInfo = std::get<FuseChannelData>(
+        std::move(completionFuture).get(250ms).channelInfo);
     // Since we just destroyed the EdenMount and the kernel-side of the FUSE
     // channel was not stopped the returned MountInfo should contain the FUSE
     // device.
-    EXPECT_TRUE(mountInfo.fuseFD);
+    EXPECT_TRUE(mountInfo.fd);
   }
 }
 

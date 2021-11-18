@@ -1263,7 +1263,8 @@ TEST(EdenMountState, newMountIsRunningAndOldMountIsShutDownAfterFuseTakeover) {
       oldMount.getChannelCompletionFuture().within(kTimeout).getVia(
           oldTestMount.getServerExecutor().get());
   oldMount.shutdown(/*doTakeover=*/true).get(kTimeout);
-  newMount.takeoverFuse(FuseChannelData{std::move(takeoverData.fuseFD), {}});
+  auto& fuseChannelData = std::get<FuseChannelData>(takeoverData.channelInfo);
+  newMount.takeoverFuse(std::move(fuseChannelData));
 
   EXPECT_EQ(oldMount.getState(), EdenMount::State::SHUT_DOWN);
   EXPECT_EQ(newMount.getState(), EdenMount::State::RUNNING);

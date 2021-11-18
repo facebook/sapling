@@ -13,6 +13,7 @@
 #include <gflags/gflags.h>
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
+#include "eden/fs/utils/FsChannelTypes.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
 /**
@@ -59,7 +60,16 @@ int main(int argc, char* argv[]) {
         takeoverSocketPath, FLAGS_shouldPing, takeoverVersion);
   }
   for (const auto& mount : data.mountPoints) {
-    XLOG(INFO) << "mount " << mount.mountPath << ": fd=" << mount.fuseFD.fd();
+    const folly::File* mountFD = nullptr;
+    if (auto fuseChannelData =
+            std::get_if<facebook::eden::FuseChannelData>(&mount.channelInfo)) {
+      mountFD = &fuseChannelData->fd;
+    } else {
+      auto& nfsChannelData =
+          std::get<facebook::eden::NfsChannelData>(mount.channelInfo);
+      mountFD = &nfsChannelData.nfsdSocketFd;
+    }
+    XLOG(INFO) << "mount " << mount.mountPath << ": fd=" << mountFD->fd();
     for (const auto& bindMount : mount.bindMounts) {
       XLOG(INFO) << "  bind mount " << bindMount;
     }

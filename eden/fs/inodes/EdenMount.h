@@ -662,7 +662,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> startChannel(bool readOnly);
 
-#ifndef _WIN32
   /**
    * Take over a FUSE channel for an existing mount point.
    *
@@ -671,9 +670,10 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    *
    * If unmount() is called before takeoverFuse() is called, then takeoverFuse()
    * throws an EdenMountCancelled exception.
+   *
+   * throws a runtime_error if fuse is not supported on this platform.
    */
   void takeoverFuse(FuseChannelData takeoverData);
-#endif
 
   /**
    * Obtains a future that will complete once the channel has wound down.

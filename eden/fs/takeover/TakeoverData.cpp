@@ -9,14 +9,19 @@
 
 #include "eden/fs/takeover/TakeoverData.h"
 
+#include <memory>
 #include <stdexcept>
+#include <variant>
 
 #include <folly/Format.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <folly/logging/xlog.h>
+
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/UnixSocket.h"
 
 using apache::thrift::CompactSerializer;
 using folly::IOBuf;
@@ -24,6 +29,26 @@ using std::string;
 
 namespace facebook {
 namespace eden {
+
+namespace {
+
+/**
+ * Determines the mount protocol for the mount point encoded in the mountInfo.
+ */
+TakeoverMountProtocol getMountProtocol(
+    const TakeoverData::MountInfo& mountInfo) {
+  if (std::holds_alternative<FuseChannelData>(mountInfo.channelInfo)) {
+    return TakeoverMountProtocol::FUSE;
+  } else if (std::holds_alternative<NfsChannelData>(mountInfo.channelInfo)) {
+    return TakeoverMountProtocol::NFS;
+  }
+  throw std::runtime_error(fmt::format(
+      "unrecognized mount protocol {} for mount: {}",
+      mountInfo.channelInfo.index(),
+      mountInfo.mountPath));
+}
+
+} // namespace
 
 const std::set<int32_t> kSupportedTakeoverVersions{
     TakeoverData::kTakeoverProtocolVersionOne,
@@ -40,7 +65,8 @@ std::optional<int32_t> TakeoverData::computeCompatibleVersion(
       // No better than the current best
       continue;
     }
-    if (supported.find(version) == supported.end()) {
+    if (std::find(supported.begin(), supported.end(), version) ==
+        supported.end()) {
       // Not supported
       continue;
     }
@@ -63,6 +89,11 @@ uint64_t TakeoverData::versionToCapabilites(int32_t version) {
       return TakeoverCapabilities::FUSE |
           TakeoverCapabilities::THRIFT_SERIALIZATION |
           TakeoverCapabilities::PING;
+    case kTakeoverProtocolVersionFive:
+      return TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
+          TakeoverCapabilities::PING |
+          TakeoverCapabilities::THRIFT_SERIALIZATION |
+          TakeoverCapabilities::NFS;
   }
   throw std::runtime_error(fmt::format("Unsupported version: {}", version));
 }
@@ -87,8 +118,21 @@ int32_t TakeoverData::capabilitesToVersion(uint64_t capabilities) {
     return kTakeoverProtocolVersionFour;
   }
 
+  if (capabilities ==
+      (TakeoverCapabilities::FUSE | TakeoverCapabilities::MOUNT_TYPES |
+       TakeoverCapabilities::PING | TakeoverCapabilities::THRIFT_SERIALIZATION |
+       TakeoverCapabilities::NFS)) {
+    return kTakeoverProtocolVersionFive;
+  }
+
   throw std::runtime_error(
       fmt::format("Unsupported combination of capabilities: {}", capabilities));
+}
+
+bool TakeoverData::shouldSerdeNFSInfo(uint32_t protocolCapabilities) {
+  // 4 and below know nothing of NFS mounts. we introduce NFS support in version
+  // 5 and expect to continue to support NFS mounts beyond version 5.
+  return protocolCapabilities & TakeoverCapabilities::NFS;
 }
 
 void TakeoverData::serialize(
@@ -97,8 +141,19 @@ void TakeoverData::serialize(
   msg.data = serialize(protocolCapabilities);
   msg.files.push_back(std::move(lockFile));
   msg.files.push_back(std::move(thriftSocket));
+
+  if (shouldSerdeNFSInfo(protocolCapabilities)) {
+    XLOG(DBG7) << "serializing mountd socket: " << mountdServerSocket.fd();
+    msg.files.push_back(std::move(mountdServerSocket));
+  }
   for (auto& mount : mountPoints) {
-    msg.files.push_back(std::move(mount.fuseFD));
+    if (auto fuseData = std::get_if<FuseChannelData>(&mount.channelInfo)) {
+      msg.files.push_back(std::move(fuseData->fd));
+    } else if (auto nfsData = std::get_if<NfsChannelData>(&mount.channelInfo)) {
+      msg.files.push_back(std::move(nfsData->nfsdSocketFd));
+    } else {
+      throw std::runtime_error("Unexpected Channel Type");
+    }
   }
 }
 
@@ -165,7 +220,9 @@ TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
   auto capabilities = TakeoverData::versionToCapabilites(protocolVersion);
 
   auto data = TakeoverData::deserialize(capabilities, &msg.data);
-  constexpr auto mountPointFilesOffset = 2;
+  // when we serialize the mountd socket we have three general files instead
+  // of two
+  const auto mountPointFilesOffset = shouldSerdeNFSInfo(capabilities) ? 3 : 2;
 
   // Add 2 here for the lock file and the thrift socket
   if (data.mountPoints.size() + mountPointFilesOffset != msg.files.size()) {
@@ -178,9 +235,20 @@ TakeoverData TakeoverData::deserialize(UnixSocket::Message& msg) {
   }
   data.lockFile = std::move(msg.files[0]);
   data.thriftSocket = std::move(msg.files[1]);
+  if (shouldSerdeNFSInfo(capabilities)) {
+    data.mountdServerSocket = std::move(msg.files[2]);
+    XLOG(DBG1) << "Deserialized mountd Socket " << data.mountdServerSocket.fd();
+  }
   for (size_t n = 0; n < data.mountPoints.size(); ++n) {
     auto& mountInfo = data.mountPoints[n];
-    mountInfo.fuseFD = std::move(msg.files[n + mountPointFilesOffset]);
+    if (auto fuseData = std::get_if<FuseChannelData>(&mountInfo.channelInfo)) {
+      fuseData->fd = std::move(msg.files[n + mountPointFilesOffset]);
+    } else if (
+        auto nfsData = std::get_if<NfsChannelData>(&mountInfo.channelInfo)) {
+      nfsData->nfsdSocketFd = std::move(msg.files[n + mountPointFilesOffset]);
+    } else {
+      throw std::runtime_error("Unexpected Channel Type");
+    }
   }
   return data;
 }
@@ -198,6 +266,7 @@ int32_t TakeoverData::getProtocolVersion(IOBuf* buf) {
       return kTakeoverProtocolVersionOne;
     case kTakeoverProtocolVersionThree:
     case kTakeoverProtocolVersionFour:
+    case kTakeoverProtocolVersionFive:
       // Version 3 (there was no 2 because of how Version 1 used word values
       // 1 and 2) doesn't care about this version byte, so we skip past it
       // and let the underlying code decode the data
@@ -220,7 +289,7 @@ TakeoverData TakeoverData::deserialize(
     return deserializeCustom(buf);
   }
   if (serializationMethod == TakeoverCapabilities::THRIFT_SERIALIZATION) {
-    return deserializeThrift(buf);
+    return deserializeThrift(protocolCapabilities, buf);
   }
 
   throw std::runtime_error(fmt::format(
@@ -262,37 +331,48 @@ IOBuf TakeoverData::serializeCustom() {
 
   // Serialize each mount point
   for (const auto& mount : mountPoints) {
-    // The mount path
-    const auto& pathStr = mount.mountPath.stringPiece();
-    app.writeBE<uint32_t>(pathStr.size());
-    app(pathStr);
+    auto mountProtocol = getMountProtocol(mount);
+    if (mountProtocol == TakeoverMountProtocol::FUSE) {
+      auto& channelData = std::get<FuseChannelData>(mount.channelInfo);
 
-    // The client configuration dir
-    const auto& clientStr = mount.stateDirectory.stringPiece();
-    app.writeBE<uint32_t>(clientStr.size());
-    app(clientStr);
+      // The mount path
+      const auto& pathStr = mount.mountPath.stringPiece();
+      app.writeBE<uint32_t>(pathStr.size());
+      app(pathStr);
 
-    // Number of bind mounts, followed by the bind mount paths
-    app.writeBE<uint32_t>(mount.bindMounts.size());
-    for (const auto& bindMount : mount.bindMounts) {
-      app.writeBE<uint32_t>(bindMount.stringPiece().size());
-      app(bindMount.stringPiece());
+      // The client configuration dir
+      const auto& clientStr = mount.stateDirectory.stringPiece();
+      app.writeBE<uint32_t>(clientStr.size());
+      app(clientStr);
+
+      // Number of bind mounts, followed by the bind mount paths
+      app.writeBE<uint32_t>(mount.bindMounts.size());
+      for (const auto& bindMount : mount.bindMounts) {
+        app.writeBE<uint32_t>(bindMount.stringPiece().size());
+        app(bindMount.stringPiece());
+      }
+
+      // Stuffing the fuse connection information in as a binary
+      // blob because we know that the endianness of the target
+      // machine must match the current system for a graceful
+      // takeover.
+      app.push(folly::StringPiece{
+          reinterpret_cast<const char*>(&channelData.connInfo),
+          sizeof(channelData.connInfo)});
+      // SerializedFileHandleMap has been removed so its size is always 0.
+      app.writeBE<uint32_t>(0);
+
+      auto serializedInodeMap =
+          CompactSerializer::serialize<std::string>(mount.inodeMap);
+      app.writeBE<uint32_t>(serializedInodeMap.size());
+      app.push(folly::StringPiece{serializedInodeMap});
+    } else {
+      throw std::runtime_error(fmt::format(
+          "version 1 of the protocol does not support serializing non-FUSE"
+          "mounts. problem mount: {} . protocol: {}",
+          mount.mountPath,
+          mountProtocol));
     }
-
-    // Stuffing the fuse connection information in as a binary
-    // blob because we know that the endianness of the target
-    // machine must match the current system for a graceful
-    // takeover.
-    app.push(folly::StringPiece{
-        reinterpret_cast<const char*>(&mount.connInfo),
-        sizeof(mount.connInfo)});
-    // SerializedFileHandleMap has been removed so its size is always 0.
-    app.writeBE<uint32_t>(0);
-
-    auto serializedInodeMap =
-        CompactSerializer::serialize<std::string>(mount.inodeMap);
-    app.writeBE<uint32_t>(serializedInodeMap.size());
-    app.push(folly::StringPiece{serializedInodeMap});
   }
 
   return buf;
@@ -381,12 +461,40 @@ TakeoverData TakeoverData::deserializeCustom(IOBuf* buf) {
         AbsolutePath{mountPath},
         AbsolutePath{stateDirectory},
         std::move(bindMounts),
-        folly::File{},
-        connInfo,
+        FuseChannelData{folly::File{}, connInfo},
         std::move(inodeMap));
   }
 
   return data;
+}
+
+bool canSerDeMountType(
+    uint64_t protocolCapabilities,
+    TakeoverMountProtocol mountProtocol) {
+  switch (mountProtocol) {
+    case TakeoverMountProtocol::FUSE:
+      return protocolCapabilities & TakeoverCapabilities::FUSE;
+    case TakeoverMountProtocol::NFS:
+      return protocolCapabilities & TakeoverCapabilities::NFS;
+    case TakeoverMountProtocol::UNKNOWN:
+      return false;
+  }
+  return false;
+}
+
+void checkCanSerDeMountType(
+    uint64_t protocolCapabilities,
+    TakeoverMountProtocol mountProtocol,
+    folly::StringPiece mountPath) {
+  if (!canSerDeMountType(protocolCapabilities, mountProtocol)) {
+    throw std::runtime_error(fmt::format(
+        "protocol does not support serializing/deserializing this type of "
+        "mounts. protocol capabilities: {}. problem mount: {}. mount protocol:"
+        " {}",
+        protocolCapabilities,
+        mountPath,
+        mountProtocol));
+  }
 }
 
 IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
@@ -411,6 +519,11 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
 
   std::vector<SerializedMountInfo> serializedMounts;
   for (const auto& mount : mountPoints) {
+    auto mountProtocol = getMountProtocol(mount);
+
+    checkCanSerDeMountType(
+        protocolCapabilities, mountProtocol, mount.mountPath.stringPiece());
+
     SerializedMountInfo serializedMount;
 
     *serializedMount.mountPath_ref() = mount.mountPath.stringPiece().str();
@@ -422,15 +535,21 @@ IOBuf TakeoverData::serializeThrift(uint64_t protocolCapabilities) {
           bindMount.stringPiece().str());
     }
 
-    // Stuffing the fuse connection information in as a binary
-    // blob because we know that the endianness of the target
-    // machine must match the current system for a graceful
-    // takeover, and it saves us from re-encoding an operating
-    // system specific struct into a thrift file.
-    *serializedMount.connInfo_ref() = std::string{
-        reinterpret_cast<const char*>(&mount.connInfo), sizeof(mount.connInfo)};
+    if (auto fuseChannelInfo =
+            std::get_if<FuseChannelData>(&mount.channelInfo)) {
+      // Stuffing the fuse connection information in as a binary
+      // blob because we know that the endianness of the target
+      // machine must match the current system for a graceful
+      // takeover, and it saves us from re-encoding an operating
+      // system specific struct into a thrift file.
+      serializedMount.connInfo_ref() = std::string{
+          reinterpret_cast<const char*>(&fuseChannelInfo->connInfo),
+          sizeof(fuseChannelInfo->connInfo)};
+    }
 
     *serializedMount.inodeMap_ref() = mount.inodeMap;
+
+    serializedMount.mountProtocol_ref() = mountProtocol;
 
     serializedMounts.emplace_back(std::move(serializedMount));
   }
@@ -459,7 +578,9 @@ folly::IOBuf TakeoverData::serializeErrorThrift(
   return std::move(*bufQ.move());
 }
 
-TakeoverData TakeoverData::deserializeThrift(IOBuf* buf) {
+TakeoverData TakeoverData::deserializeThrift(
+    uint32_t protocolCapabilities,
+    IOBuf* buf) {
   auto serialized = CompactSerializer::deserialize<SerializedTakeoverData>(buf);
 
   switch (serialized.getType()) {
@@ -469,21 +590,50 @@ TakeoverData TakeoverData::deserializeThrift(IOBuf* buf) {
     case SerializedTakeoverData::Type::mounts: {
       TakeoverData data;
       for (auto& serializedMount : serialized.mutable_mounts()) {
-        const auto* connInfo = reinterpret_cast<const fuse_init_out*>(
-            serializedMount.connInfo_ref()->data());
-
         std::vector<AbsolutePath> bindMounts;
         for (const auto& path : *serializedMount.bindMountPaths_ref()) {
           bindMounts.emplace_back(AbsolutePathPiece{path});
         }
-
-        data.mountPoints.emplace_back(
-            AbsolutePath{*serializedMount.mountPath_ref()},
-            AbsolutePath{*serializedMount.stateDirectory_ref()},
-            std::move(bindMounts),
-            folly::File{},
-            *connInfo,
-            std::move(*serializedMount.inodeMap_ref()));
+        switch (*serializedMount.mountProtocol_ref()) {
+          case TakeoverMountProtocol::UNKNOWN:
+            if (protocolCapabilities & TakeoverCapabilities::MOUNT_TYPES) {
+              throw std::runtime_error("Unknown Mount Protocol");
+            }
+            // versions <5 all assumed FUSE mounts, but we don't want to make
+            // the default mount protocol fuse. We can fall through to parsing a
+            // fuse mount in this case.
+            [[fallthrough]];
+          case TakeoverMountProtocol::FUSE:
+            checkCanSerDeMountType(
+                protocolCapabilities,
+                TakeoverMountProtocol::FUSE,
+                *serializedMount.mountPath_ref());
+            data.mountPoints.emplace_back(
+                AbsolutePath{*serializedMount.mountPath_ref()},
+                AbsolutePath{*serializedMount.stateDirectory_ref()},
+                std::move(bindMounts),
+                FuseChannelData{
+                    folly::File{},
+                    *reinterpret_cast<const fuse_init_out*>(
+                        serializedMount.connInfo_ref()->data())},
+                std::move(*serializedMount.inodeMap_ref()));
+            break;
+          case TakeoverMountProtocol::NFS:
+            checkCanSerDeMountType(
+                protocolCapabilities,
+                TakeoverMountProtocol::NFS,
+                *serializedMount.mountPath_ref());
+            data.mountPoints.emplace_back(
+                AbsolutePath{*serializedMount.mountPath_ref()},
+                AbsolutePath{*serializedMount.stateDirectory_ref()},
+                std::move(bindMounts),
+                NfsChannelData{folly::File{}},
+                std::move(*serializedMount.inodeMap_ref()));
+            break;
+          default:
+            throw std::runtime_error(
+                "impossible enum variant for TakeoverMountProtocol");
+        }
       }
       return data;
     }

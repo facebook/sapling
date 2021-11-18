@@ -33,4 +33,8 @@ struct NfsChannelData {
   folly::File nfsdSocketFd;
 };
 
+struct ProjFsChannelData {
+  // TODO fill this in with data to support takeover on windows
+};
+
 } // namespace facebook::eden

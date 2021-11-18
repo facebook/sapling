@@ -7,16 +7,18 @@
 
 #pragma once
 
-#include <folly/File.h>
-#include <folly/futures/Promise.h>
 #include <memory>
 #include <optional>
 #include <vector>
+
+#include <folly/File.h>
+#include <folly/futures/Promise.h>
 
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/FsChannelTypes.h"
 #include "eden/fs/utils/FutureUnixSocket.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/UnixSocket.h"
 
 namespace folly {
 class IOBuf;
@@ -73,6 +75,14 @@ class TakeoverCapabilities {
     // This should be used in all modern takeover versions.
     PING = 1 << 3,
 
+    // Indicates that the protocol includes the type of kernel module that will
+    // be used for each mount point.
+    // This should be used in all modern takeover versions.
+    MOUNT_TYPES = 1 << 4,
+
+    // Indicates this version of the protocol is able to serialize NFS mount
+    // points
+    NFS = 1 << 5,
   };
 };
 
@@ -108,7 +118,7 @@ class TakeoverData {
     // version 2 to describe this next one.
     kTakeoverProtocolVersionThree = 3,
 
-    // This version introduced an additonal handshake before taking over
+    // This version introduced an additional handshake before taking over
     // that is sent after the TakeoverData is ready but before actually
     // sending it. This is in order to make sure we only send the data if
     // the new process is healthy and able to receive, because otherwise
@@ -118,6 +128,13 @@ class TakeoverData {
     // break a server with this extra handshake talking to a client
     // without it
     kTakeoverProtocolVersionFour = 4,
+
+    // This version introduced the ability to takeover NFS mounts.
+    // This includes serializing the mountd socket as well as the
+    // connected socket to the kernel for each of the mount points.
+    kTakeoverProtocolVersionFive = 5,
+    // version 5 should be the last real version, we should bump to version 6
+    // and from then on only match capabilities
   };
 
   /**
@@ -147,41 +164,63 @@ class TakeoverData {
       const std::set<int32_t>& supported = kSupportedTakeoverVersions);
 
   struct MountInfo {
+    /**
+     * Constructor for an NFS mount's MountInfo
+     */
     MountInfo(
         AbsolutePathPiece mountPath,
         AbsolutePathPiece stateDirectory,
         const std::vector<AbsolutePath>& bindMountPaths,
-        folly::File fd,
-#ifndef _WIN32
-        fuse_init_out connInfo,
-#endif
+        NfsChannelData nfsChannelData,
         SerializedInodeMap&& inodeMap)
         : mountPath{mountPath},
           stateDirectory{stateDirectory},
           bindMounts{bindMountPaths},
-          fuseFD{std::move(fd)},
-#ifndef _WIN32
-          connInfo{connInfo},
-#endif
-          inodeMap{std::move(inodeMap)} {
-    }
+          channelInfo{std::move(nfsChannelData)},
+          inodeMap{std::move(inodeMap)} {}
+
+    /**
+     * Constructor for a Fuse mount's MountInfo
+     */
+    MountInfo(
+        AbsolutePathPiece mountPath,
+        AbsolutePathPiece stateDirectory,
+        const std::vector<AbsolutePath>& bindMountPaths,
+        FuseChannelData fuseChannelData,
+        SerializedInodeMap&& inodeMap)
+        : mountPath{mountPath},
+          stateDirectory{stateDirectory},
+          bindMounts{bindMountPaths},
+          channelInfo{std::move(fuseChannelData)},
+          inodeMap{std::move(inodeMap)} {}
+
+    /**
+     * Constructor for a Projected FS mount's MountInfo
+     */
+    MountInfo(
+        AbsolutePathPiece mountPath,
+        AbsolutePathPiece stateDirectory,
+        const std::vector<AbsolutePath>& bindMountPaths,
+        ProjFsChannelData projfsChannelData,
+        SerializedInodeMap&& inodeMap)
+        : mountPath{mountPath},
+          stateDirectory{stateDirectory},
+          bindMounts{bindMountPaths},
+          channelInfo{std::move(projfsChannelData)},
+          inodeMap{std::move(inodeMap)} {}
 
     AbsolutePath mountPath;
     AbsolutePath stateDirectory;
     std::vector<AbsolutePath> bindMounts;
-    folly::File fuseFD;
-#ifndef _WIN32
-    fuse_init_out connInfo;
-#endif
+
+    std::variant<FuseChannelData, NfsChannelData, ProjFsChannelData>
+        channelInfo;
+
     SerializedInodeMap inodeMap;
   };
 
   /**
-   * Serialize the TakeoverData into a buffer that can be sent to a remote
-   * process.
-   *
-   * This includes all data except for file descriptors.  The file descriptors
-   * must be sent separately.
+   * Serialize the TakeoverData into a unix socket message.
    */
   void serialize(uint64_t protocolCapabilities, UnixSocket::Message& msg);
 
@@ -217,6 +256,13 @@ class TakeoverData {
   static bool isPing(const folly::IOBuf* buf);
 
   /**
+   * Determines if we should serialized NFS data given the protocol version
+   * we are serializing with. i.e. should we send takeover data for NFS mount
+   * points and should we send the mountd socket.
+   */
+  static bool shouldSerdeNFSInfo(uint32_t protocolVersionCapabilies);
+
+  /**
    * The main eden lock file that prevents two edenfs processes from running at
    * the same time.
    */
@@ -226,6 +272,11 @@ class TakeoverData {
    * The thrift server socket.
    */
   folly::File thriftSocket;
+
+  /**
+   * Server socket for the mountd.
+   */
+  folly::File mountdServerSocket;
 
   /**
    * The list of mount points.
@@ -240,7 +291,7 @@ class TakeoverData {
 
  private:
   /**
-   * Serialize the TakeoverData using the specified protocol version into a
+   * Serialize the TakeoverData using the specified protocol capabilities into a
    * buffer that can be sent to a remote process.
    *
    * This includes all data except for file descriptors; these must be sent
@@ -249,22 +300,26 @@ class TakeoverData {
   folly::IOBuf serialize(uint64_t protocolCapabilities);
 
   /**
-   * Serialize data using version 1 of the takeover protocol.
+   * Serialize data using version 1 of the takeover protocol. This uses a home
+   * grown serialization format.
    */
   folly::IOBuf serializeCustom();
 
   /**
-   * Serialize an exception using version 1 of the takeover protocol.
+   * Serialize an exception using version 1 of the takeover protocol. This uses
+   * a home grown serialization format
    */
   static folly::IOBuf serializeErrorCustom(const folly::exception_wrapper& ew);
 
   /**
-   * Serialize data using version 2 of the takeover protocol.
+   * Serialize data for any version that uses thrift serialization. This is
+   * versions 3+.
    */
   folly::IOBuf serializeThrift(uint64_t protocolCapabilities);
 
   /**
-   * Serialize an exception using version 2 of the takeover protocol.
+   * Serialize an exception for any version that uses thrift serialization. This
+   * is versions 3+.
    */
   static folly::IOBuf serializeErrorThrift(const folly::exception_wrapper& ew);
 
@@ -277,14 +332,16 @@ class TakeoverData {
       folly::IOBuf* buf);
 
   /**
-   * Deserialize the TakeoverData from a buffer using version 3 (also known as
-   * 2), 4 or 5 of the takeover protocol.
+   * Deserialize the TakeoverData from a buffer for any version of the protocol
+   * that uses thrift serialization. This is any version 3+.
    */
-  static TakeoverData deserializeThrift(folly::IOBuf* buf);
+  static TakeoverData deserializeThrift(
+      uint32_t protocolCapabilities,
+      folly::IOBuf* buf);
 
   /**
    * Deserialize the TakeoverData from a buffer using version 1 of the takeover
-   * protocol.
+   * protocol. This uses a home grown serialization format.
    */
   static TakeoverData deserializeCustom(folly::IOBuf* buf);
 

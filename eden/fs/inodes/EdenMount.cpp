@@ -1840,7 +1840,7 @@ void EdenMount::preparePostChannelCompletion(
                 getPath(),
                 checkoutConfig_->getClientDirectory(),
                 bindMounts,
-                folly::File{},
+                ProjFsChannelData{}, // placeholder
                 SerializedInodeMap{} // placeholder
                 ));
 #else
@@ -1861,8 +1861,9 @@ void EdenMount::preparePostChannelCompletion(
                         getPath(),
                         checkoutConfig_->getClientDirectory(),
                         bindMounts,
-                        std::move(variant.fuseDevice),
-                        variant.fuseSettings,
+                        FuseChannelData{
+                            std::move(variant.fuseDevice),
+                            variant.fuseSettings},
                         SerializedInodeMap{} // placeholder
                         ));
                   } else {
@@ -1874,10 +1875,8 @@ void EdenMount::preparePostChannelCompletion(
                         getPath(),
                         checkoutConfig_->getClientDirectory(),
                         bindMounts,
-                        // TODO(xavierd): the next 2 fields should be a variant
-                        // too.
-                        folly::File(),
-                        fuse_init_out{},
+                        FuseChannelData{
+                            folly::File(), fuse_init_out{}}, // TODO: NFS data
                         SerializedInodeMap{} // placeholder
                         ));
                   }
@@ -1918,8 +1917,8 @@ void EdenMount::channelInitSuccessful(
 #endif
 }
 
-#ifndef _WIN32
 void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
+#ifndef _WIN32
   transitionState(State::INITIALIZED, State::STARTING);
 
   try {
@@ -1939,8 +1938,12 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
     transitionToFuseInitializationErrorState();
     throw;
   }
+#else
+  throw std::runtime_error("Fuse not supported on this platform.");
+#endif
 }
 
+#ifndef _WIN32
 InodeMetadata EdenMount::getInitialInodeMetadata(mode_t mode) const {
   auto owner = getOwner();
   return InodeMetadata{
