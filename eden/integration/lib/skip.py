@@ -171,8 +171,14 @@ if sys.platform.startswith("linux"):
     # on the test and disables them for both Hg and Git as nfs tests generally
     # fail for both if they fail.
     NFS_TEST_DISABLED = {
-        "takeover_test.TakeoverTest": True,  # T89344844
-        # These won't be fixed anythime soon, this requires NFSv4
+        "takeover_test.TakeoverTest": [
+            "test_takeover_doesnt_send_ping",  # this test uses protocol 3 of
+            # graceful restart. Version 3 does not support restarting
+            # NFS mounts. So we inherently expect this test to fail on
+            # NFS.
+            "test_contents_are_the_same_if_handle_is_held_open",
+        ],
+        # These won't be fixed anytime soon, this requires NFSv4
         "xattr_test.XattrTest": [  # T89439481
             "test_get_sha1_xattr",
             "test_get_sha1_xattr_succeeds_after_querying_xattr_on_dir",
@@ -183,7 +189,6 @@ if sys.platform.startswith("linux"):
             "test_setuid_setgid_and_sticky_bits_fail_with_eperm",
         ],
         "stats_test.CountersTest": True,  # T89440036
-        "takeover_test.TakeoverRocksDBStressTest": True,  # T89344844
         "thrift_test.ThriftTest": ["test_pid_fetch_counts"],  # T89440575
         "mount_test.MountTest": [  # T91790656
             "test_unmount_succeeds_while_file_handle_is_open",

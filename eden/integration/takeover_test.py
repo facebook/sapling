@@ -192,7 +192,7 @@ class TakeoverTest(testcase.EdenRepoTest):
                 offset = 0
 
                 # Repeatedly write and rewrite the same file,
-                # jalternating between two different data buffers.
+                # alternating between two different data buffers.
                 running_event.set()
                 while True:
                     os.pwrite(fd, buf, offset)
