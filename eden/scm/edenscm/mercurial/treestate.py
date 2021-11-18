@@ -184,6 +184,10 @@ class treestatemap(object):
         # to not include untracked files.
         return self._tree.tracked(prefix or "")
 
+    def matches(self, match):
+        """Filter tracked files by a matcher"""
+        return self._tree.matches(match)
+
     def preload(self):
         pass
 

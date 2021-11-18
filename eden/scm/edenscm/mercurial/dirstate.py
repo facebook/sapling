@@ -1327,6 +1327,10 @@ class dirstate(object):
                 # return that
                 if all(fn in dmap for fn in files):
                     return list(files)
+        elif self._istreestate:
+            # Treestate native path. Avoid visiting directories.
+            return dmap.matches(match)
+        # Slow path: scan all files in dirstate.
         return [f for f in dmap if match(f)]
 
     def _actualfilename(self, tr):
