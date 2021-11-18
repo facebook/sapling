@@ -563,6 +563,10 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
         auto future = info.takeoverPromise->getFuture();
 
         if (auto* channel = info.edenMount->getFuseChannel()) {
+          XLOG(DBG7) << "Calling takeover stop on fuse channel";
+          channel->takeoverStop();
+        } else if (auto* channel = info.edenMount->getNfsdChannel()) {
+          XLOG(DBG7) << "Calling takeover stop on nfsd3";
           channel->takeoverStop();
         } else {
           return EDEN_BUG_FUTURE(TakeoverData)
@@ -575,10 +579,16 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
                 -> Future<optional<TakeoverData::MountInfo>> {
               auto fuseChannelInfo =
                   std::get_if<FuseChannelData>(&takeover.channelInfo);
-              if (!fuseChannelInfo || !fuseChannelInfo->fd) {
+              auto nfsChannelInfo =
+                  std::get_if<NfsChannelData>(&takeover.channelInfo);
+              if (!fuseChannelInfo && !nfsChannelInfo) {
                 return std::nullopt;
               }
-              // TODO: takeover for NFS
+              auto& fd = fuseChannelInfo ? fuseChannelInfo->fd
+                                         : nfsChannelInfo->nfsdSocketFd;
+              if (!fd) {
+                return std::nullopt;
+              }
               return self->serverState_->getPrivHelper()
                   ->takeoverShutdown(edenMount->getPath().stringPiece())
                   .thenValue([takeover = std::move(takeover)](auto&&) mutable {
@@ -1702,14 +1712,14 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
             serverState_->getReloadableConfig()
                 .getEdenConfig()
                 ->unloadUnlinkedInodes.getValue()) {
-          // During whole Eden Process stutdown, this function can only be run
+          // During whole Eden Process shutdown, this function can only be run
           // before the mount is destroyed.
           // This is because the function is either run before the server
           // event base is destroyed or it is not run at all, and the server
           // event base is destroyed before the mountPoints. Since the function
           // must be run before the eventbase is destroyed and the eventbase is
           // destroyed before the mountPoints, this function can only be called
-          // before the mount points are destoryed during normal destruction.
+          // before the mount points are destroyed during normal destruction.
           // However, the mount pont might have been unmounted before this
           // function is run outside of shutdown.
           auto delay = serverState_->getReloadableConfig()
@@ -2018,6 +2028,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
         // currently processing thrift calls to finish.
         server_->stop();
       })
+      .via(getMainEventBase()) // NFS mounts need to be shut down here
       .thenTry([this, takeoverPromise = std::move(takeoverPromise)](
                    auto&& t) mutable {
         if (t.hasException()) {

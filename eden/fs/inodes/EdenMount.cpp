@@ -1893,14 +1893,15 @@ void EdenMount::preparePostChannelCompletion(
                   } else {
                     static_assert(std::is_same_v<T, EdenMount::NfsdStopData>);
                     serverState_->getNfsServer()->unregisterMount(getPath());
-                    inodeMap_->setUnmounted();
+                    if (!variant.socketToKernel) {
+                      inodeMap_->setUnmounted();
+                    }
                     std::vector<AbsolutePath> bindMounts;
                     channelCompletionPromise_.setValue(TakeoverData::MountInfo(
                         getPath(),
                         checkoutConfig_->getClientDirectory(),
                         bindMounts,
-                        FuseChannelData{
-                            folly::File(), fuse_init_out{}}, // TODO: NFS data
+                        NfsChannelData{std::move(variant.socketToKernel)},
                         SerializedInodeMap{} // placeholder
                         ));
                   }

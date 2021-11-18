@@ -2089,6 +2089,13 @@ folly::SemiFuture<Nfsd3::StopData> Nfsd3::getStopFuture() {
   return stopPromise_.getSemiFuture();
 }
 
+void Nfsd3::takeoverStop() {
+  XLOG(DBG7) << "calling takeover stop on the nfs RpcServer";
+  server_->takeoverStop().via(
+      server_->getEventBase()); // we do this to make sure the takeover future
+  // was completely scheduled
+}
+
 folly::StringPiece nfsProcName(uint32_t procNumber) {
   XDCHECK(procNumber < kNfs3dHandlers.size())
       << "got invalid NFS procedure: " << procNumber;

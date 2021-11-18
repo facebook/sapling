@@ -163,6 +163,8 @@ class Nfsd3 {
    */
   void invalidate(AbsolutePath path);
 
+  void takeoverStop();
+
   /**
    * Wait for all pending invalidation to complete.
    *
