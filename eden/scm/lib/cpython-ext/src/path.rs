@@ -67,6 +67,10 @@ impl PyPathBuf {
         self.0.as_bytes()
     }
 
+    pub fn from_string(s: String) -> Self {
+        Self(s)
+    }
+
     pub fn from_utf8_bytes(utf8_bytes: Vec<u8>) -> Result<Self> {
         Ok(Self(String::from_utf8(utf8_bytes)?))
     }

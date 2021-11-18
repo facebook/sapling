@@ -41,6 +41,10 @@ use cpython_ext::PyPath;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use parking_lot::Mutex;
+use pathmatcher::DirectoryMatch;
+use pathmatcher::Matcher;
+use pypathmatcher::PythonMatcher;
+use types::RepoPathBuf;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -586,6 +590,42 @@ py_class!(pub class treestate |py| {
                 true  // do visit
             },
             &|_, file| file.state & mask == setbits,
+        ))?;
+        Ok(result)
+    }
+
+    /// Tracked files filtered by the matcher.
+    def matches(&self, matcher: PyObject) -> PyResult<Vec<PyPathBuf>> {
+        let matcher = PythonMatcher::new(py, matcher);
+
+        let mut state = self.state(py).lock();
+        let mut result = Vec::new();
+        let mask = StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT;
+        convert_result(py, state.visit(
+            &mut |components, _state| {
+                let path = RepoPathBuf::from_utf8(components.concat()).expect("path should be utf-8");
+                if  matcher.matches_file(&path)? {
+                    let path = PyPathBuf::from_string(path.into_string());
+                    result.push(path);
+                }
+                Ok(VisitorResult::NotChanged)
+            },
+            &|components, dir| {
+                if let Some(state) = dir.get_aggregated_state() {
+                    if !state.union.intersects(mask) {
+                        return false;
+                    }
+                }
+                let mut binary_path = components.concat();
+                // Remove the trailing slash.
+                assert_eq!(binary_path.pop().unwrap_or(b'/'), b'/');
+                let path = RepoPathBuf::from_utf8(binary_path).expect("path should be utf-8");
+                match matcher.matches_directory(&path) {
+                    Ok(DirectoryMatch::Nothing) => false,  // do not visit
+                    _ => true,  // do visit
+                }
+            },
+            &|_, file| file.state.intersects(mask),
         ))?;
         Ok(result)
     }
