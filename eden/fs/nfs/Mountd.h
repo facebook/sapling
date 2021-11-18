@@ -66,7 +66,7 @@ class Mountd {
    * Obtain the address that this mountd program is listening on.
    */
   folly::SocketAddress getAddr() const {
-    return server_.getAddr();
+    return server_->getAddr();
   }
 
   Mountd(const Mountd&) = delete;
@@ -76,7 +76,7 @@ class Mountd {
 
  private:
   std::shared_ptr<MountdServerProcessor> proc_;
-  RpcServer server_;
+  std::shared_ptr<RpcServer> server_;
 };
 
 } // namespace facebook::eden

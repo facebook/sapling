@@ -174,16 +174,15 @@ class Nfsd3 {
    * Obtain the address that this NFSv3 program is listening on.
    */
   folly::SocketAddress getAddr() const {
-    return server_.getAddr();
+    return server_->getAddr();
   }
-
-  struct StopData {};
 
   struct OutstandingRequest {
     uint32_t xid;
     std::chrono::steady_clock::time_point requestStartTime;
   };
 
+  using StopData = RpcStopData;
   /**
    * Return a future that will be triggered on unmount.
    */
@@ -223,7 +222,7 @@ class Nfsd3 {
   std::vector<TraceSubscriptionHandle<NfsTraceEvent>> traceSubscriptionHandles_;
 
   folly::Promise<StopData> stopPromise_;
-  RpcServer server_;
+  std::shared_ptr<RpcServer> server_;
   ProcessAccessLog processAccessLog_;
   folly::Executor::KeepAlive<folly::Executor> invalidationExecutor_;
   std::atomic<size_t> traceDetailedArguments_;

@@ -70,7 +70,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
       uint32_t progVersion,
       uint32_t procNumber) override;
 
-  void onSocketClosed() override;
+  void onShutdown(RpcStopData stopData) override;
 
   ImmediateFuture<folly::Unit> null(
       folly::io::Cursor deser,
@@ -1937,11 +1937,11 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
                context = std::move(context)]() { context->finishRequest(); });
 }
 
-void Nfsd3ServerProcessor::onSocketClosed() {
+void Nfsd3ServerProcessor::onShutdown(RpcStopData data) {
   // Note this triggers the Nfsd3 destruction which will also destroy
   // Nfsd3ServerProcessor. Don't do anything will the Nfsd3ServerProcessor
   // member variables after this!
-  stopPromise_.setValue(Nfsd3::StopData{});
+  stopPromise_.setValue(std::move(data));
 }
 } // namespace
 
@@ -1956,7 +1956,7 @@ Nfsd3::Nfsd3(
     Notifications* /*notifications*/,
     CaseSensitivity caseSensitive,
     uint32_t iosize)
-    : server_(
+    : server_(RpcServer::create(
           std::make_shared<Nfsd3ServerProcessor>(
               std::move(dispatcher),
               straceLogger,
@@ -1967,7 +1967,7 @@ Nfsd3::Nfsd3(
               traceDetailedArguments_,
               traceBus_),
           evb,
-          std::move(threadPool)),
+          std::move(threadPool))),
       processAccessLog_(std::move(processNameCache)),
       invalidationExecutor_{
           folly::SerialExecutor::create(folly::getGlobalCPUExecutor())},
@@ -2017,9 +2017,9 @@ Nfsd3::Nfsd3(
 }
 
 void Nfsd3::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
-  server_.initialize(addr);
+  server_->initialize(addr);
   if (registerWithRpcbind) {
-    server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);
+    server_->registerService(kNfsdProgNumber, kNfsd3ProgVersion);
   }
 }
 
