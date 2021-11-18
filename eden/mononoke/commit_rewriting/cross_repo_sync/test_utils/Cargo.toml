@@ -25,7 +25,6 @@ maplit = "1.0"
 megarepolib = { version = "0.1.0", path = "../../megarepo" }
 metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
-sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
 synced_commit_mapping = { version = "0.1.0", path = "../../synced_commit_mapping" }
 test_repo_factory = { version = "0.1.0", path = "../../../repo_factory/test_repo_factory" }
