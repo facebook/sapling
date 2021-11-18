@@ -218,6 +218,7 @@ class RpcTcpHandler : public folly::DelayedDestruction {
     // number of requests we are in the middle of processing
     size_t pendingRequests = 0;
 
+    State() {}
     State(const State& state) = delete;
     State& operator=(const State&) = delete;
     State(State&& state) = delete;
