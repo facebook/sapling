@@ -68,7 +68,7 @@ One process waiting for another for a significant period of time (longer than th
   $ cat preup-stderr
   waiting for lock on working directory of b held by process '*' on host '*' (glob)
   (hint: run 'hg debugprocesstree *' to see related processes) (glob)
-  got lock after * seconds (glob)
+  got lock after * seconds (glob) (?)
   $ cat stdout
   adding b
 
@@ -132,7 +132,7 @@ On processs waiting on another, warning after a long time (debug output on)
   locker is still running (full unique id: '*') (glob)
   waiting for lock on working directory of b held by process '*' on host * (glob)
   (hint: run * to see related processes) (glob)
-  got lock after * seconds (glob)
+  got lock after * seconds (glob) (?)
   $ cat stdout
   adding f
 
@@ -151,7 +151,7 @@ On processs waiting on another, warning disabled, (debug output on)
   locker is still running (full unique id: '*') (glob)
   waiting for lock on working directory of b held by process '*' on host * (glob)
   (hint: run * to see related processes) (glob)
-  got lock after * seconds (glob)
+  got lock after * seconds (glob) (?)
   $ cat stdout
   adding g
 
