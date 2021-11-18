@@ -847,18 +847,6 @@ Future<Unit> EdenServer::prepareImpl(
   serverState_->getPrivHelper()->attachEventBase(mainEventBase_);
 #endif
 
-#ifndef _WIN32
-  if (auto nfsServer = serverState_->getNfsServer()) {
-    std::optional<AbsolutePath> unixSocketPath;
-    if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
-      unixSocketPath = edenDir_.getMountdSocketPath();
-    }
-    nfsServer->initialize(
-        makeNfsSocket(std::move(unixSocketPath)),
-        serverState_->getEdenConfig()->registerMountd.getValue());
-  }
-#endif
-
   startPeriodicTasks();
 
 #ifndef _WIN32
@@ -890,9 +878,27 @@ Future<Unit> EdenServer::prepareImpl(
     prepareThriftAddress();
   }
 
-  // TODO: The "state config" only has one configuration knob now. When another
-  // is required, introduce an EdenStateConfig class to manage defaults and save
-  // on update.
+#ifndef _WIN32
+  if (auto nfsServer = serverState_->getNfsServer()) {
+    if (doingTakeover) {
+      XLOG(DBG7) << "Initializing mountd from existing socket";
+      nfsServer->initialize(std::move(takeoverData.mountdServerSocket));
+    } else {
+      XLOG(DBG7) << "Initializing mountd from scratch";
+      std::optional<AbsolutePath> unixSocketPath;
+      if (serverState_->getEdenConfig()->useUnixSocket.getValue()) {
+        unixSocketPath = edenDir_.getMountdSocketPath();
+      }
+      nfsServer->initialize(
+          makeNfsSocket(std::move(unixSocketPath)),
+          serverState_->getEdenConfig()->registerMountd.getValue());
+    }
+  }
+#endif
+
+  // TODO: The "state config" only has one configuration knob now. When
+  // another is required, introduce an EdenStateConfig class to manage
+  // defaults and save on update.
   auto config = parseConfig();
   bool shouldSaveConfig = openStorageEngine(*config, *logger);
   if (shouldSaveConfig) {
@@ -2042,8 +2048,17 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
         takeover.lockFile = edenDir_.extractLock();
 
         takeover.thriftSocket = std::move(socket);
-
-        return std::move(takeover);
+        return via(getMainEventBase())
+            .thenValue([this](auto&&) {
+              return this->getServerState()->getNfsServer()->takeoverStop();
+            })
+            .thenValue([takeover = std::move(takeover)](
+                           folly::File&& mountdSocket) mutable {
+              XLOG(DBG7) << "Got mountd Socket for takeover "
+                         << mountdSocket.fd();
+              takeover.mountdServerSocket = std::move(mountdSocket);
+              return std::move(takeover);
+            });
       });
 #else
   NOT_IMPLEMENTED();

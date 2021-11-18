@@ -243,6 +243,7 @@ TEST(Takeover, simple) {
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   // And the thrift socket FD
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket.fd(), mountdSocketPath);
 
   // Make sure the received mount information is correct
   ASSERT_EQ(2, clientData.mountPoints.size());
@@ -291,6 +292,7 @@ TEST(Takeover, noMounts) {
   // expected files.
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket.fd(), mountdSocketPath);
 
   // Make sure the received mount information is empty
   EXPECT_EQ(0, clientData.mountPoints.size());
@@ -354,6 +356,7 @@ TEST(Takeover, manyMounts) {
   // Make sure the received lock file and thrift socket FDs are correct
   checkExpectedFile(clientData.lockFile.fd(), lockFilePath);
   checkExpectedFile(clientData.thriftSocket.fd(), thriftSocketPath);
+  checkExpectedFile(clientData.mountdServerSocket.fd(), mountdSocketPath);
 
   // Make sure the received mount information is correct
   ASSERT_EQ(numMounts, clientData.mountPoints.size());

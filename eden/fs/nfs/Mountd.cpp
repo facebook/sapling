@@ -227,12 +227,22 @@ void Mountd::initialize(folly::SocketAddress addr, bool registerWithRpcbind) {
   }
 }
 
+void Mountd::initialize(folly::File&& socket) {
+  XLOG(DBG7) << "initializing mountd: " << socket.fd();
+  server_->initialize(
+      std::move(socket), RpcServer::InitialSocketType::SERVER_SOCKET);
+}
+
 void Mountd::registerMount(AbsolutePathPiece path, InodeNumber ino) {
   proc_->registerMount(path, ino);
 }
 
 void Mountd::unregisterMount(AbsolutePathPiece path) {
   proc_->unregisterMount(path);
+}
+
+folly::SemiFuture<folly::File> Mountd::takeoverStop() {
+  return server_->takeoverStop();
 }
 
 } // namespace facebook::eden

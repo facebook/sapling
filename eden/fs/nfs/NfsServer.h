@@ -48,6 +48,7 @@ class NfsServer {
    * See Mountd::initialize for the meaning of registerMountdWithRpcbind.
    */
   void initialize(folly::SocketAddress addr, bool registerMountdWithRpcbind);
+  void initialize(folly::File&& socket);
 
   /**
    * Return value of registerMount.
@@ -92,6 +93,8 @@ class NfsServer {
   folly::EventBase* getEventBase() const {
     return evb_;
   }
+
+  folly::SemiFuture<folly::File> takeoverStop();
 
   NfsServer(const NfsServer&) = delete;
   NfsServer(NfsServer&&) = delete;

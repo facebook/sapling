@@ -53,7 +53,8 @@ TakeoverMountProtocol getMountProtocol(
 const std::set<int32_t> kSupportedTakeoverVersions{
     TakeoverData::kTakeoverProtocolVersionOne,
     TakeoverData::kTakeoverProtocolVersionThree,
-    TakeoverData::kTakeoverProtocolVersionFour};
+    TakeoverData::kTakeoverProtocolVersionFour,
+    TakeoverData::kTakeoverProtocolVersionFive};
 
 std::optional<int32_t> TakeoverData::computeCompatibleVersion(
     const std::set<int32_t>& versions,

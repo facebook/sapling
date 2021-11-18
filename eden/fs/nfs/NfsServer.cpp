@@ -32,6 +32,10 @@ void NfsServer::initialize(
   mountd_.initialize(addr, registerMountdWithRpcbind);
 }
 
+void NfsServer::initialize(folly::File&& socket) {
+  mountd_.initialize(std::move(socket));
+}
+
 NfsServer::NfsMountInfo NfsServer::registerMount(
     AbsolutePathPiece path,
     InodeNumber rootIno,
@@ -61,6 +65,10 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
 
 void NfsServer::unregisterMount(AbsolutePathPiece path) {
   mountd_.unregisterMount(path);
+}
+
+folly::SemiFuture<folly::File> NfsServer::takeoverStop() {
+  return mountd_.takeoverStop();
 }
 
 } // namespace facebook::eden

@@ -48,6 +48,7 @@ class Mountd {
    * host, EdenFS won't be able to register itself.
    */
   void initialize(folly::SocketAddress addr, bool registerWithRpcbind);
+  void initialize(folly::File&& socket);
 
   /**
    * Register a path as the root of a mount point.
@@ -68,6 +69,8 @@ class Mountd {
   folly::SocketAddress getAddr() const {
     return server_->getAddr();
   }
+
+  folly::SemiFuture<folly::File> takeoverStop();
 
   Mountd(const Mountd&) = delete;
   Mountd(Mountd&&) = delete;
