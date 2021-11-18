@@ -80,7 +80,22 @@ pub trait LiveCommitSyncConfig: Send + Sync {
         &self,
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
-    ) -> Result<CommitSyncConfig>;
+    ) -> Result<CommitSyncConfig> {
+        let maybe_version = self
+            .get_commit_sync_config_by_version_if_exists(repo_id, version_name)
+            .await?;
+
+        maybe_version.ok_or_else(|| {
+            ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
+        })
+    }
+
+    /// Return `CommitSyncConfig` for repo `repo_id` of version `version_name`
+    async fn get_commit_sync_config_by_version_if_exists(
+        &self,
+        repo_id: RepositoryId,
+        version_name: &CommitSyncConfigVersion,
+    ) -> Result<Option<CommitSyncConfig>>;
 
     /// Returns a config that applies to all config versions
     async fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
@@ -212,11 +227,11 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
     }
 
     /// Return `CommitSyncConfig` for repo `repo_id` of version `version_name`
-    async fn get_commit_sync_config_by_version(
+    async fn get_commit_sync_config_by_version_if_exists(
         &self,
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
-    ) -> Result<CommitSyncConfig> {
+    ) -> Result<Option<CommitSyncConfig>> {
         let large_repo_config_version_sets = &self.config_handle_for_all_versions.get().repos;
 
         let mut version = None;
@@ -236,9 +251,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
             }
         }
 
-        version.ok_or_else(|| {
-            ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
-        })
+        Ok(version)
     }
 
     async fn get_common_config_if_exists(
@@ -427,22 +440,28 @@ impl TestLiveCommitSyncConfigSource {
             .collect())
     }
 
-    fn get_commit_sync_config_by_version(
+    fn get_commit_sync_config_by_version_if_exists(
         &self,
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
-    ) -> Result<CommitSyncConfig> {
-        let config = self
+    ) -> Result<Option<CommitSyncConfig>> {
+        let maybe_config = self
             .0
             .version_to_config
             .lock()
             .unwrap()
             .get(version_name)
-            .cloned()
-            .ok_or_else(|| anyhow!("{} not found", version_name))?;
+            .cloned();
+
+        let config = match maybe_config {
+            Some(config) => config,
+            None => {
+                return Ok(None);
+            }
+        };
 
         if Self::related_to_repo(&config, repo_id) {
-            Ok(config)
+            Ok(Some(config))
         } else {
             Err(anyhow!("{} not found", version_name))
         }
@@ -516,13 +535,13 @@ impl LiveCommitSyncConfig for TestLiveCommitSyncConfig {
         self.source.get_all_commit_sync_config_versions(repo_id)
     }
 
-    async fn get_commit_sync_config_by_version(
+    async fn get_commit_sync_config_by_version_if_exists(
         &self,
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
-    ) -> Result<CommitSyncConfig> {
+    ) -> Result<Option<CommitSyncConfig>> {
         self.source
-            .get_commit_sync_config_by_version(repo_id, version_name)
+            .get_commit_sync_config_by_version_if_exists(repo_id, version_name)
     }
 
     async fn get_common_config_if_exists(

@@ -155,10 +155,10 @@ impl CommitSyncDataProvider {
     ) -> Result<bool, Error> {
         match self {
             Self::Live(live_commit_sync_config) => {
-                let versions = live_commit_sync_config
-                    .get_all_commit_sync_config_versions(repo_id)
+                let maybe_version = live_commit_sync_config
+                    .get_commit_sync_config_by_version_if_exists(repo_id, version)
                     .await?;
-                Ok(versions.contains_key(version))
+                Ok(maybe_version.is_some())
             }
         }
     }
