@@ -27,7 +27,10 @@
   $ hg pull --insecure --config paths.default=mononoke://localhost:$PROXY_PORT/test --config auth.mononoke.cert=$cert --config auth.mononoke.key=$cert_key --config auth.mononoke.prefix=mononoke://*
   pulling from mononoke://localhost:1338/test
   warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
-  abort: unexpected server response: "401 Unauthorized": advice here!
+  abort: unexpected server response: "401 Unauthorized": advice here! (?)
+  abort: unexpected server response: "401 Unauthorized":  (?)
+  advice here (?)
+  ! (?)
   [255]
   $ kill $to_kill
 
