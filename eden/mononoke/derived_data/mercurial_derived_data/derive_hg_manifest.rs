@@ -16,7 +16,10 @@ use futures::{
     compat::Future01CompatExt,
     future::{self, BoxFuture, FutureExt, TryFutureExt},
 };
-use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, Traced, TreeInfo};
+use manifest::{
+    derive_manifest_with_io_sender, derive_manifests_for_simple_stack_of_commits, Entry, LeafInfo,
+    ManifestChanges, Traced, TreeInfo,
+};
 use mercurial_types::{
     blobs::{
         ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
@@ -24,12 +27,99 @@ use mercurial_types::{
     },
     HgFileNodeId, HgManifestId,
 };
-use mononoke_types::{FileType, MPath, RepoPath};
+use mononoke_types::{ChangesetId, FileType, MPath, RepoPath, TrackedFileChange};
 use sorted_vector_map::SortedVectorMap;
-use std::{collections::BTreeMap, io::Write, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    io::Write,
+    sync::Arc,
+};
+
+use crate::derive_hg_changeset::store_file_change;
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 struct ParentIndex(usize);
+
+pub async fn derive_simple_hg_manifest_stack_without_copy_info(
+    ctx: CoreContext,
+    blobstore: Arc<dyn Blobstore>,
+    manifest_changes: Vec<ManifestChanges<TrackedFileChange>>,
+    parent: Option<HgManifestId>,
+) -> Result<HashMap<ChangesetId, HgManifestId>, Error> {
+    let res = derive_manifests_for_simple_stack_of_commits(
+        ctx.clone(),
+        blobstore.clone(),
+        parent.map(|p| Traced::assign(ParentIndex(0), p)),
+        manifest_changes,
+        {
+            cloned!(blobstore, ctx);
+            move |mut tree_info, _cs_id| {
+                cloned!(blobstore, ctx);
+                async move {
+                    tree_info.parents = tree_info
+                        .parents
+                        .into_iter()
+                        .map(|p| Traced::assign(ParentIndex(0), p.into_untraced()))
+                        .collect();
+                    create_hg_manifest(ctx.clone(), blobstore.clone(), None, tree_info).await
+                }
+            }
+        },
+        {
+            cloned!(blobstore, ctx);
+            move |leaf_info, _cs_id| {
+                cloned!(blobstore, ctx);
+                async move {
+                    let LeafInfo {
+                        leaf,
+                        path,
+                        parents,
+                    } = leaf_info;
+
+                    let parents: Vec<_> = parents
+                        .into_iter()
+                        .map(|p| Traced::assign(ParentIndex(0), p.into_untraced()))
+                        .collect();
+                    match leaf {
+                        Some(leaf) => {
+                            if leaf.copy_from().is_some() {
+                                return Err(
+                                    format_err!(
+                                        "unsupported generation of stack of hg manifests: leaf {} has copy info {:?}",
+                                        path,
+                                        leaf.copy_from(),
+                                    )
+                                );
+                            }
+                            store_file_change(
+                                ctx,
+                                blobstore,
+                                parents.get(0).map(|p| p.untraced().1),
+                                None,
+                                &path,
+                                &leaf,
+                                None, // copy_from should be empty
+                            )
+                            .map_ok(|res| ((), Traced::generate(res)))
+                            .await
+                        }
+                        None => {
+                            let (file_type, filenode) =
+                                resolve_conflict(ctx, blobstore, path, &parents).await?;
+                            Ok(((), Traced::generate((file_type, filenode))))
+                        }
+                    }
+                }
+            }
+        },
+    )
+    .await?;
+
+    Ok(res
+        .into_iter()
+        .map(|(key, value)| (key, value.into_untraced()))
+        .collect())
+}
 
 /// Derive mercurial manifest from parent manifests and bonsai file changes.
 pub async fn derive_hg_manifest(

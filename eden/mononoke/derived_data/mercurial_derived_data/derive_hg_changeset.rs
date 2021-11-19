@@ -6,10 +6,10 @@
  */
 
 use crate::{
-    derive_hg_manifest::derive_hg_manifest,
+    derive_hg_manifest::{derive_hg_manifest, derive_simple_hg_manifest_stack_without_copy_info},
     mapping::{HgChangesetDeriveOptions, MappedHgChangesetId},
 };
-use anyhow::{bail, Error};
+use anyhow::{anyhow, bail, Error};
 use blobrepo::BlobRepo;
 use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::{Blobstore, Loadable};
@@ -21,7 +21,7 @@ use futures::{
     future::{self, try_join, try_join_all},
     stream, FutureExt, TryStreamExt,
 };
-use manifest::ManifestOps;
+use manifest::{ManifestChanges, ManifestOps};
 use mercurial_types::{
     blobs::{
         ChangesetMetadata, ContentBlobMeta, File, HgBlobChangeset, HgChangesetContent,
@@ -64,7 +64,7 @@ async fn can_reuse_filenode(
     }
 }
 
-async fn store_file_change<'a>(
+pub(crate) async fn store_file_change<'a>(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     p1: Option<HgFileNodeId>,
@@ -318,9 +318,80 @@ pub(crate) async fn derive_from_parents(
     )
     .await?;
 
-    let hg_cs_id =
+    let (hg_cs_id, _) =
         generate_hg_changeset(ctx, blobstore, bonsai, manifest_id, parents, options).await?;
     Ok(MappedHgChangesetId(hg_cs_id))
+}
+
+pub async fn derive_simple_hg_changeset_stack_without_copy_info(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
+    bonsais: Vec<BonsaiChangeset>,
+    parent: Option<MappedHgChangesetId>,
+    options: &HgChangesetDeriveOptions,
+) -> Result<HashMap<ChangesetId, MappedHgChangesetId>, Error> {
+    let parent = match parent {
+        Some(parent) => Some(parent.0.load(ctx, blobstore).await?),
+        None => None,
+    };
+
+    let file_changes = bonsais
+        .iter()
+        .map(|bonsai| {
+            let per_commit_file_changes: Result<Vec<_>, Error> = bonsai
+                .file_changes()
+                .map(|(path, fc)| {
+                    use FileChange::*;
+                    let tracked_file_change = match fc {
+                        Change(tracked_file_change) => Some(tracked_file_change.clone()),
+                        Deletion => None,
+                        UntrackedChange(_) | UntrackedDeletion => {
+                            bail!(
+                                "unexpected untracked file change while deriving {}",
+                                bonsai.get_changeset_id()
+                            );
+                        }
+                    };
+                    Ok((path.clone(), tracked_file_change))
+                })
+                .collect();
+            let per_commit_file_changes = per_commit_file_changes?;
+
+            let mf_changes = ManifestChanges {
+                cs_id: bonsai.get_changeset_id(),
+                changes: per_commit_file_changes,
+            };
+
+            Ok(mf_changes)
+        })
+        .collect::<Result<Vec<_>, Error>>();
+    let file_changes = file_changes?;
+
+    let mf_ids = derive_simple_hg_manifest_stack_without_copy_info(
+        ctx.clone(),
+        blobstore.clone(),
+        file_changes,
+        parent.clone().map(|p| p.manifestid()),
+    )
+    .await?;
+    let mut parents = parent.into_iter().collect::<Vec<_>>();
+
+    let mut res = HashMap::with_capacity(bonsais.len());
+    for bonsai in bonsais {
+        let cs_id = bonsai.get_changeset_id();
+        let mf_id = mf_ids.get(&cs_id).ok_or_else(|| {
+            anyhow!(
+                "not found manifest for {} but should have derived it in this function",
+                cs_id
+            )
+        })?;
+        let (hg_changeset_id, hg_cs) =
+            generate_hg_changeset(&ctx, &blobstore, bonsai, *mf_id, parents, options).await?;
+        res.insert(cs_id, MappedHgChangesetId(hg_changeset_id));
+        parents = vec![hg_cs];
+    }
+
+    Ok(res)
 }
 
 async fn generate_hg_changeset(
@@ -330,7 +401,7 @@ async fn generate_hg_changeset(
     manifest_id: HgManifestId,
     parents: Vec<HgBlobChangeset>,
     options: &HgChangesetDeriveOptions,
-) -> Result<HgChangesetId, Error> {
+) -> Result<(HgChangesetId, HgBlobChangeset), Error> {
     let start_timestamp = Instant::now();
 
     // NOTE: We're special-casing the first 2 parents here, since that's all Mercurial
@@ -400,7 +471,7 @@ async fn generate_hg_changeset(
         .add_value(start_timestamp.elapsed().as_millis() as i64);
     STATS::generate_hg_from_bonsai_generated_commit_num.add_value(1);
 
-    Ok(csid)
+    Ok((csid, cs))
 }
 
 pub async fn get_hg_from_bonsai_changeset(

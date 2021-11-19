@@ -48,8 +48,8 @@ pub async fn derive_blame_v2_in_batch(
 
     let mut res = HashMap::new();
     for linear_stack in linear_stacks {
-        let stack_len = linear_stack.file_changes.len();
-        if let Some(item) = linear_stack.file_changes.first() {
+        let stack_len = linear_stack.stack_items.len();
+        if let Some(item) = linear_stack.stack_items.first() {
             debug!(
                 ctx.logger(),
                 "derive blame batch at {} (stack of {} from batch of {})",
@@ -60,7 +60,7 @@ pub async fn derive_blame_v2_in_batch(
         }
 
         let new_blames = linear_stack
-            .file_changes
+            .stack_items
             .into_iter()
             .enumerate()
             .map(|(index, item)| {

@@ -72,7 +72,7 @@ pub async fn derive_skeleton_manifests_in_batch(
                 derivation_ctx,
                 parent_skeleton_manifests,
                 gap_size,
-                linear_stack.file_changes,
+                linear_stack.stack_items,
             )
             .await?
         } else {
@@ -81,7 +81,7 @@ pub async fn derive_skeleton_manifests_in_batch(
                 derivation_ctx,
                 parent_skeleton_manifests,
                 gap_size,
-                linear_stack.file_changes,
+                linear_stack.stack_items,
             )
             .await?
         };

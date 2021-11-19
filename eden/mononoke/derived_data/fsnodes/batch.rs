@@ -93,7 +93,7 @@ pub async fn derive_fsnode_in_batch(
                 derivation_ctx,
                 parent_fsnodes,
                 gap_size,
-                linear_stack.file_changes,
+                linear_stack.stack_items,
             )
             .await?
         } else {
@@ -102,7 +102,7 @@ pub async fn derive_fsnode_in_batch(
                 derivation_ctx,
                 parent_fsnodes,
                 gap_size,
-                linear_stack.file_changes,
+                linear_stack.stack_items,
             )
             .await?
         };

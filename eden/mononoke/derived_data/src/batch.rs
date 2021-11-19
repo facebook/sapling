@@ -100,7 +100,7 @@ pub fn split_bonsais_in_linear_stacks(
 #[derive(Clone, Debug)]
 pub struct LinearStack {
     pub parents: Vec<ChangesetId>,
-    pub file_changes: Vec<StackItem>,
+    pub stack_items: Vec<StackItem>,
 }
 
 #[derive(Clone, Debug)]
@@ -114,7 +114,7 @@ impl LinearStack {
     fn new(parents: Vec<ChangesetId>) -> Self {
         Self {
             parents,
-            file_changes: vec![],
+            stack_items: vec![],
         }
     }
 
@@ -133,7 +133,7 @@ impl LinearStack {
 
         let mut combined_file_changes = self.get_last_file_changes().cloned().unwrap_or_default();
         combined_file_changes.extend(file_changes.clone());
-        self.file_changes.push(StackItem {
+        self.stack_items.push(StackItem {
             cs_id,
             combined_file_changes,
             per_commit_file_changes: file_changes,
@@ -179,7 +179,7 @@ impl LinearStack {
     }
 
     fn get_last_file_changes(&self) -> Option<&FileToContent> {
-        self.file_changes
+        self.stack_items
             .last()
             .map(|item| &item.combined_file_changes)
     }
@@ -353,7 +353,7 @@ mod test {
 
         // Check that per_commit_file_changes are correct
         assert_eq!(
-            linear_stacks[0].file_changes[0]
+            linear_stacks[0].stack_items[0]
                 .per_commit_file_changes
                 .keys()
                 .collect::<Vec<_>>(),
@@ -361,7 +361,7 @@ mod test {
         );
 
         assert_eq!(
-            linear_stacks[0].file_changes[1]
+            linear_stacks[0].stack_items[1]
                 .per_commit_file_changes
                 .keys()
                 .collect::<Vec<_>>(),
@@ -719,11 +719,11 @@ mod test {
         for linear_stack in actual {
             let LinearStack {
                 parents,
-                file_changes,
+                stack_items,
             } = linear_stack;
 
             let mut paths_for_the_whole_stack = vec![];
-            for item in file_changes {
+            for item in stack_items {
                 let file_to_content = item.combined_file_changes;
                 let mut paths = btreemap![];
                 for (path, maybe_content) in file_to_content {

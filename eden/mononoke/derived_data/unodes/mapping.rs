@@ -128,12 +128,12 @@ impl BonsaiDerivable for RootUnodeManifestId {
                     .map(|p| derivation_ctx.fetch_unknown_dependency::<Self>(&ctx, Some(&res), p)),
             )
             .await?;
-            if let Some(item) = stack.file_changes.first() {
+            if let Some(item) = stack.stack_items.first() {
                 debug!(
                     ctx.logger(),
                     "derive unode batch at {} (stack of {} from batch of {})",
                     item.cs_id.to_hex(),
-                    stack.file_changes.len(),
+                    stack.stack_items.len(),
                     batch_len,
                 );
             }
@@ -141,7 +141,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
             if derived_parents.len() > 1 {
                 // we can't derive stack for a merge commit,
                 // so let's derive it without batching
-                for item in stack.file_changes {
+                for item in stack.stack_items {
                     let bonsai = item.cs_id.load(&ctx, derivation_ctx.blobstore()).await?;
                     let parents = derivation_ctx
                         .fetch_unknown_parents(ctx, Some(&res), &bonsai)
@@ -150,13 +150,13 @@ impl BonsaiDerivable for RootUnodeManifestId {
                     res.insert(item.cs_id, derived);
                 }
             } else {
-                let first = stack.file_changes.first().map(|item| item.cs_id);
-                let last = stack.file_changes.last().map(|item| item.cs_id);
+                let first = stack.stack_items.first().map(|item| item.cs_id);
+                let last = stack.stack_items.last().map(|item| item.cs_id);
                 let derived = derive_unode_manifest_stack(
                     ctx,
                     derivation_ctx,
                     stack
-                        .file_changes
+                        .stack_items
                         .into_iter()
                         .map(|item| (item.cs_id, item.per_commit_file_changes))
                         .collect(),
