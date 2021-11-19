@@ -29,8 +29,8 @@ Test hg update reads new hgrc profile config
   $ cp .hg/hgrc .hg/hgrc.bak
   $ cat >> .hg/hgrc <<EOF
   > [sparseprofile]
-  > include.sparseprofile=includedbyconfig
-  > exclude.sparseprofile=excludedbyconfig
+  > include.foo.sparseprofile=includedbyconfig
+  > exclude.bar.sparseprofile=excludedbyconfig
   > EOF
 # Run a no-op command to verify it does not refresh the sparse profile with the
 # new config.
@@ -79,8 +79,8 @@ Reset to remove hgrc profile config
 Test hg commit does not read new hgrc profile config
   $ cat >> .hg/hgrc <<EOF
   > [sparseprofile]
-  > include.sparseprofile=includedbyconfig
-  > exclude.sparseprofile=excludedbyconfig
+  > include.foo.sparseprofile=includedbyconfig
+  > exclude.bar.sparseprofile=excludedbyconfig
   > EOF
   $ echo >> alwaysincluded
   $ hg commit -m 'modify alwaysincluded'
@@ -119,8 +119,8 @@ Cleanly crash an update and verify the new config was not applied
 
   $ cat >> .hg/hgrc <<EOF
   > [sparseprofile]
-  > include.sparseprofile=includedbyconfig
-  > exclude.sparseprofile=excludedbyconfig
+  > include.foo.sparseprofile=includedbyconfig
+  > exclude.bar.sparseprofile=excludedbyconfig
   > EOF
   $ hg up .^ --config extensions.killer=$TESTTMP/killer.py
   abort: bad thing happened
@@ -145,8 +145,8 @@ Reset
 Hard killing the process leaves the pending config file around
   $ cat >> .hg/hgrc <<EOF
   > [sparseprofile]
-  > include.sparseprofile=includedbyconfig
-  > exclude.sparseprofile=excludedbyconfig
+  > include.foo.sparseprofile=includedbyconfig
+  > exclude.bar.sparseprofile=excludedbyconfig
   > EOF
 
   $ cat > ../killer.py << EOF

@@ -1010,14 +1010,20 @@ def _wraprepo(ui, repo):
             includes = collections.defaultdict(list)
             excludes = collections.defaultdict(list)
             for key, value in self.ui.configitems("sparseprofile"):
-                # "exclude:" is the same length as "include.", so no need for
-                # handling both.
-                section = key[: len("include.")]
-                name = key[len("include.") :]
-                if section == "include.":
+                # Expected format:
+                #   include.someid1.path/to/sparse/profile
+                #   exclude.someid2.path/to/sparse/profile
+                # id is unsued, but allows multiple keys to contribute to the
+                # same sparse profile. This is useful when rolling out several
+                # separate waves of includes/excludes simultaneously.
+                split = key.split(".", 2)
+                if len(split) < 3:
+                    continue
+                section, id, name = split
+                if section == "include":
                     for include in self.ui.configlist("sparseprofile", key):
                         includes[name].append(include)
-                elif section == "exclude.":
+                elif section == "exclude":
                     for exclude in self.ui.configlist("sparseprofile", key):
                         excludes[name].append(exclude)
 
