@@ -64,6 +64,7 @@ pub(crate) mod tests;
 pub mod token;
 pub mod tree;
 
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::fmt;
 use std::num::NonZeroU64;
@@ -244,6 +245,42 @@ impl<W: ToApi> ToApi for Option<W> {
     type Error = <W as ToApi>::Error;
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         self.map(|w| w.to_api()).transpose()
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct WireMap<K, V>(Vec<(K, V)>);
+
+impl<K: ToWire + Eq + std::hash::Hash, V: ToWire> ToWire for HashMap<K, V> {
+    type Wire = WireMap<<K as ToWire>::Wire, <V as ToWire>::Wire>;
+
+    fn to_wire(self) -> Self::Wire {
+        WireMap(
+            self.into_iter()
+                .map(|(k, v)| (k.to_wire(), v.to_wire()))
+                .collect(),
+        )
+    }
+}
+
+impl<K: ToApi, V: ToApi> ToApi for WireMap<K, V>
+where
+    <K as ToApi>::Api: Eq + std::hash::Hash,
+{
+    type Api = HashMap<<K as ToApi>::Api, <V as ToApi>::Api>;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        self.0
+            .into_iter()
+            .map(|(k, v)| {
+                Ok((
+                    k.to_api().map_err(|e| e.into())?,
+                    v.to_api().map_err(|e| e.into())?,
+                ))
+            })
+            .collect()
     }
 }
 
