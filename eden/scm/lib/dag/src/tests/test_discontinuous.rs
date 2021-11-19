@@ -56,10 +56,10 @@ async fn test_simple_3_branches() {
         r#"Max Level: 0
  Level 0
   Group Master:
-   Next Free Id: 164
+   Next Free Id: 162
    Segments: 3
-    J+161 : L+163 [G+107]
-    G+107 : I+109 [C+2]
+    J+159 : L+161 [G+106]
+    G+106 : I+108 [C+2]
     A+0 : F+5 [] Root OnlyHead
   Group Non-Master:
    Next Free Id: N0
@@ -69,15 +69,15 @@ async fn test_simple_3_branches() {
 
     assert_eq!(
         format!("{:?}", dag.dag.ancestors("I".into()).await.unwrap()),
-        "<spans [G:I+107:109, A:C+0:2]>"
+        "<spans [G:I+106:108, A:C+0:2]>"
     );
     assert_eq!(
         format!("{:?}", dag.dag.descendants("B".into()).await.unwrap()),
-        "<spans [J:L+161:163, G:I+107:109, B:F+1:5]>"
+        "<spans [J:L+159:161, G:I+106:108, B:F+1:5]>"
     );
     assert_eq!(
         format!("{:?}", dag.dag.range("C".into(), "K".into()).await.unwrap()),
-        "<spans [J:K+161:162, G+107, C+2]>"
+        "<spans [J:K+159:160, G+106, C+2]>"
     );
     assert_eq!(
         format!("{:?}", dag.dag.parents("G".into()).await.unwrap()),
@@ -85,24 +85,24 @@ async fn test_simple_3_branches() {
     );
     assert_eq!(
         format!("{:?}", dag.dag.children("C".into()).await.unwrap()),
-        "<spans [G+107, D+3]>"
+        "<spans [G+106, D+3]>"
     );
 
     let all = dag.dag.all().await.unwrap();
     assert_eq!(
         format!("{:?}", dag.dag.children(all.clone()).await.unwrap()),
-        "<spans [J:L+161:163, G:I+107:109, B:F+1:5]>"
+        "<spans [J:L+159:161, G:I+106:108, B:F+1:5]>"
     );
     assert_eq!(
         format!("{:?}", dag.dag.parents(all.clone()).await.unwrap()),
-        "<spans [J:K+161:162, G:H+107:108, A:E+0:4]>"
+        "<spans [J:K+159:160, G:H+106:107, A:E+0:4]>"
     );
     assert_eq!(
         format!(
             "{:?}",
             dag.dag.range(all.clone(), all.clone()).await.unwrap()
         ),
-        "<spans [J:L+161:163, G:I+107:109, A:F+0:5]>"
+        "<spans [J:L+159:161, G:I+106:108, A:F+0:5]>"
     );
 }
 

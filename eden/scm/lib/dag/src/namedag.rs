@@ -2115,8 +2115,11 @@ where
 }
 
 fn update_reserved(reserved: &mut IdSet, covered: &IdSet, low: Id, reserve_size: u32) {
-    let mut high = (low + (reserve_size as u64)).min(low.group().max_id());
-    // Try to reserve id..=id+reserve_size
+    if reserve_size == 0 {
+        return;
+    }
+    let mut high = (low + (reserve_size as u64) - 1).min(low.group().max_id());
+    // Try to reserve id..=id+reserve_size-1
     let new_reserved = IdSet::from_spans(vec![low..=high]);
     let intersected = new_reserved.intersection(&covered);
     if let Some(span) = intersected.iter_span_asc().next() {
