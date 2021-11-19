@@ -323,6 +323,7 @@ transparent_wire!(
     isize,
     bytes::Bytes,
     String,
+    (),
 );
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
