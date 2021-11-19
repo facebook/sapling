@@ -86,6 +86,41 @@ fn validate_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<
     Ok(())
 }
 
+fn validate_common_commit_sync_config(
+    common_commit_sync_config: &CommonCommitSyncConfig,
+) -> Result<()> {
+    if common_commit_sync_config
+        .small_repos
+        .contains_key(&common_commit_sync_config.large_repo_id)
+    {
+        return Err(anyhow!(
+            "Large repo ({}) is one of the small repos too",
+            common_commit_sync_config.large_repo_id
+        ));
+    }
+
+    let bookmark_prefixes: Vec<&AsciiString> = common_commit_sync_config
+        .small_repos
+        .iter()
+        .map(|(_, sr)| &sr.bookmark_prefix)
+        .collect();
+
+    // No two small repos can have the bookmark prefix as prefix of another
+    for (first_prefix, second_prefix) in bookmark_prefixes.iter().tuple_combinations::<(_, _)>() {
+        let fp = first_prefix.as_str();
+        let sp = second_prefix.as_str();
+        if fp.starts_with(sp) || sp.starts_with(fp) {
+            return Err(anyhow!(
+                "One bookmark prefix starts with another, which is prohibited: {:?}, {:?}",
+                fp,
+                sp
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 impl Convert for RawCommitSyncConfig {
     type Output = CommitSyncConfig;
 
@@ -207,10 +242,14 @@ impl Convert for RawCommonCommitSyncConfig {
             })
             .collect::<Result<_>>()?;
 
-        Ok(CommonCommitSyncConfig {
+        let config = CommonCommitSyncConfig {
             large_repo_id,
             common_pushrebase_bookmarks,
             small_repos,
-        })
+        };
+
+        validate_common_commit_sync_config(&config)?;
+
+        Ok(config)
     }
 }
