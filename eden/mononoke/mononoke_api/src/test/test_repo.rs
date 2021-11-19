@@ -806,11 +806,11 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
 async fn init_x_repo(
     ctx: &CoreContext,
 ) -> Result<(Mononoke, TestLiveCommitSyncConfigSource), Error> {
-    let (syncers, commit_sync_config) = init_small_large_repo(&ctx).await?;
+    let (syncers, commit_sync_config, lv_cfg, lv_cfg_src) = init_small_large_repo(&ctx).await?;
 
     let small_to_large = syncers.small_to_large;
     let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(small_to_large.get_mapping().clone());
-    Mononoke::new_test_xrepo(
+    let mononoke = Mononoke::new_test_xrepo(
         ctx.clone(),
         (
             "smallrepo".to_string(),
@@ -822,8 +822,13 @@ async fn init_x_repo(
         ),
         commit_sync_config.clone(),
         mapping.clone(),
+        Arc::new(lv_cfg),
     )
-    .await
+    .await?;
+    let version = commit_sync_config.version_name.clone();
+    lv_cfg_src.add_config(commit_sync_config);
+    lv_cfg_src.add_current_version(version);
+    Ok((mononoke, lv_cfg_src))
 }
 
 #[fbinit::test]

@@ -1176,7 +1176,6 @@ mod test {
                 small_repo.get_repoid() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
-                    bookmark_prefix: AsciiString::from_str("prefix/")?,
 
                 },
             },

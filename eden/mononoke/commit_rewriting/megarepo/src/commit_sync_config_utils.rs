@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use ascii::AsciiString;
 use metaconfig_types::{DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig};
 use mononoke_types::MPath;
 use std::collections::HashMap;
@@ -15,7 +14,6 @@ pub struct SmallRepoCommitSyncConfigDiff {
         DefaultSmallToLargeCommitSyncPathAction,
         DefaultSmallToLargeCommitSyncPathAction,
     )>,
-    pub bookmark_prefix_change: Option<(AsciiString, AsciiString)>,
     pub mapping_added: HashMap<MPath, MPath>,
     pub mapping_changed: HashMap<MPath, (MPath, MPath)>,
     pub mapping_removed: HashMap<MPath, MPath>,
@@ -31,12 +29,6 @@ pub fn diff_small_repo_commit_sync_configs(
         Some((from.default_action, to.default_action))
     };
 
-
-    let bookmark_prefix_change = if from.bookmark_prefix == to.bookmark_prefix {
-        None
-    } else {
-        Some((from.bookmark_prefix, to.bookmark_prefix))
-    };
 
     let mut mapping_added = HashMap::new();
     let mut mapping_changed = HashMap::new();
@@ -64,7 +56,6 @@ pub fn diff_small_repo_commit_sync_configs(
 
     SmallRepoCommitSyncConfigDiff {
         default_action_change,
-        bookmark_prefix_change,
         mapping_added,
         mapping_changed,
         mapping_removed,

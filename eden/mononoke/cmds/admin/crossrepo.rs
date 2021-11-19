@@ -897,10 +897,6 @@ fn print_commit_sync_config(csc: CommitSyncConfig, line_prefix: &str) {
     {
         println!("{}  small repo: {}", line_prefix, small_repo_id);
         println!(
-            "{}  bookmark prefix: {}",
-            line_prefix, small_repo_config.bookmark_prefix
-        );
-        println!(
             "{}  default action: {:?}",
             line_prefix, small_repo_config.default_action
         );
@@ -1609,8 +1605,6 @@ mod test {
                 small_repo.get_repoid() => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
-                    bookmark_prefix: AsciiString::new(),
-
                 },
             },
             version_name: current_version.clone(),

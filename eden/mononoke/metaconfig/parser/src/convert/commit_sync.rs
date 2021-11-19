@@ -64,25 +64,6 @@ fn validate_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<
         ));
     }
 
-    let bookmark_prefixes: Vec<&AsciiString> = commit_sync_config
-        .small_repos
-        .iter()
-        .map(|(_, sr)| &sr.bookmark_prefix)
-        .collect();
-
-    // No two small repos can have the same bookmark prefix
-    for (first_prefix, second_prefix) in bookmark_prefixes.iter().tuple_combinations::<(_, _)>() {
-        let fp = first_prefix.as_str();
-        let sp = second_prefix.as_str();
-        if fp.starts_with(sp) || sp.starts_with(fp) {
-            return Err(anyhow!(
-                "One bookmark prefix starts with another, which is prohibited: {:?}, {:?}",
-                fp,
-                sp
-            ));
-        }
-    }
-
     Ok(())
 }
 
@@ -176,7 +157,6 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             repoid: _,
             default_action,
             default_prefix,
-            bookmark_prefix,
             mapping,
             ..
         } = self;
@@ -202,13 +182,9 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             .map(|(k, v)| Ok((MPath::new(k)?, MPath::new(v)?)))
             .collect::<Result<HashMap<_, _>>>()?;
 
-        let bookmark_prefix = AsciiString::from_str(&bookmark_prefix)
-            .map_err(|_| anyhow!("failed to parse ascii string from: {:?}", bookmark_prefix))?;
-
         Ok(SmallRepoCommitSyncConfig {
             default_action,
             map,
-            bookmark_prefix,
         })
     }
 }

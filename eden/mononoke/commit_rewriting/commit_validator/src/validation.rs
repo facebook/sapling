@@ -1579,7 +1579,7 @@ mod tests {
         small_index_to_test: usize,
     ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let (syncers, _) = init_small_large_repo(&ctx).await?;
+        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
         let small_to_large_commit_syncer = syncers.small_to_large;
         let small_repo = small_to_large_commit_syncer.get_small_repo();
         let large_repo = small_to_large_commit_syncer.get_large_repo();

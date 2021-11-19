@@ -18,7 +18,6 @@ use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralBlobstore;
 use futures::{future, Future};
 use futures_watchdog::WatchdogExt;
-use metaconfig_types::{CommonCommitSyncConfig, SmallRepoPermanentConfig};
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
 use slog::{debug, info, o};
@@ -253,9 +252,7 @@ pub mod test_impl {
     use super::*;
     use blobrepo::BlobRepo;
     use cloned::cloned;
-    use live_commit_sync_config::{
-        LiveCommitSyncConfig, TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource,
-    };
+    use live_commit_sync_config::LiveCommitSyncConfig;
     use metaconfig_types::CommitSyncConfig;
     use synced_commit_mapping::SyncedCommitMapping;
 
@@ -288,31 +285,11 @@ pub mod test_impl {
             ctx: CoreContext,
             small_repo: (String, BlobRepo),
             large_repo: (String, BlobRepo),
-            commit_sync_config: CommitSyncConfig,
+            _commit_sync_config: CommitSyncConfig,
             mapping: Arc<dyn SyncedCommitMapping>,
-        ) -> Result<(Self, TestLiveCommitSyncConfigSource), Error> {
+            lv_cfg: Arc<dyn LiveCommitSyncConfig>,
+        ) -> Result<Self, Error> {
             use futures::stream::{FuturesOrdered, TryStreamExt};
-            let (lv_cfg, lv_cfg_src) = TestLiveCommitSyncConfig::new_with_source();
-            let lv_cfg: Arc<dyn LiveCommitSyncConfig> = Arc::new(lv_cfg);
-            lv_cfg_src.add_config(commit_sync_config.clone());
-            lv_cfg_src.add_current_version(commit_sync_config.version_name);
-
-            lv_cfg_src.add_common_config(CommonCommitSyncConfig {
-                common_pushrebase_bookmarks: commit_sync_config.common_pushrebase_bookmarks.clone(),
-                small_repos: commit_sync_config
-                    .small_repos
-                    .iter()
-                    .map(|(repo_id, small_repo_config)| {
-                        (
-                            *repo_id,
-                            SmallRepoPermanentConfig {
-                                bookmark_prefix: small_repo_config.bookmark_prefix.clone(),
-                            },
-                        )
-                    })
-                    .collect(),
-                large_repo_id: large_repo.1.get_repoid(),
-            });
 
             let repos = vec![small_repo, large_repo]
                 .into_iter()
@@ -331,7 +308,7 @@ pub mod test_impl {
                 .await?;
 
             let mononoke = Self::new_from_repos(repos)?;
-            Ok((mononoke, lv_cfg_src))
+            Ok(mononoke)
         }
     }
 }

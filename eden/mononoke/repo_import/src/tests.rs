@@ -50,6 +50,7 @@ mod tests {
     use mutable_counters::{MutableCounters, SqlMutableCounters};
     use sql_construct::SqlConstruct;
     use std::collections::HashMap;
+    use std::str::FromStr;
     use std::sync::Arc;
     use std::time::Duration;
     use synced_commit_mapping::SqlSyncedCommitMapping;
@@ -565,7 +566,6 @@ mod tests {
             map: hashmap! {
                 mp("dest_path_prefix/B") => mp("random_dir/B"),
             },
-            bookmark_prefix: AsciiString::from_ascii("large_repo_bookmark/".to_string()).unwrap(),
         }
     }
 
@@ -578,7 +578,6 @@ mod tests {
                 mp("dest_path_prefix/B") => mp("random_dir/B"),
                 mp("dest_path_prefix/C") => mp("random_dir/C"),
             },
-            bookmark_prefix: AsciiString::from_ascii("large_repo_bookmark/".to_string()).unwrap(),
         }
     }
 
@@ -588,7 +587,6 @@ mod tests {
             map: hashmap! {
                 mp("dest_path_prefix_2") => mp("dpp2"),
             },
-            bookmark_prefix: AsciiString::from_ascii("large_repo_bookmark_2/".to_string()).unwrap(),
         }
     }
 
@@ -603,18 +601,16 @@ mod tests {
         source.add_current_version(commit_sync_config.version_name);
         source.add_common_config(CommonCommitSyncConfig {
             common_pushrebase_bookmarks: commit_sync_config.common_pushrebase_bookmarks.clone(),
-            small_repos: commit_sync_config
-                .small_repos
-                .iter()
-                .map(|(repo_id, small_repo_config)| {
-                    (
-                        *repo_id,
-                        SmallRepoPermanentConfig {
-                            bookmark_prefix: small_repo_config.bookmark_prefix.clone(),
-                        },
-                    )
-                })
-                .collect(),
+            small_repos: hashmap! {
+                RepositoryId::new(1) => SmallRepoPermanentConfig {
+                    bookmark_prefix: AsciiString::from_str(&"large_repo_bookmark/")
+                        .unwrap(),
+                },
+                RepositoryId::new(2) => SmallRepoPermanentConfig {
+                    bookmark_prefix: AsciiString::from_str("large_repo_bookmark_2/")
+                        .unwrap(),
+                },
+            },
             large_repo_id: commit_sync_config.large_repo_id,
         });
 

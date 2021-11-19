@@ -674,7 +674,6 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
                     MPath::new("current_prefix").unwrap(),
                 ),
                 map: hashmap! { },
-                bookmark_prefix: AsciiString::new(),
 
             },
         },
@@ -693,7 +692,6 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
                     MPath::new("new_prefix").unwrap(),
                 ),
                 map: hashmap! { },
-                bookmark_prefix: AsciiString::new(),
 
             },
         },
@@ -1196,7 +1194,6 @@ impl MoverType {
             Noop => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                 map: hashmap! {},
-                bookmark_prefix: AsciiString::new(),
             },
             Except(files) => {
                 let mut map = hashmap! {};
@@ -1209,7 +1206,6 @@ impl MoverType {
                 SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map,
-                    bookmark_prefix: AsciiString::new(),
                 }
             }
             Only(path) => SmallRepoCommitSyncConfig {
@@ -1219,7 +1215,6 @@ impl MoverType {
                 map: hashmap! {
                     MPath::new(path).unwrap() => MPath::new(path).unwrap(),
                 },
-                bookmark_prefix: AsciiString::new(),
             },
         }
     }
@@ -1574,7 +1569,6 @@ async fn init_merged_repos(
                         MPath::new(format!("smallrepo{}", small_repo.get_repoid().id())).unwrap(),
                     ),
                     map: hashmap! { },
-                    bookmark_prefix: AsciiString::new(),
 
                 },
             },

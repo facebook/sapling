@@ -154,7 +154,7 @@ where
 
 /// Helper to read toml files which throws an error upon encountering
 /// unknown keys
-fn read_toml<T>(bytes: &[u8]) -> Result<T>
+pub(crate) fn read_toml<T>(bytes: &[u8]) -> Result<T>
 where
     T: serde::de::DeserializeOwned,
 {

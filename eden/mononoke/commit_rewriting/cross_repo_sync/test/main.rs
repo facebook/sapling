@@ -268,7 +268,6 @@ fn create_commit_sync_config(
     let small_repo_config = SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new(prefix)?),
         map: hashmap! {},
-        bookmark_prefix: AsciiString::new(),
     };
 
     Ok(CommitSyncConfig {
@@ -789,7 +788,6 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
             MPath::new("dir1/subdir1/subsubdir1")? => MPath::new("prefix1")?,
             MPath::new("dir1")? => MPath::new("prefix2")?,
         },
-        bookmark_prefix: AsciiString::new(),
     };
 
     let commit_sync_config = CommitSyncConfig {
@@ -1756,7 +1754,6 @@ async fn prepare_commit_syncer_with_mapping_change(
         map: hashmap! {
             MPath::new("tools")? => MPath::new("tools")?,
         },
-        bookmark_prefix: AsciiString::new(),
     };
 
     let old_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
@@ -1834,7 +1831,6 @@ fn get_merge_sync_data_provider(
     let small_repo_config = SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
         map: hashmap! {},
-        bookmark_prefix: AsciiString::new(),
     };
     let commit_sync_config_v1 = CommitSyncConfig {
         large_repo_id,
@@ -2165,8 +2161,6 @@ async fn test_no_accidental_preserved_roots(
         let small_repo_config = SmallRepoCommitSyncConfig {
             default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
             map: hashmap! {},
-            bookmark_prefix: AsciiString::new(),
-            // TODO(stash): remove `direction` field since it's unused
         };
         let commit_sync_config = CommitSyncConfig {
             large_repo_id: commit_syncer.get_large_repo().get_repoid(),
@@ -2282,8 +2276,6 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
             first_small_repo_id => SmallRepoCommitSyncConfig {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                 map: hashmap! {},
-                bookmark_prefix: AsciiString::from_ascii("").unwrap(),
-
             },
         },
         version_name: noop_version_first_small_repo.clone(),

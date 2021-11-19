@@ -962,10 +962,6 @@ async fn run_diff_mapping_versions<'a>(
         println!("default action change: {:?} to {:?}", from, to);
     }
 
-    if let Some((from, to)) = diff.bookmark_prefix_change {
-        println!("bookmark prefix change: {} to {}", from, to);
-    }
-
     let mut mapping_added = diff.mapping_added.into_iter().collect::<Vec<_>>();
     mapping_added.sort();
     for (path_from, path_to) in mapping_added {

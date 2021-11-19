@@ -347,7 +347,6 @@ pub fn get_movers(
 #[cfg(test)]
 mod test {
     use super::*;
-    use ascii::AsciiString;
     use maplit::hashmap;
     use metaconfig_types::CommitSyncConfigVersion;
 
@@ -473,7 +472,6 @@ mod test {
             map: hashmap! {
                 mp("preserved2") => mp("repo1-rest/preserved2"),
             },
-            bookmark_prefix: AsciiString::from_ascii("b1".to_string()).unwrap(),
         }
     }
 
@@ -485,7 +483,6 @@ mod test {
                 mp("sub1") => mp("repo2-rest/sub1"),
                 mp("sub2") => mp("repo2-rest/sub2"),
             },
-            bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
         }
     }
 
@@ -642,7 +639,6 @@ mod test {
                     map: hashmap! {
                         mp("preserved2") => mp("preserved2"),
                     },
-                    bookmark_prefix: AsciiString::from_ascii("b1".to_string()).unwrap(),
                 },
                 RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted2")),
@@ -651,7 +647,6 @@ mod test {
                         mp("sub1") => mp("repo2-rest/sub1"),
                         mp("sub2") => mp("repo2-rest/sub2"),
                     },
-                    bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
                 },
             },
             version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
@@ -736,7 +731,6 @@ mod test {
                 mp("sub1") => mp("repo2-rest/sub1"),
                 mp("sub1/preserved") => mp("sub1/preserved"),
             },
-            bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
         }
     }
 
@@ -786,7 +780,6 @@ mod test {
                 mp("preserved") => mp("preserved"),
                 mp("preserved/excluded") => mp("shifted/preserved/excluded"),
             },
-            bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
         }
     }
 

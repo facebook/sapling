@@ -669,7 +669,7 @@ mod test {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
-            let (syncers, _) = init_small_large_repo(&ctx).await?;
+            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
             let smallrepo = commit_syncer.get_source_repo();
 
@@ -755,7 +755,7 @@ mod test {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
-            let (syncers, _) = init_small_large_repo(&ctx).await?;
+            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
             let smallrepo = commit_syncer.get_source_repo();
 
@@ -821,7 +821,7 @@ mod test {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
-            let (syncers, _) = init_small_large_repo(&ctx).await?;
+            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
             let smallrepo = commit_syncer.get_source_repo();
 
@@ -855,7 +855,7 @@ mod test {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
-            let (syncers, _) = init_small_large_repo(&ctx).await?;
+            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
             let smallrepo = commit_syncer.get_source_repo();
 
@@ -894,7 +894,7 @@ mod test {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
-            let (syncers, _) = init_small_large_repo(&ctx).await?;
+            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
             let smallrepo = commit_syncer.get_source_repo();
 
@@ -950,7 +950,7 @@ mod test {
 
             let ctx = CoreContext::test_mock(fb);
 
-            let (syncers, _) = init_small_large_repo(&ctx).await?;
+            let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
             let commit_syncer = syncers.small_to_large;
             let smallrepo = commit_syncer.get_source_repo();
 
@@ -995,7 +995,7 @@ mod test {
         let mutable_counters = SqlMutableCounters::with_sqlite_in_memory()?;
 
         let ctx = CoreContext::test_mock(fb);
-        let (syncers, _) = init_small_large_repo(&ctx).await?;
+        let (syncers, _, _, _) = init_small_large_repo(&ctx).await?;
         let commit_syncer = syncers.small_to_large;
         let smallrepo = commit_syncer.get_source_repo();
 

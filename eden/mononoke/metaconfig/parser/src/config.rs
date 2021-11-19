@@ -447,7 +447,6 @@ impl RepoConfigs {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ascii::AsciiString;
     use bookmarks_types::BookmarkName;
     use cached_config::TestSource;
     use maplit::{btreemap, hashmap, hashset};
@@ -470,7 +469,6 @@ mod test {
     use repos::RawCommitSyncConfig;
     use std::fs::{create_dir_all, write};
     use std::num::NonZeroUsize;
-    use std::str::FromStr;
     use std::sync::Arc;
     use std::time::Duration;
     use tempdir::TempDir;
@@ -557,7 +555,6 @@ mod test {
                 small_repos: hashmap! {
                     RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
-                        bookmark_prefix: AsciiString::from_str("repo2").unwrap(),
                         map: hashmap! {
                             MPath::new("p1").unwrap() => MPath::new(".r2-legacy/p1").unwrap(),
                             MPath::new("p5").unwrap() => MPath::new(".r2-legacy/p5").unwrap(),
@@ -565,7 +562,6 @@ mod test {
                     },
                     RepositoryId::new(3) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("subdir").unwrap()),
-                        bookmark_prefix: AsciiString::from_str("repo3").unwrap(),
                         map: hashmap! {
                             MPath::new("p1").unwrap() => MPath::new("p1").unwrap(),
                             MPath::new("p4").unwrap() => MPath::new("p5/p4").unwrap(),
@@ -649,51 +645,6 @@ mod test {
             assert!(msg.contains("present multiple times in the same CommitSyncConfig"));
         }
     }
-
-    #[test]
-    fn test_commit_sync_config_conflicting_bookmark_prefixes() {
-        let commit_sync_config = r#"
-            [mega]
-            large_repo_id = 1
-            common_pushrebase_bookmarks = ["master"]
-
-                [[mega.small_repos]]
-                repoid = 2
-                bookmark_prefix = "repo3/bla"
-                default_action = "preserve"
-                direction = "small_to_large"
-
-                    [mega.small_repos.mapping]
-                    "p1" = ".r2-legacy/p1"
-
-                [[mega.small_repos]]
-                repoid = 3
-                bookmark_prefix = "repo3"
-                default_action = "prepend_prefix"
-                default_prefix = "subdir"
-                direction = "small_to_large"
-
-                    [mega.small_repos.mapping]
-                    "p1" = "p1"
-                    "p4" = "p5/p4"
-        "#;
-
-        let paths = btreemap! {
-            "common/commitsyncmap.toml" => commit_sync_config
-        };
-        let tmp_dir = write_files(&paths);
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
-        let RawRepoConfigs { commit_sync, .. } =
-            crate::raw::read_raw_configs(tmp_dir.path().as_ref(), &config_store).unwrap();
-        for (_config_name, commit_sync_config) in commit_sync {
-            let res = commit_sync_config.convert();
-            let msg = format!("{:#?}", res);
-            println!("res = {}", msg);
-            assert!(res.is_err());
-            assert!(msg.contains("One bookmark prefix starts with another, which is prohibited"));
-        }
-    }
-
     #[test]
     fn test_duplicated_repo_ids() {
         let www_content = r#"
