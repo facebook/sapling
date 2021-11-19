@@ -361,6 +361,10 @@ where
     /// and write to disk more efficiently.
     ///
     /// The added vertexes are immediately query-able.
+    ///
+    /// Note: heads with `reserve_size > 0` must be passed in even if they
+    /// already exist and are not being added to the graph for the id
+    /// reservation to work correctly.
     async fn add_heads(
         &mut self,
         parents: &dyn Parents,
@@ -372,34 +376,64 @@ where
         self.populate_missing_vertexes_for_add_heads(parents, &heads.vertexes())
             .await?;
 
-        // Assign to the NON_MASTER group unconditionally so we can avoid the
-        // complexity re-assigning non-master ids.
+        // heads might require highest_group = MASTER. That might trigger
+        // id re-assigning if the NON_MASTER group is not empty. For simplicity,
+        // we don't want to deal with id reassignment here.
         //
-        // This simplifies the API (not taking 2 groups), but comes with a
-        // performance penalty - if the user does want to make one of the head
-        // in the "master" group, we have to re-assign ids in flush().
+        // Practically, there are 2 use-cases:
+        // - Server wants highest_group = MASTER and it does not use NON_MASTER.
+        // - Client only needs highest_group = NON_MASTER (default) here.
+        //
+        // Support both cases. That is:
+        // - If highest_group = MASTER is specified, then NON_MASTER group
+        //   must be empty to ensure no id reassignment (checked below).
+        // - If highest_group = MASTER is not used, then it's okay whatever.
+        if heads
+            .vertex_options()
+            .into_iter()
+            .any(|(_v, o)| o.highest_group < Group::NON_MASTER)
+        {
+            let all = self.dag.all()?;
+            let has_non_master = match all.max() {
+                Some(id) => id.group() == Group::NON_MASTER,
+                None => false,
+            };
+            if has_non_master {
+                return programming(concat!(
+                    "add_heads() called with highest_group = MASTER but NON_MASTER group is not empty. ",
+                    "To avoid id reassignment this is not supported. ",
+                    "Pass highest_group = NON_MASTER, and call flush() (common on client use-case), ",
+                    "or avoid inserting to NON_MASTER group (common on server use-case).",
+                ));
+            }
+        }
+
+        // Performance-wise, add_heads + flush is slower than
+        // add_heads_and_flush.
         //
         // Practically, the callsite might want to use add_heads + flush
-        // intead of add_heads_and_flush, if:
+        // instead of add_heads_and_flush, if:
         // - The callsites cannot figure out "master_heads" at the same time
         //   it does the graph change. For example, hg might know commits
         //   before bookmark movements.
         // - The callsite is trying some temporary graph changes, and does
         //   not want to pollute the on-disk DAG. For example, calculating
         //   a preview of a rebase.
-        let group = Group::NON_MASTER;
-
         // Update IdMap. Keep track of what heads are added.
         let mut outcome = PreparedFlatSegments::default();
         let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
+        let mut reserved = calculate_initial_reserved(self, &covered, heads).await?;
         for (head, opts) in heads.vertex_options() {
-            assert_eq!(opts.reserve_size, 0);
-            assert_eq!(opts.highest_group, group);
             if !self.contains_vertex_name(&head).await? {
+                let group = opts.highest_group;
                 let prepared_segments = self
-                    .assign_head(head.clone(), parents, group, &mut covered, &IdSet::empty())
+                    .assign_head(head.clone(), parents, group, &mut covered, &reserved)
                     .await?;
                 outcome.merge(prepared_segments);
+                if opts.reserve_size > 0 {
+                    let low = self.map.vertex_id(head.clone()).await? + 1;
+                    update_reserved(&mut reserved, &covered, low, opts.reserve_size);
+                }
                 self.pending_heads.push((head, opts));
             }
         }

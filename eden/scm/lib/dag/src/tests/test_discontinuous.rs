@@ -23,6 +23,7 @@
 //! Note: discontinuous segments is not designed to support massive amount of
 //! branches. It introduces O(branch) factor in complexity in many places.
 
+use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
 use crate::tests::DrawDag;
@@ -157,7 +158,7 @@ async fn test_grow_branches() {
         reserved_head("B6", 20),
         reserved_head("C8", 20),
     ]);
-    dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
+    dag.dag.add_heads(&draw, &heads).await.unwrap();
     assert_eq!(
         dag.debug_segments(0, Group::MASTER),
         r#"
@@ -186,7 +187,7 @@ async fn test_reservation_on_existing_vertex() {
 
     // A2: 4 is respected (3..=6 is reserved).
     let heads = VertexListWithOptions::from(vec![reserved_head("B2", 4), reserved_head("A2", 4)]);
-    dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
+    dag.dag.add_heads(&draw, &heads).await.unwrap();
     assert_eq!(
         format!("{:?}", dag.dag.all().await.unwrap()),
         "<spans [B0:B2+7:9, A0:A2+0:2]>"
