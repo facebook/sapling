@@ -44,7 +44,7 @@ pub async fn get_validation_helpers<'a>(
 
     let config_store = matches.config_store();
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
-    let common_commit_sync_config = live_commit_sync_config.get_common_config(repo_id).await?;
+    let common_commit_sync_config = live_commit_sync_config.get_common_config(repo_id)?;
 
     let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
         fb,

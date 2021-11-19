@@ -94,14 +94,13 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     ) -> Result<Option<CommitSyncConfig>>;
 
     /// Returns a config that applies to all config versions
-    async fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
-        self.get_common_config_if_exists(repo_id)
-            .await?
+    fn get_common_config(&self, repo_id: RepositoryId) -> Result<CommonCommitSyncConfig> {
+        self.get_common_config_if_exists(repo_id)?
             .ok_or_else(|| ErrorKind::NotPartOfAnyConfigs(repo_id).into())
     }
 
     /// Returns a config that applies to all config versions if it exists
-    async fn get_common_config_if_exists(
+    fn get_common_config_if_exists(
         &self,
         repo_id: RepositoryId,
     ) -> Result<Option<CommonCommitSyncConfig>>;
@@ -242,7 +241,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
         Ok(version)
     }
 
-    async fn get_common_config_if_exists(
+    fn get_common_config_if_exists(
         &self,
         repo_id: RepositoryId,
     ) -> Result<Option<CommonCommitSyncConfig>> {
@@ -470,7 +469,7 @@ impl LiveCommitSyncConfig for TestLiveCommitSyncConfig {
             .get_commit_sync_config_by_version_if_exists(repo_id, version_name)
     }
 
-    async fn get_common_config_if_exists(
+    fn get_common_config_if_exists(
         &self,
         repo_id: RepositoryId,
     ) -> Result<Option<CommonCommitSyncConfig>> {

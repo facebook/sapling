@@ -757,16 +757,15 @@ async fn get_large_repo_config_if_pushredirected<'a>(
     let enabled = live_commit_sync_config.push_redirector_enabled_for_public(repo_id);
 
     if enabled {
-        let common_commit_sync_config =
-            match live_commit_sync_config.get_common_config(repo_id).await {
-                Ok(config) => config,
-                Err(e) => {
-                    return Err(format_err!(
-                        "Failed to fetch common commit sync config: {:#}",
-                        e
-                    ));
-                }
-            };
+        let common_commit_sync_config = match live_commit_sync_config.get_common_config(repo_id) {
+            Ok(config) => config,
+            Err(e) => {
+                return Err(format_err!(
+                    "Failed to fetch common commit sync config: {:#}",
+                    e
+                ));
+            }
+        };
         let large_repo_id = common_commit_sync_config.large_repo_id;
         let (_, large_repo_config) = match repos
             .iter()
@@ -851,9 +850,7 @@ async fn get_pushredirected_vars(
     let large_repo_id = large_repo_config.repoid;
     let large_repo: BlobRepo =
         args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches).await?;
-    let common_commit_sync_config = live_commit_sync_config
-        .get_common_config(large_repo_id)
-        .await?;
+    let common_commit_sync_config = live_commit_sync_config.get_common_config(large_repo_id)?;
 
     if common_commit_sync_config.small_repos.len() > 1 {
         return Err(format_err!(

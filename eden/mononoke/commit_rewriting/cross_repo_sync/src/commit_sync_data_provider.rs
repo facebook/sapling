@@ -8,7 +8,6 @@
 use anyhow::{anyhow, Error};
 use bookmark_renaming::{get_bookmark_renamers, BookmarkRenamer, BookmarkRenamers};
 use bookmarks::BookmarkName;
-use futures::future::try_join;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::{
     CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
@@ -34,11 +33,9 @@ impl CommitSyncDataProvider {
         match self {
             Live(live_commit_sync_config) => {
                 let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(source_repo_id, version);
-                let common_config = live_commit_sync_config.get_common_config(source_repo_id);
-
-                let (commit_sync_config, common_config) =
-                    try_join(commit_sync_config, common_config).await?;
+                    .get_commit_sync_config_by_version(source_repo_id, version)
+                    .await?;
+                let common_config = live_commit_sync_config.get_common_config(source_repo_id)?;
 
                 let Movers { mover, .. } = get_movers_from_config(
                     &common_config,
@@ -62,11 +59,9 @@ impl CommitSyncDataProvider {
         match self {
             Live(live_commit_sync_config) => {
                 let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(source_repo_id, version);
-                let common_config = live_commit_sync_config.get_common_config(source_repo_id);
-
-                let (commit_sync_config, common_config) =
-                    try_join(commit_sync_config, common_config).await?;
+                    .get_commit_sync_config_by_version(source_repo_id, version)
+                    .await?;
+                let common_config = live_commit_sync_config.get_common_config(source_repo_id)?;
 
                 let Movers { reverse_mover, .. } = get_movers_from_config(
                     &common_config,
@@ -88,9 +83,8 @@ impl CommitSyncDataProvider {
 
         match self {
             Live(live_commit_sync_config) => {
-                let commit_sync_config = live_commit_sync_config
-                    .get_common_config(source_repo_id)
-                    .await?;
+                let commit_sync_config =
+                    live_commit_sync_config.get_common_config(source_repo_id)?;
 
                 let BookmarkRenamers {
                     bookmark_renamer, ..
@@ -113,9 +107,8 @@ impl CommitSyncDataProvider {
 
         match self {
             Live(live_commit_sync_config) => {
-                let commit_sync_config = live_commit_sync_config
-                    .get_common_config(source_repo_id)
-                    .await?;
+                let commit_sync_config =
+                    live_commit_sync_config.get_common_config(source_repo_id)?;
 
                 let BookmarkRenamers {
                     reverse_bookmark_renamer,
@@ -171,7 +164,7 @@ impl CommitSyncDataProvider {
 
         match self {
             Live(live_commit_sync_config) => {
-                let common_sync_config = live_commit_sync_config.get_common_config(repo_id).await?;
+                let common_sync_config = live_commit_sync_config.get_common_config(repo_id)?;
                 Ok(common_sync_config.common_pushrebase_bookmarks)
             }
         }

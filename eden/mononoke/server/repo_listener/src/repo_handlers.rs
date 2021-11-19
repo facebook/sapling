@@ -188,8 +188,7 @@ pub async fn repo_handlers<'a>(
 
         let common_commit_sync_config = repo
             .live_commit_sync_config()
-            .get_common_config_if_exists(repo.blob_repo().get_repoid())
-            .await?;
+            .get_common_config_if_exists(repo.blob_repo().get_repoid())?;
 
         let repo_client_knobs = config.repo_client_knobs.clone();
         let backup_repo_config = config.backup_repo_config.clone();

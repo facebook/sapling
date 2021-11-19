@@ -33,9 +33,7 @@ pub async fn create_commit_syncers_from_matches(
     let (source_repo, target_repo, mapping, live_commit_sync_config) =
         get_things_from_matches(ctx, matches).await?;
 
-    let common_config = live_commit_sync_config
-        .get_common_config(source_repo.0.get_repoid())
-        .await?;
+    let common_config = live_commit_sync_config.get_common_config(source_repo.0.get_repoid())?;
 
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
@@ -180,9 +178,7 @@ async fn create_commit_syncer<'a>(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     x_repo_syncer_lease: Arc<dyn LeaseOps>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
-    let common_config = live_commit_sync_config
-        .get_common_config(source_repo.0.get_repoid())
-        .await?;
+    let common_config = live_commit_sync_config.get_common_config(source_repo.0.get_repoid())?;
 
     let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, &common_config)?;
     let commit_syncer = CommitSyncer::new(

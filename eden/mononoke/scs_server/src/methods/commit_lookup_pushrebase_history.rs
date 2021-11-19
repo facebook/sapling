@@ -132,7 +132,6 @@ impl RepoChangesetsPushrebaseHistory {
         let maybe_common_commit_sync_config = repo
             .live_commit_sync_config()
             .get_common_config_if_exists(repo.repoid())
-            .await
             .map_err(errors::internal_error)?;
 
         if let Some(config) = maybe_common_commit_sync_config {

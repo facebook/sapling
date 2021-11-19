@@ -1719,15 +1719,12 @@ pub fn create_commit_syncers<M>(
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
-    let small_to_large_commit_sync_repos = CommitSyncRepos::SmallToLarge {
-        small_repo: small_repo.clone(),
-        large_repo: large_repo.clone(),
-    };
+    let common_config = live_commit_sync_config.get_common_config(large_repo.get_repoid())?;
 
-    let large_to_small_commit_sync_repos = CommitSyncRepos::LargeToSmall {
-        small_repo,
-        large_repo,
-    };
+    let small_to_large_commit_sync_repos =
+        CommitSyncRepos::new(small_repo.clone(), large_repo.clone(), &common_config)?;
+    let large_to_small_commit_sync_repos =
+        CommitSyncRepos::new(large_repo.clone(), small_repo.clone(), &common_config)?;
 
     let large_to_small_commit_syncer = CommitSyncer::new(
         ctx,

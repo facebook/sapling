@@ -94,9 +94,8 @@ pub async fn subcommand_crossrepo<'a>(
             let (source_repo, target_repo, mapping) =
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
 
-            let common_config = live_commit_sync_config
-                .get_common_config(source_repo.get_repoid())
-                .await?;
+            let common_config =
+                live_commit_sync_config.get_common_config(source_repo.get_repoid())?;
             let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, &common_config)?;
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
@@ -976,9 +975,7 @@ async fn subcommand_verify_bookmarks(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     matches: &MononokeMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let common_config = live_commit_sync_config
-        .get_common_config(target_repo.get_repoid())
-        .await?;
+    let common_config = live_commit_sync_config.get_common_config(target_repo.get_repoid())?;
     let commit_syncer = get_large_to_small_commit_syncer(
         &ctx,
         source_repo,
@@ -1363,9 +1360,7 @@ async fn get_large_to_small_commit_syncer<'a>(
     let caching = matches.caching();
     let x_repo_syncer_lease = create_commit_syncer_lease(ctx.fb, caching)?;
 
-    let common_sync_config = live_commit_sync_config
-        .get_common_config(source_repo.get_repoid())
-        .await?;
+    let common_sync_config = live_commit_sync_config.get_common_config(source_repo.get_repoid())?;
 
     let (large_repo, small_repo) = if common_sync_config.large_repo_id == source_repo.get_repoid()
         && common_sync_config

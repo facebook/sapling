@@ -1396,7 +1396,6 @@ impl RepoContext {
         let common_config = self
             .live_commit_sync_config()
             .get_common_config(self.blob_repo().get_repoid())
-            .await
             .map_err(|e| {
                 MononokeError::InvalidRequest(format!(
                     "Commits from {} are not configured to be remapped to another repo: {}",
