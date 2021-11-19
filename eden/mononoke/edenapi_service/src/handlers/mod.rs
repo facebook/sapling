@@ -45,6 +45,7 @@ mod commit;
 mod files;
 mod handler;
 mod history;
+mod land;
 mod lookup;
 mod pull;
 mod repos;
@@ -72,6 +73,7 @@ pub enum EdenApiMethod {
     CommitHashLookup,
     Clone,
     Bookmarks,
+    LandStack,
     PullFastForwardMaster,
     EphemeralPrepare,
     FetchSnapshot,
@@ -94,6 +96,7 @@ impl fmt::Display for EdenApiMethod {
             Self::CommitGraph => "commit_graph",
             Self::Clone => "clone",
             Self::Bookmarks => "bookmarks",
+            Self::LandStack => "land_stack",
             Self::Lookup => "lookup",
             Self::UploadFile => "upload_file",
             Self::PullFastForwardMaster => "pull_fast_forward_master",
@@ -280,6 +283,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<files::FilesHandler>(route);
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
         Handlers::setup::<bookmarks::BookmarksHandler>(route);
+        Handlers::setup::<land::LandStackHandler>(route);
         Handlers::setup::<history::HistoryHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
         Handlers::setup::<trees::UploadTreesHandler>(route);

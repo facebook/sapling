@@ -11,7 +11,7 @@ use anyhow::Error;
 use thiserror::Error;
 
 use gotham_ext::error::HttpError;
-use mononoke_api::MononokeError;
+use mononoke_api::{ChangesetId, MononokeError};
 use types::{HgId, Key};
 
 /// Enum to add context to server errors.
@@ -64,6 +64,8 @@ pub enum ErrorKind {
     CommitRevlogDataRequestFailed,
     #[error("HgId not found: {0}")]
     HgIdNotFound(HgId),
+    #[error("Failed to fetch HgId for Bonsai Changeset ID {0}")]
+    BonsaiChangesetToHgIdError(ChangesetId),
     #[error(
         "Invalid file content upload token in 'upload/filenodes' request for filenode: {0}, reason: {1}"
     )]
