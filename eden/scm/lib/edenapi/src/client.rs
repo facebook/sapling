@@ -60,6 +60,7 @@ use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
 use edenapi_types::PushVar;
 use edenapi_types::ServerError;
+use edenapi_types::SetBookmarkRequest;
 use edenapi_types::ToApi;
 use edenapi_types::ToWire;
 use edenapi_types::TreeAttributes;
@@ -134,6 +135,7 @@ mod paths {
     pub const COMMIT_GRAPH: &str = "commit/graph";
     pub const COMMIT_MUTATIONS: &str = "commit/mutations";
     pub const BOOKMARKS: &str = "bookmarks";
+    pub const SET_BOOKMARK: &str = "bookmarks/set";
     pub const LAND_STACK: &str = "land";
     pub const LOOKUP: &str = "lookup";
     pub const UPLOAD: &str = "upload/";
@@ -675,6 +677,34 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         self.fetch_vec_with_retry::<BookmarkEntry>(vec![req]).await
+    }
+
+    async fn set_bookmark(
+        &self,
+        repo: String,
+        bookmark: String,
+        to: Option<HgId>,
+        from: Option<HgId>,
+        pushvars: HashMap<String, String>,
+    ) -> Result<(), EdenApiError> {
+        tracing::info!("Set bookmark '{}' from {:?} to {:?}", &bookmark, from, to);
+        let url = self.build_url(paths::SET_BOOKMARK, Some(&repo))?;
+        let set_bookmark_req = SetBookmarkRequest {
+            bookmark,
+            to,
+            from,
+            pushvars: pushvars
+                .into_iter()
+                .map(|(k, v)| PushVar { key: k, value: v })
+                .collect(),
+        };
+        self.log_request(&set_bookmark_req, "set_bookmark");
+        let req = self
+            .configure_request(Request::post(url))?
+            .cbor(&set_bookmark_req.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<()>(req).await
     }
 
     /// Land a stack of commits, rebasing them onto the specified bookmark

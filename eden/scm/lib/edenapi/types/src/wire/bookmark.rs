@@ -7,11 +7,16 @@
 
 pub use crate::bookmark::WireBookmarkEntry;
 pub use crate::bookmark::WireBookmarkRequest;
+pub use crate::bookmark::WireSetBookmarkRequest;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(WireBookmarkRequest, WireBookmarkEntry);
+    auto_wire_tests!(
+        WireBookmarkRequest,
+        WireBookmarkEntry,
+        WireSetBookmarkRequest
+    );
 }

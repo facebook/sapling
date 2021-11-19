@@ -12,6 +12,8 @@ use serde_derive::Serialize;
 use type_macros::auto_wire;
 use types::hgid::HgId;
 
+use crate::land::PushVar;
+
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct BookmarkRequest {
@@ -44,6 +46,34 @@ impl Arbitrary for BookmarkEntry {
         BookmarkEntry {
             bookmark: Arbitrary::arbitrary(g),
             hgid: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[auto_wire]
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct SetBookmarkRequest {
+    #[id(0)]
+    pub bookmark: String,
+
+    #[id(1)]
+    pub to: Option<HgId>,
+
+    #[id(2)]
+    pub from: Option<HgId>,
+
+    #[id(4)]
+    pub pushvars: Vec<PushVar>,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for SetBookmarkRequest {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        SetBookmarkRequest {
+            bookmark: Arbitrary::arbitrary(g),
+            to: Arbitrary::arbitrary(g),
+            from: Arbitrary::arbitrary(g),
+            pushvars: Arbitrary::arbitrary(g),
         }
     }
 }

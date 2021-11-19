@@ -189,6 +189,19 @@ pub trait EdenApi: Send + Sync + 'static {
         Err(EdenApiError::NotSupported)
     }
 
+    /// Create, delete, or move a bookmark
+    async fn set_bookmark(
+        &self,
+        repo: String,
+        bookmark: String,
+        to: Option<HgId>,
+        from: Option<HgId>,
+        pushvars: HashMap<String, String>,
+    ) -> Result<(), EdenApiError> {
+        let _ = (repo, bookmark, to, from, pushvars);
+        Err(EdenApiError::NotSupported)
+    }
+
     /// Land a stack of commits, rebasing them onto the specified bookmark
     /// and updating the bookmark to the top of the rebased stack.
     async fn land_stack(

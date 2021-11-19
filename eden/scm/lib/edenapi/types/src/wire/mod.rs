@@ -89,6 +89,7 @@ pub use crate::wire::anyid::WireLookupResult;
 pub use crate::wire::batch::WireBatch;
 pub use crate::wire::bookmark::WireBookmarkEntry;
 pub use crate::wire::bookmark::WireBookmarkRequest;
+pub use crate::wire::bookmark::WireSetBookmarkRequest;
 pub use crate::wire::clone::WireCloneData;
 pub use crate::wire::clone::WireIdMapEntry;
 pub use crate::wire::commit::WireCommitGraphEntry;

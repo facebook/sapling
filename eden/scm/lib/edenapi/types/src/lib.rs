@@ -62,6 +62,7 @@ pub use crate::anyid::LookupResult;
 pub use crate::batch::Batch;
 pub use crate::bookmark::BookmarkEntry;
 pub use crate::bookmark::BookmarkRequest;
+pub use crate::bookmark::SetBookmarkRequest;
 pub use crate::commit::make_hash_lookup_request;
 pub use crate::commit::BonsaiChangesetContent;
 pub use crate::commit::BonsaiFileChange;
