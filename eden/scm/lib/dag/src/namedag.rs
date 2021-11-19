@@ -67,6 +67,7 @@ use crate::protocol::Process;
 use crate::protocol::RemoteIdConvertProtocol;
 use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
+use crate::types_ext::PreparedFlatSegmentsExt;
 use crate::IdSet;
 use crate::Level;
 use crate::Result;

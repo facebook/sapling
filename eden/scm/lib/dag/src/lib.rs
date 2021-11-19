@@ -28,6 +28,7 @@ pub mod protocol;
 pub mod render;
 pub mod segment;
 mod spanset;
+pub(crate) mod types_ext;
 pub mod utils;
 mod verlink;
 mod vertex_options;

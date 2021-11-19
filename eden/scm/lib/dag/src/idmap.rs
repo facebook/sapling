@@ -17,6 +17,7 @@ use crate::id::VertexName;
 use crate::ops::IdConvert;
 use crate::ops::Parents;
 use crate::segment::PreparedFlatSegments;
+use crate::types_ext::PreparedFlatSegmentsExt;
 use crate::Error;
 use crate::IdSet;
 use crate::Result;

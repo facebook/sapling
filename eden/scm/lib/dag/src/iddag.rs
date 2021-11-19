@@ -37,6 +37,7 @@ use crate::segment::PreparedFlatSegments;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
 use crate::spanset;
+use crate::types_ext::PreparedFlatSegmentsExt;
 use crate::Error::Programming;
 use crate::IdSet;
 use crate::IdSpan;
