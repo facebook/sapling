@@ -73,7 +73,7 @@ impl Ord for Span {
 
 impl Span {
     pub fn new(low: Id, high: Id) -> Self {
-        assert!(low <= high);
+        assert!(low <= high, "low {:?} <= high {:?}", low, high);
         Self { low, high }
     }
 
