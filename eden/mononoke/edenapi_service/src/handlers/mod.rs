@@ -73,6 +73,7 @@ pub enum EdenApiMethod {
     CommitHashLookup,
     Clone,
     Bookmarks,
+    SetBookmark,
     LandStack,
     PullFastForwardMaster,
     EphemeralPrepare,
@@ -96,6 +97,7 @@ impl fmt::Display for EdenApiMethod {
             Self::CommitGraph => "commit_graph",
             Self::Clone => "clone",
             Self::Bookmarks => "bookmarks",
+            Self::SetBookmark => "set_bookmark",
             Self::LandStack => "land_stack",
             Self::Lookup => "lookup",
             Self::UploadFile => "upload_file",
@@ -283,6 +285,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<files::FilesHandler>(route);
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
         Handlers::setup::<bookmarks::BookmarksHandler>(route);
+        Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
         Handlers::setup::<land::LandStackHandler>(route);
         Handlers::setup::<history::HistoryHandler>(route);
         Handlers::setup::<lookup::LookupHandler>(route);
