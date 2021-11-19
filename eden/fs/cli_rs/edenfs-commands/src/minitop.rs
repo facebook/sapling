@@ -25,7 +25,7 @@ use edenfs_error::{Result, ResultExt};
 
 use thrift_types::edenfs::types::{pid_t, AccessCounts, GetAccessCountsResult};
 
-use crate::humantime::HumanTime;
+use crate::humantime::{HumanTime, TimeUnit};
 use crate::ExitCode;
 
 #[derive(StructOpt, Debug)]
@@ -309,12 +309,17 @@ impl crate::Subcommand for MinitopCmd {
                         .access_counts
                         .fsChannelBackingStoreImports
                         .to_string(),
-                    aggregated_process
-                        .access_counts
-                        .fsChannelDurationNs
-                        .to_string(),
+                    HumanTime::from(Duration::new(
+                        0,
+                        aggregated_process
+                            .access_counts
+                            .fsChannelDurationNs
+                            .try_into()
+                            .from_err()?,
+                    ))
+                    .simple_human_time(TimeUnit::Nanoseconds),
                     HumanTime::from(aggregated_process.last_access_time.elapsed().from_err()?)
-                        .simple_human_time(),
+                        .simple_human_time(TimeUnit::Seconds),
                     aggregated_process.cmd,
                 ]);
             }
