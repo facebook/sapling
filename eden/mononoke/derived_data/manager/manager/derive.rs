@@ -28,6 +28,7 @@ use topo_sort::TopoSortedDagTraversal;
 use crate::context::DerivationContext;
 use crate::derivable::{BonsaiDerivable, DerivationDependencies};
 use crate::error::DerivationError;
+use crate::manager::util::DiscoveryStats;
 
 use super::{DerivationAssignment, DerivedDataManager};
 
@@ -131,6 +132,7 @@ impl DerivedDataManager {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         csid: ChangesetId,
+        discovery_stats: &Option<DiscoveryStats>,
     ) -> Result<(ChangesetId, Derivable)>
     where
         Derivable: BonsaiDerivable,
@@ -165,7 +167,7 @@ impl DerivedDataManager {
                     },
                     Err(e) => {
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
-                            self.derived_data_scuba::<Derivable>()
+                            self.derived_data_scuba::<Derivable>(discovery_stats)
                                 .add("changeset", csid.to_string())
                                 .log_with_msg("Derived data service failed", format!("{:#}", e));
                             break;
@@ -176,7 +178,7 @@ impl DerivedDataManager {
                 }
             }
         }
-        self.perform_single_derivation_locally(&ctx, &derivation_ctx, csid)
+        self.perform_single_derivation_locally(&ctx, &derivation_ctx, csid, discovery_stats)
             .await
     }
 
@@ -185,6 +187,7 @@ impl DerivedDataManager {
         ctx: &CoreContext,
         derivation_ctx: &DerivationContext,
         csid: ChangesetId,
+        discovery_stats: &Option<DiscoveryStats>,
     ) -> Result<(ChangesetId, Derivable)>
     where
         Derivable: BonsaiDerivable,
@@ -236,9 +239,9 @@ impl DerivedDataManager {
                 // class for derivation.
                 let ctx = self.set_derivation_session_class(ctx.clone());
 
-                // The derivation process is additonally logged to the derived
+                // The derivation process is additionally logged to the derived
                 // data scuba table.
-                let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+                let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(discovery_stats);
                 derived_data_scuba.add("changeset", csid.to_string());
                 self.log_derivation_start::<Derivable>(&ctx, &mut derived_data_scuba, csid);
 
@@ -377,13 +380,18 @@ impl DerivedDataManager {
     where
         Derivable: BonsaiDerivable,
     {
-        let (find_underived_stats, mut dag_traversal) = async {
+        let (find_underived_stats, dag_traversal) = async {
             self.find_underived_inner::<Derivable>(ctx, target_csid, None, derivation_ctx.as_ref())
                 .await
-                .map(TopoSortedDagTraversal::new)
         }
         .try_timed()
         .await?;
+
+        let stats = Some(DiscoveryStats {
+            find_underived_completion_time: find_underived_stats.completion_time,
+            commits_discovered: dag_traversal.len() as u32,
+        });
+        let mut dag_traversal = TopoSortedDagTraversal::new(dag_traversal);
 
         let buffer_size = self.max_parallel_derivations();
         let mut derivations = FuturesUnordered::new();
@@ -394,9 +402,10 @@ impl DerivedDataManager {
             derivations.extend(dag_traversal.drain(free).map(|csid| {
                 cloned!(ctx, derivation_ctx);
                 let manager = self.clone();
+                let stats = stats.clone();
                 let derivation = async move {
                     manager
-                        .perform_single_derivation(&ctx, &derivation_ctx, csid)
+                        .perform_single_derivation(&ctx, &derivation_ctx, csid, &stats)
                         .await
                 };
                 tokio::spawn(derivation).map_err(Error::from)
@@ -724,7 +733,7 @@ impl DerivedDataManager {
             None
         };
 
-        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>();
+        let mut derived_data_scuba = self.derived_data_scuba::<Derivable>(&None);
         derived_data_scuba.add(
             "changesets",
             bonsais
