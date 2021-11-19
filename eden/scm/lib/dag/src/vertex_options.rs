@@ -87,6 +87,16 @@ impl VertexListWithOptions {
         self.list.iter().map(|i| i.0.clone()).collect()
     }
 
+    /// Test if this list is empty.
+    pub fn is_empty(&self) -> bool {
+        self.list.is_empty()
+    }
+
+    /// Add a new item to the list.
+    pub fn push(&mut self, head_opts: (VertexName, VertexOptions)) {
+        self.list.push(head_opts);
+    }
+
     /// Set the `highest_group` option for all vertexes.
     pub fn with_highest_group(mut self, group: Group) -> Self {
         for (_v, opts) in self.list.iter_mut() {

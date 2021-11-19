@@ -134,7 +134,10 @@ async fn test_add_heads() {
     let parents = pending.dag.dag_snapshot().unwrap();
     client
         .dag
-        .add_heads(&parents, &["G".into(), "K".into()])
+        .add_heads(
+            &parents,
+            &vec![VertexName::from("G"), VertexName::from("K")].into(),
+        )
         .await
         .unwrap();
     assert_eq!(

@@ -99,7 +99,7 @@ where
     snapshot: RwLock<Option<Arc<Self>>>,
 
     /// Heads added via `add_heads` that are not flushed yet.
-    pending_heads: Vec<VertexName>,
+    pending_heads: VertexListWithOptions,
 
     /// Path used to open this `NameDag`.
     path: P,
@@ -159,7 +159,7 @@ where
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "ProgrammingError: add_heads_and_flush called with pending heads ({:?})",
-                &self.pending_heads,
+                &self.pending_heads.vertexes(),
             ));
         }
 
@@ -217,9 +217,10 @@ where
     /// lazy vertexes, then avoid this function. Instead, lock and
     /// flush directly (see `add_heads_and_flush`, `import_clone_data`).
     ///
-    /// `heads` specify additional options for spacial vertexes such as
-    /// requiring the master group. For other pending heads they will
-    /// be written using default `VertexOptions`.
+    /// `heads` specify additional options for special vertexes. This
+    /// overrides the `VertexOptions` provided to `add_head`. If `heads`
+    /// is empty, then `VertexOptions` provided to `add_head` will be
+    /// used.
     async fn flush(&mut self, heads: &VertexListWithOptions) -> Result<()> {
         // Sanity check.
         for result in self.vertex_id_batch(&heads.vertexes()).await? {
@@ -243,7 +244,7 @@ where
         let mut new_name_dag: Self = self.path.open()?;
 
         let parents: &(dyn DagAlgorithm + Send + Sync) = self;
-        let non_master_heads: VertexListWithOptions = self.pending_heads[..].into();
+        let non_master_heads: VertexListWithOptions = self.pending_heads.clone();
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag.set_remote_protocol(self.remote_protocol.clone());
@@ -359,14 +360,16 @@ where
     /// This does not write to disk. Use `add_heads_and_flush` to add heads
     /// and write to disk more efficiently.
     ///
-    /// The added vertexes are immediately query-able. They will get Ids
-    /// assigned to the NON_MASTER group internally. The `flush` function
-    /// can re-assign Ids to the MASTER group.
-    async fn add_heads(&mut self, parents: &dyn Parents, heads: &[VertexName]) -> Result<()> {
+    /// The added vertexes are immediately query-able.
+    async fn add_heads(
+        &mut self,
+        parents: &dyn Parents,
+        heads: &VertexListWithOptions,
+    ) -> Result<()> {
         self.invalidate_snapshot();
 
         // Populate vertex negative cache to reduce round-trips doing remote lookups.
-        self.populate_missing_vertexes_for_add_heads(parents, heads)
+        self.populate_missing_vertexes_for_add_heads(parents, &heads.vertexes())
             .await?;
 
         // Assign to the NON_MASTER group unconditionally so we can avoid the
@@ -389,13 +392,15 @@ where
         // Update IdMap. Keep track of what heads are added.
         let mut outcome = PreparedFlatSegments::default();
         let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
-        for head in heads.iter() {
-            if !self.contains_vertex_name(head).await? {
+        for (head, opts) in heads.vertex_options() {
+            assert_eq!(opts.reserve_size, 0);
+            assert_eq!(opts.highest_group, group);
+            if !self.contains_vertex_name(&head).await? {
                 let prepared_segments = self
                     .assign_head(head.clone(), parents, group, &mut covered, &IdSet::empty())
                     .await?;
                 outcome.merge(prepared_segments);
-                self.pending_heads.push(head.clone());
+                self.pending_heads.push((head, opts));
             }
         }
 
@@ -520,7 +525,7 @@ where
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "import_pull_data called with pending heads ({:?})",
-                &self.pending_heads,
+                &self.pending_heads.vertexes(),
             ));
         }
 

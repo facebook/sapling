@@ -164,7 +164,9 @@ impl EagerRepo {
         let vertex: Vertex = { Vertex::copy_from(id.as_ref()) };
         let parent_map: HashMap<Vertex, Vec<Vertex>> =
             vec![(vertex.clone(), parents)].into_iter().collect();
-        self.dag.add_heads(&parent_map, &[vertex]).await?;
+        self.dag
+            .add_heads(&parent_map, &vec![vertex].into())
+            .await?;
         Ok(id)
     }
 

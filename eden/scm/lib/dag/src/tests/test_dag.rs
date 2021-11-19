@@ -127,7 +127,10 @@ impl TestDag {
             None => all_heads,
         };
         self.dag.dag.set_new_segment_size(self.seg_size);
-        self.dag.add_heads(&parent_func, &heads).await.unwrap();
+        self.dag
+            .add_heads(&parent_func, &heads.into())
+            .await
+            .unwrap();
         if validate {
             self.validate().await;
         }

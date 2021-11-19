@@ -176,7 +176,7 @@ pub(crate) async fn beautify(
     sort(&get_ancestors, &mut heads[..], main_branch).await?;
 
     let mut dag = MemNameDag::new();
-    dag.add_heads(&this.dag_snapshot()?, &heads).await?;
+    dag.add_heads(&this.dag_snapshot()?, &heads.into()).await?;
     Ok(dag)
 }
 
@@ -401,7 +401,7 @@ pub(crate) async fn hint_subdag_for_insertion(
         parents: this,
         scope,
     };
-    dag.add_heads(&scoped_parents, heads).await?;
+    dag.add_heads(&scoped_parents, &heads.into()).await?;
 
     Ok(dag)
 }

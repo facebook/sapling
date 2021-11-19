@@ -409,7 +409,7 @@ impl MutationStore {
             Box::new(parent_func);
 
         // Inserting to a memory DAG from a fully known parent function is non-blocking.
-        dag.add_heads(&parents, &heads).await?;
+        dag.add_heads(&parents, &heads.into()).await?;
         Ok(dag)
     }
 }

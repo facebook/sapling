@@ -45,6 +45,7 @@ use dag::IdSet;
 use dag::Set;
 use dag::VerLink;
 use dag::Vertex;
+use dag::VertexListWithOptions;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::utils::atomic_write_plain;
 use indexedlog::utils::mmap_bytes;
@@ -1825,7 +1826,7 @@ impl RevlogIndex {
     fn add_heads_for_testing(
         &mut self,
         parents_func: &dyn Parents,
-        heads: &[Vertex],
+        heads: &VertexListWithOptions,
     ) -> dag::Result<()> {
         if !cfg!(test) {
             panic!(
@@ -1837,11 +1838,11 @@ impl RevlogIndex {
         }
 
         // Update IdMap. Keep track of what heads are added.
-        for head in heads.iter() {
+        for head in heads.vertexes() {
             if !non_blocking_result(self.contains_vertex_name(&head))? {
                 let parents = non_blocking_result(parents_func.parent_names(head.clone()))?;
                 for parent in parents.iter() {
-                    self.add_heads_for_testing(parents_func, &[parent.clone()])?;
+                    self.add_heads_for_testing(parents_func, &vec![parent.clone()].into())?;
                 }
                 if !non_blocking_result(self.contains_vertex_name(&head))? {
                     let parent_revs: Vec<u32> = parents
@@ -1867,7 +1868,11 @@ impl RevlogIndex {
 
 #[async_trait::async_trait]
 impl DagAddHeads for RevlogIndex {
-    async fn add_heads(&mut self, parents_func: &dyn Parents, heads: &[Vertex]) -> dag::Result<()> {
+    async fn add_heads(
+        &mut self,
+        parents_func: &dyn Parents,
+        heads: &VertexListWithOptions,
+    ) -> dag::Result<()> {
         self.add_heads_for_testing(parents_func, heads)
     }
 }

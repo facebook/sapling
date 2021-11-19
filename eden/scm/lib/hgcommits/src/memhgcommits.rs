@@ -97,7 +97,7 @@ impl AppendCommits for MemHgCommits {
                 .cloned()
                 .collect()
         };
-        self.dag.add_heads(&parents, &heads).await?;
+        self.dag.add_heads(&parents, &heads.into()).await?;
         Ok(())
     }
 

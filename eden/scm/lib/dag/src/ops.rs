@@ -271,7 +271,11 @@ impl Parents for std::collections::HashMap<VertexName, Vec<VertexName>> {
 pub trait DagAddHeads {
     /// Add vertexes and their ancestors to the DAG. This does not persistent
     /// changes to disk.
-    async fn add_heads(&mut self, parents: &dyn Parents, heads: &[VertexName]) -> Result<()>;
+    async fn add_heads(
+        &mut self,
+        parents: &dyn Parents,
+        heads: &VertexListWithOptions,
+    ) -> Result<()>;
 }
 
 /// Import a generated `CloneData` object into an empty DAG.
@@ -488,7 +492,7 @@ where
             .into_iter()
             .map(|(k, vs)| (v(k), vs.into_iter().map(v).collect()))
             .collect();
-        nonblocking::non_blocking_result(self.add_heads(&parents, &heads[..]))?;
+        nonblocking::non_blocking_result(self.add_heads(&parents, &heads[..].into()))?;
         Ok(())
     }
 }
