@@ -354,19 +354,12 @@ fn test_mem_namedag() {
    Segments: 0
   Group Non-Master:
    Next Free Id: N12
-   Segments: 12
-    L+N11 : L+N11 [K+N10]
-    K+N10 : K+N10 [H+N7, J+N9]
-    J+N9 : J+N9 [I+N8]
-    I+N8 : I+N8 [G+N6]
-    H+N7 : H+N7 [G+N6]
-    G+N6 : G+N6 [F+N5]
-    F+N5 : F+N5 [E+N4]
-    E+N4 : E+N4 [B+N1, D+N3]
-    D+N3 : D+N3 [C+N2]
-    C+N2 : C+N2 [] Root
-    B+N1 : B+N1 [A+N0]
-    A+N0 : A+N0 [] Root
+   Segments: 5
+    K+N10 : L+N11 [H+N7, J+N9]
+    I+N8 : J+N9 [G+N6]
+    E+N4 : H+N7 [B+N1, D+N3]
+    C+N2 : D+N3 [] Root
+    A+N0 : B+N1 [] Root
 "#
     );
 }
@@ -716,22 +709,21 @@ Lv0: RH0-3[] N0-N1[1] N2-N3[N1]
       N0-N1-N2-N3     l--m--n--o
                 \            \
                  -------------p---q
-Lv0: RH0-6[] N0-N1[1] N2-N3[N1]
+Lv0: RH0-6[] N0-N3[1]
 
 0---1---2---3---4---5---6--------H---I
      \               \          /
       N0-N1-N2-N3     N4-N5-N6-o
                 \            \
                  -------------N7--N8
-Lv0: RH0-6[] N0-N1[1] N2-N3[N1] N4-N6[5] N7-N8[N3, N6]
-Lv1: N0-N3[1]
+Lv0: RH0-6[] N0-N3[1] N4-N6[5] N7-N8[N3, N6]
 
 0---1---2---3---4---5---6--------11--12
      \               \          /
       N0-N1-N2-N3     7--8--9--10
                 \            \
                  -------------N4--N5
-Lv0: RH0-6[] 7-10[5] H11-12[6, 10] N0-N1[1] N2-N3[N1] N4-N5[N3, 9]"#
+Lv0: RH0-6[] 7-10[5] H11-12[6, 10] N0-N3[1] N4-N5[N3, 9]"#
     );
 
     // Notice that N4 to N6 were re-written in the last step.

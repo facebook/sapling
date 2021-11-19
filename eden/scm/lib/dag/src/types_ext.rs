@@ -31,8 +31,15 @@ impl PreparedFlatSegmentsExt for PreparedFlatSegments {
             return;
         }
 
-        // NOTE: Consider merging segments for slightly better perf.
-        self.segments.extend(rhs.segments);
+        for seg in rhs.segments {
+            if !maybe_merge_in_place(&mut self.segments, seg.low, seg.high, &seg.parents) {
+                self.segments.insert(seg);
+            }
+        }
+
+        if cfg!(debug_assertions) {
+            ensure_sorted_and_merged(&self.segments);
+        }
     }
 
     fn push_edge(&mut self, id: Id, parent_ids: &[Id]) {
@@ -143,6 +150,26 @@ mod tests {
                 "FlatSegment { low: 100, high: 101, parents: [] }",
                 "FlatSegment { low: 102, high: 104, parents: [100] }",
                 "FlatSegment { low: 105, high: 107, parents: [103] }"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_merge() {
+        let mut segs1 = PreparedFlatSegments::default();
+        segs1.push_edge(Id(10), &[]);
+        segs1.push_edge(Id(11), &[Id(10)]);
+        let mut segs2 = PreparedFlatSegments::default();
+        segs2.push_edge(Id(12), &[Id(11)]);
+        segs2.push_edge(Id(13), &[Id(12)]);
+        segs2.push_edge(Id(14), &[Id(11)]);
+        segs1.merge(segs2);
+        let dbg: Vec<String> = segs1.segments.iter().map(|s| format!("{:?}", s)).collect();
+        assert_eq!(
+            dbg,
+            [
+                "FlatSegment { low: 10, high: 13, parents: [] }",
+                "FlatSegment { low: 14, high: 14, parents: [11] }"
             ]
         );
     }
