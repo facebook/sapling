@@ -166,8 +166,7 @@ impl DerivedDataManager {
                     Err(e) => {
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
                             self.derived_data_scuba::<Derivable>()
-                                .add("changeset", csid.to_string());
-                            self.derived_data_scuba::<Derivable>()
+                                .add("changeset", csid.to_string())
                                 .log_with_msg("Derived data service failed", format!("{:#}", e));
                             break;
                         }
