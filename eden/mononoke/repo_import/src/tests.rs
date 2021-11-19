@@ -29,8 +29,7 @@ mod tests {
     use git_types::TreeHandle;
     use live_commit_sync_config::{
         CfgrLiveCommitSyncConfig, LiveCommitSyncConfig, TestLiveCommitSyncConfig,
-        CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS, CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
-        CONFIGERATOR_PUSHREDIRECT_ENABLE,
+        CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS, CONFIGERATOR_PUSHREDIRECT_ENABLE,
     };
     use maplit::hashmap;
     use mercurial_types::MPath;
@@ -413,35 +412,7 @@ mod tests {
         }
     }"#;
 
-    const CURRENT_COMMIT_SYNC_CONFIG: &str = r#"{
-        "repos": {
-            "large_repo_1": {
-                "large_repo_id": 0,
-                "common_pushrebase_bookmarks": ["b1"],
-                "small_repos": [
-                    {
-                        "repoid": 1,
-                        "default_action": "prepend_prefix",
-                        "default_prefix": "f1",
-                        "bookmark_prefix": "bp1/",
-                        "mapping": {"d": "dd"},
-                        "direction": "large_to_small"
-                    },
-                    {
-                        "repoid": 2,
-                        "default_action": "prepend_prefix",
-                        "default_prefix": "f2",
-                        "bookmark_prefix": "bp2/",
-                        "mapping": {"d": "ddd"},
-                        "direction": "small_to_large"
-                    }
-                ],
-                "version_name": "TEST_VERSION_NAME_LIVE_1"
-            }
-        }
-    }"#;
-
-    const COMMMIT_SYNC_ALL: &str = r#"{
+    const COMMIT_SYNC_ALL: &str = r#"{
         "repos": {
             "large_repo_1": {
                 "versions": [{
@@ -511,19 +482,12 @@ mod tests {
         );
 
         test_source.insert_config(
-            CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
-            CURRENT_COMMIT_SYNC_CONFIG,
-            ModificationTime::UnixTimestamp(0),
-        );
-
-        test_source.insert_config(
             CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
-            COMMMIT_SYNC_ALL,
+            COMMIT_SYNC_ALL,
             ModificationTime::UnixTimestamp(0),
         );
 
         test_source.insert_to_refresh(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string());
-        test_source.insert_to_refresh(CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS.to_string());
         test_source.insert_to_refresh(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string());
 
         let config_store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
@@ -598,7 +562,6 @@ mod tests {
 
         source.add_config(commit_sync_config.clone());
         source.add_config(later_commit_sync_config);
-        source.add_current_version(commit_sync_config.version_name);
         source.add_common_config(CommonCommitSyncConfig {
             common_pushrebase_bookmarks: commit_sync_config.common_pushrebase_bookmarks.clone(),
             small_repos: hashmap! {

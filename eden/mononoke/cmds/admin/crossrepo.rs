@@ -1612,7 +1612,6 @@ mod test {
 
         lv_cfg_src.add_common_config(common_config);
         lv_cfg_src.add_config(current_version_config);
-        lv_cfg_src.add_current_version(current_version.clone());
 
         let commit_sync_data_provider = CommitSyncDataProvider::Live(Arc::new(lv_cfg));
 

@@ -304,7 +304,6 @@ fn create_small_to_large_commit_syncer(
 
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     source.add_config(commit_sync_config.clone());
-    source.add_current_version(commit_sync_config.version_name);
     source.add_common_config(common_config);
 
     let live_commit_sync_config = Arc::new(sync_config);
@@ -348,7 +347,6 @@ fn create_large_to_small_commit_syncer_and_config_source(
 
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     source.add_config(commit_sync_config.clone());
-    source.add_current_version(commit_sync_config.version_name);
     source.add_common_config(common_config);
 
     let live_commit_sync_config = Arc::new(sync_config);
@@ -811,7 +809,6 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
 
     source.add_config(commit_sync_config.clone());
-    source.add_current_version(commit_sync_config.version_name);
     source.add_common_config(common_config);
 
     let live_commit_sync_config = Arc::new(sync_config);
@@ -1862,7 +1859,6 @@ fn get_merge_sync_data_provider(
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
     source.add_config(commit_sync_config_v1.clone());
     source.add_config(commit_sync_config_v2.clone());
-    source.add_current_version(v1);
     source.add_common_config(common_config);
 
     let live_commit_sync_config = Arc::new(sync_config);
@@ -2183,7 +2179,6 @@ async fn test_no_accidental_preserved_roots(
 
         let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
         source.add_config(commit_sync_config.clone());
-        source.add_current_version(version.clone());
         source.add_common_config(common_config);
 
         let live_commit_sync_config = Arc::new(sync_config);

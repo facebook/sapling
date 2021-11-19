@@ -732,7 +732,12 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     // Config change: new config remaps prefix2 instead of prefix
     let large_repo_id = largerepo.blob_repo().get_repoid();
     let small_repo_id = smallrepo.blob_repo().get_repoid();
-    let mut cfg = cfg_src.get_commit_sync_config_for_repo(large_repo_id)?;
+    let mut cfg = cfg_src
+        .get_commit_sync_config_by_version_if_exists(
+            large_repo_id,
+            &CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+        )?
+        .unwrap();
     let common_config = cfg_src
         .get_common_config_if_exists(large_repo_id)?
         .ok_or_else(|| anyhow!("common config doesn't exist"))?;
@@ -744,8 +749,6 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     let new_version = CommitSyncConfigVersion("TEST_VERSION_NAME_2".to_string());
     cfg.version_name = new_version.clone();
     cfg_src.add_config(cfg.clone());
-    cfg_src.remove_current_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()));
-    cfg_src.add_current_version(cfg.version_name.clone());
 
     let change_mapping_small =
         CreateCommitContext::new(&ctx, smallrepo.blob_repo(), vec![small_master_cs_id])
@@ -825,9 +828,7 @@ async fn init_x_repo(
         Arc::new(lv_cfg),
     )
     .await?;
-    let version = commit_sync_config.version_name.clone();
     lv_cfg_src.add_config(commit_sync_config);
-    lv_cfg_src.add_current_version(version);
     Ok((mononoke, lv_cfg_src))
 }
 

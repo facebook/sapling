@@ -99,7 +99,6 @@
           "version_name": "TEST_VERSION_NAME_FLIPPED"
         }
       ],
-      "current_version": "TEST_VERSION_NAME",
       "common": {
         "common_pushrebase_bookmarks": ["master_bookmark"],
         "large_repo_id": 1,

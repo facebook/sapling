@@ -681,7 +681,6 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     };
 
     lv_cfg_src.add_config(current_version_config);
-    lv_cfg_src.add_current_version(current_version.clone());
 
     let new_version_config = CommitSyncConfig {
         large_repo_id: source_repo.get_repoid(),
@@ -1272,7 +1271,6 @@ async fn init_repos(
     };
 
     lv_cfg_src.add_config(version_config);
-    lv_cfg_src.add_current_version(version.clone());
     let common = bookmark_renamer_type
         .get_common_repo_config(target_repo.get_repoid(), source_repo.get_repoid());
     lv_cfg_src.add_common_config(common);
@@ -1587,7 +1585,6 @@ async fn init_merged_repos(
             version_name: noop_version.clone(),
         };
         lv_cfg_src.add_config(noop_version_config);
-        lv_cfg_src.add_current_version(noop_version.clone());
 
         let bookmark_renamer_type = BookmarkRenamerType::CommonAndPrefix(
             BookmarkName::new("master")?,
@@ -1870,7 +1867,6 @@ async fn preserve_premerge_commit(
         };
 
         lv_cfg_src.add_config(version_config);
-        lv_cfg_src.add_current_version(version.clone());
         let common = bookmark_renamer_type
             .get_common_repo_config(small_repo.get_repoid(), large_repo.get_repoid());
         lv_cfg_src.add_common_config(common);

@@ -92,7 +92,6 @@ EOF
           "version_name": "test_version"
         }
       ],
-      "current_version": "test_version",
       "common": {
         "common_pushrebase_bookmarks": ["master_bookmark"],
         "large_repo_id": 0,
@@ -239,7 +238,6 @@ EOF
         "version_name": "new_version"
       }
       ],
-      "current_version": "new_version",
       "common": {
         "common_pushrebase_bookmarks": ["master_bookmark"],
         "large_repo_id": 0,
@@ -325,7 +323,6 @@ EOF
           "version_name": "TEST_VERSION_NAME_LIVE_V2"
         }
       ],
-      "current_version": "TEST_VERSION_NAME_LIVE_V2",
       "common": {
         "common_pushrebase_bookmarks": ["master_bookmark"],
         "large_repo_id": 0,

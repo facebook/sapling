@@ -67,7 +67,6 @@
           "version_name": "TEST_VERSION_NAME_OLD"
         }
       ],
-      "current_version": "TEST_VERSION_NAME",
       "common": {
         "common_pushrebase_bookmarks": ["master_bookmark"],
         "large_repo_id": 0,

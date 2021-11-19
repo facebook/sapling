@@ -10,21 +10,17 @@
 use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use cached_config::{ConfigHandle, ConfigStore};
-use commitsync::types::{
-    RawCommitSyncAllVersions, RawCommitSyncConfigAllVersionsOneRepo, RawCommitSyncCurrentVersions,
-};
+use commitsync::types::{RawCommitSyncAllVersions, RawCommitSyncConfigAllVersionsOneRepo};
 use metaconfig_parser::Convert;
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig};
 use mononoke_types::RepositoryId;
 use pushredirect_enable::types::{MononokePushRedirectEnable, PushRedirectEnableState};
 use slog::{debug, error, info, Logger};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 pub const CONFIGERATOR_PUSHREDIRECT_ENABLE: &str = "scm/mononoke/pushredirect/enable";
-pub const CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS: &str =
-    "scm/mononoke/repos/commitsyncmaps/current";
 pub const CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS: &str = "scm/mononoke/repos/commitsyncmaps/all";
 
 #[derive(Debug, Eq, Error, PartialEq)]
@@ -113,7 +109,6 @@ pub trait LiveCommitSyncConfig: Send + Sync {
 
 #[derive(Clone)]
 pub struct CfgrLiveCommitSyncConfig {
-    config_handle_for_current_versions: ConfigHandle<RawCommitSyncCurrentVersions>,
     config_handle_for_all_versions: ConfigHandle<RawCommitSyncAllVersions>,
     config_handle_for_push_redirection: ConfigHandle<MononokePushRedirectEnable>,
 }
@@ -124,12 +119,6 @@ impl CfgrLiveCommitSyncConfig {
         let config_handle_for_push_redirection =
             config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())?;
         debug!(logger, "Initialized PushRedirect configerator config");
-        let config_handle_for_current_versions =
-            config_store.get_config_handle(CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS.to_string())?;
-        debug!(
-            logger,
-            "Initialized current commit sync version configerator config"
-        );
         let config_handle_for_all_versions =
             config_store.get_config_handle(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string())?;
         debug!(
@@ -138,7 +127,6 @@ impl CfgrLiveCommitSyncConfig {
         );
         info!(logger, "Done initializing CfgrLiveCommitSyncConfig");
         Ok(Self {
-            config_handle_for_current_versions,
             config_handle_for_all_versions,
             config_handle_for_push_redirection,
         })
@@ -287,7 +275,6 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
 /// See `TestLiveCommitSyncConfigSource` for more details
 struct TestLiveCommitSyncConfigSourceInner {
     version_to_config: Mutex<HashMap<CommitSyncConfigVersion, CommitSyncConfig>>,
-    current_versions: Mutex<HashSet<CommitSyncConfigVersion>>,
     push_redirection_for_draft: Mutex<HashMap<RepositoryId, bool>>,
     push_redirection_for_public: Mutex<HashMap<RepositoryId, bool>>,
     common_configs: Mutex<Vec<CommonCommitSyncConfig>>,
@@ -309,7 +296,6 @@ impl TestLiveCommitSyncConfigSource {
     fn new() -> Self {
         Self(Arc::new(TestLiveCommitSyncConfigSourceInner {
             version_to_config: Mutex::new(HashMap::new()),
-            current_versions: Mutex::new(HashSet::new()),
             push_redirection_for_draft: Mutex::new(HashMap::new()),
             push_redirection_for_public: Mutex::new(HashMap::new()),
             common_configs: Mutex::new(vec![]),
@@ -322,22 +308,6 @@ impl TestLiveCommitSyncConfigSource {
             .lock()
             .expect("poisoned lock")
             .insert(config.version_name.clone(), config);
-    }
-
-    pub fn add_current_version(&self, version: CommitSyncConfigVersion) {
-        self.0
-            .current_versions
-            .lock()
-            .expect("poisoned lock")
-            .insert(version);
-    }
-
-    pub fn remove_current_version(&self, version: &CommitSyncConfigVersion) {
-        self.0
-            .current_versions
-            .lock()
-            .expect("poisoned lock")
-            .remove(version);
     }
 
     pub fn set_draft_push_redirection_enabled(&self, repo_id: RepositoryId) {
@@ -362,50 +332,6 @@ impl TestLiveCommitSyncConfigSource {
             .lock()
             .expect("poisoned lock")
             .push(config);
-    }
-
-    pub fn get_commit_sync_config_for_repo_if_exists(
-        &self,
-        repo_id: RepositoryId,
-    ) -> Result<Option<CommitSyncConfig>> {
-        let mut configs = vec![];
-
-        let current_versions = { self.0.current_versions.lock().unwrap().clone() };
-        let version_to_config = { self.0.version_to_config.lock().unwrap().clone() };
-
-        for current_version in current_versions {
-            match version_to_config.get(&current_version) {
-                Some(config) => {
-                    let related = Self::related_to_repo(config, repo_id);
-                    if related {
-                        configs.push(config);
-                    }
-                }
-                None => {
-                    return Err(anyhow!("current version {} not found", current_version));
-                }
-            }
-        }
-
-        let mut iter = configs.into_iter();
-        match (iter.next(), iter.next()) {
-            (Some(config), None) => Ok(Some(config.clone())),
-            (Some(first), Some(second)) => Err(anyhow!(
-                "too many configs for {}: {:?} and {:?}",
-                repo_id,
-                first,
-                second
-            )),
-            (None, _) => Ok(None),
-        }
-    }
-
-    pub fn get_commit_sync_config_for_repo(
-        &self,
-        repo_id: RepositoryId,
-    ) -> Result<CommitSyncConfig> {
-        self.get_commit_sync_config_for_repo_if_exists(repo_id)?
-            .ok_or(anyhow!("No config for {}", repo_id))
     }
 
     fn push_redirector_enabled_for_draft(&self, repo_id: RepositoryId) -> bool {
@@ -440,7 +366,7 @@ impl TestLiveCommitSyncConfigSource {
             .collect())
     }
 
-    fn get_commit_sync_config_by_version_if_exists(
+    pub fn get_commit_sync_config_by_version_if_exists(
         &self,
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
