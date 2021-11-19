@@ -59,7 +59,7 @@ Clone the repo
   $ setup_hg_client
 
 Test move bookmark
-  $ hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$E'" -i "'$C'" -i "[]"
+  $ hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$E'" -i "'$C'"
   True
 
 Inspect results
@@ -77,7 +77,7 @@ Inspect results
   
 
 Test delete bookmark
-  $ hgedenapi debugapi -e setbookmark -i "'to_delete'" -i "None" -i "'$E'" -i "[]"
+  $ hgedenapi debugapi -e setbookmark -i "'to_delete'" -i "None" -i "'$E'"
   True
 
 Inspect results
@@ -95,7 +95,7 @@ Inspect results
   
 
 Test create bookmark
-  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$B'" -i "None" -i "[]"
+  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$B'" -i "None"
   True
 
 Inspect results
@@ -113,7 +113,7 @@ Inspect results
   
 
 Test move bookmark failure (invalid from)
-  $ hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$D'" -i "'$C'" -i "[]" 2>&1 | grep 'error.RustError'
+  $ hgedenapi debugapi -e setbookmark -i "'master_bookmark'" -i "'$D'" -i "'$C'" 2>&1 | grep 'error.RustError'
   error.RustError: expected response, but none returned by the server
 
 Inspect results
@@ -132,7 +132,7 @@ Inspect results
 
 
 Test delete bookmark failure (invalid from)
-  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "None" -i "'$D'" -i "[]" 2>&1 | grep 'error.RustError'
+  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "None" -i "'$D'" 2>&1 | grep 'error.RustError'
   error.RustError: expected response, but none returned by the server
 
 Inspect results
@@ -151,7 +151,7 @@ Inspect results
 
 
 Test create bookmark failure (already exists)
-  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$D'" -i "None" -i "[]" 2>&1 | grep 'error.RustError'
+  $ hgedenapi debugapi -e setbookmark -i "'create_bookmark'" -i "'$D'" -i "None" 2>&1 | grep 'error.RustError'
   error.RustError: expected response, but none returned by the server
 
 Inspect results

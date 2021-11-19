@@ -65,7 +65,7 @@ Clone the repo
   $ setup_hg_client
 
 Test land stack
-  $ hgedenapi debugapi -e landstack -i "'master_bookmark'" -i "'$E'" -i "'$B'" -i "[]"
+  $ hgedenapi debugapi -e landstack -i "'master_bookmark'" -i "'$E'" -i "'$B'"
   {"new_head": bin("cee85bb77dff9258b0b36fbe83501f3fd953fc4d"),
    "old_to_new_hgids": {bin("26805aba1e600a82e93661149f2313866a221a7b"): bin("fe5e845d9af57038d1cd62d4c10a61dd52655389"),
                         bin("9bc730a19041f9ec7cb33c626e811aa233efb18c"): bin("cee85bb77dff9258b0b36fbe83501f3fd953fc4d"),
