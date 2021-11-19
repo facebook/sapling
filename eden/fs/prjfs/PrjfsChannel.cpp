@@ -793,7 +793,7 @@ ImmediateFuture<folly::Unit> PrjfsChannelInner::preSetHardlink(
     RelativePath relPath,
     RelativePath /*newPath*/,
     bool /*isDirectory*/,
-    ObjectFetchContext& context) {
+    ObjectFetchContext& /*context*/) {
   return folly::Try<folly::Unit>(makeHResultErrorExplicit(
       HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
       fmt::format(FMT_STRING("Hardlinks are not supported: {}"), relPath)));

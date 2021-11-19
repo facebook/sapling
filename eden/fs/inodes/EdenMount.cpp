@@ -1964,6 +1964,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
     throw;
   }
 #else
+  (void)takeoverData;
   throw std::runtime_error("Fuse not supported on this platform.");
 #endif
 }
@@ -1995,6 +1996,7 @@ folly::Future<folly::Unit> EdenMount::takeoverNfs(NfsChannelData takeoverData) {
     return folly::makeFuture<folly::Unit>(err);
   }
 #else
+  (void)takeoverData;
   throw std::runtime_error("Nfs not supported on this platform.");
 #endif
 }

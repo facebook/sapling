@@ -76,16 +76,6 @@ static constexpr int kExitCodeSuccess = 0;
 static constexpr int kExitCodeError = 1;
 static constexpr int kExitCodeUsage = 2;
 
-#ifdef _WIN32
-int geteuid() {
-  // EdenFS calls geteuid() during start-up to confirm that it is started with
-  // root privileges on POSIX systems.  This doesn't matter on Windows.
-  // We define geteuid() to return 0 to allow our geteuid() check always succeed
-  // on Windows.
-  return 0;
-}
-#endif // _WIN32
-
 } // namespace
 
 namespace facebook::eden {

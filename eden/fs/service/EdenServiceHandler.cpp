@@ -193,19 +193,8 @@ class ThriftFetchContext : public ObjectFetchContext {
 // Helper class to log where the request completes in Future
 class ThriftLogHelper {
  public:
-  FOLLY_PUSH_WARNING
-  FOLLY_CLANG_DISABLE_WARNING("-Wunused-member-function")
-#ifdef _MSC_VER
-  // Older versions of MSVC (19.13.26129.0) don't perform copy elision
-  // as required by C++17, and require a move constructor to be defined for this
-  // class.
-  ThriftLogHelper(ThriftLogHelper&&) = default;
-#else
   ThriftLogHelper(ThriftLogHelper&&) = delete;
-#endif
-  // However, this class is not move-assignable.
   ThriftLogHelper& operator=(ThriftLogHelper&&) = delete;
-  FOLLY_POP_WARNING
 
   template <typename... Args>
   ThriftLogHelper(
@@ -1608,6 +1597,7 @@ EdenServiceHandler::future_setPathObjectId(
                 std::move(resultAndTimes.result));
           }));
 #else
+  (void)params;
   NOT_IMPLEMENTED();
 #endif
 }
