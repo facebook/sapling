@@ -7,6 +7,8 @@
 
 //! Extensions to types in other crates.
 
+use std::collections::BTreeSet;
+
 use crate::FlatSegment;
 use crate::Id;
 use crate::PreparedFlatSegments;
@@ -29,51 +31,64 @@ impl PreparedFlatSegmentsExt for PreparedFlatSegments {
             return;
         }
 
-        // sanity check: should be easy to verify - next_free_id provides
-        // incremental ids.
-        debug_assert!(self.segments.last().unwrap().high < rhs.segments[0].low);
-
         // NOTE: Consider merging segments for slightly better perf.
         self.segments.extend(rhs.segments);
     }
 
     fn push_edge(&mut self, id: Id, parent_ids: &[Id]) {
-        let new_seg = FlatSegment {
-            low: id,
-            high: id,
-            parents: parent_ids.to_vec(),
-        };
-
-        // Find the position to insert the new segment.
-        let idx = match self.segments.binary_search_by_key(&id, |seg| seg.high) {
-            Ok(i) => i,
-            Err(i) => i,
-        };
-
-        if parent_ids.len() != 1 || parent_ids[0] + 1 != id || idx == 0 {
-            // Start a new segment.
-            self.segments.insert(idx, new_seg);
-        } else {
-            // Try to reuse the existing segment.
-            if let Some(seg) = self.segments.get_mut(idx - 1) {
-                if seg.high + 1 == id {
-                    seg.high = id;
-                } else {
-                    self.segments.insert(idx, new_seg);
-                }
-            } else {
-                self.segments.insert(idx, new_seg);
-            }
+        if !maybe_merge_in_place(&mut self.segments, id, id, parent_ids) {
+            let new_seg = FlatSegment {
+                low: id,
+                high: id,
+                parents: parent_ids.to_vec(),
+            };
+            self.segments.insert(new_seg);
         }
-
         if cfg!(debug_assertions) {
             ensure_sorted_and_merged(&self.segments);
         }
     }
 }
 
+/// Try to merge a flat segment (low..=high, parents=parents) in place.
+/// Return true if it was merged in place.
+fn maybe_merge_in_place(
+    segments: &mut BTreeSet<FlatSegment>,
+    low: Id,
+    high: Id,
+    parent_ids: &[Id],
+) -> bool {
+    if let [parent_id] = parent_ids {
+        if *parent_id + 1 != low {
+            return false;
+        }
+    } else {
+        return false;
+    }
+    let upper_bound = FlatSegment {
+        low,
+        high: low,
+        parents: Vec::new(),
+    };
+    if let Some(candidate) = segments.range(..=upper_bound).rev().next() {
+        if candidate.high + 1 == low {
+            // Merge
+            let candidate = candidate.clone();
+            let new_seg = FlatSegment {
+                low: candidate.low,
+                high,
+                parents: candidate.parents.clone(),
+            };
+            segments.remove(&candidate);
+            segments.insert(new_seg);
+            return true;
+        }
+    }
+    false
+}
+
 /// Check that segments are sorted and merged.
-fn ensure_sorted_and_merged(segments: &[FlatSegment]) {
+fn ensure_sorted_and_merged(segments: &BTreeSet<FlatSegment>) {
     let mut last_high = None;
     for seg in segments {
         // Sorted? No overlap?

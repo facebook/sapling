@@ -64,7 +64,12 @@ impl ToWire for CloneData<HgId> {
             })
             .collect();
         WireCloneData {
-            flat_segments: self.flat_segments.segments.to_wire(),
+            flat_segments: self
+                .flat_segments
+                .segments
+                .into_iter()
+                .collect::<Vec<_>>()
+                .to_wire(),
             idmap,
         }
     }
@@ -80,7 +85,7 @@ impl ToApi for WireCloneData {
             idmap.insert(wie.dag_id.to_api()?, wie.hg_id.to_api()?);
         }
         let flat_segments = PreparedFlatSegments {
-            segments: self.flat_segments.to_api()?,
+            segments: self.flat_segments.to_api()?.into_iter().collect(),
         };
         Ok(CloneData {
             flat_segments,

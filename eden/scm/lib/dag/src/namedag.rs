@@ -584,7 +584,7 @@ where
             ));
         }
 
-        if let Some(highest_seg) = clone_data.flat_segments.segments.last() {
+        if let Some(highest_seg) = clone_data.flat_segments.segments.range(..).rev().next() {
             let id = highest_seg.high;
             if !clone_data.idmap.contains_key(&id) {
                 return programming(format!("server does not provide name for head {:?}", id));
@@ -740,7 +740,7 @@ where
         }
 
         let new_client_segments = PreparedFlatSegments {
-            segments: new_client_segments,
+            segments: new_client_segments.into_iter().collect(),
         };
 
         new.dag
@@ -792,7 +792,9 @@ where
                     parents,
                 });
             }
-            PreparedFlatSegments { segments: prepared }
+            PreparedFlatSegments {
+                segments: prepared.into_iter().collect(),
+            }
         };
 
         let data = CloneData {

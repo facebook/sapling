@@ -14,7 +14,7 @@ use crate::id::Id;
 ///
 /// Intermediate structure between processing a Dag and constructing high level segments.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Ord, PartialOrd)]
 pub struct FlatSegment {
     pub low: Id,
     pub high: Id,
@@ -45,7 +45,7 @@ impl Arbitrary for FlatSegment {
 #[derive(Serialize, Deserialize)]
 pub struct PreparedFlatSegments {
     /// New flat segments.
-    pub segments: Vec<FlatSegment>,
+    pub segments: BTreeSet<FlatSegment>,
 }
 
 impl PreparedFlatSegments {

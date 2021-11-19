@@ -42,7 +42,7 @@ where
 {
     fn arbitrary(g: &mut Gen) -> Self {
         let flat_segments = PreparedFlatSegments {
-            segments: Vec::arbitrary(g),
+            segments: Arbitrary::arbitrary(g),
         };
         CloneData {
             flat_segments,

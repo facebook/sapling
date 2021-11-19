@@ -515,7 +515,9 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// Returns the [`FlatSegment`] entries that are used by this [`IdDag`].
     pub fn flat_segments(&self, group: Group) -> Result<PreparedFlatSegments> {
         let segments = self.flat_segments_range(group.min_id(), group.max_id())?;
-        Ok(PreparedFlatSegments { segments })
+        Ok(PreparedFlatSegments {
+            segments: segments.into_iter().collect(),
+        })
     }
 
     /// Return all flat segments that overlap with range (and potentially cover
@@ -546,7 +548,9 @@ impl<Store: IdDagStore> IdDag<Store> {
         let (min, max) = if let (Some(min), Some(max)) = (set.min(), set.max()) {
             (min, max)
         } else {
-            return Ok(PreparedFlatSegments { segments });
+            return Ok(PreparedFlatSegments {
+                segments: segments.into_iter().collect(),
+            });
         };
         let segs = self.flat_segments_range(min, max)?;
         let seg_iter = segs.into_iter().rev();
@@ -557,7 +561,9 @@ impl<Store: IdDagStore> IdDag<Store> {
 
         segments.reverse();
 
-        Ok(PreparedFlatSegments { segments })
+        Ok(PreparedFlatSegments {
+            segments: segments.into_iter().collect(),
+        })
     }
 }
 
@@ -1884,7 +1890,9 @@ mod tests {
                     high: Id(30),
                     parents: vec![Id(10)],
                 },
-            ],
+            ]
+            .into_iter()
+            .collect(),
         };
 
         // Segment 20..=30 shouldn't have the "ONLY_HEAD" flag because of the gap.

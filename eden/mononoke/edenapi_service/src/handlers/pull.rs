@@ -56,7 +56,12 @@ pub async fn pull_fast_forward_master(state: &mut State) -> Result<BytesBody<Byt
         })
         .collect();
     let wire_clone_data = WireCloneData {
-        flat_segments: clone_data.flat_segments.segments.to_wire(),
+        flat_segments: clone_data
+            .flat_segments
+            .segments
+            .into_iter()
+            .collect::<Vec<_>>()
+            .to_wire(),
         idmap,
     };
 
