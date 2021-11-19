@@ -705,7 +705,6 @@ where
                 Ok(())
             };
 
-            // TODO(stash) - remove after initial rollout
             if tunables().get_xrepo_disable_commit_sync_lease() {
                 sync().await?;
             } else {
