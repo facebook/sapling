@@ -37,7 +37,7 @@ use manifest::ManifestOps;
 use maplit::{btreemap, hashmap};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+    CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
     DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
 };
 use mononoke_types::{
@@ -269,7 +269,6 @@ fn create_commit_sync_config(
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new(prefix)?),
         map: hashmap! {},
         bookmark_prefix: AsciiString::new(),
-        direction: CommitSyncDirection::LargeToSmall,
     };
 
     Ok(CommitSyncConfig {
@@ -791,7 +790,6 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
             MPath::new("dir1")? => MPath::new("prefix2")?,
         },
         bookmark_prefix: AsciiString::new(),
-        direction: CommitSyncDirection::SmallToLarge,
     };
 
     let commit_sync_config = CommitSyncConfig {
@@ -1759,7 +1757,6 @@ async fn prepare_commit_syncer_with_mapping_change(
             MPath::new("tools")? => MPath::new("tools")?,
         },
         bookmark_prefix: AsciiString::new(),
-        direction: CommitSyncDirection::LargeToSmall,
     };
 
     let old_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
@@ -1838,7 +1835,6 @@ fn get_merge_sync_data_provider(
         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
         map: hashmap! {},
         bookmark_prefix: AsciiString::new(),
-        direction: CommitSyncDirection::LargeToSmall,
     };
     let commit_sync_config_v1 = CommitSyncConfig {
         large_repo_id,
@@ -2171,7 +2167,6 @@ async fn test_no_accidental_preserved_roots(
             map: hashmap! {},
             bookmark_prefix: AsciiString::new(),
             // TODO(stash): remove `direction` field since it's unused
-            direction: CommitSyncDirection::LargeToSmall,
         };
         let commit_sync_config = CommitSyncConfig {
             large_repo_id: commit_syncer.get_large_repo().get_repoid(),
@@ -2288,7 +2283,7 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
                 default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                 map: hashmap! {},
                 bookmark_prefix: AsciiString::from_ascii("").unwrap(),
-                direction: CommitSyncDirection::SmallToLarge,
+
             },
         },
         version_name: noop_version_first_small_repo.clone(),

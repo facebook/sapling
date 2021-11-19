@@ -36,7 +36,7 @@ mod tests {
     use mercurial_types::MPath;
     use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
     use metaconfig_types::{
-        CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+        CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
         DefaultSmallToLargeCommitSyncPathAction, PushrebaseParams, RepoConfig,
         SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
     };
@@ -566,7 +566,6 @@ mod tests {
                 mp("dest_path_prefix/B") => mp("random_dir/B"),
             },
             bookmark_prefix: AsciiString::from_ascii("large_repo_bookmark/".to_string()).unwrap(),
-            direction: CommitSyncDirection::SmallToLarge,
         }
     }
 
@@ -580,7 +579,6 @@ mod tests {
                 mp("dest_path_prefix/C") => mp("random_dir/C"),
             },
             bookmark_prefix: AsciiString::from_ascii("large_repo_bookmark/".to_string()).unwrap(),
-            direction: CommitSyncDirection::SmallToLarge,
         }
     }
 
@@ -591,7 +589,6 @@ mod tests {
                 mp("dest_path_prefix_2") => mp("dpp2"),
             },
             bookmark_prefix: AsciiString::from_ascii("large_repo_bookmark_2/".to_string()).unwrap(),
-            direction: CommitSyncDirection::SmallToLarge,
         }
     }
 

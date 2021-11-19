@@ -24,7 +24,7 @@ use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+    CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
     DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
 };
 use mononoke_types::RepositoryId;
@@ -300,7 +300,6 @@ pub fn base_commit_sync_config(large_repo: &BlobRepo, small_repo: &BlobRepo) -> 
         ),
         map: hashmap! {},
         bookmark_prefix: AsciiString::new(),
-        direction: CommitSyncDirection::SmallToLarge,
     };
     CommitSyncConfig {
         large_repo_id: large_repo.get_repoid(),
@@ -361,7 +360,6 @@ fn get_small_repo_sync_config_noop(bookmark_prefix: String) -> SmallRepoCommitSy
         default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
         map: hashmap! {},
         bookmark_prefix: AsciiString::from_ascii(bookmark_prefix).unwrap(),
-        direction: CommitSyncDirection::SmallToLarge,
     }
 }
 
@@ -372,7 +370,6 @@ fn get_small_repo_sync_config_1(bookmark_prefix: String) -> SmallRepoCommitSyncC
         ),
         map: hashmap! {},
         bookmark_prefix: AsciiString::from_ascii(bookmark_prefix).unwrap(),
-        direction: CommitSyncDirection::SmallToLarge,
     }
 }
 
@@ -385,6 +382,5 @@ fn get_small_repo_sync_config_2(bookmark_prefix: String) -> SmallRepoCommitSyncC
             MPath::new("special").unwrap() => MPath::new("special").unwrap(),
         },
         bookmark_prefix: AsciiString::from_ascii(bookmark_prefix).unwrap(),
-        direction: CommitSyncDirection::SmallToLarge,
     }
 }

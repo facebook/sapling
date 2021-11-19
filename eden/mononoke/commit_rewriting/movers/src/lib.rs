@@ -474,7 +474,6 @@ mod test {
                 mp("preserved2") => mp("repo1-rest/preserved2"),
             },
             bookmark_prefix: AsciiString::from_ascii("b1".to_string()).unwrap(),
-            direction: CommitSyncDirection::LargeToSmall,
         }
     }
 
@@ -487,7 +486,6 @@ mod test {
                 mp("sub2") => mp("repo2-rest/sub2"),
             },
             bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
-            direction: CommitSyncDirection::LargeToSmall,
         }
     }
 
@@ -645,7 +643,6 @@ mod test {
                         mp("preserved2") => mp("preserved2"),
                     },
                     bookmark_prefix: AsciiString::from_ascii("b1".to_string()).unwrap(),
-                    direction: CommitSyncDirection::LargeToSmall,
                 },
                 RepositoryId::new(2) => SmallRepoCommitSyncConfig {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted2")),
@@ -655,7 +652,6 @@ mod test {
                         mp("sub2") => mp("repo2-rest/sub2"),
                     },
                     bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
-                    direction: CommitSyncDirection::LargeToSmall,
                 },
             },
             version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
@@ -741,7 +737,6 @@ mod test {
                 mp("sub1/preserved") => mp("sub1/preserved"),
             },
             bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
-            direction: CommitSyncDirection::LargeToSmall,
         }
     }
 
@@ -792,7 +787,6 @@ mod test {
                 mp("preserved/excluded") => mp("shifted/preserved/excluded"),
             },
             bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
-            direction: CommitSyncDirection::LargeToSmall,
         }
     }
 

@@ -14,7 +14,7 @@ use bookmarks_types::BookmarkName;
 use commitsync::types::CommonCommitSyncConfig as RawCommonCommitSyncConfig;
 use itertools::Itertools;
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+    CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
     DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
@@ -143,7 +143,6 @@ impl Convert for RawCommitSyncSmallRepoConfig {
             default_prefix,
             bookmark_prefix,
             mapping,
-            direction,
             ..
         } = self;
 
@@ -171,17 +170,10 @@ impl Convert for RawCommitSyncSmallRepoConfig {
         let bookmark_prefix = AsciiString::from_str(&bookmark_prefix)
             .map_err(|_| anyhow!("failed to parse ascii string from: {:?}", bookmark_prefix))?;
 
-        let direction = match direction.as_str() {
-            "large_to_small" => CommitSyncDirection::LargeToSmall,
-            "small_to_large" => CommitSyncDirection::SmallToLarge,
-            other => return Err(anyhow!("unknown commit sync direction: {:?}", other)),
-        };
-
         Ok(SmallRepoCommitSyncConfig {
             default_action,
             map,
             bookmark_prefix,
-            direction,
         })
     }
 }

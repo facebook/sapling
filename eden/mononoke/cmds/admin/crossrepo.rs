@@ -901,10 +901,6 @@ fn print_commit_sync_config(csc: CommitSyncConfig, line_prefix: &str) {
             line_prefix, small_repo_config.bookmark_prefix
         );
         println!(
-            "{}  direction: {:?}",
-            line_prefix, small_repo_config.direction
-        );
-        println!(
             "{}  default action: {:?}",
             line_prefix, small_repo_config.default_action
         );
@@ -1614,7 +1610,7 @@ mod test {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
                     bookmark_prefix: AsciiString::new(),
-                    direction: CommitSyncDirection::LargeToSmall,
+
                 },
             },
             version_name: current_version.clone(),

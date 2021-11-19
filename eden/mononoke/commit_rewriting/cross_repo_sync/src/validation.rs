@@ -1177,7 +1177,7 @@ mod test {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map: hashmap! { },
                     bookmark_prefix: AsciiString::from_str("prefix/")?,
-                    direction: CommitSyncDirection::LargeToSmall,
+
                 },
             },
             version_name: current_version.clone(),

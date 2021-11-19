@@ -26,13 +26,11 @@ test various admin commands
     version name: TEST_VERSION_NAME
       small repo: 1
       bookmark prefix: fbsource/
-      direction: SmallToLarge
       default action: Preserve
       prefix map:
         arvr->.fbsource-rest/arvr
       small repo: 2
       bookmark prefix: ovrsource/
-      direction: SmallToLarge
       default action: PrependPrefix(MPath("arvr-legacy"))
       prefix map:
         arvr->arvr
@@ -48,13 +46,11 @@ test various admin commands
     version name: TEST_VERSION_NAME_OLD
       small repo: 1
       bookmark prefix: fbsource/
-      direction: SmallToLarge
       default action: Preserve
       prefix map:
         arvr->.fbsource-rest/arvr_old
       small repo: 2
       bookmark prefix: ovrsource/
-      direction: SmallToLarge
       default action: PrependPrefix(MPath("arvr-legacy"))
       prefix map:
         arvr->arvr
@@ -72,13 +68,11 @@ test various admin commands
   version name: TEST_VERSION_NAME_OLD
     small repo: 1
     bookmark prefix: fbsource/
-    direction: SmallToLarge
     default action: Preserve
     prefix map:
       arvr->.fbsource-rest/arvr_old
     small repo: 2
     bookmark prefix: ovrsource/
-    direction: SmallToLarge
     default action: PrependPrefix(MPath("arvr-legacy"))
     prefix map:
       arvr->arvr

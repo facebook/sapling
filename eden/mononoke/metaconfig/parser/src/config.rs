@@ -453,15 +453,15 @@ mod test {
     use maplit::{btreemap, hashmap, hashset};
     use metaconfig_types::{
         BlameVersion, BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams,
-        CacheWarmupParams, CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
-        DatabaseConfig, DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig,
-        DerivedDataTypesConfig, EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig,
-        HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
-        LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams,
-        PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
-        RepoClientKnobs, SegmentedChangelogConfig, ShardableRemoteDatabaseConfig,
-        ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig, SourceControlServiceMonitoring,
-        SourceControlServiceParams, UnodeVersion, WireprotoLoggingConfig,
+        CacheWarmupParams, CommitSyncConfig, CommitSyncConfigVersion, DatabaseConfig,
+        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
+        EphemeralBlobstoreConfig, FilestoreParams, HookBypass, HookConfig, HookManagerParams,
+        HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
+        MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams, PushrebaseFlags,
+        PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
+        SegmentedChangelogConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
+        SmallRepoCommitSyncConfig, SourceControlServiceMonitoring, SourceControlServiceParams,
+        UnodeVersion, WireprotoLoggingConfig,
     };
     use mononoke_types::MPath;
     use nonzero_ext::nonzero;
@@ -562,7 +562,6 @@ mod test {
                             MPath::new("p1").unwrap() => MPath::new(".r2-legacy/p1").unwrap(),
                             MPath::new("p5").unwrap() => MPath::new(".r2-legacy/p5").unwrap(),
                         },
-                        direction: CommitSyncDirection::SmallToLarge,
                     },
                     RepositoryId::new(3) => SmallRepoCommitSyncConfig {
                         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("subdir").unwrap()),
@@ -571,7 +570,6 @@ mod test {
                             MPath::new("p1").unwrap() => MPath::new("p1").unwrap(),
                             MPath::new("p4").unwrap() => MPath::new("p5/p4").unwrap(),
                         },
-                        direction: CommitSyncDirection::SmallToLarge,
                     }
                 },
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),

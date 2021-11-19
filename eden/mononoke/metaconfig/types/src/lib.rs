@@ -1259,8 +1259,6 @@ pub struct SmallRepoCommitSyncConfig {
     pub map: HashMap<MPath, MPath>,
     /// Bookmark prefix to use in the large repo
     pub bookmark_prefix: AsciiString,
-    /// Commit sync direction
-    pub direction: CommitSyncDirection,
 }
 
 /// Commit sync direction

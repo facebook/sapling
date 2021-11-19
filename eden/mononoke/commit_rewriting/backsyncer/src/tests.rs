@@ -32,7 +32,7 @@ use manifest::{Entry, ManifestOps};
 use maplit::{btreemap, hashmap};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, CommonCommitSyncConfig,
+    CommitSyncConfig, CommitSyncConfigVersion, CommonCommitSyncConfig,
     DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig, SmallRepoPermanentConfig,
 };
 use mononoke_types::RepositoryId;
@@ -675,7 +675,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
                 ),
                 map: hashmap! { },
                 bookmark_prefix: AsciiString::new(),
-                direction: CommitSyncDirection::LargeToSmall,
+
             },
         },
         version_name: current_version.clone(),
@@ -694,7 +694,7 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
                 ),
                 map: hashmap! { },
                 bookmark_prefix: AsciiString::new(),
-                direction: CommitSyncDirection::LargeToSmall,
+
             },
         },
         version_name: new_version.clone(),
@@ -1197,7 +1197,6 @@ impl MoverType {
                 default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                 map: hashmap! {},
                 bookmark_prefix: AsciiString::new(),
-                direction: CommitSyncDirection::LargeToSmall,
             },
             Except(files) => {
                 let mut map = hashmap! {};
@@ -1211,7 +1210,6 @@ impl MoverType {
                     default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
                     map,
                     bookmark_prefix: AsciiString::new(),
-                    direction: CommitSyncDirection::LargeToSmall,
                 }
             }
             Only(path) => SmallRepoCommitSyncConfig {
@@ -1222,7 +1220,6 @@ impl MoverType {
                     MPath::new(path).unwrap() => MPath::new(path).unwrap(),
                 },
                 bookmark_prefix: AsciiString::new(),
-                direction: CommitSyncDirection::LargeToSmall,
             },
         }
     }
@@ -1578,7 +1575,7 @@ async fn init_merged_repos(
                     ),
                     map: hashmap! { },
                     bookmark_prefix: AsciiString::new(),
-                    direction: CommitSyncDirection::LargeToSmall,
+
                 },
             },
             version_name: after_merge_version.clone(),
