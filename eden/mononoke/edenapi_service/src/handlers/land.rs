@@ -59,6 +59,7 @@ async fn land_stack(
     base_hgid: HgId,
     pushvars: HashMap<String, Bytes>,
 ) -> Result<LandStackResponse, Error> {
+    // TODO(meyer): Figure out why these errors weren't propagating to the client
     let repo = repo.write().await?;
 
     let head = HgChangesetId::new(HgNodeHash::from(head_hgid));
@@ -76,7 +77,6 @@ async fn land_stack(
         .context("failed to resolve base")?
         .ok_or_else(|| ErrorKind::HgIdNotFound(base_hgid))?
         .id();
-
 
     let pushrebase_outcome = repo
         .land_stack(
