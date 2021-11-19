@@ -170,6 +170,29 @@ async fn test_grow_branches() {
     );
 }
 
+#[tokio::test]
+async fn test_reservation_on_existing_vertex() {
+    let mut dag = TestDag::new();
+    let draw = DrawDag::from(
+        r#" A0-A1-A2
+            B0-B1-B2"#,
+    );
+    let heads = VertexListWithOptions::from(vec![reserved_head("A2", 4)]);
+    dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
+    assert_eq!(
+        format!("{:?}", dag.dag.all().await.unwrap()),
+        "<spans [A0:A2+0:2]>"
+    );
+
+    // BUG: A2: 4 is not respected.
+    let heads = VertexListWithOptions::from(vec![reserved_head("B2", 4), reserved_head("A2", 4)]);
+    dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
+    assert_eq!(
+        format!("{:?}", dag.dag.all().await.unwrap()),
+        "<spans [A0:B2+0:5]>"
+    );
+}
+
 fn reserved_head(s: &'static str, reserve_size: u32) -> (Vertex, VertexOptions) {
     (
         Vertex::from(s),
