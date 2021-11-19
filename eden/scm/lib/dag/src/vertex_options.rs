@@ -7,6 +7,8 @@
 
 use std::collections::HashSet;
 
+use serde::Serialize;
+
 use crate::Group;
 use crate::VertexName;
 
@@ -19,7 +21,7 @@ pub struct VertexListWithOptions {
 /// Options attached to a vertex. Usually the vertex is a head. The head and its
 /// ancestors are going to be inserted to the graph. The options controls some
 /// details about the insertion.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 #[non_exhaustive]
 pub struct VertexOptions {
     /// How many ids to reserve for this vertex. Suppose this vertex has id `n`,
@@ -29,19 +31,25 @@ pub struct VertexOptions {
     /// Note: if any id `j` in the `n+1..=n+reserve_size` range were already
     /// taken, then the reserve range becomes `n+1..j` instead. This avoids
     /// fragmentation.
+    #[serde(default = "Default::default")]
     pub reserve_size: u32,
 
     /// The highest [`Group`] for this vertex. If set to `NON_MASTER` then
     /// this vertex could end up in `MASTER` or `NON_MASTER`. If set to
     /// `MASTER` then this vertex will end up in `MASTER` group.
+    #[serde(default = "default_highest_group")]
     pub highest_group: Group,
+}
+
+const fn default_highest_group() -> Group {
+    Group::NON_MASTER
 }
 
 impl Default for VertexOptions {
     fn default() -> Self {
         Self {
             reserve_size: 0,
-            highest_group: Group::NON_MASTER,
+            highest_group: default_highest_group(),
         }
     }
 }
