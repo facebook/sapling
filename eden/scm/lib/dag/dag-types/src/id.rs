@@ -88,7 +88,7 @@ where
 
 impl fmt::Debug for VertexName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.0.len() >= 2 {
+        if self.0.len() >= 4 || !looks_like_ascii_identifier(self.as_ref()) {
             // Use hex format for long names (ex. binary commit hashes).
             let hex = self.to_hex();
             // Truncate to specified width (ex. '{:#.12}').
@@ -99,13 +99,21 @@ impl fmt::Debug for VertexName {
                 f.write_str(&hex)
             }
         } else {
-            // Do not use hex if it's a valid utf-8 name.
+            // Do not use hex if it looks like an ASCII identifier.
             match std::str::from_utf8(self.as_ref()) {
                 Ok(s) => write!(f, "{}", s),
                 Err(_) => write!(f, "{}", self.to_hex()),
             }
         }
     }
+}
+
+fn looks_like_ascii_identifier(bytes: &[u8]) -> bool {
+    let mut iter = bytes.iter().copied();
+    if !(iter.next().unwrap_or(b'\0') as char).is_ascii_alphabetic() {
+        return false;
+    }
+    iter.all(|b| b.is_ascii_alphanumeric())
 }
 
 /// An integer that separates distinct groups of [`Id`]s.

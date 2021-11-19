@@ -203,7 +203,10 @@ mod tests {
         let set = meta_set(&["1", "3", "2", "7", "5"]);
         assert_eq!(format!("{:?}", &set), "<meta ?>");
         r(set.evaluate()).unwrap();
-        assert_eq!(format!("{:5?}", &set), "<meta <static [1, 3, 2, 7, 5]>>");
+        assert_eq!(
+            format!("{:5?}", &set),
+            "<meta <static [31, 33, 32, 37, 35]>>"
+        );
     }
 
     quickcheck::quickcheck! {
