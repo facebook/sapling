@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use anyhow::{Context, Error};
 use async_trait::async_trait;
 use bytes::Bytes;
-use edenapi_types::{HgId, LandStackRequest, LandStackResponse, RebaseIdUpdate};
+use edenapi_types::{HgId, LandStackRequest, LandStackResponse};
 use futures::{stream, StreamExt};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_api_hg::HgRepoContext;
@@ -133,14 +133,10 @@ async fn land_stack(
         })
         .collect();
 
-    let updated_ids = old_hgids?
-        .into_iter()
-        .zip(new_hgids?.into_iter())
-        .map(|(old_id, new_id)| RebaseIdUpdate { old_id, new_id })
-        .collect();
+    let old_to_new_hgids = old_hgids?.into_iter().zip(new_hgids?.into_iter()).collect();
 
     Ok(LandStackResponse {
         new_head: new_head_hgid,
-        updated_ids,
+        old_to_new_hgids,
     })
 }

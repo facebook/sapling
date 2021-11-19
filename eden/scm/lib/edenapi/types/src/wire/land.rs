@@ -8,17 +8,11 @@
 pub use crate::land::WireLandStackRequest;
 pub use crate::land::WireLandStackResponse;
 pub use crate::land::WirePushVar;
-pub use crate::land::WireRebaseIdUpdate;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::wire::tests::auto_wire_tests;
 
-    auto_wire_tests!(
-        WirePushVar,
-        WireLandStackRequest,
-        WireLandStackResponse,
-        WireRebaseIdUpdate
-    );
+    auto_wire_tests!(WirePushVar, WireLandStackRequest, WireLandStackResponse,);
 }

@@ -111,7 +111,6 @@ pub use crate::history::WireHistoryEntry;
 pub use crate::land::LandStackRequest;
 pub use crate::land::LandStackResponse;
 pub use crate::land::PushVar;
-pub use crate::land::RebaseIdUpdate;
 pub use crate::metadata::AnyFileContentId;
 pub use crate::metadata::ContentId;
 pub use crate::metadata::DirectoryMetadata;
