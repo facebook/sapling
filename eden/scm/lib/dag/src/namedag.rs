@@ -117,11 +117,11 @@ where
     /// protocols.
     overlay_map: Arc<RwLock<CoreMemIdMap>>,
 
-    /// Max ID + 1 in the `overlay_map`. A protection. The `overlay_map` is
-    /// shared (Arc) and its ID should not exceed the existing maximum ID at
-    /// `map` open time. The IDs from 0..overlay_map_next_id are considered
-    /// immutable, but lazy.
-    overlay_map_next_id: Id,
+    /// `Id`s that are allowed in the `overlay_map`. A protection.
+    /// The `overlay_map` is shared (Arc) and its ID should not exceed the
+    /// existing maximum ID at `map` open time. The IDs from
+    /// 0..overlay_map_next_id are considered immutable, but lazy.
+    overlay_map_id_set: IdSet,
 
     /// The source of `overlay_map`s. This avoids absolute Ids, and is
     /// used to flush overlay_map content shall the IdMap change on
@@ -281,7 +281,7 @@ where
         new.maybe_reuse_caches_from(self);
 
         let id_names =
-            calculate_id_name_from_paths(&new.map, &*new.dag, new.overlay_map_next_id, &to_insert)
+            calculate_id_name_from_paths(&new.map, &*new.dag, &new.overlay_map_id_set, &to_insert)
                 .await?;
 
         // For testing purpose, skip inserting certain vertexes.
@@ -330,7 +330,7 @@ where
     /// Usually called when `self` is newly created.
     fn maybe_reuse_caches_from(&mut self, other: &Self) {
         if self.state.int_version() != other.state.int_version()
-            || self.overlay_map_next_id != other.overlay_map_next_id
+            || self.persisted_id_set.as_spans() != other.persisted_id_set.as_spans()
         {
             tracing::debug!(target: "dag::cache", "cannot reuse cache");
             return;
@@ -862,14 +862,13 @@ where
 
     fn invalidate_overlay_map(&mut self) -> Result<()> {
         self.overlay_map = Default::default();
-        self.update_overlay_map_next_id()?;
+        self.update_overlay_map_id_set()?;
         tracing::debug!(target: "dag::cache", "cleared overlay map cache");
         Ok(())
     }
 
-    fn update_overlay_map_next_id(&mut self) -> Result<()> {
-        let next_id = self.dag.next_free_id(0, Group::MASTER)?;
-        self.overlay_map_next_id = next_id;
+    fn update_overlay_map_id_set(&mut self) -> Result<()> {
+        self.overlay_map_id_set = self.dag.master_group()?;
         Ok(())
     }
 
@@ -897,7 +896,7 @@ where
                     // If we do deep clone here we can remove `overlay_map_next_id`
                     // protection. However that could be too expensive.
                     overlay_map: Arc::clone(&self.overlay_map),
-                    overlay_map_next_id: self.overlay_map_next_id,
+                    overlay_map_id_set: self.overlay_map_id_set.clone(),
                     overlay_map_paths: Arc::clone(&self.overlay_map_paths),
                     remote_protocol: self.remote_protocol.clone(),
                     missing_vertexes_confirmed_by_remote: Arc::clone(
@@ -1271,7 +1270,7 @@ where
         let to_insert: Vec<(Id, VertexName)> = calculate_id_name_from_paths(
             self.map(),
             self.dag().deref(),
-            self.overlay_map_next_id,
+            &self.overlay_map_id_set,
             &path_names,
         )
         .await?;
@@ -1294,7 +1293,7 @@ where
 async fn calculate_id_name_from_paths(
     map: &dyn IdConvert,
     dag: &dyn IdDagAlgorithm,
-    max_id_plus_1: Id,
+    overlay_map_id_set: &IdSet,
     path_names: &[(AncestorPath, Vec<VertexName>)],
 ) -> Result<Vec<(Id, VertexName)>> {
     if path_names.is_empty() {
@@ -1325,15 +1324,15 @@ async fn calculate_id_name_from_paths(
             &names,
             x_id
         );
-        if x_id >= max_id_plus_1 {
+        if !overlay_map_id_set.contains(x_id) {
             crate::failpoint!("dag-error-x-n-overflow");
             let msg = format!(
                 concat!(
-                    "Server returned x~n (x = {:?} {}, n = {}). But x exceeds the head in the ",
-                    "local master group {}. This is not expected and indicates some ",
+                    "Server returned x~n (x = {:?} {}, n = {}). But x is out of range ",
+                    "({:?}). This is not expected and indicates some ",
                     "logic error on the server side."
                 ),
-                &path.x, x_id, path.n, max_id_plus_1
+                &path.x, x_id, path.n, overlay_map_id_set
             );
             return programming(msg);
         }
@@ -2137,7 +2136,7 @@ where
 
         // The master group might have new vertexes inserted, which will
         // affect the `overlay_map_next_id`.
-        self.update_overlay_map_next_id()?;
+        self.update_overlay_map_id_set()?;
 
         // Rebuild non-master ids and segments.
         if self.need_rebuild_non_master().await {

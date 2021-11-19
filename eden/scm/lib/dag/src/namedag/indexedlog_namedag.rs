@@ -56,7 +56,7 @@ impl Open for IndexedLogNameDagPath {
         let map = IdMap::open_from_log(map_log)?;
         let dag = IdDag::open_from_store(IndexedLogStore::open_from_clean_log(dag_log)?)?;
         let state = NameDagState { mlog: Some(mlog) };
-        let overlay_map_next_id = map.next_free_id(Group::MASTER)?;
+        let overlay_map_id_set = dag.master_group()?;
         let persisted_id_set = dag.all_ids_in_groups(&Group::ALL)?;
         Ok(AbstractNameDag {
             dag,
@@ -68,7 +68,7 @@ impl Open for IndexedLogNameDagPath {
             state,
             id: format!("ilog:{}", self.0.display()),
             overlay_map: Default::default(),
-            overlay_map_next_id,
+            overlay_map_id_set,
             overlay_map_paths: Default::default(),
             remote_protocol: Arc::new(()),
             missing_vertexes_confirmed_by_remote: Default::default(),

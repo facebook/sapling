@@ -17,7 +17,7 @@ use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Persist;
 use crate::Group;
-use crate::Id;
+use crate::IdSet;
 use crate::Result;
 
 /// In-memory version of [`NameDag`].
@@ -61,7 +61,7 @@ impl Open for MemNameDagPath {
             state: MemNameDagState::default(),
             id: format!("mem:{}", next_id()),
             overlay_map: Default::default(),
-            overlay_map_next_id: Id::MIN,
+            overlay_map_id_set: IdSet::empty(),
             overlay_map_paths: Default::default(),
             remote_protocol: Arc::new(()),
             missing_vertexes_confirmed_by_remote: Default::default(),
