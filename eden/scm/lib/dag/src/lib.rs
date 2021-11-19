@@ -41,10 +41,13 @@ pub use dag_types::Location;
 pub use dag_types::VertexName;
 pub use iddag::FirstAncestorConstraint;
 pub use iddag::IdDag;
+pub use iddag::IdDagAlgorithm;
+pub use iddagstore::IdDagStore;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use idmap::IdMap;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use namedag::NameDag;
+pub use namedag::NameDagBuilder;
 pub use nameset::NameSet;
 pub use ops::DagAlgorithm;
 pub use segment::FlatSegment;

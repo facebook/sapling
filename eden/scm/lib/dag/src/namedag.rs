@@ -73,10 +73,12 @@ use crate::Result;
 use crate::VerLink;
 use crate::VertexListWithOptions;
 
+mod builder;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 mod indexedlog_namedag;
 mod mem_namedag;
 
+pub use builder::NameDagBuilder;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use indexedlog_namedag::IndexedLogNameDagPath;
 #[cfg(any(test, feature = "indexedlog-backend"))]

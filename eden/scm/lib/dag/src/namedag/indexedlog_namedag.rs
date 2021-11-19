@@ -7,12 +7,12 @@
 
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use indexedlog::multi;
 use indexedlog::DefaultOpenOptions;
 
 use super::AbstractNameDag;
+use super::NameDagBuilder;
 use crate::errors::bug;
 use crate::iddag::IdDag;
 use crate::iddagstore::IndexedLogStore;
@@ -21,7 +21,6 @@ use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Persist;
 use crate::ops::TryClone;
-use crate::Group;
 use crate::Result;
 
 /// A DAG that uses VertexName instead of ids as vertexes.
@@ -56,23 +55,13 @@ impl Open for IndexedLogNameDagPath {
         let map = IdMap::open_from_log(map_log)?;
         let dag = IdDag::open_from_store(IndexedLogStore::open_from_clean_log(dag_log)?)?;
         let state = NameDagState { mlog: Some(mlog) };
-        let overlay_map_id_set = dag.master_group()?;
-        let persisted_id_set = dag.all_ids_in_groups(&Group::ALL)?;
-        Ok(AbstractNameDag {
-            dag,
-            map,
-            path: self.clone(),
-            snapshot: Default::default(),
-            pending_heads: Default::default(),
-            persisted_id_set,
-            state,
-            id: format!("ilog:{}", self.0.display()),
-            overlay_map: Default::default(),
-            overlay_map_id_set,
-            overlay_map_paths: Default::default(),
-            remote_protocol: Arc::new(()),
-            missing_vertexes_confirmed_by_remote: Default::default(),
-        })
+        let id = format!("ilog:{}", self.0.display());
+        let dag = NameDagBuilder::new_with_idmap_dag(map, dag)
+            .with_path(self.clone())
+            .with_state(state)
+            .with_id(id)
+            .build()?;
+        Ok(dag)
     }
 }
 

@@ -7,17 +7,15 @@
 
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::{self};
-use std::sync::Arc;
 
 use super::AbstractNameDag;
+use super::NameDagBuilder;
 use crate::iddag::IdDag;
 use crate::iddagstore::InProcessStore;
 use crate::idmap::MemIdMap;
 use crate::ops::IntVersion;
 use crate::ops::Open;
 use crate::ops::Persist;
-use crate::Group;
-use crate::IdSet;
 use crate::Result;
 
 /// In-memory version of [`NameDag`].
@@ -50,22 +48,13 @@ impl Open for MemNameDagPath {
     fn open(&self) -> Result<Self::OpenTarget> {
         let dag = IdDag::new_in_process();
         let map = MemIdMap::new();
-        let persisted_id_set = dag.all_ids_in_groups(&Group::ALL)?;
-        let result = AbstractNameDag {
-            dag,
-            map,
-            path: self.clone(),
-            snapshot: Default::default(),
-            pending_heads: Default::default(),
-            persisted_id_set,
-            state: MemNameDagState::default(),
-            id: format!("mem:{}", next_id()),
-            overlay_map: Default::default(),
-            overlay_map_id_set: IdSet::empty(),
-            overlay_map_paths: Default::default(),
-            remote_protocol: Arc::new(()),
-            missing_vertexes_confirmed_by_remote: Default::default(),
-        };
+        let id = format!("mem:{}", next_id());
+        let state = MemNameDagState::default();
+        let result = NameDagBuilder::new_with_idmap_dag(map, dag)
+            .with_path(self.clone())
+            .with_id(id)
+            .with_state(state)
+            .build()?;
         Ok(result)
     }
 }
