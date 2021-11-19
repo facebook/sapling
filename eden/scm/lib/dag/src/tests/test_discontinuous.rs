@@ -71,6 +71,39 @@ async fn test_simple_3_branches() {
         format!("{:?}", dag.dag.ancestors("I".into()).await.unwrap()),
         "<spans [G:I+107:109, A:C+0:2]>"
     );
+    assert_eq!(
+        format!("{:?}", dag.dag.descendants("B".into()).await.unwrap()),
+        "<spans [J:L+161:163, G:I+107:109, B:F+1:5]>"
+    );
+    assert_eq!(
+        format!("{:?}", dag.dag.range("C".into(), "K".into()).await.unwrap()),
+        "<spans [J:K+161:162, G+107, C+2]>"
+    );
+    assert_eq!(
+        format!("{:?}", dag.dag.parents("G".into()).await.unwrap()),
+        "<spans [C+2]>"
+    );
+    assert_eq!(
+        format!("{:?}", dag.dag.children("C".into()).await.unwrap()),
+        "<spans [G+107, D+3]>"
+    );
+
+    let all = dag.dag.all().await.unwrap();
+    assert_eq!(
+        format!("{:?}", dag.dag.children(all.clone()).await.unwrap()),
+        "<spans [J:L+161:163, G:I+107:109, B:F+1:5]>"
+    );
+    assert_eq!(
+        format!("{:?}", dag.dag.parents(all.clone()).await.unwrap()),
+        "<spans [J:K+161:162, G:H+107:108, A:E+0:4]>"
+    );
+    assert_eq!(
+        format!(
+            "{:?}",
+            dag.dag.range(all.clone(), all.clone()).await.unwrap()
+        ),
+        "<spans [J:L+161:163, G:I+107:109, A:F+0:5]>"
+    );
 }
 
 fn reserved_head(s: &'static str, reserve_size: u32) -> (Vertex, VertexOptions) {
