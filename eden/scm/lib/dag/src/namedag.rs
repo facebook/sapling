@@ -140,6 +140,24 @@ where
     missing_vertexes_confirmed_by_remote: Arc<RwLock<HashSet<VertexName>>>,
 }
 
+impl<D, M, P, S> AbstractNameDag<D, M, P, S>
+where
+    D: Send + Sync,
+    M: Send + Sync,
+    P: Send + Sync,
+    S: Send + Sync,
+{
+    /// Extract inner states. Useful for advanced use-cases.
+    pub fn into_idmap_dag(self) -> (M, D) {
+        (self.map, self.dag)
+    }
+
+    /// Extract inner states. Useful for advanced use-cases.
+    pub fn into_idmap_dag_path_state(self) -> (M, D, P, S) {
+        (self.map, self.dag, self.path, self.state)
+    }
+}
+
 #[async_trait::async_trait]
 impl<IS, M, P, S> DagPersistent for AbstractNameDag<IdDag<IS>, M, P, S>
 where
