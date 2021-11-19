@@ -13,7 +13,6 @@ use bookmarks::BookmarkName;
 use metaconfig_types::{CommitSyncDirection, CommonCommitSyncConfig};
 use mononoke_types::RepositoryId;
 use std::collections::HashSet;
-use std::str::FromStr;
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -48,7 +47,7 @@ fn get_prefix_and_common_bookmarks(
         .ok_or(ErrorKind::SmallRepoNotFound(small_repo_id))?
         .bookmark_prefix
         .clone();
-    Ok((AsciiString::from_str(&prefix)?, common_pushrebase_bookmarks))
+    Ok((prefix, common_pushrebase_bookmarks))
 }
 
 /// Get a renamer for small-to-large repo sync
@@ -118,6 +117,7 @@ mod test {
     use super::*;
     use maplit::hashmap;
     use metaconfig_types::SmallRepoPermanentConfig;
+    use std::str::FromStr;
 
     fn get_commit_sync_config() -> CommonCommitSyncConfig {
         CommonCommitSyncConfig {
@@ -127,10 +127,10 @@ mod test {
             ],
             small_repos: hashmap! {
                 RepositoryId::new(1) => SmallRepoPermanentConfig {
-                    bookmark_prefix: "b1/".to_string()
+                    bookmark_prefix: AsciiString::from_str("b1/").unwrap(),
                 },
                 RepositoryId::new(2) => SmallRepoPermanentConfig {
-                    bookmark_prefix: "b2/".to_string()
+                    bookmark_prefix: AsciiString::from_str("b2/").unwrap(),
                 },
             },
             large_repo_id: RepositoryId::new(0),

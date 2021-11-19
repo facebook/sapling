@@ -30,7 +30,7 @@ use metaconfig_types::{
 use mononoke_types::RepositoryId;
 use mononoke_types::{ChangesetId, DateTime, MPath};
 use sql_construct::SqlConstruct;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 use synced_commit_mapping::{
     SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
@@ -145,7 +145,7 @@ pub async fn init_small_large_repo(
         large_repo_id: RepositoryId::new(1),
         common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
         small_repos: hashmap! {
-            RepositoryId::new(0) => get_small_repo_sync_config_1("".to_string()),
+            RepositoryId::new(0) => get_small_repo_sync_config_1(AsciiString::new()),
         },
         version_name: version_with_small_repo.clone(),
     };
@@ -157,7 +157,7 @@ pub async fn init_small_large_repo(
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
             RepositoryId::new(0) => SmallRepoPermanentConfig {
-                bookmark_prefix: "".to_string(),
+                bookmark_prefix: AsciiString::new(),
             }
         },
         large_repo_id: RepositoryId::new(1),
@@ -319,7 +319,7 @@ fn prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
 pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
     let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
 
-    let bookmark_prefix = "small".to_string();
+    let bookmark_prefix = AsciiString::from_str("small").unwrap();
     let first_version = CommitSyncConfig {
         large_repo_id: RepositoryId::new(0),
         common_pushrebase_bookmarks: vec![],
@@ -363,17 +363,17 @@ fn get_small_repo_sync_config_noop(bookmark_prefix: String) -> SmallRepoCommitSy
     }
 }
 
-fn get_small_repo_sync_config_1(bookmark_prefix: String) -> SmallRepoCommitSyncConfig {
+fn get_small_repo_sync_config_1(bookmark_prefix: AsciiString) -> SmallRepoCommitSyncConfig {
     SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
             MPath::new("prefix").unwrap(),
         ),
         map: hashmap! {},
-        bookmark_prefix: AsciiString::from_ascii(bookmark_prefix).unwrap(),
+        bookmark_prefix,
     }
 }
 
-fn get_small_repo_sync_config_2(bookmark_prefix: String) -> SmallRepoCommitSyncConfig {
+fn get_small_repo_sync_config_2(bookmark_prefix: AsciiString) -> SmallRepoCommitSyncConfig {
     SmallRepoCommitSyncConfig {
         default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
             MPath::new("prefix").unwrap(),
@@ -381,6 +381,6 @@ fn get_small_repo_sync_config_2(bookmark_prefix: String) -> SmallRepoCommitSyncC
         map: hashmap! {
             MPath::new("special").unwrap() => MPath::new("special").unwrap(),
         },
-        bookmark_prefix: AsciiString::from_ascii(bookmark_prefix).unwrap(),
+        bookmark_prefix,
     }
 }

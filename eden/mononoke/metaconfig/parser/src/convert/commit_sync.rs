@@ -194,12 +194,19 @@ impl Convert for RawCommonCommitSyncConfig {
             .into_iter()
             .map(|(repo_id, small_repo_config)| {
                 let repo_id = RepositoryId::new(repo_id);
-                let config = SmallRepoPermanentConfig {
-                    bookmark_prefix: small_repo_config.bookmark_prefix,
-                };
-                (repo_id, config)
+                let bookmark_prefix = AsciiString::from_str(&small_repo_config.bookmark_prefix)
+                    .map_err(|_| {
+                        anyhow!(
+                            "failed to parse ascii string from: {:?}",
+                            small_repo_config.bookmark_prefix
+                        )
+                    })?;
+
+                let config = SmallRepoPermanentConfig { bookmark_prefix };
+                Ok((repo_id, config))
             })
-            .collect();
+            .collect::<Result<_>>()?;
+
         Ok(CommonCommitSyncConfig {
             large_repo_id,
             common_pushrebase_bookmarks,

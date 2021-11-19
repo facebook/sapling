@@ -306,7 +306,7 @@ pub mod test_impl {
                         (
                             *repo_id,
                             SmallRepoPermanentConfig {
-                                bookmark_prefix: small_repo_config.bookmark_prefix.to_string(),
+                                bookmark_prefix: small_repo_config.bookmark_prefix.clone(),
                             },
                         )
                     })

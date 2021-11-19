@@ -295,7 +295,7 @@ fn create_small_to_large_commit_syncer(
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
             small_repo.get_repoid() => SmallRepoPermanentConfig {
-                bookmark_prefix: "".to_string(),
+                bookmark_prefix: AsciiString::new(),
             }
         },
         large_repo_id: large_repo.get_repoid(),
@@ -340,7 +340,7 @@ fn create_large_to_small_commit_syncer_and_config_source(
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
             small_repo.get_repoid() => SmallRepoPermanentConfig {
-                bookmark_prefix: "".to_string(),
+                bookmark_prefix: AsciiString::new(),
             }
         },
         large_repo_id: large_repo.get_repoid(),
@@ -805,7 +805,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
             small_repo.get_repoid() => SmallRepoPermanentConfig {
-                bookmark_prefix: "".to_string(),
+                bookmark_prefix: AsciiString::new(),
             }
         },
         large_repo_id: megarepo.get_repoid(),
@@ -1773,7 +1773,7 @@ async fn prepare_commit_syncer_with_mapping_change(
         common_pushrebase_bookmarks: vec![],
         small_repos: hashmap! {
             small_repo.get_repoid() => SmallRepoPermanentConfig {
-                bookmark_prefix: "".to_string(),
+                bookmark_prefix: AsciiString::new(),
             }
         },
         large_repo_id,
@@ -1857,7 +1857,7 @@ fn get_merge_sync_data_provider(
         common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
         small_repos: hashmap! {
             small_repo_id => SmallRepoPermanentConfig {
-                bookmark_prefix: "".to_string(),
+                bookmark_prefix: AsciiString::new(),
             }
         },
         large_repo_id,
@@ -2181,7 +2181,7 @@ async fn test_no_accidental_preserved_roots(
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
                 commit_syncer.get_small_repo().get_repoid() => SmallRepoPermanentConfig {
-                    bookmark_prefix: "".to_string(),
+                    bookmark_prefix: AsciiString::new(),
                 }
             },
             large_repo_id: commit_syncer.get_large_repo().get_repoid(),
@@ -2264,10 +2264,10 @@ async fn test_not_sync_candidate_if_mapping_does_not_have_small_repo(
         common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
         small_repos: hashmap! {
             first_small_repo_id => SmallRepoPermanentConfig {
-                bookmark_prefix: "".to_string(),
+                bookmark_prefix: AsciiString::new(),
             },
             second_small_repo_id => SmallRepoPermanentConfig {
-                bookmark_prefix: "".to_string(),
+                bookmark_prefix: AsciiString::new(),
             },
         },
         large_repo_id,

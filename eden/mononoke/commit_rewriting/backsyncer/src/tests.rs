@@ -1146,7 +1146,7 @@ impl BookmarkRenamerType {
                 common_pushrebase_bookmarks: vec![common.clone()],
                 small_repos: hashmap! {
                     small_repo_id => SmallRepoPermanentConfig {
-                        bookmark_prefix: bookmark_prefix.clone(),
+                        bookmark_prefix: AsciiString::from_str(&bookmark_prefix).unwrap(),
                     }
                 },
                 large_repo_id,
@@ -1155,7 +1155,7 @@ impl BookmarkRenamerType {
                 common_pushrebase_bookmarks: vec![name.clone()],
                 small_repos: hashmap! {
                     small_repo_id => SmallRepoPermanentConfig {
-                        bookmark_prefix: "nonexistentprefix".to_string(),
+                        bookmark_prefix: AsciiString::from_str("nonexistentprefix").unwrap(),
                     }
                 },
                 large_repo_id,
@@ -1164,7 +1164,7 @@ impl BookmarkRenamerType {
                 common_pushrebase_bookmarks: vec![],
                 small_repos: hashmap! {
                     small_repo_id => SmallRepoPermanentConfig {
-                        bookmark_prefix: "nonexistentprefix".to_string(),
+                        bookmark_prefix: AsciiString::from_str("nonexistentprefix").unwrap(),
                     }
                 },
                 large_repo_id,
@@ -1173,7 +1173,7 @@ impl BookmarkRenamerType {
                 common_pushrebase_bookmarks: vec![],
                 small_repos: hashmap! {
                     small_repo_id => SmallRepoPermanentConfig {
-                        bookmark_prefix: "".to_string(),
+                        bookmark_prefix: AsciiString::new(),
                     }
                 },
                 large_repo_id,

@@ -1163,7 +1163,7 @@ mod test {
             common_pushrebase_bookmarks: vec![BookmarkName::new("master")?],
             small_repos: hashmap! {
                 small_repo.get_repoid() => SmallRepoPermanentConfig {
-                    bookmark_prefix: "prefix/".to_string(),
+                    bookmark_prefix: AsciiString::from_str("prefix/").unwrap(),
                 }
             },
             large_repo_id: large_repo.get_repoid(),

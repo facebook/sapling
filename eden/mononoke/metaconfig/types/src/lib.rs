@@ -1341,7 +1341,7 @@ pub struct CommonCommitSyncConfig {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SmallRepoPermanentConfig {
     /// Prefix of the bookmark
-    pub bookmark_prefix: String,
+    pub bookmark_prefix: AsciiString,
 }
 
 /// Configuration for logging wireproto commands and arguments
