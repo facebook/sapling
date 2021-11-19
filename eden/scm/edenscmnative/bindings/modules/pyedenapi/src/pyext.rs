@@ -48,6 +48,7 @@ use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
 use edenapi_types::IndexableId;
+use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResult;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::TreeAttributes;
@@ -215,6 +216,30 @@ pub trait EdenApiPyExt: EdenApi {
             bookmarks.set_item(py, entry.bookmark, entry.hgid.map(|id| id.to_hex()))?;
         }
         Ok(bookmarks)
+    }
+
+    fn land_stack_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        bookmark: String,
+        head: HgId,
+        base: HgId,
+        pushvars: Vec<(String, String)>,
+    ) -> PyResult<Serde<LandStackResponse>> {
+        let response = py
+            .allow_threads(|| {
+                block_unless_interrupted(async move {
+                    let response = self
+                        .land_stack(repo, bookmark, head, base, pushvars.into_iter().collect())
+                        .await?;
+                    Ok::<_, EdenApiError>(response)
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?;
+
+        Ok(Serde(response))
     }
 
     fn hash_lookup_py(

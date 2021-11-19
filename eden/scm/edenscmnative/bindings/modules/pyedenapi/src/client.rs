@@ -36,6 +36,7 @@ use edenapi_types::FileSpec;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
+use edenapi_types::LandStackResponse;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
@@ -164,6 +165,20 @@ py_class!(pub class client |py| {
         bookmarks: Vec<String>
     ) -> PyResult<PyDict> {
         self.inner(py).clone().bookmarks_py(py, repo, bookmarks)
+    }
+
+    /// land_stack(repo, bookmark, head, base, pushvars) -> {old_hgids: [node], new_hgids: [node]}
+    ///
+    /// Land a stack of already-uploaded commits by rebasing onto a bookmark and updating the bookmark.
+    def landstack(
+        &self,
+        repo: String,
+        bookmark: String,
+        head: Serde<HgId>,
+        base: Serde<HgId>,
+        pushvars: Vec<(String, String)> = Vec::new(),
+    ) -> PyResult<Serde<LandStackResponse>> {
+        self.inner(py).clone().land_stack_py(py, repo, bookmark, head.0, base.0, pushvars)
     }
 
     /// (repo, hexprefix) -> [{'request': {'InclusiveRange': (start_node, end_node)},
