@@ -106,6 +106,70 @@ async fn test_simple_3_branches() {
     );
 }
 
+#[tokio::test]
+async fn test_grow_branches() {
+    let mut dag = TestDag::new();
+    let draw = DrawDag::from(
+        r#"
+            A0-A1-A2
+            B0-B1-B2
+            C0-C1-C2"#,
+    );
+    let heads = VertexListWithOptions::from(vec![
+        reserved_head("A2", 4),
+        reserved_head("B2", 4),
+        reserved_head("C2", 4),
+    ]);
+    dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
+    assert_eq!(
+        format!("{:?}", dag.dag.all().await.unwrap()),
+        "<spans [C0:C2+14:16, B0:B2+7:9, A0:A2+0:2]>"
+    );
+
+    // Grow all branches with larger reservation. Larger reservation
+    // is changed to pre-existing reservation to avoid fragmentation.
+    let draw = DrawDag::from(
+        r#" A2-A3-A4
+            B2-B3-B4
+            C2-C3-C4"#,
+    );
+    let heads = VertexListWithOptions::from(vec![
+        reserved_head("A4", 20),
+        reserved_head("B4", 20),
+        reserved_head("C4", 20),
+    ]);
+    dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
+    assert_eq!(
+        format!("{:?}", dag.dag.all().await.unwrap()),
+        "<spans [C0:C4+14:18, B0:B4+7:11, A0:A4+0:4]>"
+    );
+
+    // Large reservation is respected when the previously reservation
+    // gets used up. Note how B5 and C5 respects reservations from
+    // A8 (->C4) and B6.
+    let draw = DrawDag::from(
+        r#" A4-A5-A6-A7-A8
+            B4-B5-B6
+            C4-C5-C6-C7-C8"#,
+    );
+    let heads = VertexListWithOptions::from(vec![
+        reserved_head("A8", 20),
+        reserved_head("B6", 20),
+        reserved_head("C8", 20),
+    ]);
+    dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
+    assert_eq!(
+        dag.debug_segments(0, Group::MASTER),
+        r#"
+        C5+61 : C8+64 [C4+18]
+        B5+39 : B6+40 [B4+11]
+        C0+14 : C4+18 [] Root
+        A7+12 : A8+13 [A6+6]
+        B0+7 : B4+11 [] Root
+        A0+0 : A6+6 [] Root OnlyHead"#
+    );
+}
+
 fn reserved_head(s: &'static str, reserve_size: u32) -> (Vertex, VertexOptions) {
     (
         Vertex::from(s),

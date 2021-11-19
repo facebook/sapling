@@ -2118,14 +2118,39 @@ fn update_reserved(reserved: &mut IdSet, covered: &IdSet, low: Id, reserve_size:
     if reserve_size == 0 {
         return;
     }
-    let mut high = (low + (reserve_size as u64) - 1).min(low.group().max_id());
-    // Try to reserve id..=id+reserve_size-1
-    let new_reserved = IdSet::from_spans(vec![low..=high]);
-    let intersected = new_reserved.intersection(&covered);
-    if let Some(span) = intersected.iter_span_asc().next() {
-        // Overlap with existing covered spans. Decrease `high` so it
-        // no longer overlap.
-        high = span.low - 1;
+    let mut low = low;
+    let mut high;
+    loop {
+        high = (low + (reserve_size as u64) - 1).min(low.group().max_id());
+        // Try to reserve id..=id+reserve_size-1
+        let reserved = IdSet::from_spans(vec![low..=high]);
+        let intersected = reserved.intersection(covered);
+        if let Some(span) = intersected.iter_span_asc().next() {
+            // Overlap with existing covered spans. Decrease `high` so it
+            // no longer overlap.
+            let last_free = span.low - 1;
+            if last_free >= low {
+                // [----------reserved----------]
+                //       [--span(overlap)--]
+                //      ^
+                // ^    last_free       ^
+                // low                  high
+                high = last_free;
+            } else {
+                // No space on the left side. Try the right side.
+                //   [--------reserved-------]
+                //   [--span(overlap)--]
+                //                 try: [------reserved------]
+                //   ^                       ^
+                //   low                     high
+                //  ^                   ^
+                //  last_free           low (try next)
+                low = span.high + 1;
+                // Try again.
+                continue;
+            }
+        }
+        break;
     }
     reserved.push(low..=high);
 }
