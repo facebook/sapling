@@ -35,6 +35,8 @@ pub enum EdenApiError {
     WireToApiConversionFailed(#[from] WireToApiConversionError),
     #[error(transparent)]
     ServerError(#[from] EdenApiServerError),
+    #[error("expected response, but none returned by the server")]
+    NoResponse,
     #[error(transparent)]
     Other(#[from] anyhow::Error),
     #[error("Not supported by the server")]

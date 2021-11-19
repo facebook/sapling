@@ -341,6 +341,15 @@ impl Client {
             .await
     }
 
+    /// Similar to `fetch`, but returns the response type directly, instead of Response<_>.
+    async fn fetch_single<T>(&self, request: Request) -> Result<T, EdenApiError>
+    where
+        <T as ToWire>::Wire: Send + DeserializeOwned + 'static,
+        T: ToWire + Send + 'static,
+    {
+        self.fetch::<T>(vec![request])?.single().await
+    }
+
     /// Log the request to the configured log directory as JSON.
     fn log_request<R: Serialize + Debug>(&self, req: &R, label: &str) {
         tracing::trace!("Sending request: {:?}", req);

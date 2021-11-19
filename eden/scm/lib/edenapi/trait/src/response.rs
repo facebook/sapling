@@ -56,6 +56,14 @@ impl<T: Send + 'static> Response<T> {
     pub async fn flatten(self) -> Result<Vec<T>, EdenApiError> {
         self.entries.try_collect().await
     }
+
+    /// Read one (and presumably the only) item from the response
+    pub async fn single(mut self) -> Result<T, EdenApiError> {
+        self.entries
+            .try_next()
+            .await
+            .and_then(|opt| opt.ok_or(EdenApiError::NoResponse))
+    }
 }
 
 /// Metadata extracted from the headers of an individual HTTP response.
