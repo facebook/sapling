@@ -7,14 +7,13 @@
 
 #![deny(warnings)]
 
-mod mem_writes_bonsai_hg_mapping;
 mod mem_writes_changesets;
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
-use bonsai_hg_mapping::ArcBonsaiHgMapping;
+use bonsai_hg_mapping::{ArcBonsaiHgMapping, MemWritesBonsaiHgMapping};
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changesets::ArcChangesets;
 use clap::{Arg, SubCommand};
@@ -35,7 +34,6 @@ use slog::info;
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::mem_writes_bonsai_hg_mapping::MemWritesBonsaiHgMapping;
 use crate::mem_writes_changesets::MemWritesChangesets;
 
 // Refactor this a bit. Use a thread pool for git operations. Pass that wherever we use store repo.

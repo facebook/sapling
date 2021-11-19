@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use crate::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use anyhow::Error;
 use async_trait::async_trait;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use context::CoreContext;
 use lock_ext::LockExt;
 use mercurial_types::HgChangesetId;

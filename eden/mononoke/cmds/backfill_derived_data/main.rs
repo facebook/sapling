@@ -14,6 +14,7 @@ use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::{Blobstore, Loadable};
+use bonsai_hg_mapping::{ArcBonsaiHgMapping, MemWritesBonsaiHgMapping};
 use bookmarks::{
     BookmarkKind, BookmarkPagination, BookmarkPrefix, BookmarksSubscription, Freshness,
 };
@@ -670,11 +671,15 @@ async fn run_subcmd<'a>(
                 );
                 let orig_repo = repo.clone();
                 let mut memblobstore = None;
-                let repo = repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
-                    let blobstore = Arc::new(MemWritesBlobstore::new(blobstore));
-                    memblobstore = Some(blobstore.clone());
-                    blobstore
-                });
+                let repo = repo
+                    .dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
+                        let blobstore = Arc::new(MemWritesBlobstore::new(blobstore));
+                        memblobstore = Some(blobstore.clone());
+                        blobstore
+                    })
+                    .dangerous_override(|bonsai_hg_mapping| -> ArcBonsaiHgMapping {
+                        Arc::new(MemWritesBonsaiHgMapping::new(bonsai_hg_mapping))
+                    });
                 let memblobstore = memblobstore.unwrap();
 
                 regenerate::regenerate_derived_data(
