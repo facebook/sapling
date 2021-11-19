@@ -56,6 +56,7 @@ pub mod commit;
 pub mod errors;
 pub mod file;
 pub mod history;
+pub mod land;
 pub mod metadata;
 pub mod pull;
 #[cfg(test)]
@@ -118,6 +119,10 @@ pub use crate::wire::file::WireUploadTokensResponse;
 pub use crate::wire::history::WireHistoryRequest;
 pub use crate::wire::history::WireHistoryResponseChunk;
 pub use crate::wire::history::WireWireHistoryEntry;
+pub use crate::wire::land::WireLandStackRequest;
+pub use crate::wire::land::WireLandStackResponse;
+pub use crate::wire::land::WirePushVar;
+pub use crate::wire::land::WireRebaseIdUpdate;
 pub use crate::wire::metadata::WireAnyFileContentId;
 pub use crate::wire::metadata::WireContentId;
 pub use crate::wire::metadata::WireDirectoryMetadata;

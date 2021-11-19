@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::num::NonZeroU64;
 
 use async_trait::async_trait;
@@ -30,6 +31,7 @@ use edenapi_types::FileSpec;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
+use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResponse;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
@@ -184,6 +186,20 @@ pub trait EdenApi: Send + Sync + 'static {
         bookmarks: Vec<String>,
     ) -> Result<Vec<BookmarkEntry>, EdenApiError> {
         let _ = (repo, bookmarks);
+        Err(EdenApiError::NotSupported)
+    }
+
+    /// Land a stack of commits, rebasing them onto the specified bookmark
+    /// and updating the bookmark to the top of the rebased stack.
+    async fn land_stack(
+        &self,
+        repo: String,
+        bookmark: String,
+        head: HgId,
+        base: HgId,
+        pushvars: HashMap<String, String>,
+    ) -> Result<LandStackResponse, EdenApiError> {
+        let _ = (repo, bookmark, head, base, pushvars);
         Err(EdenApiError::NotSupported)
     }
 

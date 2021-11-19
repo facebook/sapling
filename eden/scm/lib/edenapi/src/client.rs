@@ -53,9 +53,12 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::HistoryRequest;
 use edenapi_types::HistoryResponseChunk;
 use edenapi_types::IndexableId;
+use edenapi_types::LandStackRequest;
+use edenapi_types::LandStackResponse;
 use edenapi_types::LookupRequest;
 use edenapi_types::LookupResponse;
 use edenapi_types::LookupResult;
+use edenapi_types::PushVar;
 use edenapi_types::ServerError;
 use edenapi_types::ToApi;
 use edenapi_types::ToWire;
@@ -131,6 +134,7 @@ mod paths {
     pub const COMMIT_GRAPH: &str = "commit/graph";
     pub const COMMIT_MUTATIONS: &str = "commit/mutations";
     pub const BOOKMARKS: &str = "bookmarks";
+    pub const LAND_STACK: &str = "land";
     pub const LOOKUP: &str = "lookup";
     pub const UPLOAD: &str = "upload/";
     pub const UPLOAD_FILENODES: &str = "upload/filenodes";
@@ -671,6 +675,42 @@ impl EdenApi for Client {
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         self.fetch_vec_with_retry::<BookmarkEntry>(vec![req]).await
+    }
+
+    /// Land a stack of commits, rebasing them onto the specified bookmark
+    /// and updating the bookmark to the top of the rebased stack
+    async fn land_stack(
+        &self,
+        repo: String,
+        bookmark: String,
+        head: HgId,
+        base: HgId,
+        pushvars: HashMap<String, String>,
+    ) -> Result<LandStackResponse, EdenApiError> {
+        tracing::info!(
+            "Landing stack between head {} and base {} to bookmark '{}'",
+            head,
+            base,
+            &bookmark
+        );
+        let url = self.build_url(paths::LAND_STACK, Some(&repo))?;
+
+        let land_stack_req = LandStackRequest {
+            bookmark,
+            head,
+            base,
+            pushvars: pushvars
+                .into_iter()
+                .map(|(k, v)| PushVar { key: k, value: v })
+                .collect(),
+        };
+        self.log_request(&land_stack_req, "land");
+        let req = self
+            .configure_request(Request::post(url))?
+            .cbor(&land_stack_req.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+
+        self.fetch_single::<LandStackResponse>(req).await
     }
 
     async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
