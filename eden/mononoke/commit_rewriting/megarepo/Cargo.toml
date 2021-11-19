@@ -13,7 +13,6 @@ path = "tool/main.rs"
 
 [dependencies]
 anyhow = "1.0"
-ascii = "1.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobrepo_utils = { version = "0.1.0", path = "../../blobrepo_utils" }

@@ -17,6 +17,7 @@ blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
@@ -44,8 +45,6 @@ mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
-serde = { version = "1.0.126", features = ["derive", "rc"] }
-serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
