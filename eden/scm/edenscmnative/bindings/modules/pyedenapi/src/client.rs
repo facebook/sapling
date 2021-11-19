@@ -167,6 +167,20 @@ py_class!(pub class client |py| {
         self.inner(py).clone().bookmarks_py(py, repo, bookmarks)
     }
 
+    /// setbookmark(repo, bookmark, to, from, pushvars)
+    ///
+    /// Create, delete, or move a bookmark.
+    def setbookmark(
+        &self,
+        repo: String,
+        bookmark: String,
+        to: Serde<Option<HgId>>,
+        from: Serde<Option<HgId>>,
+        pushvars: Vec<(String, String)> = Vec::new(),
+    ) -> PyResult<bool> {
+        self.inner(py).clone().set_bookmark_py(py, repo, bookmark, to.0, from.0, pushvars)
+    }
+
     /// land_stack(repo, bookmark, head, base, pushvars) -> {old_hgids: [node], new_hgids: [node]}
     ///
     /// Land a stack of already-uploaded commits by rebasing onto a bookmark and updating the bookmark.

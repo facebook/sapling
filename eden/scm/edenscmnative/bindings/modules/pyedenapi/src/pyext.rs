@@ -218,6 +218,28 @@ pub trait EdenApiPyExt: EdenApi {
         Ok(bookmarks)
     }
 
+    fn set_bookmark_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        bookmark: String,
+        to: Option<HgId>,
+        from: Option<HgId>,
+        pushvars: Vec<(String, String)>,
+    ) -> PyResult<bool> {
+        py.allow_threads(|| {
+            block_unless_interrupted(async move {
+                self.set_bookmark(repo, bookmark, to, from, pushvars.into_iter().collect())
+                    .await?;
+                Ok::<(), EdenApiError>(())
+            })
+        })
+        .map_pyerr(py)?
+        .map_pyerr(py)?;
+
+        Ok(true)
+    }
+
     fn land_stack_py(
         self: Arc<Self>,
         py: Python,
