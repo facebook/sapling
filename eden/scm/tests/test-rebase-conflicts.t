@@ -155,54 +155,54 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   │ │  date:        Thu Sep 05 12:59:39 2013 -0400
   │ │  summary:     merge
   │ │
-  │ o  commit:      e31216eec445
+  │ o  commit:      4c9fbe56a16f
+  │ │  branch:      f1
+  │ │  user:        szhang
+  │ │  date:        Thu Sep 05 12:54:00 2013 -0400
+  │ │  summary:     changed f1
+  │ │
+  o │  commit:      e31216eec445
   │ │  branch:      f1
   │ │  user:        szhang
   │ │  date:        Thu Sep 05 12:59:10 2013 -0400
   │ │  summary:     more changes to f1
   │ │
-  │ o    commit:      8e4e2c1a07ae
-  │ ├─╮  branch:      f1
-  │ │ │  user:        szhang
-  │ │ │  date:        Thu Sep 05 12:57:59 2013 -0400
-  │ │ │  summary:     bad merge
-  │ │ │
-  │ │ o  commit:      400110238667
-  │ │ │  branch:      f2
-  │ │ │  user:        szhang
-  │ │ │  date:        Tue Sep 03 13:58:02 2013 -0400
-  │ │ │  summary:     changed f2 on f2
-  │ │ │
-  │ │ o  commit:      12e8ec6bb010
-  │ │ │  branch:      f2
-  │ │ │  user:        szhang
-  │ │ │  date:        Tue Sep 03 13:57:18 2013 -0400
-  │ │ │  summary:     created f2 branch
-  │ │ │
-  o │ │  commit:      4c9fbe56a16f
-  ├─╯ │  branch:      f1
-  │   │  user:        szhang
-  │   │  date:        Thu Sep 05 12:54:00 2013 -0400
-  │   │  summary:     changed f1
-  │   │
-  o   │  commit:      4bc80088dc6b
-  │   │  branch:      f1
-  │   │  user:        szhang
-  │   │  date:        Tue Sep 03 13:56:20 2013 -0400
-  │   │  summary:     added f1.txt
-  │   │
-  o   │  commit:      ef53c9e6b608
-  │   │  branch:      f1
-  │   │  user:        szhang
-  │   │  date:        Tue Sep 03 13:55:26 2013 -0400
-  │   │  summary:     created f1 branch
-  │   │
-  │ @ │  commit:      d79e2059b5c0
-  │ ├─╯  user:        szhang
+  o │  commit:      8e4e2c1a07ae
+  ├─╮  branch:      f1
+  │ │  user:        szhang
+  │ │  date:        Thu Sep 05 12:57:59 2013 -0400
+  │ │  summary:     bad merge
+  │ │
+  o │  commit:      400110238667
+  │ │  branch:      f2
+  │ │  user:        szhang
+  │ │  date:        Tue Sep 03 13:58:02 2013 -0400
+  │ │  summary:     changed f2 on f2
+  │ │
+  o │  commit:      12e8ec6bb010
+  │ │  branch:      f2
+  │ │  user:        szhang
+  │ │  date:        Tue Sep 03 13:57:18 2013 -0400
+  │ │  summary:     created f2 branch
+  │ │
+  │ o  commit:      4bc80088dc6b
+  │ │  branch:      f1
+  │ │  user:        szhang
+  │ │  date:        Tue Sep 03 13:56:20 2013 -0400
+  │ │  summary:     added f1.txt
+  │ │
+  │ o  commit:      ef53c9e6b608
+  │ │  branch:      f1
+  │ │  user:        szhang
+  │ │  date:        Tue Sep 03 13:55:26 2013 -0400
+  │ │  summary:     created f1 branch
+  │ │
+  │ │ @  commit:      d79e2059b5c0
+  ├───╯  user:        szhang
   │ │    date:        Tue Sep 03 13:57:39 2013 -0400
   │ │    summary:     changed f2 on default
   │ │
-  │ o  commit:      8a951942e016
+  o │  commit:      8a951942e016
   ├─╯  user:        szhang
   │    date:        Tue Sep 03 13:57:11 2013 -0400
   │    summary:     added f2.txt

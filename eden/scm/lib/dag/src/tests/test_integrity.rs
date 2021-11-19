@@ -46,10 +46,11 @@ async fn test_isomorphic_graph_with_different_segments() {
         J+10 : J+10 [E+9, I+8]
         E+9 : E+9 [D+7]
         I+8 : I+8 [H+6]
-        D+7 : D+7 [C+4]
-        H+6 : H+6 [C+4, G+5]
-        G+5 : G+5 [F+2]
-        B+3 : C+4 [A+1]
+        D+7 : D+7 [C+5]
+        H+6 : H+6 [C+5, G+4]
+        C+5 : C+5 [B+3]
+        G+4 : G+4 [F+2]
+        B+3 : B+3 [A+1]
         A+1 : F+2 [] Root
         K+0 : K+0 [] Root OnlyHead"#
     );

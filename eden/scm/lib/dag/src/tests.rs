@@ -429,10 +429,10 @@ fn test_protocols() {
     assert_eq!(
         built.ascii[3],
         r#"
-                1-3-\     /--8--9--\
-            0-2------4-5-6-7--------10-11
-Lv0: RH0-0[] R1-1[] 2-2[0] 3-3[1] H4-7[2, 3] 8-9[6] H10-11[7, 9]
-Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
+                1-2-\     /--7--8--\
+            0-3------4-5-6-9--------10-11
+Lv0: RH0-0[] R1-2[] 3-3[0] H4-8[3, 2] 9-9[6] H10-11[9, 8]
+Lv1: R0-0[] R1-8[0]"#
     );
 
     // Replace "[66]" to "B", "[67]" to "C", etc.
@@ -454,7 +454,7 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
         r((&built.name_dag.map, &built.name_dag.dag).process(ids)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &request1)),
-        "RequestLocationToName { paths: [J~1, L~2(+5), D~1, B~1] }"
+        "RequestLocationToName { paths: [L~2, J~1(+5), D~1, B~1] }"
     );
 
     // [name] -> RequestNameToLocation (useful for getting ids from commit hashes).
@@ -473,7 +473,7 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     let response1 = r((&built.name_dag.map, &built.name_dag.dag).process(request1)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response1)),
-        "ResponseIdNamePair { path_names: [(J~1, [I]), (L~2(+5), [H, G, F, E, B]), (D~1, [C]), (B~1, [A])] }"
+        "ResponseIdNamePair { path_names: [(L~2, [H]), (J~1(+5), [I, G, F, E, B]), (D~1, [C]), (B~1, [A])] }"
     );
 
     // RequestNameToLocation -> ResponseIdNamePair
@@ -481,7 +481,7 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     let response2 = r((&built.name_dag.map, &built.name_dag.dag).process(request2)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response2)),
-        "ResponseIdNamePair { path_names: [(B~1, [A]), (J~5, [B]), (D~1, [C]), (J~4, [E]), (J~3, [F]), (J~2, [G]), (L~2, [H]), (J~1, [I])] }"
+        "ResponseIdNamePair { path_names: [(B~1, [A]), (H~4, [B]), (D~1, [C]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (L~2, [H]), (J~1, [I])] }"
     );
 
     // Applying responses to IdMap. Should not cause errors.
@@ -498,31 +498,24 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     .unwrap();
     assert_eq!(
         format!("{:?}", &sparse_id_map),
-        r#"IdMap {
-  B: 2,
-  D: 3,
-  H: 7,
-  J: 9,
-  L: 11,
-}
-"#
+        "IdMap {\n  D: 2,\n  B: 3,\n  J: 8,\n  H: 9,\n  L: 11,\n}\n"
     );
     // Apply response2.
     r((&mut sparse_id_map, &built.name_dag.dag).process(response2)).unwrap();
     assert_eq!(
         format!("{:?}", &sparse_id_map),
         r#"IdMap {
-  B: 2,
-  D: 3,
-  H: 7,
-  J: 9,
+  D: 2,
+  B: 3,
+  J: 8,
+  H: 9,
   L: 11,
   A: 0,
   C: 1,
   E: 4,
   F: 5,
   G: 6,
-  I: 8,
+  I: 7,
 }
 "#
     );
@@ -1060,10 +1053,10 @@ fn test_heads() {
         r#"
     2 6   9 10
     | |\  |/
-    1 4 5 8 11
+    1 5 4 8 11
     | |/  |/
     0 3   7
-Lv0: RH0-2[] R3-4[] 5-5[3] 6-6[4, 5] R7-9[] 10-10[8] 11-11[7]
+Lv0: RH0-2[] R3-4[] 5-5[3] 6-6[5, 4] R7-9[] 10-10[8] 11-11[7]
 Lv1: R0-2[] R3-4[] 5-6[3, 4] R7-9[] 10-10[8]
 Lv2: R0-2[] R3-6[] R7-9[]"#
     );
@@ -1093,22 +1086,22 @@ fn test_roots() {
         r#"
     2 6   11
     | |\  |\
-    1 4 5 9 10
+    1 5 4 107
     | |/  |\
-    0 3   7 8
-Lv0: RH0-2[] R3-4[] 5-5[3] 6-6[4, 5] R7-7[] R8-8[] 9-9[7, 8] R10-10[] 11-11[9, 10]
-Lv1: R0-2[] R3-4[] 5-6[3, 4] R7-7[] R8-9[7]
-Lv2: R0-2[] R3-6[]"#
+    0 3   9 8
+Lv0: RH0-2[] R3-4[] 5-5[3] 6-6[5, 4] R7-7[] R8-8[] R9-9[] 10-10[9, 8] 11-11[10, 7]
+Lv1: R0-2[] R3-4[] 5-6[3, 4] R7-7[] R8-8[] R9-10[8]
+Lv2: R0-2[] R3-6[] R7-7[]"#
     );
 
     let dag = result.name_dag.dag;
     let roots = |spans| -> String { format_set(dag.roots(IdSet::from_spans(spans)).unwrap()) };
 
     assert_eq!(roots(vec![]), "");
-    assert_eq!(roots(vec![0..=11]), "0 3 7 8 10");
-    assert_eq!(roots(vec![1..=2, 4..=6, 8..=10]), "1 4 5 8 10");
-    assert_eq!(roots(vec![0..=0, 2..=3, 5..=6, 9..=11]), "0 2 3 9 10");
-    assert_eq!(roots(vec![1..=1, 3..=3, 6..=8, 11..=11]), "1 3 6 7 8 11");
+    assert_eq!(roots(vec![0..=11]), "0 3 7 8 9");
+    assert_eq!(roots(vec![1..=2, 4..=6, 8..=10]), "1 4 5 8 9");
+    assert_eq!(roots(vec![0..=0, 2..=3, 5..=6, 9..=11]), "0 2 3 9");
+    assert_eq!(roots(vec![1..=1, 3..=3, 6..=8, 11..=11]), "1 3 6 7 8");
 }
 
 #[test]

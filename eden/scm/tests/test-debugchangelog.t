@@ -238,13 +238,13 @@ Prepare the "master" group. Note the "Group Master" output in debugchangelog:
     Group Master:
      Next Free Id: 7
      Segments: 3
-      5e98a0f69ae0+6 : 5e98a0f69ae0+6 [4ec7ca77ac1a+2, 50e53efd5222+5] OnlyHead
-      e7050b6e5048+3 : 50e53efd5222+5 [] Root
-      1fc8102cda62+0 : 4ec7ca77ac1a+2 [] Root OnlyHead
+      5e98a0f69ae0+6 : 5e98a0f69ae0+6 [4ec7ca77ac1a+5, 50e53efd5222+2] OnlyHead
+      1fc8102cda62+3 : 4ec7ca77ac1a+5 [] Root
+      e7050b6e5048+0 : 50e53efd5222+2 [] Root OnlyHead
     Group Non-Master:
      Next Free Id: N1
      Segments: 1
-      f535a6a0548e+N0 : f535a6a0548e+N0 [4ec7ca77ac1a+2]
+      f535a6a0548e+N0 : f535a6a0548e+N0 [4ec7ca77ac1a+5]
 
 To lazy:
 
@@ -262,17 +262,17 @@ To lazy:
   │
   │ o  C remote/master
   ╭─┤
-  │ o  D
+  o │  A
   │ │
-  │ o  F
+  o │  E
   │ │
-  │ o  H
-  │
-  o  A
-  │
-  o  E
-  │
-  o  G
+  o │  G
+    │
+    o  D
+    │
+    o  F
+    │
+    o  H
   
 Revlog -> Lazy:
 

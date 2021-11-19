@@ -9,6 +9,8 @@
 //!
 //! See [`IdMap`] for the main structure.
 
+use std::borrow::Cow;
+
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
@@ -99,17 +101,42 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
         //
         // The code below is optimized for cases where p1 branch is linear,
         // but p2 branch is not.
+        //
+        // However, the above visit order (first parent last) is not optimal
+        // for incremental build case with pushrebase branches. Because
+        // pushrebase uses the first parent as the mainline. For example:
+        //
+        //    A---B---C-...-D---M  (parents(M) = [D, F])
+        //                     /
+        //              E-...-F
+        //
+        // The A ... M branch is the mainline. The head of the mainline
+        // was A ... D, then M. An incremental build job might have built up
+        // A, B, ..., D before it sees M. In this case it's better to make
+        // the incremental build finish the A ... D part before jumping to
+        // E ... F.
+        //
+        // We choose first parent last order if `covered` is empty, or when
+        // visiting ancestors of non-first parents.
         let mut outcome = PreparedFlatSegments::default();
+
+        #[derive(Copy, Clone, Debug)]
+        enum VisitOrder {
+            /// Visit the first parent first.
+            FirstFirst,
+            /// Visit the first parent last.
+            FirstLast,
+        }
 
         // Emulate the stack in heap to avoid overflow.
         #[derive(Debug)]
         enum Todo {
             /// Visit parents. Finally assign self. This will eventually turn into AssignedId.
-            Visit(VertexName),
+            Visit(VertexName, VisitOrder),
 
             /// Assign a number if not assigned. Parents are visited.
             /// The `usize` provides the length of parents.
-            Assign(VertexName, usize),
+            Assign(VertexName, usize, VisitOrder),
 
             /// Assigned Id. Will be picked by and pushed to the current `parent_ids` stack.
             AssignedId(Id),
@@ -119,11 +146,20 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
         use Todo::Visit;
         let mut parent_ids: Vec<Id> = Vec::new();
 
-        let mut todo_stack: Vec<Todo> = vec![Visit(head.clone())];
+        let mut todo_stack: Vec<Todo> = {
+            let order = if covered_ids.is_empty() {
+                // Assume re-building from scratch.
+                VisitOrder::FirstLast
+            } else {
+                // Assume incremental updates with pushrebase.
+                VisitOrder::FirstFirst
+            };
+            vec![Visit(head.clone(), order)]
+        };
         while let Some(todo) = todo_stack.pop() {
             tracing::trace!(target: "dag::assign", "todo: {:?}", &todo);
             match todo {
-                Visit(head) => {
+                Visit(head, order) => {
                     // If the id was not assigned, or was assigned to a higher group,
                     // (re-)assign it to this group.
                     //
@@ -132,14 +168,24 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                         None => {
                             let parents = parents_by_name.parent_names(head.clone()).await?;
                             tracing::trace!(target: "dag::assign", "visit {:?} with parents {:?}", &head, &parents);
-                            todo_stack.push(Todo::Assign(head, parents.len()));
-                            // If the parent was not assigned, or was assigned to a higher group,
-                            // (re-)assign the parent to this group.
-                            // "rev" is the "optimization"
-                            for p in parents.into_iter().rev() {
+                            todo_stack.push(Todo::Assign(head, parents.len(), order));
+                            let mut visit = parents;
+                            match order {
+                                VisitOrder::FirstFirst => {}
+                                VisitOrder::FirstLast => visit.reverse(),
+                            }
+                            for (i, p) in visit.into_iter().enumerate() {
+                                // If the parent was not assigned, or was assigned to a higher group,
+                                // (re-)assign the parent to this group.
                                 match self.vertex_id_with_max_group(&p, group).await {
                                     Ok(Some(id)) => todo_stack.push(Todo::AssignedId(id)),
-                                    Ok(None) => todo_stack.push(Todo::Visit(p)),
+                                    Ok(None) => {
+                                        let parent_order = match (order, i) {
+                                            (VisitOrder::FirstFirst, 0) => VisitOrder::FirstFirst,
+                                            _ => VisitOrder::FirstLast,
+                                        };
+                                        todo_stack.push(Todo::Visit(p, parent_order))
+                                    }
                                     Err(e) => return Err(e),
                                 }
                             }
@@ -150,12 +196,21 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                         }
                     }
                 }
-                Assign(head, parent_len) => {
+                Assign(head, parent_len, order) => {
                     let parent_start = parent_ids.len() - parent_len;
                     let id = match self.vertex_id_with_max_group(&head, group).await? {
                         Some(id) => id,
                         None => {
-                            let parents = &parent_ids[parent_start..];
+                            let parents = match order {
+                                VisitOrder::FirstLast => Cow::Borrowed(&parent_ids[parent_start..]),
+                                VisitOrder::FirstFirst => Cow::Owned(
+                                    parent_ids[parent_start..]
+                                        .iter()
+                                        .cloned()
+                                        .rev()
+                                        .collect::<Vec<_>>(),
+                                ),
+                            };
                             let mut candidate_id = match parents.iter().max() {
                                 Some(&max_parent_id) => (max_parent_id + 1).max(group.min_id()),
                                 None => group.min_id(),
@@ -178,7 +233,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                             tracing::trace!(target: "dag::assign", "assign {:?} = {:?}", &head, id);
                             covered_ids.push(id);
                             self.insert(id, head.as_ref()).await?;
-                            outcome.push_edge(id, parents);
+                            outcome.push_edge(id, &parents);
                             id
                         }
                     };
