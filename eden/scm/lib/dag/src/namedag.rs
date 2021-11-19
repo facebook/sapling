@@ -2071,7 +2071,7 @@ where
         // Update IdMap.
         let mut outcome = PreparedFlatSegments::default();
         let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
-        let mut reserved = IdSet::empty();
+        let mut reserved = calculate_initial_reserved(self, &covered, heads).await?;
         for group in [Group::MASTER, Group::NON_MASTER] {
             for (vertex, opts) in heads.vertex_options() {
                 if opts.highest_group != group {
@@ -2112,6 +2112,23 @@ where
 
         Ok(())
     }
+}
+
+async fn calculate_initial_reserved(
+    map: &dyn IdConvert,
+    covered: &IdSet,
+    heads: &VertexListWithOptions,
+) -> Result<IdSet> {
+    let mut reserved = IdSet::empty();
+    for (vertex, opts) in heads.vertex_options() {
+        if let Some(id) = map
+            .vertex_id_with_max_group(&vertex, opts.highest_group)
+            .await?
+        {
+            update_reserved(&mut reserved, covered, id + 1, opts.reserve_size);
+        }
+    }
+    Ok(reserved)
 }
 
 fn update_reserved(reserved: &mut IdSet, covered: &IdSet, low: Id, reserve_size: u32) {

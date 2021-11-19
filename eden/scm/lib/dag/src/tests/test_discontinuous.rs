@@ -184,12 +184,12 @@ async fn test_reservation_on_existing_vertex() {
         "<spans [A0:A2+0:2]>"
     );
 
-    // BUG: A2: 4 is not respected.
+    // A2: 4 is respected (3..=6 is reserved).
     let heads = VertexListWithOptions::from(vec![reserved_head("B2", 4), reserved_head("A2", 4)]);
     dag.dag.add_heads_and_flush(&draw, &heads).await.unwrap();
     assert_eq!(
         format!("{:?}", dag.dag.all().await.unwrap()),
-        "<spans [A0:B2+0:5]>"
+        "<spans [B0:B2+7:9, A0:A2+0:2]>"
     );
 }
 
