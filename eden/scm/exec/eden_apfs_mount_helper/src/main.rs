@@ -439,7 +439,7 @@ fn find_disk_for_eden_mount(mount_point: &str) -> Result<String> {
 
     let fstype = unsafe { std::ffi::CStr::from_ptr(stat.f_fstypename.as_ptr()).to_str()? };
     if "apfs" != fstype {
-        bail!("disk {} must be apfs");
+        bail!("disk at {} must be apfs", mount_point);
     }
     let partition = unsafe { std::ffi::CStr::from_ptr(stat.f_mntfromname.as_ptr()).to_str()? };
     let output = new_cmd_unprivileged(DISKUTIL)
