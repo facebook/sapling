@@ -1064,6 +1064,16 @@ if [[ -n "${BACKUP_FROM:-}" ]]; then
 backup_source_repo_name="$BACKUP_FROM"
 CONFIG
 fi
+
+if [[ -n "${ENABLE_API_WRITES:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[source_control_service]
+permit_writes = true
+[[bookmarks]]
+regex=".*"
+hooks_skip_ancestors_of=["master_bookmark"]
+CONFIG
+fi
 }
 
 function write_infinitepush_config {
