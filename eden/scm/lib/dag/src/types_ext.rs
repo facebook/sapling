@@ -67,19 +67,24 @@ impl PreparedFlatSegmentsExt for PreparedFlatSegments {
         }
 
         if cfg!(debug_assertions) {
-            let mut last_high = None;
-            for seg in &self.segments {
-                // Sorted?
-                assert!(Some(seg.low) > last_high);
-                // Merged?
-                if let Some(last_high) = last_high {
-                    if seg.parents.len() == 1 && seg.parents[0] + 1 == seg.low {
-                        assert_ne!(last_high + 1, seg.low);
-                    }
-                }
-                last_high = Some(seg.high);
+            ensure_sorted_and_merged(&self.segments);
+        }
+    }
+}
+
+/// Check that segments are sorted and merged.
+fn ensure_sorted_and_merged(segments: &[FlatSegment]) {
+    let mut last_high = None;
+    for seg in segments {
+        // Sorted? No overlap?
+        assert!(Some(seg.low) > last_high);
+        // Merged?
+        if let Some(last_high) = last_high {
+            if seg.parents.len() == 1 && seg.parents[0] + 1 == seg.low {
+                assert_ne!(last_high + 1, seg.low);
             }
         }
+        last_high = Some(seg.high);
     }
 }
 
