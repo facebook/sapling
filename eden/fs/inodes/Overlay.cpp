@@ -356,13 +356,19 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
       inodeNumber, serializeOverlayDir(inodeNumber, dir));
 }
 
+void Overlay::freeInodeFromMetadataTable(InodeNumber ino) {
+#ifndef _WIN32
+  // TODO: batch request during GC
+  getInodeMetadataTable()->freeInode(ino);
+#else
+  (void)ino;
+#endif
+}
+
 void Overlay::removeOverlayData(InodeNumber inodeNumber) {
   IORequest req{this};
 
-#ifndef _WIN32
-  // TODO: batch request during GC
-  getInodeMetadataTable()->freeInode(inodeNumber);
-#endif // !_WIN32
+  freeInodeFromMetadataTable(inodeNumber);
   backingOverlay_->removeOverlayData(inodeNumber);
 }
 
@@ -569,7 +575,8 @@ void Overlay::handleGCRequest(GCRequest& request) {
 
     overlay::OverlayDir dir;
     try {
-      auto dirData = backingOverlay_->loadOverlayDir(ino);
+      freeInodeFromMetadataTable(ino);
+      auto dirData = backingOverlay_->loadAndRemoveOverlayDir(ino);
       if (!dirData.has_value()) {
         XLOG(DBG7) << "no dir data for inode " << ino;
         continue;
@@ -582,7 +589,6 @@ void Overlay::handleGCRequest(GCRequest& request) {
       continue;
     }
 
-    safeRemoveOverlayData(ino);
     processDir(dir);
   }
 }

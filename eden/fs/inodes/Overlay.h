@@ -331,6 +331,13 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 #endif // !_WIN32
 
   /**
+   * Wrapper around InodeMetadataTable::freeInode.
+   *
+   * This exist to limit the use of #ifdef to this function.
+   */
+  void freeInodeFromMetadataTable(InodeNumber ino);
+
+  /**
    * Thread which recursively removes entries from the overlay underneath the
    * trees added to gcQueue_.
    */
