@@ -424,10 +424,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let reponame = args::get_repo_name(matches.config_store(), &matches)?;
     let mut scuba_sample_builder = matches.scuba_sample_builder();
     scuba_sample_builder.add("reponame", reponame);
-    let mut ctx =
-        SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba_sample_builder);
-    ctx.session_mut()
-        .override_session_class(context::SessionClass::Background);
+    let ctx = create_ctx(fb, logger, scuba_sample_builder, &matches);
 
     helpers::block_execute(
         run_subcmd(fb, ctx, &logger, &matches),
@@ -437,6 +434,25 @@ fn main(fb: FacebookInit) -> Result<()> {
         &matches,
         cmdlib::monitoring::AliveService,
     )
+}
+
+fn create_ctx<'a>(
+    fb: FacebookInit,
+    logger: &Logger,
+    scuba_sample_builder: MononokeScubaSampleBuilder,
+    matches: &'a MononokeMatches<'a>,
+) -> CoreContext {
+    let mut ctx =
+        SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba_sample_builder);
+    match matches.subcommand() {
+        (SUBCOMMAND_BACKFILL_ALL, _) | (SUBCOMMAND_BACKFILL, _) => {
+            ctx.session_mut()
+                .override_session_class(context::SessionClass::Background);
+        }
+        _ => {}
+    };
+
+    ctx
 }
 
 async fn run_subcmd<'a>(
