@@ -160,8 +160,7 @@ queries! {
     read SelectChunkLen(id: &str) -> (u64) {
         "SELECT CAST(SUM(LENGTH(value)) AS UNSIGNED)
          FROM chunk
-         WHERE id = {id}
-         GROUP BY id"
+         WHERE id = {id}"
     }
 
     read GetChunkGeneration(id: &str) -> (u64, Option<u64>) {
