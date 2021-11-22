@@ -49,7 +49,7 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
-    SyncedCommitMappingEntry,
+    SyncedCommitMappingEntry, WorkingCopyEquivalence,
 };
 use tokio::{
     fs::{read_to_string, File},
@@ -73,7 +73,7 @@ use crate::cli::{
     DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_DELETE, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS,
     HEAD_BOOKMARK, HISTORY_FIXUP_DELETE, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT,
     MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT,
-    MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH, PATHS_FILE, PATH_PREFIX, PATH_REGEX,
+    MERGE, MOVE, ORIGIN_REPO, OVERWRITE, PARENTS, PATH, PATHS_FILE, PATH_PREFIX, PATH_REGEX,
     PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER, SECOND_PARENT, SELECT_PARENTS_AUTOMATICALLY,
     SOURCE_CHANGESET, SYNC_COMMIT_AND_ANCESTORS, SYNC_DIAMOND_MERGE, TARGET_CHANGESET,
     TO_MERGE_CS_ID, VERSION, WAIT_SECS,
@@ -755,6 +755,16 @@ async fn run_mark_not_synced<'a>(
     let large_repo = commit_syncer.get_large_repo();
     let mapping = commit_syncer.get_mapping();
 
+    let mapping_version_name = sub_m
+        .value_of(MAPPING_VERSION_NAME)
+        .ok_or_else(|| format_err!("{} is supposed to be set", MAPPING_VERSION_NAME))?;
+    let mapping_version_name = CommitSyncConfigVersion(mapping_version_name.to_string());
+    if !commit_syncer.version_exists(&mapping_version_name).await? {
+        return Err(format_err!("{} version is not found", mapping_version_name));
+    }
+
+    let overwrite = sub_m.is_present(OVERWRITE);
+
     let input_file = sub_m
         .value_of(INPUT_FILE)
         .ok_or_else(|| format_err!("input-file is not specified"))?;
@@ -764,32 +774,53 @@ async fn run_mark_not_synced<'a>(
     let reader = BufReader::new(inputfile);
 
     let ctx = &ctx;
+    let mapping_version_name = &mapping_version_name;
     let s = tokio_stream::wrappers::LinesStream::new(reader.lines())
         .map_err(Error::from)
         .map_ok(move |line| async move {
             let cs_id = helpers::csid_resolve(&ctx, large_repo, line).await?;
-            let mappings = mapping
-                .get(ctx, large_repo.get_repoid(), cs_id, small_repo.get_repoid())
+
+            let existing_value = mapping
+                .get_equivalent_working_copy(
+                    ctx,
+                    large_repo.get_repoid(),
+                    cs_id,
+                    small_repo.get_repoid(),
+                )
                 .await?;
-            if mappings.is_empty() {
-                let wc_entry = EquivalentWorkingCopyEntry {
-                    large_repo_id: large_repo.get_repoid(),
-                    large_bcs_id: cs_id,
-                    small_repo_id: small_repo.get_repoid(),
-                    small_bcs_id: None,
-                    version_name: None,
-                };
-                let res = mapping
-                    .insert_equivalent_working_copy(ctx, wc_entry)
-                    .await?;
-                if !res {
-                    warn!(
-                        ctx.logger(),
-                        "failed to insert NotSyncedMapping entry for {}", cs_id
-                    );
+
+            if overwrite {
+                if let Some(WorkingCopyEquivalence::WorkingCopy(_, _)) = existing_value {
+                    return Err(format_err!("unexpected working copy found for {}", cs_id));
                 }
             } else {
-                info!(ctx.logger(), "{} already have mapping", cs_id);
+                if existing_value.is_some() {
+                    info!(ctx.logger(), "{} already have mapping", cs_id);
+                    return Ok(1);
+                }
+            }
+
+            let wc_entry = EquivalentWorkingCopyEntry {
+                large_repo_id: large_repo.get_repoid(),
+                large_bcs_id: cs_id,
+                small_repo_id: small_repo.get_repoid(),
+                small_bcs_id: None,
+                version_name: Some(mapping_version_name.clone()),
+            };
+            let res = if overwrite {
+                mapping
+                    .overwrite_equivalent_working_copy(ctx, wc_entry)
+                    .await?
+            } else {
+                mapping
+                    .insert_equivalent_working_copy(ctx, wc_entry)
+                    .await?
+            };
+            if !res {
+                warn!(
+                    ctx.logger(),
+                    "failed to insert NotSyncedMapping entry for {}", cs_id
+                );
             }
 
             // Processed a single entry

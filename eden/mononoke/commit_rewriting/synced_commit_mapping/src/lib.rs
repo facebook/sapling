@@ -212,6 +212,14 @@ pub trait SyncedCommitMapping: Send + Sync {
         entry: EquivalentWorkingCopyEntry,
     ) -> Result<bool, Error>;
 
+    /// Same as previous command, but it overwrites existing value.
+    /// This is not intended to be used in production, but just as a debug tool
+    async fn overwrite_equivalent_working_copy(
+        &self,
+        ctx: &CoreContext,
+        entry: EquivalentWorkingCopyEntry,
+    ) -> Result<bool, Error>;
+
     /// Finds equivalent working copy
     async fn get_equivalent_working_copy(
         &self,
@@ -275,6 +283,20 @@ queries! {
          VALUES {values}"
     }
 
+    write ReplaceWorkingCopyEquivalence(values: (
+        large_repo_id: RepositoryId,
+        large_bcs_id: ChangesetId,
+        small_repo_id: RepositoryId,
+        small_bcs_id: Option<ChangesetId>,
+        sync_map_version_name: Option<CommitSyncConfigVersion>,
+    )) {
+        none,
+        "REPLACE
+         INTO synced_working_copy_equivalence
+         (large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name)
+         VALUES {values}"
+    }
+
     read SelectWorkingCopyEquivalence(
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
@@ -296,6 +318,18 @@ queries! {
     )) {
         insert_or_ignore,
         "{insert_or_ignore}
+        INTO version_for_large_repo_commit
+        (large_repo_id, large_bcs_id, sync_map_version_name)
+        VALUES {values}"
+    }
+
+    write ReplaceVersionForLargeRepoCommit(values: (
+        large_repo_id: RepositoryId,
+        large_bcs_id: ChangesetId,
+        sync_map_version_name: CommitSyncConfigVersion,
+    )) {
+        none,
+        "REPLACE
         INTO version_for_large_repo_commit
         (large_repo_id, large_bcs_id, sync_map_version_name)
         VALUES {values}"
@@ -342,6 +376,95 @@ impl SqlSyncedCommitMapping {
         Ok(affected_rows)
     }
 
+
+    async fn insert_or_overwrite_equivalent_working_copy(
+        &self,
+        ctx: &CoreContext,
+        entry: EquivalentWorkingCopyEntry,
+        should_overwrite: bool,
+    ) -> Result<bool, Error> {
+        STATS::insert_working_copy_eqivalence.add_value(1);
+
+        let EquivalentWorkingCopyEntry {
+            large_repo_id,
+            large_bcs_id,
+            small_repo_id,
+            small_bcs_id,
+            version_name,
+        } = entry;
+
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
+        if let Some(ref version_name) = version_name {
+            // TODO(stash): make version non-optional
+            self.insert_version_for_large_repo_commit(
+                &ctx,
+                &self.write_connection,
+                large_repo_id,
+                large_bcs_id,
+                version_name,
+                should_overwrite,
+            )
+            .await?;
+        }
+        let result = if should_overwrite {
+            ReplaceWorkingCopyEquivalence::query(
+                &self.write_connection,
+                &[(
+                    &large_repo_id,
+                    &large_bcs_id,
+                    &small_repo_id,
+                    &small_bcs_id,
+                    &version_name,
+                )],
+            )
+            .await?
+        } else {
+            InsertWorkingCopyEquivalence::query(
+                &self.write_connection,
+                &[(
+                    &large_repo_id,
+                    &large_bcs_id,
+                    &small_repo_id,
+                    &small_bcs_id,
+                    &version_name,
+                )],
+            )
+            .await?
+        };
+
+        if result.affected_rows() >= 1 {
+            Ok(true)
+        } else {
+            if !should_overwrite {
+                // Check that db stores consistent entry
+                let maybe_equivalent_wc = self
+                    .get_equivalent_working_copy(ctx, large_repo_id, large_bcs_id, small_repo_id)
+                    .await?;
+
+                if let Some(equivalent_wc) = maybe_equivalent_wc {
+                    use WorkingCopyEquivalence::*;
+                    let (expected_bcs_id, expected_version) = match equivalent_wc {
+                        WorkingCopy(wc, mapping) => (Some(wc), mapping),
+                        NoWorkingCopy(mapping) => (None, mapping),
+                    };
+                    let expected_version = Some(expected_version);
+                    if (expected_bcs_id != small_bcs_id) || (expected_version != version_name) {
+                        let err = ErrorKind::InconsistentWorkingCopyEntry {
+                            expected_bcs_id,
+                            expected_config_version: expected_version,
+                            actual_bcs_id: small_bcs_id,
+                            actual_config_version: version_name,
+                        };
+                        return Err(err.into());
+                    }
+                }
+            }
+            Ok(false)
+        }
+    }
+
+
     async fn insert_version_for_large_repo_commit(
         &self,
         ctx: &CoreContext,
@@ -349,30 +472,41 @@ impl SqlSyncedCommitMapping {
         large_repo_id: RepositoryId,
         large_cs_id: ChangesetId,
         version_name: &CommitSyncConfigVersion,
+        should_overwrite: bool,
     ) -> Result<bool, Error> {
-        let result = InsertVersionForLargeRepoCommit::query(
-            &write_connection,
-            &[(&large_repo_id, &large_cs_id, &version_name)],
-        )
-        .await?;
+        let result = if should_overwrite {
+            ReplaceVersionForLargeRepoCommit::query(
+                &write_connection,
+                &[(&large_repo_id, &large_cs_id, &version_name)],
+            )
+            .await?
+        } else {
+            InsertVersionForLargeRepoCommit::query(
+                &write_connection,
+                &[(&large_repo_id, &large_cs_id, &version_name)],
+            )
+            .await?
+        };
 
-        if result.affected_rows() == 1 {
+        if result.affected_rows() >= 1 {
             Ok(true)
         } else {
-            // Check that db stores consistent entry
-            let maybe_large_repo_version = self
-                .get_large_repo_commit_version(ctx, large_repo_id, large_cs_id)
-                .await?;
+            if !should_overwrite {
+                // Check that db stores consistent entry
+                let maybe_large_repo_version = self
+                    .get_large_repo_commit_version(ctx, large_repo_id, large_cs_id)
+                    .await?;
 
-            if let Some(actual_version_name) = maybe_large_repo_version {
-                if &actual_version_name != version_name {
-                    let err = ErrorKind::InconsistentLargeRepoCommitVersion {
-                        large_repo_id,
-                        large_cs_id,
-                        expected_version_name: version_name.clone(),
-                        actual_version_name,
-                    };
-                    return Err(err.into());
+                if let Some(actual_version_name) = maybe_large_repo_version {
+                    if &actual_version_name != version_name {
+                        let err = ErrorKind::InconsistentLargeRepoCommitVersion {
+                            large_repo_id,
+                            large_cs_id,
+                            expected_version_name: version_name.clone(),
+                            actual_version_name,
+                        };
+                        return Err(err.into());
+                    }
                 }
             }
             Ok(false)
@@ -466,68 +600,21 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         ctx: &CoreContext,
         entry: EquivalentWorkingCopyEntry,
     ) -> Result<bool, Error> {
-        STATS::insert_working_copy_eqivalence.add_value(1);
-
-        let EquivalentWorkingCopyEntry {
-            large_repo_id,
-            large_bcs_id,
-            small_repo_id,
-            small_bcs_id,
-            version_name,
-        } = entry;
-
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlWrites);
-        if let Some(ref version_name) = version_name {
-            // TODO(stash): make version non-optional
-            self.insert_version_for_large_repo_commit(
-                &ctx,
-                &self.write_connection,
-                large_repo_id,
-                large_bcs_id,
-                version_name,
-            )
-            .await?;
-        }
-        let result = InsertWorkingCopyEquivalence::query(
-            &self.write_connection,
-            &[(
-                &large_repo_id,
-                &large_bcs_id,
-                &small_repo_id,
-                &small_bcs_id,
-                &version_name,
-            )],
+        self.insert_or_overwrite_equivalent_working_copy(
+            ctx, entry, false, /* should overwrite */
         )
-        .await?;
+        .await
+    }
 
-        if result.affected_rows() == 1 {
-            Ok(true)
-        } else {
-            // Check that db stores consistent entry
-            let maybe_equivalent_wc = self
-                .get_equivalent_working_copy(ctx, large_repo_id, large_bcs_id, small_repo_id)
-                .await?;
-
-            if let Some(equivalent_wc) = maybe_equivalent_wc {
-                use WorkingCopyEquivalence::*;
-                let (expected_bcs_id, expected_version) = match equivalent_wc {
-                    WorkingCopy(wc, mapping) => (Some(wc), mapping),
-                    NoWorkingCopy(mapping) => (None, mapping),
-                };
-                let expected_version = Some(expected_version);
-                if (expected_bcs_id != small_bcs_id) || (expected_version != version_name) {
-                    let err = ErrorKind::InconsistentWorkingCopyEntry {
-                        expected_bcs_id,
-                        expected_config_version: expected_version,
-                        actual_bcs_id: small_bcs_id,
-                        actual_config_version: version_name,
-                    };
-                    return Err(err.into());
-                }
-            }
-            Ok(false)
-        }
+    async fn overwrite_equivalent_working_copy(
+        &self,
+        ctx: &CoreContext,
+        entry: EquivalentWorkingCopyEntry,
+    ) -> Result<bool, Error> {
+        self.insert_or_overwrite_equivalent_working_copy(
+            ctx, entry, true, /* should overwrite */
+        )
+        .await
     }
 
     async fn get_equivalent_working_copy(

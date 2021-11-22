@@ -97,7 +97,7 @@
 -- Step 1. large repo unbound commits need to be marked as not sync candidate, since they
 -- should not ever be synced to a small repo.
   $ echo "$(hg log -r master_bookmark -T '{node}')" > "$TESTTMP/not-sync-candidates"
-  $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 mark-not-synced --input-file "$TESTTMP/not-sync-candidates" 2> /dev/null
+  $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 mark-not-synced --input-file "$TESTTMP/not-sync-candidates" test_version 2> /dev/null
 
 -- Step 2. then we need to sync new small repo commits to a large repo
   $ megarepo_tool_multirepo --source-repo-id 1 --target-repo-id 0 sync-commit-and-ancestors --commit-hash "$SMALL_NODE" 2>&1 | grep remapped

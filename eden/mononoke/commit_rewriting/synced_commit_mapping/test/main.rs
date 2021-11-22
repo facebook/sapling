@@ -288,3 +288,51 @@ async fn test_version_for_large_repo_commit(fb: FacebookInit) -> Result<(), Erro
 
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
+    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+    let ctx = CoreContext::test_mock(fb);
+
+    // Insert working copy equivalence, version for the large commit
+    let version_name = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let entry = EquivalentWorkingCopyEntry {
+        large_repo_id: REPO_ZERO,
+        large_bcs_id: bonsai::ONES_CSID,
+        small_repo_id: REPO_ONE,
+        small_bcs_id: Some(bonsai::TWOS_CSID),
+        version_name: Some(version_name.clone()),
+    };
+    let result = mapping
+        .insert_equivalent_working_copy(&ctx, entry.clone())
+        .await?;
+    assert!(result);
+
+    let new_version_name = CommitSyncConfigVersion("NEW_TEST_VERSION_NAME".to_string());
+    let entry = EquivalentWorkingCopyEntry {
+        large_repo_id: REPO_ZERO,
+        large_bcs_id: bonsai::ONES_CSID,
+        small_repo_id: REPO_ONE,
+        small_bcs_id: Some(bonsai::TWOS_CSID),
+        version_name: Some(new_version_name.clone()),
+    };
+    let result = mapping
+        .overwrite_equivalent_working_copy(&ctx, entry.clone())
+        .await?;
+    assert!(result);
+
+    let res = mapping
+        .get_equivalent_working_copy(&ctx, REPO_ZERO, bonsai::ONES_CSID, REPO_ONE)
+        .await
+        .expect("get equivalent wc failed, should succeed");
+
+    assert_eq!(
+        res,
+        Some(WorkingCopyEquivalence::WorkingCopy(
+            bonsai::TWOS_CSID,
+            new_version_name.clone(),
+        ))
+    );
+
+    Ok(())
+}

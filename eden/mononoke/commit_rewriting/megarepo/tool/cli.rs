@@ -53,6 +53,7 @@ pub const MAX_NUM_OF_MOVES_IN_COMMIT: &str = "max-num-of-moves-in-commit";
 pub const MERGE: &str = "merge";
 pub const MOVE: &str = "move";
 pub const ORIGIN_REPO: &str = "origin-repo";
+pub const OVERWRITE: &str = "overwrite";
 pub const PARENTS: &str = "parents";
 pub const PATH_REGEX: &str = "path-regex";
 pub const PATH: &str = "path";
@@ -582,11 +583,24 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     let mark_not_synced_candidate = SubCommand::with_name(MARK_NOT_SYNCED_COMMAND)
         .about("mark all commits that do not have any mapping as not synced candidate, but leave those that have the mapping alone")
         .arg(
+            Arg::with_name(MAPPING_VERSION_NAME)
+                .help("a version to use")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
             Arg::with_name(INPUT_FILE)
                 .long(INPUT_FILE)
                 .help("list of large repo commit hashes that should be considered to be marked as not sync candidate")
                 .takes_value(true)
                 .required(true)
+        )
+        .arg(
+            Arg::with_name(OVERWRITE)
+                .long(OVERWRITE)
+                .help("whether to overwrite existing values or not")
+                .takes_value(false)
+                .required(false),
         );
 
     let check_push_redirection_prereqs_subcommand = SubCommand::with_name(CHECK_PUSH_REDIRECTION_PREREQS)
