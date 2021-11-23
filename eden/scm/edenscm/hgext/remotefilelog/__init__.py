@@ -849,7 +849,7 @@ def gc(ui, repo, *args, **opts):
         cachepath = ui.config("remotefilelog", "cachepath")
 
         if cachepath:
-            command = "`rm -rf {cachepath}/*`"
+            command = "`rm -rf {}/*`".format(cachepath)
 
             ui.warn(
                 _(
