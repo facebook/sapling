@@ -15,7 +15,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{bail, format_err, Context, Error, Result};
-use cached_config::ConfigStore;
+use cached_config::{ConfigHandle, ConfigStore};
 use clap::{ArgMatches, Values};
 use derived_data_remote::RemoteDerivationOptions;
 use fbinit::FacebookInit;
@@ -63,9 +63,9 @@ use super::{
         NO_DEFAULT_SCUBA_DATASET_ARG, PUT_MEAN_DELAY_SECS_ARG, PUT_STDDEV_DELAY_SECS_ARG,
         READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG,
         RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS, SCUBA_DATASET_ARG, SCUBA_LOG_FILE_ARG,
-        TUNABLES_CONFIG, WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG,
-        WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG, WRITE_BYTES_ARG, WRITE_CHAOS_ARG,
-        WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
+        TUNABLES_CONFIG, TUNABLES_LOCAL_PATH, WITH_DYNAMIC_OBSERVABILITY,
+        WITH_READONLY_STORAGE_ARG, WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG,
+        WRITE_BYTES_ARG, WRITE_CHAOS_ARG, WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
     },
     cache::parse_and_init_cachelib,
 };
@@ -776,6 +776,14 @@ fn init_tunables<'a>(
     if matches.is_present(DISABLE_TUNABLES) {
         debug!(logger, "Tunables are disabled");
         return Ok(());
+    }
+
+    if let Some(tunables_local_path) = matches.value_of(TUNABLES_LOCAL_PATH) {
+        let value = std::fs::read_to_string(&tunables_local_path)
+            .with_context(|| format!("failed to open tunables path {}", tunables_local_path))?;
+        let config_handle = ConfigHandle::from_json(&value)
+            .with_context(|| format!("failed to parse tunables at path {}", tunables_local_path))?;
+        return init_tunables_worker(logger, config_handle);
     }
 
     let tunables_spec = matches

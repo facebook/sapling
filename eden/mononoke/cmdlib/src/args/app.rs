@@ -48,6 +48,7 @@ pub const MYSQL_SQLBLOB_POOL_AGE_TIMEOUT: &str = "mysql-sqblob-pool-age-timeout"
 pub const MYSQL_SQLBLOB_POOL_IDLE_TIMEOUT: &str = "mysql-sqblob-pool-idle-timeout";
 pub const RUNTIME_THREADS: &str = "runtime-threads";
 pub const TUNABLES_CONFIG: &str = "tunables-config";
+pub const TUNABLES_LOCAL_PATH: &str = "tunables-local-path";
 pub const DISABLE_TUNABLES: &str = "disable-tunables";
 pub const SCRIBE_LOGGING_DIRECTORY: &str = "scribe-logging-directory";
 pub const RENDEZVOUS_FREE_CONNECTIONS: &str = "rendezvous-free-connections";
@@ -836,11 +837,19 @@ fn add_tunables_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         Arg::with_name(TUNABLES_CONFIG)
             .long(TUNABLES_CONFIG)
             .takes_value(true)
-            .help("The location of a tunables config"),
+            .help("Tunables dynamic config path in Configerator"),
+    )
+    .arg(
+        Arg::with_name(TUNABLES_LOCAL_PATH)
+            .long(TUNABLES_LOCAL_PATH)
+            .conflicts_with(TUNABLES_CONFIG)
+            .takes_value(true)
+            .help("Tunables static config local path"),
     )
     .arg(
         Arg::with_name(DISABLE_TUNABLES)
             .long(DISABLE_TUNABLES)
+            .conflicts_with_all(&[TUNABLES_CONFIG, TUNABLES_LOCAL_PATH])
             .help("Use the default values for all tunables (useful for tests)"),
     )
 }
