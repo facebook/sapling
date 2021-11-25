@@ -6,7 +6,7 @@
  */
 
 use crate::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use context::CoreContext;
 use lock_ext::LockExt;
@@ -15,7 +15,10 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use std::cmp::Eq;
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 
 type Cache = (
     HashMap<(RepositoryId, ChangesetId), HgChangesetId>,
@@ -26,6 +29,9 @@ type Cache = (
 pub struct MemWritesBonsaiHgMapping<T: BonsaiHgMapping + Clone + 'static> {
     inner: T,
     cache: Arc<Mutex<Cache>>,
+    no_access_to_inner: Arc<AtomicBool>,
+    readonly: Arc<AtomicBool>,
+    save_noop_writes: Arc<AtomicBool>,
 }
 
 impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
@@ -33,7 +39,24 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
         Self {
             inner,
             cache: Default::default(),
+            no_access_to_inner: Default::default(),
+            readonly: Default::default(),
+            save_noop_writes: Default::default(),
         }
+    }
+
+    pub fn set_readonly(&self, readonly: bool) {
+        self.readonly.store(readonly, Ordering::Relaxed);
+    }
+
+    pub fn set_no_access_to_inner(&self, no_access_to_inner: bool) {
+        self.no_access_to_inner
+            .store(no_access_to_inner, Ordering::Relaxed);
+    }
+
+    pub fn set_save_noop_writes(&self, save_noop_writes: bool) {
+        self.save_noop_writes
+            .store(save_noop_writes, Ordering::Relaxed);
     }
 }
 
@@ -65,8 +88,10 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
             });
         }
 
-        let from_inner = self.inner.get(ctx, repo_id, from_inner.into()).await?;
-        from_cache.extend(from_inner);
+        if !self.no_access_to_inner.load(Ordering::Relaxed) {
+            let from_inner = self.inner.get(ctx, repo_id, from_inner.into()).await?;
+            from_cache.extend(from_inner);
+        }
         Ok(from_cache)
     }
 }
@@ -74,6 +99,12 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
 #[async_trait]
 impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHgMapping<T> {
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
+        if self.readonly.load(Ordering::Relaxed) {
+            return Err(anyhow!(
+                "cannot write to a readonly MemWritesBonsaiHgMapping"
+            ));
+        }
+
         let this = self.clone();
 
         let BonsaiHgMappingEntry {
@@ -83,7 +114,7 @@ impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHg
         } = entry;
 
         let entry = this.get_hg_from_bonsai(ctx, repo_id, bcs_id).await?;
-        if entry.is_some() {
+        if entry.is_some() && !self.save_noop_writes.load(Ordering::Relaxed) {
             Ok(false)
         } else {
             this.cache.with(|cache| {

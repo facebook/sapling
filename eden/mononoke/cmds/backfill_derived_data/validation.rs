@@ -68,6 +68,7 @@ pub async fn validate(
         );
         let orig_repo = repo.clone();
         let mut memblobstore = None;
+        let mut membonsaihgmapping = None;
         let repo = repo
             .dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
                 let blobstore = Arc::new(MemWritesBlobstore::new(blobstore));
@@ -75,9 +76,15 @@ pub async fn validate(
                 blobstore
             })
             .dangerous_override(|bonsai_hg_mapping| -> ArcBonsaiHgMapping {
-                Arc::new(MemWritesBonsaiHgMapping::new(bonsai_hg_mapping))
+                let bonsai_hg_mapping = Arc::new(MemWritesBonsaiHgMapping::new(bonsai_hg_mapping));
+                membonsaihgmapping = Some(bonsai_hg_mapping.clone());
+                bonsai_hg_mapping
             });
         let memblobstore = memblobstore.unwrap();
+        let membonsaihgmapping = membonsaihgmapping.unwrap();
+        // By default MemWritesBonsaiHgMapping doesn't save data to cache if it
+        // already exists in underlying mapping. This option disables this feature.
+        membonsaihgmapping.set_save_noop_writes(true);
 
         regenerate::regenerate_derived_data(
             &ctx,
@@ -92,13 +99,14 @@ pub async fn validate(
         info!(ctx.logger(), "created {} blobs", cache.len());
         let real_derived_utils = &derived_data_utils(ctx.fb, &orig_repo, derived_data_type)?;
 
+        // Make sure that the generated data was saved in memory blobstore
+        membonsaihgmapping.set_no_access_to_inner(true);
+        membonsaihgmapping.set_readonly(true);
+        memblobstore.set_no_access_to_inner(true);
         let repo = repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
             Arc::new(ReadOnlyBlobstore::new(blobstore))
         });
         let rederived_utils = &derived_data_utils(ctx.fb, &repo, derived_data_type)?;
-
-        // Make sure that the generated data was saved in memory blobstore
-        memblobstore.set_no_access_to_inner(true);
 
         borrowed!(ctx, orig_repo, repo);
         stream::iter(chunk)
