@@ -192,6 +192,8 @@ pub trait DerivedUtils: Send + Sync + 'static {
         repo: &'a BlobRepo,
         csid: ChangesetId,
     ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error>;
+
+    async fn is_derived(&self, ctx: &CoreContext, csid: ChangesetId) -> Result<bool, Error>;
 }
 
 pub type BackfillDeriveStats = BatchDeriveStats;
@@ -344,6 +346,14 @@ where
         self.manager
             .find_underived::<Derivable>(ctx, csid, None, Some(utils))
             .await
+    }
+
+    async fn is_derived(&self, ctx: &CoreContext, csid: ChangesetId) -> Result<bool, Error> {
+        Ok(self
+            .manager
+            .fetch_derived::<Derivable>(ctx, csid, None)
+            .await?
+            .is_some())
     }
 }
 
@@ -1101,6 +1111,10 @@ mod tests {
             _repo: &'a BlobRepo,
             _csid: ChangesetId,
         ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error> {
+            unimplemented!()
+        }
+
+        async fn is_derived(&self, _ctx: &CoreContext, _csid: ChangesetId) -> Result<bool, Error> {
             unimplemented!()
         }
     }

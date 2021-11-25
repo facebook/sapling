@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
@@ -18,7 +18,10 @@ use mononoke_types::BlobstoreBytes;
 use std::{
     collections::HashMap,
     mem,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
 };
 
 /// A blobstore wrapper that reads from the underlying blobstore but writes to memory.
@@ -26,6 +29,7 @@ use std::{
 pub struct MemWritesBlobstore<T> {
     inner: T,
     cache: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
+    no_access_to_inner: Arc<AtomicBool>,
 }
 
 impl<T: std::fmt::Display> std::fmt::Display for MemWritesBlobstore<T> {
@@ -39,6 +43,7 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
         Self {
             inner: blobstore,
             cache: Default::default(),
+            no_access_to_inner: Default::default(),
         }
     }
 
@@ -46,6 +51,12 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
     ///
     /// NOTE: In case of error all pending changes will be lost.
     pub async fn persist<'a>(&'a self, ctx: &'a CoreContext) -> Result<()> {
+        if self.no_access_to_inner.load(Ordering::Relaxed) {
+            return Err(anyhow!(
+                "unexpected write to memory blobstore when access to inner blobstore was disabled"
+            ));
+        }
+
         let items = self.cache.with(|cache| mem::replace(cache, HashMap::new()));
         stream::iter(items)
             .map(|(key, value)| self.inner.put(ctx, key, value))
@@ -60,6 +71,11 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
 
     pub fn get_cache(&self) -> &Arc<Mutex<HashMap<String, BlobstoreBytes>>> {
         &self.cache
+    }
+
+    pub fn set_no_access_to_inner(&self, no_access_to_inner: bool) {
+        self.no_access_to_inner
+            .store(no_access_to_inner, Ordering::Relaxed);
     }
 }
 
@@ -82,7 +98,13 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
     ) -> Result<Option<BlobstoreGetData>> {
         match self.cache.with(|cache| cache.get(key).cloned()) {
             Some(value) => Ok(Some(value.into())),
-            None => Ok(self.inner.get(ctx, key).await?.map(Into::into)),
+            None => {
+                if self.no_access_to_inner.load(Ordering::Relaxed) {
+                    return Ok(None);
+                }
+
+                Ok(self.inner.get(ctx, key).await?.map(Into::into))
+            }
         }
     }
 }

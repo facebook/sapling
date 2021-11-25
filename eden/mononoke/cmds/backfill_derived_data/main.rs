@@ -43,6 +43,7 @@ use futures::{
 use futures_stats::{TimedFutureExt, TimedTryFutureExt};
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime};
+use readonlyblob::ReadOnlyBlobstore;
 use repo_factory::RepoFactoryBuilder;
 use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
@@ -714,12 +715,23 @@ async fn run_subcmd<'a>(
                 );
                 let real_derived_utils =
                     &derived_data_utils(ctx.fb, &orig_repo, derived_data_type)?;
+
+                let repo = repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
+                    Arc::new(ReadOnlyBlobstore::new(blobstore))
+                });
                 let rederived_utils = &derived_data_utils(ctx.fb, &repo, derived_data_type)?;
+
+                // Make sure that the generated data was saved in memory blobstore
+                memblobstore.set_no_access_to_inner(true);
 
                 borrowed!(ctx, orig_repo, repo);
                 stream::iter(chunk)
                     .map(Ok)
                     .try_for_each_concurrent(100, |csid| async move {
+                        if !rederived_utils.is_derived(&ctx, csid).await? {
+                            return Err(anyhow!("{} unexpectedly not derived", csid));
+                        }
+
                         let f1 = real_derived_utils.derive(ctx.clone(), orig_repo.clone(), csid);
                         let f2 = rederived_utils.derive(ctx.clone(), repo.clone(), csid);
                         let (real, rederived) = try_join(f1, f2).await?;
