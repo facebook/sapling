@@ -13,7 +13,7 @@ use anyhow::{anyhow, format_err, Context, Error, Result};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
-use blobstore::Loadable;
+use blobstore::StoreLoadable;
 use bookmarks::{
     BookmarkKind, BookmarkPagination, BookmarkPrefix, BookmarksSubscription, Freshness,
 };
