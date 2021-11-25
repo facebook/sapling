@@ -41,7 +41,6 @@ from .. import (
     exchange,
     extensions,
     formatter,
-    graphmod,
     hbisect,
     help,
     hg,
@@ -62,13 +61,12 @@ from .. import (
     sshserver,
     streamclone,
     templatekw,
-    templater,
     ui as uimod,
     util,
     visibility,
 )
 from ..i18n import _
-from ..node import bin, hex, nullid, nullrev, short
+from ..node import bin, hex, nullid, short
 from ..pycompat import range, isint
 from . import cmdtable
 
@@ -692,6 +690,14 @@ def backout(ui, repo, node=None, rev=None, **opts):
         release(lock, wlock)
 
 
+def _makebackoutmessage(repo, message, node):
+    addmessage = "\n\nOriginal commit changeset: %s" % short(node)
+    if not message:
+        title = repo.changelog.changelogrevision(node).description.splitlines()[0]
+        message = 'Back out "%s"' % title
+    return message + addmessage
+
+
 def _dobackout(ui, repo, node=None, rev=None, **opts):
     if opts.get("commit") and opts.get("no_commit"):
         raise error.Abort(_("cannot use --commit with --no-commit"))
@@ -764,19 +770,18 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         return 0
 
     def commitfunc(ui, repo, message, match, opts):
-        # take the first line of old description only, the title
-        olddescription = repo.changelog.changelogrevision(
-            node
-        ).description.splitlines()[0]
         editform = "backout"
         e = cmdutil.getcommiteditor(editform=editform, **opts)
-
-        addmessage = "\n\nOriginal commit changeset: %s" % short(node)
         if not message:
-            message = 'Back out "%s"' % olddescription
             e = cmdutil.getcommiteditor(edit=True, editform=editform)
+
+        message = _makebackoutmessage(repo, message, node)
         return repo.commit(
-            message + addmessage, opts.get("user"), opts.get("date"), match, editor=e
+            message,
+            opts.get("user"),
+            opts.get("date"),
+            match,
+            editor=e,
         )
 
     newnode = cmdutil.commit(ui, repo, commitfunc, [], opts)

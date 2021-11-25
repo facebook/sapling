@@ -5,7 +5,7 @@
 
 import re
 
-from edenscm.mercurial import cmdutil, registrar, templatekw
+from edenscm.mercurial import cmdutil, commands, extensions, registrar, templatekw
 from edenscm.mercurial.node import hex
 
 from .extlib.phabricator import diffprops
@@ -63,3 +63,16 @@ def showreviewers(repo, ctx, templ, **args):
         args = args.copy()
         args["templ"] = " ".join(reviewers)
         return templatekw.showlist("reviewer", reviewers, args)
+
+
+def makebackoutmessage(orig, repo, message, node):
+    message = orig(repo, message, node)
+    olddescription = repo.changelog.changelogrevision(node).description
+    revision = diffprops.parserevfromcommitmsg(olddescription)
+    if revision:
+        message += "\n\nOriginal Phabricator Diff: D%s" % revision
+    return message
+
+
+def extsetup(ui):
+    extensions.wrapfunction(commands, "_makebackoutmessage", makebackoutmessage)

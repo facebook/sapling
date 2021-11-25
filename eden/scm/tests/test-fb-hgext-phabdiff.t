@@ -86,3 +86,12 @@ Check singlepublicbase
 
   $ hg log -r . --template "{singlepublicbase}\n"
   2480b7b497e0af879a40a0d4d960ceb748d27085
+
+Check hg backout template listing the diff properly
+  $ echo h > h
+  $ hg commit -Aqm "Differential Revision: https://phabricator.intern.facebook.com/D98765"
+  $ hg log -l 1 --template "{phabdiff}\n"
+  D98765
+  $ hg backout -r . -m "Some default message to avoid the interactive editor" -q
+  $ hg log -l 1 --template '{desc}' | grep "Original Phabricator Diff"
+  Original Phabricator Diff: D98765
