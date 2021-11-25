@@ -68,9 +68,7 @@ use stats::prelude::*;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
-use warm_bookmarks_cache::{
-    BookmarkUpdateDelay, BookmarksCache, NoopBookmarksCache, WarmBookmarksCacheBuilder,
-};
+use warm_bookmarks_cache::{BookmarksCache, NoopBookmarksCache, WarmBookmarksCacheBuilder};
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -222,11 +220,8 @@ impl Repo {
             }
 
             async {
-                Ok(Arc::new(
-                    warm_bookmarks_cache_builder
-                        .build(env.warm_bookmarks_cache_delay)
-                        .await?,
-                ) as Arc<dyn BookmarksCache>)
+                Ok(Arc::new(warm_bookmarks_cache_builder.build().await?)
+                    as Arc<dyn BookmarksCache>)
             }
             .boxed()
         } else {
@@ -354,9 +349,7 @@ impl Repo {
         // We are constructing a test repo, so ensure the warm bookmark cache
         // is fully warmed, so that tests see up-to-date bookmarks.
         warm_bookmarks_cache_builder.wait_until_warmed();
-        let warm_bookmarks_cache = warm_bookmarks_cache_builder
-            .build(BookmarkUpdateDelay::Allow)
-            .await?;
+        let warm_bookmarks_cache = warm_bookmarks_cache_builder.build().await?;
 
         let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = match live_commit_sync_config {
             Some(live_commit_sync_config) => live_commit_sync_config,

@@ -72,12 +72,6 @@ pub type IsWarmFn = dyn for<'a> Fn(
     + Send
     + Sync;
 
-#[derive(Clone, Copy)]
-pub enum BookmarkUpdateDelay {
-    Allow,
-    Disallow,
-}
-
 pub struct Warmer {
     warmer: Box<WarmerFn>,
     is_warm: Box<IsWarmFn>,
@@ -209,18 +203,8 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
         self.init_mode = InitMode::Warm;
     }
 
-    pub async fn build(
-        self,
-        bookmark_update_delay: BookmarkUpdateDelay,
-    ) -> Result<WarmBookmarksCache, Error> {
-        WarmBookmarksCache::new(
-            &self.ctx,
-            &self.repo,
-            bookmark_update_delay,
-            self.warmers,
-            self.init_mode,
-        )
-        .await
+    pub async fn build(self) -> Result<WarmBookmarksCache, Error> {
+        WarmBookmarksCache::new(&self.ctx, &self.repo, self.warmers, self.init_mode).await
     }
 }
 
@@ -289,7 +273,6 @@ impl WarmBookmarksCache {
     pub async fn new(
         ctx: &CoreContext,
         repo: &InnerRepo,
-        bookmark_update_delay: BookmarkUpdateDelay,
         warmers: Vec<Warmer>,
         init_mode: InitMode,
     ) -> Result<Self, Error> {
@@ -307,14 +290,8 @@ impl WarmBookmarksCache {
         let bookmarks = init_bookmarks(&ctx, &*sub, &repo, &warmers, init_mode).await?;
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
-        BookmarksCoordinator::new(
-            bookmarks.clone(),
-            sub,
-            repo.clone(),
-            warmers.clone(),
-            bookmark_update_delay,
-        )
-        .spawn(ctx.clone(), receiver);
+        BookmarksCoordinator::new(bookmarks.clone(), sub, repo.clone(), warmers.clone())
+            .spawn(ctx.clone(), receiver);
 
         Ok(Self {
             bookmarks,
@@ -605,7 +582,6 @@ struct BookmarksCoordinator {
     sub: Box<dyn BookmarksSubscription>,
     repo: InnerRepo,
     warmers: Arc<Vec<Warmer>>,
-    bookmark_update_delay: BookmarkUpdateDelay,
     live_updaters: Arc<RwLock<HashMap<BookmarkName, BookmarkUpdaterState>>>,
 }
 
@@ -615,14 +591,12 @@ impl BookmarksCoordinator {
         sub: Box<dyn BookmarksSubscription>,
         repo: InnerRepo,
         warmers: Arc<Vec<Warmer>>,
-        bookmark_update_delay: BookmarkUpdateDelay,
     ) -> Self {
         Self {
             bookmarks,
             sub,
             repo,
             warmers,
-            bookmark_update_delay,
             live_updaters: Arc::new(RwLock::new(HashMap::new())),
         }
     }
@@ -706,7 +680,6 @@ impl BookmarksCoordinator {
                     self.bookmarks,
                     self.live_updaters,
                     self.warmers,
-                    self.bookmark_update_delay
                 );
                 let _ = tokio::spawn(async move {
                     let res = single_bookmark_updater(
@@ -725,7 +698,6 @@ impl BookmarksCoordinator {
                                 );
                             });
                         },
-                        bookmark_update_delay,
                     )
                     .await;
                     if let Err(ref err) = res {
@@ -884,38 +856,12 @@ async fn single_bookmark_updater(
     bookmarks: &Arc<RwLock<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>>>,
     warmers: &Arc<Vec<Warmer>>,
     mut staleness_reporter: impl FnMut(Timestamp),
-    bookmark_update_delay: BookmarkUpdateDelay,
 ) -> Result<(), Error> {
     let (latest_derived, underived_history) =
         find_all_underived_and_latest_derived(&ctx, &repo, &bookmark.name(), warmers.as_ref())
             .await?;
 
-    let bookmark_update_delay_secs = match bookmark_update_delay {
-        BookmarkUpdateDelay::Allow => {
-            let delay_secs = tunables().get_warm_bookmark_cache_delay();
-            if delay_secs < 0 {
-                warn!(
-                    ctx.logger(),
-                    "invalid warm bookmark cache delay value: {}", delay_secs
-                );
-            }
-            delay_secs
-        }
-        BookmarkUpdateDelay::Disallow => 0,
-    };
-
-    let update_bookmark = |maybe_ts: Option<Timestamp>, cs_id: ChangesetId| async move {
-        if let Some(ts) = maybe_ts {
-            let cur_delay = ts.since_seconds();
-            if cur_delay < bookmark_update_delay_secs {
-                let to_sleep = (bookmark_update_delay_secs - cur_delay) as u64;
-                info!(
-                    ctx.logger(),
-                    "sleeping for {} secs before updating a bookmark", to_sleep
-                );
-                tokio::time::sleep(Duration::from_secs(to_sleep)).await;
-            }
-        }
+    let update_bookmark = |cs_id: ChangesetId| async move {
         bookmarks.with_write(|bookmarks| {
             let name = bookmark.name().clone();
             bookmarks.insert(name, (cs_id, *bookmark.kind()))
@@ -925,8 +871,8 @@ async fn single_bookmark_updater(
     match latest_derived {
         // Move bookmark to the latest derived commit or delete the bookmark completely
         LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => match maybe_cs_id_and_ts {
-            Some((cs_id, ts)) => {
-                update_bookmark(ts, cs_id).await;
+            Some((cs_id, _ts)) => {
+                update_bookmark(cs_id).await;
             }
             None => {
                 bookmarks.with_write(|bookmarks| bookmarks.remove(bookmark.name()));
@@ -951,7 +897,7 @@ async fn single_bookmark_updater(
         let res = warm_all(&ctx, &repo, &underived_cs_id, &warmers).await;
         match res {
             Ok(()) => {
-                update_bookmark(maybe_ts, underived_cs_id).await;
+                update_bookmark(underived_cs_id).await;
             }
             Err(err) => {
                 warn!(
@@ -1202,7 +1148,6 @@ mod tests {
                 .await?,
             repo.clone(),
             warmers,
-            BookmarkUpdateDelay::Disallow,
         );
 
         let master_book = BookmarkName::new("master")?;
@@ -1259,16 +1204,7 @@ mod tests {
             master_book_name.clone(),
             BookmarkKind::PullDefaultPublishing,
         );
-        single_bookmark_updater(
-            &ctx,
-            &repo,
-            &master_book,
-            &bookmarks,
-            &warmers,
-            |_| {},
-            BookmarkUpdateDelay::Disallow,
-        )
-        .await?;
+        single_bookmark_updater(&ctx, &repo, &master_book, &bookmarks, &warmers, |_| {}).await?;
 
         assert_eq!(
             bookmarks.with_read(|bookmarks| bookmarks.get(&master_book_name).cloned()),
@@ -1390,7 +1326,6 @@ mod tests {
                 .await?,
             repo.clone(),
             warmers,
-            BookmarkUpdateDelay::Disallow,
         );
 
         let master_book = BookmarkName::new("master")?;
@@ -1422,7 +1357,6 @@ mod tests {
                 .await?,
             repo.clone(),
             warmers,
-            BookmarkUpdateDelay::Disallow,
         );
 
         update_and_wait_for_bookmark(
@@ -1512,7 +1446,6 @@ mod tests {
                 .await?,
             repo.clone(),
             warmers.clone(),
-            BookmarkUpdateDelay::Disallow,
         );
         coordinator.update(&ctx).await?;
 
@@ -1574,7 +1507,6 @@ mod tests {
                 .await?,
             repo.clone(),
             warmers,
-            BookmarkUpdateDelay::Disallow,
         );
 
         let publishing_book = BookmarkName::new("publishing")?;
@@ -1640,16 +1572,7 @@ mod tests {
         )
         .await?;
 
-        single_bookmark_updater(
-            &ctx,
-            &repo,
-            &master_book,
-            &bookmarks,
-            &warmers,
-            |_| {},
-            BookmarkUpdateDelay::Disallow,
-        )
-        .await?;
+        single_bookmark_updater(&ctx, &repo, &master_book, &bookmarks, &warmers, |_| {}).await?;
 
         assert_eq!(
             bookmarks.with_read(|bookmarks| bookmarks.get(&master_book_name).cloned()),

@@ -23,10 +23,7 @@ use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use megarepo_api::MegarepoApi;
 use metaconfig_parser::load_repo_configs;
-use mononoke_api::{
-    BookmarkUpdateDelay, CoreContext, Mononoke, MononokeApiEnvironment,
-    WarmBookmarksCacheDerivedData,
-};
+use mononoke_api::{CoreContext, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
 use panichandler::Fate;
 use repo_factory::RepoFactory;
 use slog::info;
@@ -110,7 +107,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         repo_factory: repo_factory.clone(),
         disabled_hooks: args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,
-        warm_bookmarks_cache_delay: BookmarkUpdateDelay::Allow,
         warm_bookmarks_cache_enabled: true,
         skiplist_enabled: true,
     };

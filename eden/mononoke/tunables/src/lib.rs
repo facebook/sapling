@@ -69,7 +69,6 @@ pub struct MononokeTunables {
     mutation_advertise_for_infinitepush: AtomicBool,
     mutation_accept_for_infinitepush: AtomicBool,
     mutation_generate_for_draft: AtomicBool,
-    warm_bookmark_cache_delay: AtomicI64,
     warm_bookmark_cache_poll_interval_ms: AtomicI64,
     /// Don't read from the BookmarksSubscription when updating the WBC, and instead poll for the
     /// entire list of bookmarks on every iteration.

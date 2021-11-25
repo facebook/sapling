@@ -25,9 +25,7 @@ use cmdlib::{
 use context::SessionContainer;
 use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
-use mononoke_api::{
-    BookmarkUpdateDelay, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData,
-};
+use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
 use repo_factory::RepoFactory;
 
 const ARG_REQUEST_LIMIT: &str = "request-limit";
@@ -79,7 +77,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         repo_factory: repo_factory.clone(),
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
-        warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
         warm_bookmarks_cache_enabled: true,
         skiplist_enabled: true,
     };

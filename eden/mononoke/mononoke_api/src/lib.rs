@@ -21,7 +21,6 @@ use futures_watchdog::WatchdogExt;
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
 use slog::{debug, info, o};
-pub use warm_bookmarks_cache::BookmarkUpdateDelay;
 
 use metaconfig_parser::RepoConfigs;
 
@@ -236,7 +235,6 @@ pub struct MononokeApiEnvironment {
     pub repo_factory: RepoFactory,
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
-    pub warm_bookmarks_cache_delay: BookmarkUpdateDelay,
     pub warm_bookmarks_cache_enabled: bool,
     pub skiplist_enabled: bool,
 }

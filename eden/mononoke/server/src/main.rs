@@ -15,9 +15,7 @@ use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
 use futures_watchdog::WatchdogExt;
-use mononoke_api::{
-    BookmarkUpdateDelay, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData,
-};
+use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
 use openssl::ssl::AlpnError;
 use repo_factory::RepoFactory;
 use slog::{error, info};
@@ -162,7 +160,6 @@ fn main(fb: FacebookInit) -> Result<()> {
                 repo_factory,
                 disabled_hooks,
                 warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
-                warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
                 warm_bookmarks_cache_enabled: true,
                 skiplist_enabled: true,
             };

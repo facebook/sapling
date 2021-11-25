@@ -32,9 +32,7 @@ use futures_stats::TimedFutureExt;
 use hgproto::HgCommands;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::{BlobConfig, CensoredScubaParams};
-use mononoke_api::{
-    BookmarkUpdateDelay, MononokeApiEnvironment, Repo, WarmBookmarksCacheDerivedData,
-};
+use mononoke_api::{MononokeApiEnvironment, Repo, WarmBookmarksCacheDerivedData};
 use mononoke_types::Timestamp;
 use nonzero_ext::nonzero;
 use rand::{thread_rng, Rng};
@@ -238,7 +236,6 @@ async fn bootstrap_repositories<'a>(
         repo_factory,
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
-        warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
         warm_bookmarks_cache_enabled: true,
         skiplist_enabled: !no_skiplist,
     };

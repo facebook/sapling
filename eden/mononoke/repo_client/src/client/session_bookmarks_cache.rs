@@ -277,7 +277,7 @@ mod test {
     use maplit::hashmap;
     use mononoke_api_types::InnerRepo;
     use tests_utils::{bookmark, CreateCommitContext};
-    use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCacheBuilder};
+    use warm_bookmarks_cache::WarmBookmarksCacheBuilder;
 
     struct TestRepo {
         repo: BlobRepo,
@@ -337,7 +337,7 @@ mod test {
         println!("With warm bookmark cache");
         let mut builder = WarmBookmarksCacheBuilder::new(ctx.clone(), &repo);
         builder.add_hg_warmers()?;
-        let wbc = builder.build(BookmarkUpdateDelay::Disallow).await?;
+        let wbc = builder.build().await?;
         let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
             repo: repo.blob_repo.clone(),
             wbc: Some(Arc::new(wbc)),

@@ -27,9 +27,7 @@ use async_requests::types::{
     ThriftMegarepoAsynchronousRequestParams,
 };
 use megarepo_error::MegarepoError;
-use mononoke_api::{
-    BookmarkUpdateDelay, Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData,
-};
+use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
 use repo_factory::RepoFactory;
 use source_control::{
     MegarepoAddBranchingTargetResult, MegarepoAddTargetResult, MegarepoChangeTargetConfigResult,
@@ -115,7 +113,6 @@ pub async fn subcommand_async_requests<'a>(
         repo_factory: repo_factory.clone(),
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
-        warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
         skiplist_enabled: false,
         warm_bookmarks_cache_enabled: false,
     };
