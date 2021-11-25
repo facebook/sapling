@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::sync::Arc;
+
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use std::sync::Arc;
 
 use crate::dag::errors::BackendError;
 use crate::dag::namedag::MemNameDag;
@@ -26,6 +27,10 @@ impl FetchParents {
             ctx,
             changeset_fetcher,
         }
+    }
+
+    pub fn get_changeset_fetcher(&self) -> &dyn ChangesetFetcher {
+        &self.changeset_fetcher
     }
 }
 

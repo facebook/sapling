@@ -22,15 +22,14 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
-use crate::dag::idmap::IdMapAssignHead;
-use crate::dag::IdSet;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{vertex_name_from_cs_id, CacheHandlers, IdMapFactory, IdMapWrapper};
+use crate::idmap::{CacheHandlers, IdMapFactory};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::parents::FetchParents;
 use crate::types::SegmentedChangelogVersion;
+use crate::update::update_sc;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{Group, SegmentedChangelogSqlConnections};
+use crate::SegmentedChangelogSqlConnections;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.tailer.update";
@@ -176,23 +175,16 @@ impl SegmentedChangelogTailer {
             .await
             .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
 
-        let mut covered_ids = iddag.all()?;
-        let flat_segments =
-            IdMapWrapper::run(ctx.clone(), idmap.clone(), move |mut idmap| async move {
-                idmap
-                    .assign_head(
-                        vertex_name_from_cs_id(&head),
-                        &FetchParents::new(ctx.clone(), self.changeset_fetcher.clone()),
-                        Group::MASTER,
-                        &mut covered_ids,
-                        &IdSet::empty(),
-                    )
-                    .await
-                    .map_err(anyhow::Error::from)
-            })
-            .await?;
+        let new_segment_count = update_sc(
+            &ctx,
+            &FetchParents::new(ctx.clone(), self.changeset_fetcher.clone()),
+            &mut iddag,
+            &idmap,
+            head,
+        )
+        .await?;
 
-        if flat_segments.segment_count() == 0 {
+        if new_segment_count == 0 {
             info!(
                 ctx.logger(),
                 "repo {}: segmented changelog already up to date, skipping update to iddag",
@@ -201,8 +193,6 @@ impl SegmentedChangelogTailer {
             let owned = OwnedSegmentedChangelog::new(iddag, idmap);
             return Ok((owned, head));
         }
-
-        iddag.build_segments_from_prepared_flat_segments(&flat_segments)?;
 
         info!(
             ctx.logger(),

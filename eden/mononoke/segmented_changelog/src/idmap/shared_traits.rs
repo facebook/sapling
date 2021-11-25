@@ -54,15 +54,15 @@ pub fn vertex_name_from_cs_id(cs_id: &ChangesetId) -> VertexName {
     VertexName::copy_from(cs_id.blake2().as_ref())
 }
 
-struct IdMapMemWrites {
+struct IdMapMemWrites<'a> {
     /// The actual IdMap
-    inner: Arc<dyn IdMap>,
+    inner: &'a dyn IdMap,
     /// Stores recent writes that haven't yet been persisted to the backing store
     mem: ConcurrentMemIdMap,
 }
 
-impl IdMapMemWrites {
-    pub fn new(inner: Arc<dyn IdMap>) -> Self {
+impl<'a> IdMapMemWrites<'a> {
+    pub fn new(inner: &'a dyn IdMap) -> Self {
         Self {
             inner,
             mem: ConcurrentMemIdMap::new(),
@@ -82,7 +82,7 @@ impl IdMapMemWrites {
 }
 
 #[async_trait]
-impl IdMap for IdMapMemWrites {
+impl<'a> IdMap for IdMapMemWrites<'a> {
     async fn insert_many(
         &self,
         ctx: &CoreContext,
@@ -196,19 +196,19 @@ impl IdMap for IdMapMemWrites {
 /// outside the `closure` to avoid performance issues. Having all `NameSet`
 /// calculations inside the `closure` is fine, even if the final result is
 /// passed out to the enclosing scope
-pub struct IdMapWrapper {
+pub struct IdMapWrapper<'a> {
     verlink: VerLink,
-    inner: Arc<IdMapMemWrites>,
+    inner: Arc<IdMapMemWrites<'a>>,
     ctx: CoreContext,
 }
 
-impl IdMapWrapper {
+impl<'a> IdMapWrapper<'a> {
     /// Run the given closure with a [`IdMapWrapper`] around the supplied [`IdMap`] and [`CoreContext`]
     /// This lets you use `dag` crate methods on a server `IdMap`
     pub async fn run<Fut, T>(
         ctx: CoreContext,
-        idmap: Arc<dyn IdMap>,
-        closure: impl FnOnce(IdMapWrapper) -> Fut,
+        idmap: &'a dyn IdMap,
+        closure: impl FnOnce(IdMapWrapper<'a>) -> Fut,
     ) -> anyhow::Result<T>
     where
         Fut: Future<Output = anyhow::Result<T>>,
@@ -226,7 +226,7 @@ impl IdMapWrapper {
 }
 
 #[async_trait]
-impl PrefixLookup for IdMapWrapper {
+impl<'a> PrefixLookup for IdMapWrapper<'a> {
     async fn vertexes_by_hex_prefix(
         &self,
         _hex_prefix: &[u8],
@@ -236,7 +236,7 @@ impl PrefixLookup for IdMapWrapper {
     }
 }
 #[async_trait]
-impl IdConvert for IdMapWrapper {
+impl<'a> IdConvert for IdMapWrapper<'a> {
     async fn vertex_id(&self, name: VertexName) -> Result<Id> {
         // NOTE: The server implementation puts all Ids in the "master" group.
         self.vertex_id_with_max_group(&name, Group::MASTER)
@@ -347,7 +347,7 @@ impl IdConvert for IdMapWrapper {
 }
 
 #[async_trait]
-impl IdMapWrite for IdMapWrapper {
+impl<'a> IdMapWrite for IdMapWrapper<'a> {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         // NB: This is only suitable for tailing right now, as it writes on every call
         // Eventually, this needs to use a batching interface
