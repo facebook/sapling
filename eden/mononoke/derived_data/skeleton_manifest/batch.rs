@@ -65,7 +65,9 @@ pub async fn derive_skeleton_manifests_in_batch(
             .collect::<FuturesOrdered<_>>()
             .try_collect::<Vec<_>>()
             .await?;
-        let use_new_batch_derivation = tunables().get_skeleton_manifests_use_new_batch_derivation();
+        let use_new_batch_derivation = tunables()
+            .get_by_repo_skeleton_manifests_use_new_batch_derivation(derivation_ctx.repo_name())
+            .unwrap_or(false);
         let new_skeleton_manifests = if !use_new_batch_derivation {
             old_batch_derivation(
                 ctx,
@@ -259,8 +261,10 @@ mod test {
             let manager = repo.repo_derived_data().manager();
 
             let tunables = MononokeTunables::default();
-            tunables.update_bools(&hashmap! {
-                "skeleton_manifests_use_new_batch_derivation".to_string() => true,
+            tunables.update_by_repo_bools(&hashmap! {
+                repo.name().to_string() => hashmap!{
+                    "skeleton_manifests_use_new_batch_derivation".to_string() => true,
+                }
             });
 
             with_tunables_async(
@@ -338,8 +342,10 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         let tunables = MononokeTunables::default();
-        tunables.update_bools(&hashmap! {
-            "skeleton_manifests_use_new_batch_derivation".to_string() => true,
+        tunables.update_by_repo_bools(&hashmap! {
+            repo.name().to_string() => hashmap!{
+                "skeleton_manifests_use_new_batch_derivation".to_string() => true,
+            }
         });
 
         with_tunables_async(

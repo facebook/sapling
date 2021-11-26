@@ -104,7 +104,10 @@ impl BonsaiDerivable for RootUnodeManifestId {
         }
 
         let mut res = HashMap::new();
-        if !tunables::tunables().get_unodes_use_new_batch_derivation() {
+        if !tunables::tunables()
+            .get_by_repo_unodes_use_new_batch_derivation(derivation_ctx.repo_name())
+            .unwrap_or(false)
+        {
             for bonsai in bonsais {
                 let csid = bonsai.get_changeset_id();
                 let parents = derivation_ctx
@@ -359,7 +362,11 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         let tunables = tunables::MononokeTunables::default();
-        tunables.update_bools(&hashmap! {"unodes_use_batch_derivation".to_string() => true});
+        tunables.update_by_repo_bools(&hashmap! {
+            repo.name().to_string() => hashmap!{
+                "unodes_use_new_batch_derivation".to_string() => true,
+            }
+        });
 
         let batch_derived = tunables::with_tunables_async(
             tunables,

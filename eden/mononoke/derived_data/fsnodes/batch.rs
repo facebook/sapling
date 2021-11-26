@@ -87,7 +87,10 @@ pub async fn derive_fsnode_in_batch(
             .try_collect::<Vec<_>>()
             .await?;
 
-        let new_fsnodes = if !tunables().get_fsnodes_use_new_batch_derivation() {
+        let new_fsnodes = if !tunables()
+            .get_by_repo_fsnodes_use_new_batch_derivation(derivation_ctx.repo_name())
+            .unwrap_or(false)
+        {
             old_batch_derivation(
                 ctx,
                 derivation_ctx,
@@ -280,8 +283,10 @@ mod test {
             let manager = repo.repo_derived_data().manager();
 
             let tunables = MononokeTunables::default();
-            tunables.update_bools(&hashmap! {
-                "skeleton_manifests_use_new_batch_derivation".to_string() => true,
+            tunables.update_by_repo_bools(&hashmap! {
+                repo.name().to_string() => hashmap!{
+                    "fsnodes_use_new_batch_derivation".to_string() => true,
+                }
             });
 
             with_tunables_async(

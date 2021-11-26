@@ -68,7 +68,10 @@ impl BonsaiDerivable for MappedHgChangesetId {
         }
 
         let mut res = HashMap::new();
-        if !tunables().get_hgchangesets_use_new_batch_derivation() {
+        if !tunables()
+            .get_by_repo_hgchangesets_use_new_batch_derivation(derivation_ctx.repo_name())
+            .unwrap_or(false)
+        {
             for bonsai in bonsais {
                 let csid = bonsai.get_changeset_id();
                 let parents = derivation_ctx
@@ -298,8 +301,11 @@ mod test {
         let manager = repo.repo_derived_data().manager();
 
         let tunables = tunables::MononokeTunables::default();
-        tunables
-            .update_bools(&hashmap! {"hgchangesets_use_new_batch_derivation".to_string() => true});
+        tunables.update_by_repo_bools(&hashmap! {
+            repo.name().to_string() => hashmap!{
+                "hgchangesets_use_new_batch_derivation".to_string() => true,
+            }
+        });
 
         let batch_derived = tunables::with_tunables_async(
             tunables,
