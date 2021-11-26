@@ -38,7 +38,7 @@ use futures_old::future::ok;
 use futures_old::{
     future as future_old, stream as stream_old, try_ready, Async, Future, IntoFuture, Poll, Stream,
 };
-use futures_stats::{Timed, TimedFutureExt, TimedStreamTrait};
+use futures_stats::{Timed, TimedFutureExt, TimedStreamExt};
 use getbundle_response::{
     create_getbundle_response, DraftsInBundlesPolicy, PhasesPart, SessionLfsParams,
 };
@@ -890,9 +890,11 @@ impl RepoClient {
                             }
                         }
                     })
+                    .boxify()
+                    .compat()
                     .timed({
                         cloned!(ctx);
-                        move |stats, _| {
+                        move |stats| {
                             STATS::getpack_ms
                                 .add_value(stats.completion_time.as_millis_unchecked() as i64);
                             let encoded_params = {
@@ -920,9 +922,11 @@ impl RepoClient {
                             let json_params = json! {encoded_params};
                             command_logger.finalize_command(ctx, &stats, Some(&json_params));
 
-                            Ok(())
+                            future::ready(())
                         }
                     })
+                    .boxed()
+                    .compat()
             };
 
             throttle_stream(&self.session, Metric::GetpackFiles, name, request_stream).boxify()
@@ -1490,14 +1494,17 @@ impl HgCommands for RepoClient {
                 .whole_stream_timeout(getbundle_timeout())
                 .yield_periodically()
                 .flatten_err()
+                .timed({
+                    cloned!(ctx);
+                    move |stats| {
+                        STATS::getbundle_ms
+                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                        command_logger.finalize_command(ctx, &stats, Some(&value));
+                        future::ready(())
+                    }
+                })
                 .boxed()
                 .compat()
-                .timed(move |stats, _| {
-                    STATS::getbundle_ms
-                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    command_logger.finalize_command(ctx, &stats, Some(&value));
-                    Ok(())
-                })
                 .boxify();
 
             throttle_stream(&self.session, Metric::Commits, ops::GETBUNDLE, move || s)
@@ -1847,9 +1854,7 @@ impl HgCommands for RepoClient {
                     .whole_stream_timeout(default_timeout())
                     .yield_periodically()
                     .flatten_err()
-                    .boxed()
-                    .compat()
-                    .inspect({
+                    .inspect_ok({
                         cloned!(ctx);
                         move |bytes| {
                             ctx.perf_counters().add_to_counter(
@@ -1863,16 +1868,19 @@ impl HgCommands for RepoClient {
                         }
                     })
                     .timed({
-                        move |stats, _| {
+                        cloned!(ctx);
+                        move |stats| {
                             if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
                                 command_logger.add_trimmed_scuba_extra("command_args", &args);
                             }
                             STATS::gettreepack_ms
                                 .add_value(stats.completion_time.as_millis_unchecked() as i64);
                             command_logger.finalize_command(ctx, &stats, Some(&args));
-                            Ok(())
+                            future::ready(())
                         }
-                    });
+                    })
+                    .boxed()
+                    .compat();
 
                 throttle_stream(
                     &self.session,
@@ -2011,14 +2019,12 @@ impl HgCommands for RepoClient {
                 .yield_periodically()
                 .flatten_err()
                 .map_ok(bytes_ext::copy_from_new)
+                .timed(|stats| {
+                    command_logger.finalize_command(ctx, &stats, None);
+                    future::ready(())
+                })
                 .boxed()
                 .compat()
-                .timed({
-                    move |stats, _| {
-                        command_logger.finalize_command(ctx, &stats, None);
-                        Ok(())
-                    }
-                })
         })
     }
 
@@ -2099,19 +2105,17 @@ impl HgCommands for RepoClient {
                 .whole_stream_timeout(default_timeout())
                 .yield_periodically()
                 .flatten_err()
-                .boxed()
-                .compat()
-                .timed({
-                    move |stats, _| {
-                        if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
-                            command_logger.add_trimmed_scuba_extra("command_args", &args);
-                        }
-                        STATS::getcommitdata_ms
-                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                        command_logger.finalize_command(ctx, &stats, Some(&args));
-                        Ok(())
+                .timed(move |stats| {
+                    if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
+                        command_logger.add_trimmed_scuba_extra("command_args", &args);
                     }
-                });
+                    STATS::getcommitdata_ms
+                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                    command_logger.finalize_command(ctx, &stats, Some(&args));
+                    future::ready(())
+                })
+                .boxed()
+                .compat();
 
             throttle_stream(
                 &self.session,
