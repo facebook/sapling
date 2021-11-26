@@ -410,6 +410,9 @@ def getparser():
 
     harness = parser.add_argument_group("Test Harness Behavior")
     harness.add_argument(
+        "--getdeps-build", action="store_true", help="let us know build is from getdeps"
+    )
+    harness.add_argument(
         "--bisect-repo",
         metavar="bisect_repo",
         help="Path of a repo to bisect. Use together with --known-good-rev",
@@ -1551,13 +1554,18 @@ class Test(unittest.TestCase):
         # Do not be affected by system legacy configs.
         env["HGLEGACY"] = ""
 
-        for k in (
+        keys_to_del = (
             "HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy "
             + "HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER "
             + "NO_PROXY CHGDEBUG HGDETECTRACE RUST_BACKTRACE RUST_LIB_BACKTRACE "
             + " EDENSCM_TRACE_LEVEL EDENSCM_TRACE_OUTPUT"
             + " EDENSCM_TRACE_PY TRACING_DATA_FAKE_CLOCK"
             + " EDENSCM_LOG LOG FAILPOINTS"
+            # Used by dummyssh
+            + " DUMMYSSH_STABLE_ORDER"
+        ).split()
+
+        if not self._options.getdeps_build:
             # LD_LIBRARY_PATH is usually set by buck sh_binary wrapper to import
             # Python extensions depending on buck runtime shared objects.
             # However, that breaks system executables like "curl" depending on
@@ -1565,10 +1573,9 @@ class Test(unittest.TestCase):
             # Python extensions, expect them to use "hg debugpython" or "python"
             # in the test, which will go through the wrapper and get a correct
             # environment again.
-            + " LD_LIBRARY_PATH"
-            # Used by dummyssh
-            + " DUMMYSSH_STABLE_ORDER"
-        ).split():
+            keys_to_del.append("LD_LIBRARY_PATH")
+
+        for k in keys_to_del:
             if k in env:
                 del env[k]
 
