@@ -2033,7 +2033,18 @@ function merge_tunables() {
 
 function init_tunables() {
   if [[ ! -f "$MONONOKE_TUNABLES_PATH" ]]; then
-    echo "{}" > "$MONONOKE_TUNABLES_PATH"
+    cat >> "$MONONOKE_TUNABLES_PATH" <<EOF
+{
+  "killswitches_by_repo": {
+    "$REPONAME": {
+      "fsnodes_use_new_batch_derivation": true,
+      "hgchangesets_use_new_batch_derivation": true,
+      "unodes_use_new_batch_derivation": true,
+      "skeleton_manifests_use_new_batch_derivation": true
+    }
+  }
+}
+EOF
   fi
 }
 

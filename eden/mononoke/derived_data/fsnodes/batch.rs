@@ -87,7 +87,7 @@ pub async fn derive_fsnode_in_batch(
             .try_collect::<Vec<_>>()
             .await?;
 
-        let new_fsnodes = if !tunables()
+        if !tunables()
             .get_by_repo_fsnodes_use_new_batch_derivation(derivation_ctx.repo_name())
             .unwrap_or(false)
         {
@@ -97,8 +97,9 @@ pub async fn derive_fsnode_in_batch(
                 parent_fsnodes,
                 gap_size,
                 linear_stack.stack_items,
+                &mut res,
             )
-            .await?
+            .await?;
         } else {
             new_batch_derivation(
                 ctx,
@@ -106,10 +107,10 @@ pub async fn derive_fsnode_in_batch(
                 parent_fsnodes,
                 gap_size,
                 linear_stack.stack_items,
+                &mut res,
             )
-            .await?
-        };
-        res.extend(new_fsnodes);
+            .await?;
+        }
     }
 
     Ok(res)
@@ -121,7 +122,8 @@ pub async fn old_batch_derivation(
     parent_fsnodes: Vec<FsnodeId>,
     gap_size: Option<usize>,
     file_changes: Vec<StackItem>,
-) -> Result<Vec<(ChangesetId, RootFsnodeId)>, Error> {
+    already_derived: &mut HashMap<ChangesetId, RootFsnodeId>,
+) -> Result<(), Error> {
     let to_derive = match gap_size {
         Some(gap_size) => file_changes
             .chunks(gap_size)
@@ -157,7 +159,8 @@ pub async fn old_batch_derivation(
         .try_collect::<Vec<_>>()
         .await?;
 
-    Ok(new_fsnodes)
+    already_derived.extend(new_fsnodes.into_iter());
+    Ok(())
 }
 
 pub async fn new_batch_derivation(
@@ -166,18 +169,18 @@ pub async fn new_batch_derivation(
     parent_fsnode_manifests: Vec<FsnodeId>,
     gap_size: Option<usize>,
     file_changes: Vec<StackItem>,
-) -> Result<Vec<(ChangesetId, RootFsnodeId)>, Error> {
-    let mut res = HashMap::new();
+    already_derived: &mut HashMap<ChangesetId, RootFsnodeId>,
+) -> Result<(), Error> {
     if parent_fsnode_manifests.len() > 1 {
         // we can't derive stack for a merge commit,
         // so let's derive it without batching
         for item in file_changes {
             let bonsai = item.cs_id.load(&ctx, derivation_ctx.blobstore()).await?;
             let parents = derivation_ctx
-                .fetch_unknown_parents(ctx, Some(&res), &bonsai)
+                .fetch_unknown_parents(ctx, Some(&already_derived), &bonsai)
                 .await?;
             let derived = RootFsnodeId::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
-            res.insert(item.cs_id, derived);
+            already_derived.insert(item.cs_id, derived);
         }
     } else {
         let first = file_changes.first().map(|item| item.cs_id);
@@ -217,19 +220,20 @@ pub async fn new_batch_derivation(
         .await
         .with_context(|| format!("failed deriving stack of {:?} to {:?}", first, last,))?;
 
-        res.extend(
+        already_derived.extend(
             derived
                 .into_iter()
                 .map(|(csid, mf_id)| (csid, RootFsnodeId(mf_id))),
         );
     }
 
-    Ok(res.into_iter().collect())
+    Ok(())
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobrepo::BlobRepo;
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use fixtures::linear;
@@ -237,7 +241,8 @@ mod test {
     use maplit::hashmap;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
-    use tests_utils::resolve_cs_id;
+    use test_repo_factory::TestRepoFactory;
+    use tests_utils::{bookmark, drawdag::create_from_dag, resolve_cs_id};
     use tunables::{with_tunables_async, MononokeTunables};
 
     #[fbinit::test]
@@ -322,6 +327,83 @@ mod test {
         assert_eq!(old_batch, sequential);
         assert_eq!(new_batch, sequential);
         Ok(())
+    }
+
+    #[fbinit::test]
+    async fn batch_derive_with_merge(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let new_batch = {
+            let repo = repo_with_merge(&ctx).await?;
+            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+
+            let mut cs_ids =
+                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
+                    .compat()
+                    .try_collect::<Vec<_>>()
+                    .await?;
+            cs_ids.reverse();
+
+            let manager = repo.repo_derived_data().manager();
+
+            let tunables = MononokeTunables::default();
+            tunables.update_by_repo_bools(&hashmap! {
+                repo.name().to_string() => hashmap!{
+                    "fsnodes_use_new_batch_derivation".to_string() => true,
+                }
+            });
+
+            with_tunables_async(
+                tunables,
+                manager
+                    .backfill_batch::<RootFsnodeId>(
+                        &ctx,
+                        cs_ids,
+                        BatchDeriveOptions::Parallel { gap_size: None },
+                        None,
+                    )
+                    .boxed(),
+            )
+            .await?;
+
+            manager
+                .fetch_derived::<RootFsnodeId>(&ctx, master_cs_id, None)
+                .await?
+                .unwrap()
+                .into_fsnode_id()
+        };
+
+        let sequential = {
+            let repo = repo_with_merge(&ctx).await?;
+            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+            repo.repo_derived_data()
+                .manager()
+                .derive::<RootFsnodeId>(&ctx, master_cs_id, None)
+                .await?
+                .into_fsnode_id()
+        };
+
+        assert_eq!(new_batch, sequential);
+        Ok(())
+    }
+
+    async fn repo_with_merge(ctx: &CoreContext) -> Result<BlobRepo, Error> {
+        let repo: BlobRepo = TestRepoFactory::new()?.build()?;
+
+        let commit_map = create_from_dag(
+            ctx,
+            &repo,
+            r##"
+            A-M
+             /
+            B
+            "##,
+        )
+        .await?;
+
+        let m = commit_map.get(&"M".to_string()).unwrap();
+        bookmark(ctx, &repo, "master").set_to(*m).await?;
+
+        Ok(repo)
     }
 
     #[fbinit::test]
