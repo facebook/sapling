@@ -95,8 +95,10 @@ pub async fn validate(
         )
         .await?;
 
-        let cache = memblobstore.get_cache().lock().unwrap();
-        info!(ctx.logger(), "created {} blobs", cache.len());
+        {
+            let cache = memblobstore.get_cache().lock().unwrap();
+            info!(ctx.logger(), "created {} blobs", cache.len());
+        }
         let real_derived_utils = &derived_data_utils(ctx.fb, &orig_repo, derived_data_type)?;
 
         // Make sure that the generated data was saved in memory blobstore
