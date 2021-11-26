@@ -222,6 +222,10 @@ pub struct MononokeTunables {
 
     // Timeout for is_present call for multiplexed blobstore
     is_present_timeout_ms: AtomicI64,
+
+    // What timeout to use when doing filenode lookup.
+    // Usually filenode lookup is used while generating hg changesets
+    filenode_lookup_timeout_ms: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

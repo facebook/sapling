@@ -27,6 +27,15 @@ use bytes::Bytes;
 use context::CoreContext;
 use futures::Future;
 use mononoke_types::{BlobstoreBytes, ContentId, MPath};
+use stats::prelude::*;
+use std::time::Duration;
+use tokio::time::timeout;
+use tunables::tunables;
+
+define_stats! {
+    prefix = "mononoke.mercurial.filenode_lookup";
+    timeout: timeseries(Rate, Sum),
+}
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 pub struct FileNodeIdPointer(String);
@@ -92,8 +101,21 @@ pub async fn lookup_filenode_id<B: Blobstore>(
     blobstore: &B,
     key: FileNodeIdPointer,
 ) -> Result<Option<HgFileNodeId>> {
-    Ok(blobstore
-        .get(ctx, &key.0)
-        .await?
-        .and_then(|blob| HgFileNodeId::from_bytes(blob.as_raw_bytes()).ok()))
+    let filenode_lookup_timeout_ms = tunables().get_filenode_lookup_timeout_ms();
+    let fut = blobstore.get(ctx, &key.0);
+    let blob = if filenode_lookup_timeout_ms > 0 {
+        let maybe_timed_out = timeout(
+            Duration::from_millis(filenode_lookup_timeout_ms as u64),
+            fut,
+        )
+        .await;
+        if maybe_timed_out.is_err() {
+            STATS::timeout.add_value(1);
+        }
+        maybe_timed_out??
+    } else {
+        fut.await?
+    };
+
+    Ok(blob.and_then(|blob| HgFileNodeId::from_bytes(blob.as_raw_bytes()).ok()))
 }
