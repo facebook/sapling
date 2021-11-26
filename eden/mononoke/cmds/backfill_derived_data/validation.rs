@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use blobstore::{Blobstore, StoreLoadable};
@@ -23,7 +23,9 @@ use futures::{
     future::{try_join, try_join_all},
     stream, StreamExt, TryStreamExt,
 };
-use manifest::{find_intersection_of_diffs, Entry, Manifest};
+use manifest::{
+    find_intersection_of_diffs, find_intersection_of_diffs_and_parents, Entry, Manifest,
+};
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, MononokeId};
 use readonlyblob::ReadOnlyBlobstore;
@@ -131,7 +133,9 @@ pub async fn validate(
                     return Err(anyhow!("mismatch in {}: {} vs {}", csid, real, rederived));
                 };
 
-                validate_generated_data(&ctx, &orig_repo, real_derived_utils, csid, repo).await
+                validate_generated_data(&ctx, &orig_repo, real_derived_utils, csid, repo)
+                    .await
+                    .with_context(|| format!("failed validating generated data for {}", csid))
             })
             .await?;
         info!(ctx.logger(), "Validation successful!");
@@ -282,16 +286,35 @@ async fn validate_hgchangesets<'a>(
 
     let (manifest, parents) = try_join(manifest, parents).await?;
 
-    validate_new_manifest_entries(
-        ctx,
-        real_blobstore,
-        manifest,
-        parents,
-        &mem_blob,
-        |tree_id| Some(tree_id.blobstore_key()),
-        |(_file_type, hg_filenode)| Some(hg_filenode.blobstore_key()),
-    )
-    .await?;
+    let mf_entries =
+        find_intersection_of_diffs_and_parents(ctx.clone(), real_blobstore, manifest, parents)
+            .try_filter_map(|(_, entry, parent_entries)| async move {
+                match entry {
+                    Entry::Leaf((ty, filenode_id)) => {
+                        for p in parent_entries {
+                            if let Entry::Leaf((_ty, parent_filenode_id)) = p {
+                                // This is mode-only change, no new blobstore writes were made
+                                if parent_filenode_id == filenode_id {
+                                    return Ok(None);
+                                }
+                            }
+                        }
+                        Ok(Some(Entry::Leaf((ty, filenode_id))))
+                    }
+                    Entry::Tree(manifest_id) => Ok(Some(Entry::Tree(manifest_id))),
+                }
+            })
+            .try_collect::<Vec<_>>()
+            .await?;
+
+    for entry in mf_entries {
+        let key = match entry {
+            Entry::Tree(mf_id) => mf_id.blobstore_key(),
+            Entry::Leaf((_, filenode_id)) => filenode_id.blobstore_key(),
+        };
+
+        check_exists(ctx, mem_blob, key).await?;
+    }
 
     Ok(())
 }
