@@ -54,6 +54,12 @@ pub async fn validate(
     let derived_data_type = sub_m
         .value_of(ARG_DERIVED_DATA_TYPE)
         .ok_or_else(|| anyhow!("{} is not set", ARG_DERIVED_DATA_TYPE))?;
+    info!(
+        ctx.logger(),
+        "Validating {} on {}...",
+        derived_data_type,
+        repo.name()
+    );
     let opts = regenerate::DeriveOptions::from_matches(sub_m)?;
 
     let validate_chunk_size = args::get_usize(&sub_m, ARG_VALIDATE_CHUNK_SIZE, 10000);
