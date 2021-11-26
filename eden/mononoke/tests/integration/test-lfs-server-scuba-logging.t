@@ -33,6 +33,8 @@
     "int": {
       "BlobGets": 1,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsNotFound": 1,
+      "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
@@ -79,6 +81,8 @@
     "int": {
       "BlobGets": 0,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsNotFound": 0,
+      "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 210,
@@ -121,6 +125,8 @@
     "int": {
       "BlobGets": 2,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsNotFound": 0,
+      "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
@@ -171,6 +177,8 @@
     "int": {
       "BlobGets": 206,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsNotFound": 0,
+      "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
@@ -212,6 +220,8 @@
     "int": {
       "BlobGets": 0,
       "BlobGetsMaxLatency": *, (glob)
+      "BlobGetsNotFound": 0,
+      "BlobGetsNotFoundMaxLatency": *, (glob)
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,

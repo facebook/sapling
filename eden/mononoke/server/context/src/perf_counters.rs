@@ -48,9 +48,11 @@ macro_rules! define_perf_counters {
 define_perf_counters! {
     enum PerfCounterType {
         BlobGets,
+        BlobGetsNotFound,
         BlobGetsAccessWait,
         BlobGetsShardAccessWait,
         BlobGetsMaxLatency,
+        BlobGetsNotFoundMaxLatency,
         BlobGetsDeduplicated,
         BlobPresenceChecks,
         BlobPresenceChecksMaxLatency,
@@ -122,7 +124,9 @@ impl PerfCounterType {
 
         match self {
             BlobGets
+            | BlobGetsNotFound
             | BlobGetsMaxLatency
+            | BlobGetsNotFoundMaxLatency
             | BlobPresenceChecks
             | BlobPresenceChecksMaxLatency
             | BlobPuts
@@ -146,6 +150,7 @@ impl PerfCounterType {
 
         match self {
             BlobGets
+            | BlobGetsNotFound
             | BlobGetsAccessWait
             | BlobGetsShardAccessWait
             | BlobGetsDeduplicated
@@ -202,6 +207,7 @@ impl PerfCounterType {
             | S3BlobSumDelay
             | S3AccessWait => PerfCounterTypeUpdateFunc::Add,
             BlobGetsMaxLatency
+            | BlobGetsNotFoundMaxLatency
             | BlobPresenceChecksMaxLatency
             | BlobPutsMaxLatency
             | GetpackMaxFileSize => PerfCounterTypeUpdateFunc::Max,

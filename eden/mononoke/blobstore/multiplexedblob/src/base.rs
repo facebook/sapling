@@ -437,6 +437,15 @@ async fn blobstore_get<'a>(
         PerfCounterType::BlobGetsMaxLatency,
         stats.completion_time.as_millis_unchecked() as i64,
     );
+    if let Ok(None) = result {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::BlobGetsNotFound);
+        ctx.perf_counters().set_max_counter(
+            PerfCounterType::BlobGetsNotFoundMaxLatency,
+            stats.completion_time.as_millis_unchecked() as i64,
+        );
+    }
+
     Ok(result?)
 }
 
