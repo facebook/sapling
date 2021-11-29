@@ -52,6 +52,7 @@ mod filestore;
 mod hash_convert;
 mod hg_changeset;
 mod hg_sync;
+mod list_ancestors;
 mod mutable_counters;
 mod phases;
 mod pushrebase;
@@ -87,6 +88,7 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(skiplist_subcommand::build_subcommand())
         .subcommand(hash_convert::build_subcommand())
         .subcommand(hg_sync::build_subcommand())
+        .subcommand(list_ancestors::build_subcommand())
         .subcommand(mutable_counters::build_subcommand())
         .subcommand(redaction::build_subcommand())
         .subcommand(filenodes::build_subcommand())
@@ -157,6 +159,9 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (hash_convert::HASH_CONVERT, Some(sub_m)) => {
                 subcommand_hash_convert(fb, logger, &matches, sub_m).await
+            }
+            (list_ancestors::LIST_ANCESTORS, Some(sub_m)) => {
+                list_ancestors::list_ancestors(fb, logger, &matches, sub_m).await
             }
             (mutable_counters::MUTABLE_COUNTERS, Some(sub_m)) => {
                 subcommand_mutable_counters(fb, sub_m, &matches, logger.clone()).await
