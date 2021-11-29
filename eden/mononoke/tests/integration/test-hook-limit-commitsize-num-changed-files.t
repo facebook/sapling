@@ -36,13 +36,13 @@ Large commit, a lot of files changed
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. Reach out to Source control @ fb for instructions.
+  remote:     limit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. Reach out to Source Control @ Meta for instructions.
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     limit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. Reach out to Source control @ fb for instructions.
+  remote:     limit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. Reach out to Source Control @ Meta for instructions.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. Reach out to Source control @ fb for instructions."
+  remote:     "hooks failed:\nlimit_commitsize for bb41d2a5d8c3492f085f4d276927533e79f269ae: Commit changed 6 files but at most 5 are allowed. Reach out to Source Control @ Meta for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

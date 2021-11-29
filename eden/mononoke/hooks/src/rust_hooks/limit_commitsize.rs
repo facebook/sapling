@@ -173,31 +173,33 @@ impl ChangesetHook for LimitCommitsize {
             }
 
             num_changed_files += 1;
-            if let Some(changed_files_limit) = self.changed_files_limit {
-                if num_changed_files > changed_files_limit {
-                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                        "Commit too large",
-                        format!(
-                            "Commit changed {} files but at most {} are allowed. Reach out to Source control @ fb for instructions.",
-                            num_changed_files, changed_files_limit,
-                        ),
-                    )));
-                }
-            }
-
             totalsize += file_change.size().unwrap_or(0);
-            if totalsize > max_commit_size_limit {
+        }
+
+        if let Some(changed_files_limit) = self.changed_files_limit {
+            if num_changed_files > changed_files_limit {
                 return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                     "Commit too large",
                     format!(
-                        "Commit size limit is {} bytes.\n\
-                        You tried to push a commit {} bytes in size that is over the limit.\n\
-                        See https://fburl.com/landing_big_diffs for instructions.",
-                        max_commit_size_limit, totalsize
+                        "Commit changed {} files but at most {} are allowed. Reach out to Source Control @ Meta for instructions.",
+                        num_changed_files, changed_files_limit,
                     ),
                 )));
             }
         }
+
+        if totalsize > max_commit_size_limit {
+            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                "Commit too large",
+                format!(
+                    "Commit size limit is {} bytes.\n\
+                     You tried to push a commit {} bytes in size that is over the limit.\n\
+                     See https://fburl.com/landing_big_diffs for instructions.",
+                    max_commit_size_limit, totalsize
+                ),
+            )));
+        }
+
         Ok(HookExecution::Accepted)
     }
 }
@@ -224,6 +226,7 @@ mod test {
         let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("dir/a", "a")
             .add_file("dir/b", "b")
+            .add_file("dir/c", "c")
             .commit()
             .await?;
 
@@ -231,8 +234,8 @@ mod test {
 
         let content_manager = BlobRepoFileContentManager::new(repo.clone());
         let hook = build_hook(hashmap! {
-            "commitsizelimit".to_string() => 2,
-            "changed_files_limit".to_string() => 2,
+            "commitsizelimit".to_string() => 3,
+            "changed_files_limit".to_string() => 3,
         })?;
         let hook_execution = hook
             .run(
@@ -247,7 +250,7 @@ mod test {
 
 
         let hook = build_hook(hashmap! {
-            "commitsizelimit".to_string() => 2,
+            "commitsizelimit".to_string() => 3,
             "changed_files_limit".to_string() => 1,
         })?;
         let hook_execution = hook
@@ -260,7 +263,9 @@ mod test {
             )
             .await?;
         match hook_execution {
-            HookExecution::Rejected(_) => {}
+            HookExecution::Rejected(info) => {
+                assert!(info.long_description.contains("changed 3 files"));
+            }
             HookExecution::Accepted => {
                 return Err(anyhow!("should be rejected"));
             }
@@ -268,7 +273,7 @@ mod test {
 
         let hook = build_hook(hashmap! {
             "commitsizelimit".to_string() => 1,
-            "changed_files_limit".to_string() => 2,
+            "changed_files_limit".to_string() => 3,
         })?;
         let hook_execution = hook
             .run(
@@ -280,7 +285,9 @@ mod test {
             )
             .await?;
         match hook_execution {
-            HookExecution::Rejected(_) => {}
+            HookExecution::Rejected(info) => {
+                assert!(info.long_description.contains("commit 3 bytes"));
+            }
             HookExecution::Accepted => {
                 return Err(anyhow!("should be rejected"));
             }
