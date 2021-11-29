@@ -394,8 +394,9 @@ impl IO {
         }
         inner.set_progress("")?;
 
-        let mut pager =
-            Pager::new_using_stdio().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let mut pager = Pager::new_using_system_terminal()
+            .or_else(|_| Pager::new_using_stdio())
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // Configure the pager.
         // The Hybrid mode is similar to "-FX" from "less".
