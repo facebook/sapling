@@ -46,10 +46,9 @@ sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-s
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
 time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
-types = { version = "0.1.0", path = "../../../scm/lib/types" }
-
-[dev-dependencies]
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
+tunables = { version = "0.1.0", path = "../../tunables" }
+types = { version = "0.1.0", path = "../../../scm/lib/types" }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
