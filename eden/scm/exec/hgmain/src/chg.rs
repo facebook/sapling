@@ -5,10 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use encoding::osstring_to_local_cstring;
-use libc::{c_char, c_int};
-use std::ffi::{CString, OsString};
+use std::ffi::CString;
+use std::ffi::OsString;
 use std::path::Path;
+
+use clidispatch::io::IsTty;
+use encoding::osstring_to_local_cstring;
+use libc::c_char;
+use libc::c_int;
 
 #[cfg_attr(not(fb_buck_build), link(name = "chg", kind = "static"))]
 extern "C" {
@@ -91,6 +95,13 @@ fn should_call_chg(args: &Vec<String>) -> bool {
             .iter()
             .any(|a| a.starts_with("/dev/fd/") || a.starts_with("/proc/self/"))
     {
+        return false;
+    }
+
+    // stdin is not a tty but stdout is a tty. Interactive pager is used
+    // but lack of ctty makes it impossible to control the interactive
+    // pager via keys.
+    if cfg!(unix) && !std::io::stdin().is_tty() && std::io::stdout().is_tty() {
         return false;
     }
 
