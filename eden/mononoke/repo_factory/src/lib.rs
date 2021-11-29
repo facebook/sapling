@@ -875,7 +875,7 @@ impl RepoFactory {
         );
         let derivation_service_client =
             get_derivation_client(self.env.fb, self.env.remote_derivation_options.clone())?;
-        Ok::<_, anyhow::Error>(Arc::new(DerivedDataManagerSet::new(
+        anyhow::Ok(Arc::new(DerivedDataManagerSet::new(
             repo_identity.id(),
             repo_identity.name().to_string(),
             changesets.clone(),

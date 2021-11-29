@@ -38,7 +38,7 @@ pub async fn file_to_async_key_stream(path: PathBuf) -> Result<impl Stream<Item 
                 .get(1)
                 .ok_or_else(|| anyhow!("malformed line, no comma found"))?;
             let path = RepoPathBuf::from_string(path.to_string())?;
-            Ok::<_, anyhow::Error>(Key::new(path, hgid))
+            anyhow::Ok(Key::new(path, hgid))
         })
         .filter_map(|res| {
             future::ready(match res {
