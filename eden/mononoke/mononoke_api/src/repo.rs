@@ -875,7 +875,8 @@ impl RepoContext {
         })
     }
 
-    pub async fn changeset_exists_by_bonsai(
+    /// Test whether a changeset exists in a particular storage location.
+    pub async fn changeset_exists(
         &self,
         changeset_id: ChangesetId,
         storage_location: StorageLocation,
@@ -909,11 +910,11 @@ impl RepoContext {
     ) -> Result<Option<ChangesetId>, MononokeError> {
         let id = match specifier {
             ChangesetSpecifier::Bonsai(cs_id) => self
-                .changeset_exists_by_bonsai(cs_id, StorageLocation::Persistent)
+                .changeset_exists(cs_id, StorageLocation::Persistent)
                 .await?
                 .then(|| cs_id),
             ChangesetSpecifier::EphemeralBonsai(cs_id, bubble_id) => self
-                .changeset_exists_by_bonsai(cs_id, StorageLocation::ephemeral(bubble_id))
+                .changeset_exists(cs_id, StorageLocation::ephemeral(bubble_id))
                 .await?
                 .then(|| cs_id),
             ChangesetSpecifier::Hg(hg_cs_id) => {
@@ -1035,7 +1036,7 @@ impl RepoContext {
     ///     (id, hg_id)
     /// });
     /// ```
-    pub async fn changeset_hg_ids(
+    pub async fn many_changeset_hg_ids(
         &self,
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, HgChangesetId)>, MononokeError> {
@@ -1049,8 +1050,8 @@ impl RepoContext {
         Ok(mapping)
     }
 
-    /// Similar to changeset_hg_ids, but returning Git-SHA1s.
-    pub async fn changeset_git_sha1s(
+    /// Similar to many_changeset_hg_ids, but returning Git-SHA1s.
+    pub async fn many_changeset_git_sha1s(
         &self,
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, GitSha1)>, MononokeError> {
@@ -1065,8 +1066,8 @@ impl RepoContext {
         Ok(mapping)
     }
 
-    /// Similar to changeset_hg_ids, but returning Globalrevs.
-    pub async fn changeset_globalrev_ids(
+    /// Similar to many_changeset_hg_ids, but returning Globalrevs.
+    pub async fn many_changeset_globalrev_ids(
         &self,
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, Globalrev)>, MononokeError> {
@@ -1079,8 +1080,8 @@ impl RepoContext {
         Ok(mapping)
     }
 
-    /// Similar to changeset_hg_ids, but returning Svnrevs.
-    pub async fn changeset_svnrev_ids(
+    /// Similar to many_changeset_hg_ids, but returning Svnrevs.
+    pub async fn many_changeset_svnrev_ids(
         &self,
         changesets: Vec<ChangesetId>,
     ) -> Result<Vec<(ChangesetId, Svnrev)>, MononokeError> {

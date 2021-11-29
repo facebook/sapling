@@ -129,7 +129,7 @@ async fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
     let hg_hash1 = "607314ef579bd2407752361ba1b0c1729d08b281";
     let hg_hash2 = "79a13814c5ce7330173ec04d279bf95ab3f652fb";
     let ids: HashMap<_, _> = repo
-        .changeset_hg_ids(vec![
+        .many_changeset_hg_ids(vec![
             ChangesetId::from_str(hash1)?,
             ChangesetId::from_str(hash2)?,
         ])

@@ -102,7 +102,11 @@ async fn land_stack(
         .chain(old_ids.iter().copied())
         .chain(new_ids.iter().copied())
         .collect();
-    let all_hgids: HashMap<_, _> = repo.changeset_hg_ids(all_ids).await?.into_iter().collect();
+    let all_hgids: HashMap<_, _> = repo
+        .many_changeset_hg_ids(all_ids)
+        .await?
+        .into_iter()
+        .collect();
 
     let new_head_hgid = all_hgids
         .get(&new_head)

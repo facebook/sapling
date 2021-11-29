@@ -127,7 +127,7 @@ async fn check_request_item(repo: HgRepoContext, item: LookupRequest) -> Result<
             .await?
         }
         AnyId::BonsaiChangesetId(id) => repo
-            .changeset_exists_by_bonsai(
+            .changeset_exists(
                 id.into(),
                 match bubble_id {
                     Some(id) => StorageLocation::Bubble(id),
@@ -146,7 +146,7 @@ async fn check_request_item(repo: HgRepoContext, item: LookupRequest) -> Result<
             .await?
             .into(),
         AnyId::HgChangesetId(id) => repo
-            .changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
+            .hg_changeset_exists(HgChangesetId::new(HgNodeHash::from(id)))
             .await?
             .into(),
     };

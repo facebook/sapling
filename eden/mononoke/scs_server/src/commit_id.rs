@@ -114,7 +114,7 @@ pub(crate) async fn map_commit_identities(
         let ids = ids.clone();
         let identities = async {
             let bonsai_hg_ids = repo_ctx
-                .changeset_hg_ids(ids)
+                .many_changeset_hg_ids(ids)
                 .await?
                 .into_iter()
                 .map(|(cs_id, hg_cs_id)| {
@@ -134,7 +134,7 @@ pub(crate) async fn map_commit_identities(
         cloned!(ids);
         let identities = async {
             let bonsai_git_shas = repo_ctx
-                .changeset_git_sha1s(ids)
+                .many_changeset_git_sha1s(ids)
                 .await?
                 .into_iter()
                 .map(|(cs_id, git_sha1)| {
@@ -154,7 +154,7 @@ pub(crate) async fn map_commit_identities(
         cloned!(ids);
         let identities = async {
             let bonsai_globalrev_ids = repo_ctx
-                .changeset_globalrev_ids(ids)
+                .many_changeset_globalrev_ids(ids)
                 .await?
                 .into_iter()
                 .map(|(cs_id, globalrev)| {
@@ -173,7 +173,7 @@ pub(crate) async fn map_commit_identities(
     if schemes.contains(&thrift::CommitIdentityScheme::SVNREV) {
         let identities = async {
             let bonsai_svnrev_ids = repo_ctx
-                .changeset_svnrev_ids(ids)
+                .many_changeset_svnrev_ids(ids)
                 .await?
                 .into_iter()
                 .map(|(cs_id, svnrev)| {

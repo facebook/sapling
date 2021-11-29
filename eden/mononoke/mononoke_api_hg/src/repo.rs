@@ -258,8 +258,8 @@ impl HgRepoContext {
         .await?)
     }
 
-    /// Look up changeset
-    pub async fn changeset_exists(
+    /// Test whether a Mercurial changeset exists.
+    pub async fn hg_changeset_exists(
         &self,
         hg_changeset_id: HgChangesetId,
     ) -> Result<bool, MononokeError> {
@@ -269,15 +269,15 @@ impl HgRepoContext {
             .map_err(MononokeError::from)
     }
 
-    /// Look up by bonsai changeset
-    pub async fn changeset_exists_by_bonsai(
+    /// Test whether a changeset exists in a particular storage location.
+    pub async fn changeset_exists(
         &self,
         changeset_id: ChangesetId,
         storage_location: StorageLocation,
     ) -> Result<bool, MononokeError> {
         Ok(self
             .repo
-            .changeset_exists_by_bonsai(changeset_id, storage_location)
+            .changeset_exists(changeset_id, storage_location)
             .await?)
     }
 
