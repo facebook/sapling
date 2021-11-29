@@ -10,7 +10,7 @@ license = "GPLv2+"
 [dependencies]
 abomonation = "0.7"
 abomonation_derive = "0.5"
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 async-trait = "0.1.51"
 auto_impl = "0.4"
 blobstore = { version = "0.1.0", path = "../blobstore" }

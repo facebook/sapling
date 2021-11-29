@@ -6,5 +6,5 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 taggederror = { path = "../taggederror" }

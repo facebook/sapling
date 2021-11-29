@@ -13,7 +13,7 @@ test = false
 
 [dependencies]
 alpn = { version = "0.1.0", path = "../alpn" }
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 bytes = { version = "1.1", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 clap = "2.33"

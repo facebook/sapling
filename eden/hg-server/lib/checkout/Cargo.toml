@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { path = "../manifest", features = ["for-tests"] }
 parking_lot = "0.10.2"

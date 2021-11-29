@@ -19,5 +19,5 @@ thiserror = "1.0.29"
 util = { path = "../util" }
 
 [dev-dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 tempfile = "3.2"

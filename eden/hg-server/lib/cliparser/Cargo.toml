@@ -6,7 +6,7 @@ authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 cpython = { version = "0.7", optional = true, default-features = false }
 cpython_ext = { path = "../cpython-ext", optional = true, default-features = false }
 lazy_static = "1.0"

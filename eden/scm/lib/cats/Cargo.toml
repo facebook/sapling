@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 configmodel = { path = "../configmodel" }
 indexmap = { version = "1.7.0", features = ["rayon", "serde-1"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }

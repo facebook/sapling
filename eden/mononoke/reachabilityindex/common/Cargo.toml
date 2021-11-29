@@ -8,7 +8,7 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

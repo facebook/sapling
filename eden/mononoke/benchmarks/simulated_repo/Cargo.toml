@@ -15,7 +15,7 @@ name = "benchmark"
 path = "benchmark.rs"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 async-trait = "0.1.51"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

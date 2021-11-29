@@ -9,7 +9,7 @@ name = "edenapi_cli"
 path = "src/bin/cli.rs"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 async-runtime = { path = "../async-runtime" }
 async-trait = "0.1.51"
 atty = "0.2"

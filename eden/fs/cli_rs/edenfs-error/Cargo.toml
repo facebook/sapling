@@ -8,5 +8,5 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 thiserror = "1.0.29"

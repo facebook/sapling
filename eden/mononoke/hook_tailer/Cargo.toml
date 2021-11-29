@@ -12,7 +12,7 @@ name = "hook_tailer"
 path = "main.rs"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }

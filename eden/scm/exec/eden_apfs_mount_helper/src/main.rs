@@ -11,7 +11,7 @@
 //! It is intended to be used together with edenfs, but may also be
 //! useful for non-virtualized repos as a way to move IO out of a recursive
 //! watch.
-use anyhow::*;
+use anyhow::{anyhow, bail, format_err, Context, Result};
 use serde::*;
 use sha2::{Digest, Sha256};
 use std::os::unix::fs::MetadataExt;

@@ -15,7 +15,7 @@ name = "mononoke_hg_sync_job"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 async-stream = "0.3"
 base64 = "0.11.0"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }

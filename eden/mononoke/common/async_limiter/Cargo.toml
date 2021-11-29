@@ -9,7 +9,7 @@ license = "GPLv2+"
 autoexamples = false
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 pin-project = "0.4.28"
 ratelimit_meter = "5"

@@ -12,7 +12,7 @@ name = "bench"
 harness = false
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 dirs = "2.0"
 filetime = "0.2.9"
 hgtime = { path = "../hgtime" }

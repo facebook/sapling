@@ -17,7 +17,7 @@ description = '''
 '''
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 eventsource = "0.5"
 filetime = "0.2.9"
 lazy_static = "1.0"

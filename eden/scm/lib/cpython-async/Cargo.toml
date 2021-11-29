@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 async-runtime = { path = "../async-runtime" }
 cpython = { version = "0.7", default-features = false }
 cpython_ext = { path = "../cpython-ext", default-features = false }

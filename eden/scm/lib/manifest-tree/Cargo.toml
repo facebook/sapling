@@ -11,7 +11,7 @@ harness = false
 required-features = ["for-tests"]
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 async-runtime = { path = "../async-runtime" }
 bytes = { version = "1.1", features = ["serde"] }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }

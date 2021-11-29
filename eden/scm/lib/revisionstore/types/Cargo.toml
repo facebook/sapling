@@ -9,7 +9,7 @@ edition = "2021"
 path = "lib.rs"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 byteorder = "1.3"
 quickcheck = "1.0"
 serde = { version = "1.0.126", features = ["derive", "rc"] }

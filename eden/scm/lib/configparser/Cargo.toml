@@ -12,7 +12,7 @@ name = "bench"
 harness = false
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 configmodel = { path = "../configmodel" }
 dirs = "2.0"
 filetime = { version = "0.2.9", optional = true }

@@ -12,7 +12,7 @@ name = "blobrepo_test"
 path = "test/main.rs"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bonsai_git_mapping = { version = "0.1.0", path = "../bonsai_git_mapping" }
 bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }

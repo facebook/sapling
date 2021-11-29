@@ -9,7 +9,7 @@ name = "blackbox"
 harness = false
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 byteorder = "1.3"
 indexedlog = { path = "../indexedlog" }
 lazy_static = "1.0"

@@ -12,7 +12,7 @@ name = "backfill_derived_data"
 path = "../cmds/backfill_derived_data/main.rs"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }

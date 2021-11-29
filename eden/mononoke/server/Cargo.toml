@@ -9,7 +9,7 @@ license = "GPLv2+"
 
 [dependencies]
 alpn = { version = "0.1.0", path = "../alpn" }
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 clap = "2.33"
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }

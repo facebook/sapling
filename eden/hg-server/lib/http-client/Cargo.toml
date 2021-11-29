@@ -9,7 +9,7 @@ name = "http_cli"
 path = "src/bin/cli.rs"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 atty = "0.2"
 curl = { version = "0.4", features = ["http2"] }
 curl-sys = "0.4"

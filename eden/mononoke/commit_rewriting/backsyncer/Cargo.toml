@@ -12,7 +12,7 @@ name = "backsyncer_cmd"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }

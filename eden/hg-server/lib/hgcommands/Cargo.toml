@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 async-runtime = { path = "../async-runtime" }
 bindings = { path = "../../edenscmnative/bindings", default-features = false }
 blackbox = { path = "../blackbox" }

@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.48"
+anyhow = "1.0.51"
 blake2 = "0.9"
 crossbeam = "0.8"
 edenapi = { path = ".." }
