@@ -55,9 +55,9 @@ extern const std::set<int32_t> kSupportedTakeoverVersions;
 class TakeoverCapabilities {
  public:
   enum : uint64_t {
-    // This indicates we use our own invented format for sending takeover data
-    // between the client and server. This was used in early versions of the
-    // protocol.
+    // DEPRECATED This indicates we use our own invented format for sending
+    // takeover data between the client and server. This was used in early
+    // versions of the protocol. No longer Supported in any version of EdenFS
     CUSTOM_SERIALIZATION = 1 << 0,
 
     // Indicates this version of the protocol is able to serialize FUSE mount
@@ -104,9 +104,12 @@ class TakeoverData {
     // we can use it in tests
     kTakeoverProtocolVersionNeverSupported = 0,
 
-    // This is the protocol version supported by eden just prior
+    // DEPRECATED: This is the protocol version supported by eden just prior
     // to this protocol versioning code being written
     kTakeoverProtocolVersionOne = 1,
+
+    // TODO: deprecate versions 3-5 after capability matching is stable
+    // roughly Feb 2022 T104382350.
 
     // This version introduced thrift encoding of the takeover structures.
     // It is nominally version 2 but named 3 here because VersionOne
@@ -300,18 +303,6 @@ class TakeoverData {
   folly::IOBuf serialize(uint64_t protocolCapabilities);
 
   /**
-   * Serialize data using version 1 of the takeover protocol. This uses a home
-   * grown serialization format.
-   */
-  folly::IOBuf serializeCustom();
-
-  /**
-   * Serialize an exception using version 1 of the takeover protocol. This uses
-   * a home grown serialization format
-   */
-  static folly::IOBuf serializeErrorCustom(const folly::exception_wrapper& ew);
-
-  /**
    * Serialize data for any version that uses thrift serialization. This is
    * versions 3+.
    */
@@ -338,12 +329,6 @@ class TakeoverData {
   static TakeoverData deserializeThrift(
       uint32_t protocolCapabilities,
       folly::IOBuf* buf);
-
-  /**
-   * Deserialize the TakeoverData from a buffer using version 1 of the takeover
-   * protocol. This uses a home grown serialization format.
-   */
-  static TakeoverData deserializeCustom(folly::IOBuf* buf);
 
   /**
    * Message type values.

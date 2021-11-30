@@ -51,7 +51,6 @@ TakeoverMountProtocol getMountProtocol(
 } // namespace
 
 const std::set<int32_t> kSupportedTakeoverVersions{
-    TakeoverData::kTakeoverProtocolVersionOne,
     TakeoverData::kTakeoverProtocolVersionThree,
     TakeoverData::kTakeoverProtocolVersionFour,
     TakeoverData::kTakeoverProtocolVersionFive};
@@ -159,45 +158,29 @@ void TakeoverData::serialize(
 }
 
 IOBuf TakeoverData::serialize(uint64_t protocolCapabilities) {
-  uint64_t serializationMethod = protocolCapabilities &
-      (TakeoverCapabilities::CUSTOM_SERIALIZATION |
-       TakeoverCapabilities::THRIFT_SERIALIZATION);
-
-  if (serializationMethod == TakeoverCapabilities::CUSTOM_SERIALIZATION) {
-    return serializeCustom();
-  } else if (
-      serializationMethod == TakeoverCapabilities::THRIFT_SERIALIZATION) {
-    return serializeThrift(protocolCapabilities);
-  } else {
-    throw std::runtime_error(fmt::format(
-        "Asked to serialize takeover data in unsupported format. "
-        "Cababilities: {}",
-        protocolCapabilities));
-  }
+  XCHECK(protocolCapabilities & TakeoverCapabilities::THRIFT_SERIALIZATION)
+      << fmt::format(
+             "Asked to serialize takeover data in unsupported format. "
+             "Cababilities: {}",
+             protocolCapabilities);
+  return serializeThrift(protocolCapabilities);
 }
 
 folly::IOBuf TakeoverData::serializeError(
     uint64_t protocolCapabilities,
     const folly::exception_wrapper& ew) {
-  uint64_t serializationMethod = protocolCapabilities &
-      (TakeoverCapabilities::CUSTOM_SERIALIZATION |
-       TakeoverCapabilities::THRIFT_SERIALIZATION);
-
+  XCHECK(
+      protocolCapabilities & TakeoverCapabilities::THRIFT_SERIALIZATION ||
+      protocolCapabilities == 0)
+      << fmt::format(
+             "Asked to serialize takeover data in unsupported format. "
+             "Cababilities: {}",
+             protocolCapabilities);
   // We allow NeverSupported in the error case so that we don't
   // end up erroring out in the version mismatch error
   // reporting case.
-  if (serializationMethod == TakeoverCapabilities::CUSTOM_SERIALIZATION ||
-      protocolCapabilities == 0) {
-    return serializeErrorCustom(ew);
-  } else if (
-      serializationMethod == TakeoverCapabilities::THRIFT_SERIALIZATION) {
-    return serializeErrorThrift(ew);
-  } else {
-    throw std::runtime_error(fmt::format(
-        "Asked to serialize takeover error in unsupported format. "
-        "Capabilities: {}",
-        protocolCapabilities));
-  }
+
+  return serializeErrorThrift(ew);
 }
 
 bool TakeoverData::isPing(const IOBuf* buf) {
@@ -260,11 +243,6 @@ int32_t TakeoverData::getProtocolVersion(IOBuf* buf) {
 
   auto messageType = cursor.readBE<uint32_t>();
   switch (messageType) {
-    case MessageType::ERROR:
-    case MessageType::MOUNTS:
-      // A version 1 response.  We don't advance the buffer that we pass down
-      // because it the messageType is needed to decode the response.
-      return kTakeoverProtocolVersionOne;
     case kTakeoverProtocolVersionThree:
     case kTakeoverProtocolVersionFour:
     case kTakeoverProtocolVersionFive:
@@ -283,190 +261,15 @@ int32_t TakeoverData::getProtocolVersion(IOBuf* buf) {
 TakeoverData TakeoverData::deserialize(
     uint64_t protocolCapabilities,
     IOBuf* buf) {
-  uint64_t serializationMethod = protocolCapabilities &
-      (TakeoverCapabilities::CUSTOM_SERIALIZATION |
-       TakeoverCapabilities::THRIFT_SERIALIZATION);
-  if (serializationMethod == TakeoverCapabilities::CUSTOM_SERIALIZATION) {
-    return deserializeCustom(buf);
-  }
-  if (serializationMethod == TakeoverCapabilities::THRIFT_SERIALIZATION) {
-    return deserializeThrift(protocolCapabilities, buf);
-  }
+  XCHECK(
+      protocolCapabilities & TakeoverCapabilities::THRIFT_SERIALIZATION ||
+      protocolCapabilities == 0)
+      << fmt::format(
+             "Asked to serialize takeover data in unsupported format. "
+             "Cababilities: {}",
+             protocolCapabilities);
 
-  throw std::runtime_error(fmt::format(
-      "Unrecognized TakeoverData serialization capability {:x}",
-      protocolCapabilities));
-}
-
-IOBuf TakeoverData::serializeCustom() {
-  // Compute the body data length
-  uint64_t bodyLength = sizeof(uint32_t);
-  for (const auto& mount : mountPoints) {
-    bodyLength += sizeof(uint32_t) + mount.mountPath.stringPiece().size();
-    bodyLength += sizeof(uint32_t) + mount.stateDirectory.stringPiece().size();
-    bodyLength += sizeof(uint32_t);
-    for (const auto& bindMount : mount.bindMounts) {
-      bodyLength += sizeof(uint32_t) + bindMount.stringPiece().size();
-    }
-    bodyLength += sizeof(fuse_init_out);
-
-    // The fileHandleMap has been removed, so its size will always be 0.
-    constexpr size_t fileHandleMapSize = 0;
-    bodyLength += sizeof(uint32_t) + fileHandleMapSize;
-
-    auto serializedInodeMap =
-        CompactSerializer::serialize<std::string>(mount.inodeMap);
-    bodyLength += sizeof(uint32_t) + serializedInodeMap.size();
-  }
-
-  // Build a buffer with all of the mount paths
-  auto fullCapacity = kHeaderLength + bodyLength;
-  IOBuf buf(IOBuf::CREATE, fullCapacity);
-  folly::io::Appender app(&buf, 0);
-
-  // Serialize the message type
-  app.writeBE<uint32_t>(MessageType::MOUNTS);
-
-  // Write the number of mount points
-  app.writeBE<uint32_t>(mountPoints.size());
-
-  // Serialize each mount point
-  for (const auto& mount : mountPoints) {
-    auto mountProtocol = getMountProtocol(mount);
-    if (mountProtocol == TakeoverMountProtocol::FUSE) {
-      auto& channelData = std::get<FuseChannelData>(mount.channelInfo);
-
-      // The mount path
-      const auto& pathStr = mount.mountPath.stringPiece();
-      app.writeBE<uint32_t>(pathStr.size());
-      app(pathStr);
-
-      // The client configuration dir
-      const auto& clientStr = mount.stateDirectory.stringPiece();
-      app.writeBE<uint32_t>(clientStr.size());
-      app(clientStr);
-
-      // Number of bind mounts, followed by the bind mount paths
-      app.writeBE<uint32_t>(mount.bindMounts.size());
-      for (const auto& bindMount : mount.bindMounts) {
-        app.writeBE<uint32_t>(bindMount.stringPiece().size());
-        app(bindMount.stringPiece());
-      }
-
-      // Stuffing the fuse connection information in as a binary
-      // blob because we know that the endianness of the target
-      // machine must match the current system for a graceful
-      // takeover.
-      app.push(folly::StringPiece{
-          reinterpret_cast<const char*>(&channelData.connInfo),
-          sizeof(channelData.connInfo)});
-      // SerializedFileHandleMap has been removed so its size is always 0.
-      app.writeBE<uint32_t>(0);
-
-      auto serializedInodeMap =
-          CompactSerializer::serialize<std::string>(mount.inodeMap);
-      app.writeBE<uint32_t>(serializedInodeMap.size());
-      app.push(folly::StringPiece{serializedInodeMap});
-    } else {
-      throw std::runtime_error(fmt::format(
-          "version 1 of the protocol does not support serializing non-FUSE"
-          "mounts. problem mount: {} . protocol: {}",
-          mount.mountPath,
-          mountProtocol));
-    }
-  }
-
-  return buf;
-}
-
-folly::IOBuf TakeoverData::serializeErrorCustom(
-    const folly::exception_wrapper& ew) {
-  // Compute the body data length
-  auto exceptionClassName = ew.class_name();
-  folly::StringPiece what = ew ? ew.get_exception()->what() : "";
-  uint64_t bodyLength = sizeof(uint32_t) + exceptionClassName.size() +
-      sizeof(uint32_t) + what.size();
-
-  // Allocate the buffer
-  auto fullCapacity = kHeaderLength + bodyLength;
-  IOBuf buf(IOBuf::CREATE, fullCapacity);
-  folly::io::Appender app(&buf, 0);
-
-  // Serialize the message type
-  app.writeBE<uint32_t>(MessageType::ERROR);
-
-  // Write the error type and message
-  app.writeBE<uint32_t>(exceptionClassName.size());
-  app(exceptionClassName);
-  app.writeBE<uint32_t>(what.size());
-  app(what);
-
-  return buf;
-}
-
-TakeoverData TakeoverData::deserializeCustom(IOBuf* buf) {
-  folly::io::Cursor cursor(buf);
-
-  auto messageType = cursor.readBE<uint32_t>();
-  if (messageType != MessageType::ERROR && messageType != MessageType::MOUNTS) {
-    throw std::runtime_error(
-        folly::to<string>("unknown takeover data message type ", messageType));
-  }
-
-  // Check the message type
-  if (messageType == MessageType::ERROR) {
-    auto errorTypeLength = cursor.readBE<uint32_t>();
-    auto errorType = cursor.readFixedString(errorTypeLength);
-    auto errorMessageLength = cursor.readBE<uint32_t>();
-    auto errorMessage = cursor.readFixedString(errorMessageLength);
-
-    throw std::runtime_error(errorType + ": " + errorMessage);
-  }
-  if (messageType != MessageType::MOUNTS) {
-    throw std::runtime_error(
-        folly::to<string>("unknown takeover data message type ", messageType));
-  }
-
-  TakeoverData data;
-  auto numMounts = cursor.readBE<uint32_t>();
-  for (uint32_t mountIdx = 0; mountIdx < numMounts; ++mountIdx) {
-    auto pathLength = cursor.readBE<uint32_t>();
-    auto mountPath = cursor.readFixedString(pathLength);
-
-    auto clientPathLength = cursor.readBE<uint32_t>();
-    auto stateDirectory = cursor.readFixedString(clientPathLength);
-
-    auto numBindMounts = cursor.readBE<uint32_t>();
-
-    std::vector<AbsolutePath> bindMounts;
-    bindMounts.reserve(numBindMounts);
-    for (uint32_t bindIdx = 0; bindIdx < numBindMounts; ++bindIdx) {
-      auto bindPathLength = cursor.readBE<uint32_t>();
-      auto bindPath = cursor.readFixedString(bindPathLength);
-      bindMounts.emplace_back(AbsolutePathPiece{bindPath});
-    }
-
-    fuse_init_out connInfo;
-    cursor.pull(&connInfo, sizeof(connInfo));
-
-    auto fileHandleMapLength = cursor.readBE<uint32_t>();
-    cursor.readFixedString(fileHandleMapLength);
-    // No need to decode the file handle map.
-
-    auto inodeMapLength = cursor.readBE<uint32_t>();
-    auto inodeMapBuffer = cursor.readFixedString(inodeMapLength);
-    auto inodeMap =
-        CompactSerializer::deserialize<SerializedInodeMap>(inodeMapBuffer);
-
-    data.mountPoints.emplace_back(
-        AbsolutePath{mountPath},
-        AbsolutePath{stateDirectory},
-        std::move(bindMounts),
-        FuseChannelData{folly::File{}, connInfo},
-        std::move(inodeMap));
-  }
-
-  return data;
+  return deserializeThrift(protocolCapabilities, buf);
 }
 
 bool canSerDeMountType(
