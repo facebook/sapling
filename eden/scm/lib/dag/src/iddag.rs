@@ -161,9 +161,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 
     /// Returns whether the iddag contains segments for the given `id`.
     pub fn contains_id(&self, id: Id) -> Result<bool> {
-        let group = id.group();
-        let level = 0;
-        Ok(self.next_free_id(level, group)? > id)
+        Ok(self.all()?.contains(id))
     }
 
     pub(crate) fn version(&self) -> &VerLink {
