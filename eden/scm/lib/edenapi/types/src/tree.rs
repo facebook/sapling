@@ -294,8 +294,6 @@ pub struct UploadTreeRequest {
 #[auto_wire]
 #[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadTreeResponse {
-    #[id(0)]
-    pub index: usize,
     #[id(1)]
     pub token: UploadToken,
 }
@@ -304,7 +302,6 @@ pub struct UploadTreeResponse {
 impl Arbitrary for UploadTreeResponse {
     fn arbitrary(g: &mut Gen) -> Self {
         Self {
-            index: Arbitrary::arbitrary(g),
             token: Arbitrary::arbitrary(g),
         }
     }

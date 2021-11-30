@@ -183,7 +183,6 @@ async fn fetch_child_file_metadata(
 async fn store_tree(
     repo: HgRepoContext,
     item: UploadTreeRequest,
-    index: usize,
 ) -> Result<UploadTreeResponse, Error> {
     let upload_node_id = HgNodeHash::from(item.entry.node_id);
     let contents = item.entry.data;
@@ -192,7 +191,6 @@ async fn store_tree(
     repo.store_tree(upload_node_id, p1, p2, Bytes::from(contents))
         .await?;
     Ok(UploadTreeResponse {
-        index,
         token: UploadToken::new_fake_token(AnyId::HgTreeId(item.entry.node_id), None),
     })
 }
@@ -218,8 +216,7 @@ impl EdenApiHandler for UploadTreesHandler {
         let tokens = request
             .batch
             .into_iter()
-            .enumerate()
-            .map(move |(i, item)| store_tree(repo.clone(), item, i));
+            .map(move |item| store_tree(repo.clone(), item));
 
         Ok(stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_UPLOAD_TREES_PER_REQUEST)
