@@ -179,7 +179,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                                 // If the parent was not assigned, or was assigned to a higher group,
                                 // (re-)assign the parent to this group.
                                 match self.vertex_id_with_max_group(&p, group).await {
-                                    Ok(Some(id)) => todo_stack.push(Todo::AssignedId(id)),
+                                    Ok(Some(id)) => todo_stack.push(AssignedId(id)),
                                     Ok(None) => {
                                         let parent_order = match (order, i) {
                                             (VisitOrder::FirstFirst, 0) => VisitOrder::FirstFirst,
@@ -191,10 +191,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                                 }
                             }
                         }
-                        Some(id) => {
-                            // Inlined Assign(id, ...) -> AssignedId(id)
-                            parent_ids.push(id);
-                        }
+                        Some(id) => todo_stack.push(AssignedId(id)),
                     }
                 }
                 Assign(head, parent_len, order) => {
@@ -239,8 +236,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                         }
                     };
                     parent_ids.truncate(parent_start);
-                    // Inlined AssignId(id);
-                    parent_ids.push(id);
+                    todo_stack.push(AssignedId(id));
                 }
                 AssignedId(id) => {
                     parent_ids.push(id);
