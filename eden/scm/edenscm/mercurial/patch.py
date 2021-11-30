@@ -2619,7 +2619,7 @@ def diff(
             # cmdutil.getloglinerangerevs() for 'hg log -L'.
             assert fctx2 is not None, "fctx2 unexpectly None in diff hunks filtering"
             hunks = hunksfilterfn(fctx2, hunks)
-        text = b"".join(sum((list(hlines) for hrange, hlines in hunks), []))
+        text = b"".join(l for hrange, hlines in hunks for l in hlines)
         if hdr and (text or len(hdr) > 1):
             yield b"\n".join(hdr) + b"\n"
         if text:
