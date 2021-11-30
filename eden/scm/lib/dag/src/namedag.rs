@@ -2203,23 +2203,27 @@ fn update_reserved(reserved: &mut IdSet, covered: &IdSet, low: Id, reserve_size:
             // no longer overlap.
             let last_free = span.low - 1;
             if last_free >= low {
-                // [----------reserved----------]
-                //       [--span(overlap)--]
-                //      ^
-                // ^    last_free       ^
-                // low                  high
+                // Use the remaining part of the previous reservation.
+                //   [----------reserved--------------]
+                //             [--intersected--]
+                //   ^                                ^
+                //   low                              high
+                //            ^
+                //            last_free
+                //   [reserved] <- remaining of the previous reservation
+                //            ^
+                //            high
                 high = last_free;
             } else {
                 // No space on the left side. Try the right side.
                 //   [--------reserved-------]
-                //   [--span(overlap)--]
-                //                 try: [------reserved------]
+                //   [--intersected--]
                 //   ^                       ^
                 //   low                     high
-                //  ^                   ^
-                //  last_free           low (try next)
+                //        try next -> [------reserved------]
+                //  ^                 ^
+                //  last_free         low (try next)
                 low = span.high + 1;
-                // Try again.
                 continue;
             }
         }

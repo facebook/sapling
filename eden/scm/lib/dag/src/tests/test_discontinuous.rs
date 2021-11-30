@@ -145,7 +145,7 @@ async fn test_grow_branches() {
         "<spans [C0:C4+14:18, B0:B4+7:11, A0:A4+0:4]>"
     );
 
-    // Large reservation is respected when the previously reservation
+    // Large reservation is respected when the previous reservation
     // gets used up. Note how B5 and C5 respects reservations from
     // A8 (->C4) and B6.
     let draw = DrawDag::from(
