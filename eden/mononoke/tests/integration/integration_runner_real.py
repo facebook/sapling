@@ -161,11 +161,9 @@ def _hg_runner(
     interactive: bool = False,
     quiet: bool = False,
 ):
-    if "SANDCASTLE" in os.environ and "GETDEPS_BUILD" not in os.environ:
+    if "SANDCASTLE" in os.environ:
         # Sandcastle's /tmp might be mounted on a slow device
         # In that case let's move the test tmp dir to /dev/shm
-        # But if this is a getdeps build it might be running in environment
-        # without /dev/shm (like Legocastle's OSX), so leave it be.
         os.environ["TMPDIR"] = "/dev/shm"
 
     with tempfile.TemporaryDirectory() as output_dir:
