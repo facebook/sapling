@@ -66,11 +66,11 @@ async fn test_idmap_more_entries_conflict_with_assign_head() {
 
     let draw = DrawDag::from("B--D");
     let heads = VertexListWithOptions::from(&["D".into()][..]).with_highest_group(Group::MASTER);
-    let res = dag.dag.add_heads(&draw, &heads).await;
+    dag.dag.add_heads(&draw, &heads).await.unwrap();
 
-    // FIXME: Conflict is not handled.
+    // D takes id 3, skips the taken id 2.
     assert_eq!(
-        res.unwrap_err().to_string(),
-        "bug: new entry 2 = [68] conflicts with an existing entry 2 = [67]"
+        dag.debug_segments(0, Group::MASTER),
+        "\n        D+3 : D+3 [B+1]\n        A+0 : B+1 [] Root OnlyHead"
     );
 }

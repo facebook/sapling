@@ -274,26 +274,19 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                             let id = match known_id {
                                 Some(id) => id,
                                 None => {
-                                    let mut candidate_id = match parents.iter().max() {
+                                    let candidate_id = match parents.iter().max() {
                                         Some(&max_parent_id) => {
                                             (max_parent_id + 1).max(group.min_id())
                                         }
                                         None => group.min_id(),
                                     };
-                                    loop {
-                                        if let Some(span) = covered_ids.span_contains(candidate_id)
-                                        {
-                                            candidate_id = span.high + 1;
-                                            continue;
-                                        }
-                                        if let Some(span) = reserved_ids.span_contains(candidate_id)
-                                        {
-                                            candidate_id = span.high + 1;
-                                            continue;
-                                        }
-                                        break;
-                                    }
-                                    candidate_id
+                                    adjust_candidate_id(
+                                        self,
+                                        covered_ids,
+                                        reserved_ids,
+                                        candidate_id,
+                                    )
+                                    .await?
                                 }
                             };
                             if id.group() != group {
@@ -337,6 +330,65 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
 
         Ok(outcome)
     }
+}
+
+/// Pick a minimal `n`, so `candidate_id + n` is an `Id` that is not "covered",
+/// not "reserved", and not in the "map".  Return the picked `Id`.
+async fn adjust_candidate_id(
+    map: &(impl IdConvert + ?Sized),
+    covered_ids: &IdSet,
+    reserved_ids: &IdSet,
+    mut candidate_id: Id,
+) -> Result<Id> {
+    loop {
+        // (Fast) test using covered_ids + reserved_ids.
+        loop {
+            if let Some(span) = covered_ids.span_contains(candidate_id) {
+                candidate_id = span.high + 1;
+                continue;
+            }
+            if let Some(span) = reserved_ids.span_contains(candidate_id) {
+                candidate_id = span.high + 1;
+                continue;
+            }
+            break;
+        }
+        // (Slow) test using the IdMap.
+        let new_candidate_id = ensure_id_not_exist_in_map(map, candidate_id).await?;
+        if new_candidate_id == candidate_id {
+            break;
+        } else {
+            // Check the covered_ids + reserved_ids.
+            candidate_id = new_candidate_id;
+        }
+    }
+    Ok(candidate_id)
+}
+
+/// Pick a minimal `n`, so `candidate_id + n` is an `Id` that is not in the
+/// "map". Return the picked `Id`.
+async fn ensure_id_not_exist_in_map(
+    map: &(impl IdConvert + ?Sized),
+    mut candidate_id: Id,
+) -> Result<Id> {
+    // PERF: This lacks of batching if it forms a loop. But it
+    // is also expected to be rare - only when the server
+    // tailer (assuming only one tailer is writing globally) is
+    // killed abnormally, *and* the branch being assigned has
+    // non-fast-forward move, this code path becomes useful.
+    //
+    // Technically, not using `locally` is more correct in a
+    // lazy `IdMap`. However, lazy `IdMap` is only used by
+    // client (local) dag, which ensures `IdMap` and `IdDag`
+    // are in-sync, meaning that the above `covered_ids` check
+    // is sufficient. So this is really only protecting the
+    // server's out-of-sync `IdMap` use-case, where the
+    // `locally` variant is the same as the non-`locally`,
+    // since the server has a non-lazy `IdMap`.
+    while let [true] = &map.contains_vertex_id_locally(&[candidate_id]).await?[..] {
+        candidate_id = candidate_id + 1;
+    }
+    Ok(candidate_id)
 }
 
 impl<T> IdMapAssignHead for T where T: IdConvert + IdMapWrite {}
