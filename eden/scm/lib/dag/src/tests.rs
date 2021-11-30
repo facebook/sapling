@@ -1329,7 +1329,8 @@ impl IdMap {
     fn replace(&self, text: &str) -> String {
         let mut result = text.to_string();
         for &group in Group::ALL.iter() {
-            for id in group.min_id().to(self.next_free_id(group).unwrap()) {
+            const MAX_ID_IN_ASCII_TEST: u64 = 30;
+            for id in group.min_id().to(group.min_id() + MAX_ID_IN_ASCII_TEST) {
                 if let Ok(Some(name)) = self.find_name_by_id(id) {
                     let name = String::from_utf8(name.to_vec()).unwrap();
                     let id_str = format!("{:01$}", id, name.len());

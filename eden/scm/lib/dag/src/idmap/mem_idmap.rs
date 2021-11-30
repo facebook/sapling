@@ -26,12 +26,11 @@ use crate::VerLink;
 /// Private. Stored in memory.
 pub struct MemIdMap {
     core: CoreMemIdMap,
-    cached_next_free_ids: [AtomicU64; Group::COUNT],
     map_id: String,
     map_version: VerLink,
 }
 
-/// Subset of the `MemIdMap` interface that does not have "next_free_id"
+/// Subset of the `MemIdMap` interface that does not have "map_version".
 /// or "version" concept.
 #[derive(Default, Clone)]
 pub(crate) struct CoreMemIdMap {
@@ -44,7 +43,6 @@ impl MemIdMap {
     pub fn new() -> Self {
         Self {
             core: Default::default(),
-            cached_next_free_ids: Default::default(),
             map_id: format!("mem:{}", next_id()),
             map_version: VerLink::new(),
         }
@@ -57,10 +55,6 @@ impl Clone for MemIdMap {
             core: self.core.clone(),
             map_id: self.map_id.clone(),
             map_version: self.map_version.clone(),
-            cached_next_free_ids: [
-                AtomicU64::new(self.cached_next_free_ids[0].load(atomic::Ordering::SeqCst)),
-                AtomicU64::new(self.cached_next_free_ids[1].load(atomic::Ordering::SeqCst)),
-            ],
         }
     }
 }
@@ -166,13 +160,6 @@ impl IdMapWrite for MemIdMap {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         let vertex_name = VertexName::copy_from(name);
         self.core.insert_vertex_id_name(id, vertex_name);
-        let group = id.group();
-        // TODO: use fetch_max once stabilized.
-        // (https://github.com/rust-lang/rust/issues/4865)
-        let cached = self.cached_next_free_ids[group.0].load(atomic::Ordering::SeqCst);
-        if id.0 >= cached {
-            self.cached_next_free_ids[group.0].store(id.0 + 1, atomic::Ordering::SeqCst);
-        }
         self.map_version.bump();
         Ok(())
     }

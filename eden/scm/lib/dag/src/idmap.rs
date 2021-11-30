@@ -278,18 +278,14 @@ mod tests {
         let mut map = IdMap::open(dir.path()).unwrap();
         let lock = map.lock().unwrap();
         map.reload(&lock).unwrap();
-        assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 0);
         map.insert(Id(1), b"abc").unwrap();
-        assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 2);
         map.insert(Id(2), b"def").unwrap();
-        assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 3);
         map.insert(Id(10), b"ghi").unwrap();
-        assert_eq!(map.next_free_id(Group::MASTER).unwrap().0, 11);
         map.insert(Id(11), b"ghi").unwrap_err(); // ghi maps to 10
         map.insert(Id(10), b"ghi2").unwrap_err(); // 10 maps to ghi
 
         // Test another group.
-        let id = map.next_free_id(Group::NON_MASTER).unwrap();
+        let id = Group::NON_MASTER.min_id();
         map.insert(id, b"jkl").unwrap();
         map.insert(id, b"jkl").unwrap();
         map.insert(id, b"jkl2").unwrap_err(); // id maps to jkl
@@ -297,7 +293,6 @@ mod tests {
         map.insert(id + 2, b"jkl2").unwrap_err(); // jkl2 maps to id + 1
         map.insert(Id(15), b"jkl2").unwrap(); // reassign jkl2 to master group - ok.
         map.insert(id + 3, b"abc").unwrap_err(); // reassign abc to non-master group - error.
-        assert_eq!(map.next_free_id(Group::NON_MASTER).unwrap(), id + 2);
 
         // Test hex lookup.
         assert_eq!(0x6a, b'j');

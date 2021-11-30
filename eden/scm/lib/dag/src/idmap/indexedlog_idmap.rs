@@ -8,12 +8,9 @@
 use std::fmt;
 use std::fs::File;
 use std::fs::{self};
-use std::io::Cursor;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::{self};
 
 use byteorder::BigEndian;
 use byteorder::ReadBytesExt;
@@ -40,7 +37,6 @@ use crate::VerLink;
 pub struct IdMap {
     pub(crate) log: log::Log,
     path: PathBuf,
-    cached_next_free_ids: [AtomicU64; Group::COUNT],
     need_rebuild_non_master: bool,
     map_id: String,
     map_version: VerLink,
@@ -74,7 +70,6 @@ impl TryClone for IdMap {
         let result = Self {
             log: self.log.try_clone()?,
             path: self.path.clone(),
-            cached_next_free_ids: Default::default(),
             need_rebuild_non_master: self.need_rebuild_non_master,
             map_id: self.map_id.clone(),
             map_version: self.map_version.clone(),
@@ -90,7 +85,6 @@ impl IdMap {
         Ok(Self {
             log,
             path,
-            cached_next_free_ids: Default::default(),
             need_rebuild_non_master: false,
             map_id,
             map_version: VerLink::new(),
@@ -200,17 +194,15 @@ impl IdMap {
     /// Errors if the new entry conflicts with existing entries.
     pub fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         let group = id.group();
-        if id < self.next_free_id(group)? {
-            let existing_name = self.find_name_by_id(id)?;
-            if let Some(existing_name) = existing_name {
-                if existing_name == name {
-                    return Ok(());
-                } else {
-                    return bug(format!(
-                        "new entry {} = {:?} conflicts with an existing entry {} = {:?}",
-                        id, name, id, existing_name
-                    ));
-                }
+        let existing_name = self.find_name_by_id(id)?;
+        if let Some(existing_name) = existing_name {
+            if existing_name == name {
+                return Ok(());
+            } else {
+                return bug(format!(
+                    "new entry {} = {:?} conflicts with an existing entry {} = {:?}",
+                    id, name, id, existing_name
+                ));
             }
         }
         let existing_id = self.find_id_by_name(name)?;
@@ -240,25 +232,8 @@ impl IdMap {
         data.extend_from_slice(&id.group().bytes());
         data.extend_from_slice(&name);
         self.log.append(data)?;
-        let next_free_id = self.cached_next_free_ids[group.0].get_mut();
-        if id.0 >= *next_free_id {
-            *next_free_id = id.0 + 1;
-        }
         self.map_version.bump();
         Ok(())
-    }
-
-    /// Return the next unused id in the given group.
-    pub fn next_free_id(&self, group: Group) -> Result<Id> {
-        let cached = self.cached_next_free_ids[group.0].load(atomic::Ordering::SeqCst);
-        let id = if cached == 0 {
-            let id = Self::get_next_free_id(&self.log, group)?;
-            self.cached_next_free_ids[group.0].store(id.0, atomic::Ordering::SeqCst);
-            id
-        } else {
-            Id(cached)
-        };
-        Ok(id)
     }
 
     /// Lookup names by hex prefix.
@@ -283,26 +258,6 @@ impl IdMap {
             }
         }
         Ok(result)
-    }
-
-    // Find an unused id that is bigger than existing ids.
-    // Used internally. It should match `next_free_id`.
-    fn get_next_free_id(log: &log::Log, group: Group) -> Result<Id> {
-        // Checks should have been done at callsite.
-        let lower_bound_id = group.min_id();
-        let upper_bound_id = group.max_id();
-        let lower_bound = lower_bound_id.to_bytearray();
-        let upper_bound = upper_bound_id.to_bytearray();
-        let range = &lower_bound[..]..=&upper_bound[..];
-        let mut iter = log.lookup_range(Self::INDEX_ID_TO_NAME, range)?.rev();
-        let id = match iter.nth(0) {
-            None => lower_bound_id,
-            Some(Ok((key, _))) => Id(Cursor::new(key).read_u64::<BigEndian>()? + 1),
-            _ => return bug(format!("cannot read next_free_id for group {}", group)),
-        };
-        debug_assert!(id >= lower_bound_id);
-        debug_assert!(id <= upper_bound_id);
-        Ok(id)
     }
 }
 
@@ -382,11 +337,6 @@ impl IdMapWrite for IdMap {
         self.log.append(IdMap::MAGIC_CLEAR_NON_MASTER)?;
         self.map_version = VerLink::new();
         self.need_rebuild_non_master = false;
-        // Invalidate the next free id cache.
-        self.cached_next_free_ids = Default::default();
-        if self.next_free_id(Group::NON_MASTER)? != Group::NON_MASTER.min_id() {
-            return bug("remove_non_master did not take effect");
-        }
         Ok(())
     }
     async fn need_rebuild_non_master(&self) -> bool {
@@ -418,8 +368,6 @@ impl Persist for IdMap {
     fn reload(&mut self, _lock: &Self::Lock) -> Result<()> {
         self.log.clear_dirty()?;
         self.log.sync()?;
-        // Invalidate the next free id cache.
-        self.cached_next_free_ids = Default::default();
         Ok(())
     }
 
