@@ -14,7 +14,6 @@ use gotham_ext::{
     error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
 };
 use serde::Deserialize;
-use std::collections::BTreeMap;
 use std::num::NonZeroU64;
 use std::time::Duration;
 
@@ -264,11 +263,6 @@ impl EdenApiHandler for UploadHgChangesetsHandler {
     ) -> HandlerResult<'async_trait, Self::Response> {
         let changesets = request.changesets;
         let mutations = request.mutations;
-        let indexes = changesets
-            .iter()
-            .enumerate()
-            .map(|(index, cs)| (cs.node_id.clone(), index))
-            .collect::<BTreeMap<_, _>>();
         let changesets_data = changesets
             .into_iter()
             .map(|changeset| {
@@ -292,7 +286,6 @@ impl EdenApiHandler for UploadHgChangesetsHandler {
                 r.map(|(hg_cs_id, _bonsai_cs_id)| {
                     let hgid = HgId::from(hg_cs_id.into_nodehash());
                     UploadTokensResponse {
-                        index: indexes.get(&hgid).cloned().unwrap(), // always present
                         token: UploadToken::new_fake_token(AnyId::HgChangesetId(hgid), None),
                     }
                 })
@@ -363,7 +356,6 @@ impl EdenApiHandler for UploadBonsaiChangesetHandler {
 
         Ok(stream::once(async move {
             Ok(UploadTokensResponse {
-                index: 0,
                 token: UploadToken::new_fake_token(
                     AnyId::BonsaiChangesetId(cs_id.into()),
                     bubble_id.map(Into::into),

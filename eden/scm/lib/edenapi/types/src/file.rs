@@ -322,8 +322,6 @@ pub struct UploadHgFilenodeRequest {
 #[auto_wire]
 #[derive(Clone, Default, Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct UploadTokensResponse {
-    #[id(1)]
-    pub index: usize,
     #[id(2)]
     pub token: UploadToken,
 }
@@ -353,7 +351,6 @@ impl Arbitrary for HgFilenodeData {
 impl Arbitrary for UploadTokensResponse {
     fn arbitrary(g: &mut Gen) -> Self {
         Self {
-            index: Arbitrary::arbitrary(g),
             token: Arbitrary::arbitrary(g),
         }
     }

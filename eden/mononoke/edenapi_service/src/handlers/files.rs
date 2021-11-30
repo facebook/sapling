@@ -223,7 +223,6 @@ pub async fn upload_file(state: &mut State) -> Result<impl TryIntoResponse, Http
 async fn store_hg_filenode(
     repo: HgRepoContext,
     item: UploadHgFilenodeRequest,
-    index: usize,
 ) -> Result<UploadTokensResponse, Error> {
     // TODO(liubovd): validate signature of the upload token (item.token) and
     // return 'ErrorKind::UploadHgFilenodeRequestInvalidToken' if it's invalid.
@@ -277,7 +276,6 @@ async fn store_hg_filenode(
         .await?;
 
     Ok(UploadTokensResponse {
-        index,
         token: UploadToken::new_fake_token(AnyId::HgFilenodeId(node_id), None),
     })
 }
@@ -303,8 +301,7 @@ impl EdenApiHandler for UploadHgFilenodesHandler {
         let tokens = request
             .batch
             .into_iter()
-            .enumerate()
-            .map(move |(i, item)| store_hg_filenode(repo.clone(), item, i));
+            .map(move |item| store_hg_filenode(repo.clone(), item));
         Ok(stream::iter(tokens)
             .buffer_unordered(MAX_CONCURRENT_UPLOAD_FILENODES_PER_REQUEST)
             .boxed())
