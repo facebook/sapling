@@ -17,7 +17,9 @@
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
 
+#ifdef EDEN_HAVE_SERVICEROUTER
 #include "common/rust/shed/hostcaps/hostcaps.h"
+#endif
 #include "eden/fs/config/ConfigSetting.h"
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/config/MountProtocol.h"
