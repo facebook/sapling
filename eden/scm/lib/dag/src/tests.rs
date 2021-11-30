@@ -37,6 +37,9 @@ mod test_sparse;
 mod test_discontinuous;
 
 #[cfg(test)]
+mod test_server;
+
+#[cfg(test)]
 pub mod dummy_dag;
 
 #[cfg(test)]
