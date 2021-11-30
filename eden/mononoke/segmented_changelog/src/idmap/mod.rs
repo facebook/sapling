@@ -30,7 +30,7 @@ use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::types::IdMapVersion;
-use crate::{DagId, Group, InProcessIdDag};
+use crate::{DagId, DagIdSet, InProcessIdDag};
 
 #[async_trait]
 #[auto_impl::auto_impl(&, Arc)]
@@ -118,34 +118,34 @@ pub trait IdMap: Send + Sync {
 /// update operation to be consistent.  When we download an iddag, it has the idmap described by
 /// the shared store. The overlay allows us to update the iddag in process by adding an idmap that
 /// stores all the changes that we made in process. It's important to note that the shared store is
-/// updated constantly by other processes. Because dag_ids are added in increasing order, we can
-/// use the last entry in the downloaded iddag as the cutoff that delimitates the entries that are
-/// fetched from the shared store and those that are fetched from the in process store. Note that
-/// if we were to use the abcence of an entry from the in process store to fetch from the shared
-/// store we would likely end up with inconsistent entries from an updated shared store.
-// DagIds greater than or equal to cutoff are associated with mem idmap.
-// DagIds less than cutoff are associated with shared idmap.
+/// updated constantly by other processes. So we need to be careful not using the shared store
+/// for Ids that are not referred by the matching IdDag. To do that, we ask the IdDag about all
+/// Ids covered by it, store it in `shared_id_set` and then only use the shared store for Ids in
+/// `shared_id_set`. Note that if we were to use the abcence of an entry from the in process store
+/// to fetch from the shared store we would likely end up with inconsistent entries from an updated
+/// shared store.
 pub struct OverlayIdMap {
+    /// Source for `Id`s not in `shared_id_set`. Mutable.
     mem: ConcurrentMemIdMap,
+    /// Source for `Id`s in `shared_id_set`. Immutable.
     shared: Arc<dyn IdMap>,
-    cutoff: DagId,
+    /// `Id`s covered by the `shared` IdMap.
+    shared_id_set: DagIdSet,
 }
 
 impl OverlayIdMap {
-    pub fn new(shared: Arc<dyn IdMap>, cutoff: DagId) -> Self {
+    pub fn new(shared: Arc<dyn IdMap>, shared_id_set: DagIdSet) -> Self {
         let mem = ConcurrentMemIdMap::new();
         Self {
             mem,
             shared,
-            cutoff,
+            shared_id_set,
         }
     }
 
     pub fn from_iddag_and_idmap(iddag: &InProcessIdDag, shared: Arc<dyn IdMap>) -> Result<Self> {
-        let cutoff = iddag
-            .next_free_id(0, Group::MASTER)
-            .context("error fetching next iddag id")?;
-        Ok(Self::new(shared, cutoff))
+        let shared_id_set = iddag.all().context("error calculating iddag.all()")?;
+        Ok(Self::new(shared, shared_id_set))
     }
 }
 
@@ -157,11 +157,11 @@ impl IdMap for OverlayIdMap {
         mappings: Vec<(DagId, ChangesetId)>,
     ) -> Result<()> {
         for (v, _) in mappings.iter() {
-            if v < &self.cutoff {
+            if self.shared_id_set.contains(*v) {
                 return Err(format_err!(
-                    "overlay idmap asked to insert {} but cutoff is {}",
+                    "overlay idmap asked to insert {} but it is in immutable shared set {:?}",
                     v,
-                    self.cutoff
+                    &self.shared_id_set
                 ));
             }
         }
@@ -175,13 +175,13 @@ impl IdMap for OverlayIdMap {
     ) -> Result<HashMap<DagId, ChangesetId>> {
         let from_mem = dag_ids
             .iter()
-            .filter(|&v| v >= &self.cutoff)
+            .filter(|&v| !self.shared_id_set.contains(*v))
             .cloned()
             .collect();
         let mut result = self.mem.find_many_changeset_ids(ctx, from_mem).await?;
         let from_shared: Vec<DagId> = dag_ids
             .iter()
-            .filter(|&v| v < &self.cutoff)
+            .filter(|&v| self.shared_id_set.contains(*v))
             .cloned()
             .collect();
         if !from_shared.is_empty() {
@@ -203,12 +203,12 @@ impl IdMap for OverlayIdMap {
     ) -> Result<HashMap<ChangesetId, DagId>> {
         let mut result = self.mem.find_many_dag_ids(ctx, cs_ids.clone()).await?;
         for (cs, v) in result.iter() {
-            if v < &self.cutoff {
+            if self.shared_id_set.contains(*v) {
                 bail!(
-                    "unexpected assignment found in mem idmap: {} for {} but cutoff is {}",
+                    "unexpected assignment found in mem idmap: {} for {} but shared_id_set is {:?}",
                     v,
                     cs,
-                    self.cutoff
+                    &self.shared_id_set
                 );
             }
         }
@@ -218,7 +218,7 @@ impl IdMap for OverlayIdMap {
             .collect();
         let from_shared = self.shared.find_many_dag_ids(ctx, to_get_shared).await?;
         for (cs, v) in from_shared {
-            if v < self.cutoff {
+            if self.shared_id_set.contains(v) {
                 result.insert(cs, v);
             }
         }
@@ -235,12 +235,12 @@ impl IdMap for OverlayIdMap {
             .find_many_dag_ids_maybe_stale(ctx, cs_ids.clone())
             .await?;
         for (cs, v) in result.iter() {
-            if v < &self.cutoff {
+            if self.shared_id_set.contains(*v) {
                 bail!(
-                    "unexpected assignment found in mem idmap: {} for {} but cutoff is {}",
+                    "unexpected assignment found in mem idmap: {} for {} but shared_id_set is {:?}",
                     v,
                     cs,
-                    self.cutoff
+                    &self.shared_id_set
                 );
             }
         }
@@ -253,7 +253,7 @@ impl IdMap for OverlayIdMap {
             .find_many_dag_ids_maybe_stale(ctx, to_get_shared)
             .await?;
         for (cs, v) in from_shared {
-            if v < self.cutoff {
+            if self.shared_id_set.contains(v) {
                 result.insert(cs, v);
             }
         }
@@ -263,16 +263,16 @@ impl IdMap for OverlayIdMap {
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(DagId, ChangesetId)>> {
         match self.mem.get_last_entry(ctx).await? {
             Some(x) => Ok(Some(x)),
-            None if self.cutoff > DagId(0) => {
-                let dag_id = self.cutoff - 1;
+            None if !self.shared_id_set.is_empty() => {
+                let dag_id = self.shared_id_set.max().unwrap();
                 let cs_id = self
                     .shared
                     .find_changeset_id(ctx, dag_id)
                     .await?
                     .with_context(|| {
                         format!(
-                            "could not find shared entry for dag_id {} (overlay cutoff = {})",
-                            dag_id, self.cutoff
+                            "could not find shared entry for dag_id {} (overlay shared_id_set = {:?})",
+                            dag_id, &self.shared_id_set
                         )
                     })?;
                 Ok(Some((dag_id, cs_id)))
@@ -361,6 +361,14 @@ mod tests {
         AS_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
     };
 
+    fn cutoff(n: u64) -> DagIdSet {
+        if n == 0 {
+            DagIdSet::empty()
+        } else {
+            DagIdSet::from_spans(vec![DagId(0)..=DagId(n - 1)])
+        }
+    }
+
     #[fbinit::test]
     async fn test_overlay_idmap_find(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
@@ -371,7 +379,7 @@ mod tests {
             .insert_many(&ctx, vec![(DagId(0), AS_CSID), (DagId(1), ONES_CSID)])
             .await?;
 
-        let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(2));
+        let overlay = OverlayIdMap::new(Arc::clone(&shared), cutoff(2));
 
         assert_eq!(
             overlay
@@ -430,12 +438,12 @@ mod tests {
             .await?;
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(0));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), cutoff(0));
             assert_eq!(overlay.get_last_entry(&ctx).await?, None);
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(1));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), cutoff(1));
             assert_eq!(
                 overlay.get_last_entry(&ctx).await?,
                 Some((DagId(0), AS_CSID))
@@ -443,7 +451,7 @@ mod tests {
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(1));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), cutoff(1));
             overlay.insert(&ctx, DagId(1), THREES_CSID).await?;
             assert_eq!(
                 overlay.get_last_entry(&ctx).await?,
@@ -452,7 +460,7 @@ mod tests {
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(2));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), cutoff(2));
             assert_eq!(
                 overlay.get_last_entry(&ctx).await?,
                 Some((DagId(1), ONES_CSID)),
@@ -460,7 +468,7 @@ mod tests {
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(2));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), cutoff(2));
             overlay.insert(&ctx, DagId(2), TWOS_CSID).await?;
             assert_eq!(
                 overlay.get_last_entry(&ctx).await?,
@@ -469,7 +477,7 @@ mod tests {
         }
 
         {
-            let overlay = OverlayIdMap::new(Arc::clone(&shared), DagId(3));
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), cutoff(3));
             assert!(overlay.get_last_entry(&ctx).await.is_err());
         }
 
