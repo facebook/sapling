@@ -9,6 +9,7 @@ use super::{IsWarmFn, Warmer, WarmerFn};
 use anyhow::Error;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
+use derived_data_manager::BonsaiDerivable;
 use futures::future::{FutureExt, TryFutureExt};
 use futures_ext::FutureExt as OldFutureExt;
 use futures_watchdog::WatchdogExt;
@@ -17,7 +18,7 @@ use mononoke_types::ChangesetId;
 use phases::Phases;
 use slog::{info, o};
 
-pub fn create_derived_data_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
+pub fn create_derived_data_warmer<D: BonsaiDerivable + BonsaiDerived>(ctx: &CoreContext) -> Warmer {
     info!(ctx.logger(), "Warming {}", D::DERIVABLE_NAME);
     let warmer: Box<WarmerFn> =
         Box::new(|ctx: CoreContext, repo: InnerRepo, cs_id: ChangesetId| {
@@ -38,7 +39,11 @@ pub fn create_derived_data_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer
                 .map_err(Error::from)
                 .boxed()
         });
-    Warmer { warmer, is_warm }
+    Warmer {
+        warmer,
+        is_warm,
+        name: D::NAME.to_string(),
+    }
 }
 
 pub fn create_public_phase_warmer(ctx: &CoreContext) -> Warmer {
@@ -71,5 +76,9 @@ pub fn create_public_phase_warmer(ctx: &CoreContext) -> Warmer {
             }
             .boxed()
         });
-    Warmer { warmer, is_warm }
+    Warmer {
+        warmer,
+        is_warm,
+        name: "public phases".to_string(),
+    }
 }

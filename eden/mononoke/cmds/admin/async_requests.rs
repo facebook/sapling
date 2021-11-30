@@ -29,6 +29,7 @@ use async_requests::types::{
 use megarepo_error::MegarepoError;
 use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
 use repo_factory::RepoFactory;
+use scuba_ext::MononokeScubaSampleBuilder;
 use source_control::{
     MegarepoAddBranchingTargetResult, MegarepoAddTargetResult, MegarepoChangeTargetConfigResult,
     MegarepoRemergeSourceResult, MegarepoSyncChangesetResult,
@@ -115,6 +116,7 @@ pub async fn subcommand_async_requests<'a>(
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
         skiplist_enabled: false,
         warm_bookmarks_cache_enabled: false,
+        warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder::with_discard(),
     };
     let mononoke = Arc::new(Mononoke::new(&env, repo_configs.clone()).await?);
     let megarepo = MegarepoApi::new(matches.environment(), repo_configs, repo_factory, mononoke)

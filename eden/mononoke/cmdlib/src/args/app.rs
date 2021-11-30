@@ -84,6 +84,7 @@ pub const LOGVIEW_ADDITIONAL_LEVEL_FILTER: &str = "logview-additional-level-filt
 pub const SCUBA_DATASET_ARG: &str = "scuba-dataset";
 pub const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
 pub const NO_DEFAULT_SCUBA_DATASET_ARG: &str = "no-default-scuba-dataset";
+pub const WARM_BOOKMARK_CACHE_SCUBA_DATASET_ARG: &str = "warm-bookmark-cache-scuba-dataset";
 
 // Argument, responsible for instantiation of `ObservabilityContext::Dynamic`
 pub const WITH_DYNAMIC_OBSERVABILITY: &str = "with-dynamic-observability";
@@ -1100,6 +1101,15 @@ fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>, has_default: bool) -> App<'a
                 .long(SCUBA_LOG_FILE_ARG)
                 .takes_value(true)
                 .help("A log file to write JSON Scuba logs to (primarily useful in testing)"),
+        )
+        .arg(
+            Arg::with_name(WARM_BOOKMARK_CACHE_SCUBA_DATASET_ARG)
+                .long(WARM_BOOKMARK_CACHE_SCUBA_DATASET_ARG)
+                .takes_value(true)
+                .help(
+                    "Special dataset to be used by warm bookmark cache. \
+                If a binary doesn't use warm bookmark cache then this parameter is ignored",
+                ),
         );
 
     if has_default {

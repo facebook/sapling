@@ -20,6 +20,7 @@ use futures::{future, Future};
 use futures_watchdog::WatchdogExt;
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o};
 
 use metaconfig_parser::RepoConfigs;
@@ -236,6 +237,7 @@ pub struct MononokeApiEnvironment {
     pub disabled_hooks: HashMap<String, HashSet<String>>,
     pub warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
     pub warm_bookmarks_cache_enabled: bool,
+    pub warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder,
     pub skiplist_enabled: bool,
 }
 

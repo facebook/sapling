@@ -27,6 +27,7 @@ use hostname::get_hostname;
 use megarepo_api::MegarepoApi;
 use mononoke_api::{Mononoke, MononokeApiEnvironment, WarmBookmarksCacheDerivedData};
 use repo_factory::RepoFactory;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 const ARG_REQUEST_LIMIT: &str = "request-limit";
 const ARG_CONCURRENT_JOBS_LIMIT: &str = "jobs-limit";
@@ -78,6 +79,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::None,
         warm_bookmarks_cache_enabled: true,
+        warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder::with_discard(),
         skiplist_enabled: true,
     };
     let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs.clone()))?);

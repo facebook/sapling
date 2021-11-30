@@ -35,6 +35,7 @@ pub struct MononokeEnvironment {
     pub fb: FacebookInit,
     pub logger: Logger,
     pub scuba_sample_builder: MononokeScubaSampleBuilder,
+    pub warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder,
     pub config_store: ConfigStore,
     pub caching: Caching,
     pub observability_context: ObservabilityContext,

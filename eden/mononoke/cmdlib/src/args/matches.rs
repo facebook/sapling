@@ -28,6 +28,7 @@ use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV
 use slog_term::TermDecorator;
 use std::panic::{RefUnwindSafe, UnwindSafe};
 use tokio::runtime::{Handle, Runtime};
+use tunables::tunables;
 
 use blobstore_factory::{
     BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, DelayOptions, PackOptions,
@@ -63,9 +64,10 @@ use super::{
         NO_DEFAULT_SCUBA_DATASET_ARG, PUT_MEAN_DELAY_SECS_ARG, PUT_STDDEV_DELAY_SECS_ARG,
         READ_BURST_BYTES_ARG, READ_BYTES_ARG, READ_CHAOS_ARG, READ_QPS_ARG,
         RENDEZVOUS_FREE_CONNECTIONS, RUNTIME_THREADS, SCUBA_DATASET_ARG, SCUBA_LOG_FILE_ARG,
-        TUNABLES_CONFIG, TUNABLES_LOCAL_PATH, WITH_DYNAMIC_OBSERVABILITY,
-        WITH_READONLY_STORAGE_ARG, WITH_TEST_MEGAREPO_CONFIGS_CLIENT, WRITE_BURST_BYTES_ARG,
-        WRITE_BYTES_ARG, WRITE_CHAOS_ARG, WRITE_QPS_ARG, WRITE_ZSTD_ARG, WRITE_ZSTD_LEVEL_ARG,
+        TUNABLES_CONFIG, TUNABLES_LOCAL_PATH, WARM_BOOKMARK_CACHE_SCUBA_DATASET_ARG,
+        WITH_DYNAMIC_OBSERVABILITY, WITH_READONLY_STORAGE_ARG, WITH_TEST_MEGAREPO_CONFIGS_CLIENT,
+        WRITE_BURST_BYTES_ARG, WRITE_BYTES_ARG, WRITE_CHAOS_ARG, WRITE_QPS_ARG, WRITE_ZSTD_ARG,
+        WRITE_ZSTD_LEVEL_ARG,
     },
     cache::parse_and_init_cachelib,
 };
@@ -113,6 +115,10 @@ impl<'a> MononokeMatches<'a> {
             create_scuba_sample_builder(fb, &matches, &app_data, &observability_context)
                 .context("Failed to create scuba sample builder")?;
 
+        let warm_bookmarks_cache_scuba_sample_builder =
+            create_warm_bookmark_cache_scuba_sample_builder(fb, &matches)
+                .context("Failed to create warm bookmark cache scuba sample builder")?;
+
         let caching = parse_and_init_cachelib(fb, &matches, app_data.cachelib_settings.clone());
 
         let runtime = init_runtime(&matches).context("Failed to create Tokio runtime")?;
@@ -139,6 +145,7 @@ impl<'a> MononokeMatches<'a> {
                 fb,
                 logger,
                 scuba_sample_builder,
+                warm_bookmarks_cache_scuba_sample_builder,
                 config_store,
                 caching,
                 observability_context,
@@ -192,6 +199,12 @@ impl<'a> MononokeMatches<'a> {
 
     pub fn scuba_sample_builder(&self) -> MononokeScubaSampleBuilder {
         self.environment.scuba_sample_builder.clone()
+    }
+
+    pub fn warm_bookmarks_cache_scuba_sample_builder(&self) -> MononokeScubaSampleBuilder {
+        self.environment
+            .warm_bookmarks_cache_scuba_sample_builder
+            .clone()
     }
 
     // Delegate some common methods to save on .as_ref() calls
@@ -392,6 +405,37 @@ fn create_scuba_sample_builder(
     scuba_logger.add_common_server_data();
 
     Ok(scuba_logger)
+}
+
+fn create_warm_bookmark_cache_scuba_sample_builder(
+    fb: FacebookInit,
+    matches: &ArgMatches<'_>,
+) -> Result<MononokeScubaSampleBuilder, Error> {
+    let maybe_scuba = match matches
+        .value_of(WARM_BOOKMARK_CACHE_SCUBA_DATASET_ARG)
+        .map(|s| s.to_string())
+    {
+        Some(scuba) => {
+            let tw_task_id =
+                std::env::var("TW_TASK_ID").context("failed to get TW_TASK_ID env var")?;
+            let tw_task_id: u32 = tw_task_id
+                .parse()
+                .context("failed to parse TW_TASK_ID env var")?;
+            let mut sampling = tunables().get_warm_bookmark_cache_loggin_tw_task_sampling() as u32;
+            if sampling == 0 {
+                sampling = 10;
+            }
+
+            if tw_task_id % sampling == 0 {
+                Some(scuba)
+            } else {
+                None
+            }
+        }
+        None => None,
+    };
+
+    Ok(MononokeScubaSampleBuilder::with_opt_table(fb, maybe_scuba))
 }
 
 fn parse_readonly_storage(matches: &ArgMatches<'_>) -> Result<ReadOnlyStorage, Error> {

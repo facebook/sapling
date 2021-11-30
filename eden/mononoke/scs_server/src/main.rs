@@ -100,6 +100,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let repo_configs = load_repo_configs(config_path, config_store)?;
 
     let scuba_builder = matches.scuba_sample_builder();
+    let warm_bookmarks_cache_scuba_builder = matches.warm_bookmarks_cache_scuba_sample_builder();
 
     let repo_factory = RepoFactory::new(matches.environment().clone(), &repo_configs.common);
 
@@ -108,6 +109,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         disabled_hooks: args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,
         warm_bookmarks_cache_enabled: true,
+        warm_bookmarks_cache_scuba_sample_builder: warm_bookmarks_cache_scuba_builder,
         skiplist_enabled: true,
     };
 

@@ -148,6 +148,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let env = matches.environment();
 
     let scuba = matches.scuba_sample_builder();
+    let warm_bookmarks_cache_scuba = matches.warm_bookmarks_cache_scuba_sample_builder();
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
@@ -161,6 +162,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 disabled_hooks,
                 warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
                 warm_bookmarks_cache_enabled: true,
+                warm_bookmarks_cache_scuba_sample_builder: warm_bookmarks_cache_scuba,
                 skiplist_enabled: true,
             };
 

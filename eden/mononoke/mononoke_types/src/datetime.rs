@@ -146,6 +146,7 @@ impl Arbitrary for DateTime {
     }
 }
 
+const MS_IN_NS: i64 = 1_000_000;
 const SEC_IN_NS: i64 = 1_000_000_000;
 
 /// Number of non-leap-nanoseconds since January 1, 1970 UTC
@@ -177,6 +178,10 @@ impl Timestamp {
     pub fn since_nanos(&self) -> i64 {
         let now = Self::now().timestamp_nanos();
         now - self.0
+    }
+
+    pub fn since_millis(&self) -> i64 {
+        self.since_nanos() / MS_IN_NS
     }
 
     pub fn since_seconds(&self) -> i64 {

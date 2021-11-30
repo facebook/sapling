@@ -207,6 +207,9 @@ impl Repo {
         };
 
         let warm_bookmarks_cache = if env.warm_bookmarks_cache_enabled {
+            let mut scuba_sample_builder = env.warm_bookmarks_cache_scuba_sample_builder.clone();
+            scuba_sample_builder.add("repo", inner.blob_repo.name().clone());
+            let ctx = ctx.with_mutated_scuba(|_| scuba_sample_builder);
             let mut warm_bookmarks_cache_builder =
                 WarmBookmarksCacheBuilder::new(ctx.clone(), &inner);
             match env.warm_bookmarks_cache_derived_data {

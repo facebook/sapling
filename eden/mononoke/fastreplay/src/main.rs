@@ -237,6 +237,7 @@ async fn bootstrap_repositories<'a>(
         disabled_hooks: Default::default(),
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
         warm_bookmarks_cache_enabled: true,
+        warm_bookmarks_cache_scuba_sample_builder: MononokeScubaSampleBuilder::with_discard(),
         skiplist_enabled: !no_skiplist,
     };
 

@@ -33,6 +33,7 @@ use futures::{
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_ext::BoxFuture as OldBoxFuture;
+use futures_stats::TimedFutureExt;
 use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
@@ -75,6 +76,7 @@ pub type IsWarmFn = dyn for<'a> Fn(
 pub struct Warmer {
     warmer: Box<WarmerFn>,
     is_warm: Box<IsWarmFn>,
+    name: String,
 }
 
 /// Initialization mode for the warm bookmarks cache.
@@ -98,6 +100,11 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
     pub fn new(mut ctx: CoreContext, repo: &'a InnerRepo) -> Self {
         ctx.session_mut()
             .override_session_class(SessionClass::WarmBookmarksCache);
+        let ctx = ctx.with_mutated_scuba(|mut scuba_sample_builder| {
+            scuba_sample_builder.add("repo", repo.blob_repo.name().clone());
+            scuba_sample_builder.add_common_server_data();
+            scuba_sample_builder
+        });
 
         Self {
             ctx,
@@ -450,8 +457,24 @@ async fn warm_all(
     warmers: &Arc<Vec<Warmer>>,
 ) -> Result<(), Error> {
     stream::iter(warmers.iter().map(Ok))
-        .try_for_each_concurrent(100, |warmer| {
-            (*warmer.warmer)(ctx.clone(), repo.clone(), *cs_id).compat()
+        .try_for_each_concurrent(100, |warmer| async {
+            let (stats, res) = (*warmer.warmer)(ctx.clone(), repo.clone(), *cs_id)
+                .compat()
+                .timed()
+                .await;
+            let mut scuba = ctx.scuba().clone();
+            scuba
+                .add("Warmer name", warmer.name.clone())
+                .add_future_stats(&stats);
+            match &res {
+                Ok(()) => {
+                    scuba.log_with_msg("Warmer succeed", None);
+                }
+                Err(err) => {
+                    scuba.log_with_msg("Warmer failed", Some(format!("{:#}", err)));
+                }
+            }
+            res
         })
         .await
 }
@@ -494,6 +517,8 @@ pub enum LatestDerivedBookmarkEntry {
     NotFound,
 }
 
+pub struct BookmarkUpdateLogId(pub u64);
+
 /// Searches bookmark log for latest entry for which everything is derived. Note that we consider log entry that
 /// deletes a bookmark to be derived. Returns this entry if it was found and changesets for all underived entries after that
 /// OLDEST ENTRIES FIRST.
@@ -505,7 +530,7 @@ pub async fn find_all_underived_and_latest_derived(
 ) -> Result<
     (
         LatestDerivedBookmarkEntry,
-        VecDeque<(ChangesetId, Option<Timestamp>)>,
+        VecDeque<(ChangesetId, Option<(BookmarkUpdateLogId, Timestamp)>)>,
     ),
     Error,
 > {
@@ -528,7 +553,10 @@ pub async fn find_all_underived_and_latest_derived(
                 Some(prev_limit),
                 Freshness::MaybeStale,
             )
-            .map_ok(|(_, maybe_cs_id, _, ts)| (maybe_cs_id, Some(ts)))
+            .map_ok(|(id, maybe_cs_id, _, ts)| {
+                let id = BookmarkUpdateLogId(id);
+                (maybe_cs_id, Some((id, ts)))
+            })
             .try_collect::<Vec<_>>()
             .await?;
 
@@ -544,26 +572,29 @@ pub async fn find_all_underived_and_latest_derived(
         }
 
         let log_entries_fetched = log_entries.len();
-        let mut maybe_derived =
-            stream::iter(log_entries.into_iter().map(|(maybe_cs_id, ts)| async move {
+        let mut maybe_derived = stream::iter(log_entries.into_iter().map(
+            |(maybe_cs_id, id_and_ts)| async move {
                 match maybe_cs_id {
                     Some(cs_id) => {
                         let derived = is_warm(ctx, repo, &cs_id, warmers).await;
-                        (Some((cs_id, ts)), derived)
+                        (Some((cs_id, id_and_ts)), derived)
                     }
                     None => (None, true),
                 }
-            }))
-            .buffered(100);
+            },
+        ))
+        .buffered(100);
 
-        while let Some((maybe_cs_and_ts, is_warm)) =
-            maybe_derived.next().watched(ctx.logger()).await
+        while let Some((maybe_cs_id_ts, is_warm)) = maybe_derived.next().watched(ctx.logger()).await
         {
             if is_warm {
-                return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs_and_ts), res));
+                // Remove bookmark update log id
+                let maybe_cs_ts =
+                    maybe_cs_id_ts.map(|(cs_id, id_and_ts)| (cs_id, id_and_ts.map(|(_, ts)| ts)));
+                return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs_ts), res));
             } else {
-                if let Some(cs_and_ts) = maybe_cs_and_ts {
-                    res.push_front(cs_and_ts);
+                if let Some(cs_id_ts) = maybe_cs_id_ts {
+                    res.push_front(cs_id_ts);
                 }
             }
         }
@@ -887,14 +918,35 @@ async fn single_bookmark_updater(
         }
     }
 
-    for (underived_cs_id, maybe_ts) in underived_history {
-        if let Some(ts) = maybe_ts {
+    for (underived_cs_id, maybe_id_ts) in underived_history {
+        if let Some((_, ts)) = maybe_id_ts {
             // timestamp might not be known if e.g. bookmark has no history.
             // In that case let's not report staleness
             staleness_reporter(ts);
         }
 
-        let res = warm_all(&ctx, &repo, &underived_cs_id, &warmers).await;
+        let bookmark_log_id = maybe_id_ts.as_ref().map(|(id, _)| id.0);
+        let maybe_ts = maybe_id_ts.map(|(_, ts)| ts);
+
+        let ctx = ctx.clone().with_mutated_scuba(|mut scuba| {
+            scuba.add("bookmark", bookmark.name().to_string());
+            scuba.add("bookmark_log_id", bookmark_log_id);
+            scuba.add("top_changeset", underived_cs_id.to_hex().to_string());
+            scuba
+        });
+
+        ctx.scuba()
+            .clone()
+            .add("delay_ms", maybe_ts.map(|ts| ts.since_millis()))
+            .log_with_msg("Before warming bookmark", None);
+        let (stats, res) = warm_all(&ctx, &repo, &underived_cs_id, &warmers)
+            .timed()
+            .await;
+        ctx.scuba()
+            .clone()
+            .add_future_stats(&stats)
+            .log_with_msg("After warming bookmark", None);
+
         match res {
             Ok(()) => {
                 update_bookmark(underived_cs_id).await;
@@ -1313,6 +1365,7 @@ mod tests {
                 }
                 .boxed()
             }),
+            name: "test".to_string(),
         };
         let mut warmers: Vec<Warmer> = Vec::new();
         warmers.push(warmer);
@@ -1414,6 +1467,7 @@ mod tests {
                 }
                 .boxed()
             }),
+            name: "test".to_string(),
         };
         let mut warmers: Vec<Warmer> = Vec::new();
         warmers.push(warmer);
