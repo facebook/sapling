@@ -268,9 +268,11 @@ pub async fn prepare_incremental_iddag_update<'a>(
     let mut visited = HashSet::new();
     let mut start_state = StartState::new();
 
-    let id_dag_next_id = iddag
-        .next_free_id(0, dag::Group::MASTER)
-        .context("fetching next free id")?;
+    let id_dag_covered_id_set = iddag.master_group().context("iddag::master_group()")?;
+    let id_dag_next_id = id_dag_covered_id_set
+        .max()
+        .map(|dag_id| dag_id + 1)
+        .unwrap_or_else(|| dag::Group::MASTER.min_id());
     let id_map_next_id = idmap
         .get_last_entry(ctx)
         .await?
