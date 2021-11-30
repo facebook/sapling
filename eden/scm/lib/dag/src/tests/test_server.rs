@@ -44,12 +44,14 @@ async fn test_idmap_more_entries_than_iddag() {
         .with_highest_group(Group::MASTER);
     dag.dag.add_heads(&draw, &heads).await.unwrap();
 
-    // FIXME: Ids inserted manually are not present in IdDag.
+    // C, D, E, H, I are inserted to the IdDag respecting their IdMap values.
     assert_eq!(
         dag.debug_segments(0, Group::MASTER),
         r#"
-        J+22 : K+23 [I+21]
+        H+20 : K+23 [] Root
         F+9 : G+10 [D+6, E+8]
+        E+8 : E+8 [] Root
+        C+5 : D+6 [B+1]
         A+0 : B+1 [] Root OnlyHead"#
     );
 }

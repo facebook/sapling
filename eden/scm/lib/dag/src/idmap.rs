@@ -133,7 +133,15 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
         #[derive(Debug)]
         enum Todo {
             /// Visit parents. Finally assign self. This will eventually turn into AssignedId.
-            Visit { head: VertexName, order: VisitOrder },
+            Visit {
+                head: VertexName,
+
+                /// The `Id` in `IdMap` that is known assigned to the `head`.
+                /// This can be non-`None` if `IdMap` has more entries than `IdDag`.
+                known_id: Option<Id>,
+
+                order: VisitOrder,
+            },
 
             /// Assign an `Id` if not assigned. Their parents are prepared in the
             /// `parent_ids` stack. `Assign` `head` and `Visit` `head`'s parents
@@ -142,6 +150,10 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
             Assign {
                 /// The vertex to assign. Its parents are already visited and assigned.
                 head: VertexName,
+
+                /// The `Id` in `IdMap` that is known assigned to the `head`.
+                /// This can be non-`None` if `IdMap` has more entries than `IdDag`.
+                known_id: Option<Id>,
 
                 /// The number of parents, at the end of the `parent_ids`.
                 parent_len: usize,
@@ -168,23 +180,34 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
             };
             vec![Visit {
                 head: head.clone(),
+                known_id: None,
                 order,
             }]
         };
         while let Some(todo) = todo_stack.pop() {
             tracing::trace!(target: "dag::assign", "todo: {:?}", &todo);
             match todo {
-                Visit { head, order } => {
+                Visit {
+                    head,
+                    known_id,
+                    order,
+                } => {
                     // If the id was not assigned, or was assigned to a higher group,
                     // (re-)assign it to this group.
                     //
                     // PERF: This might trigger remote fetch too frequently.
-                    match self.vertex_id_with_max_group(&head, group).await? {
-                        None => {
+                    let known_id = match known_id {
+                        Some(id) => Some(id),
+                        None => self.vertex_id_with_max_group(&head, group).await?,
+                    };
+                    match known_id {
+                        Some(id) if covered_ids.contains(id) => todo_stack.push(AssignedId { id }),
+                        _ => {
                             let parents = parents_by_name.parent_names(head.clone()).await?;
-                            tracing::trace!(target: "dag::assign", "visit {:?} with parents {:?}", &head, &parents);
+                            tracing::trace!(target: "dag::assign", "visit {:?} ({:?}) with parents {:?}", &head, known_id, &parents);
                             todo_stack.push(Assign {
                                 head,
+                                known_id,
                                 parent_len: parents.len(),
                                 order,
                             });
@@ -197,7 +220,15 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                                 // If the parent was not assigned, or was assigned to a higher group,
                                 // (re-)assign the parent to this group.
                                 match self.vertex_id_with_max_group(&p, group).await {
-                                    Ok(Some(id)) => todo_stack.push(AssignedId { id }),
+                                    Ok(Some(id)) if covered_ids.contains(id) => {
+                                        todo_stack.push(AssignedId { id })
+                                    }
+                                    // Go deeper if IdMap has the entry but IdDag misses it.
+                                    Ok(Some(id)) => todo_stack.push(Visit {
+                                        head: p,
+                                        known_id: Some(id),
+                                        order,
+                                    }),
                                     Ok(None) => {
                                         let parent_order = match (order, i) {
                                             (VisitOrder::FirstFirst, 0) => VisitOrder::FirstFirst,
@@ -205,6 +236,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                                         };
                                         todo_stack.push(Visit {
                                             head: p,
+                                            known_id: None,
                                             order: parent_order,
                                         })
                                     }
@@ -212,18 +244,22 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                                 }
                             }
                         }
-                        Some(id) => todo_stack.push(AssignedId { id }),
                     }
                 }
                 Assign {
                     head,
+                    known_id,
                     parent_len,
                     order,
                 } => {
                     let parent_start = parent_ids.len() - parent_len;
-                    let id = match self.vertex_id_with_max_group(&head, group).await? {
-                        Some(id) => id,
-                        None => {
+                    let known_id = match known_id {
+                        Some(id) => Some(id),
+                        None => self.vertex_id_with_max_group(&head, group).await?,
+                    };
+                    let id = match known_id {
+                        Some(id) if covered_ids.contains(id) => id,
+                        _ => {
                             let parents = match order {
                                 VisitOrder::FirstLast => Cow::Borrowed(&parent_ids[parent_start..]),
                                 VisitOrder::FirstFirst => Cow::Owned(
@@ -234,28 +270,41 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                                         .collect::<Vec<_>>(),
                                 ),
                             };
-                            let mut candidate_id = match parents.iter().max() {
-                                Some(&max_parent_id) => (max_parent_id + 1).max(group.min_id()),
-                                None => group.min_id(),
+                            let id = match known_id {
+                                Some(id) => id,
+                                None => {
+                                    let mut candidate_id = match parents.iter().max() {
+                                        Some(&max_parent_id) => {
+                                            (max_parent_id + 1).max(group.min_id())
+                                        }
+                                        None => group.min_id(),
+                                    };
+                                    loop {
+                                        if let Some(span) = covered_ids.span_contains(candidate_id)
+                                        {
+                                            candidate_id = span.high + 1;
+                                            continue;
+                                        }
+                                        if let Some(span) = reserved_ids.span_contains(candidate_id)
+                                        {
+                                            candidate_id = span.high + 1;
+                                            continue;
+                                        }
+                                        break;
+                                    }
+                                    candidate_id
+                                }
                             };
-                            loop {
-                                if let Some(span) = covered_ids.span_contains(candidate_id) {
-                                    candidate_id = span.high + 1;
-                                    continue;
-                                }
-                                if let Some(span) = reserved_ids.span_contains(candidate_id) {
-                                    candidate_id = span.high + 1;
-                                    continue;
-                                }
-                                break;
-                            }
-                            let id = candidate_id;
                             if id.group() != group {
                                 return Err(Error::IdOverflow(group));
                             }
-                            tracing::trace!(target: "dag::assign", "assign {:?} = {:?}", &head, id);
                             covered_ids.push(id);
-                            self.insert(id, head.as_ref()).await?;
+                            if known_id.is_none() {
+                                tracing::trace!(target: "dag::assign", "assign {:?} = {:?}", &head, id);
+                                self.insert(id, head.as_ref()).await?;
+                            } else {
+                                tracing::trace!(target: "dag::assign", "assign {:?} = {:?} (known)", &head, id);
+                            }
                             outcome.push_edge(id, &parents);
                             id
                         }
