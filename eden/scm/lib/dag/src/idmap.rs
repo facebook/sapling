@@ -11,6 +11,7 @@
 
 use std::borrow::Cow;
 
+use crate::errors::bug;
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
@@ -305,6 +306,12 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                             } else {
                                 tracing::trace!(target: "dag::assign", "assign {:?} = {:?} (known)", &head, id);
                             }
+                            if parents.iter().any(|&p| p >= id) {
+                                return bug(format!(
+                                    "IdMap Ids are not topo-sorted: {:?} ({:?}) has parent ids {:?}",
+                                    id, head, &parents,
+                                ));
+                            }
                             outcome.push_edge(id, &parents);
                             id
                         }
@@ -313,6 +320,16 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                     todo_stack.push(AssignedId { id });
                 }
                 AssignedId { id } => {
+                    if !covered_ids.contains(id) {
+                        return bug(format!(
+                            concat!(
+                                "attempted to assign id with wrong order: {:?} ",
+                                "is being pushed as parent id but it cannot be used ",
+                                "because it is not yet covered by IdDag",
+                            ),
+                            &id
+                        ));
+                    }
                     parent_ids.push(id);
                 }
             }
