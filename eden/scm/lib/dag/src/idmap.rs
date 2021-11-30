@@ -133,14 +133,25 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
         #[derive(Debug)]
         enum Todo {
             /// Visit parents. Finally assign self. This will eventually turn into AssignedId.
-            Visit(VertexName, VisitOrder),
+            Visit { head: VertexName, order: VisitOrder },
 
-            /// Assign a number if not assigned. Parents are visited.
-            /// The `usize` provides the length of parents.
-            Assign(VertexName, usize, VisitOrder),
+            /// Assign an `Id` if not assigned. Their parents are prepared in the
+            /// `parent_ids` stack. `Assign` `head` and `Visit` `head`'s parents
+            /// are pushed together so the `Visit` entries can turn into `Id`s in
+            /// the `parent_ids` stack.
+            Assign {
+                /// The vertex to assign. Its parents are already visited and assigned.
+                head: VertexName,
+
+                /// The number of parents, at the end of the `parent_ids`.
+                parent_len: usize,
+
+                /// The order of parents if extracted from `parent_ids`.
+                order: VisitOrder,
+            },
 
             /// Assigned Id. Will be picked by and pushed to the current `parent_ids` stack.
-            AssignedId(Id),
+            AssignedId { id: Id },
         }
         use Todo::Assign;
         use Todo::AssignedId;
@@ -155,12 +166,15 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                 // Assume incremental updates with pushrebase.
                 VisitOrder::FirstFirst
             };
-            vec![Visit(head.clone(), order)]
+            vec![Visit {
+                head: head.clone(),
+                order,
+            }]
         };
         while let Some(todo) = todo_stack.pop() {
             tracing::trace!(target: "dag::assign", "todo: {:?}", &todo);
             match todo {
-                Visit(head, order) => {
+                Visit { head, order } => {
                     // If the id was not assigned, or was assigned to a higher group,
                     // (re-)assign it to this group.
                     //
@@ -169,7 +183,11 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                         None => {
                             let parents = parents_by_name.parent_names(head.clone()).await?;
                             tracing::trace!(target: "dag::assign", "visit {:?} with parents {:?}", &head, &parents);
-                            todo_stack.push(Todo::Assign(head, parents.len(), order));
+                            todo_stack.push(Assign {
+                                head,
+                                parent_len: parents.len(),
+                                order,
+                            });
                             let mut visit = parents;
                             match order {
                                 VisitOrder::FirstFirst => {}
@@ -179,22 +197,29 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                                 // If the parent was not assigned, or was assigned to a higher group,
                                 // (re-)assign the parent to this group.
                                 match self.vertex_id_with_max_group(&p, group).await {
-                                    Ok(Some(id)) => todo_stack.push(AssignedId(id)),
+                                    Ok(Some(id)) => todo_stack.push(AssignedId { id }),
                                     Ok(None) => {
                                         let parent_order = match (order, i) {
                                             (VisitOrder::FirstFirst, 0) => VisitOrder::FirstFirst,
                                             _ => VisitOrder::FirstLast,
                                         };
-                                        todo_stack.push(Todo::Visit(p, parent_order))
+                                        todo_stack.push(Visit {
+                                            head: p,
+                                            order: parent_order,
+                                        })
                                     }
                                     Err(e) => return Err(e),
                                 }
                             }
                         }
-                        Some(id) => todo_stack.push(AssignedId(id)),
+                        Some(id) => todo_stack.push(AssignedId { id }),
                     }
                 }
-                Assign(head, parent_len, order) => {
+                Assign {
+                    head,
+                    parent_len,
+                    order,
+                } => {
                     let parent_start = parent_ids.len() - parent_len;
                     let id = match self.vertex_id_with_max_group(&head, group).await? {
                         Some(id) => id,
@@ -236,9 +261,9 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                         }
                     };
                     parent_ids.truncate(parent_start);
-                    todo_stack.push(AssignedId(id));
+                    todo_stack.push(AssignedId { id });
                 }
-                AssignedId(id) => {
+                AssignedId { id } => {
                     parent_ids.push(id);
                 }
             }
