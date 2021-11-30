@@ -81,21 +81,29 @@ impl Convert for RawBlobstoreConfig {
                 remote: raw.remote.convert()?,
             },
             RawBlobstoreConfig::multiplexed(raw) => {
-                let unchecked_minimum_successful_writes: usize =
-                    raw.minimum_successful_writes.unwrap_or(1).try_into()?;
+                let parse_quorum = |raw_value: i64, name: &'static str| {
+                    let unchecked: usize = raw_value.try_into()?;
 
-                if unchecked_minimum_successful_writes > raw.components.len() {
-                    return Err(anyhow!(
-                        "Not enough blobstores for {} required writes (have {})",
-                        unchecked_minimum_successful_writes,
-                        raw.components.len()
-                    ));
-                }
+                    if unchecked > raw.components.len() {
+                        return Err(anyhow!(
+                            "Not enough blobstores for {} {} (have {})",
+                            unchecked,
+                            name,
+                            raw.components.len()
+                        ));
+                    }
+
+                    NonZeroUsize::new(unchecked)
+                        .with_context(|| format!("Must require at least 1 {}", name))
+                };
 
                 let minimum_successful_writes =
-                    NonZeroUsize::new(unchecked_minimum_successful_writes).ok_or_else(|| {
-                        anyhow!("Must require at least 1 successful write to make a put succeed")
-                    })?;
+                    parse_quorum(raw.minimum_successful_writes.unwrap_or(1), "minimum writes")?;
+                let not_present_read_quorum = parse_quorum(
+                    raw.not_present_read_quorum
+                        .unwrap_or(raw.components.len().try_into()?),
+                    "read quorum",
+                )?;
 
                 BlobConfig::Multiplexed {
                     multiplex_id: raw
@@ -119,6 +127,7 @@ impl Convert for RawBlobstoreConfig {
                         })
                         .collect::<Result<Vec<_>>>()?,
                     minimum_successful_writes,
+                    not_present_read_quorum,
                     queue_db: raw
                         .queue_db
                         .ok_or_else(|| anyhow!("missing queue_db from configuration"))?

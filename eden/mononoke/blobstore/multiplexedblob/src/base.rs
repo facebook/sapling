@@ -113,6 +113,9 @@ pub struct MultiplexedBlobstoreBase {
     /// blobstore wins the `put` race).
     /// Note that if this is bigger than the number of blobstores, we will always fail writes
     minimum_successful_writes: NonZeroUsize,
+    /// During a `get/is_present`, if this many blobstores successfully return that the blob is not present, then the
+    /// blob is considered not present in this blobstore.
+    not_present_read_quorum: NonZeroUsize,
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     scuba: MononokeScubaSampleBuilder,
     scuba_sample_rate: NonZeroU64,
@@ -159,6 +162,7 @@ impl MultiplexedBlobstoreBase {
         blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
+        not_present_read_quorum: NonZeroUsize,
         handler: Arc<dyn MultiplexedBlobstorePutHandler>,
         mut scuba: MononokeScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
@@ -170,6 +174,7 @@ impl MultiplexedBlobstoreBase {
             blobstores: blobstores.into(),
             write_mostly_blobstores: write_mostly_blobstores.into(),
             minimum_successful_writes,
+            not_present_read_quorum,
             handler,
             scuba,
             scuba_sample_rate,
@@ -368,11 +373,21 @@ async fn blobstore_get<'a>(
     ctx: &'a CoreContext,
     blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
     write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    not_present_read_quorum: NonZeroUsize,
     key: &'a str,
     scuba: MononokeScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>, Error> {
     let is_logged = scuba.sampling().is_logged();
     let blobstores_count = blobstores.len() + write_mostly_blobstores.len();
+    let mut needed_not_present: usize = not_present_read_quorum.get();
+
+    if needed_not_present > blobstores_count {
+        anyhow::bail!(
+            "Not enough blobstores for configured get needs. Have {}, need {}",
+            blobstores_count,
+            needed_not_present
+        )
+    }
 
     let (stats, result) = {
         async move {
@@ -407,7 +422,7 @@ async fn blobstore_get<'a>(
                             // Allow the other requests to complete so that we can record some
                             // metrics for the blobstore. This will also log metrics for write-mostly
                             // blobstores, which helps us decide whether they're good
-                            tokio::spawn(requests.for_each(|_| async {}));
+                            spawn_stream_completion(requests);
                         }
                         // Return the blob that won the race
                         value.remove_ctime();
@@ -416,7 +431,15 @@ async fn blobstore_get<'a>(
                     (blobstore_id, Err(error)) => {
                         errors.insert(blobstore_id, error);
                     }
-                    (_, Ok(None)) => {}
+                    (_, Ok(None)) => {
+                        needed_not_present = needed_not_present.saturating_sub(1);
+                        if needed_not_present == 0 {
+                            if is_logged {
+                                spawn_stream_completion(requests);
+                            }
+                            return Ok(None);
+                        }
+                    }
                 }
             }
 
@@ -520,9 +543,18 @@ impl Blobstore for MultiplexedBlobstoreBase {
         let mut scuba = self.scuba.clone();
         let blobstores = self.blobstores.clone();
         let write_mostly_blobstores = self.write_mostly_blobstores.clone();
+        let not_present_read_quorum = self.not_present_read_quorum;
         scuba.sampled(self.scuba_sample_rate);
 
-        blobstore_get(ctx, blobstores, write_mostly_blobstores, key, scuba).await
+        blobstore_get(
+            ctx,
+            blobstores,
+            write_mostly_blobstores,
+            not_present_read_quorum,
+            key,
+            scuba,
+        )
+        .await
     }
 
     async fn is_present<'a>(
@@ -531,6 +563,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         key: &'a str,
     ) -> Result<BlobstoreIsPresent> {
         let blobstores_count = self.blobstores.len() + self.write_mostly_blobstores.len();
+        let mut needed_not_present: usize = self.not_present_read_quorum.get();
         let comprehensive_lookup = matches!(
             ctx.session().session_class(),
             SessionClass::ComprehensiveLookup
@@ -584,7 +617,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
                             present_counter = present_counter + 1;
                         }
                         (_, Ok(BlobstoreIsPresent::Absent)) => {
-                            if comprehensive_lookup {
+                            needed_not_present = needed_not_present.saturating_sub(1);
+                            if comprehensive_lookup || needed_not_present == 0 {
                                 return Ok(BlobstoreIsPresent::Absent);
                             }
                         }

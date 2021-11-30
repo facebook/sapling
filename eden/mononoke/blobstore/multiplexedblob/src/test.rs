@@ -301,6 +301,7 @@ async fn scrub_none(
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
         vec![(bid2, bs2.clone())],
         nonzero!(1usize),
+        nonzero!(3usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -369,11 +370,13 @@ async fn do_base(
         .collect();
 
     let min_successful = cmp::max(1, regular_stores.len() - 1);
+    let not_present_read_quorum = regular_stores.len() + 1 - min_successful;
     let bs = MultiplexedBlobstoreBase::new(
         MultiplexId::new(1),
         dyn_stores,
         vec![],
         NonZeroUsize::new(min_successful).unwrap(),
+        NonZeroUsize::new(not_present_read_quorum).unwrap(),
         log.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -479,30 +482,34 @@ async fn do_base(
         assert!(put_fut.await.is_err());
     }
 
-    // get: Error + None -> Error
+    // get: None + ... (quorum - 1) + Error + ... -> Error
     {
         let k3 = "k3";
         let mut get_fut = bs.get(ctx, k3).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
-        bs0.tick(Some("case 4: bs0 failed"));
+        let (nones, errors) = regular_stores.split_at(not_present_read_quorum - 1);
 
-        for (_id, store) in regular_stores[1..].iter() {
-            assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+        for (_id, store) in nones.iter() {
             store.tick(None);
+            assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         }
+
+        for (_id, store) in errors.iter() {
+            assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
+            store.tick(Some("case 4: failed"));
+        }
+
         assert!(get_fut.await.is_err());
     }
 
-    // get: None + None -> None
+    // get: None + None + ... (quorum) -> None
     {
         let k3 = "k3";
         let mut get_fut = bs.get(ctx, k3).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
-        bs0.tick(None);
-
-        for (_id, store) in regular_stores[1..].iter() {
+        for (_id, store) in regular_stores[0..not_present_read_quorum].iter() {
             assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
             store.tick(None);
         }
@@ -535,6 +542,27 @@ async fn do_base(
             assert_eq!(store.get_bytes(k4), Some(v4.clone()));
         }
     }
+
+    // is_present: None + None + ... (quorum) -> Absent
+    {
+        let k5 = "k5";
+        let mut is_present_fut = bs.is_present(ctx, k5).map_err(|_| ()).boxed();
+        assert!(
+            PollOnce::new(Pin::new(&mut is_present_fut))
+                .await
+                .is_pending()
+        );
+
+        for (_id, store) in regular_stores[0..not_present_read_quorum].iter() {
+            assert!(
+                PollOnce::new(Pin::new(&mut is_present_fut))
+                    .await
+                    .is_pending()
+            );
+            store.tick(None);
+        }
+        assert!(!is_present_fut.await.unwrap().assume_not_found_if_unsure());
+    }
 }
 
 #[fbinit::test]
@@ -552,6 +580,7 @@ async fn multiplexed(fb: FacebookInit) {
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
         vec![],
         nonzero!(1usize),
+        nonzero!(2usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -705,6 +734,7 @@ async fn multiplexed_new_semantics(fb: FacebookInit) {
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
         vec![],
         nonzero!(1usize),
+        nonzero!(2usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -863,6 +893,7 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<()> {
         ],
         vec![],
         nonzero!(1usize),
+        nonzero!(3usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -917,6 +948,7 @@ async fn multiplexed_blob_size(fb: FacebookInit) -> Result<()> {
         ],
         vec![],
         nonzero!(1usize),
+        nonzero!(3usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -963,6 +995,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
         vec![(bid2, bs2.clone())],
         nonzero!(1usize),
+        nonzero!(3usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -1065,6 +1098,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
         vec![(bid2, bs2.clone())],
         nonzero!(1usize),
+        nonzero!(3usize),
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         MononokeScubaSampleBuilder::with_discard(),
@@ -1114,6 +1148,7 @@ async fn scrub_scenarios(fb: FacebookInit, scrub_action_on_missing_write_mostly:
             vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
             vec![(bid2, bs2.clone())],
             nonzero!(1usize),
+            nonzero!(3usize),
             queue.clone(),
             MononokeScubaSampleBuilder::with_discard(),
             MononokeScubaSampleBuilder::with_discard(),
@@ -1236,6 +1271,7 @@ async fn queue_waits(fb: FacebookInit) {
         ],
         vec![],
         nonzero!(1usize),
+        nonzero!(3usize),
         log.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -1336,6 +1372,7 @@ async fn write_mostly_get(fb: FacebookInit) {
         vec![(BlobstoreId::new(0), main_bs.clone())],
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
         nonzero!(1usize),
+        nonzero!(2usize),
         log.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -1446,6 +1483,7 @@ async fn write_mostly_put(fb: FacebookInit) {
         vec![(BlobstoreId::new(0), main_bs.clone())],
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
         nonzero!(1usize),
+        nonzero!(2usize),
         log.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -1610,6 +1648,7 @@ async fn needed_writes(fb: FacebookInit) {
         ],
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
         nonzero!(2usize),
+        nonzero!(2usize),
         log.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -1726,6 +1765,7 @@ async fn needed_writes_bad_config(fb: FacebookInit) {
         ],
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
         nonzero!(5usize),
+        nonzero!(5usize),
         log.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -1769,6 +1809,7 @@ async fn no_handlers(fb: FacebookInit) {
         ],
         vec![],
         nonzero!(1usize),
+        nonzero!(3usize),
         log.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -1880,6 +1921,7 @@ async fn failing_put_handler(fb: FacebookInit) {
         vec![],
         // 1 mininum successful write
         nonzero!(1usize),
+        nonzero!(3usize),
         failing_put_handler,
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -1993,6 +2035,7 @@ async fn test_dont_wait_for_slowest_blobstore_in_background_mode(fb: FacebookIni
         ],
         vec![],
         nonzero!(1usize),
+        nonzero!(2usize),
         log.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
@@ -2009,6 +2052,38 @@ async fn test_dont_wait_for_slowest_blobstore_in_background_mode(fb: FacebookIni
     let start = Instant::now();
     let fut = bs.put(&ctx, "key".to_string(), make_value("v0")).boxed();
     with_tunables_async(tunables, fut).await?;
+    assert!(start.elapsed() < Duration::from_secs(2));
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_dont_wait_for_slowest_blobstore_on_read(fb: FacebookInit) -> Result<()> {
+    let bs0 = Arc::new(DelayBlobstore::new(Duration::from_secs(0)));
+    let bs1 = Arc::new(DelayBlobstore::new(Duration::from_secs(15)));
+    let log = Arc::new(LogHandler::new());
+    let bs = MultiplexedBlobstoreBase::new(
+        MultiplexId::new(1),
+        vec![
+            (BlobstoreId::new(0), bs0.clone()),
+            (BlobstoreId::new(1), bs1.clone()),
+        ],
+        vec![],
+        nonzero!(2usize),
+        nonzero!(1usize),
+        log.clone(),
+        MononokeScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+
+    let ctx = CoreContext::test_mock(fb);
+    let start = Instant::now();
+    assert_eq!(bs.get(&ctx, "key").await?, None);
+    assert!(
+        !bs.is_present(&ctx, "key2")
+            .await?
+            .assume_not_found_if_unsure()
+    );
     assert!(start.elapsed() < Duration::from_secs(2));
 
     Ok(())

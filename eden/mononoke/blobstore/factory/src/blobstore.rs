@@ -456,6 +456,7 @@ fn make_blobstore_put_ops<'a>(
                 scuba_sample_rate,
                 blobstores,
                 minimum_successful_writes,
+                not_present_read_quorum,
                 queue_db,
             } => {
                 needs_wrappers = false;
@@ -468,6 +469,7 @@ fn make_blobstore_put_ops<'a>(
                     scuba_sample_rate,
                     blobstores,
                     minimum_successful_writes,
+                    not_present_read_quorum,
                     mysql_options,
                     readonly_storage,
                     blobstore_options,
@@ -587,6 +589,7 @@ async fn make_blobstore_multiplexed<'a>(
     scuba_sample_rate: NonZeroU64,
     inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
     minimum_successful_writes: NonZeroUsize,
+    not_present_read_quorum: NonZeroUsize,
     mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
@@ -669,6 +672,7 @@ async fn make_blobstore_multiplexed<'a>(
             normal_components,
             write_mostly_components,
             minimum_successful_writes,
+            not_present_read_quorum,
             Arc::new(queue),
             scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
                 MononokeScubaSampleBuilder::new(fb, &table)
@@ -685,6 +689,7 @@ async fn make_blobstore_multiplexed<'a>(
             normal_components,
             write_mostly_components,
             minimum_successful_writes,
+            not_present_read_quorum,
             Arc::new(queue),
             scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
                 MononokeScubaSampleBuilder::new(fb, &table)

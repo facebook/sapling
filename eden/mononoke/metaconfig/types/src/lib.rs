@@ -931,6 +931,8 @@ pub enum BlobConfig {
         blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
         /// The number of writes that must succeed for a `put` to the multiplex to succeed
         minimum_successful_writes: NonZeroUsize,
+        /// The number of reads needed to decided a blob is not present
+        not_present_read_quorum: NonZeroUsize,
         /// 1 in scuba_sample_rate samples will be logged for both
         /// multiplex and per blobstore scuba tables
         scuba_sample_rate: NonZeroU64,

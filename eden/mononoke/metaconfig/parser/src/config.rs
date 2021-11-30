@@ -911,6 +911,7 @@ mod test {
                 ),
             ],
             minimum_successful_writes: nonzero!(2usize),
+            not_present_read_quorum: nonzero!(2usize),
             queue_db: DatabaseConfig::Remote(RemoteDatabaseConfig {
                 db_address: "queue_db_address".into(),
             }),
@@ -1406,6 +1407,7 @@ mod test {
                             })
                         ],
                         minimum_successful_writes: nonzero!(1usize),
+                        not_present_read_quorum: nonzero!(1usize),
                         queue_db: DatabaseConfig::Remote(
                             RemoteDatabaseConfig {
                                 db_address: "queue_db_address".into(),
