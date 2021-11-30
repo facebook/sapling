@@ -38,7 +38,7 @@ use futures_old::future::ok;
 use futures_old::{
     future as future_old, stream as stream_old, try_ready, Async, Future, IntoFuture, Poll, Stream,
 };
-use futures_stats::{Timed, TimedFutureExt, TimedStreamExt};
+use futures_stats::{TimedFutureExt, TimedStreamExt};
 use getbundle_response::{
     create_getbundle_response, DraftsInBundlesPolicy, PhasesPart, SessionLfsParams,
 };
@@ -1040,10 +1040,9 @@ impl RepoClient {
             }
             .timeout(default_timeout())
             .flatten_err()
-            .boxed()
-            .compat()
-            .timed(move |stats, known_nodes| {
-                if let Ok(known) = known_nodes {
+            .timed()
+            .map(move |(stats, known_nodes)| {
+                if let Ok(ref known) = known_nodes {
                     ctx.perf_counters()
                         .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
                     ctx.perf_counters().add_to_counter(
@@ -1052,8 +1051,10 @@ impl RepoClient {
                     );
                 }
                 command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
+                known_nodes
             })
+            .boxed()
+            .compat()
         })
     }
 }
@@ -1174,12 +1175,13 @@ impl HgCommands for RepoClient {
                 .compat()
                 .timeout(default_timeout())
                 .flatten_err()
+                .timed()
+                .map(move |(stats, res)| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    res
+                })
                 .boxed()
                 .compat()
-                .timed(move |stats, _| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    Ok(())
-                })
         })
     }
 
@@ -1220,10 +1222,13 @@ impl HgCommands for RepoClient {
                     }
                 }
 
-                future_old::ok(hostname).timed(move |stats, _| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    Ok(())
-                })
+                future::ok(hostname)
+                    .timed()
+                    .map(move |(stats, res)| {
+                        command_logger.without_wireproto().finalize_command(&stats);
+                        res
+                    })
+                    .compat()
             },
         )
     }
@@ -1240,12 +1245,13 @@ impl HgCommands for RepoClient {
                 .compat()
                 .timeout(default_timeout())
                 .flatten_err()
+                .timed()
+                .map(move |(stats, res)| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    res
+                })
                 .boxed()
                 .compat()
-                .timed(move |stats, _| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    Ok(())
-                })
         })
     }
 
@@ -1417,12 +1423,13 @@ impl HgCommands for RepoClient {
             }
             .timeout(default_timeout())
             .flatten_err()
+            .timed()
+            .map(move |(stats, res)| {
+                command_logger.without_wireproto().finalize_command(&stats);
+                res
+            })
             .boxed()
             .compat()
-            .timed(move |stats, _| {
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
         })
     }
 
@@ -1519,10 +1526,15 @@ impl HgCommands for RepoClient {
             caps.push(format!("bundle2={}", bundle2caps()));
             res.insert("capabilities".to_string(), caps);
 
-            future_old::ok(res).timed(move |stats, _| {
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
+            future::ok(res)
+                .timed()
+                .map(move |(stats, res)| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    res
+                })
+                .boxed()
+                .compat()
+                .boxify()
         })
     }
 
@@ -1531,10 +1543,14 @@ impl HgCommands for RepoClient {
         if namespace == "bookmarks" {
             self.command_future(ops::LISTKEYS, UNSAMPLED, |ctx, command_logger| {
                 self.get_pull_default_bookmarks_maybe_stale(ctx)
-                    .timed(move |stats, _| {
+                    .compat()
+                    .timed()
+                    .map(move |(stats, res)| {
                         command_logger.without_wireproto().finalize_command(&stats);
-                        Ok(())
+                        res
                     })
+                    .compat()
+                    .boxify()
             })
         } else {
             info!(
@@ -1610,12 +1626,13 @@ impl HgCommands for RepoClient {
                 })
                 .timeout(default_timeout())
                 .flatten_err()
+                .timed()
+                .map(move |(stats, res)| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    res
+                })
                 .boxed()
                 .compat()
-                .timed(move |stats, _| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    Ok(())
-                })
         })
     }
 
@@ -1799,12 +1816,13 @@ impl HgCommands for RepoClient {
                     .map_err(Error::from)
                     .timeout(default_timeout())
                     .flatten_err()
+                    .timed()
+                    .map(move |(stats, res)| {
+                        command_logger.without_wireproto().finalize_command(&stats);
+                        res
+                    })
                     .boxed()
                     .compat()
-                    .timed(move |stats, _| {
-                        command_logger.without_wireproto().finalize_command(&stats);
-                        Ok(())
-                    })
                 })
             })
             .boxify()

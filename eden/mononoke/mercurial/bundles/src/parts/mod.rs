@@ -21,10 +21,11 @@ use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes as BytesNew;
 use bytes_old::Bytes;
 use context::CoreContext;
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
 use futures_old::stream::{iter_ok, once};
 use futures_old::{Future, Stream};
-use futures_stats::Timed;
+use futures_stats::TimedFutureExt;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_types::{
     Delta, HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, MPath, RepoPath, RevFlags,
@@ -78,14 +79,17 @@ where
             Ok::<_, Error>(payload)
         })
         .map_err(|err| err.context(ErrorKind::PhaseHeadsGeneration))
-        .timed(move |stats, result| {
+        .compat()
+        .timed()
+        .map(move |(stats, result)| {
             if result.is_ok() {
                 scuba_logger
                     .add_future_stats(&stats)
                     .log_with_msg("Phases calculated - Success", None);
             }
-            Ok(())
-        });
+            result
+        })
+        .compat();
     builder.set_data_future(fut);
     Ok(builder)
 }

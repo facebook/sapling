@@ -28,7 +28,7 @@ use futures::{
 };
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::{future as future_old, stream, Future as FutureOld, IntoFuture, Stream};
-use futures_stats::{FutureStats, Timed, TimedTryFutureExt};
+use futures_stats::{FutureStats, TimedFutureExt, TimedTryFutureExt};
 use mononoke_types::{ContentId, MPath, RepoPath};
 use slog::{trace, Logger};
 use stats::prelude::*;
@@ -150,21 +150,22 @@ impl UploadHgTreeEntry {
                 .put(&ctx, blobstore_key, envelope_blob.into())
                 .await
         }
-        .boxed()
-        .compat()
-        .map({
+        .map_ok({
             let path = path.clone();
             move |()| (manifest_id, path)
         })
-        .timed({
+        .timed()
+        .map({
             let logger = logger.clone();
-            move |stats, result| {
+            move |(stats, result)| {
                 if result.is_ok() {
                     log_upload_stats(logger, path, node_id, computed_node_id, stats);
                 }
-                Ok(())
+                result
             }
-        });
+        })
+        .boxed()
+        .compat();
 
         Ok((manifest_id, upload.boxify()))
     }
@@ -289,21 +290,25 @@ impl UploadHgFileContents {
                     file_bytes.into_bytes(),
                 );
 
-                let upload_fut = upload_fut.boxed().compat().timed({
-                    let logger = ctx.logger().clone();
-                    move |stats, result| {
-                        if result.is_ok() {
-                            UploadHgFileEntry::log_stats(
-                                logger,
-                                None,
-                                node_id,
-                                "content_uploaded",
-                                stats,
-                            );
+                let upload_fut = upload_fut
+                    .timed()
+                    .map({
+                        let logger = ctx.logger().clone();
+                        move |(stats, result)| {
+                            if result.is_ok() {
+                                UploadHgFileEntry::log_stats(
+                                    logger,
+                                    None,
+                                    node_id,
+                                    "content_uploaded",
+                                    stats,
+                                );
+                            }
+                            result
                         }
-                        Ok(())
-                    }
-                });
+                    })
+                    .boxed()
+                    .compat();
 
                 let cbmeta = ContentBlobMeta {
                     id,
