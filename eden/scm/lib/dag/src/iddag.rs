@@ -1729,21 +1729,22 @@ mod tests {
     fn test_segment_basic_lookups() {
         let dir = tempdir().unwrap();
         let mut dag = IdDag::open(dir.path()).unwrap();
-        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 0);
-        assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 0);
+        assert_eq!(dag.all().unwrap().count(), 0);
 
         let flags = SegmentFlags::empty();
 
         dag.insert(flags, 0, Id::MIN, Id(50), &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 51);
+        assert_eq!(dag.all().unwrap().max(), Some(Id(50)));
+
         dag.insert(flags, 0, Id(51), Id(100), &vec![Id(50)])
             .unwrap();
-        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 101);
+        assert_eq!(dag.all().unwrap().max(), Some(Id(100)));
+
         dag.insert(flags, 0, Id(101), Id(150), &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 151);
-        assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 0);
+        assert_eq!(dag.all().unwrap().max(), Some(Id(150)));
+
         dag.insert(flags, 1, Id::MIN, Id(150), &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 151);
+        assert_eq!(dag.all().unwrap().max(), Some(Id(150)));
 
         // Helper functions to make the below lines shorter.
         let low_by_head = |head, level| match dag.find_segment_by_head_and_level(Id(head), level) {
@@ -1791,7 +1792,7 @@ mod tests {
     fn test_sync_reload() {
         let dir = tempdir().unwrap();
         let mut dag = IdDag::open(dir.path()).unwrap();
-        assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 0);
+        assert_eq!(dag.all().unwrap().max(), None);
 
         let lock = dag.lock().unwrap();
         dag.reload(&lock).unwrap();

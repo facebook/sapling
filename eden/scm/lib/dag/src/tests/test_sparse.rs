@@ -57,7 +57,6 @@ async fn test_sparse_dag() {
             r#"Max Level: 0
  Level 0
   Group Master:
-   Next Free Id: 13
    Segments: 6
     11 : M+12 [D+10, J+7] OnlyHead
     9 : D+10 [B+8, G+2]
@@ -66,7 +65,6 @@ async fn test_sparse_dag() {
     5 : L+6 [] Root
     0 : I+4 [] Root OnlyHead
   Group Non-Master:
-   Next Free Id: N0
    Segments: 0
 "#
         );

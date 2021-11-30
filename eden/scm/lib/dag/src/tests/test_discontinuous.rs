@@ -57,13 +57,11 @@ async fn test_simple_3_branches() {
         r#"Max Level: 0
  Level 0
   Group Master:
-   Next Free Id: 162
    Segments: 3
     J+159 : L+161 [G+106]
     G+106 : I+108 [C+2]
     A+0 : F+5 [] Root OnlyHead
   Group Non-Master:
-   Next Free Id: N0
    Segments: 0
 "#
     );

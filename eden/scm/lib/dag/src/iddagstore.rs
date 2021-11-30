@@ -135,11 +135,6 @@ pub trait IdDagStore: Send + Sync + 'static {
         Ok(result)
     }
 
-    /// Return the next unused id for segments of the specified level.
-    ///
-    /// Useful for building segments incrementally.
-    fn next_free_id(&self, level: Level, group: Group) -> Result<Id>;
-
     /// Find segments that covers `id..` range at the given level, within a same group.
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>>;
 
@@ -651,25 +646,6 @@ mod tests {
         assert_eq!(fmt_iter(iter), [] as [String; 0]);
     }
 
-    fn test_next_free_id(store: &dyn IdDagStore) {
-        assert_eq!(
-            store.next_free_id(0 as Level, Group::MASTER).unwrap(),
-            Id(14)
-        );
-        assert_eq!(
-            store.next_free_id(0 as Level, Group::NON_MASTER).unwrap(),
-            nid(7)
-        );
-        assert_eq!(
-            store.next_free_id(1 as Level, Group::MASTER).unwrap(),
-            Id(14)
-        );
-        assert_eq!(
-            store.next_free_id(2 as Level, Group::MASTER).unwrap(),
-            Group::MASTER.min_id()
-        );
-    }
-
     fn test_next_segments(store: &dyn IdDagStore) {
         let segments = store.next_segments(Id(4), 0 as Level).unwrap();
         let expected = segments_to_owned(&[&MERGED_LEVEL0_HEAD5, &LEVEL0_HEAD9, &LEVEL0_HEAD13]);
@@ -846,10 +822,6 @@ mod tests {
                 .unwrap()
                 .is_none()
         );
-        assert_eq!(
-            store.next_free_id(0 as Level, Group::NON_MASTER).unwrap(),
-            nid(0)
-        );
         assert!(
             store
                 .iter_master_flat_segments_with_parent_span(nid(2).into())
@@ -908,11 +880,6 @@ mod tests {
         for_each_empty_store(|store| {
             test_all_ids_in_segment_level(store);
         })
-    }
-
-    #[test]
-    fn test_multi_stores_next_free_id() {
-        for_each_store(|store| test_next_free_id(store));
     }
 
     #[test]

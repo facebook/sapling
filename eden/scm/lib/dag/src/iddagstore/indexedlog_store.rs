@@ -191,34 +191,6 @@ impl IdDagStore for IndexedLogStore {
         Ok(result)
     }
 
-    fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
-        let lower_bound = group.min_id().to_prefixed_bytearray(level);
-        let upper_bound = group.max_id().to_prefixed_bytearray(level);
-        let range = &lower_bound[..]..=&upper_bound[..];
-        match self
-            .log
-            .lookup_range(Self::INDEX_LEVEL_HEAD, range)?
-            .rev()
-            .nth(0)
-        {
-            None => Ok(group.min_id()),
-            Some(result) => {
-                let (key, mut values) = result?;
-                // PERF: The "next id" information can be also extracted from
-                // `key` without going through values. Right now the code path
-                // goes through values so `Segment` format changes wouldn't
-                // break the logic here. If perf is really needed, we can change
-                // logic here to not checking values.
-                if let Some(bytes) = values.next() {
-                    let seg = self.segment_from_slice(bytes?);
-                    Ok(seg.high()? + 1)
-                } else {
-                    bug(format!("key {:?} should have values in next_free_id", key))
-                }
-            }
-        }
-    }
-
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
         let lower_bound = Self::serialize_head_level_lookup_key(id, level);
         let upper_bound = Self::serialize_head_level_lookup_key(id.group().max_id(), level);
@@ -336,12 +308,9 @@ impl IdDagStore for IndexedLogStore {
     /// Mark non-master ids as "removed".
     fn remove_non_master(&mut self) -> Result<()> {
         self.log.append(Self::MAGIC_CLEAR_NON_MASTER)?;
-        // As an optimization, we could pass a max_level hint from iddag.
-        // Doesn't seem necessary though.
-        for level in 0..=self.max_level()? {
-            if self.next_free_id(level, Group::NON_MASTER)? != Group::NON_MASTER.min_id() {
-                return bug("remove_non_master did not take effect");
-            }
+        let non_master_ids = self.all_ids_in_groups(&[Group::NON_MASTER])?;
+        if !non_master_ids.is_empty() {
+            return bug("remove_non_master did not take effect");
         }
         Ok(())
     }
@@ -622,10 +591,6 @@ impl IndexedLogStore {
         };
         Ok(store)
     }
-}
-
-fn default_next_free_ids_without_dirty() -> (Id, Id) {
-    (Group::MASTER.min_id(), Group::NON_MASTER.min_id())
 }
 
 // Build index key for the INDEX_PARENT (group-parent) index.

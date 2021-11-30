@@ -125,18 +125,14 @@ To full segments:
   Max Level: 1
    Level 1
     Group Master:
-     Next Free Id: 0
      Segments: 0
     Group Non-Master:
-     Next Free Id: N8
      Segments: 1
       1fc8102cda62+N0 : 5e98a0f69ae0+N6 [] Root
    Level 0
     Group Master:
-     Next Free Id: 0
      Segments: 0
     Group Non-Master:
-     Next Free Id: N8
      Segments: 4
       f535a6a0548e+N7 : f535a6a0548e+N7 [4ec7ca77ac1a+N2]
       5e98a0f69ae0+N6 : 5e98a0f69ae0+N6 [4ec7ca77ac1a+N2, 50e53efd5222+N5]
@@ -236,13 +232,11 @@ Prepare the "master" group. Note the "Group Master" output in debugchangelog:
   Max Level: 0
    Level 0
     Group Master:
-     Next Free Id: 7
      Segments: 3
       5e98a0f69ae0+6 : 5e98a0f69ae0+6 [4ec7ca77ac1a+5, 50e53efd5222+2] OnlyHead
       1fc8102cda62+3 : 4ec7ca77ac1a+5 [] Root
       e7050b6e5048+0 : 50e53efd5222+2 [] Root OnlyHead
     Group Non-Master:
-     Next Free Id: N1
      Segments: 1
       f535a6a0548e+N0 : f535a6a0548e+N0 [4ec7ca77ac1a+5]
 

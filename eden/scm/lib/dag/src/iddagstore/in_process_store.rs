@@ -168,21 +168,6 @@ impl IdDagStore for InProcessStore {
         Ok(result)
     }
 
-    fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
-        match self.get_head_index(level).and_then(|head_index| {
-            head_index
-                .range(group.min_id()..=group.max_id())
-                .rev()
-                .next()
-        }) {
-            None => Ok(group.min_id()),
-            Some((_, store_id)) => {
-                let segment = self.get_segment(store_id);
-                Ok(segment.high()? + 1)
-            }
-        }
-    }
-
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
         match self.get_head_index(level) {
             None => Ok(vec![]),

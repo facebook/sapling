@@ -677,7 +677,11 @@ where
             client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
         }
 
-        let mut next_free_client_id = new.dag.next_free_id(0, Group::MASTER)?;
+        let mut next_free_client_id = new
+            .dag
+            .master_group()?
+            .max()
+            .map_or_else(|| Group::MASTER.min_id(), |i| i + 1);
         let mut new_client_segments = vec![];
         let server_idmap_tree: BTreeMap<_, _> = clone_data.idmap.clone().into_iter().collect();
         let mut last_server_id = None; // Can't use 0 since server might return segment starting from 0 (for example if pulling from empty repo)
@@ -2320,9 +2324,6 @@ fn debug<S: IdDagStore>(
             writeln!(f, " Level {}", lv)?;
             for group in Group::ALL.iter().cloned() {
                 writeln!(f, "  {}:", group)?;
-                if let Ok(id) = iddag.next_free_id(0, group) {
-                    writeln!(f, "   Next Free Id: {}", id)?;
-                }
                 if let Ok(segments) = iddag.next_segments(group.min_id(), lv) {
                     writeln!(f, "   Segments: {}", segments.len())?;
                     for line in debug_segments_by_level_group(iddag, idmap, lv, group) {

@@ -350,10 +350,8 @@ fn test_mem_namedag() {
         r#"Max Level: 0
  Level 0
   Group Master:
-   Next Free Id: 0
    Segments: 0
   Group Non-Master:
-   Next Free Id: N12
    Segments: 5
     K+N10 : L+N11 [H+N7, J+N9]
     I+N8 : J+N9 [G+N6]
@@ -389,18 +387,14 @@ fn test_namedag() {
         r#"Max Level: 1
  Level 1
   Group Master:
-   Next Free Id: 0
    Segments: 0
   Group Non-Master:
-   Next Free Id: N11
    Segments: 1
     A+N0 : J+N8 [] Root
  Level 0
   Group Master:
-   Next Free Id: 0
    Segments: 0
   Group Non-Master:
-   Next Free Id: N11
    Segments: 10
     K+N10 : K+N10 [H+N9, I+N7]
     H+N9 : H+N9 [E+N2, F+N6]
