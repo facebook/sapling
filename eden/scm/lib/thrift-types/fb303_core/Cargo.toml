@@ -8,7 +8,7 @@ edition = "2021"
 anyhow = "1"
 async-trait = "0.1"
 const-cstr = "0.3.0"
-fbthrift = { path = "../../../../../thrift/lib/rust" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 futures = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_derive = "1.0"
