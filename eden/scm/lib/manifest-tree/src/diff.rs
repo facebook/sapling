@@ -92,7 +92,7 @@ pub struct Diff<'a> {
     output: VecDeque<DiffEntry>,
     store: &'a InnerStore,
     matcher: &'a dyn Matcher,
-    progress_bar: Option<&'a Arc<ProgressBar>>,
+    progress_bar: Arc<ProgressBar>,
     #[allow(dead_code)]
     fetch_thread: JoinHandle<()>,
     sender: Sender<DiffItem>,
@@ -132,7 +132,7 @@ impl<'a> Diff<'a> {
             output: VecDeque::new(),
             store: &left.store,
             matcher,
-            progress_bar: None,
+            progress_bar: ProgressBar::register_new("diffing tree", 18, "depth"),
             fetch_thread,
             sender: send_prefetch,
             receiver: receive_done,
@@ -145,10 +145,6 @@ impl<'a> Diff<'a> {
             diff: self,
             output: VecDeque::new(),
         }
-    }
-
-    pub fn attach_progress_bar(&mut self, bar: &'a Arc<ProgressBar>) {
-        self.progress_bar = Some(bar);
     }
 
     /// Process the next `DiffItem` for this layer (either a pair of modified directories
@@ -172,10 +168,9 @@ impl<'a> Diff<'a> {
         let item = self.receiver.recv()?;
         self.pending -= 1;
 
-        if let Some(bar) = self.progress_bar {
-            // Set "depth" according to item depth.
-            bar.set_position(item.path().ancestors().count() as u64);
-        }
+        // Set "depth" according to item depth.
+        self.progress_bar
+            .set_position(item.path().ancestors().count() as u64);
 
         let entries = item.process(
             &mut self.sender,

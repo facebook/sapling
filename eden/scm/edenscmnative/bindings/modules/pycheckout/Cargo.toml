@@ -11,7 +11,6 @@ cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 manifest-tree = { path = "../../../../lib/manifest-tree" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
-progress-model = { path = "../../../../lib/progress/model" }
 pyconfigparser = { path = "../pyconfigparser" }
 pypathmatcher = { path = "../pypathmatcher" }
 pymanifest = { path = "../pymanifest" }

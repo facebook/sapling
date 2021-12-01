@@ -29,7 +29,6 @@ use cpython_ext::ResultPyErrExt;
 use manifest_tree::Diff;
 use manifest_tree::TreeManifest;
 use pathmatcher::Matcher;
-use progress_model::ProgressBar;
 use pyconfigparser::config;
 use pymanifest::treemanifest;
 use pypathmatcher::extract_matcher;
@@ -76,9 +75,7 @@ py_class!(class checkoutplan |py| {
         let mut actions = py.allow_threads(move || {
             let target = target.read();
             let current = current.read();
-            let mut diff = Diff::new(&current, &target, &matcher)?;
-            let bar = &ProgressBar::register_new("Calculating", 0, "depth");
-            diff.attach_progress_bar(bar);
+            let diff = Diff::new(&current, &target, &matcher)?;
             ActionMap::from_diff(diff)
         }).map_pyerr(py)?;
 
