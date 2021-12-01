@@ -80,6 +80,10 @@ impl RenderingConfig {
         return Cow::Borrowed(text);
     }
 
+    pub(crate) fn max_topic_len(&self) -> usize {
+        if self.term_width < 80 { 12 } else { 16 }
+    }
+
     fn width_str(&self, text: &str) -> usize {
         if self.cjk_width {
             text.width_cjk()

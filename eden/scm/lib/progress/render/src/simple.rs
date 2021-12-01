@@ -26,8 +26,8 @@ pub fn render(registry: &Registry, config: &RenderingConfig) -> String {
     let series_list = registry.list_io_time_series();
     let bar_list = registry.list_progress_bar();
 
-    render_cache_stats(&mut lines, &cache_list);
-    render_time_series(&mut lines, &series_list);
+    render_cache_stats(&mut lines, &cache_list, config);
+    render_time_series(&mut lines, &series_list, config);
     render_progress_bars(&mut lines, &bar_list, config);
 
     for line in lines.iter_mut() {
@@ -37,7 +37,11 @@ pub fn render(registry: &Registry, config: &RenderingConfig) -> String {
     lines.join("\n")
 }
 
-fn render_time_series(lines: &mut Vec<String>, series_list: &[Arc<IoTimeSeries>]) {
+fn render_time_series(
+    lines: &mut Vec<String>,
+    series_list: &[Arc<IoTimeSeries>],
+    config: &RenderingConfig,
+) {
     for model in series_list {
         let mut phrases = Vec::with_capacity(4);
         if model.is_stale() {
@@ -45,7 +49,7 @@ fn render_time_series(lines: &mut Vec<String>, series_list: &[Arc<IoTimeSeries>]
         }
 
         // Net [▁▂▄█▇▅▃▆] 3 MB/s
-        phrases.push(format!("{:>12}", model.topic()));
+        phrases.push(format!("{:>1$}", model.topic(), config.max_topic_len()));
 
         let ascii = ascii_time_series(&model);
         phrases.push(format!("[{}]", ascii));
@@ -91,8 +95,14 @@ fn render_progress_bars(
         shown += 1;
 
         // topic [====>    ] 12 / 56 files message
-        let topic = capitalize(bar.topic().split_whitespace().next().unwrap_or(""));
-        let mut phrases = vec![format!("{:>12}", topic)];
+        let mut topic = bar.topic();
+        while topic.len() > config.max_topic_len() {
+            match topic.rfind(char::is_whitespace) {
+                Some(idx) => topic = &topic[..idx],
+                None => break,
+            }
+        }
+        let mut phrases = vec![format!("{:>1$}", capitalize(topic), config.max_topic_len())];
         // [===>    ]
 
         let (pos, total) = bar.position_total();
@@ -167,11 +177,16 @@ fn render_progress_bars(
     }
 
     if hidden > 0 {
-        lines.push(format!("{:>12}  and {} more", "", hidden));
+        lines.push(format!(
+            "{:>width$}  and {} more",
+            "",
+            hidden,
+            width = config.max_topic_len()
+        ));
     }
 }
 
-fn render_cache_stats(lines: &mut Vec<String>, list: &[Arc<CacheStats>]) {
+fn render_cache_stats(lines: &mut Vec<String>, list: &[Arc<CacheStats>], config: &RenderingConfig) {
     for model in list {
         // topic [====>    ] 12 / 56 files message
         let topic = model.topic();
@@ -179,7 +194,12 @@ fn render_cache_stats(lines: &mut Vec<String>, list: &[Arc<CacheStats>]) {
         let hit = model.hit();
         let total = miss + hit;
         if total > 0 {
-            let mut line = format!("{:>12}  {}", topic, total);
+            let mut line = format!(
+                "{:>width$}  {}",
+                topic,
+                total,
+                width = config.max_topic_len()
+            );
             if miss > 0 {
                 let miss_rate = (miss * 100) / (total.max(1));
                 line += &format!(" ({}% miss)", miss_rate);

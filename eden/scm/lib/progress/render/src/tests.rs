@@ -15,7 +15,7 @@ use crate::RenderingConfig;
 #[test]
 fn test_simple_render() {
     let reg = example();
-    let config = RenderingConfig::for_testing();
+    let mut config = RenderingConfig::for_testing();
     assert_eq!(
         format!("\n{}", crate::simple::render(&reg, &config)),
         r#"
@@ -25,10 +25,26 @@ fn test_simple_render() {
         Disk  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▲ 4050B/s
        Files  [=======>       ]  5KB/10KB
        Trees  [     <=>       ]  5KB
-     Commits  [=======>       ]  5KB/10KB
+  Defragging  [=======>       ]  5KB/10KB
        Files  [=======>       ]  5KB/10KB  ./foo/Files/文…
        Trees  [     <=>       ]  5KB  ./foo/Trees/文件名
               and 4 more"#
+    );
+
+    config.term_width = 80;
+    assert_eq!(
+        format!("\n{}", crate::simple::render(&reg, &config)),
+        r#"
+           Files  110 (9% miss)
+           Trees  110 (9% miss)
+             Net  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▼ 67KB/s  154 requests
+            Disk  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▲ 4050B/s
+           Files  [=======>       ]  5KB/10KB
+           Trees  [     <=>       ]  5KB
+Defragging disks  [=======>       ]  5KB/10KB
+           Files  [=======>       ]  5KB/10KB  ./foo/Files/文件名
+           Trees  [     <=>       ]  5KB  ./foo/Trees/文件名
+                  and 4 more"#
     );
 }
 
@@ -57,7 +73,7 @@ fn example() -> Registry {
 
     // Progress bars
     for i in 0..3 {
-        for &topic in &["Files", "Trees", "Commits"] {
+        for &topic in &["Files", "Trees", "defragging disks"] {
             let total = if topic == "Trees" { 0 } else { 10000 };
             let bar = ProgressBar::new(topic, total, "bytes");
             bar.increase_position(5000);
