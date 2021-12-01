@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::fs::create_dir_all;
+use std::future::ready;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::time::Duration;
@@ -89,6 +90,7 @@ use minibytes::Bytes;
 use percent_encoding::utf8_percent_encode;
 use percent_encoding::AsciiSet;
 use percent_encoding::NON_ALPHANUMERIC;
+use progress_model::AggregatingProgressBar;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use types::HgId;
@@ -156,6 +158,8 @@ pub struct Client {
 pub struct ClientInner {
     config: Config,
     client: HttpClient,
+    tree_progress: Arc<AggregatingProgressBar>,
+    file_progress: Arc<AggregatingProgressBar>,
 }
 
 impl Client {
@@ -164,7 +168,12 @@ impl Client {
         let client = http_client("edenapi")
             .verbose(config.debug)
             .max_concurrent_requests(config.max_requests.unwrap_or(0));
-        let inner = Arc::new(ClientInner { config, client });
+        let inner = Arc::new(ClientInner {
+            config,
+            client,
+            tree_progress: AggregatingProgressBar::new("fetching", "trees"),
+            file_progress: AggregatingProgressBar::new("fetching", "files"),
+        });
         Self { inner }
     }
 
@@ -561,8 +570,16 @@ impl EdenApi for Client {
     ) -> Result<Response<FileEntry>, EdenApiError> {
         tracing::info!("Requesting content for {} file(s)", keys.len());
 
+        let prog = self.inner.file_progress.create_or_extend(keys.len() as u64);
+
         RetryableFiles::new(keys)
             .perform_with_retries(self.clone(), repo)
+            .and_then(|r| async {
+                Ok(r.then(move |r| {
+                    prog.increase_position(1);
+                    ready(r)
+                }))
+            })
             .await
     }
 
@@ -573,8 +590,16 @@ impl EdenApi for Client {
     ) -> Result<Response<FileEntry>, EdenApiError> {
         tracing::info!("Requesting attributes for {} file(s)", reqs.len());
 
+        let prog = self.inner.file_progress.create_or_extend(reqs.len() as u64);
+
         RetryableFileAttrs::new(reqs)
             .perform_with_retries(self.clone(), repo)
+            .and_then(|r| async {
+                Ok(r.then(move |r| {
+                    prog.increase_position(1);
+                    ready(r)
+                }))
+            })
             .await
     }
 
@@ -616,8 +641,16 @@ impl EdenApi for Client {
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         tracing::info!("Requesting {} tree(s)", keys.len());
 
+        let prog = self.inner.tree_progress.create_or_extend(keys.len() as u64);
+
         RetryableTrees::new(keys, attributes)
             .perform_with_retries(self.clone(), repo)
+            .and_then(|r| async {
+                Ok(r.then(move |r| {
+                    prog.increase_position(1);
+                    ready(r)
+                }))
+            })
             .await
     }
 

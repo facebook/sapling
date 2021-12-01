@@ -64,6 +64,18 @@ impl<T: Send + 'static> Response<T> {
             .await
             .and_then(|opt| opt.ok_or(EdenApiError::NoResponse))
     }
+
+    /// Wrap entries stream via then().
+    pub fn then<Fut, F>(self, f: F) -> Self
+    where
+        Fut: Future<Output = Result<T, EdenApiError>> + Send + 'static,
+        F: Fn(Result<T, EdenApiError>) -> Fut + Send + 'static,
+    {
+        Self {
+            entries: self.entries.then(f).boxed(),
+            stats: self.stats,
+        }
+    }
 }
 
 /// Metadata extracted from the headers of an individual HTTP response.

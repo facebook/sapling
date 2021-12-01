@@ -24,6 +24,7 @@ once_cell = "1.8"
 parking_lot = "0.10.2"
 percent-encoding = "2.1"
 pprint = { path = "../pprint" }
+progress-model = { path = "../progress/model" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
