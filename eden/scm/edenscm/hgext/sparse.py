@@ -377,7 +377,7 @@ def _setupupdates(ui):
         # have been handled by the temporary includes above.
         if changedprofiles and not branchmerge:
             scopename = "Calculating additional actions for sparse profile update"
-            with util.traced(scopename):
+            with util.traced(scopename), progress.spinner(ui, "sparse config"):
                 mf = mctx.manifest()
                 fullprefetchonsparseprofilechange = ui.configbool(
                     "sparse", "force_full_prefetch_on_sparse_profile_change"

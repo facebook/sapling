@@ -20,6 +20,7 @@ use manifest::FileType;
 use manifest::Manifest;
 use pathmatcher::Matcher;
 use pathmatcher::XorMatcher;
+use progress_model::ProgressBar;
 use types::RepoPathBuf;
 
 /// Map of simple actions that needs to be performed to move between revisions without conflicts.
@@ -83,6 +84,8 @@ impl ActionMap {
         new_matcher: M2,
         new_manifest: &impl Manifest,
     ) -> Result<Self> {
+        let _prog = ProgressBar::register_new("sparse config", 0, "");
+
         // First - remove all the files that were scheduled for update, but actually aren't in new sparse profile
         let mut result = Ok(());
         self.map.retain(|path, action| {
