@@ -19,6 +19,7 @@ use http_client::HttpClient;
 use http_client::Request;
 use http_client::Stats;
 use once_cell::sync::Lazy;
+use progress_model::AggregatingProgressBar;
 use progress_model::IoSample;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
@@ -89,6 +90,9 @@ pub fn enable_progress_reporting() {
 
 /// State for progress reporting. Lazily initialized.
 static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Send + Sync>> = Lazy::new(|| {
+    let trees_bar = AggregatingProgressBar::new("downloading", "bytes");
+    let files_bar = AggregatingProgressBar::new("downloading", "bytes");
+
     Request::on_new_request(move |req| {
         TOTAL.request_count.fetch_add(1, Relaxed);
         let req_listeners = req.ctx_mut().event_listeners();
@@ -103,16 +107,27 @@ static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Send + Sync>> = Lazy::new(|| {
             }
         });
 
-        // Create a progress bar to the main progress registry.
         // TODO: How to tell whether it is downloading or uploading?
-        let bar = ProgressBar::new("Downloading", 0, "bytes");
-        bar.set_message(req.ctx_mut().url().to_string());
+
+        // Consolidate /trees and /files requests into single progress bars.
+        let url = req.ctx_mut().url().to_string();
+        let mut is_single_bar = false;
+        let bar = if url.ends_with("/trees") {
+            trees_bar.create_or_extend(0)
+        } else if url.ends_with("/files") {
+            files_bar.create_or_extend(0)
+        } else {
+            is_single_bar = true;
+            ProgressBar::new("downloading", 0, "bytes")
+        };
+
+        bar.set_message(url);
 
         let req_listeners = req.ctx_mut().event_listeners();
         req_listeners.on_content_length({
             let bar = bar.clone();
             move |_req, n| {
-                bar.set_total(n as _);
+                bar.increase_total(n as _);
             }
         });
         req_listeners.on_download_bytes({
@@ -121,10 +136,12 @@ static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Send + Sync>> = Lazy::new(|| {
                 bar.increase_position(n as _);
             }
         });
-        req_listeners.on_first_activity(move |_req| {
-            let registry = Registry::main();
-            registry.register_progress_bar(&bar);
-        })
+        if is_single_bar {
+            req_listeners.on_first_activity(move |_req| {
+                let registry = Registry::main();
+                registry.register_progress_bar(&bar);
+            });
+        }
     });
 
     // HTTP I/O time series.
