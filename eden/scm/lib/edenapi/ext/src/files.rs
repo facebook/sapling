@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use crossbeam::channel;
 use edenapi::api::EdenApi;
 use edenapi_types::AnyFileContentId;
@@ -29,57 +29,62 @@ async fn on_disk_optimization(
     root: &RepoPathBuf,
     paths: Vec<RepoPathBuf>,
     token: &UploadToken,
-) -> (Vec<RepoPathBuf>, Option<Bytes>) {
+    // Try not to fail if possible
+    conservative: bool,
+) -> Result<(Vec<RepoPathBuf>, Option<Bytes>)> {
     let desired_cid = match token.data.id {
         AnyId::AnyFileContentId(AnyFileContentId::ContentId(cid)) => cid,
         // Id is not in the desired format, skip optimisation
         _ => {
-            return (paths, None);
+            if conservative {
+                return Ok((paths, None));
+            } else {
+                bail!("Token not in ContentId format")
+            }
         }
     };
     let (send, recv) = channel::unbounded();
     let filtered_paths = stream::iter(paths)
-        .filter(|rel_path| {
+        .map(Result::<_>::Ok)
+        .try_filter_map(|rel_path| {
             let mut abs_path = root.clone();
             abs_path.push(&rel_path);
             let send = send.clone();
             async move {
                 let bytes = match tokio::fs::read(abs_path.as_repo_path().as_str()).await {
                     Ok(bytes) => bytes,
-                    Err(_) => return true,
+                    Err(_) if conservative => return Ok(Some(rel_path)),
+                    Err(err) => return Err(err.into()),
                 };
                 let content_id = calc_contentid(&bytes);
                 if content_id == desired_cid {
                     if send.is_empty() {
                         let _ = send.send(Bytes::from_owner(bytes));
                     }
-                    false
+                    Ok(None)
                 } else {
-                    true
+                    Ok(Some(rel_path))
                 }
             }
         })
-        .collect()
-        .await;
-    (filtered_paths, recv.try_recv().ok())
+        .try_collect()
+        .await?;
+    Ok((filtered_paths, recv.try_recv().ok()))
 }
 
-pub async fn download_files(
-    api: &(impl EdenApi + ?Sized),
-    repo: &String,
-    root: &RepoPathBuf,
+struct MergedTokens {
+    token: UploadToken,
+    paths: Vec<RepoPathBuf>,
+}
+
+fn merge_tokens(
     files: impl IntoIterator<Item = (RepoPathBuf, UploadToken)>,
-) -> Result<()> {
-    struct Value {
-        token: UploadToken,
-        paths: Vec<RepoPathBuf>,
-    }
-    // Using a HashMap to merge all downloads of same content
+) -> impl Iterator<Item = MergedTokens> {
     let to_download = files
         .into_iter()
         .fold(HashMap::new(), |mut map, (path, token)| {
             map.entry((token.data.id.clone(), token.data.bubble_id))
-                .or_insert_with(|| Value {
+                .or_insert_with(|| MergedTokens {
                     token,
                     paths: vec![],
                 })
@@ -88,13 +93,23 @@ pub async fn download_files(
             map
         });
 
+    to_download.into_iter().map(|(_, value)| value)
+}
+
+const WORKERS: usize = 10;
+
+pub async fn download_files(
+    api: &(impl EdenApi + ?Sized),
+    repo: &String,
+    root: &RepoPathBuf,
+    files: impl IntoIterator<Item = (RepoPathBuf, UploadToken)>,
+) -> Result<()> {
     let vfs = VFS::new(std::path::PathBuf::from(root.as_str()))?;
-    let workers = 10;
-    let writer = AsyncVfsWriter::spawn_new(vfs, workers);
+    let writer = AsyncVfsWriter::spawn_new(vfs, WORKERS);
     let writer = &writer;
 
-    stream::iter(to_download.into_iter().map(|(_, value)| async move {
-        let (paths, content) = on_disk_optimization(root, value.paths, &value.token).await;
+    stream::iter(merge_tokens(files).map(|value| async move {
+        let (paths, content) = on_disk_optimization(root, value.paths, &value.token, true).await?;
         let len = paths.len();
         if len == 0 {
             return Ok(());
@@ -116,7 +131,7 @@ pub async fn download_files(
             .await?;
         Ok(())
     }))
-    .buffered(workers)
+    .buffered(WORKERS)
     .try_collect()
     .await
 }
