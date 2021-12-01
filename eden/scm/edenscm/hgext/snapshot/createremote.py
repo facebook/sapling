@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from edenscm.mercurial.edenapi_upload import (
     getreponame,
@@ -34,6 +35,13 @@ def _parselifetime(opts):
         return None
 
 
+def _parsemaxuntracked(opts):
+    if opts["max_untracked_size"] != "":
+        return int(opts["max_untracked_size"]) * 1000 * 1000
+    else:
+        return None
+
+
 @dataclass(frozen=True)
 class workingcopy(object):
     untracked: list
@@ -46,10 +54,16 @@ class workingcopy(object):
         return self.untracked + self.removed + self.modified + self.added + self.missing
 
     @staticmethod
-    def fromrepo(repo):
+    def fromrepo(repo, maxuntrackedsize):
         wctx = repo[None]
 
-        untracked = [f for f in wctx.status(listunknown=True).unknown]
+        def filterlarge(f):
+            if maxuntrackedsize is None:
+                return True
+            else:
+                return Path(repo.root, f).stat().st_size <= maxuntrackedsize
+
+        untracked = [f for f in wctx.status(listunknown=True).unknown if filterlarge(f)]
         removed = []
         for f in wctx.removed():
             # If a file is marked as removed but still exists, it means it was hg rm'ed
@@ -71,6 +85,7 @@ class workingcopy(object):
 
 def createremote(ui, repo, **opts):
     lifetime = _parselifetime(opts)
+    maxuntrackedsize = _parsemaxuntracked(opts)
     with repo.lock():
         _backupcurrentcommit(repo)
 
@@ -79,7 +94,7 @@ def createremote(ui, repo, **opts):
 
         (time, tz) = wctx.date()
 
-        wc = workingcopy.fromrepo(repo)
+        wc = workingcopy.fromrepo(repo, maxuntrackedsize)
         previousbubble = fetchlatestbubble(repo.metalog())
 
         response = repo.edenapi.uploadsnapshot(

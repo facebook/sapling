@@ -40,7 +40,14 @@ subcmd = snapshot.subcommand(
                 "how long the snapshot should last for, seconds to days supported (e.g. 60s, 90d, 1h30m)"
             ),
             _("LIFETIME"),
-        )
+        ),
+        (
+            "",
+            "max-untracked-size",
+            "",
+            _("filter out any untracked files larger than this size, in megabytes"),
+            _("MAX_SIZE"),
+        ),
     ],
 )
 def createremotecmd(*args, **kwargs):
