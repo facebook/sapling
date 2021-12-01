@@ -12,13 +12,15 @@ use anyhow::{format_err, Context, Result};
 use fbinit::FacebookInit;
 use futures::compat::Stream01CompatExt;
 use futures::future::{try_join_all, FutureExt};
+use futures::stream;
 use futures::StreamExt;
 use once_cell::sync::Lazy;
 
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Bookmarks};
 use caching_ext::{CachelibHandler, MemcacheHandler};
-use changesets::{ChangesetEntry, ChangesetsRef};
+use changeset_fetcher::PrefetchedChangesetsFetcher;
+use changesets::{ChangesetEntry, ChangesetsArc, ChangesetsRef};
 use context::CoreContext;
 use fixtures::{branch_even, linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -93,14 +95,26 @@ async fn seed_with_prefetched(
     let sql_phases = phases.get_store();
     mark_reachable_as_public(&ctx, sql_phases, &heads, false).await?;
 
+    let prefetched = match prefetched {
+        None => stream::empty().boxed(),
+        Some(prefetched) => stream::iter(prefetched.into_iter().map(|cs_id| Ok(cs_id))).boxed(),
+    };
+
+    let changeset_fetcher = Arc::new(
+        PrefetchedChangesetsFetcher::new(
+            blobrepo.get_repoid(),
+            blobrepo.changesets_arc(),
+            prefetched,
+        )
+        .await?,
+    );
+
     let seeder = SegmentedChangelogSeeder::new(
         blobrepo.get_repoid(),
         connections.clone(),
         Arc::new(NoReplicaLagMonitor()),
-        blobrepo.get_changesets_object(),
-        blobrepo.get_phases(),
         Arc::new(blobrepo.get_blobstore()),
-        prefetched,
+        changeset_fetcher,
     );
     seeder.run(ctx, heads).await
 }
@@ -981,18 +995,6 @@ async fn test_prefetched_seeding(fb: FacebookInit) -> Result<()> {
     let last_cs =
         resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
 
-    // this should fail - we didn't add parent commit in the list of prefetched
-    let res = seed_with_prefetched(
-        &ctx,
-        &blobrepo,
-        &conns,
-        vec![last_cs],
-        Some(vec![second_cs_entry.clone()]),
-    )
-    .await;
-    assert!(res.is_err());
-
-    // And this should succeed since we have both first and second entry in "prefetched" list
     seed_with_prefetched(
         &ctx,
         &blobrepo,

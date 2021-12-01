@@ -11,21 +11,22 @@ use std::sync::Arc;
 
 use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
-use bytes::Bytes;
-use clap::Arg;
-use slog::info;
-
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
-use changesets::deserialize_cs_entries;
+use bytes::Bytes;
+use changeset_fetcher::PrefetchedChangesetsFetcher;
+use changesets::{deserialize_cs_entries, ChangesetsArc};
+use clap::Arg;
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::stream;
 use metaconfig_types::MetadataDatabaseConfig;
 use segmented_changelog::types::IdMapVersion;
 use segmented_changelog::{SegmentedChangelogSeeder, SegmentedChangelogSqlConnections};
+use slog::info;
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
@@ -121,26 +122,38 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .open::<SegmentedChangelogSqlConnections>()
         .context("error opening segmented changelog sql connections")?;
 
-    let prefetched_commits =
-        match matches.value_of(ARG_PREFETCHED_COMMITS_PATH) {
-            Some(path) => {
-                info!(ctx.logger(), "reading prefetched commits from {}", path);
-                let data = tokio::fs::read(path).await?;
-                Some(deserialize_cs_entries(&Bytes::from(data)).with_context(|| {
-                    format!("failed to parse serialized cs entries from {}", path)
-                })?)
-            }
-            None => None,
-        };
+    let prefetched_commits = match matches.value_of(ARG_PREFETCHED_COMMITS_PATH) {
+        Some(path) => {
+            info!(ctx.logger(), "reading prefetched commits from {}", path);
+            let data = tokio::fs::read(path).await?;
+            deserialize_cs_entries(&Bytes::from(data))
+                .with_context(|| format!("failed to parse serialized cs entries from {}", path))?
+        }
+        None => vec![],
+    };
+
+    let repo_id = repo.get_repoid();
+    let changeset_fetcher = Arc::new(
+        PrefetchedChangesetsFetcher::new(
+            repo_id,
+            repo.changesets_arc(),
+            stream::iter(prefetched_commits.iter().filter_map(|entry| {
+                if entry.repo_id == repo_id {
+                    Some(Ok(entry.clone()))
+                } else {
+                    None
+                }
+            })),
+        )
+        .await?,
+    );
 
     let segmented_changelog_seeder = SegmentedChangelogSeeder::new(
-        repo.get_repoid(),
+        repo_id,
         segmented_changelog_sql_connections,
         replica_lag_monitor,
-        repo.get_changesets_object(),
-        repo.get_phases(),
         Arc::new(repo.get_blobstore()),
-        prefetched_commits,
+        changeset_fetcher,
     );
 
     info!(

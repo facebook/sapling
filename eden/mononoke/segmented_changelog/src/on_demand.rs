@@ -28,8 +28,9 @@ use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::idmap::IdMap;
+use crate::parents::FetchParents;
 use crate::read_only::ReadOnlySegmentedChangelog;
-use crate::update::{prepare_incremental_iddag_update, update_iddag};
+use crate::update::update_sc;
 use crate::{
     segmented_changelog_delegate, CloneData, Group, InProcessIdDag, Location, MismatchedHeadsError,
     SegmentedChangelog,
@@ -317,16 +318,11 @@ async fn the_actual_update(
     head: ChangesetId,
 ) -> Result<()> {
     let monitored = async {
-        let (head_dag_id, idmap_update_state) = {
-            let iddag = iddag.read().await;
-            prepare_incremental_iddag_update(&ctx, &iddag, &idmap, &changeset_fetcher, head)
-                .await
-                .context("error preparing an incremental update for iddag")?
-        };
-        if let Some((start_state, mem_idmap)) = idmap_update_state {
-            let mut iddag = iddag.write().await;
-            update_iddag(&ctx, &mut iddag, &start_state, &mem_idmap, head_dag_id)?;
-        }
+        let mut iddag = iddag.write().await;
+        let parents_fetcher = FetchParents::new(ctx.clone(), changeset_fetcher);
+
+        update_sc(&ctx, &parents_fetcher, &mut iddag, &idmap, head).await?;
+
         Ok(())
     };
     actual_update::STATS::count.add_value(1);

@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::{format_err, Result};
+use anyhow::Result;
 use parking_lot::RwLock;
 
 use context::CoreContext;
@@ -36,12 +36,6 @@ impl MemIdMap {
         self.dag_id2cs.len()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (DagId, ChangesetId)> + '_ {
-        self.dag_id2cs
-            .iter()
-            .map(|(&dag_id, &cs_id)| (dag_id, cs_id))
-    }
-
     pub fn drain(&mut self) -> impl Iterator<Item = (DagId, ChangesetId)> + '_ {
         self.last_entry = None;
         self.cs2dag_id.clear();
@@ -61,18 +55,8 @@ impl MemIdMap {
         self.dag_id2cs.get(&dag_id).copied()
     }
 
-    pub fn get_changeset_id(&self, dag_id: DagId) -> Result<ChangesetId> {
-        self.find_changeset_id(dag_id)
-            .ok_or_else(|| format_err!("Failed to find segmented changelog id {} in IdMap", dag_id))
-    }
-
     pub fn find_dag_id(&self, cs_id: ChangesetId) -> Option<DagId> {
         self.cs2dag_id.get(&cs_id).copied()
-    }
-
-    pub fn get_dag_id(&self, cs_id: ChangesetId) -> Result<DagId> {
-        self.find_dag_id(cs_id)
-            .ok_or_else(|| format_err!("Failed to find changeset id {} in IdMap", cs_id))
     }
 
     pub fn get_last_entry(&self) -> Result<Option<(DagId, ChangesetId)>> {
