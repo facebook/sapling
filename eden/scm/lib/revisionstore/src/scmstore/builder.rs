@@ -15,6 +15,7 @@ use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use edenapi::Builder;
 use parking_lot::Mutex;
+use progress_model::AggregatingProgressBar;
 use regex::Regex;
 
 use crate::contentstore::check_cache_buster;
@@ -398,6 +399,7 @@ impl<'a> FileStoreBuilder<'a> {
             aux_cache,
 
             creation_time: Instant::now(),
+            lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
         })
     }

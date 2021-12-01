@@ -19,6 +19,7 @@ use edenapi_types::FileEntry;
 use edenapi_types::FileSpec;
 use futures::StreamExt;
 use parking_lot::RwLock;
+use progress_model::AggregatingProgressBar;
 use tracing::field;
 use tracing::instrument;
 use types::Key;
@@ -75,6 +76,8 @@ pub struct FetchState {
     /// Tracks remote fetches which match a specific regex
     fetch_logger: Option<Arc<FetchLogger>>,
 
+    lfs_progress: Arc<AggregatingProgressBar>,
+
     /// Track fetch metrics,
     metrics: FileStoreFetchMetrics,
 
@@ -102,6 +105,7 @@ impl FetchState {
             fetch_logger: file_store.fetch_logger.clone(),
             extstored_policy: file_store.extstored_policy,
             compute_aux_data: true,
+            lfs_progress: file_store.lfs_progress.clone(),
         }
     }
 
@@ -565,12 +569,16 @@ impl FetchState {
             .as_ref()
             .map(|fl| fl.report_keys(self.lfs_pointers.keys()));
 
+        let prog = self.lfs_progress.create_or_extend(pending.len() as u64);
+
         // Fetch & write to local LFS stores
         store.batch_fetch(&pending, {
             let lfs_local = local.clone();
             let lfs_cache = cache.clone();
             let pointer_origin = self.pointer_origin.clone();
             move |sha256, data| -> Result<()> {
+                prog.increase_position(1);
+
                 match pointer_origin.read().get(&sha256).ok_or_else(|| {
                     anyhow!(
                         "no source found for Sha256; received unexpected Sha256 from LFS server"

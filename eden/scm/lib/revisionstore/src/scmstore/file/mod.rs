@@ -24,6 +24,7 @@ use crossbeam::channel::unbounded;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
+use progress_model::AggregatingProgressBar;
 use tracing::instrument;
 
 pub(crate) use self::fetch::FetchState;
@@ -109,6 +110,8 @@ pub struct FileStore {
 
     // Records the store creation time, so we can only use memcache for long running commands.
     pub(crate) creation_time: Instant,
+
+    pub(crate) lfs_progress: Arc<AggregatingProgressBar>,
 
     // Don't flush on drop when we're using FileStore in a "disposable" context, like backingstore
     pub flush_on_drop: bool,
@@ -357,6 +360,8 @@ impl FileStore {
 
             creation_time: self.creation_time,
 
+            lfs_progress: self.lfs_progress.clone(),
+
             // Don't flush the local-only subset of stores on drop, rely on the parent instead
             flush_on_drop: false,
         }
@@ -444,6 +449,7 @@ impl FileStore {
             aux_cache: None,
 
             creation_time: Instant::now(),
+            lfs_progress: AggregatingProgressBar::new("fetching", "LFS"),
             flush_on_drop: true,
         }
     }
@@ -494,6 +500,7 @@ impl LegacyStore for FileStore {
             aux_cache: None,
 
             creation_time: Instant::now(),
+            lfs_progress: self.lfs_progress.clone(),
 
             // Conservatively flushing on drop here, didn't see perf problems and might be needed by Python
             flush_on_drop: true,
