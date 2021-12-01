@@ -102,10 +102,11 @@ def createremote(ui, repo, **opts):
             previousbubble,
         )
 
-    csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"]).hex()
+    csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])
     bubble = response["bubble_id"]
 
-    storelatest(repo.metalog(), bubble)
+    storelatest(repo.metalog(), csid, bubble)
+    csid = csid.hex()
 
     if ui.plain():
         ui.status(f"{csid}\n")

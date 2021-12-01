@@ -9,6 +9,8 @@ from edenscm.mercurial.edenapi_upload import (
 )
 from edenscm.mercurial.i18n import _
 
+from .metalog import storelatest
+
 
 def _hasanychanges(repo):
     wctx = repo[None]
@@ -41,11 +43,12 @@ def _fullclean(ui, repo, exclude):
 
 def update(ui, repo, csid, clean=False):
     ui.status(_("Will restore snapshot {}\n").format(csid), component="snapshot")
+    csid = bytes.fromhex(csid)
 
     snapshot = repo.edenapi.fetchsnapshot(
         getreponame(repo),
         {
-            "cs_id": bytes.fromhex(csid),
+            "cs_id": csid,
         },
     )
 
@@ -115,3 +118,6 @@ def update(ui, repo, csid, clean=False):
             [path for (path, fc) in snapshot["file_changes"] if "Change" in fc],
             quiet=True,
         )
+
+        # TODO(yancouto): Also update bubble here, need to get it from server
+        storelatest(repo.metalog(), csid, None)

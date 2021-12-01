@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 LATESTBUBBLE = "latestbubble"
+LATESTSNAPSHOT = "latestsnapshot"
 
 
 def fetchlatestbubble(ml):
@@ -15,6 +16,13 @@ def fetchlatestbubble(ml):
             return None
 
 
-def storelatest(ml, bubble):
-    ml.set(LATESTBUBBLE, str(bubble).encode("ascii"))
-    ml.commit("Save latest bubble")
+def fetchlatestsnapshot(ml):
+    return ml.get(LATESTSNAPSHOT)
+
+
+def storelatest(ml, snapshot, bubble):
+    if snapshot is not None:
+        ml.set(LATESTSNAPSHOT, snapshot)
+    if bubble is not None:
+        ml.set(LATESTBUBBLE, str(bubble).encode("ascii"))
+    ml.commit("Save latest bubble/snapshot")

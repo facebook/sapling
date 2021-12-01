@@ -6,7 +6,7 @@
 from edenscm.mercurial import error, registrar
 from edenscm.mercurial.i18n import _
 
-from . import createremote, update, show
+from . import createremote, update, show, latest
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -76,3 +76,12 @@ def updatecmd(*args, **kwargs):
 def showcmd(*args, **kwargs):
     """gather information about the snapshot"""
     show.show(*args, **kwargs)
+
+
+@subcmd(
+    "latest",
+    [],
+)
+def latestcmd(*args, **kwargs):
+    """information regarding the latest created/restored snapshot"""
+    latest.latest(*args, **kwargs)
