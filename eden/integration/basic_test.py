@@ -250,6 +250,14 @@ class BasicTest(BasicTestBase):
             expected_error = errno.EPERM if sys.platform != "win32" else errno.EACCES
             self.assertEqual(context.exception.errno, expected_error)
 
+    if sys.platform == "win32":
+
+        def test_cmd_globbing(self) -> None:
+            out = subprocess.check_output(
+                "cmd /C dir /B *lo", cwd=self.mount, text=True, stderr=subprocess.STDOUT
+            )
+            self.assertEqual(out, "hello\n")
+
 
 @testcase.eden_repo_test
 class PosixTest(BasicTestBase):

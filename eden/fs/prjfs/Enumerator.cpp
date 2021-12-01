@@ -54,11 +54,16 @@ Enumerator::Enumerator(std::vector<PrjfsDirEntry>&& entryList)
 void Enumerator::advanceEnumeration() {
   XDCHECK_NE(iter_, metadataList_.end());
 
-  ++iter_;
   while (iter_ != metadataList_.end() &&
          !iter_->matchPattern(searchExpression_)) {
     ++iter_;
   }
+
+  if (iter_ == metadataList_.end()) {
+    return;
+  }
+
+  ++iter_;
 }
 
 std::vector<ImmediateFuture<PrjfsDirEntry::Ready>>
