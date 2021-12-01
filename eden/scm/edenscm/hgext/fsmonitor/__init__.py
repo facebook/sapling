@@ -902,9 +902,7 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         if not self._watchmanclient.available():
             return bail("client unavailable")
 
-        with progress.spinner(self._ui, "scanning working copy"), self._detectrace(
-            match
-        ):
+        with progress.spinner(self._ui, "watchman query"), self._detectrace(match):
             try:
                 # Ideally we'd return the result incrementally, but we need to
                 # be able to fall back if watchman fails. So let's consume the
