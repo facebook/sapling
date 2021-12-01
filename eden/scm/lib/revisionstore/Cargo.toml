@@ -60,7 +60,7 @@ mockito = "0.25"
 rand_chacha = "0.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-fbinit = { path = "../../../../common/rust/shed/fbinit" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 
 [features]
 default = ["fb", "for-tests"]

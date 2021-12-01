@@ -17,7 +17,7 @@ configmodel = { path = "../configmodel" }
 dirs = "2.0"
 filetime = { version = "0.2.9", optional = true }
 hgtime = { path = "../hgtime", optional = true }
-hostcaps = { path = "../../../../common/rust/shed/hostcaps", optional = true }
+hostcaps = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main", optional = true }
 hostname = "0.3"
 http-client = { path = "../http-client", optional = true }
 indexmap = { version = "1.7.0", features = ["rayon", "serde-1"] }
