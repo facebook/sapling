@@ -159,15 +159,26 @@ impl IoTimeSeries {
         new.bytes_per_second(&old)
     }
 
-    /// Obtains current total value.
-    pub fn total_bytes(&self) -> u64 {
+    fn current_sample(&self) -> &MutableIoSample {
         let samples = &self.samples;
         let head = self.samples_head.load(Acquire);
         let len = samples.len();
+        &samples[(head + len - 1) % len]
+    }
 
-        let cur = (head + len - 1) % len;
-        let cur = &samples[cur];
-        cur.total_bytes()
+    /// Obtains current total value.
+    pub fn total_bytes(&self) -> u64 {
+        self.current_sample().total_bytes()
+    }
+
+    /// Obtains current input bytes.
+    pub fn input_bytes(&self) -> u64 {
+        self.current_sample().input_bytes()
+    }
+
+    /// Obtains current output bytes.
+    pub fn output_bytes(&self) -> u64 {
+        self.current_sample().output_bytes()
     }
 
     /// Return speed units of this time series.
@@ -177,9 +188,7 @@ impl IoTimeSeries {
 
     /// Get the count associated with the time series (from the last sample).
     pub fn count(&self) -> u64 {
-        let len = self.samples.len();
-        let head = (self.samples_head.load(Acquire) + len - 1) % len;
-        self.samples[head].count()
+        self.current_sample().count()
     }
 
     /// Are the samples empty (no progress at all)?

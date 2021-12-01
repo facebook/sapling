@@ -70,6 +70,17 @@ fn render_time_series(
             let unit = model.count_unit();
             phrases.push(format!("{} {}", count, unit));
         }
+
+        match model.mode() {
+            TimeSeriesMode::BytesSpeed => {
+                let total = human_rx_tx_total(model.input_bytes(), model.output_bytes());
+                if !total.is_empty() {
+                    phrases.push(format!("total {}", total));
+                }
+            }
+            _ => {}
+        }
+
         let line = phrases.join("  ");
         lines.push(line);
     }
@@ -217,6 +228,16 @@ fn human_rx_tx_per_second(rx: u64, tx: u64) -> String {
         }
     }
     result.join("  ")
+}
+
+fn human_rx_tx_total(rx: u64, tx: u64) -> String {
+    let mut result = Vec::new();
+    for (total, dir) in [(rx, "down"), (tx, "up")] {
+        if total > 0 {
+            result.push(format!("{} {}", human_bytes(total), dir));
+        }
+    }
+    result.join(", ")
 }
 
 fn human_bytes(bytes: u64) -> String {

@@ -96,6 +96,14 @@ impl MutableIoSample {
         self.input_bytes.load(Relaxed) + self.output_bytes.load(Relaxed)
     }
 
+    pub(crate) fn input_bytes(&self) -> u64 {
+        self.input_bytes.load(Relaxed)
+    }
+
+    pub(crate) fn output_bytes(&self) -> u64 {
+        self.output_bytes.load(Relaxed)
+    }
+
     /// Number of (ex. requests).
     pub(crate) fn count(&self) -> u64 {
         self.count.load(Relaxed)

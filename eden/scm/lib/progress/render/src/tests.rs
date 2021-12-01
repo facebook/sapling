@@ -21,8 +21,8 @@ fn test_simple_render() {
         r#"
        Files  110 (9% miss)
        Trees  110 (9% miss)
-         Net  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▼ 67KB/s  154 requests
-        Disk  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▲ 4050B/s
+         Net  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▼ 67KB/s  154 requests  t…
+        Disk  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▲ 4050B/s  total 58KB up
        Files  [=======>       ]  5KB/10KB
        Trees  [     <=>       ]  5KB
   Defragging  [=======>       ]  5KB/10KB
@@ -37,8 +37,8 @@ fn test_simple_render() {
         r#"
            Files  110 (9% miss)
            Trees  110 (9% miss)
-             Net  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▼ 67KB/s  154 requests
-            Disk  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▲ 4050B/s
+             Net  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▼ 67KB/s  154 requests  total 980KB down
+            Disk  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ▲ 4050B/s  total 58KB up
            Files  [=======>       ]  5KB/10KB
            Trees  [     <=>       ]  5KB
 Defragging disks  [=======>       ]  5KB/10KB
