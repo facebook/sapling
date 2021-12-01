@@ -192,6 +192,11 @@ pub struct MononokeTunables {
 
     // Disable derivation via direved data service.
     derived_data_disable_remote_derivation: AtomicBool,
+    // Set preferred region for derivation remotely
+    // Sets TargetLocality in SR client making
+    // the requests from the client goes to that region
+    // if there are available hosts.
+    derived_data_service_target_region: TunableString,
 
     // multiplexed blobstore is_present/get new semantics rollout
     multiplex_blobstore_get_do_queue_lookup: AtomicBool,
