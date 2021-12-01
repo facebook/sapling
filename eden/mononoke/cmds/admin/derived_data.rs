@@ -8,11 +8,13 @@
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
+use blobrepo_override::DangerousOverride;
 use blobstore::Loadable;
+use cacheblob::{dummy::DummyLease, LeaseOps};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{
     args::{self, MononokeMatches},
-    helpers::csid_resolve,
+    helpers::{self, csid_resolve},
 };
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -26,6 +28,7 @@ use futures::{
     future::{try_join_all, FutureExt as PreviewFutureExt},
     stream, StreamExt, TryStreamExt,
 };
+use futures_stats::TimedFutureExt;
 use manifest::ManifestOps;
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, ContentId, FileType, MPath};
@@ -34,20 +37,25 @@ use slog::{info, Logger};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
+    sync::Arc,
 };
 use unodes::RootUnodeManifestId;
 
 use crate::error::SubcommandError;
 
 pub const DERIVED_DATA: &str = "derived-data";
+const SUBCOMMAND_DERIVE: &str = "derive";
 const SUBCOMMAND_EXISTS: &str = "exists";
 const SUBCOMMAND_COUNT_UNDERIVED: &str = "count-underived";
 const SUBCOMMAND_VERIFY_MANIFESTS: &str = "verify-manifests";
 
+const ARG_CHANGESET: &str = "changeset";
 const ARG_HASH_OR_BOOKMARK: &str = "hash-or-bookmark";
 const ARG_TYPE: &str = "type";
+const ARG_INPUT_FILE: &str = "input-file";
 const ARG_IF_DERIVED: &str = "if-derived";
 const ARG_BACKFILL: &str = "backfill";
+const ARG_REDERIVE: &str = "rederive";
 
 const MANIFEST_DERIVED_DATA_TYPES: &[&str] = &[
     RootFsnodeId::NAME,
@@ -128,6 +136,39 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .long(ARG_IF_DERIVED),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_DERIVE)
+                .about("actually derive data")
+                .arg(
+                    Arg::with_name(ARG_TYPE)
+                        .help("type of derived data")
+                        .takes_value(true)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name(ARG_CHANGESET)
+                        .long(ARG_CHANGESET)
+                        .help("(hg|bonsai) commit hash or bookmark that needs to be derived")
+                        .takes_value(true)
+                        .required(true)
+                        .conflicts_with(ARG_INPUT_FILE),
+                )
+                .arg(
+                    Arg::with_name(ARG_INPUT_FILE)
+                        .long(ARG_INPUT_FILE)
+                        .takes_value(true)
+                        .required(false)
+                        .help("File with a list of changeset hashes {hd|bonsai} or bookmarks that need to be derived"),
+                )
+                .arg(
+                    Arg::with_name(ARG_REDERIVE)
+                        .long(ARG_REDERIVE)
+                        .help("whether the changesets need to be rederived or not")
+                        .takes_value(false)
+                        .required(false),
+                )
+        )
 }
 
 pub async fn subcommand_derived_data<'a>(
@@ -197,6 +238,49 @@ pub async fn subcommand_derived_data<'a>(
                 fetch_derived,
             )
             .await
+        }
+        (SUBCOMMAND_DERIVE, Some(arg_matches)) => {
+            let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
+            let ty = arg_matches
+                .value_of(ARG_TYPE)
+                .ok_or_else(|| anyhow!("{} is not set", ARG_TYPE))?;
+            let derived_utils = derived_data_utils(ctx.fb, &repo, ty)?;
+
+            let mut csids = vec![];
+            if let Some(hash_or_bookmark) = arg_matches.value_of(ARG_CHANGESET) {
+                let csid = helpers::csid_resolve(&ctx, repo.clone(), hash_or_bookmark).await?;
+                csids.push(csid);
+            }
+
+            if let Some(input_file) = arg_matches.value_of(ARG_INPUT_FILE) {
+                let new_csids =
+                    helpers::csids_resolve_from_file(&ctx, repo.clone(), input_file).await?;
+                csids.extend(new_csids);
+            }
+
+            if arg_matches.is_present(ARG_REDERIVE) {
+                info!(ctx.logger(), "about to rederive {} commits", csids.len());
+                derived_utils.regenerate(&csids);
+            } else {
+                info!(ctx.logger(), "about to derive {} commits", csids.len());
+            }
+
+            for csid in csids {
+                info!(ctx.logger(), "deriving {}", csid);
+                let (stats, res) = derived_utils
+                    .derive(ctx.clone(), repo.clone(), csid)
+                    .timed()
+                    .await;
+                info!(
+                    ctx.logger(),
+                    "derived {} in {}ms, {:?}",
+                    csid,
+                    stats.completion_time.as_millis(),
+                    res,
+                );
+            }
+
+            Ok(())
         }
         _ => Err(SubcommandError::InvalidArgs),
     }
