@@ -12,10 +12,12 @@ use std::sync::atomic::Ordering::AcqRel;
 use std::sync::atomic::Ordering::Acquire;
 use std::sync::atomic::Ordering::Release;
 use std::sync::Arc;
+use std::sync::Weak;
 use std::time::Duration;
 use std::time::Instant;
 
 use arc_swap::ArcSwapOption;
+use parking_lot::Mutex;
 
 use crate::Registry;
 
@@ -124,5 +126,79 @@ impl fmt::Debug for ProgressBar {
             write!(f, " {}", message)?;
         }
         Ok(())
+    }
+}
+
+pub struct AggregatingProgressBar {
+    bar: Mutex<Weak<ProgressBar>>,
+    topic: Cow<'static, str>,
+    unit: Cow<'static, str>,
+}
+
+/// AggregatingProgressBar allows sharing a progress bar across
+/// concurrent uses when otherwise inconvenient. For example, it lets
+/// you display a single progress bar via a low level client object
+/// when that client is used by multiple high level threads.
+impl AggregatingProgressBar {
+    pub fn new(
+        topic: impl Into<Cow<'static, str>>,
+        unit: impl Into<Cow<'static, str>>,
+    ) -> Arc<Self> {
+        Arc::new(AggregatingProgressBar {
+            bar: Mutex::new(Weak::new()),
+            topic: topic.into(),
+            unit: unit.into(),
+        })
+    }
+
+    /// If progress bar exists, increase its total, otherwise create a
+    /// new progress bar. You should avoid calling set_position or
+    /// set_total on the returned ProgressBar.
+    pub fn create_or_extend(&self, additional_total: u64) -> Arc<ProgressBar> {
+        let mut bar = self.bar.lock();
+
+        match bar.upgrade() {
+            Some(bar) => {
+                bar.increase_total(additional_total);
+                bar
+            }
+            None => {
+                let new_bar = ProgressBar::register_new(
+                    self.topic.clone(),
+                    additional_total,
+                    self.unit.clone(),
+                );
+                *bar = Arc::downgrade(&new_bar);
+                new_bar
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_aggregating_bar() {
+        let agg = AggregatingProgressBar::new("eat", "apples");
+
+        {
+            let bar1 = agg.create_or_extend(10);
+            bar1.increase_position(5);
+            assert_eq!((5, 10), agg.create_or_extend(0).position_total());
+
+            {
+                let bar2 = agg.create_or_extend(5);
+                bar2.increase_position(5);
+                assert_eq!((10, 15), agg.create_or_extend(0).position_total());
+            }
+
+            assert_eq!((10, 15), agg.create_or_extend(0).position_total());
+        }
+
+        Registry::main().remove_orphan_progress_bar();
+
+        assert_eq!((0, 0), agg.create_or_extend(0).position_total());
     }
 }
