@@ -44,6 +44,8 @@ the table cases
   A bar
   ./bar
   ./foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: bar 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -59,6 +61,8 @@ the table cases
   R foo
   ? bar
   ./bar
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -79,6 +83,8 @@ the table cases
   ? bar
   ./bar
   ./foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -95,6 +101,8 @@ the table cases
   R foo
   ? bar
   ./bar
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -122,6 +130,8 @@ the table cases
   progress: deleting (end)
   exit code: 0
   R foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -136,6 +146,8 @@ the table cases
   progress: deleting (end)
   exit code: 0
   R foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -150,6 +162,8 @@ the table cases
   progress: deleting (end)
   exit code: 0
   R foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -168,6 +182,8 @@ the table cases
   A bar
   ./bar
   ./foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: bar 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -198,6 +214,8 @@ the table cases
   ? bar
   ./bar
   ./foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -214,6 +232,8 @@ the table cases
   R foo
   ? bar
   ./bar
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -242,6 +262,8 @@ the table cases
   exit code: 0
   R foo
   ./foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -257,6 +279,8 @@ the table cases
   exit code: 0
   R foo
   ./foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -271,6 +295,8 @@ the table cases
   progress: deleting (end)
   exit code: 0
   R foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: foo 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -301,6 +327,9 @@ dir, options none
   R test/bar
   R test/foo
   ./foo
+  progress: check untracked: 1/2 (50.00%)
+  progress: check untracked: 2/2 (100.00%)
+  progress: check untracked (end)
   progress: updating: test/foo 2/2 files (100.00%)
   progress: updating (end)
   progress: recording: 1/2 files (50.00%)
@@ -323,6 +352,9 @@ dir, options -f
   R test/bar
   R test/foo
   ./foo
+  progress: check untracked: 1/2 (50.00%)
+  progress: check untracked: 2/2 (100.00%)
+  progress: check untracked (end)
   progress: updating: test/foo 2/2 files (100.00%)
   progress: updating (end)
   progress: recording: 1/2 files (50.00%)
@@ -343,6 +375,8 @@ dir, options -Av
   R test/bar
   ./foo
   ./test/foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: test/bar 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -361,6 +395,8 @@ dir, options -A <dir>
   R test/bar
   ./foo
   ./test/foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: test/bar 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -377,6 +413,8 @@ without any files/dirs, options -A
   R test/bar
   ./foo
   ./test/foo
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: updating: test/bar 1/1 files (100.00%)
   progress: updating (end)
   progress: recording: 1/1 files (100.00%)
@@ -399,6 +437,9 @@ dir, options -Af
   R test/foo
   ./foo
   ./test/foo
+  progress: check untracked: 1/2 (50.00%)
+  progress: check untracked: 2/2 (100.00%)
+  progress: check untracked (end)
   progress: updating: test/foo 2/2 files (100.00%)
   progress: updating (end)
   progress: recording: 1/2 files (50.00%)

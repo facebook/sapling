@@ -87,6 +87,8 @@ Remove the directory, then try to replace it with a file (issue754)
   progress: converting: 4/6 revisions (66.67%)
   0 Merge branch other
   progress: converting: 5/6 revisions (83.33%)
+  progress: check untracked: 1/1 (100.00%)
+  progress: check untracked (end)
   progress: converting (end)
   updating bookmarks
   $ hg up -q -R git-repo-hg
@@ -184,12 +186,19 @@ full conversion
   progress: converting: 4/9 revisions (44.44%)
   3 Octopus merge
   progress: converting: 5/9 revisions (55.56%)
+  progress: check untracked: 1/3 (33.33%)
+  progress: check untracked: 2/3 (66.67%)
+  progress: check untracked: 3/3 (100.00%)
+  progress: check untracked (end)
   2 change bar
   progress: converting: 6/9 revisions (66.67%)
   1 change foo
   progress: converting: 7/9 revisions (77.78%)
   0 Discard change to foo
   progress: converting: 8/9 revisions (88.89%)
+  progress: check untracked: 1/2 (50.00%)
+  progress: check untracked: 2/2 (100.00%)
+  progress: check untracked (end)
   progress: converting (end)
   updating bookmarks
   $ hg up -q -R fullrepo

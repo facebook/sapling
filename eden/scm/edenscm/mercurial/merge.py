@@ -809,6 +809,9 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
     unknownconfig = _getcheckunknownconfig(repo, "merge", "checkunknown")
     ignoredconfig = _getcheckunknownconfig(repo, "merge", "checkignored")
     pathconfig = repo.ui.configbool("experimental", "merge.checkpathconflicts")
+
+    progiter = lambda itr: progress.each(repo.ui, itr, "check untracked")
+
     if not force:
 
         def collectconflicts(conflicts, config):
@@ -819,7 +822,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
 
         checkunknowndirs = _unknowndirschecker()
         count = 0
-        for f, (m, args, msg) in pycompat.iteritems(actions):
+        for f, (m, args, msg) in progiter(pycompat.iteritems(actions)):
             if m in ("c", "dc"):
                 count += 1
                 if _checkunknownfile(repo, wctx, mctx, f):
@@ -839,7 +842,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
         collectconflicts(ignoredconflicts, ignoredconfig)
         collectconflicts(unknownconflicts, unknownconfig)
     else:
-        for f, (m, args, msg) in pycompat.iteritems(actions):
+        for f, (m, args, msg) in progiter(pycompat.iteritems(actions)):
             if m == "cm":
                 fl2, anc = args
                 different = _checkunknownfile(repo, wctx, mctx, f)
