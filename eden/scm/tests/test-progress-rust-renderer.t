@@ -115,3 +115,15 @@ test unicode topic
   \x1b[J            あいうえ  [===============]  4/4 cycles  あいう\r (no-eol) (esc)
   \r (no-eol) (esc)
   \x1b[J (no-eol) (esc)
+
+test iter adapter
+  $ hg iterprogresstest
+           Numbers  [===>           ]  1/4\r (no-eol) (esc)
+  \r (no-eol) (esc)
+  \x1b[J         Numbers  [=======>       ]  2/4\r (no-eol) (esc)
+  \r (no-eol) (esc)
+  \x1b[J         Numbers  [===========>   ]  3/4\r (no-eol) (esc)
+  \r (no-eol) (esc)
+  \x1b[J         Numbers  [===============]  4/4\r (no-eol) (esc)
+  \r (no-eol) (esc)
+  \x1b[J (no-eol) (esc)

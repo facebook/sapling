@@ -95,6 +95,12 @@ def bytesprogresstest(ui):
             syncrender()
 
 
+@command("iterprogresstest", norepo=True)
+def iterprogresstest(ui):
+    for _ in progress.each(ui, [1, 2, 3, 4], "numbers"):
+        syncrender()
+
+
 def uisetup(ui):
     class syncengine(progress.getengine().__class__):
         def _activate(self, ui):

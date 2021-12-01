@@ -465,5 +465,30 @@ def spinner(ui, topic):
     return bar(ui, topic, start=None)
 
 
+class iterwrapper(object):
+    def __init__(self, itr, bar):
+        self.itr = itr
+        self.bar = bar
+
+    def __iter__(self):
+        self.bar.__enter__()
+        return self
+
+    def __next__(self):
+        try:
+            n = next(self.itr)
+            self.bar.value += 1
+            return n
+        except Exception:
+            # We ignore exception info, so don't bother populating.
+            self.bar.__exit__(None, None, None)
+            raise
+
+
+def each(ui, iterable, topic, unit=""):
+    b = bar(ui, topic, unit, total=len(iterable))
+    return iterwrapper(iter(iterable), b)
+
+
 def resetstate():
     getengine().resetstate()
