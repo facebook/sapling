@@ -17,11 +17,12 @@ import errno
 import os
 import threading
 import time
+import traceback
 
 import bindings
 from bindings import threading as rustthreading
 
-from . import encoding, util
+from . import pycompat, util
 from .i18n import _, _x
 
 
@@ -342,6 +343,12 @@ class basebar(object):
         # Proxy value and total updates to rust.
         if name == "value":
             pos, message = _progvalue(value)
+            if self._detail:
+                if message:
+                    message = "%s %s" % (message, self._detail)
+                else:
+                    message = self._detail
+
             if message:
                 self._rust_model.set_message(str(message))
             self._rust_model.set_position(pos or 0)
@@ -360,7 +367,9 @@ class normalbar(basebar):
         # alternatively: prog.value = (pos, item)
     """
 
-    def __init__(self, ui, topic, unit="", total=None, start=0, formatfunc=None):
+    def __init__(
+        self, ui, topic, unit="", total=None, start=0, formatfunc=None, detail=None
+    ):
         super(normalbar, self).__init__()
 
         self._ui = ui
@@ -376,6 +385,7 @@ class normalbar(basebar):
         self._estimatecount = max(20, int(self._estimateinterval))
         self._estimatetick = self._estimateinterval / self._estimatecount
         self._estimatering = util.ring(self._estimatecount)
+        self._detail = detail
 
     def reset(self, topic, unit="", total=None):
         with getengine().lock():
@@ -407,7 +417,9 @@ class normalbar(basebar):
 
 
 class debugbar(basebar):
-    def __init__(self, ui, topic, unit="", total=None, start=0, formatfunc=None):
+    def __init__(
+        self, ui, topic, unit="", total=None, start=0, formatfunc=None, detail=None
+    ):
         super(debugbar, self).__init__()
 
         self._ui = ui
@@ -417,6 +429,7 @@ class debugbar(basebar):
         self._start = start
         self._formatfunc = formatfunc
         self._started = False
+        self._detail = detail
 
     def reset(self, topic, unit="", total=None):
         if self._started:
@@ -455,10 +468,22 @@ class debugbar(basebar):
 
 
 def bar(ui, topic, unit="", total=None, start=0, formatfunc=None):
+    detail = None
+    if ui.configbool("progress", "verbose"):
+        frames = list(
+            filter(lambda frame: frame.filename != __file__, traceback.extract_stack())
+        )
+        if frames:
+            caller = frames[-1]
+            path = util.splitpath(caller.filename)
+            if len(path) > 2:
+                path = path[-2:]
+            detail = "(%s:%d)" % (pycompat.ossep.join(path), caller.lineno)
+
     if ui.configbool("progress", "debug"):
         return debugbar(ui, topic, unit, total, start, formatfunc)
     else:
-        return normalbar(ui, topic, unit, total, start, formatfunc)
+        return normalbar(ui, topic, unit, total, start, formatfunc, detail=detail)
 
 
 def spinner(ui, topic):
