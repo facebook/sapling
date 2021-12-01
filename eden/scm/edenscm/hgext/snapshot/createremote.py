@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+from dataclasses import dataclass
+
 from edenscm.mercurial.edenapi_upload import (
     getreponame,
     filetypefromfile,
@@ -32,15 +34,20 @@ def _parselifetime(opts):
         return None
 
 
-def createremote(ui, repo, **opts):
-    lifetime = _parselifetime(opts)
-    with repo.lock():
-        _backupcurrentcommit(repo)
+@dataclass(frozen=True)
+class workingcopy(object):
+    untracked: list
+    removed: list
+    modified: list
+    added: list
+    missing: list
 
-        # Current working context
+    def all(self):
+        return self.untracked + self.removed + self.modified + self.added + self.missing
+
+    @staticmethod
+    def fromrepo(repo):
         wctx = repo[None]
-
-        (time, tz) = wctx.date()
 
         untracked = [f for f in wctx.status(listunknown=True).unknown]
         removed = []
@@ -53,6 +60,26 @@ def createremote(ui, repo, **opts):
             else:
                 removed.append(f)
 
+        return workingcopy(
+            untracked=untracked,
+            removed=removed,
+            modified=wctx.modified(),
+            added=wctx.added(),
+            missing=wctx.deleted(),
+        )
+
+
+def createremote(ui, repo, **opts):
+    lifetime = _parselifetime(opts)
+    with repo.lock():
+        _backupcurrentcommit(repo)
+
+        # Current working context
+        wctx = repo[None]
+
+        (time, tz) = wctx.date()
+
+        wc = workingcopy.fromrepo(repo)
         previousbubble = fetchlatestbubble(repo.metalog())
 
         response = repo.edenapi.uploadsnapshot(
@@ -60,13 +87,11 @@ def createremote(ui, repo, **opts):
             {
                 "files": {
                     "root": repo.root,
-                    "modified": [
-                        (f, filetypefromfile(wctx[f])) for f in wctx.modified()
-                    ],
-                    "added": [(f, filetypefromfile(wctx[f])) for f in wctx.added()],
-                    "untracked": [(f, filetypefromfile(wctx[f])) for f in untracked],
-                    "removed": removed,
-                    "missing": [f for f in wctx.deleted()],
+                    "modified": [(f, filetypefromfile(wctx[f])) for f in wc.modified],
+                    "added": [(f, filetypefromfile(wctx[f])) for f in wc.added],
+                    "untracked": [(f, filetypefromfile(wctx[f])) for f in wc.untracked],
+                    "removed": wc.removed,
+                    "missing": wc.missing,
                 },
                 "author": wctx.user(),
                 "time": int(time),
