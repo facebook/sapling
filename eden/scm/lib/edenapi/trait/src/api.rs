@@ -223,8 +223,9 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
+        copy_from_bubble_id: Option<NonZeroU64>,
     ) -> Result<Vec<LookupResponse>, EdenApiError> {
-        let _ = (repo, items, bubble_id);
+        let _ = (repo, items, bubble_id, copy_from_bubble_id);
         Err(EdenApiError::NotSupported)
     }
 
@@ -234,8 +235,9 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
+        copy_from_bubble_id: Option<NonZeroU64>,
     ) -> Result<Response<UploadToken>, EdenApiError> {
-        let _ = (repo, data, bubble_id);
+        let _ = (repo, data, bubble_id, copy_from_bubble_id);
         Err(EdenApiError::NotSupported)
     }
 

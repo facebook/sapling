@@ -12,6 +12,8 @@ from edenscm.mercurial.edenapi_upload import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.revset import parseage
 
+from .metalog import fetchlatestbubble, storelatest
+
 
 def _backupcurrentcommit(repo):
     """make sure the current commit is backed up in commitcloud"""
@@ -51,6 +53,8 @@ def createremote(ui, repo, **opts):
             else:
                 removed.append(f)
 
+        previousbubble = fetchlatestbubble(repo.metalog())
+
         response = repo.edenapi.uploadsnapshot(
             getreponame(repo),
             {
@@ -70,9 +74,13 @@ def createremote(ui, repo, **opts):
                 "hg_parents": parentsfromctx(wctx),
             },
             lifetime,
+            previousbubble,
         )
 
     csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"]).hex()
+    bubble = response["bubble_id"]
+
+    storelatest(repo.metalog(), bubble)
 
     if ui.plain():
         ui.status(f"{csid}\n")

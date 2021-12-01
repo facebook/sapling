@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::num::NonZeroU64;
 use std::time::Duration;
 
 use anyhow::bail;
@@ -32,6 +33,7 @@ pub async fn upload_snapshot(
     repo: String,
     data: SnapshotRawData,
     custom_duration_secs: Option<u64>,
+    copy_from_bubble_id: Option<NonZeroU64>,
 ) -> Result<UploadSnapshotResponse> {
     let SnapshotRawData {
         files,
@@ -93,24 +95,29 @@ pub async fn upload_snapshot(
             .await
             .context("Failed to create ephemeral bubble")??
     };
-    let bubble_id = Some(prepare_response.bubble_id);
+    let bubble_id = prepare_response.bubble_id;
     let file_content_tokens = {
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
         // upload file contents first, receiving upload tokens
-        api.process_files_upload(repo.clone(), upload_data, bubble_id)
-            .await?
-            .entries
-            .try_collect::<Vec<_>>()
-            .await?
-            .into_iter()
-            .map(|token| {
-                let content_id = match token.data.id {
-                    AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
-                    _ => bail!(downcast_error),
-                };
-                Ok((content_id, token))
-            })
-            .collect::<Result<BTreeMap<_, _>, _>>()?
+        api.process_files_upload(
+            repo.clone(),
+            upload_data,
+            Some(bubble_id),
+            copy_from_bubble_id,
+        )
+        .await?
+        .entries
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .map(|token| {
+            let content_id = match token.data.id {
+                AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
+                _ => bail!(downcast_error),
+            };
+            Ok((content_id, token))
+        })
+        .collect::<Result<BTreeMap<_, _>, _>>()?
     };
     let mut response = api
         .upload_bonsai_changeset(
@@ -160,7 +167,7 @@ pub async fn upload_snapshot(
                 message: "".to_string(),
                 is_snapshot: true,
             },
-            bubble_id,
+            Some(bubble_id),
         )
         .await?;
     let changeset_response = response
@@ -170,5 +177,6 @@ pub async fn upload_snapshot(
         .context("Failed to create changeset")??;
     Ok(UploadSnapshotResponse {
         changeset_token: changeset_response.token,
+        bubble_id,
     })
 }

@@ -842,7 +842,7 @@ impl EdenApi for Client {
             .cloned()
             .map(|hgid| AnyId::HgChangesetId(hgid))
             .collect();
-        let entries = self.lookup_batch(repo, anyids.clone(), None).await?;
+        let entries = self.lookup_batch(repo, anyids.clone(), None, None).await?;
 
         let into_hgid = |id: IndexableId| match id.id {
             AnyId::HgChangesetId(hgid) => Ok(hgid),
@@ -904,6 +904,7 @@ impl EdenApi for Client {
         repo: String,
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
+        copy_from_bubble_id: Option<NonZeroU64>,
     ) -> Result<Vec<LookupResponse>, EdenApiError> {
         tracing::info!("Requesting lookup for {} item(s)", items.len());
 
@@ -922,7 +923,7 @@ impl EdenApi for Client {
                     .map(|id| LookupRequest {
                         id,
                         bubble_id,
-                        copy_from_bubble_id: None,
+                        copy_from_bubble_id,
                     })
                     .collect(),
             },
@@ -936,6 +937,7 @@ impl EdenApi for Client {
         repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
+        copy_from_bubble_id: Option<NonZeroU64>,
     ) -> Result<Response<UploadToken>, EdenApiError> {
         if data.is_empty() {
             return Ok(Response::empty());
@@ -951,7 +953,7 @@ impl EdenApi for Client {
             .collect();
 
         let entries = self
-            .lookup_batch(repo.clone(), anyids.clone(), bubble_id)
+            .lookup_batch(repo.clone(), anyids.clone(), bubble_id, copy_from_bubble_id)
             .await?;
         for entry in entries {
             if let LookupResult::Present(token) = entry.result {

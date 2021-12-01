@@ -524,6 +524,7 @@ pub struct FetchSnapshotResponse {
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UploadSnapshotResponse {
     pub changeset_token: UploadToken,
+    pub bubble_id: NonZeroU64,
 }
 
 #[auto_wire]

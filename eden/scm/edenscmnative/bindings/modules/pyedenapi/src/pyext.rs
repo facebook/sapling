@@ -8,6 +8,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -482,6 +483,7 @@ pub trait EdenApiPyExt: EdenApi {
                         repo,
                         indexable_ids.iter().map(|(id, _)| id.id.clone()).collect(),
                         None,
+                        None,
                     )
                     .await
                     .map(|responses| {
@@ -559,7 +561,7 @@ pub trait EdenApiPyExt: EdenApi {
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.process_files_upload(repo, data, None).await?;
+                    let response = self.process_files_upload(repo, data, None, None).await?;
                     let file_content_tokens = response
                         .entries
                         .try_collect::<Vec<_>>()
@@ -657,7 +659,7 @@ pub trait EdenApiPyExt: EdenApi {
                     let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
                     // upload file contents first, receiving upload tokens
                     let file_content_tokens = self
-                        .process_files_upload(repo.clone(), upload_data, None)
+                        .process_files_upload(repo.clone(), upload_data, None, None)
                         .await?
                         .entries
                         .try_collect::<Vec<_>>()
@@ -768,9 +770,16 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         data: Serde<SnapshotRawData>,
         custom_duration_secs: Option<u64>,
+        copy_from_bubble_id: Option<NonZeroU64>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
         py.allow_threads(|| {
-            block_unless_interrupted(upload_snapshot(self, repo, data.0, custom_duration_secs))
+            block_unless_interrupted(upload_snapshot(
+                self,
+                repo,
+                data.0,
+                custom_duration_secs,
+                copy_from_bubble_id,
+            ))
         })
         .map_pyerr(py)?
         .map_pyerr(py)

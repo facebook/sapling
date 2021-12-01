@@ -383,8 +383,10 @@ py_class!(pub class client |py| {
         repo: String,
         data: Serde<SnapshotRawData>,
         custom_duration_secs: Option<u64>,
+        copy_from_bubble_id: Option<u64>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
-        self.inner(py).clone().uploadsnapshot_py(py, repo, data, custom_duration_secs)
+        let copy_from_bubble_id = copy_from_bubble_id.and_then(NonZeroU64::new);
+        self.inner(py).clone().uploadsnapshot_py(py, repo, data, custom_duration_secs, copy_from_bubble_id)
     }
 
     /// Fetch snapshot information
@@ -439,7 +441,7 @@ py_class!(pub class client |py| {
         let bubble_id = bubbleid.and_then(NonZeroU64::new);
         let inner = self.inner(py).clone();
         let entries = py
-            .allow_threads(|| block_unless_interrupted(inner.process_files_upload(repo, data.0, bubble_id)))
+            .allow_threads(|| block_unless_interrupted(inner.process_files_upload(repo, data.0, bubble_id, None)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;
