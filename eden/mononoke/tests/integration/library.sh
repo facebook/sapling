@@ -716,7 +716,7 @@ EOF
 }
 EOF
   fi
-  
+
   COMMIT_SYNC_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/repos/commitsyncmaps"
   mkdir -p "$COMMIT_SYNC_CONF"
   export COMMIT_SYNC_CONF
@@ -1026,14 +1026,19 @@ fi
 
 write_infinitepush_config "$reponame"
 
+cat >> "repos/$reponame/server.toml" <<CONFIG
+  [derived_data_config]
+  enabled_config_name = "default"
+CONFIG
+
 if [[ -n "${ENABLED_DERIVED_DATA:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
-[derived_data_config.enabled]
+[derived_data_config.available_configs.default]
 types = $ENABLED_DERIVED_DATA
 CONFIG
 else
   cat >> "repos/$reponame/server.toml" <<CONFIG
-[derived_data_config.enabled]
+[derived_data_config.available_configs.default]
 types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests"]
 CONFIG
 fi

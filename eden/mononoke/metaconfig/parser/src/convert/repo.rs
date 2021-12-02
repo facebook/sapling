@@ -416,8 +416,13 @@ impl Convert for RawDerivedDataConfig {
     fn convert(self) -> Result<Self::Output> {
         Ok(DerivedDataConfig {
             scuba_table: self.scuba_table,
-            enabled: self.enabled.convert()?.unwrap_or_default(),
-            backfilling: self.backfilling.convert()?.unwrap_or_default(),
+            enabled_config_name: self.enabled_config_name.unwrap_or_default(),
+            available_configs: self
+                .available_configs
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(s, raw_config)| Ok((s, raw_config.convert()?)))
+                .collect::<Result<_, anyhow::Error>>()?,
         })
     }
 }

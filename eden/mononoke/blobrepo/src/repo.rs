@@ -33,7 +33,7 @@ use futures::{
     FutureExt, Stream, TryStreamExt,
 };
 use mercurial_mutation::{ArcHgMutationStore, HgMutationStore};
-use metaconfig_types::DerivedDataConfig;
+use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, Globalrev, MononokeId, RepositoryId,
 };
@@ -407,6 +407,14 @@ impl BlobRepo {
 
     pub fn get_derived_data_config(&self) -> &DerivedDataConfig {
         &self.inner.repo_derived_data.config()
+    }
+
+    pub fn get_active_derived_data_types_config(&self) -> &DerivedDataTypesConfig {
+        &self.inner.repo_derived_data.manager().config()
+    }
+
+    pub fn get_derived_data_types_config(&self, name: &str) -> Option<&DerivedDataTypesConfig> {
+        self.inner.repo_derived_data.config().get_config(name)
     }
 
     pub fn get_derived_data_lease_ops(&self) -> Arc<dyn LeaseOps> {

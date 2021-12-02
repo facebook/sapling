@@ -148,7 +148,7 @@ async fn validate_unnecessary_derived_data_is_not_derived(
     cs_id: ChangesetId,
     derived_data_to_derive: &str,
 ) -> Result<(), Error> {
-    for ty in &repo.get_derived_data_config().enabled.types {
+    for ty in &repo.get_active_derived_data_types_config().types {
         if ty == "git_trees" {
             // Derived data utils doesn't support git_trees, so we have to skip it
             continue;

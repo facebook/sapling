@@ -131,8 +131,7 @@ impl<'a> AddSyncTarget<'a> {
             i += 1;
             let derived_data_types = repo
                 .blob_repo()
-                .get_derived_data_config()
-                .enabled
+                .get_active_derived_data_types_config()
                 .types
                 .iter();
             let derivers = FuturesUnordered::new();

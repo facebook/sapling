@@ -725,7 +725,11 @@ mod tests {
         // Unodes v1 should create a new one that points to the parent unode
         let repo: BlobRepo = factory
             .with_config_override(|config| {
-                config.derived_data_config.enabled.unode_version = UnodeVersion::V1;
+                config
+                    .derived_data_config
+                    .get_active_config()
+                    .expect("No enabled derived data types config")
+                    .unode_version = UnodeVersion::V1;
             })
             .build()?;
         let (p1_unodes, merge_unodes) = find_unodes(ctx.clone(), repo.clone()).await?;

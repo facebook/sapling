@@ -147,6 +147,7 @@ impl DerivedDataManager {
                         self.repo_name().to_string(),
                         Derivable::NAME.to_string(),
                         csid,
+                        self.config_name(),
                     )
                     .await
                 {

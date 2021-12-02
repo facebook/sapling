@@ -24,5 +24,6 @@ pub trait DerivationClient: Send + Sync {
         repo_name: String,
         derived_data_type: String,
         cs_id: ChangesetId,
+        config_name: String,
     ) -> Result<Option<Self::Output>>;
 }

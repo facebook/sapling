@@ -268,8 +268,7 @@ impl<'a> ChangeTargetConfig<'a> {
         // Derrive all the necessary data before moving the bookmark
         let derived_data_types = target_repo
             .blob_repo()
-            .get_derived_data_config()
-            .enabled
+            .get_active_derived_data_types_config()
             .types
             .iter();
 

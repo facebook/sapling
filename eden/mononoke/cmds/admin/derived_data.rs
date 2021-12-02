@@ -20,7 +20,8 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_utils::{
-    derived_data_utils, derived_data_utils_for_backfill, POSSIBLE_DERIVED_TYPES,
+    derived_data_utils, derived_data_utils_for_config, DEFAULT_BACKFILLING_CONFIG_NAME,
+    POSSIBLE_DERIVED_TYPES,
 };
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
@@ -55,6 +56,7 @@ const ARG_TYPE: &str = "type";
 const ARG_INPUT_FILE: &str = "input-file";
 const ARG_IF_DERIVED: &str = "if-derived";
 const ARG_BACKFILL: &str = "backfill";
+const ARG_BACKFILL_CONFIG_NAME: &str = "backfill-config-name";
 const ARG_REDERIVE: &str = "rederive";
 
 const MANIFEST_DERIVED_DATA_TYPES: &[&str] = &[
@@ -88,6 +90,12 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .takes_value(true)
                         .multiple(true)
                         .required(true),
+                )
+                .arg(
+                    Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
+                        .long(ARG_BACKFILL_CONFIG_NAME)
+                        .help("sets the name for backfilling derived data types config")
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -111,6 +119,12 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .takes_value(true)
                         .multiple(true)
                         .required(true),
+                )
+                .arg(
+                    Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
+                        .long(ARG_BACKFILL_CONFIG_NAME)
+                        .help("sets the name for backfilling derived data types config")
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -194,8 +208,19 @@ pub async fn subcommand_derived_data<'a>(
 
             let backfill = arg_matches.is_present(ARG_BACKFILL);
 
-            check_derived_data_exists(ctx, repo, derived_data_type, hashes_or_bookmarks, backfill)
-                .await
+            let backfill_config_name = sub_m
+                .value_of(ARG_BACKFILL_CONFIG_NAME)
+                .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
+
+            check_derived_data_exists(
+                ctx,
+                repo,
+                derived_data_type,
+                hashes_or_bookmarks,
+                backfill,
+                backfill_config_name,
+            )
+            .await
         }
         (SUBCOMMAND_COUNT_UNDERIVED, Some(arg_matches)) => {
             let hashes_or_bookmarks: Vec<_> = arg_matches
@@ -210,7 +235,19 @@ pub async fn subcommand_derived_data<'a>(
 
             let backfill = arg_matches.is_present(ARG_BACKFILL);
 
-            count_underived(ctx, repo, derived_data_type, hashes_or_bookmarks, backfill).await
+            let backfill_config_name = sub_m
+                .value_of(ARG_BACKFILL_CONFIG_NAME)
+                .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
+
+            count_underived(
+                ctx,
+                repo,
+                derived_data_type,
+                hashes_or_bookmarks,
+                backfill,
+                backfill_config_name,
+            )
+            .await
         }
         (SUBCOMMAND_VERIFY_MANIFESTS, Some(arg_matches)) => {
             let hash_or_bookmark = arg_matches
@@ -292,9 +329,10 @@ async fn check_derived_data_exists(
     derived_data_type: String,
     hashes_or_bookmarks: Vec<String>,
     backfill: bool,
+    backfill_config_name: &str,
 ) -> Result<(), SubcommandError> {
     let derived_utils = if backfill {
-        derived_data_utils_for_backfill(ctx.fb, &repo, derived_data_type)?
+        derived_data_utils_for_config(ctx.fb, &repo, derived_data_type, backfill_config_name)?
     } else {
         derived_data_utils(ctx.fb, &repo, derived_data_type)?
     };
@@ -327,9 +365,10 @@ async fn count_underived(
     derived_data_type: String,
     hashes_or_bookmarks: Vec<String>,
     backfill: bool,
+    backfill_config_name: &str,
 ) -> Result<(), SubcommandError> {
     let derived_utils = if backfill {
-        derived_data_utils_for_backfill(ctx.fb, &repo, derived_data_type)?
+        derived_data_utils_for_config(ctx.fb, &repo, derived_data_type, backfill_config_name)?
     } else {
         derived_data_utils(ctx.fb, &repo, derived_data_type)?
     };

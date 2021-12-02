@@ -90,6 +90,7 @@ impl DerivedDataManager {
 }
 
 pub mod derived_data_service {
+    use std::collections::HashMap;
     use std::sync::Arc;
 
     use super::DerivedDataManager;
@@ -99,24 +100,19 @@ pub mod derived_data_service {
     use changesets::Changesets;
     use derived_data_remote::DerivationClient;
     use filenodes::Filenodes;
-    use metaconfig_types::DerivedDataConfig;
+    use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
     use mononoke_types::RepositoryId;
     use repo_blobstore::RepoBlobstore;
     use scuba_ext::MononokeScubaSampleBuilder;
 
     #[facet::facet]
     pub struct DerivedDataManagerSet {
-        prod: DerivedDataManager,
-        backfilling: DerivedDataManager,
+        configs: HashMap<String, DerivedDataManager>,
     }
 
     impl DerivedDataManagerSet {
-        pub fn get_prod(&self) -> &DerivedDataManager {
-            return &self.prod;
-        }
-
-        pub fn get_backfilling(&self) -> &DerivedDataManager {
-            return &self.backfilling;
+        pub fn get_mananger(&self, config_name: impl Into<String>) -> Option<&DerivedDataManager> {
+            self.configs.get(&config_name.into())
         }
     }
 
@@ -139,7 +135,7 @@ pub mod derived_data_service {
             config: DerivedDataConfig,
             derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
         ) -> Result<Self> {
-            let prod = DerivedDataManager::new(
+            let manager = DerivedDataManager::new(
                 repo_id,
                 repo_name,
                 changesets,
@@ -148,11 +144,22 @@ pub mod derived_data_service {
                 repo_blobstore,
                 lease,
                 scuba,
-                config.enabled.clone(),
+                String::default(),
+                DerivedDataTypesConfig::default(),
                 derivation_service_client,
             );
-            let backfilling = prod.with_replaced_config(config.backfilling.clone());
-            Ok(Self { prod, backfilling })
+            let configs = config
+                .available_configs
+                .into_iter()
+                .map(|(config_name, config)| {
+                    (
+                        config_name.clone(),
+                        manager.with_replaced_config(config_name, config),
+                    )
+                })
+                .collect();
+
+            Ok(Self { configs })
         }
     }
 }

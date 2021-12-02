@@ -46,6 +46,7 @@ pub struct DerivedDataManagerInner {
     repo_blobstore: RepoBlobstore,
     lease: DerivedDataLease,
     scuba: MononokeScubaSampleBuilder,
+    config_name: String,
     config: DerivedDataTypesConfig,
     /// If a (primary) manager has a secondary manager, that means some of the
     /// changesets should be derived using the primary manager, and some the secondary,
@@ -88,6 +89,7 @@ impl DerivedDataManager {
         repo_blobstore: RepoBlobstore,
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
+        config_name: String,
         config: DerivedDataTypesConfig,
         derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
     ) -> Self {
@@ -96,6 +98,7 @@ impl DerivedDataManager {
             inner: Arc::new(DerivedDataManagerInner {
                 repo_id,
                 repo_name,
+                config_name,
                 config,
                 changesets,
                 bonsai_hg_mapping: Some(bonsai_hg_mapping),
@@ -162,9 +165,14 @@ impl DerivedDataManager {
         }
     }
 
-    pub fn with_replaced_config(&self, config: DerivedDataTypesConfig) -> Self {
+    pub fn with_replaced_config(
+        &self,
+        config_name: String,
+        config: DerivedDataTypesConfig,
+    ) -> Self {
         Self {
             inner: Arc::new(DerivedDataManagerInner {
+                config_name,
                 config,
                 ..self.inner.as_ref().clone()
             }),
@@ -197,6 +205,10 @@ impl DerivedDataManager {
 
     pub fn config(&self) -> &DerivedDataTypesConfig {
         &self.inner.config
+    }
+
+    pub fn config_name(&self) -> String {
+        self.inner.config_name.clone()
     }
 
     pub fn bonsai_hg_mapping(&self) -> Result<&dyn BonsaiHgMapping> {

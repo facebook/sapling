@@ -151,7 +151,13 @@ async fn test_blame_version(fb: FacebookInit, version: BlameVersion) -> Result<(
     //
     let ctx = CoreContext::test_mock(fb);
     let repo: BlobRepo = TestRepoFactory::new()?
-        .with_config_override(|config| config.derived_data_config.enabled.blame_version = version)
+        .with_config_override(|config| {
+            config
+                .derived_data_config
+                .get_active_config()
+                .expect("No enabled derived data types config")
+                .blame_version = version
+        })
         .build()?;
     borrowed!(ctx, repo);
 
@@ -270,8 +276,16 @@ async fn test_blame_size_rejected_version(
 
     let repo: BlobRepo = TestRepoFactory::new()?
         .with_config_override(|config| {
-            config.derived_data_config.enabled.blame_version = version;
-            config.derived_data_config.enabled.blame_filesize_limit = Some(4);
+            config
+                .derived_data_config
+                .get_active_config()
+                .expect("No enabled derived data types config")
+                .blame_version = version;
+            config
+                .derived_data_config
+                .get_active_config()
+                .expect("No enabled derived data types config")
+                .blame_filesize_limit = Some(4);
         })
         .build()?;
 
@@ -299,7 +313,11 @@ async fn test_blame_copy_source(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo: BlobRepo = TestRepoFactory::new()?
         .with_config_override(|config| {
-            config.derived_data_config.enabled.blame_version = BlameVersion::V2
+            config
+                .derived_data_config
+                .get_active_config()
+                .expect("No enabled derived data types config")
+                .blame_version = BlameVersion::V2
         })
         .build()?;
     borrowed!(ctx, repo);

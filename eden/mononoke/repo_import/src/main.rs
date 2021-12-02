@@ -317,7 +317,7 @@ async fn derive_bonsais_single_repo(
     repo: &BlobRepo,
     bcs_ids: &[ChangesetId],
 ) -> Result<(), Error> {
-    let derived_data_types = &repo.get_derived_data_config().enabled.types;
+    let derived_data_types = &repo.get_active_derived_data_types_config().types;
 
     let derived_utils: Vec<_> = derived_data_types
         .iter()

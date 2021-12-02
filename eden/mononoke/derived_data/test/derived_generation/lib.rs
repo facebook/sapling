@@ -137,7 +137,8 @@ pub fn make_test_repo_factory() -> TestRepoFactory {
     factory.with_config_override(|repo_config| {
         repo_config
             .derived_data_config
-            .enabled
+            .get_active_config()
+            .expect("No enabled derived data types config")
             .types
             .insert(DerivedGeneration::NAME.to_string());
     });

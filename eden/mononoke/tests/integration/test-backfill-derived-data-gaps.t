@@ -39,7 +39,7 @@ add a mapping key prefix to skeleton manifests to test these work
   >   setup_mononoke_config
   $ cd "$TESTTMP"
   $ cat >> mononoke-config/repos/repo/server.toml <<CONFIG
-  > [derived_data_config.backfilling]
+  > [derived_data_config.available_configs.backfilling]
   > types=["blame", "skeleton_manifests", "unodes"]
   > mapping_key_prefixes={"skeleton_manifests"="xyz."}
   > blame_version=2

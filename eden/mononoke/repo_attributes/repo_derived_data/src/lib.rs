@@ -11,7 +11,7 @@
 
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::LeaseOps;
 use changesets::Changesets;
@@ -48,6 +48,7 @@ impl RepoDerivedData {
         config: DerivedDataConfig,
         derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
     ) -> Result<RepoDerivedData> {
+        let config_name = config.enabled_config_name.clone();
         let manager = DerivedDataManager::new(
             repo_id,
             repo_name,
@@ -57,7 +58,16 @@ impl RepoDerivedData {
             repo_blobstore,
             lease,
             scuba,
-            config.enabled.clone(),
+            config_name.clone(),
+            config
+                .get_config(&config_name)
+                .ok_or_else(|| {
+                    anyhow!(
+                        "Requested config name: {} is not in the available configs",
+                        config_name
+                    )
+                })?
+                .clone(),
             derivation_service_client,
         );
         Ok(RepoDerivedData { config, manager })

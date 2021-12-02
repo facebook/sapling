@@ -72,7 +72,8 @@ mod tests {
             .with_config_override(|config| {
                 config
                     .derived_data_config
-                    .enabled
+                    .get_active_config()
+                    .expect("No enabled derived data types config")
                     .types
                     .remove(TreeHandle::NAME);
             })
@@ -789,7 +790,7 @@ mod tests {
         repo: &BlobRepo,
         cs_ids: &[ChangesetId],
     ) -> Result<()> {
-        let derived_data_types = &repo.get_derived_data_config().enabled.types;
+        let derived_data_types = &repo.get_active_derived_data_types_config().types;
 
         for derived_data_type in derived_data_types {
             let derived_utils = derived_data_utils(ctx.fb, repo, derived_data_type)?;

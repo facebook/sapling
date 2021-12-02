@@ -54,7 +54,7 @@ enable some more derived data types for normal usage and backfilling
   >     setup_mononoke_config
   >   cd "$TESTTMP"
   >   cat >> mononoke-config/repos/repo/server.toml <<CONFIG
-  > [derived_data_config.backfilling]
+  > [derived_data_config.available_configs.backfilling]
   > types=["blame", "skeleton_manifests", "unodes"]
   > CONFIG
   > }
@@ -66,7 +66,7 @@ enable some more derived data types for normal usage and backfilling
   >     setup_mononoke_config
   >   cd "$TESTTMP"
   >   cat >> mononoke-config/repos/backup/server.toml <<CONFIG
-  > [derived_data_config.backfilling]
+  > [derived_data_config.available_configs.backfilling]
   > types=["blame", "skeleton_manifests", "unodes"]
   > CONFIG
   > }

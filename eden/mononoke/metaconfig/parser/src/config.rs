@@ -722,7 +722,10 @@ mod test {
             all_hooks_bypassed=false
             bypassed_commits_scuba_table="commits_bypassed_hooks"
 
-            [derived_data_config.enabled]
+            [derived_data_config]
+            enabled_config_name = "default"
+
+            [derived_data_config.available_configs.default]
             types = ["fsnodes", "unodes", "blame"]
             unode_version = 2
             blame_filesize_limit = 101
@@ -1073,7 +1076,8 @@ mod test {
                     ],
                 }),
                 derived_data_config: DerivedDataConfig {
-                    enabled: DerivedDataTypesConfig {
+                    enabled_config_name: "default".to_string(),
+                    available_configs: hashmap!["default".to_string() => DerivedDataTypesConfig {
                         types: hashset! {
                             String::from("fsnodes"),
                             String::from("unodes"),
@@ -1084,8 +1088,7 @@ mod test {
                         blame_filesize_limit: Some(101),
                         hg_set_committer_extra: false,
                         blame_version: BlameVersion::V1,
-                    },
-                    backfilling: DerivedDataTypesConfig::default(),
+                    },],
                     scuba_table: None,
                 },
                 hgsql_name: HgsqlName("fbsource".to_string()),

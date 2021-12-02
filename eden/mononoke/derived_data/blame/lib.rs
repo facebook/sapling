@@ -77,7 +77,7 @@ pub async fn fetch_blame_compat(
     csid: ChangesetId,
     path: MPath,
 ) -> Result<(CompatBlame, FileUnodeId), BlameError> {
-    let blame_version = repo.get_derived_data_config().enabled.blame_version;
+    let blame_version = repo.get_active_derived_data_types_config().blame_version;
     let root_unode = match blame_version {
         BlameVersion::V1 => {
             BlameRoot::derive(ctx, repo, csid).await?;

@@ -66,6 +66,8 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     TreeHandle::NAME,
 ];
 
+pub const DEFAULT_BACKFILLING_CONFIG_NAME: &str = "backfilling";
+
 lazy_static! {
     // TODO: come up with a better way to maintain these dependencies T77090285
     pub static ref DERIVED_DATA_DEPS: HashMap<&'static str, Vec<&'static str>> = {
@@ -206,7 +208,7 @@ struct DerivedUtilsFromManager<Derivable> {
 }
 
 impl<Derivable> DerivedUtilsFromManager<Derivable> {
-    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Self {
+    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig, config_name: String) -> Self {
         let lease = repo.repo_derived_data().lease().clone();
         let scuba = repo.repo_derived_data().manager().scuba().clone();
         let manager = DerivedDataManager::new(
@@ -218,6 +220,7 @@ impl<Derivable> DerivedUtilsFromManager<Derivable> {
             repo.repo_blobstore().clone(),
             lease,
             scuba,
+            config_name,
             config.clone(),
             None, // derivation_service_client=None
         );
@@ -363,33 +366,47 @@ pub fn derived_data_utils(
     name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
     let name = name.as_ref();
-    let config = repo.get_derived_data_config();
-    let types_config = if config.enabled.types.contains(name) {
-        &config.enabled
+    let derived_data_config = repo.get_derived_data_config();
+    let types_config = if derived_data_config.is_enabled(name) {
+        repo.get_active_derived_data_types_config()
     } else {
         return Err(anyhow!("Derived data type {} is not configured", name));
     };
-    derived_data_utils_impl(fb, repo, name, types_config)
+    derived_data_utils_impl(
+        fb,
+        repo,
+        name,
+        types_config,
+        &derived_data_config.enabled_config_name,
+    )
 }
 
-pub fn derived_data_utils_for_backfill(
+pub fn derived_data_utils_for_config(
     fb: FacebookInit,
     repo: &BlobRepo,
-    name: impl AsRef<str>,
+    type_name: impl AsRef<str>,
+    config_name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
-    let name = name.as_ref();
     let config = repo.get_derived_data_config();
-    let types_config = if config.backfilling.types.contains(name) {
-        &config.backfilling
-    } else if config.enabled.types.contains(name) {
-        &config.enabled
+    if config.is_enabled_for_config_name(type_name.as_ref(), config_name.as_ref()) {
+        let named_config = repo
+            .get_derived_data_types_config(config_name.as_ref())
+            .ok_or_else(|| {
+                anyhow!(
+                    "Named config: {} not found in the available derived data configs",
+                    config_name.as_ref()
+                )
+            })?;
+        derived_data_utils_impl(
+            fb,
+            repo,
+            type_name.as_ref(),
+            named_config,
+            config_name.as_ref(),
+        )
     } else {
-        return Err(anyhow!(
-            "Derived data type {} is not configured for backfilling",
-            name
-        ));
-    };
-    derived_data_utils_impl(fb, repo, name, types_config)
+        derived_data_utils(fb, repo, type_name)
+    }
 }
 
 fn derived_data_utils_impl(
@@ -397,42 +414,62 @@ fn derived_data_utils_impl(
     repo: &BlobRepo,
     name: &str,
     config: &DerivedDataTypesConfig,
+    enabled_config_name: &str,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
+    let enabled_config_name = enabled_config_name.to_string();
     match name {
         RootUnodeManifestId::NAME => Ok(Arc::new(
-            DerivedUtilsFromManager::<RootUnodeManifestId>::new(repo, config),
+            DerivedUtilsFromManager::<RootUnodeManifestId>::new(repo, config, enabled_config_name),
         )),
         RootFastlog::NAME => Ok(Arc::new(DerivedUtilsFromManager::<RootFastlog>::new(
-            repo, config,
+            repo,
+            config,
+            enabled_config_name,
         ))),
         MappedHgChangesetId::NAME => Ok(Arc::new(
-            DerivedUtilsFromManager::<MappedHgChangesetId>::new(repo, config),
+            DerivedUtilsFromManager::<MappedHgChangesetId>::new(repo, config, enabled_config_name),
         )),
         RootFsnodeId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<RootFsnodeId>::new(
-            repo, config,
+            repo,
+            config,
+            enabled_config_name,
         ))),
         BlameRoot::NAME => match config.blame_version {
             BlameVersion::V1 => Ok(Arc::new(DerivedUtilsFromManager::<BlameRoot>::new(
-                repo, config,
+                repo,
+                config,
+                enabled_config_name,
             ))),
             BlameVersion::V2 => Ok(Arc::new(DerivedUtilsFromManager::<RootBlameV2>::new(
-                repo, config,
+                repo,
+                config,
+                enabled_config_name,
             ))),
         },
         ChangesetInfo::NAME => Ok(Arc::new(DerivedUtilsFromManager::<ChangesetInfo>::new(
-            repo, config,
+            repo,
+            config,
+            enabled_config_name,
         ))),
         RootDeletedManifestId::NAME => Ok(Arc::new(
-            DerivedUtilsFromManager::<RootDeletedManifestId>::new(repo, config),
+            DerivedUtilsFromManager::<RootDeletedManifestId>::new(
+                repo,
+                config,
+                enabled_config_name,
+            ),
         )),
         FilenodesOnlyPublic::NAME => Ok(Arc::new(
-            DerivedUtilsFromManager::<FilenodesOnlyPublic>::new(repo, config),
+            DerivedUtilsFromManager::<FilenodesOnlyPublic>::new(repo, config, enabled_config_name),
         )),
         RootSkeletonManifestId::NAME => Ok(Arc::new(DerivedUtilsFromManager::<
             RootSkeletonManifestId,
-        >::new(repo, config))),
+        >::new(
+            repo, config, enabled_config_name
+        ))),
         TreeHandle::NAME => Ok(Arc::new(DerivedUtilsFromManager::<TreeHandle>::new(
-            repo, config,
+            repo,
+            config,
+            enabled_config_name,
         ))),
         name => Err(format_err!("Unsupported derived data type: {}", name)),
     }
@@ -1205,6 +1242,7 @@ mod tests {
                 unode_version: UnodeVersion::V1,
                 ..Default::default()
             },
+            "default",
         )?;
 
         let utils_v2 = derived_data_utils_impl(
@@ -1216,6 +1254,7 @@ mod tests {
                 unode_version: UnodeVersion::V2,
                 ..Default::default()
             },
+            "default",
         )?;
 
         assert_eq!(

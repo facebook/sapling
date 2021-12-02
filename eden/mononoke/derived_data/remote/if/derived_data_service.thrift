@@ -20,6 +20,7 @@ struct DeriveRequest {
   1: string repo_name;
   2: DerivedDataType derived_data_type;
   3: binary changeset_id;
+  4: string config_name;
 } (rust.exhaustive)
 
 struct DeriveResponse {
@@ -107,12 +108,17 @@ struct RepoNotFound {
   1: string reason;
 } (rust.exhaustive)
 
+struct UnknownDerivedDataConfig {
+  1: string reason;
+} (rust.exhaustive)
+
 struct DisabledFilenodes {} (rust.exhaustive)
 
 union RequestErrorReason {
   1: DerivedDataTypeNotEnabled derived_data_type_not_enabled;
   2: CommitNotFound commit_not_found;
   3: RepoNotFound repo_not_found;
+  4: UnknownDerivedDataConfig unknown_derived_data_config;
 }
 
 exception RequestError {

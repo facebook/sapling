@@ -116,7 +116,11 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
 
     pub fn add_all_warmers(&mut self) -> Result<(), Error> {
         self.add_derived_data_warmers(
-            &self.repo.blob_repo.get_derived_data_config().enabled.types,
+            &self
+                .repo
+                .blob_repo
+                .get_active_derived_data_types_config()
+                .types,
         )?;
         self.add_public_phase_warmer();
         Ok(())
@@ -168,7 +172,12 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
                 ));
         }
         if types.contains(BlameRoot::NAME) {
-            match config.enabled.blame_version {
+            match self
+                .repo
+                .blob_repo
+                .get_active_derived_data_types_config()
+                .blame_version
+            {
                 BlameVersion::V1 => {
                     self.warmers
                         .push(create_derived_data_warmer::<BlameRoot>(&self.ctx));

@@ -29,8 +29,8 @@ use cmdlib::{
 use context::{CoreContext, SessionContainer};
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
 use derived_data_utils::{
-    create_derive_graph_scuba_sample, derived_data_utils, derived_data_utils_for_backfill,
-    DerivedUtils, ThinOut, POSSIBLE_DERIVED_TYPES,
+    create_derive_graph_scuba_sample, derived_data_utils, derived_data_utils_for_config,
+    DerivedUtils, ThinOut, DEFAULT_BACKFILLING_CONFIG_NAME, POSSIBLE_DERIVED_TYPES,
 };
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
@@ -90,6 +90,7 @@ const ARG_BACKFILL: &str = "backfill";
 const ARG_GAP_SIZE: &str = "gap-size";
 const ARG_JSON: &str = "json";
 const ARG_VALIDATE_CHUNK_SIZE: &str = "validate-chunk-size";
+const ARG_BACKFILL_CONFIG_NAME: &str = "backfill-config-name";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
 const SUBCOMMAND_BACKFILL_ALL: &str = "backfill-all";
@@ -199,6 +200,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .long(ARG_GAP_SIZE)
                         .takes_value(true)
                         .help("size of gap to leave in derived data types that support gaps"),
+                )
+                .arg(
+                    Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
+                        .long(ARG_BACKFILL_CONFIG_NAME)
+                        .help("sets the name for backfilling derived data types config")
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -274,6 +281,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .long(ARG_GAP_SIZE)
                         .takes_value(true)
                         .help("size of gap to leave in derived data types that support gaps"),
+                )
+                .arg(
+                    Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
+                        .long(ARG_BACKFILL_CONFIG_NAME)
+                        .help("sets the name for backfilling derived data types config")
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -351,6 +364,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .long(ARG_GAP_SIZE)
                         .takes_value(true)
                         .help("size of gap to leave in derived data types that support gaps"),
+                )
+                .arg(
+                    Arg::with_name(ARG_BACKFILL_CONFIG_NAME)
+                        .long(ARG_BACKFILL_CONFIG_NAME)
+                        .help("sets the name for backfilling derived data types config")
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -464,10 +483,21 @@ async fn run_subcmd<'a>(
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
             let repo: InnerRepo = args::open_repo_unredacted(fb, logger, matches).await?;
 
+            let backfill_config_name = sub_m
+                .value_of(ARG_BACKFILL_CONFIG_NAME)
+                .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
+
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
                 || {
-                    let config = repo.blob_repo.get_derived_data_config();
-                    &config.enabled.types | &config.backfilling.types
+                    let enabled_types = repo.blob_repo.get_active_derived_data_types_config();
+                    if let Some(backfill_config) = repo
+                        .blob_repo
+                        .get_derived_data_types_config(backfill_config_name)
+                    {
+                        &enabled_types.types | &backfill_config.types
+                    } else {
+                        enabled_types.types.clone()
+                    }
                 },
                 |names| names.map(ToString::to_string).collect(),
             );
@@ -500,6 +530,7 @@ async fn run_subcmd<'a>(
                 batch_size,
                 parallel,
                 gap_size,
+                backfill_config_name,
             )
             .await
         }
@@ -556,6 +587,10 @@ async fn run_subcmd<'a>(
                 .map(str::parse::<usize>)
                 .transpose()?;
 
+            let backfill_config_name = sub_m
+                .value_of(ARG_BACKFILL_CONFIG_NAME)
+                .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
+
             subcommand_backfill(
                 &ctx,
                 &repo,
@@ -565,6 +600,7 @@ async fn run_subcmd<'a>(
                 batch_size,
                 gap_size,
                 changesets,
+                backfill_config_name,
             )
             .await
         }
@@ -600,6 +636,10 @@ async fn run_subcmd<'a>(
                 .map(str::parse::<usize>)
                 .transpose()?;
 
+            let backfill_config_name = sub_m
+                .value_of(ARG_BACKFILL_CONFIG_NAME)
+                .unwrap_or_else(|| DEFAULT_BACKFILLING_CONFIG_NAME);
+
             let repos = args::resolve_repos(&config_store, &matches)?;
 
             let mut tailers = Vec::new();
@@ -626,6 +666,7 @@ async fn run_subcmd<'a>(
                     gap_size,
                     backfill,
                     slice_size,
+                    backfill_config_name,
                 );
                 tailers.push(future);
             }
@@ -677,8 +718,7 @@ async fn parse_repo_and_derived_data_types(
         (true, None) => {
             let repo: BlobRepo = args::open_repo_unredacted(fb, logger, matches).await?;
             let types = repo
-                .get_derived_data_config()
-                .enabled
+                .get_active_derived_data_types_config()
                 .types
                 .iter()
                 .cloned()
@@ -726,11 +766,14 @@ async fn subcommand_backfill_all(
     batch_size: usize,
     parallel: bool,
     gap_size: Option<usize>,
+    config_name: &str,
 ) -> Result<()> {
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
         .iter()
-        .map(|name| derived_data_utils_for_backfill(ctx.fb, &repo.blob_repo, name.as_str()))
+        .map(|name| {
+            derived_data_utils_for_config(ctx.fb, &repo.blob_repo, name.as_str(), config_name)
+        })
         .collect::<Result<Vec<_>, _>>()?;
 
     let heads = get_most_recent_heads(ctx, &repo.blob_repo).await?;
@@ -822,9 +865,10 @@ async fn subcommand_backfill(
     batch_size: usize,
     gap_size: Option<usize>,
     changesets: Vec<ChangesetId>,
+    config_name: &str,
 ) -> Result<()> {
     let derived_utils =
-        &derived_data_utils_for_backfill(ctx.fb, &repo.blob_repo, derived_data_type)?;
+        &derived_data_utils_for_config(ctx.fb, &repo.blob_repo, derived_data_type, config_name)?;
 
     info!(
         ctx.logger(),
@@ -916,6 +960,7 @@ async fn subcommand_tail(
     gap_size: Option<usize>,
     mut backfill: bool,
     slice_size: Option<u64>,
+    config_name: &str,
 ) -> Result<()> {
     if backfill && batch_size == None {
         return Err(anyhow!("tail --backfill requires --batched"));
@@ -935,10 +980,9 @@ async fn subcommand_tail(
     };
     let repo = &repo;
 
-    let derived_data_config = repo.get_derived_data_config();
+    let active_derived_data_config = repo.get_active_derived_data_types_config();
 
-    let tail_derivers: Vec<Arc<dyn DerivedUtils>> = derived_data_config
-        .enabled
+    let tail_derivers: Vec<Arc<dyn DerivedUtils>> = active_derived_data_config
         .types
         .iter()
         .map(|name| derived_data_utils(ctx.fb, &repo, name))
@@ -960,20 +1004,23 @@ async fn subcommand_tail(
         .context("Error creating bookmarks subscription")?;
 
     let backfill_derivers: Vec<Arc<dyn DerivedUtils>> =
-        if backfill && !derived_data_config.backfilling.types.is_empty() {
-            // Some backfilling types may depend on enabled types for their
-            // derivation.  This means we need to include the appropriate
-            // derivers for all types (enabled and backfilling).  Since the
-            // enabled type will already have been derived, the deriver for
-            // those types will just be used for mapping look-ups.  The
-            // `derived_data_utils_for_backfill` function takes care of giving
-            // us the right deriver type for the config.
-            derived_data_config
-                .enabled
-                .types
-                .union(&derived_data_config.backfilling.types)
-                .map(|name| derived_data_utils_for_backfill(ctx.fb, &repo, name))
-                .collect::<Result<_>>()?
+        if let Some(named_derived_data_config) = repo.get_derived_data_types_config(config_name) {
+            if backfill {
+                // Some backfilling types may depend on enabled types for their
+                // derivation.  This means we need to include the appropriate
+                // derivers for all types (enabled and backfilling).  Since the
+                // enabled type will already have been derived, the deriver for
+                // those types will just be used for mapping look-ups.  The
+                // `derived_data_utils_for_config` function takes care of giving
+                // us the right deriver type for the config.
+                active_derived_data_config
+                    .types
+                    .union(&named_derived_data_config.types)
+                    .map(|name| derived_data_utils_for_config(ctx.fb, &repo, name, config_name))
+                    .collect::<Result<_>>()?
+            } else {
+                Vec::new()
+            }
         } else {
             backfill = false;
             Vec::new()

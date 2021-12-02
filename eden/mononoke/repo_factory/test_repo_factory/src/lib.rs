@@ -35,7 +35,7 @@ use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
 use fsnodes::RootFsnodeId;
 use git_types::TreeHandle;
-use maplit::hashset;
+use maplit::{hashmap, hashset};
 use megarepo_mapping::MegarepoMapping;
 use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
@@ -93,7 +93,8 @@ pub fn default_test_repo_config() -> RepoConfig {
     RepoConfig {
         derived_data_config: DerivedDataConfig {
             scuba_table: None,
-            enabled: DerivedDataTypesConfig {
+            enabled_config_name: "default".to_string(),
+            available_configs: hashmap!["default".to_string() =>DerivedDataTypesConfig {
                 types: hashset! {
                     BlameRoot::NAME.to_string(),
                     FilenodesOnlyPublic::NAME.to_string(),
@@ -109,7 +110,7 @@ pub fn default_test_repo_config() -> RepoConfig {
                 unode_version: UnodeVersion::V2,
                 ..Default::default()
             },
-            backfilling: DerivedDataTypesConfig::default(),
+            "backfilling".to_string() => DerivedDataTypesConfig::default(),],
         },
         ..Default::default()
     }

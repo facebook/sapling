@@ -41,8 +41,7 @@ pub async fn fetch_content_for_blame(
     file_unode_id: FileUnodeId,
 ) -> Result<FetchOutcome> {
     let filesize_limit = repo
-        .get_derived_data_config()
-        .enabled
+        .get_active_derived_data_types_config()
         .blame_filesize_limit
         .unwrap_or(DEFAULT_BLAME_FILESIZE_LIMIT);
     let blobstore = repo.blobstore().boxed();

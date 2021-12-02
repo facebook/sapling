@@ -1140,8 +1140,10 @@ mod tests {
         // All types blobrepo can support
         let a = test_repo_factory::default_test_repo_config()
             .derived_data_config
-            .enabled
-            .types;
+            .get_active_config()
+            .expect("No enabled derived data types config")
+            .types
+            .clone();
 
         // supported in graph
         let mut s = HashSet::new();
@@ -1163,7 +1165,7 @@ mod tests {
         let grandfathered: HashSet<&'static str> =
             HashSet::from_iter(vec!["git_trees"].into_iter());
         let mut missing = HashSet::new();
-        for t in &a {
+        for t in a {
             if s.contains(t.as_str()) {
                 assert!(
                     !grandfathered.contains(t.as_str()),

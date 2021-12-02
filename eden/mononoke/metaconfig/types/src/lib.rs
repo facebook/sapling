@@ -235,17 +235,40 @@ pub struct DerivedDataConfig {
     /// Name of scuba table where all derivation will be logged to
     pub scuba_table: Option<String>,
 
-    /// Configuration for enabled derived data types.
-    pub enabled: DerivedDataTypesConfig,
+    /// Name of of configuration for enabled derived data types.
+    pub enabled_config_name: String,
 
-    /// Configuration for backfilling derived data types.
-    pub backfilling: DerivedDataTypesConfig,
+    /// All available configs for derived data types
+    pub available_configs: HashMap<String, DerivedDataTypesConfig>,
 }
 
 impl DerivedDataConfig {
     /// Returns whether the named derived data type is enabled.
     pub fn is_enabled(&self, name: &str) -> bool {
-        self.enabled.types.contains(name)
+        if let Some(config) = self.available_configs.get(&self.enabled_config_name) {
+            config.types.contains(name)
+        } else {
+            false
+        }
+    }
+
+    /// Return whether the named derived data type is enabled in named config
+    pub fn is_enabled_for_config_name(&self, name: &str, config_name: &str) -> bool {
+        if let Some(config) = self.available_configs.get(config_name) {
+            config.types.contains(name)
+        } else {
+            false
+        }
+    }
+
+    /// Returns mutable ref to active DerivedDataTypesConfig
+    pub fn get_active_config(&mut self) -> Option<&mut DerivedDataTypesConfig> {
+        self.available_configs.get_mut(&self.enabled_config_name)
+    }
+
+    /// Returns DerivedDataTypesConfig for the given name from the list of available configs.
+    pub fn get_config(&self, name: &str) -> Option<&DerivedDataTypesConfig> {
+        self.available_configs.get(name)
     }
 }
 
