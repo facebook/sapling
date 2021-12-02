@@ -775,6 +775,7 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
 
         def test_file_locked_removal(self) -> None:
             self.repo.update(self.commit3)
+            self.assertEqual(self.read_file("dir/file3"), "three")
             with self._open_locked("dir/file3"):
                 with self.assertRaises(hgrepo.HgError):
                     self.repo.update(self.commit4)
