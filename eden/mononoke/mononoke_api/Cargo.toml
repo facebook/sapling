@@ -58,6 +58,7 @@ repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived
 repo_factory = { version = "0.1.0", path = "../repo_factory" }
 repo_read_write_status = { version = "0.1.0", path = "../repo_client/repo_read_write_status" }
 revset = { version = "0.1.0", path = "../revset" }
+scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../segmented_changelog" }
 skeleton_manifest = { version = "0.1.0", path = "../derived_data/skeleton_manifest" }
 skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }

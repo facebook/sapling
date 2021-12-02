@@ -19,6 +19,7 @@ backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
 blame = { version = "0.1.0", path = "../derived_data/blame" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
+blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 blobstore_factory = { version = "0.1.0", path = "../blobstore/factory" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../bonsai_hg_mapping" }

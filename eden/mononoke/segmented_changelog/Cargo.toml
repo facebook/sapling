@@ -15,12 +15,10 @@ async-trait = "0.1.51"
 auto_impl = "0.4"
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
-bulkops = { version = "0.1.0", path = "../bulkops" }
 bytes = { version = "1.1", features = ["serde"] }
 cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
-changesets = { version = "0.1.0", path = "../changesets" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
@@ -32,7 +30,6 @@ metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mincode = { version = "0.1.0", path = "../../scm/lib/mincode" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 parking_lot = "0.10.2"
-phases = { version = "0.1.0", path = "../phases" }
 rand = { version = "0.8", features = ["small_rng"] }
 reloader = { version = "0.1.0", path = "../common/reloader" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }
@@ -48,11 +45,13 @@ tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
+changesets = { version = "0.1.0", path = "../changesets" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 once_cell = "1.8"
+phases = { version = "0.1.0", path = "../phases" }
 revset = { version = "0.1.0", path = "../revset" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
 
