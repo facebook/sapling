@@ -7,7 +7,7 @@
 
 //! Recursively fetch the contents of a directory.
 
-use anyhow::{bail, Error};
+use anyhow::{bail, Context, Error};
 use bytesize::ByteSize;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use futures::future::FutureExt;
@@ -30,6 +30,7 @@ pub(super) const NAME: &str = "export";
 
 const ARG_OUTPUT: &str = "OUTPUT";
 const ARG_VERBOSE: &str = "VERBOSE";
+const ARG_MAKE_PARENT_DIRS: &str = "MAKE_PARENT_DIRS";
 
 /// Chunk size for requests.
 const TREE_CHUNK_SIZE: i64 = source_control::TREE_LIST_MAX_LIMIT;
@@ -61,6 +62,11 @@ pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
             .short("v")
             .long("verbose")
             .help("Show paths of files fetched"),
+    );
+    let cmd = cmd.arg(
+        Arg::with_name(ARG_MAKE_PARENT_DIRS)
+            .long("make-parent-dirs")
+            .help("Create parent directories of the destination if they do not exist"),
     );
     cmd
 }
@@ -299,6 +305,13 @@ pub(super) async fn run(
             "destination ({}) already exists",
             destination.to_string_lossy()
         );
+    }
+    if matches.is_present(ARG_MAKE_PARENT_DIRS) {
+        if let Some(parent) = destination.parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent).context("failed to create parent directories")?;
+            }
+        }
     }
 
     let repo = get_repo_specifier(matches).expect("repository is required");
