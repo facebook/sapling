@@ -29,7 +29,9 @@ pub(crate) fn backingstore_global_init() {
             let data = Arc::new(Mutex::new(TracingData::new()));
             let collector = tracing_collector::default_collector(data, Level::TRACE);
             let env_filter = EnvFilter::from_env("EDENSCM_LOG");
-            let env_logger = FmtLayer::new().with_span_events(FmtSpan::ACTIVE);
+            let env_logger = FmtLayer::new()
+                .with_span_events(FmtSpan::ACTIVE)
+                .with_ansi(false);
             let collector = collector.with(env_filter.and_then(env_logger));
             if let Err(e) = tracing::subscriber::set_global_default(collector) {
                 eprintln!("Failed to set rust tracing subscriber: {:?}", e);

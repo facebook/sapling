@@ -248,6 +248,9 @@ def get_edenfs_environment() -> Dict[str, str]:
     """Get the environment to use to start the edenfs daemon."""
     eden_env = {}
 
+    # Errors from Rust will be logged to the edenfs log.
+    eden_env["EDENSCM_LOG"] = "error"
+
     if sys.platform != "win32":
         # Reset $PATH to the following contents, so that everyone has the
         # same consistent settings.
