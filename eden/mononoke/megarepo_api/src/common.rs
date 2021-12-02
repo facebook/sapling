@@ -143,19 +143,13 @@ pub trait MegarepoOp {
             parents.push(additions_merge.id())
         }
 
-        let mut bcs = BonsaiChangesetMut {
+        let mut bcs = new_megarepo_automation_commit(
             parents,
-            author: "svcscm".to_string(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: message
+            message
                 .clone()
                 .unwrap_or("target config change".to_string()),
-            extra: SortedVectorMap::new(),
-            file_changes: SortedVectorMap::new(),
-            is_snapshot: false,
-        };
+            Default::default(),
+        );
         state
             .save_in_changeset(ctx, repo.blob_repo(), &mut bcs)
             .await?;
@@ -268,23 +262,15 @@ pub trait MegarepoOp {
             .collect();
         let message = match new_version {
             Some(new_version) => {
-                format!("Deletion commit for {}", new_version)
+                format!("deletion commit for {}", new_version)
             }
             None => {
-                format!("Deletion commit")
+                format!("deletion commit")
             }
         };
-        let old_target_with_removed_files = BonsaiChangesetMut {
-            parents: vec![old_target_cs.id()],
-            author: "svcscm".to_string(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message,
-            extra: SortedVectorMap::new(),
-            file_changes,
-            is_snapshot: false,
-        };
+
+        let old_target_with_removed_files =
+            new_megarepo_automation_commit(vec![old_target_cs.id()], message, file_changes);
         let old_target_with_removed_files = old_target_with_removed_files.freeze()?;
         save_bonsai_changesets(
             vec![old_target_with_removed_files.clone()],
@@ -406,18 +392,11 @@ pub trait MegarepoOp {
         }
         file_changes.extend(linkfiles.into_iter());
 
-        // TODO(stash): we need to figure out what parameters to set here
-        let moved_bcs = BonsaiChangesetMut {
-            parents: vec![cs_id],
-            author: "svcscm".to_string(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message: format!("move commit for source {}", source_name.0),
-            extra: SortedVectorMap::new(),
-            file_changes: file_changes.into_iter().collect(),
-            is_snapshot: false,
-        }
+        let moved_bcs = new_megarepo_automation_commit(
+            vec![cs_id],
+            format!("move commit for source {}", source_name.0),
+            file_changes.into_iter().collect(),
+        )
         .freeze()?;
 
         let mutable_renames = self
@@ -893,21 +872,10 @@ pub trait MegarepoOp {
         // TODO(stash, mateusz, simonfar): figure out what fields
         // we need to set here
         let message = message.unwrap_or(format!(
-            "Merging source {} for target version {}",
+            "merging source {} for target version {}",
             source_name.0, version
         ));
-        let bcs = BonsaiChangesetMut {
-            parents,
-            author: "svcscm".to_string(),
-            author_date: DateTime::now(),
-            committer: None,
-            committer_date: None,
-            message,
-            extra: SortedVectorMap::new(),
-            file_changes: SortedVectorMap::new(),
-            is_snapshot: false,
-        };
-
+        let bcs = new_megarepo_automation_commit(parents, message, Default::default());
         Ok(bcs)
     }
 
@@ -1225,6 +1193,25 @@ pub fn find_source_config<'a, 'b>(
     })?;
 
     Ok(source_config)
+}
+
+/// Used by megarepo automation to create brand-new commits
+pub(crate) fn new_megarepo_automation_commit(
+    parents: Vec<ChangesetId>,
+    message: String,
+    file_changes: SortedVectorMap<MPath, FileChange>,
+) -> BonsaiChangesetMut {
+    BonsaiChangesetMut {
+        parents,
+        author: "svcscm".to_string(),
+        author_date: DateTime::now(),
+        committer: None,
+        committer_date: None,
+        message,
+        extra: SortedVectorMap::new(),
+        file_changes,
+        is_snapshot: false,
+    }
 }
 
 #[cfg(test)]
