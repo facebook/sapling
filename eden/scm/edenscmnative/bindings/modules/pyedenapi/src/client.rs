@@ -79,11 +79,11 @@ py_class!(pub class client |py| {
     }
 
     def health(&self) -> PyResult<PyDict> {
-        self.inner(py).clone().health_py(py)
+        self.inner(py).as_ref().health_py(py)
     }
 
     def capabilities(&self, repo: String) -> PyResult<Vec<String>> {
-        let client = self.inner(py).clone();
+        let client = self.inner(py).as_ref();
         let caps = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
@@ -100,7 +100,7 @@ py_class!(pub class client |py| {
         repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>
     ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
-        self.inner(py).clone().files_py(py, repo, keys)
+        self.inner(py).as_ref().files_py(py, repo, keys)
     }
 
     def filesattrs(
@@ -108,9 +108,9 @@ py_class!(pub class client |py| {
         repo: String,
         spec: Serde<Vec<FileSpec>>,
     ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
-        let inner = self.inner(py).clone();
+        let api = self.inner(py).as_ref();
         let entries = py
-            .allow_threads(|| block_unless_interrupted(inner.files_attrs(repo, spec.0)))
+            .allow_threads(|| block_unless_interrupted(api.files_attrs(repo, spec.0)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;
@@ -123,7 +123,7 @@ py_class!(pub class client |py| {
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
         length: Option<u32> = None
     ) -> PyResult<TStream<anyhow::Result<Serde<HistoryEntry>>>> {
-        self.inner(py).clone().history_py(py, repo, keys, length)
+        self.inner(py).as_ref().history_py(py, repo, keys, length)
     }
 
     def storetrees(
@@ -133,7 +133,7 @@ py_class!(pub class client |py| {
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<Serde<TreeAttributes>> = None
     ) -> PyResult<stats> {
-        self.inner(py).clone().storetrees_py(py, store, repo, keys, attributes.map(|a| a.0))
+        self.inner(py).as_ref().storetrees_py(py, store, repo, keys, attributes.map(|a| a.0))
     }
 
     def trees(
@@ -142,7 +142,7 @@ py_class!(pub class client |py| {
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<Serde<TreeAttributes>> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<TreeEntry>>>, PyFuture)> {
-        self.inner(py).clone().trees_py(py, repo, keys, attributes.map(|a| a.0))
+        self.inner(py).as_ref().trees_py(py, repo, keys, attributes.map(|a| a.0))
     }
 
     /// commitdata(repo: str, nodes: [bytes]) -> [(node: bytes, data: bytes)], stats
@@ -153,7 +153,7 @@ py_class!(pub class client |py| {
         repo: String,
         nodes: Serde<Vec<HgId>>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitRevlogData>>>, PyFuture)> {
-        self.inner(py).clone().commit_revlog_data_py(py, repo, nodes.0)
+        self.inner(py).as_ref().commit_revlog_data_py(py, repo, nodes.0)
     }
 
     /// bookmarks(repo, [name]) -> {name: node|None}
@@ -164,7 +164,7 @@ py_class!(pub class client |py| {
         repo: String,
         bookmarks: Vec<String>
     ) -> PyResult<PyDict> {
-        self.inner(py).clone().bookmarks_py(py, repo, bookmarks)
+        self.inner(py).as_ref().bookmarks_py(py, repo, bookmarks)
     }
 
     /// setbookmark(repo, bookmark, to, from, pushvars)
@@ -178,7 +178,7 @@ py_class!(pub class client |py| {
         from: Serde<Option<HgId>>,
         pushvars: Vec<(String, String)> = Vec::new(),
     ) -> PyResult<bool> {
-        self.inner(py).clone().set_bookmark_py(py, repo, bookmark, to.0, from.0, pushvars)
+        self.inner(py).as_ref().set_bookmark_py(py, repo, bookmark, to.0, from.0, pushvars)
     }
 
     /// land_stack(repo, bookmark, head, base, pushvars) -> {old_hgids: [node], new_hgids: [node]}
@@ -192,7 +192,7 @@ py_class!(pub class client |py| {
         base: Serde<HgId>,
         pushvars: Vec<(String, String)> = Vec::new(),
     ) -> PyResult<Serde<LandStackResponse>> {
-        self.inner(py).clone().land_stack_py(py, repo, bookmark, head.0, base.0, pushvars)
+        self.inner(py).as_ref().land_stack_py(py, repo, bookmark, head.0, base.0, pushvars)
     }
 
     /// (repo, hexprefix) -> [{'request': {'InclusiveRange': (start_node, end_node)},
@@ -204,7 +204,7 @@ py_class!(pub class client |py| {
         repo: String,
         hash_prefixes: Vec<String>
     ) -> PyResult<Serde<Vec<CommitHashLookupResponse>>> {
-        self.inner(py).clone().hash_lookup_py(py, repo, hash_prefixes)
+        self.inner(py).as_ref().hash_lookup_py(py, repo, hash_prefixes)
     }
 
     def filestore(
@@ -239,7 +239,7 @@ py_class!(pub class client |py| {
         repo: String,
         requests: Serde<Vec<(HgId, u64, u64)>>,
     ) -> PyResult<Serde<Vec<CommitLocationToHashResponse>>> {
-        self.inner(py).clone().commit_location_to_hash_py(py, repo, requests.0)
+        self.inner(py).as_ref().commit_location_to_hash_py(py, repo, requests.0)
     }
 
     /// commithashtolocation(repo: str, master_heads: [bytes], hghds: [bytes]) ->
@@ -256,33 +256,33 @@ py_class!(pub class client |py| {
         master_heads: Serde<Vec<HgId>>,
         hgids: Serde<Vec<HgId>>,
     ) -> PyResult<Serde<Vec<CommitHashToLocationResponse>>> {
-        self.inner(py).clone().commit_hash_to_location_py(py, repo, master_heads.0, hgids.0)
+        self.inner(py).as_ref().commit_hash_to_location_py(py, repo, master_heads.0, hgids.0)
     }
 
     /// commitknown(repo: str, nodes: [bytes]) -> [{'hgid': bytes, 'known': Result[bool]}]
     def commitknown(&self, repo: String, hgids: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<CommitKnownResponse>>>
     {
-        self.inner(py).clone().commit_known_py(py, repo, hgids.0)
+        self.inner(py).as_ref().commit_known_py(py, repo, hgids.0)
     }
 
     /// commitgraph(repo: str, heads: [bytes], common: [bytes]) -> [{'hgid': bytes, 'parents': [bytes]}]
     def commitgraph(&self, repo: String, heads: Serde<Vec<HgId>>, common: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<CommitGraphEntry>>>
     {
-        self.inner(py).clone().commit_graph_py(py, repo, heads.0, common.0)
+        self.inner(py).as_ref().commit_graph_py(py, repo, heads.0, common.0)
     }
 
     /// clonedata(repo: str) -> PyCell
     def clonedata(&self, repo: String) -> PyResult<PyCell> {
-        self.inner(py).clone().clone_data_py(py, repo)
+        self.inner(py).as_ref().clone_data_py(py, repo)
     }
 
     /// pullfastforwardmaster(repo: str, old_master: Bytes, new_master: Bytes) -> PyCell
     def pullfastforwardmaster(&self, repo: String, old_master: Serde<HgId>, new_master: Serde<HgId>)
         -> PyResult<PyCell>
     {
-        self.inner(py).clone().pull_fast_forward_master_py(py, repo, old_master.0, new_master.0)
+        self.inner(py).as_ref().pull_fast_forward_master_py(py, repo, old_master.0, new_master.0)
     }
 
 
@@ -290,28 +290,28 @@ py_class!(pub class client |py| {
     def lookup_file_contents(&self, repo: String, content_ids: Vec<PyBytes>)
         -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
-        self.inner(py).clone().lookup_file_contents(py, repo, content_ids)
+        self.inner(py).as_ref().lookup_file_contents(py, repo, content_ids)
     }
 
     /// lookup_commits(repo: str, nodes: [bytes])
     def lookup_commits(&self, repo: String, nodes: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
-        self.inner(py).clone().lookup_commits(py, repo, nodes.0)
+        self.inner(py).as_ref().lookup_commits(py, repo, nodes.0)
     }
 
     /// lookup_filenodes(repo: str, filenodes: [bytes])
     def lookup_filenodes(&self, repo: String, hgids: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
-        self.inner(py).clone().lookup_filenodes(py, repo, hgids.0)
+        self.inner(py).as_ref().lookup_filenodes(py, repo, hgids.0)
     }
 
     /// lookup_trees(repo: str, trees: [bytes])
     def lookup_trees(&self, repo: String, hgids: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
-        self.inner(py).clone().lookup_trees(py, repo, hgids.0)
+        self.inner(py).as_ref().lookup_trees(py, repo, hgids.0)
     }
 
 
@@ -319,7 +319,7 @@ py_class!(pub class client |py| {
     def lookup_filenodes_and_trees(&self, repo: String, filenodes: Serde<Vec<HgId>>, trees: Serde<Vec<HgId>>)
         -> PyResult<Serde<Vec<(usize, UploadToken)>>>
     {
-        self.inner(py).clone().lookup_filenodes_and_trees(py, repo, filenodes.0, trees.0)
+        self.inner(py).as_ref().lookup_filenodes_and_trees(py, repo, filenodes.0, trees.0)
     }
 
     /// Upload file contents only
@@ -332,7 +332,7 @@ py_class!(pub class client |py| {
             Serde<HgId>, /* hgid */
         )>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
-        self.inner(py).clone().uploadfileblobs_py(py, store, repo, keys)
+        self.inner(py).as_ref().uploadfileblobs_py(py, store, repo, keys)
     }
 
     /// Upload file contents and hg filenodes
@@ -347,7 +347,7 @@ py_class!(pub class client |py| {
             Serde<HgId>,   /* p2 */
         )>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
-        self.inner(py).clone().uploadfiles_py(py, store, repo, keys)
+        self.inner(py).as_ref().uploadfiles_py(py, store, repo, keys)
     }
 
     /// Upload trees
@@ -361,7 +361,7 @@ py_class!(pub class client |py| {
             PyBytes,      /* data */
         )>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
-        self.inner(py).clone().uploadtrees_py(py, repo, items)
+        self.inner(py).as_ref().uploadtrees_py(py, repo, items)
     }
 
     /// Upload changesets
@@ -375,7 +375,7 @@ py_class!(pub class client |py| {
         )>>,
         mutations: Vec<Serde<HgMutationEntryContent>>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
-        self.inner(py).clone().uploadchangesets_py(py, repo, changesets.0, mutations)
+        self.inner(py).as_ref().uploadchangesets_py(py, repo, changesets.0, mutations)
     }
 
     def uploadsnapshot(
@@ -386,7 +386,7 @@ py_class!(pub class client |py| {
         copy_from_bubble_id: Option<u64>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
         let copy_from_bubble_id = copy_from_bubble_id.and_then(NonZeroU64::new);
-        self.inner(py).clone().uploadsnapshot_py(py, repo, data, custom_duration_secs, copy_from_bubble_id)
+        self.inner(py).as_ref().uploadsnapshot_py(py, repo, data, custom_duration_secs, copy_from_bubble_id)
     }
 
     /// Fetch snapshot information
@@ -395,7 +395,7 @@ py_class!(pub class client |py| {
         repo: String,
         data: Serde<FetchSnapshotRequest>,
     ) -> PyResult<Serde<FetchSnapshotResponse>> {
-        self.inner(py).clone().fetchsnapshot_py(py, repo, data)
+        self.inner(py).as_ref().fetchsnapshot_py(py, repo, data)
     }
 
     /// Downloads files from given upload tokens to given paths
@@ -406,7 +406,7 @@ py_class!(pub class client |py| {
         // (path to download, content id)
         files: Vec<(PyPathBuf, Serde<UploadToken>)>,
     ) -> PyResult<bool> {
-        self.inner(py).clone().downloadfiles_py(py, repo, root, files)
+        self.inner(py).as_ref().downloadfiles_py(py, repo, root, files)
     }
 
     /// Checks which files differ from
@@ -415,7 +415,7 @@ py_class!(pub class client |py| {
         root: Serde<RepoPathBuf>,
         files: Vec<(PyPathBuf, Serde<UploadToken>)>
     ) -> PyResult<Vec<PyPathBuf>> {
-        self.inner(py).clone().checkfiles_py(py, root, files)
+        self.inner(py).as_ref().checkfiles_py(py, root, files)
     }
 
     /// Download file from given upload token to memory
@@ -424,15 +424,15 @@ py_class!(pub class client |py| {
         repo: String,
         token: Serde<UploadToken>
     ) -> PyResult<PyBytes> {
-        self.inner(py).clone().downloadfiletomemory_py(py, repo, token)
+        self.inner(py).as_ref().downloadfiletomemory_py(py, repo, token)
     }
 
     def ephemeralprepare(&self, repo: String, custom_duration: Option<u64>)
         -> PyResult<TStream<anyhow::Result<Serde<EphemeralPrepareResponse>>>>
     {
-        let inner = self.inner(py).clone();
+        let api = self.inner(py).as_ref();
         let entries = py
-            .allow_threads(|| block_unless_interrupted(inner.ephemeral_prepare(repo, custom_duration.map(Duration::from_secs))))
+            .allow_threads(|| block_unless_interrupted(api.ephemeral_prepare(repo, custom_duration.map(Duration::from_secs))))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;
@@ -447,10 +447,10 @@ py_class!(pub class client |py| {
         data: Serde<Vec<(AnyFileContentId, Bytes)>>,
         bubbleid: Option<u64> = None
     ) -> PyResult<TStream<anyhow::Result<Serde<UploadToken>>>> {
+        let api = self.inner(py).as_ref();
         let bubble_id = bubbleid.and_then(NonZeroU64::new);
-        let inner = self.inner(py).clone();
         let entries = py
-            .allow_threads(|| block_unless_interrupted(inner.process_files_upload(repo, data.0, bubble_id, None)))
+            .allow_threads(|| block_unless_interrupted(api.process_files_upload(repo, data.0, bubble_id, None)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;
@@ -462,8 +462,8 @@ py_class!(pub class client |py| {
         repo: String,
         commits: Serde<Vec<HgId>>,
     ) -> PyResult<Serde<Vec<HgMutationEntryContent>>> {
-        let inner = self.inner(py).clone();
-        py.allow_threads(|| block_unless_interrupted(inner.commit_mutations(repo, commits.0)))
+        let api = self.inner(py).as_ref();
+        py.allow_threads(|| block_unless_interrupted(api.commit_mutations(repo, commits.0)))
             .map_pyerr(py)?
             .map_pyerr(py)
             .map(|responses| Serde(responses.into_iter().map(|r| r.mutation).collect()))

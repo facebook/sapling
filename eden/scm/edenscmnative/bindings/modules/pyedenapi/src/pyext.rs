@@ -93,7 +93,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn files_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
@@ -108,7 +108,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn history_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
@@ -124,7 +124,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn storetrees_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         store: PyObject,
         repo: String,
@@ -153,7 +153,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn trees_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
@@ -180,7 +180,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn commit_revlog_data_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         nodes: Vec<HgId>,
@@ -202,12 +202,7 @@ pub trait EdenApiPyExt: EdenApi {
         Ok((commits_py.into(), stats_py))
     }
 
-    fn bookmarks_py(
-        self: Arc<Self>,
-        py: Python,
-        repo: String,
-        bookmarks: Vec<String>,
-    ) -> PyResult<PyDict> {
+    fn bookmarks_py(&self, py: Python, repo: String, bookmarks: Vec<String>) -> PyResult<PyDict> {
         let response = py
             .allow_threads(|| block_unless_interrupted(self.bookmarks(repo, bookmarks)))
             .map_pyerr(py)?
@@ -221,7 +216,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn set_bookmark_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         bookmark: String,
@@ -243,7 +238,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn land_stack_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         bookmark: String,
@@ -267,7 +262,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn hash_lookup_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         hash_prefixes: Vec<String>,
@@ -282,7 +277,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn commit_location_to_hash_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         requests: Vec<(HgId, u64, u64)>,
@@ -305,7 +300,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn commit_hash_to_location_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         master_heads: Vec<HgId>,
@@ -322,7 +317,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn commit_known_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         hgids: Vec<HgId>,
@@ -335,7 +330,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn commit_graph_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         heads: Vec<HgId>,
@@ -350,7 +345,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     /// Get the "CloneData" serialized using mincode.
-    fn clone_data_py(self: Arc<Self>, py: Python, repo: String) -> PyResult<PyCell> {
+    fn clone_data_py(&self, py: Python, repo: String) -> PyResult<PyCell> {
         let data = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
@@ -366,7 +361,7 @@ pub trait EdenApiPyExt: EdenApi {
 
     /// Get pll data for master pull fast path
     fn pull_fast_forward_master_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         old_master: HgId,
@@ -393,7 +388,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn lookup_file_contents(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         ids: Vec<PyBytes>,
@@ -410,7 +405,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn lookup_commits(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         nodes: Vec<HgId>,
@@ -423,7 +418,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn lookup_filenodes(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         ids: Vec<HgId>,
@@ -432,7 +427,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn lookup_trees(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         ids: Vec<HgId>,
@@ -441,7 +436,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn lookup_filenodes_and_trees(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         filenodes_ids: Vec<HgId>,
@@ -459,7 +454,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn lookup_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         ids: Vec<AnyId>,
@@ -510,7 +505,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn uploadfileblobs_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         store: PyObject,
         repo: String,
@@ -595,7 +590,7 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     fn uploadfiles_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         store: PyObject,
         repo: String,
@@ -704,7 +699,7 @@ pub trait EdenApiPyExt: EdenApi {
 
     /// Upload trees
     fn uploadtrees_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         items: Vec<(
@@ -733,7 +728,7 @@ pub trait EdenApiPyExt: EdenApi {
     /// Upload changesets
     /// This method sends a single request, batching should be done outside.
     fn uploadchangesets_py(
-        self: Arc<Self>,
+        &self,
         py: Python,
         repo: String,
         changesets: Vec<(
