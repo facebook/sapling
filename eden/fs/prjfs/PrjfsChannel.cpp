@@ -32,12 +32,51 @@ detail::RcuLockedPtr getChannel(
   return channel->getInner();
 }
 
+/**
+ * Disallow some know applications that force EdenFS to overfetch files.
+ *
+ * Some backup applications or indexing are ignoring the
+ * FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS attribute attached to all EdenFS
+ * files/directories and are therefore forcing the entire repository to be
+ * fetched. Since this isn't the intention of these applications, simply
+ * disallow them from accessing anything on EdenFS.
+ */
+bool disallowMisbehavingApplications(PCWSTR fullAppName) noexcept {
+  if (fullAppName == nullptr) {
+    return false;
+  }
+
+  constexpr std::wstring_view misbehavingApps[] = {
+      L"Code42Service.exe",
+      L"windirstat.exe",
+  };
+
+  auto fullAppNameView = std::wstring_view{fullAppName};
+  auto lastSlash = fullAppNameView.find_last_of(L'\\');
+  auto appName = fullAppNameView.substr(lastSlash + 1);
+
+  for (auto misbehavingApp : misbehavingApps) {
+    if (appName == misbehavingApp) {
+      XLOG(DBG6) << "Stopping \"" << wideToMultibyteString<std::string>(appName)
+                 << "\" from accessing the repository.";
+      return true;
+    }
+  }
+
+  return false;
+}
+
 template <class Method, class... Args>
 HRESULT runCallback(
     Method method,
     const PRJ_CALLBACK_DATA* callbackData,
     Args&&... args) noexcept {
   try {
+    if (disallowMisbehavingApplications(
+            callbackData->TriggeringProcessImageFileName)) {
+      return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);
+    }
+
     auto channel = getChannel(callbackData);
     if (!channel) {
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
