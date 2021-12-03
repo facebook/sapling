@@ -259,7 +259,7 @@ mod tests {
         assert_eq!(stream.next().await.map(|v| v.unwrap()), Some(9));
 
         let err = stream.next().await.unwrap().unwrap_err();
-        with_py(|py| {
+        with_py(|_py| {
             assert!(format!("{}", err).contains("dislike this number"));
         });
 

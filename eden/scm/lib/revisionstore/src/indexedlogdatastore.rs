@@ -776,7 +776,7 @@ mod tests {
             FileAttributes::CONTENT,
         );
 
-        let (mut found, missing, errors) = fetched.consume();
+        let (mut found, missing, _errors) = fetched.consume();
         assert_eq!(
             found
                 .get_mut(&nonlfs_key)
@@ -830,7 +830,7 @@ mod tests {
             FileAttributes::CONTENT,
         );
 
-        let (mut found, missing, errors) = fetched.consume();
+        let (mut found, missing, _errors) = fetched.consume();
         assert_eq!(
             found
                 .get_mut(&nonlfs_key)
