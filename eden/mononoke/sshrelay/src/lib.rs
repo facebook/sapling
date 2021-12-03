@@ -21,7 +21,7 @@ use clientinfo::ClientInfo;
 use futures::sync::mpsc;
 use futures_ext::BoxStream;
 use maplit::hashmap;
-use permission_checker::MononokeIdentitySet;
+use permission_checker::{MononokeIdentitySet, MononokeIdentitySetExt};
 use serde::{Deserialize, Serialize};
 use session_id::{generate_session_id, SessionId};
 use tokio::time::timeout;
@@ -95,14 +95,19 @@ impl Metadata {
             None => generate_session_id(),
         };
 
-        // Hostname of the client is for non-critical use only, make sure we don't block clients
-        // in case DNS is down by setting a timeout. In case DNS resolving is down, we maximumly
-        // delay the request for one second.
-        let client_hostname = timeout(Duration::from_secs(1), Metadata::reverse_lookup(client_ip))
-            .await
-            .map_err(Error::from)
-            .flatten()
-            .ok();
+        // Hostname of the client is for non-critical use only. We're doing best-effort lookup here:
+        // 1) We're extracting it from identities (which requires no remote calls)
+        let client_hostname = if let Some(client_hostname) = identities.hostname() {
+            Some(client_hostname.to_string())
+        }
+        // 2) If it's not there we're trying to look it up via reverse dns with timeout of 1s.
+        else {
+            timeout(Duration::from_secs(1), Metadata::reverse_lookup(client_ip))
+                .await
+                .map_err(Error::from)
+                .flatten()
+                .ok()
+        };
 
         Self {
             session_id,
