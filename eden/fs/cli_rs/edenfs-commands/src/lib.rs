@@ -18,6 +18,7 @@ use util::path::expand_path;
 
 mod config;
 mod debug;
+mod du;
 mod gc;
 mod humantime;
 mod minitop;
@@ -85,6 +86,7 @@ pub enum TopLevelSubcommand {
     Debug(crate::debug::DebugCmd),
     // Top(crate::top::TopCmd),
     Minitop(crate::minitop::MinitopCmd),
+    // Du(crate::du::DiskUsageCmd),
 }
 
 #[async_trait]
@@ -100,6 +102,7 @@ impl Subcommand for TopLevelSubcommand {
             Debug(cmd) => cmd,
             // Top(cmd) => cmd,
             Minitop(cmd) => cmd,
+            // Du(cmd) => cmd,
         };
         sc.run(instance).await
     }
