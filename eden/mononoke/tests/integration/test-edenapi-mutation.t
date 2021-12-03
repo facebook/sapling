@@ -128,7 +128,7 @@ Test how they are propagated to client 2
   $ hgedenapi pull -r f643b098cd18 -q
   $ hgedenapi pull -r 929f2b9071cf -q
   $ sl
-  o  929f2b9071cf 'A'
+  x  929f2b9071cf 'A' (Rewritten using metaedit into f643b098cd18)
   │
   │ o  f643b098cd18 'new_message'
   ├─╯

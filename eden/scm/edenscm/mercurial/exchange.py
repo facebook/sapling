@@ -32,6 +32,7 @@ from . import (
     pushkey,
     pycompat,
     scmutil,
+    mutation,
     sslutil,
     streamclone,
     url as urlmod,
@@ -1781,6 +1782,27 @@ def _pullcommitgraph(pullop):
     if graphnodes:
         commits.addgraphnodes(graphnodes)
         pullop.cgresult = 2  # changed
+        if repo.ui.configbool("pull", "httpmutation"):
+            allnodes = {
+                node
+                for node, _ps in graphnodes
+                if repo._phasecache.phase(repo, repo[node].rev()) != phases.public
+            }
+            mutations = repo.edenapi.commitmutations(repo.name, list(allnodes))
+            mutations = [
+                mutation.createsyntheticentry(
+                    repo,
+                    m["predecessors"],
+                    m["successor"],
+                    m["op"],
+                    m["split"],
+                    bytes(m["user"]).decode("utf8"),
+                    (m["time"], m["tz"]),
+                    m["extras"],
+                )
+                for m in mutations
+            ]
+            mutation.recordentries(repo, mutations)
     else:
         pullop.cgresult = 1  # unchanged
 

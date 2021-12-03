@@ -129,7 +129,9 @@ def createentry(node, mutinfo):
         )
 
 
-def createsyntheticentry(repo, preds, succ, op, splitting=None, user=None, date=None):
+def createsyntheticentry(
+    repo, preds, succ, op, splitting=None, user=None, date=None, extras=None
+):
     user = user or repo.ui.config("mutation", "user") or repo.ui.username()
     date = date or repo.ui.config("mutation", "date")
     if date is None:
@@ -137,7 +139,7 @@ def createsyntheticentry(repo, preds, succ, op, splitting=None, user=None, date=
     else:
         date = util.parsedate(date)
     return mutationstore.mutationentry(
-        succ, preds, splitting, op, user, int(date[0]), int(date[1]), None
+        succ, preds, splitting, op, user, int(date[0]), int(date[1]), extras
     )
 
 

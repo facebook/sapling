@@ -28,6 +28,7 @@ use edenapi::types::CommitHashToLocationResponse;
 use edenapi::types::CommitKnownResponse;
 use edenapi::types::CommitLocationToHashRequest;
 use edenapi::types::CommitLocationToHashResponse;
+use edenapi::types::CommitMutationsResponse;
 use edenapi::types::CommitRevlogData;
 use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
@@ -439,6 +440,17 @@ impl EdenApi for EagerRepo {
                 },
             )
             .collect()
+    }
+
+    async fn commit_mutations(
+        &self,
+        repo: String,
+        mut commits: Vec<HgId>,
+    ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
+        commits.sort();
+        debug!("commit_mutations {}", debug_hgid_list(&commits));
+        let _ = (repo, commits);
+        Ok(vec![])
     }
 }
 
