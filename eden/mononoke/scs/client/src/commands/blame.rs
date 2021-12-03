@@ -38,6 +38,7 @@ const ARG_LINE_NUMBER: &str = "LINE_NUMBER";
 const ARG_ORIGIN_LINE_NUMBER: &str = "ORIGIN_LINE_NUMBER";
 const ARG_ORIGIN_PATH: &str = "ORIGIN_PATH";
 const ARG_PARENT: &str = "PARENT";
+const ARG_PARENT_INDEX: &str = "PARENT_INDEX";
 const ARG_PARENT_LINE_RANGE: &str = "PARENT_LINE_RANGE";
 const ARG_TITLE: &str = "TITLE";
 const ARG_TITLE_WIDTH: &str = "TITLE_WIDTH";
@@ -352,7 +353,17 @@ pub(super) async fn run(
         ..Default::default()
     };
 
-    if matches.is_present(ARG_PARENT) {
+    let parent_index = if matches.is_present(ARG_PARENT) {
+        Some(0)
+    } else {
+        matches
+            .value_of(ARG_PARENT_INDEX)
+            .map(usize::from_str)
+            .transpose()
+            .context("Invalid parent index")?
+    };
+
+    if let Some(parent_index) = parent_index {
         let params = thrift::CommitInfoParams {
             identity_schemes: btreeset! { thrift::CommitIdentityScheme::BONSAI },
             ..Default::default()
@@ -362,10 +373,17 @@ pub(super) async fn run(
             response
                 .parents
                 .iter()
-                .next()
-                .ok_or_else(|| format_err!("Commit does not have a parent"))?
+                .nth(parent_index)
+                .ok_or_else(|| {
+                    format_err!("Commit does not have a parent with index {}", parent_index)
+                })?
                 .get(&thrift::CommitIdentityScheme::BONSAI)
-                .ok_or_else(|| format_err!("Could not determine ID of commit's parent"))?,
+                .ok_or_else(|| {
+                    format_err!(
+                        "Could not determine ID of commit's parent with index {}",
+                        parent_index
+                    )
+                })?,
         );
     }
     let path = get_path(matches).expect("path is required");
@@ -438,6 +456,13 @@ fn add_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         Arg::with_name(ARG_PARENT)
             .long("parent")
             .help("Show blame for the first parent of the commit"),
+    )
+    .arg(
+        Arg::with_name(ARG_PARENT_INDEX)
+            .long("parent-index")
+            .takes_value(true)
+            .help("Show blame for the Nth parent of the commit")
+            .conflicts_with(ARG_PARENT),
     )
     .arg(
         Arg::with_name(ARG_PARENT_LINE_RANGE)
