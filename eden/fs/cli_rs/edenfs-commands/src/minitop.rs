@@ -309,8 +309,7 @@ impl crate::Subcommand for MinitopCmd {
                         .access_counts
                         .fsChannelBackingStoreImports
                         .to_string(),
-                    HumanTime::from(Duration::new(
-                        0,
+                    HumanTime::from(Duration::from_nanos(
                         aggregated_process
                             .access_counts
                             .fsChannelDurationNs
