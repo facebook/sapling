@@ -149,6 +149,7 @@ pub(crate) fn add_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(
             Arg::with_name(ARG_CLIENT_ID)
                 .long("client-id")
+                .global(true)
                 .help("Name of the client for quota attribution and logging")
                 .takes_value(true)
                 .default_value("scsc-default-client"),
@@ -157,6 +158,7 @@ pub(crate) fn add_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             Arg::with_name(ARG_TIER)
                 .short("t")
                 .long("tier")
+                .global(true)
                 .help("Tier name to connect to")
                 .takes_value(true),
         );
@@ -166,6 +168,7 @@ pub(crate) fn add_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             Arg::with_name(ARG_HOST_PORT)
                 .short("h")
                 .long("host")
+                .global(true)
                 .help("Host to connect to")
                 .takes_value(true),
         )

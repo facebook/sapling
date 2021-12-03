@@ -27,6 +27,7 @@ macro_rules! commands {
             let mut app = app.arg(
                 Arg::with_name(ARG_JSON)
                     .long("json")
+                    .global(true)
                     .help("Output as a stream of JSON objects"),
             );
             $(
