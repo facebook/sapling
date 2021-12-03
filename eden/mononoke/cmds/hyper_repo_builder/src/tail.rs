@@ -12,6 +12,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cmdlib::args::{self, MononokeMatches};
 use commit_transformation::{rewrite_commit, upload_commits};
 use context::CoreContext;
+use cross_repo_sync::types::{Source, Target};
 use futures::{compat::Stream01CompatExt, future::try_join_all, TryStreamExt};
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{ChangesetId, MPath};
@@ -28,7 +29,7 @@ use crate::common::{decode_latest_synced_state_extras, encode_latest_synced_stat
 pub async fn find_source_repos<'a>(
     ctx: &CoreContext,
     hyper_repo: &BlobRepo,
-    bookmark_name: &BookmarkName,
+    bookmark_name: &Target<BookmarkName>,
     matches: &'a MononokeMatches<'_>,
 ) -> Result<Vec<InnerRepo>, Error> {
     let hyper_repo_tip_cs_id = hyper_repo
@@ -55,10 +56,11 @@ pub async fn tail_once(
     ctx: &CoreContext,
     source_repos: Vec<InnerRepo>,
     hyper_repo: BlobRepo,
-    bookmark_name: &BookmarkName,
+    source_bookmark: &Source<BookmarkName>,
+    hyper_repo_bookmark: &Target<BookmarkName>,
 ) -> Result<(), Error> {
     let source_repos_and_latest_synced_commits =
-        find_latest_synced_commits(ctx, &source_repos, &hyper_repo, bookmark_name).await?;
+        find_latest_synced_commits(ctx, &source_repos, &hyper_repo, hyper_repo_bookmark).await?;
 
     let mut latest_replayed_state = HashMap::new();
     for (source_repo, latest_synced) in &source_repos_and_latest_synced_commits {
@@ -67,7 +69,8 @@ pub async fn tail_once(
 
     for (source_repo, latest_synced_commit) in source_repos_and_latest_synced_commits {
         let commits_to_replay =
-            find_commits_to_replay(ctx, &source_repo, latest_synced_commit, bookmark_name).await?;
+            find_commits_to_replay(ctx, &source_repo, latest_synced_commit, source_bookmark)
+                .await?;
 
         for cs_id in commits_to_replay {
             sync_commit(
@@ -75,7 +78,7 @@ pub async fn tail_once(
                 &source_repo,
                 &hyper_repo,
                 cs_id,
-                bookmark_name,
+                hyper_repo_bookmark,
                 &mut latest_replayed_state,
             )
             .await?;
@@ -89,7 +92,7 @@ async fn find_latest_synced_commits(
     ctx: &CoreContext,
     source_repos: &[InnerRepo],
     hyper_repo: &BlobRepo,
-    bookmark_name: &BookmarkName,
+    bookmark_name: &Target<BookmarkName>,
 ) -> Result<Vec<(InnerRepo, ChangesetId)>, Error> {
     let hyper_repo_tip_cs_id = hyper_repo
         .get_bonsai_bookmark(ctx.clone(), bookmark_name)
@@ -123,7 +126,7 @@ async fn find_commits_to_replay(
     ctx: &CoreContext,
     source_repo: &InnerRepo,
     latest_synced_cs_id: ChangesetId,
-    bookmark_name: &BookmarkName,
+    bookmark_name: &Source<BookmarkName>,
 ) -> Result<Vec<ChangesetId>, Error> {
     let source_repo_tip_cs_id = source_repo
         .blob_repo
@@ -182,7 +185,7 @@ async fn sync_commit(
     source_repo: &InnerRepo,
     hyper_repo: &BlobRepo,
     cs_id: ChangesetId,
-    bookmark_name: &BookmarkName,
+    bookmark_name: &Target<BookmarkName>,
     latest_synced_state: &mut HashMap<String, ChangesetId>,
 ) -> Result<(), Error> {
     info!(
@@ -309,7 +312,7 @@ mod test {
             &source_repo,
             &hyper_repo,
             second_cs_id,
-            &BookmarkName::new("main")?,
+            &Target(BookmarkName::new("main")?),
             &mut latest_synced_state,
         )
         .await?;
@@ -344,12 +347,14 @@ mod test {
             .with_name("hyper_repo")
             .build()?;
 
+        let book = Source(BookmarkName::new("main")?);
+        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
         // Create a commit in hyper repo
         let root_cs_id = CreateCommitContext::new_root(&ctx, &hyper_repo)
             .add_file("README.md", "readme")
             .commit()
             .await?;
-        bookmark(&ctx, &hyper_repo, "main")
+        bookmark(&ctx, &hyper_repo, hyper_repo_book.0.clone())
             .set_to(root_cs_id)
             .await?;
 
@@ -358,29 +363,42 @@ mod test {
             .add_file("1.txt", "start")
             .commit()
             .await?;
-        bookmark(&ctx, &source_repo.blob_repo, "main")
+        bookmark(&ctx, &source_repo.blob_repo, book.0.clone())
             .set_to(root_cs_id)
             .await?;
 
-        let book = BookmarkName::new("main")?;
-        add_source_repo(&ctx, &source_repo.blob_repo, &hyper_repo, &book).await?;
+        add_source_repo(
+            &ctx,
+            &source_repo.blob_repo,
+            &hyper_repo,
+            &book,
+            &hyper_repo_book,
+        )
+        .await?;
 
         // Now sync a single commit
         let second_cs_id = CreateCommitContext::new(&ctx, &source_repo.blob_repo, vec![root_cs_id])
             .add_file("1.txt", "content")
             .commit()
             .await?;
-        bookmark(&ctx, &source_repo.blob_repo, "main")
+        bookmark(&ctx, &source_repo.blob_repo, book.0.clone())
             .set_to(second_cs_id)
             .await?;
 
-        tail_once(&ctx, vec![source_repo.clone()], hyper_repo.clone(), &book).await?;
+        tail_once(
+            &ctx,
+            vec![source_repo.clone()],
+            hyper_repo.clone(),
+            &book,
+            &hyper_repo_book,
+        )
+        .await?;
 
         assert_eq!(
             list_working_copy_utf8(
                 &ctx,
                 &hyper_repo,
-                resolve_cs_id(&ctx, &hyper_repo, "main").await?,
+                resolve_cs_id(&ctx, &hyper_repo, &hyper_repo_book.0).await?,
             )
             .await?,
             hashmap! {
@@ -401,17 +419,24 @@ mod test {
                 .delete_file("newfile")
                 .commit()
                 .await?;
-        bookmark(&ctx, &source_repo.blob_repo, "main")
+        bookmark(&ctx, &source_repo.blob_repo, book.0.clone())
             .set_to(delete_file_cs_id)
             .await?;
 
-        tail_once(&ctx, vec![source_repo.clone()], hyper_repo.clone(), &book).await?;
+        tail_once(
+            &ctx,
+            vec![source_repo.clone()],
+            hyper_repo.clone(),
+            &book,
+            &hyper_repo_book,
+        )
+        .await?;
 
         assert_eq!(
             list_working_copy_utf8(
                 &ctx,
                 &hyper_repo,
-                resolve_cs_id(&ctx, &hyper_repo, "main").await?,
+                resolve_cs_id(&ctx, &hyper_repo, &hyper_repo_book.0).await?,
             )
             .await?,
             hashmap! {

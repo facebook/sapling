@@ -19,14 +19,16 @@ use bookmarks::BookmarkName;
 use clap::{Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
+use cross_repo_sync::types::{Source, Target};
 use fbinit::FacebookInit;
 use futures::future::try_join;
 use std::time::Duration;
 
 use crate::tail::{find_source_repos, tail_once};
 
-const BOOKMARK_NAME: &str = "master";
+const ARG_HYPER_REPO_BOOKMARK_NAME: &str = "hyper-repo-bookmark-name";
 const ARG_SOURCE_REPO: &str = "source-repo";
+const ARG_SOURCE_REPO_BOOKMARK_NAME: &str = "source-repo-bookmark-name";
 const SUBCOMMAND_ADD_SOURCE_REPO: &str = "add-source-repo";
 const SUBCOMMAND_TAIL: &str = "tail";
 
@@ -43,9 +45,10 @@ async fn subcommand_tail<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let hyper_repo: BlobRepo = args::open_repo(ctx.fb, ctx.logger(), &matches).await?;
-    let bookmark_name = BookmarkName::new(BOOKMARK_NAME)?;
 
-    let source_repos = find_source_repos(&ctx, &hyper_repo, &bookmark_name, matches).await?;
+    let (source_bookmark, hyper_repo_bookmark) = parse_bookmarks(matches)?;
+
+    let source_repos = find_source_repos(&ctx, &hyper_repo, &hyper_repo_bookmark, matches).await?;
 
 
     loop {
@@ -53,7 +56,8 @@ async fn subcommand_tail<'a>(
             &ctx,
             source_repos.clone(),
             hyper_repo.clone(),
-            &bookmark_name,
+            &source_bookmark,
+            &hyper_repo_bookmark,
         )
         .await?;
 
@@ -83,9 +87,16 @@ async fn subcommand_add_source_repo<'a>(
 
     let (source_repo, hyper_repo): (BlobRepo, BlobRepo) = try_join(source_repo, hyper_repo).await?;
 
-    let bookmark_name = BookmarkName::new(BOOKMARK_NAME)?;
+    let (source_bookmark, hyper_repo_bookmark) = parse_bookmarks(matches)?;
 
-    add_source_repo::add_source_repo(&ctx, &source_repo, &hyper_repo, &bookmark_name).await?;
+    add_source_repo::add_source_repo(
+        &ctx,
+        &source_repo,
+        &hyper_repo,
+        &source_bookmark,
+        &hyper_repo_bookmark,
+    )
+    .await?;
 
     Ok(())
 }
@@ -100,6 +111,22 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'_>) -> Result<(
     }
 }
 
+fn parse_bookmarks(
+    matches: &MononokeMatches<'_>,
+) -> Result<(Source<BookmarkName>, Target<BookmarkName>), Error> {
+    let hyper_repo_bookmark = matches
+        .value_of(ARG_HYPER_REPO_BOOKMARK_NAME)
+        .ok_or_else(|| anyhow!("{} is not set", ARG_HYPER_REPO_BOOKMARK_NAME))?;
+
+    let source_bookmark = matches
+        .value_of(ARG_SOURCE_REPO_BOOKMARK_NAME)
+        .ok_or_else(|| anyhow!("{} is not set", ARG_SOURCE_REPO_BOOKMARK_NAME))?;
+    Ok((
+        Source(BookmarkName::new(source_bookmark)?),
+        Target(BookmarkName::new(hyper_repo_bookmark)?),
+    ))
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = args::MononokeAppBuilder::new("Hyper repo builder")
@@ -108,6 +135,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .about(
             "A tool to create a merged repo out of a few other repos. \
         It can be useful for testing the scalability limits e.g. limits on commit rate.",
+        )
+        .arg(
+            Arg::with_name(ARG_HYPER_REPO_BOOKMARK_NAME)
+                .long(ARG_HYPER_REPO_BOOKMARK_NAME)
+                .required(true)
+                .takes_value(true)
+                .help("Name of the bookmark in hyper repo to sync to"),
+        )
+        .arg(
+            Arg::with_name(ARG_SOURCE_REPO_BOOKMARK_NAME)
+                .long(ARG_SOURCE_REPO_BOOKMARK_NAME)
+                .required(true)
+                .takes_value(true)
+                .help("Name of the bookmark in source repos to sync from"),
         )
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_ADD_SOURCE_REPO)

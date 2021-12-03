@@ -501,6 +501,12 @@ impl From<String> for CommitIdentifier {
     }
 }
 
+impl From<&BookmarkName> for CommitIdentifier {
+    fn from(bookmark: &BookmarkName) -> Self {
+        Self::Bookmark(bookmark.clone())
+    }
+}
+
 impl From<BookmarkName> for CommitIdentifier {
     fn from(bookmark: BookmarkName) -> Self {
         Self::Bookmark(bookmark)
@@ -521,6 +527,12 @@ impl From<&str> for BookmarkIdentifier {
 impl From<String> for BookmarkIdentifier {
     fn from(s: String) -> Self {
         Self::String(s)
+    }
+}
+
+impl From<&BookmarkName> for BookmarkIdentifier {
+    fn from(bookmark: &BookmarkName) -> Self {
+        Self::Bookmark(bookmark.clone())
     }
 }
 

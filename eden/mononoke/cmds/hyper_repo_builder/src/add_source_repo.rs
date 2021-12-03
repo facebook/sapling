@@ -11,6 +11,7 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use commit_transformation::copy_file_contents;
 use context::CoreContext;
+use cross_repo_sync::types::{Source, Target};
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::TryStreamExt;
@@ -28,12 +29,13 @@ pub async fn add_source_repo(
     ctx: &CoreContext,
     source_repo: &BlobRepo,
     hyper_repo: &BlobRepo,
-    bookmark_name: &BookmarkName,
+    source_bookmark: &Source<BookmarkName>,
+    hyper_repo_bookmark: &Target<BookmarkName>,
 ) -> Result<(), Error> {
     let source_bcs_id = source_repo
-        .get_bonsai_bookmark(ctx.clone(), bookmark_name)
+        .get_bonsai_bookmark(ctx.clone(), source_bookmark)
         .await?
-        .ok_or_else(|| anyhow!("{} not found", bookmark_name))?;
+        .ok_or_else(|| anyhow!("{} not found", source_bookmark))?;
 
     // First list files that needs copying to hyper repo and prepend
     // source repo name to each path.
@@ -48,7 +50,7 @@ pub async fn add_source_repo(
         .await?;
 
     let parent = hyper_repo
-        .get_bonsai_bookmark(ctx.clone(), bookmark_name)
+        .get_bonsai_bookmark(ctx.clone(), &hyper_repo_bookmark)
         .await?;
     if let Some(parent) = parent {
         ensure_no_file_intersection(&ctx, &hyper_repo, parent, &leaf_entries).await?;
@@ -93,7 +95,7 @@ pub async fn add_source_repo(
     match parent {
         Some(parent) => {
             txn.update(
-                bookmark_name,
+                hyper_repo_bookmark,
                 cs_id,
                 parent,
                 BookmarkUpdateReason::ManualMove,
@@ -101,14 +103,19 @@ pub async fn add_source_repo(
             )?;
         }
         None => {
-            txn.create(bookmark_name, cs_id, BookmarkUpdateReason::ManualMove, None)?;
+            txn.create(
+                hyper_repo_bookmark,
+                cs_id,
+                BookmarkUpdateReason::ManualMove,
+                None,
+            )?;
         }
     };
     let success = txn.commit().await?;
     if !success {
         return Err(anyhow!(
             "failed to move {} bookmark in hyper repo",
-            bookmark_name
+            hyper_repo_bookmark
         ));
     }
 
@@ -210,8 +217,9 @@ mod tests {
             .with_name("hyper_repo")
             .build()?;
 
-        let res =
-            add_source_repo(&ctx, &source_repo, &hyper_repo, &BookmarkName::new("main")?).await;
+        let book = Source(BookmarkName::new("main")?);
+        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
+        let res = add_source_repo(&ctx, &source_repo, &hyper_repo, &book, &hyper_repo_book).await;
         // Expect it to fail because source repo doesn't have a bookmark
         assert!(res.is_err());
 
@@ -220,16 +228,16 @@ mod tests {
             .commit()
             .await?;
 
-        bookmark(&ctx, &source_repo, "main")
+        bookmark(&ctx, &source_repo, &book.0)
             .set_to(root_cs_id)
             .await?;
-        add_source_repo(&ctx, &source_repo, &hyper_repo, &BookmarkName::new("main")?).await?;
+        add_source_repo(&ctx, &source_repo, &hyper_repo, &book, &hyper_repo_book).await?;
 
         assert_eq!(
             list_working_copy_utf8(
                 &ctx,
                 &hyper_repo,
-                resolve_cs_id(&ctx, &hyper_repo, "main").await?,
+                resolve_cs_id(&ctx, &hyper_repo, &hyper_repo_book.0).await?,
             )
             .await?,
             hashmap! {
@@ -243,21 +251,22 @@ mod tests {
             .commit()
             .await?;
 
-        bookmark(&ctx, &second_source_repo, "main")
+        bookmark(&ctx, &second_source_repo, &book.0)
             .set_to(second_root_cs_id)
             .await?;
         add_source_repo(
             &ctx,
             &second_source_repo,
             &hyper_repo,
-            &BookmarkName::new("main")?,
+            &book,
+            &hyper_repo_book,
         )
         .await?;
         assert_eq!(
             list_working_copy_utf8(
                 &ctx,
                 &hyper_repo,
-                resolve_cs_id(&ctx, &hyper_repo, "main").await?,
+                resolve_cs_id(&ctx, &hyper_repo, &hyper_repo_book.0).await?,
             )
             .await?,
             hashmap! {
@@ -287,8 +296,10 @@ mod tests {
             .add_file("1.txt", "content")
             .commit()
             .await?;
+        let book = Source(BookmarkName::new("main")?);
+        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
 
-        bookmark(&ctx, &source_repo, "main")
+        bookmark(&ctx, &source_repo, &book.0)
             .set_to(root_cs_id)
             .await?;
 
@@ -298,12 +309,18 @@ mod tests {
             .commit()
             .await?;
 
-        bookmark(&ctx, &hyper_repo, "main")
+        bookmark(&ctx, &hyper_repo, &hyper_repo_book.0)
             .set_to(root_cs_id)
             .await?;
 
-        let res =
-            add_source_repo(&ctx, &source_repo, &hyper_repo, &BookmarkName::new("main")?).await;
+        let res = add_source_repo(
+            &ctx,
+            &source_repo,
+            &hyper_repo,
+            &Source(BookmarkName::new("main")?),
+            &Target(BookmarkName::new("hyper_repo_main")?),
+        )
+        .await;
         assert!(res.is_err());
 
         Ok(())
