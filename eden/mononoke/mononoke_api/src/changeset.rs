@@ -27,6 +27,7 @@ use maplit::hashset;
 use mercurial_types::Globalrev;
 pub use mononoke_types::Generation;
 use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement, Svnrev};
+use rand;
 use reachabilityindex::ReachabilityIndex;
 use repo_derived_data::RepoDerivedDataRef;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -403,7 +404,11 @@ impl ChangesetContext {
     /// Returns `true` if this commit is an ancestor of `other_commit`.  A commit is considered its
     /// own ancestor for the purpose of this call.
     pub async fn is_ancestor_of(&self, other_commit: ChangesetId) -> Result<bool, MononokeError> {
-        if !tunables().get_segmented_changelog_disable_for_server_side_ops() {
+        let segmented_changelog_rollout_pct =
+            tunables().get_segmented_changelog_is_ancestor_percentage();
+        let use_segmented_changelog =
+            ((rand::random::<usize>() % 100) as i64) < segmented_changelog_rollout_pct;
+        if use_segmented_changelog {
             let segmented_changelog = self.repo().segmented_changelog();
             // If we have segmeneted changelog enabled...
             if !segmented_changelog.disabled(&self.ctx()).await? {
