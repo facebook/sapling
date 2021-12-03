@@ -87,7 +87,14 @@ def showcmd(*args, **kwargs):
 
 @subcmd(
     "latest",
-    [],
+    [
+        (
+            "",
+            "is-working-copy",
+            None,
+            _("fails if there have been local changes since the latest snapshot"),
+        )
+    ],
 )
 def latestcmd(*args, **kwargs):
     """information regarding the latest created/restored snapshot"""

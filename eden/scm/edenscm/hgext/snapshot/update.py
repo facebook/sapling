@@ -41,16 +41,20 @@ def _fullclean(ui, repo, exclude):
     )
 
 
-def update(ui, repo, csid, clean=False):
-    ui.status(_("Will restore snapshot {}\n").format(csid), component="snapshot")
-    csid = bytes.fromhex(csid)
-
-    snapshot = repo.edenapi.fetchsnapshot(
+def fetchsnapshot(repo, csid):
+    return repo.edenapi.fetchsnapshot(
         getreponame(repo),
         {
             "cs_id": csid,
         },
     )
+
+
+def update(ui, repo, csid, clean=False):
+    ui.status(_("Will restore snapshot {}\n").format(csid), component="snapshot")
+    csid = bytes.fromhex(csid)
+
+    snapshot = fetchsnapshot(repo, csid)
 
     # Once merges/conflicted states are supported, we'll need to support more
     # than one parent

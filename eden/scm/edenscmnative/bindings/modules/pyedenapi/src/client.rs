@@ -409,6 +409,15 @@ py_class!(pub class client |py| {
         self.inner(py).clone().downloadfiles_py(py, repo, root, files)
     }
 
+    /// Checks which files differ from
+    def checkfiles(
+        &self,
+        root: Serde<RepoPathBuf>,
+        files: Vec<(PyPathBuf, Serde<UploadToken>)>
+    ) -> PyResult<Vec<PyPathBuf>> {
+        self.inner(py).clone().checkfiles_py(py, root, files)
+    }
+
     /// Download file from given upload token to memory
     def downloadfiletomemory(
         &self,

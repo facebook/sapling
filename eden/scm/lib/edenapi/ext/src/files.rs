@@ -98,6 +98,20 @@ fn merge_tokens(
 
 const WORKERS: usize = 10;
 
+pub async fn check_files(
+    root: &RepoPathBuf,
+    files: impl IntoIterator<Item = (RepoPathBuf, UploadToken)>,
+) -> Result<Vec<RepoPathBuf>> {
+    stream::iter(merge_tokens(files).map(|value| async move {
+        let (paths, _) = on_disk_optimization(root, value.paths, &value.token, false).await?;
+        Result::<_>::Ok(stream::iter(paths).map(Result::<_>::Ok))
+    }))
+    .buffered(WORKERS)
+    .try_flatten()
+    .try_collect()
+    .await
+}
+
 pub async fn download_files(
     api: &(impl EdenApi + ?Sized),
     repo: &String,
