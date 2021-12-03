@@ -21,13 +21,45 @@ use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::future::try_join;
+use std::time::Duration;
+
+use crate::tail::{find_source_repos, tail_once};
 
 const BOOKMARK_NAME: &str = "master";
 const ARG_SOURCE_REPO: &str = "source-repo";
 const SUBCOMMAND_ADD_SOURCE_REPO: &str = "add-source-repo";
+const SUBCOMMAND_TAIL: &str = "tail";
 
 mod add_source_repo;
 mod common;
+mod tail;
+
+async fn subcommand_tail<'a>(
+    fb: FacebookInit,
+    matches: &'a MononokeMatches<'_>,
+    _sub_m: &'a ArgMatches<'_>,
+) -> Result<(), Error> {
+    let logger = matches.logger();
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
+    let hyper_repo: BlobRepo = args::open_repo(ctx.fb, ctx.logger(), &matches).await?;
+    let bookmark_name = BookmarkName::new(BOOKMARK_NAME)?;
+
+    let source_repos = find_source_repos(&ctx, &hyper_repo, &bookmark_name, matches).await?;
+
+
+    loop {
+        tail_once(
+            &ctx,
+            source_repos.clone(),
+            hyper_repo.clone(),
+            &bookmark_name,
+        )
+        .await?;
+
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+}
 
 async fn subcommand_add_source_repo<'a>(
     fb: FacebookInit,
@@ -63,6 +95,7 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'_>) -> Result<(
         (SUBCOMMAND_ADD_SOURCE_REPO, Some(sub_m)) => {
             subcommand_add_source_repo(fb, &matches, &sub_m).await
         }
+        (SUBCOMMAND_TAIL, Some(sub_m)) => subcommand_tail(fb, &matches, &sub_m).await,
         (subcommand, _) => Err(anyhow!("unknown subcommand {}!", subcommand)),
     }
 }
@@ -86,6 +119,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .takes_value(true)
                         .help("new repo to add to a hyper repo"),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_TAIL).about("Tail source repos into hyper repo"),
         )
         .get_matches(fb)?;
 
