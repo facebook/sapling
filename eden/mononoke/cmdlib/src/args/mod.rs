@@ -323,7 +323,9 @@ where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
     open_repo_internal_with_repo_id(
-        logger, repo_id, matches,
+        logger,
+        RepoIdentifier::Id(repo_id),
+        matches,
         false, // use CreateStorage::ExistingOnly when creating blobstore
         None,  // do not override redaction config
     )
@@ -341,7 +343,7 @@ where
     let source_repo_id = get_source_repo_id(&config_store, matches)?;
     open_repo_internal_with_repo_id(
         logger,
-        source_repo_id,
+        RepoIdentifier::Id(source_repo_id),
         matches,
         false, // use CreateStorage::ExistingOnly when creating blobstore
         None,  // do not override redaction config
@@ -361,7 +363,7 @@ where
     let source_repo_id = get_target_repo_id(&config_store, matches)?;
     open_repo_internal_with_repo_id(
         logger,
-        source_repo_id,
+        RepoIdentifier::Id(source_repo_id),
         matches,
         false, // use CreateStorage::ExistingOnly when creating blobstore
         None,  // do not override redaction config
@@ -441,6 +443,24 @@ pub fn get_config_by_repoid<'a>(
         .map(|(name, config)| (name.clone(), config.clone()))
 }
 
+pub fn get_config_by_name<'a>(
+    config_store: &ConfigStore,
+    matches: &'a MononokeMatches<'a>,
+    repo_name: String,
+) -> Result<RepoConfig> {
+    let configs = load_repo_configs(config_store, matches)?;
+    configs
+        .repos
+        .get(&repo_name)
+        .cloned()
+        .ok_or_else(|| format_err!("unknown reponame {:?}", repo_name))
+}
+
+enum RepoIdentifier {
+    Id(RepositoryId),
+    Name(String),
+}
+
 async fn open_repo_internal<R>(
     _: FacebookInit,
     logger: &Logger,
@@ -453,12 +473,19 @@ where
 {
     let config_store = matches.config_store();
     let repo_id = get_repo_id(config_store, matches)?;
-    open_repo_internal_with_repo_id(logger, repo_id, matches, create, redaction_override).await
+    open_repo_internal_with_repo_id(
+        logger,
+        RepoIdentifier::Id(repo_id),
+        matches,
+        create,
+        redaction_override,
+    )
+    .await
 }
 
 async fn open_repo_internal_with_repo_id<R>(
     logger: &Logger,
-    repo_id: RepositoryId,
+    repo_id: RepoIdentifier,
     matches: &MononokeMatches<'_>,
     create: bool,
     redaction_override: Option<Redaction>,
@@ -468,7 +495,18 @@ where
 {
     let config_store = matches.config_store();
     let common_config = load_common_config(config_store, &matches)?;
-    let (reponame, mut config) = get_config_by_repoid(config_store, matches, repo_id)?;
+
+    let (reponame, repo_id, mut config) = match repo_id {
+        RepoIdentifier::Id(repo_id) => {
+            let (reponame, config) = get_config_by_repoid(config_store, matches, repo_id)?;
+            (reponame, repo_id, config)
+        }
+        RepoIdentifier::Name(name) => {
+            let config = get_config_by_name(config_store, matches, name.clone())?;
+            (name, config.repoid, config)
+        }
+    };
+
     info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
     match &config.storage_config.blobstore {
         BlobConfig::Files { path } | BlobConfig::Sqlite { path } => {
@@ -503,7 +541,26 @@ pub async fn open_repo_with_repo_id<'a, R: 'a>(
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
-    open_repo_internal_with_repo_id(logger, repo_id, matches, false, None).await
+    open_repo_internal_with_repo_id(logger, RepoIdentifier::Id(repo_id), matches, false, None).await
+}
+
+pub async fn open_repo_with_repo_name<'a, R: 'a>(
+    _: FacebookInit,
+    logger: &Logger,
+    repo_name: String,
+    matches: &'a MononokeMatches<'a>,
+) -> Result<R, Error>
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
+    open_repo_internal_with_repo_id(
+        logger,
+        RepoIdentifier::Name(repo_name),
+        matches,
+        false,
+        None,
+    )
+    .await
 }
 
 pub fn get_usize_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<usize> {
