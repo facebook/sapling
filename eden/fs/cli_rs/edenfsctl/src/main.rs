@@ -51,9 +51,14 @@ fn fallback() -> Result<()> {
     #[cfg(windows)]
     {
         // Windows doesn't have exec, so we have to open a subprocess
-        cmd.status()
+        let status = cmd
+            .status()
             .with_context(|| format!("failed to execute: {:?}", cmd))?;
-        Ok(())
+        std::process::exit(
+            status
+                .code()
+                .expect(format!("{:?} didn't set an error code", cmd).as_str()),
+        )
     }
 
     #[cfg(unix)]
