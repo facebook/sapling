@@ -5336,6 +5336,7 @@ def resolve(ui, repo, *pats, **opts):
             ):
                 proceed = mergemod.driverconclude(repo, ms, wctx)
                 ms.commit()
+                ms.recordactions()
                 if not proceed:
                     return 1
 

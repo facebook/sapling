@@ -769,12 +769,14 @@ delete all the files
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels):
   >     ui.status('* preprocess called\n')
   >     for f in mergestate:
-  >         mergestate.mark(f, 'd')
+  >         if f in ["foo.txt", "bar.txt"]:
+  >             mergestate.mark(f, 'd')
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels):
   >     ui.status('* conclude called\n')
   >     for f in mergestate.driverresolved():
-  >         os.unlink(f)
-  >         mergestate.queueremove(f)
+  >         if f in ["foo.txt", "bar.txt"]:
+  >             os.unlink(f)
+  >             mergestate.queueremove(f)
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [experimental]
@@ -792,3 +794,37 @@ delete all the files
   foo.txt: file not found
   $ hg files
   [1]
+
+delete all the files, but with a non-interactive conflict resolution involved
+  $ hg revert --all
+  $ hg up -q .^
+  $ echo foo > other.txt
+  $ hg commit -Aqm 'intro other.txt'
+  $ echo bar > other.txt
+  $ echo bar >> foo.txt
+  $ hg commit -Aqm 'modify other.txt'
+  $ hg up -q .^
+  $ echo gah > other.txt
+  $ echo gah >> foo.txt
+  $ hg commit -Aqm 'different other.txt'
+  $ hg --config extensions.rebase= rebase -d 'desc("modify other.txt")'
+  rebasing f931f701d752 "different other.txt"
+  * preprocess called
+  merging other.txt
+  warning: 1 conflicts while merging other.txt! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ echo gah > other.txt
+  $ hg resolve --mark other.txt
+  (no more unresolved files -- run "hg resolve --all" to conclude)
+  $ hg resolve --all
+  * conclude called
+  (no more unresolved files)
+  $ hg st
+  M other.txt
+  R foo.txt
+  ? other.txt.orig
+  $ hg --config extensions.rebase= rebase --continue
+  rebasing f931f701d752 "different other.txt"
+  $ hg st
+  ? other.txt.orig
