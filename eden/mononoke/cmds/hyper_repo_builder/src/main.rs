@@ -50,6 +50,18 @@ async fn subcommand_tail<'a>(
 
     let source_repos = find_source_repos(&ctx, &hyper_repo, &hyper_repo_bookmark, matches).await?;
 
+    // Let's be extra cautious. hyper repo is expected to be a test repo, so no backup
+    // config should be present. If it's present then something might be wrong, and we
+    // might be accidentally syncing data to a prod repo.
+    let config_store = matches.config_store();
+    let (_, config) = args::get_config(&config_store, matches)?;
+    if config.backup_repo_config.is_some() {
+        return Err(anyhow!(
+            "hyper repo unexpectedly has a backup repo. \
+        Since hyper repo is expected to be a test repo it's not expected that it has a backup. \
+        As a precaution we fail instead of writing to a non-test repo."
+        ));
+    }
 
     loop {
         tail_once(
