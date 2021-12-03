@@ -5,14 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use futures::Future;
+use futures::{future, Future, FutureExt};
 use gotham::state::{client_addr, FromState, State};
 use gotham_derive::StateData;
 use hyper::header::HeaderMap;
 use hyper::{Body, Response};
 use lazy_static::lazy_static;
 use percent_encoding::percent_decode;
-use permission_checker::{MononokeIdentity, MononokeIdentitySet};
+use permission_checker::{MononokeIdentity, MononokeIdentitySet, MononokeIdentitySetExt};
 use std::net::{IpAddr, SocketAddr};
 use trust_dns_resolver::TokioAsyncResolver;
 
@@ -42,20 +42,30 @@ impl ClientIdentity {
         &self.address
     }
 
-    /// Perform a reverse DNS lookup of the client's IP address to determine
-    /// its hostname.
+    // Hostname of the client is for non-critical use only (best-effort lookup):
     pub fn hostname(&self) -> impl Future<Output = Option<String>> + 'static {
         // XXX: Can't make this an async fn because the resulting Future would
         // have a non-'static lifetime (due to the &self argument).
 
+        // 1) We're extracting it from identities (which requires no remote calls)
+        if let Some(client_hostname) = self
+            .identities
+            .as_ref()
+            .map(|id| id.hostname().map(|h| h.to_string()))
+            .flatten()
+        {
+            return future::ready(Some(client_hostname)).left_future();
+        }
+        // 2) Perform a reverse DNS lookup of the client's IP address to determine
+        // its hostname.
         let address = self.address.clone();
-
-        async move {
+        (async move {
             let resolver = TokioAsyncResolver::tokio_from_system_conf().ok()?;
             let hosts = resolver.reverse_lookup(address?).await.ok()?;
             let host = hosts.iter().next()?;
             Some(host.to_string().trim_end_matches('.').to_string())
-        }
+        })
+        .right_future()
     }
 
     // Extract the client's username from the identity set, if present.
