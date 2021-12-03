@@ -177,8 +177,8 @@ def posixfile(name, mode="r", buffering=-1):
         raise IOError(err.errno, "%s: %s" % (name, encoding.strtolocal(err.strerror)))
 
 
-def fdopen(fd, mode="r", bufsize=-1):
-    fp = os.fdopen(fd, mode, bufsize)
+def fdopen(fd, mode="r", bufsize=-1, **kwargs):
+    fp = os.fdopen(fd, mode, bufsize, **kwargs)
     return _fixseek(fp, mode)
 
 
