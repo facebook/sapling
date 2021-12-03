@@ -93,7 +93,14 @@ def showcmd(*args, **kwargs):
             "is-working-copy",
             None,
             _("fails if there have been local changes since the latest snapshot"),
-        )
+        ),
+        (
+            "",
+            "max-untracked-size",
+            "",
+            _("filter out any untracked files larger than this size, in megabytes"),
+            _("MAX_SIZE"),
+        ),
     ],
 )
 def latestcmd(*args, **kwargs):

@@ -35,7 +35,7 @@ def _parselifetime(opts):
         return None
 
 
-def _parsemaxuntracked(opts):
+def parsemaxuntracked(opts):
     if opts["max_untracked_size"] != "":
         return int(opts["max_untracked_size"]) * 1000 * 1000
     else:
@@ -85,7 +85,7 @@ class workingcopy(object):
 
 def createremote(ui, repo, **opts):
     lifetime = _parselifetime(opts)
-    maxuntrackedsize = _parsemaxuntracked(opts)
+    maxuntrackedsize = parsemaxuntracked(opts)
     with repo.lock():
         _backupcurrentcommit(repo)
 

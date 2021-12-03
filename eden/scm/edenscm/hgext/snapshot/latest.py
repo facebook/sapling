@@ -6,12 +6,12 @@
 from edenscm.mercurial import error, node
 from edenscm.mercurial.i18n import _
 
-from .createremote import workingcopy
+from .createremote import workingcopy, parsemaxuntracked
 from .metalog import fetchlatestsnapshot
 from .update import fetchsnapshot
 
 
-def _isworkingcopy(ui, repo, csid):
+def _isworkingcopy(ui, repo, csid, maxuntrackedsize):
     """Fails if working copy is not the provided snapshot"""
     snapshot = fetchsnapshot(repo, csid)
 
@@ -21,7 +21,7 @@ def _isworkingcopy(ui, repo, csid):
     ):
         return False, _("parent commits differ")
 
-    wc = workingcopy.fromrepo(repo, None)
+    wc = workingcopy.fromrepo(repo, maxuntrackedsize)
     filechanges = snapshot["file_changes"]
 
     allpaths = {path for (path, _) in filechanges}
@@ -61,6 +61,11 @@ def _isworkingcopy(ui, repo, csid):
 def latest(ui, repo, **opts):
     csid = fetchlatestsnapshot(repo.metalog())
     isworkingcopy = opts.get("is_working_copy") is True
+    maxuntrackedsize = parsemaxuntracked(opts)
+    if maxuntrackedsize is not None and isworkingcopy is False:
+        raise error.Abort(
+            _("--max-untracked-size can only be used together with --is-working-copy")
+        )
     if csid is None:
         if isworkingcopy:
             raise error.Abort(_("latest snapshot not found"))
@@ -69,7 +74,7 @@ def latest(ui, repo, **opts):
     else:
         csid = csid.hex()
         if isworkingcopy:
-            iswc, reason = _isworkingcopy(ui, repo, csid)
+            iswc, reason = _isworkingcopy(ui, repo, csid, maxuntrackedsize)
             if iswc:
                 if not ui.plain():
                     ui.status(_("latest snapshot is the working copy\n"))
