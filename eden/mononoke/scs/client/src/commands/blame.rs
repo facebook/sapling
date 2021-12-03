@@ -17,6 +17,8 @@ use source_control::types as thrift;
 use std::fmt::Write as _;
 use std::io::Write;
 use std::str::FromStr;
+use unicode_truncate::{Alignment, UnicodeTruncateStr};
+use unicode_width::UnicodeWidthStr;
 
 use crate::args::commit_id::{
     add_commit_id_args, add_scheme_args, get_commit_id, get_request_schemes, get_schemes,
@@ -87,7 +89,7 @@ impl Render for BlameOut {
                         .max()
                         .unwrap_or(0),
                 );
-                let max_author_len = blame.authors.iter().map(|a| a.len()).max().unwrap_or(0);
+                let max_author_width = blame.authors.iter().map(|a| a.width()).max().unwrap_or(0);
                 let max_line_width =
                     number_width(blame.lines.iter().map(|l| l.line).max().unwrap_or(0) + 1);
 
@@ -99,7 +101,7 @@ impl Render for BlameOut {
                     .map(|l| {
                         let origin_path = blame.paths[l.path_index as usize].as_str();
                         if origin_path != path {
-                            origin_path.len()
+                            origin_path.width()
                         } else {
                             0
                         }
@@ -115,7 +117,7 @@ impl Render for BlameOut {
                             .map_or(0, |i| if i > 0 { number_width(i) + 2 } else { 0 });
                         let parent_path_width = l
                             .parent_path_index
-                            .map_or(0, |p| blame.paths[p as usize].len() + 2);
+                            .map_or(0, |p| blame.paths[p as usize].width() + 2);
                         let parent_range_width = match (l.parent_start_line, l.parent_range_length)
                         {
                             (Some(start), Some(0)) => number_width(start) + 1,
@@ -132,11 +134,11 @@ impl Render for BlameOut {
                 for line in blame.lines.iter() {
                     let mut separator = "";
                     if matches.is_present(ARG_USER) {
+                        let author = blame.authors[line.author_index as usize].as_str();
                         write!(
                             w,
-                            "{:>width$}",
-                            blame.authors[line.author_index as usize],
-                            width = max_author_len as usize
+                            "{}",
+                            author.unicode_pad(max_author_width, Alignment::Right, false),
                         )?;
                         separator = " ";
                     }
@@ -191,10 +193,9 @@ impl Render for BlameOut {
                         };
                         write!(
                             w,
-                            "{}{:<width$.width$}",
+                            "{}{}",
                             separator,
-                            title,
-                            width = title_width
+                            title.unicode_pad(title_width, Alignment::Left, true)
                         )?;
                         separator = ":";
                     }
@@ -219,10 +220,9 @@ impl Render for BlameOut {
                         }
                         write!(
                             w,
-                            "{}{:>width$}",
+                            "{}{}",
                             separator,
-                            plr,
-                            width = max_parent_line_range_width
+                            plr.unicode_pad(max_parent_line_range_width, Alignment::Right, false)
                         )?;
                         separator = ":";
                     }
@@ -230,10 +230,13 @@ impl Render for BlameOut {
                         let origin_path = blame.paths[line.path_index as usize].as_str();
                         write!(
                             w,
-                            "{}{:>width$}",
+                            "{}{}",
                             separator,
-                            if origin_path != path { origin_path } else { "" },
-                            width = max_origin_path_width
+                            if origin_path != path { origin_path } else { "" }.unicode_pad(
+                                max_origin_path_width,
+                                Alignment::Right,
+                                false
+                            )
                         )?;
                         separator = ":";
                     }
