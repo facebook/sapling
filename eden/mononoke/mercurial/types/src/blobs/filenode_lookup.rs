@@ -109,10 +109,13 @@ pub async fn lookup_filenode_id<B: Blobstore>(
             fut,
         )
         .await;
-        if maybe_timed_out.is_err() {
-            STATS::timeout.add_value(1);
+        match maybe_timed_out {
+            Ok(blob) => blob?,
+            Err(_) => {
+                STATS::timeout.add_value(1);
+                return Ok(None);
+            }
         }
-        maybe_timed_out??
     } else {
         fut.await?
     };

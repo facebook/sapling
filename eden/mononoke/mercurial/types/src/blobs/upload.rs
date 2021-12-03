@@ -226,7 +226,11 @@ impl UploadHgFileContents {
                     cloned!(ctx, blobstore);
                     let file_node_id_ptr =
                         FileNodeIdPointer::new(&cbmeta.id, &cbmeta.copy_from, &p1, &p2);
-                    async move { lookup_filenode_id(&ctx, &blobstore, file_node_id_ptr).await }
+                    async move {
+                        lookup_filenode_id(&ctx, &blobstore, file_node_id_ptr)
+                            .await
+                            .context("failed to lookup filenode id")
+                    }
                 };
 
                 let metadata_fut = Self::compute_metadata(
