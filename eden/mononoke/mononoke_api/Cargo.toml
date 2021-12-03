@@ -51,6 +51,7 @@ mononoke_api_types = { version = "0.1.0", path = "types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_renames = { version = "0.1.0", path = "../mutable_renames" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
+rand = { version = "0.8", features = ["small_rng"] }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.5.4"
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }

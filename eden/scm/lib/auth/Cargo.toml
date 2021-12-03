@@ -12,7 +12,7 @@ indexmap = { version = "1.7.0", features = ["rayon", "serde-1"] }
 pem = "0.8"
 simple_asn1 = "0.4"
 thiserror = "1.0.29"
-tracing = "0.1.27"
+tracing = "0.1.29"
 url = "2.2.2"
 util = { path = "../util" }
 

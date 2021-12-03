@@ -43,9 +43,9 @@ runlog = { path = "../runlog" }
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 taggederror = { path = "../taggederror" }
 terminal_size = "0.1"
-tracing = "0.1.27"
+tracing = "0.1.29"
 tracing-collector = { path = "../tracing-collector" }
-tracing-subscriber = { version = "0.3.1", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.3", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
 types = { path = "../types" }
 util = { path = "../util" }
 version = { path = "../version" }

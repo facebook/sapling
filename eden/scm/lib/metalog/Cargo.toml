@@ -13,7 +13,7 @@ mincode = { path = "../mincode" }
 minibytes = { path = "../minibytes" }
 parking_lot = "0.10.2"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
-tracing = "0.1.27"
+tracing = "0.1.29"
 types = { path = "../types" }
 zstore = { path = "../zstore" }
 

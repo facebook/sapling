@@ -27,7 +27,7 @@ ref-cast = "1.0.2"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_derive = "1.0"
 thiserror = "1.0.29"
-tracing = "0.1.27"
+tracing = "0.1.29"
 tracing-futures = "0.2.5"
 
 [build-dependencies]

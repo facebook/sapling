@@ -16,5 +16,5 @@ taggederror = { path = "../taggederror" }
 taggederror-util = { path = "../taggederror-util" }
 thiserror = "1.0.29"
 thrift-types = { path = "../thrift-types" }
-tracing = "0.1.27"
+tracing = "0.1.29"
 util = { path = "../util" }

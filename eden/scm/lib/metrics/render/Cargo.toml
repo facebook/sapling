@@ -9,4 +9,4 @@ async-runtime = { path = "../../async-runtime" }
 metrics = { path = ".." }
 once_cell = "1.8"
 progress-model = { path = "../../progress/model" }
-tracing = "0.1.27"
+tracing = "0.1.29"

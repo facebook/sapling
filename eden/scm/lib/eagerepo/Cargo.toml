@@ -15,7 +15,7 @@ metalog = { path = "../metalog" }
 minibytes = { path = "../minibytes" }
 nonblocking = { path = "../nonblocking" }
 thiserror = "1.0.29"
-tracing = "0.1.27"
+tracing = "0.1.29"
 zstore = { path = "../zstore" }
 
 [dev-dependencies]

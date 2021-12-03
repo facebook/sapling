@@ -10,4 +10,4 @@ dag = { path = ".." }
 git2 = "0.13"
 nonblocking = { path = "../../nonblocking" }
 parking_lot = "0.10.2"
-tracing = "0.1.27"
+tracing = "0.1.29"

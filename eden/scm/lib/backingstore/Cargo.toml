@@ -20,9 +20,9 @@ manifest = { path = "../manifest" }
 manifest-tree = { path = "../manifest-tree" }
 parking_lot = "0.10.2"
 revisionstore = { path = "../revisionstore" }
-tracing = "0.1.27"
+tracing = "0.1.29"
 tracing-collector = { path = "../tracing-collector" }
-tracing-subscriber = { version = "0.3.1", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
+tracing-subscriber = { version = "0.3.3", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
 types = { path = "../types" }
 
 [features]

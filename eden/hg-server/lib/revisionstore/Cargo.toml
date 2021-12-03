@@ -45,7 +45,7 @@ streams = { path = "../streams" }
 tempfile = "3.2"
 thiserror = "1.0.29"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
-tracing = "0.1.27"
+tracing = "0.1.29"
 types = { path = "../types" }
 url = "2.2.2"
 util = { path = "../util" }

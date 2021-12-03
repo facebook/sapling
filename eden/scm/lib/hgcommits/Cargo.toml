@@ -18,6 +18,6 @@ revlogindex = { path = "../revlogindex" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 streams = { path = "../streams" }
 thiserror = "1.0.29"
-tracing = "0.1.27"
+tracing = "0.1.29"
 types = { path = "../types" }
 zstore = { path = "../zstore" }
