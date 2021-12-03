@@ -206,12 +206,17 @@ impl SourceControlServiceImpl {
         let option_include_title = options.contains(&thrift::BlameFormatOption::INCLUDE_TITLE);
         let option_include_message = options.contains(&thrift::BlameFormatOption::INCLUDE_MESSAGE);
         let option_include_parent = options.contains(&thrift::BlameFormatOption::INCLUDE_PARENT);
+        let option_include_commit_numbers =
+            options.contains(&thrift::BlameFormatOption::INCLUDE_COMMIT_NUMBERS);
 
         // Changeset ids in the order they will be returned.
         let mut indexed_csids = Vec::new();
 
         // Mapped commit ids in that same order.
         let mut commit_ids = Vec::new();
+
+        // The small number suitable for each commit, in that same order.
+        let mut commit_numbers = Vec::new();
 
         // The index into these vectors of each changeset.
         let mut commit_id_indexes = HashMap::new();
@@ -232,17 +237,23 @@ impl SourceControlServiceImpl {
         // Map all the changeset IDs into the requested identity schemes.  Keep a mapping of
         // which bonsai changeset ID corresponds to which mapped commit ID index, so we can look
         // them up later.
-        let csids: Vec<_> = blame
+        let csids_and_nums: Vec<_> = blame
             .changeset_ids()
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
-        for (id, mapped_ids) in map_commit_identities(repo, csids.clone(), &params.identity_schemes)
-            .await?
-            .into_iter()
-        {
-            let index = commit_ids.len();
-            commit_ids.push(mapped_ids);
-            commit_id_indexes.insert(id, index);
-            indexed_csids.push(id);
+        let csids = csids_and_nums
+            .iter()
+            .map(|(csid, _)| *csid)
+            .collect::<Vec<_>>();
+        let mut mapped_commit_ids =
+            map_commit_identities(&repo, csids.clone(), &params.identity_schemes).await?;
+        for (id, num) in csids_and_nums {
+            if let Some(mapped_ids) = mapped_commit_ids.remove(&id) {
+                let index = commit_ids.len();
+                commit_ids.push(mapped_ids);
+                commit_numbers.push(num as i32);
+                commit_id_indexes.insert(id, index);
+                indexed_csids.push(id);
+            }
         }
 
         // Collect author and date fields from the commit info.
@@ -374,6 +385,7 @@ impl SourceControlServiceImpl {
         let authors = authors.into_items();
         let titles = Some(titles.into_items()).filter(|titles| !titles.is_empty());
         let messages = Some(messages.into_items()).filter(|messages| !messages.is_empty());
+        let commit_numbers = option_include_commit_numbers.then(|| commit_numbers);
         let dates = dates
             .into_items()
             .into_iter()
@@ -392,6 +404,7 @@ impl SourceControlServiceImpl {
             titles,
             messages,
             parent_commit_ids,
+            commit_numbers,
             ..Default::default()
         };
 

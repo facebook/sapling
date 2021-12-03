@@ -41,6 +41,8 @@ const ARG_PARENT: &str = "PARENT";
 const ARG_PARENT_LINE_RANGE: &str = "PARENT_LINE_RANGE";
 const ARG_TITLE: &str = "TITLE";
 const ARG_TITLE_WIDTH: &str = "TITLE_WIDTH";
+const ARG_COMMIT_NUMBER: &str = "COMMIT_NUMBER";
+const ARG_NO_COMMIT_ID: &str = "NO_COMMIT_ID";
 
 const DEFAULT_TITLE_WIDTH: usize = 32;
 const DEFAULT_TITLE_WIDTH_STR: &str = "32";
@@ -75,6 +77,15 @@ impl Render for BlameOut {
 
         match self.blame {
             thrift::Blame::blame_compact(ref blame) => {
+                let max_commit_number_width = number_width(
+                    blame
+                        .commit_numbers
+                        .iter()
+                        .flatten()
+                        .copied()
+                        .max()
+                        .unwrap_or(0),
+                );
                 let max_author_len = blame.authors.iter().map(|a| a.len()).max().unwrap_or(0);
                 let max_line_width =
                     number_width(blame.lines.iter().map(|l| l.line).max().unwrap_or(0) + 1);
@@ -118,22 +129,44 @@ impl Render for BlameOut {
                     .unwrap_or(0);
 
                 for line in blame.lines.iter() {
+                    let mut separator = "";
                     if matches.is_present(ARG_USER) {
                         write!(
                             w,
-                            "{:>width$} ",
+                            "{:>width$}",
                             blame.authors[line.author_index as usize],
                             width = max_author_len as usize
                         )?;
+                        separator = " ";
                     }
-                    render_commit_id(
-                        None,
-                        " ",
-                        "blamed changeset",
-                        &map_commit_ids(blame.commit_ids[line.commit_id_index as usize].values()),
-                        &schemes,
-                        w,
-                    )?;
+                    if matches.is_present(ARG_COMMIT_NUMBER) {
+                        if let Some(commit_numbers) = &blame.commit_numbers {
+                            let commit_number =
+                                format!("#{}", commit_numbers[line.commit_id_index as usize]);
+                            write!(
+                                w,
+                                "{}{:>width$}",
+                                separator,
+                                commit_number,
+                                width = max_commit_number_width + 1
+                            )?
+                        }
+                        separator = " ";
+                    }
+                    if !matches.is_present(ARG_NO_COMMIT_ID) {
+                        write!(w, "{}", separator)?;
+                        render_commit_id(
+                            None,
+                            " ",
+                            "blamed changeset",
+                            &map_commit_ids(
+                                blame.commit_ids[line.commit_id_index as usize].values(),
+                            ),
+                            &schemes,
+                            w,
+                        )?;
+                        separator = " ";
+                    }
                     if matches.is_present(ARG_DATE) || matches.is_present(ARG_DATE_SHORT) {
                         let blame_date = datetime(&blame.dates[line.date_index as usize]);
                         let blame_date_formatted = if matches.is_present(ARG_DATE_SHORT) {
@@ -141,7 +174,11 @@ impl Render for BlameOut {
                         } else {
                             blame_date.format("%+")
                         };
-                        write!(w, " {}", blame_date_formatted)?;
+                        write!(w, "{}{}", separator, blame_date_formatted)?;
+                        separator = " ";
+                    }
+                    if separator != "" {
+                        separator = ":";
                     }
                     if matches.is_present(ARG_TITLE) {
                         let title = match line.title_index {
@@ -151,7 +188,14 @@ impl Render for BlameOut {
                             },
                             None => "",
                         };
-                        write!(w, ":{:<width$.width$}", title, width = title_width)?;
+                        write!(
+                            w,
+                            "{}{:<width$.width$}",
+                            separator,
+                            title,
+                            width = title_width
+                        )?;
+                        separator = ":";
                     }
                     if matches.is_present(ARG_PARENT_LINE_RANGE) {
                         let mut plr = String::with_capacity(max_parent_line_range_width);
@@ -172,29 +216,55 @@ impl Render for BlameOut {
                                 write!(plr, "{}-{}", start, start + length - 1)?;
                             }
                         }
-                        write!(w, ":{:>width$}", plr, width = max_parent_line_range_width)?;
+                        write!(
+                            w,
+                            "{}{:>width$}",
+                            separator,
+                            plr,
+                            width = max_parent_line_range_width
+                        )?;
+                        separator = ":";
                     }
                     if matches.is_present(ARG_ORIGIN_PATH) {
                         let origin_path = blame.paths[line.path_index as usize].as_str();
                         write!(
                             w,
-                            ":{:>width$}",
+                            "{}{:>width$}",
+                            separator,
                             if origin_path != path { origin_path } else { "" },
                             width = max_origin_path_width
                         )?;
+                        separator = ":";
                     }
                     if matches.is_present(ARG_ORIGIN_LINE_NUMBER) {
                         write!(
                             w,
-                            ":{:>width$}",
+                            "{}{:>width$}",
+                            separator,
                             line.origin_line,
                             width = max_origin_line_width
                         )?;
+                        separator = ":";
                     }
                     if matches.is_present(ARG_LINE_NUMBER) {
-                        write!(w, ":{:>width$}", line.line, width = max_line_width)?;
+                        write!(
+                            w,
+                            "{}{:>width$}",
+                            separator,
+                            line.line,
+                            width = max_line_width
+                        )?;
+                        separator = ":";
                     }
-                    write!(w, ": {}\n", line.contents.as_deref().unwrap_or_default())?;
+                    if separator != "" {
+                        separator = ": ";
+                    }
+                    write!(
+                        w,
+                        "{}{}\n",
+                        separator,
+                        line.contents.as_deref().unwrap_or_default()
+                    )?;
                 }
                 Ok(())
             }
@@ -224,6 +294,12 @@ impl Render for BlameOut {
                             .expect("line must be an object")
                             .insert(String::from(key), value);
                     };
+                    if let Some(commit_numbers) = &blame.commit_numbers {
+                        insert(
+                            "commit_number",
+                            commit_numbers[line.commit_id_index as usize].into(),
+                        );
+                    }
                     if let (Some(title_index), Some(titles)) =
                         (line.title_index, blame.titles.as_ref())
                     {
@@ -308,6 +384,7 @@ pub(super) async fn run(
             thrift::BlameFormatOption::INCLUDE_CONTENTS,
             thrift::BlameFormatOption::INCLUDE_TITLE,
             thrift::BlameFormatOption::INCLUDE_PARENT,
+            thrift::BlameFormatOption::INCLUDE_COMMIT_NUMBERS,
         }),
         ..Default::default()
     };
@@ -380,5 +457,16 @@ fn add_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("Set the maximum width of the title (if shown)")
             .takes_value(true)
             .default_value(DEFAULT_TITLE_WIDTH_STR),
+    )
+    .arg(
+        Arg::with_name(ARG_COMMIT_NUMBER)
+            .short("n")
+            .long("commit-number")
+            .help("Show numbers for commits (specific to this blame revision)"),
+    )
+    .arg(
+        Arg::with_name(ARG_NO_COMMIT_ID)
+            .long("no-commit-id")
+            .help("Do not show commit ids"),
     )
 }

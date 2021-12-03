@@ -374,6 +374,12 @@ enum BlameFormatOption {
   /// information, i.e. which lines the blamed line is deemed to have replaced,
   /// and the parent commit identities for every commit.
   INCLUDE_PARENT = 4,
+
+  /// Applies to BlameCompact.  Controls whether the blame includes per-commit
+  /// numerical identifiers.  These identifiers are only valid within this
+  /// blame instance, however attempts are made to keep these stable over the
+  /// main (p1) history of the file.
+  INCLUDE_COMMIT_NUMBERS = 5,
 }
 
 union Blame {
@@ -418,6 +424,13 @@ struct BlameCompact {
   /// The parent commit ids for each of the commits (in the same order as
   /// `commit_ids`).  Only present if `INCLUDE_PARENT` was requested.
   8: optional list<list<map<CommitIdentityScheme, CommitId>>> parent_commit_ids;
+
+  /// Small numbers suitable for use to identify each of the commits within this
+  /// blame (in the same order as `commit_ids`).  These numbers are not
+  /// guaranteed to apply to the same commit in any other blame, however the
+  /// server will attempt to keep the numbers stable over the main history of
+  /// the file.
+  9: optional list<i32> commit_numbers;
 }
 
 struct BlameCompactLine {

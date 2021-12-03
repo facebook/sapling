@@ -472,7 +472,11 @@ async fn blame_hg_annotate<C: AsRef<[u8]> + 'static + Send>(
     }
     let content = String::from_utf8_lossy(content.as_ref());
     let mut result = String::new();
-    let csids: Vec<_> = blame.changeset_ids()?;
+    let csids: Vec<_> = blame
+        .changeset_ids()?
+        .into_iter()
+        .map(|(csid, _)| csid)
+        .collect();
     let mapping = repo.get_hg_bonsai_mapping(ctx, csids).await?;
     let mapping: HashMap<_, _> = mapping.into_iter().map(|(k, v)| (v, k)).collect();
 

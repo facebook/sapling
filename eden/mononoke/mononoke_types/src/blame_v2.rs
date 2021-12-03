@@ -173,9 +173,14 @@ impl BlameV2 {
         }
     }
 
-    pub fn changeset_ids(&self) -> Result<impl Iterator<Item = ChangesetId> + '_, BlameRejected> {
+    pub fn changeset_ids(
+        &self,
+    ) -> Result<impl Iterator<Item = (ChangesetId, u32)> + '_, BlameRejected> {
         match self {
-            BlameV2::Blame(blame_data) => Ok(blame_data.csids.values().cloned()),
+            BlameV2::Blame(blame_data) => Ok(blame_data
+                .csids
+                .iter()
+                .map(|(number, csid)| (*csid, number as u32))),
             BlameV2::Rejected(rejected) => Err(rejected.clone()),
         }
     }

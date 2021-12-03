@@ -42,7 +42,7 @@ impl CompatBlame {
         }
     }
 
-    pub fn changeset_ids(&self) -> Result<Vec<ChangesetId>, BlameRejected> {
+    pub fn changeset_ids(&self) -> Result<Vec<(ChangesetId, u32)>, BlameRejected> {
         match self {
             CompatBlame::V1(BlameMaybeRejected::Rejected(rejected)) => Err(*rejected),
             CompatBlame::V1(BlameMaybeRejected::Blame(blame)) => Ok(blame
@@ -51,6 +51,7 @@ impl CompatBlame {
                 .map(|range| range.csid)
                 .collect::<BTreeSet<_>>()
                 .into_iter()
+                .zip(0..)
                 .collect()),
             CompatBlame::V2(blame) => Ok(blame.changeset_ids()?.collect()),
         }
