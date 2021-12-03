@@ -399,12 +399,16 @@ async fn init_bookmarks(
 
             let remaining = total - i - 1;
 
-            if !is_warm(ctx, repo, &cs_id, warmers).await {
+            if !is_warm(ctx, repo, &cs_id, warmers)
+                .watched(ctx.logger())
+                .await
+            {
                 match mode {
                     InitMode::Rewind => {
                         let maybe_cs_id = move_bookmark_back_in_history_until_derived(
                             &ctx, &repo, &book, &warmers,
                         )
+                        .watched(ctx.logger())
                         .await?;
 
                         info!(
@@ -415,7 +419,9 @@ async fn init_bookmarks(
                     }
                     InitMode::Warm => {
                         info!(ctx.logger(), "warmed bookmark {} at {}", book, cs_id);
-                        warm_all(ctx, repo, &cs_id, warmers).await?;
+                        warm_all(ctx, repo, &cs_id, warmers)
+                            .watched(ctx.logger())
+                            .await?;
                         Ok((remaining, Some((book, (cs_id, kind)))))
                     }
                 }
