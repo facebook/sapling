@@ -14,7 +14,7 @@ use blobstore::Loadable;
 use blobsync::copy_content;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future::try_join_all, stream::FuturesUnordered, TryStreamExt};
+use futures::{future::try_join_all, stream, StreamExt, TryStreamExt};
 use manifest::get_implicit_deletes;
 use megarepo_configs::types::SourceMappingRules;
 use mercurial_types::HgManifestId;
@@ -369,10 +369,6 @@ pub async fn upload_commits<'a>(
     Ok(())
 }
 
-async fn identity<T>(res: T) -> Result<T, Error> {
-    Ok(res)
-}
-
 pub async fn copy_file_contents<'a>(
     ctx: &'a CoreContext,
     source_repo: &'a BlobRepo,
@@ -382,21 +378,21 @@ pub async fn copy_file_contents<'a>(
     let source_blobstore = source_repo.get_blobstore();
     let target_blobstore = target_repo.get_blobstore();
     let target_filestore_config = target_repo.filestore_config();
-    let uploader: FuturesUnordered<_> = content_ids
-        .into_iter()
-        .map({
-            |content_id| {
-                copy_content(
-                    ctx,
-                    &source_blobstore,
-                    &target_blobstore,
-                    target_filestore_config.clone(),
-                    content_id,
-                )
-            }
-        })
-        .collect();
-    uploader.try_for_each_concurrent(100, identity).await
+
+    stream::iter(content_ids.into_iter().map({
+        |content_id| {
+            copy_content(
+                &ctx,
+                &source_blobstore,
+                &target_blobstore,
+                target_filestore_config.clone(),
+                content_id,
+            )
+        }
+    }))
+    .buffer_unordered(100)
+    .try_for_each(|_| async { Ok(()) })
+    .await
 }
 
 #[cfg(test)]
