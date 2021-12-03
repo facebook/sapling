@@ -873,6 +873,7 @@ impl<'a> BlameLines<'a> {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct BlameLineParent<'a> {
     pub parent_index: u32,
     pub offset: u32,

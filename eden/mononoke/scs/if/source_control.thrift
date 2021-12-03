@@ -369,6 +369,11 @@ enum BlameFormatOption {
   /// Applies to BlameCompact.  Controls whether the blame includes the messages
   /// of the commits that introduced each line.
   INCLUDE_MESSAGE = 3,
+
+  /// Applies to BlameCompact.  Controls whether the blame includes parent range
+  /// information, i.e. which lines the blamed line is deemed to have replaced,
+  /// and the parent commit identities for every commit.
+  INCLUDE_PARENT = 4,
 }
 
 union Blame {
@@ -382,6 +387,25 @@ union Blame {
 /// Some items might be missing, depending on the options selected in the
 /// request.  In this case, the corresponding look-up table will also be
 /// omitted.
+///
+/// ## Implementing "skip past this change"
+///
+/// The change that a line is blamed against can be skipped, i.e. the user
+/// can be directed to the code *before* the change, by following these
+/// steps:
+///
+/// * Use `parent_commit_ids[line.commit_id_index][line.parent_index]` as
+///   the commit.
+///
+/// * If `parent_path_index` is present, use `paths[line.parent_path_index]`
+///   as the path, otherwise use `paths[line.path_index]` as the path.
+///
+/// * Use `parent_start_line` and `parent_range_length` as the line range.
+///   If the range length is 0, then the line was inserted *before* the
+///   start line.
+///
+/// If none of the `parent_*` fields are  present then this line is an
+/// original line from the first version of the file.
 struct BlameCompact {
   1: list<BlameCompactLine> lines;
   2: list<map<CommitIdentityScheme, CommitId>> commit_ids;
@@ -390,6 +414,10 @@ struct BlameCompact {
   5: list<DateTime> dates;
   6: optional list<string> titles;
   7: optional list<string> messages;
+
+  /// The parent commit ids for each of the commits (in the same order as
+  /// `commit_ids`).  Only present if `INCLUDE_PARENT` was requested.
+  8: optional list<list<map<CommitIdentityScheme, CommitId>>> parent_commit_ids;
 }
 
 struct BlameCompactLine {
@@ -426,6 +454,32 @@ struct BlameCompactLine {
   /// introduced this line.  This is only provided if `format_options` included
   /// `INCLUDE_MESSAGE` in the request.
   9: optional i32 message_index;
+
+  /// The index of the parent in the bonsai changeset's parents that this line
+  /// is deemed to have replaced.  This is only provided if `format_options`
+  /// included `INCLUDE_PARENT` in the request, and if the line is not from the
+  /// original version of the file.  Use in conjunction with `commit_id_index`
+  /// to find the parent commit from the `parent_commit_ids` look-up table.
+  10: optional i32 parent_index;
+
+  /// The line number in the parent of the start of the range that this
+  /// line is deemed to have replaced.  This may be one greater than the number
+  /// of lines in the file if the new lines were inserted at the end. This is
+  /// only provided if `format_options` included `INCLUDE_PARENT` in the
+  /// request, and if the lines is not from the original version of the file.
+  11: optional i32 parent_start_line;
+
+  /// The number of lines in the parent of the range that this line is deemed
+  /// to have replaced.  If zero, then this line was inserted *before* the
+  /// parent_start_line.  This is only provided if `format_options` included
+  /// `INCLUDE_PARENT` in the request, and if the line is not from the original
+  /// version of the file.
+  12: optional i32 parent_range_length;
+
+  /// If the file was renamed, the index into `paths` of the name of the
+  /// file in the parent.  This is only provided if `format_options` included
+  /// `INCLUDE_PARENT` in the request.
+  13: optional i32 parent_path_index;
 }
 
 enum HistoryFormat {

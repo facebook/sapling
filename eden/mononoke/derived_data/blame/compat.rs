@@ -11,8 +11,8 @@ use mononoke_types::blame::{
     BlameLines as BlameLinesV1, BlameMaybeRejected, BlameRange as BlameRangeV1, BlameRejected,
 };
 use mononoke_types::blame_v2::{
-    BlameLine as BlameLineV2, BlameLines as BlameLinesV2, BlameRange as BlameRangeV2,
-    BlameRanges as BlameRangesV2, BlameV2,
+    BlameLine as BlameLineV2, BlameLineParent, BlameLines as BlameLinesV2,
+    BlameRange as BlameRangeV2, BlameRanges as BlameRangesV2, BlameV2,
 };
 use mononoke_types::{ChangesetId, MPath};
 
@@ -115,6 +115,7 @@ pub struct CompatBlameLine<'a> {
     pub path: &'a MPath,
     pub origin_offset: u32,
     pub changeset_index: Option<u32>,
+    pub parent: Option<BlameLineParent<'a>>,
 }
 
 impl<'a> From<(ChangesetId, &'a MPath, u32)> for CompatBlameLine<'a> {
@@ -124,6 +125,7 @@ impl<'a> From<(ChangesetId, &'a MPath, u32)> for CompatBlameLine<'a> {
             path,
             origin_offset,
             changeset_index: None,
+            parent: None,
         }
     }
 }
@@ -135,6 +137,7 @@ impl<'a> From<BlameLineV2<'a>> for CompatBlameLine<'a> {
             path: blame_line.path,
             origin_offset: blame_line.origin_offset,
             changeset_index: Some(blame_line.changeset_index),
+            parent: blame_line.parent,
         }
     }
 }

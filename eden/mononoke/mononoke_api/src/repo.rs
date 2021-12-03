@@ -21,7 +21,7 @@ pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix};
 use cacheblob::{InProcessLease, LeaseOps};
 use changeset_info::ChangesetInfo;
-use changesets::{Changesets, ChangesetsArc};
+use changesets::{Changesets, ChangesetsArc, ChangesetsRef};
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncer_lease, types::Target, CandidateSelectionHint, CommitSyncContext,
@@ -1097,6 +1097,21 @@ impl RepoContext {
             .map(|entry| (entry.bcs_id, entry.svnrev))
             .collect();
         Ok(mapping)
+    }
+
+    pub async fn many_changeset_parents(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, MononokeError> {
+        let parents = self
+            .blob_repo()
+            .changesets()
+            .get_many(self.ctx.clone(), changesets)
+            .await?
+            .into_iter()
+            .map(|entry| (entry.cs_id, entry.parents))
+            .collect();
+        Ok(parents)
     }
 
     /// Get a list of bookmarks.

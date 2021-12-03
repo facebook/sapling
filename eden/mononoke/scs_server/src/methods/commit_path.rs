@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use dedupmap::DedupMap;
@@ -15,7 +16,7 @@ use mononoke_api::MononokePath;
 use mononoke_api::{ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
 use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::commit_id::map_commit_identities;
 use crate::errors;
@@ -194,6 +195,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitPathBlameParams,
     ) -> Result<thrift::CommitPathBlameResponse, errors::ServiceError> {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+        borrowed!(repo);
         let path = changeset.path_with_history(&commit_path.path)?;
 
         let options = params.format_options.unwrap_or_else(|| {
@@ -203,9 +205,17 @@ impl SourceControlServiceImpl {
             options.contains(&thrift::BlameFormatOption::INCLUDE_CONTENTS);
         let option_include_title = options.contains(&thrift::BlameFormatOption::INCLUDE_TITLE);
         let option_include_message = options.contains(&thrift::BlameFormatOption::INCLUDE_MESSAGE);
+        let option_include_parent = options.contains(&thrift::BlameFormatOption::INCLUDE_PARENT);
 
+        // Changeset ids in the order they will be returned.
+        let mut indexed_csids = Vec::new();
+
+        // Mapped commit ids in that same order.
         let mut commit_ids = Vec::new();
+
+        // The index into these vectors of each changeset.
         let mut commit_id_indexes = HashMap::new();
+
         let mut paths = DedupMap::new();
         let mut authors = DedupMap::new();
         let mut dates = DedupMap::new();
@@ -225,43 +235,79 @@ impl SourceControlServiceImpl {
         let csids: Vec<_> = blame
             .changeset_ids()
             .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
-        for (id, mapped_ids) in
-            map_commit_identities(&repo, csids.clone(), &params.identity_schemes)
-                .await?
-                .into_iter()
+        for (id, mapped_ids) in map_commit_identities(repo, csids.clone(), &params.identity_schemes)
+            .await?
+            .into_iter()
         {
             let index = commit_ids.len();
             commit_ids.push(mapped_ids);
             commit_id_indexes.insert(id, index);
+            indexed_csids.push(id);
         }
 
         // Collect author and date fields from the commit info.
-        let info: HashMap<_, _> = future::try_join_all(csids.into_iter().map(move |csid| {
-            let repo = repo.clone();
-            async move {
-                let changeset = repo
-                    .changeset(ChangesetSpecifier::Bonsai(csid))
-                    .await?
-                    .ok_or_else(|| {
-                        MononokeError::InvalidRequest(format!("failed to resolve commit: {}", csid))
-                    })?;
-                let (date, author, message) = try_join!(
-                    changeset.author_date(),
-                    changeset.author(),
-                    changeset.message(),
-                )?;
-                let title: String = message
-                    .chars()
-                    .take(BLAME_TITLE_MAX_LENGTH)
-                    .take_while(|ch| *ch != '\n')
-                    .collect();
+        let info: HashMap<_, _> = future::try_join_all(csids.iter().map(move |csid| async move {
+            let changeset = repo
+                .changeset(ChangesetSpecifier::Bonsai(*csid))
+                .await?
+                .ok_or_else(|| {
+                    MononokeError::InvalidRequest(format!("failed to resolve commit: {}", csid))
+                })?;
+            let (date, author, message) = try_join!(
+                changeset.author_date(),
+                changeset.author(),
+                changeset.message(),
+            )?;
+            let title: String = message
+                .chars()
+                .take(BLAME_TITLE_MAX_LENGTH)
+                .take_while(|ch| *ch != '\n')
+                .collect();
 
-                Ok::<_, MononokeError>((csid, (author, date, message, title)))
-            }
+            Ok::<_, MononokeError>((*csid, (author, date, message, title)))
         }))
         .await?
         .into_iter()
         .collect();
+
+        // Collect parent information for each changeset if requested.
+        let parent_commit_ids = if option_include_parent {
+            let changeset_parents = repo.many_changeset_parents(csids.clone()).await?;
+            let all_parent_csids = changeset_parents
+                .iter()
+                .map(|(_, parents)| parents)
+                .flatten()
+                .collect::<HashSet<_>>()
+                .into_iter()
+                .copied()
+                .collect::<Vec<_>>();
+            let parent_commit_ids_map =
+                map_commit_identities(repo, all_parent_csids, &params.identity_schemes).await?;
+            let mut parent_commit_ids = Vec::with_capacity(indexed_csids.len());
+            for csid in indexed_csids {
+                let parents = changeset_parents.get(&csid).ok_or_else(|| {
+                    errors::internal_error(format!("missing parents for {}", csid))
+                })?;
+                let mut changeset_parent_commit_ids = Vec::with_capacity(parents.len());
+                for parent in parents {
+                    changeset_parent_commit_ids.push(
+                        parent_commit_ids_map
+                            .get(parent)
+                            .ok_or_else(|| {
+                                errors::internal_error(format!(
+                                    "missing parent commit ids for {}",
+                                    parent
+                                ))
+                            })?
+                            .clone(),
+                    );
+                }
+                parent_commit_ids.push(changeset_parent_commit_ids);
+            }
+            Some(parent_commit_ids)
+        } else {
+            None
+        };
 
         let mut content_iter = content.as_ref().split(|c| *c == b'\n');
 
@@ -286,7 +332,7 @@ impl SourceControlServiceImpl {
                             blame_line.changeset_id
                         ))
                     })?;
-                let mut blame_line = thrift::BlameCompactLine {
+                let mut thrift_blame_line = thrift::BlameCompactLine {
                     line: (line + 1) as i32,
                     contents: None,
                     commit_id_index: *commit_id_index as i32,
@@ -300,17 +346,27 @@ impl SourceControlServiceImpl {
                 };
                 if option_include_contents {
                     if let Some(content_line) = content_iter.next() {
-                        blame_line.contents =
+                        thrift_blame_line.contents =
                             Some(String::from_utf8_lossy(content_line).into_owned());
                     }
                 }
                 if option_include_title {
-                    blame_line.title_index = Some(titles.insert(title) as i32);
+                    thrift_blame_line.title_index = Some(titles.insert(title) as i32);
                 }
                 if option_include_message {
-                    blame_line.message_index = Some(messages.insert(message) as i32);
+                    thrift_blame_line.message_index = Some(messages.insert(message) as i32);
                 }
-                Ok(blame_line)
+                if option_include_parent {
+                    if let Some(parent) = &blame_line.parent {
+                        thrift_blame_line.parent_index = Some(parent.parent_index as i32);
+                        thrift_blame_line.parent_start_line = Some((parent.offset + 1) as i32);
+                        thrift_blame_line.parent_range_length = Some(parent.length as i32);
+                        thrift_blame_line.parent_path_index = parent
+                            .renamed_from_path
+                            .map(|path| paths.insert(&path.to_string()) as i32);
+                    }
+                }
+                Ok(thrift_blame_line)
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -335,6 +391,7 @@ impl SourceControlServiceImpl {
             dates,
             titles,
             messages,
+            parent_commit_ids,
             ..Default::default()
         };
 

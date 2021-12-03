@@ -14,6 +14,7 @@ use futures_util::stream::StreamExt;
 use maplit::btreeset;
 use serde_json::json;
 use source_control::types as thrift;
+use std::fmt::Write as _;
 use std::io::Write;
 use std::str::FromStr;
 
@@ -35,7 +36,9 @@ const ARG_DATE: &str = "DATE";
 const ARG_DATE_SHORT: &str = "DATE_SHORT";
 const ARG_LINE_NUMBER: &str = "LINE_NUMBER";
 const ARG_ORIGIN_LINE_NUMBER: &str = "ORIGIN_LINE_NUMBER";
+const ARG_ORIGIN_PATH: &str = "ORIGIN_PATH";
 const ARG_PARENT: &str = "PARENT";
+const ARG_PARENT_LINE_RANGE: &str = "PARENT_LINE_RANGE";
 const ARG_TITLE: &str = "TITLE";
 const ARG_TITLE_WIDTH: &str = "TITLE_WIDTH";
 
@@ -61,19 +64,58 @@ struct BlameOut {
 impl Render for BlameOut {
     fn render(&self, matches: &ArgMatches, w: &mut dyn Write) -> Result<(), Error> {
         let schemes = get_schemes(matches);
+        let path = get_path(matches).expect("path is required");
         let title_width = matches
             .value_of(ARG_TITLE_WIDTH)
             .map(usize::from_str)
             .transpose()
             .context("Invalid title width")?
             .unwrap_or(DEFAULT_TITLE_WIDTH);
+        let number_width = |n| ((n + 1) as f32).log10().ceil() as usize;
+
         match self.blame {
             thrift::Blame::blame_compact(ref blame) => {
                 let max_author_len = blame.authors.iter().map(|a| a.len()).max().unwrap_or(0);
-                let max_line = blame.lines.iter().map(|l| l.line).max().unwrap_or(0);
-                let max_line_width = ((max_line + 1) as f32).log10().ceil() as usize;
-                let max_origin_line = blame.lines.iter().map(|l| l.origin_line).max().unwrap_or(0);
-                let max_origin_line_width = ((max_origin_line + 1) as f32).log10().ceil() as usize;
+                let max_line_width =
+                    number_width(blame.lines.iter().map(|l| l.line).max().unwrap_or(0) + 1);
+
+                let max_origin_line_width =
+                    number_width(blame.lines.iter().map(|l| l.origin_line).max().unwrap_or(0));
+                let max_origin_path_width = blame
+                    .lines
+                    .iter()
+                    .map(|l| {
+                        let origin_path = blame.paths[l.path_index as usize].as_str();
+                        if origin_path != path {
+                            origin_path.len()
+                        } else {
+                            0
+                        }
+                    })
+                    .max()
+                    .unwrap_or(0);
+                let max_parent_line_range_width = blame
+                    .lines
+                    .iter()
+                    .map(|l| {
+                        let parent_index_width = l
+                            .parent_index
+                            .map_or(0, |i| if i > 0 { number_width(i) + 2 } else { 0 });
+                        let parent_path_width = l
+                            .parent_path_index
+                            .map_or(0, |p| blame.paths[p as usize].len() + 2);
+                        let parent_range_width = match (l.parent_start_line, l.parent_range_length)
+                        {
+                            (Some(start), Some(0)) => number_width(start) + 1,
+                            (Some(start), Some(len)) => {
+                                number_width(start) + number_width(start + len - 1) + 1
+                            }
+                            _ => 0,
+                        };
+                        parent_index_width + parent_path_width + parent_range_width
+                    })
+                    .max()
+                    .unwrap_or(0);
 
                 for line in blame.lines.iter() {
                     if matches.is_present(ARG_USER) {
@@ -111,6 +153,36 @@ impl Render for BlameOut {
                         };
                         write!(w, ":{:<width$.width$}", title, width = title_width)?;
                     }
+                    if matches.is_present(ARG_PARENT_LINE_RANGE) {
+                        let mut plr = String::with_capacity(max_parent_line_range_width);
+                        if let Some(parent_index) = line.parent_index {
+                            if parent_index != 0 {
+                                write!(plr, "({})", parent_index)?;
+                            }
+                        }
+                        if let Some(path_index) = line.parent_path_index {
+                            write!(plr, "[{}]", blame.paths[path_index as usize])?;
+                        }
+                        if let (Some(start), Some(length)) =
+                            (line.parent_start_line, line.parent_range_length)
+                        {
+                            if length == 0 {
+                                write!(plr, "+{}", start)?;
+                            } else {
+                                write!(plr, "{}-{}", start, start + length - 1)?;
+                            }
+                        }
+                        write!(w, ":{:>width$}", plr, width = max_parent_line_range_width)?;
+                    }
+                    if matches.is_present(ARG_ORIGIN_PATH) {
+                        let origin_path = blame.paths[line.path_index as usize].as_str();
+                        write!(
+                            w,
+                            ":{:>width$}",
+                            if origin_path != path { origin_path } else { "" },
+                            width = max_origin_path_width
+                        )?;
+                    }
                     if matches.is_present(ARG_ORIGIN_LINE_NUMBER) {
                         write!(
                             w,
@@ -146,16 +218,38 @@ impl Render for BlameOut {
                         "datetime": datetime(&blame.dates[line.date_index as usize]).to_rfc3339(),
                         "origin_line": line.origin_line,
                     });
-                    if let (Some(title_index), Some(titles)) =
-                        (line.title_index, blame.titles.as_ref())
-                    {
+                    let mut insert = |key, value| {
                         line_json
                             .as_object_mut()
                             .expect("line must be an object")
-                            .insert(
-                                String::from("title"),
-                                titles[title_index as usize].clone().into(),
+                            .insert(String::from(key), value);
+                    };
+                    if let (Some(title_index), Some(titles)) =
+                        (line.title_index, blame.titles.as_ref())
+                    {
+                        insert("title", titles[title_index as usize].clone().into());
+                    }
+                    if let Some(parent_index) = line.parent_index {
+                        insert("parent_index", parent_index.into());
+                        if let Some(parent_commit_ids) = &blame.parent_commit_ids {
+                            let parents = &parent_commit_ids[line.commit_id_index as usize];
+                            insert(
+                                "parent",
+                                json!(map_commit_ids(parents[parent_index as usize].values())),
                             );
+                        }
+                    }
+                    if let Some(path_index) = line.parent_path_index {
+                        insert(
+                            "parent_path",
+                            blame.paths[path_index as usize].clone().into(),
+                        );
+                    }
+                    if let (Some(start), Some(length)) =
+                        (line.parent_start_line, line.parent_range_length)
+                    {
+                        insert("parent_start_line", start.into());
+                        insert("parent_range_length", length.into());
                     }
                     lines.push(line_json);
                 }
@@ -213,6 +307,7 @@ pub(super) async fn run(
         format_options: Some(btreeset! {
             thrift::BlameFormatOption::INCLUDE_CONTENTS,
             thrift::BlameFormatOption::INCLUDE_TITLE,
+            thrift::BlameFormatOption::INCLUDE_PARENT,
         }),
         ..Default::default()
     };
@@ -257,9 +352,21 @@ fn add_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("Show origin line number"),
     )
     .arg(
+        Arg::with_name(ARG_ORIGIN_PATH)
+            .short("O")
+            .long("origin-path")
+            .help("Show origin path if different from current path"),
+    )
+    .arg(
         Arg::with_name(ARG_PARENT)
             .long("parent")
             .help("Show blame for the first parent of the commit"),
+    )
+    .arg(
+        Arg::with_name(ARG_PARENT_LINE_RANGE)
+            .short("P")
+            .long("parent-line-range")
+            .help("Show the line range in the parent this line replaces"),
     )
     .arg(
         Arg::with_name(ARG_TITLE)
