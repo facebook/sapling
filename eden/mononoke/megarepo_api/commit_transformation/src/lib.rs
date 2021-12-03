@@ -364,7 +364,7 @@ pub async fn upload_commits<'a>(
                 });
         files_to_sync.extend(new_files_to_sync);
     }
-    copy_file_contents(ctx, source_repo, target_repo, files_to_sync).await?;
+    copy_file_contents(ctx, source_repo, target_repo, files_to_sync, |_| {}).await?;
     save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone()).await?;
     Ok(())
 }
@@ -374,11 +374,13 @@ pub async fn copy_file_contents<'a>(
     source_repo: &'a BlobRepo,
     target_repo: &'a BlobRepo,
     content_ids: impl IntoIterator<Item = ContentId>,
+    progress_reporter: impl Fn(usize),
 ) -> Result<(), Error> {
     let source_blobstore = source_repo.get_blobstore();
     let target_blobstore = target_repo.get_blobstore();
     let target_filestore_config = target_repo.filestore_config();
 
+    let mut i = 0;
     stream::iter(content_ids.into_iter().map({
         |content_id| {
             copy_content(
@@ -391,7 +393,11 @@ pub async fn copy_file_contents<'a>(
         }
     }))
     .buffer_unordered(100)
-    .try_for_each(|_| async { Ok(()) })
+    .try_for_each(|_| {
+        i += 1;
+        progress_reporter(i);
+        async { Ok(()) }
+    })
     .await
 }
 

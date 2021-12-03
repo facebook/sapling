@@ -140,7 +140,7 @@ pub async fn copy(
             source_repo.name(),
             target_repo.name()
         );
-        copy_file_contents(ctx, source_repo, target_repo, contents_to_upload).await?;
+        copy_file_contents(ctx, source_repo, target_repo, contents_to_upload, |_| {}).await?;
     }
 
     create_changesets(

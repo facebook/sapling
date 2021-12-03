@@ -66,6 +66,11 @@ pub async fn add_source_repo(
         &source_repo,
         &hyper_repo,
         leaf_entries.iter().map(|(_, fsnode)| *fsnode.content_id()),
+        |i| {
+            if i % 100 == 0 {
+                info!(ctx.logger(), "copied {} files", i);
+            }
+        },
     )
     .await?;
     info!(ctx.logger(), "Finished copying");
