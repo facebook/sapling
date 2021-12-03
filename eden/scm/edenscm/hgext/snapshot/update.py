@@ -91,6 +91,7 @@ def update(ui, repo, csid, clean=False):
                 _fullclean(ui, repo, [path for (path, _) in snapshot["file_changes"]])
 
         files2download = []
+        files2exec = []
 
         wctx = repo[None]
         for (path, fc) in snapshot["file_changes"]:
@@ -111,9 +112,15 @@ def update(ui, repo, csid, clean=False):
                     fctx.remove()
             elif "Change" in fc:
                 files2download.append((path, fc["Change"]["upload_token"]))
+                filetype = fc["Change"]["file_type"]
+                if filetype == "Executable":
+                    files2exec.append(path)
             elif "UntrackedChange" in fc:
                 wctx.forget([path], quiet=True)
                 files2download.append((path, fc["UntrackedChange"]["upload_token"]))
+                filetype = fc["UntrackedChange"]["file_type"]
+                if filetype == "Executable":
+                    files2exec.append(path)
 
         repo.edenapi.downloadfiles(getreponame(repo), repo.root, files2download)
 
@@ -122,6 +129,9 @@ def update(ui, repo, csid, clean=False):
             [path for (path, fc) in snapshot["file_changes"] if "Change" in fc],
             quiet=True,
         )
+
+        for path in files2exec:
+            wctx[path].setflags(l=False, x=True)
 
         # TODO(yancouto): Also update bubble here, need to get it from server
         storelatest(repo.metalog(), csid, None)
