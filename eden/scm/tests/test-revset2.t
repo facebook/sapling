@@ -1686,7 +1686,7 @@ Test obsstore related revsets
   D
   G
 
-Test `draft() & ::x` optimization
+Test `draft() & ::x` is not optimized to _phaseandancestors:
 
   $ hg init $TESTTMP/repo2
   $ cd $TESTTMP/repo2
@@ -1746,10 +1746,12 @@ Test `draft() & ::x` optimization
               (symbol 'D3')))
           (symbol 'S2')))))
   * optimized:
-  (func
-    (symbol '_phaseandancestors')
-    (list
+  (and
+    (func
       (symbol 'draft')
+      None)
+    (func
+      (symbol 'ancestors')
       (or
         (list
           (difference
@@ -1768,10 +1770,12 @@ Test `draft() & ::x` optimization
       (symbol 'ancestors')
       (symbol '9')))
   * optimized:
-  (func
-    (symbol '_phaseandancestors')
-    (list
+  (and
+    (func
       (symbol 'secret')
+      None)
+    (func
+      (symbol 'ancestors')
       (symbol '9')))
   $ hg debugrevspec --verify -p optimized '(not public()) & ancestors(S1+D2+P5, 1)'
   * optimized:

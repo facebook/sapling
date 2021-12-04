@@ -125,13 +125,14 @@ def crdump(ui, repo, *revs, **opts):
             except KeyError:
                 pass  # lfs extension is not enabled
 
-        notbackedup = set(repo[rev].node() for rev in revs)
+        # notbackedup is a revset
+        notbackedup = revs
         if ui.configbool("crdump", "commitcloud", False):
             try:
                 oldquiet = repo.ui.quiet
                 # Silence any output from commitcloud
                 repo.ui.quiet = True
-                notbackedup = commitcloud.backup.backup(repo, revs)[1]
+                _backedup, notbackedup = commitcloud.backup.backup(repo, revs)
             except Exception:
                 # Don't let commit cloud exceptions block crdump
                 pass
@@ -148,7 +149,7 @@ def crdump(ui, repo, *revs, **opts):
                 "p1": {"node": ctx.p1().hex()},
                 "user": encoding.fromlocal(ctx.user()),
                 "bookmarks": list(map(encoding.fromlocal, ctx.bookmarks())),
-                "commit_cloud": False if ctx.node() in notbackedup else True,
+                "commit_cloud": False if ctx.rev() in notbackedup else True,
                 "manifest_node": hex(ctx.manifestnode()),
             }
             if ctx.p1().phase() != phases.public:
