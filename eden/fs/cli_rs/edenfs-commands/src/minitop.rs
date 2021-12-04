@@ -56,15 +56,15 @@ const UNKNOWN_COMMAND: &str = "<unknown>";
 const COLUMN_TITLES: &[&str] = &[
     "TOP PID",
     "MOUNT",
-    "FUSE R",
-    "FUSE W",
-    "FUSE COUNT",
-    "FUSE FETCH",
+    "READS",
+    "WRITES",
+    "TOTAL COUNT",
+    "FETCHES",
     "MEMORY",
     "DISK",
     "IMPORTS",
-    "FUSE TIME",
-    "FUSE LAST",
+    "TIME SPENT",
+    "LAST ACCESS",
     "CMD",
 ];
 
