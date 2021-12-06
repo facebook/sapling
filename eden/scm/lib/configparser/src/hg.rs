@@ -461,32 +461,33 @@ impl ConfigSetHgExt for ConfigSet {
     }
 }
 
-/// Read repo name from various places (.hg/reponame, remotefilelog.reponame).
+/// Read repo name from various places (.hg/reponame, remotefilelog.reponame,
+/// paths.default).
 ///
 /// Try to write the reponame back to `.hg/reponame`.
 ///
 /// If `configs.forbid-empty-reponame` is `true`, raise if the repo name is empty
 /// and `paths.default` is set.
 fn read_repo_name(config: &ConfigSet, repo_path: &Path) -> crate::Result<String> {
-    let repo_name: String = match read_repo_name_from_disk(repo_path) {
-        Ok(name) => {
-            tracing::debug!("repo name: {:?} (from .hg/reponame)", &name);
-            name
-        }
+    let (repo_name, source): (String, &str) = match read_repo_name_from_disk(repo_path) {
+        Ok(name) => (name, ".hg/reponame"),
         Err(e) => {
             tracing::warn!("repo name: no .hg/reponame: {:?}", &e);
             let name: String = config.get_or_default("remotefilelog", "reponame")?;
-            if !name.is_empty() {
-                tracing::debug!("repo name: {:?} (from config)", &name);
-                let path = get_repo_name_path(repo_path);
-                match fs::write(&path, &name) {
-                    Ok(_) => tracing::debug!("repo name: written to .hg/reponame"),
-                    Err(e) => tracing::warn!("repo name: cannot write to .hg/reponame: {:?}", e),
-                }
-            }
-            name
+            (name, "remotefilelog.reponame")
         }
     };
+
+    if !repo_name.is_empty() {
+        tracing::debug!("repo name: {:?} (from {})", &repo_name, source);
+        if source != ".hg/reponame" {
+            let path = get_repo_name_path(repo_path);
+            match fs::write(&path, &repo_name) {
+                Ok(_) => tracing::debug!("repo name: written to .hg/reponame"),
+                Err(e) => tracing::warn!("repo name: cannot write to .hg/reponame: {:?}", e),
+            }
+        }
+    }
 
     let forbid_empty_reponame: bool = config.get_or_default("configs", "forbid-empty-reponame")?;
     if forbid_empty_reponame && repo_name.is_empty() && config.get("paths", "default").is_some() {
