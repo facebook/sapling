@@ -8,6 +8,7 @@ Create a repository:
 
   $ hg config
   devel.all-warnings=true
+  devel.collapse-traceback=true
   devel.default-date=0 0
   experimental.metalog=true
   extensions.patchrmdir=

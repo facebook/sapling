@@ -77,6 +77,7 @@ promptecho = True
 
 [devel]
 all-warnings = true
+collapse-traceback = true
 default-date = 0 0
 
 [lfs]

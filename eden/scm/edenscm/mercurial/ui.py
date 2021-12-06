@@ -1434,12 +1434,19 @@ class ui(object):
             fancy = self.configbool("ui", "fancy-traceback")
             cause = getattr(exc[1], "cause", None)
 
+            # Collapse traceback to make it easier for tests.
+            collapse = self.configbool("devel", "collapse-traceback")
+
             if cause is not None:
-                if fancy:
-                    causetb = util.smarttraceback(cause[2])
+                if collapse:
+                    causetb = ["  # collapsed by devel.collapse-traceback"]
+                    exctb = []
                 else:
-                    causetb = traceback.format_tb(cause[2])
-                exctb = traceback.format_tb(exc[2])
+                    if fancy:
+                        causetb = util.smarttraceback(cause[2])
+                    else:
+                        causetb = traceback.format_tb(cause[2])
+                    exctb = traceback.format_tb(exc[2])
                 exconly = traceback.format_exception_only(cause[0], cause[1])
 
                 # exclude frame where 'exc' was chained and rethrown from exctb
@@ -1450,11 +1457,18 @@ class ui(object):
                     "".join(exconly),
                 )
             else:
-                if fancy:
-                    data = util.smartformatexc(exc)
+                if collapse:
+                    exconly = traceback.format_exception_only(exc[0], exc[1])
+                    data = (
+                        "Traceback (most recent call last):\n"
+                        "  # collapsed by devel.collapse-traceback\n"
+                    ) + "".join(exconly)
                 else:
-                    output = traceback.format_exception(exc[0], exc[1], exc[2])
-                    data = r"".join(output)
+                    if fancy:
+                        data = util.smartformatexc(exc)
+                    else:
+                        output = traceback.format_exception(exc[0], exc[1], exc[2])
+                        data = r"".join(output)
                 self.write_err(data)
         return self.tracebackflag or force
 

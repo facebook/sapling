@@ -232,10 +232,13 @@ Testing --debug:
 
 Testing --traceback (this does not work with the Rust code path):
 
-#if false
-  $ hg --cwd c --config x --traceback id 2>&1 | grep -i 'traceback'
+  $ hg --traceback log -r foo
   Traceback (most recent call last):
-#endif
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.RepoError: '$TESTTMP' is not inside a repository, but this command requires a repository
+  abort: '$TESTTMP' is not inside a repository, but this command requires a repository!
+  (use 'cd' to go to a directory inside a repository and try again)
+  [255]
 
 Testing --time:
 

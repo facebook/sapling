@@ -1603,6 +1603,7 @@ class Test(unittest.TestCase):
             hgrc.write("[defaults]\n")
             hgrc.write("[devel]\n")
             hgrc.write("all-warnings = true\n")
+            hgrc.write("collapse-traceback = true\n")
             hgrc.write("default-date = 0 0\n")
             hgrc.write("[experimental]\n")
             hgrc.write("metalog = true\n")
