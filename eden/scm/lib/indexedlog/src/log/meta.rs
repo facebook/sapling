@@ -12,6 +12,9 @@ use std::io::Write;
 use std::io::{self};
 use std::path::Path;
 
+use byteorder::LittleEndian;
+use byteorder::ReadBytesExt;
+use byteorder::WriteBytesExt;
 use vlqencoding::VLQDecode;
 use vlqencoding::VLQEncode;
 
@@ -36,18 +39,13 @@ pub struct LogMetadata {
 }
 
 impl LogMetadata {
-    const HEADER: &'static [u8] = b"meta\0";
-
     /// Read metadata from a reader.
     pub fn read<R: Read>(mut reader: R) -> io::Result<Self> {
-        let mut header = vec![0; Self::HEADER.len()];
-        reader.read_exact(&mut header)?;
-        if header != Self::HEADER {
-            let msg = "invalid metadata header";
-            return Err(io::Error::new(io::ErrorKind::InvalidData, msg));
-        }
-
-        let hash: u64 = reader.read_vlq()?;
+        let header = HeaderVersion::from_reader(&mut reader)?;
+        let hash: u64 = match header {
+            HeaderVersion::V0 => reader.read_vlq()?,
+            HeaderVersion::V1 => reader.read_u64::<LittleEndian>()?,
+        };
         let buf_len = reader.read_vlq()?;
 
         let mut buf = vec![0; buf_len];
@@ -87,6 +85,20 @@ impl LogMetadata {
 
     /// Write metadata to a writer.
     pub fn write<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+        let header = if cfg!(test) {
+            HeaderVersion::V1
+        } else {
+            HeaderVersion::V0
+        };
+        self.write_using_header(writer, header)
+    }
+
+    /// Write using specified header. Used by tests.
+    fn write_using_header<W: Write>(
+        &self,
+        writer: &mut W,
+        header: HeaderVersion,
+    ) -> io::Result<()> {
         let mut buf = Vec::new();
         buf.write_vlq(self.primary_len)?;
         buf.write_vlq(self.indexes.len())?;
@@ -97,8 +109,11 @@ impl LogMetadata {
             buf.write_vlq(*len)?;
         }
         buf.write_vlq(self.epoch)?;
-        writer.write_all(Self::HEADER)?;
-        writer.write_vlq(xxhash(&buf))?;
+        writer.write_all(header.to_bytes())?;
+        match header {
+            HeaderVersion::V1 => writer.write_u64::<LittleEndian>(xxhash(&buf))?,
+            HeaderVersion::V0 => writer.write_vlq(xxhash(&buf))?,
+        }
         writer.write_vlq(buf.len())?;
         writer.write_all(&buf)?;
 
@@ -141,6 +156,40 @@ impl LogMetadata {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+enum HeaderVersion {
+    V0,
+
+    // V1: xxhash uses fixed 8 bytes instead of vlq.
+    V1,
+}
+
+impl HeaderVersion {
+    const HEADER_V0: &'static [u8] = b"meta\0";
+    const HEADER_V1: &'static [u8] = b"meta\x01";
+
+    fn from_reader(reader: &mut dyn Read) -> io::Result<Self> {
+        assert_eq!(Self::HEADER_V0.len(), Self::HEADER_V0.len());
+        let mut header = vec![0; Self::HEADER_V0.len()];
+        reader.read_exact(&mut header)?;
+        if header == Self::HEADER_V1 {
+            Ok(Self::V1)
+        } else if header == Self::HEADER_V0 {
+            Ok(Self::V0)
+        } else {
+            let msg = "invalid metadata header";
+            Err(io::Error::new(io::ErrorKind::InvalidData, msg))
+        }
+    }
+
+    fn to_bytes(&self) -> &[u8] {
+        match self {
+            Self::V0 => Self::HEADER_V0,
+            Self::V1 => Self::HEADER_V1,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use quickcheck::quickcheck;
@@ -153,6 +202,15 @@ mod tests {
             let mut buf = Vec::new();
             let meta = LogMetadata { primary_len, indexes, epoch,  };
             meta.write(&mut buf).expect("write");
+            let mut cur = Cursor::new(buf);
+            let meta_read = LogMetadata::read(&mut cur).expect("read");
+            meta_read == meta
+        }
+
+        fn test_roundtrip_meta_v0(primary_len: u64, indexes: BTreeMap<String, u64>, epoch: u64) -> bool {
+            let mut buf = Vec::new();
+            let meta = LogMetadata { primary_len, indexes, epoch,  };
+            meta.write_using_header(&mut buf, HeaderVersion::V0).expect("write");
             let mut cur = Cursor::new(buf);
             let meta_read = LogMetadata::read(&mut cur).expect("read");
             meta_read == meta
