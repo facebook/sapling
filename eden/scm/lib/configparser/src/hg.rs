@@ -338,38 +338,8 @@ impl ConfigSetHgExt for ConfigSet {
                     bail!("unable to read repo config to get repo name");
                 }
 
-                let repo_name: String = match read_repo_name_from_disk(&repo_path) {
-                    Ok(name) => {
-                        tracing::debug!("repo name: {:?} (from .hg/reponame)", &name);
-                        name
-                    }
-                    Err(e) => {
-                        tracing::warn!("repo name: no .hg/reponame: {:?}", &e);
-                        let name: String =
-                            temp_config.get_or_default("remotefilelog", "reponame")?;
-                        if !name.is_empty() {
-                            tracing::debug!("repo name: {:?} (from config)", &name);
-                            let path = get_repo_name_path(&repo_path);
-                            match fs::write(&path, &name) {
-                                Ok(_) => tracing::debug!("repo name: written to .hg/reponame"),
-                                Err(e) => tracing::warn!(
-                                    "repo name: cannot write to .hg/reponame: {:?}",
-                                    e
-                                ),
-                            }
-                        }
-                        name
-                    }
-                };
-
-                let forbid_empty_reponame: bool =
-                    temp_config.get_or_default("configs", "forbid-empty-reponame")?;
-                if forbid_empty_reponame && repo_name.is_empty() {
-                    let msg = "reponame is empty".to_string();
-                    return Err(Error::General(msg).into());
-                }
-
                 let user_name: String = temp_config.get_or_default("ui", "username")?;
+                let repo_name = read_repo_name(&temp_config, repo_path)?;
 
                 (repo_name, user_name)
             };
@@ -489,6 +459,41 @@ impl ConfigSetHgExt for ConfigSet {
             }),
         ))
     }
+}
+
+/// Read repo name from various places (.hg/reponame, remotefilelog.reponame).
+///
+/// Try to write the reponame back to `.hg/reponame`.
+///
+/// If `configs.forbid-empty-reponame` is `true`, raise if the repo name is empty.
+fn read_repo_name(config: &ConfigSet, repo_path: &Path) -> crate::Result<String> {
+    let repo_name: String = match read_repo_name_from_disk(repo_path) {
+        Ok(name) => {
+            tracing::debug!("repo name: {:?} (from .hg/reponame)", &name);
+            name
+        }
+        Err(e) => {
+            tracing::warn!("repo name: no .hg/reponame: {:?}", &e);
+            let name: String = config.get_or_default("remotefilelog", "reponame")?;
+            if !name.is_empty() {
+                tracing::debug!("repo name: {:?} (from config)", &name);
+                let path = get_repo_name_path(repo_path);
+                match fs::write(&path, &name) {
+                    Ok(_) => tracing::debug!("repo name: written to .hg/reponame"),
+                    Err(e) => tracing::warn!("repo name: cannot write to .hg/reponame: {:?}", e),
+                }
+            }
+            name
+        }
+    };
+
+    let forbid_empty_reponame: bool = config.get_or_default("configs", "forbid-empty-reponame")?;
+    if forbid_empty_reponame && repo_name.is_empty() {
+        let msg = "reponame is empty".to_string();
+        return Err(Error::General(msg));
+    }
+
+    Ok(repo_name)
 }
 
 impl ConfigSet {
