@@ -487,12 +487,13 @@ fn read_repo_name(config: &ConfigSet, repo_path: &Path) -> crate::Result<String>
                 Err(e) => tracing::warn!("repo name: cannot write to .hg/reponame: {:?}", e),
             }
         }
-    }
-
-    let forbid_empty_reponame: bool = config.get_or_default("configs", "forbid-empty-reponame")?;
-    if forbid_empty_reponame && repo_name.is_empty() && config.get("paths", "default").is_some() {
-        let msg = "reponame is empty".to_string();
-        return Err(Error::General(msg));
+    } else {
+        let forbid_empty_reponame: bool =
+            config.get_or_default("configs", "forbid-empty-reponame")?;
+        if forbid_empty_reponame && config.get("paths", "default").is_some() {
+            let msg = "reponame is empty".to_string();
+            return Err(Error::General(msg));
+        }
     }
 
     Ok(repo_name)
