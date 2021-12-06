@@ -1030,7 +1030,10 @@ fn check_type(index: impl IndexBuf, offset: usize, expected: u8) -> crate::Resul
         .get(offset)
         .ok_or_else(|| index.range_error(offset, 1))?);
     if typeint != expected {
-        Err(index.corruption(format!("type mismatch at offset {}", offset)))
+        Err(index.corruption(format!(
+            "type mismatch at offset {} expected {} but got {}",
+            offset, expected, typeint
+        )))
     } else {
         Ok(())
     }
