@@ -364,7 +364,7 @@ impl OpenOptionsRepair for OpenOptions {
         out += &indent(&multi_meta_log_open_options().open_options_repair(&mpath)?);
 
         // Then, repair each logs.
-        let mut name_len: HashMap<&str, u64> = HashMap::new();
+        let mut repaired_log_metas = HashMap::new();
         for (name, opts) in self.name_open_options.iter() {
             let fspath = path.join(name);
             if !fspath.exists() {
@@ -376,7 +376,7 @@ impl OpenOptionsRepair for OpenOptions {
             let log = opts.open(&fspath)?;
             let len = log.meta.primary_len;
             out += &format!("Log {} has valid length {} after repair\n", name, len);
-            name_len.insert(*name, len);
+            repaired_log_metas.insert(*name, log.meta);
         }
 
         // Finally, figure out a good "multimeta" from the multimeta log.
@@ -394,7 +394,10 @@ impl OpenOptionsRepair for OpenOptions {
                     // Check if everything is okay.
                     if mmeta.metas.iter().all(|(name, meta)| {
                         let len_required = meta.lock().unwrap().primary_len;
-                        let len_provided = name_len.get(name.as_str()).cloned().unwrap_or_default();
+                        let len_provided = repaired_log_metas
+                            .get(name.as_str())
+                            .map(|m| m.primary_len)
+                            .unwrap_or_default();
                         len_required <= len_provided
                     }) {
                         if invalid_count > 0 {
@@ -440,7 +443,21 @@ impl OpenOptionsRepair for OpenOptions {
             Some(meta) => meta,
         };
 
-        if invalid_count > 0 {
+        let mut should_write_new_meta_entry = invalid_count > 0;
+        for (name, log_meta) in selected_meta.metas.iter() {
+            let mut log_meta = log_meta.lock().unwrap();
+            let should_invalidate_indexes = match repaired_log_metas.get(name.as_str()) {
+                None => true,
+                Some(repaired_log_meta) => &*log_meta != repaired_log_meta,
+            };
+            if should_invalidate_indexes {
+                out += &format!("Invalidated indexes in log '{}'\n", name);
+                log_meta.indexes.clear();
+                should_write_new_meta_entry = true;
+            }
+        }
+
+        if should_write_new_meta_entry {
             selected_meta
                 .write_log(&mut mlog, &lock)
                 .context("repair cannot write MultiMeta log")?;
@@ -858,6 +875,8 @@ Log a has valid length 992 after repair
 Repairing Log b
 Log b has valid length 1212 after repair
 Found valid MultiMeta after 2 invalid entries: a: 972, b: 972
+Invalidated indexes in log 'a'
+Invalidated indexes in log 'b'
 Write valid MultiMeta"#
         );
         verify();
@@ -870,7 +889,9 @@ Repairing Log a
 Log a has valid length 992 after repair
 Repairing Log b
 Log b has valid length 1212 after repair
-MultiMeta is valid"#
+Invalidated indexes in log 'a'
+Invalidated indexes in log 'b'
+Write valid MultiMeta"#
         );
     }
 
@@ -922,16 +943,16 @@ MultiMeta is valid"#
 Repairing Log a
   Rebuilt index "x"
 Log a has valid length 52 after repair
-MultiMeta is valid"#
+Invalidated indexes in log 'a'
+Write valid MultiMeta"#
         );
 
         // Index should be rebuilt (shorter).
         let index_len_after = file_size(&index_path);
         assert!(index_len_before > index_len_after);
 
-        // BUG: Still cannot open the MultiLog properly.
-        // This is because the MultiMeta uses an invalid index length.
-        opts.open(path).map(|_| 1).unwrap_err();
+        // The MultiLog can be opened fine.
+        opts.open(path).map(|_| 1).unwrap();
     }
 
     #[test]
