@@ -465,7 +465,8 @@ impl ConfigSetHgExt for ConfigSet {
 ///
 /// Try to write the reponame back to `.hg/reponame`.
 ///
-/// If `configs.forbid-empty-reponame` is `true`, raise if the repo name is empty.
+/// If `configs.forbid-empty-reponame` is `true`, raise if the repo name is empty
+/// and `paths.default` is set.
 fn read_repo_name(config: &ConfigSet, repo_path: &Path) -> crate::Result<String> {
     let repo_name: String = match read_repo_name_from_disk(repo_path) {
         Ok(name) => {
@@ -488,7 +489,7 @@ fn read_repo_name(config: &ConfigSet, repo_path: &Path) -> crate::Result<String>
     };
 
     let forbid_empty_reponame: bool = config.get_or_default("configs", "forbid-empty-reponame")?;
-    if forbid_empty_reponame && repo_name.is_empty() {
+    if forbid_empty_reponame && repo_name.is_empty() && config.get("paths", "default").is_some() {
         let msg = "reponame is empty".to_string();
         return Err(Error::General(msg));
     }
