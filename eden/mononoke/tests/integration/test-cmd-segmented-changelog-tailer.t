@@ -55,23 +55,11 @@ Seed repository.
 Actually run Segmented Changelog Tailer.
 
   $ quiet segmented_changelog_tailer --repo repo
-  $ grep segmented_changelog "$TESTTMP/quiet.last.log"
-  * repo name 'repo' translates to id 0 (glob)
-  * repo 0: SegmentedChangelogTailer initialized (glob)
-  * repo 0: starting incremental update to segmented changelog (glob)
-  * repo 0: bookmark master_bookmark resolved to * (glob)
-  * repo 0: IdMap updated, IdDag updated (glob)
-  * repo 0: segmented changelog version saved, idmap_version: 1, iddag_version: c2e0b7de* (glob)
+  $ grep 'successful incremental update' "$TESTTMP/quiet.last.log"
   * repo 0: successful incremental update to segmented changelog (glob)
-  * repo 0: SegmentedChangelogTailer is done (glob)
 
 Run Segmented Changelog Tailer. Nothing to do.
 
   $ quiet segmented_changelog_tailer --repo repo
-  $ grep segmented_changelog "$TESTTMP/quiet.last.log"
-  * repo name 'repo' translates to id 0 (glob)
-  * repo 0: SegmentedChangelogTailer initialized (glob)
-  * repo 0: starting incremental update to segmented changelog (glob)
-  * repo 0: bookmark master_bookmark resolved to * (glob)
+  $ grep 'already up to date' "$TESTTMP/quiet.last.log"
   * repo 0: segmented changelog already up to date, skipping update to iddag (glob)
-  * repo 0: SegmentedChangelogTailer is done (glob)
