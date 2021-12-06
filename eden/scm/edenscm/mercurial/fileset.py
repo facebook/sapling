@@ -457,11 +457,11 @@ def eol(mctx, x):
         d = mctx.ctx[f].data()
         if util.binary(d):
             continue
-        if (enc == "dos" or enc == "win") and "\r\n" in d:
+        if (enc == "dos" or enc == "win") and b"\r\n" in d:
             s.append(f)
-        elif enc == "unix" and re.search("(?<!\r)\n", d):
+        elif enc == "unix" and re.search(b"(?<!\r)\n", d):
             s.append(f)
-        elif enc == "mac" and re.search("\r(?!\n)", d):
+        elif enc == "mac" and re.search(b"\r(?!\n)", d):
             s.append(f)
     return s
 

@@ -1,4 +1,3 @@
-#require py2
 
   $ newext buggylocking <<EOF
   > """A small extension that tests our developer warnings
@@ -47,12 +46,12 @@
   > 
   > @command('no-wlock-write', [], '')
   > def nowlockwrite(ui, repo):
-  >     with repo.vfs(b'branch', 'a'):
+  >     with repo.vfs('branch', 'a'):
   >         pass
   > 
   > @command('no-lock-write', [], '')
   > def nolockwrite(ui, repo):
-  >     with repo.svfs(b'fncache', 'a'):
+  >     with repo.svfs('fncache', 'a'):
   >         pass
   > 
   > @command('stripintr', [], '')

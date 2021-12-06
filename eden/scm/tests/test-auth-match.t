@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ hg init repo
@@ -35,8 +34,8 @@ Non-existent credentials are ignored
   > EOF
 
   $ hg debugreadauthforuri https://example.com
-   DEBUG auth: Ignoring [auth] group "first" because of missing client certificate: "foocert"
-   DEBUG auth: Ignoring [auth] group "second" because of missing private key: "fookey"
+  DEBUG auth: Ignoring [auth] group "first" because of missing client certificate: "foocert"
+  DEBUG auth: Ignoring [auth] group "second" because of missing private key: "fookey"
   no match found
 
 Valid credentials are used
@@ -68,7 +67,7 @@ Valid credentials are preferred
   > EOF
 
   $ hg debugreadauthforuri https://example.com
-   DEBUG auth: Ignoring [auth] group "second" because of missing private key: "fookey"
+  DEBUG auth: Ignoring [auth] group "second" because of missing private key: "fookey"
   auth.first.cert=foocert
   auth.first.prefix=example.com
   auth.first.schemes=https

@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ fileset() {
@@ -30,6 +29,8 @@ Test operators and basic patterns
   (string 're:a\\d')
   a1
   a2
+  * DeprecationWarning: invalid escape sequence '\d' (glob)
+    return decodeutf8(codecs.escape_decode(s)[0], errors="surrogateescape")
   $ fileset -v 'a1 or a2'
   (or
     (symbol 'a1')
@@ -53,7 +54,7 @@ Test operators and basic patterns
   a2
   $ fileset 'a_b'
   $ fileset '"\xy"'
-  hg: parse error: invalid \x escape
+  hg: parse error: invalid \x escape at position 0
   [255]
 
 Test files status
@@ -138,7 +139,7 @@ Test files properties
   c1
   b1
   $ fileset 'grep("missingparens(")'
-  hg: parse error: invalid match pattern: unbalanced parenthesis
+  hg: parse error: invalid match pattern: missing ), unterminated subpattern at position 13
   [255]
 
 #if execbit
@@ -272,9 +273,9 @@ Test with a revision
   b2
   c1
 
-  >>> _ = open('dos', 'wb').write("dos\r\n")
-  >>> _ = open('mixed', 'wb').write("dos\r\nunix\n")
-  >>> _ = open('mac', 'wb').write("mac\r")
+  >>> _ = open('dos', 'wb').write(b"dos\r\n")
+  >>> _ = open('mixed', 'wb').write(b"dos\r\nunix\n")
+  >>> _ = open('mac', 'wb').write(b"mac\r")
   $ hg add dos mixed mac
 
 (remove a1, to examine safety of 'eol' on removed files)

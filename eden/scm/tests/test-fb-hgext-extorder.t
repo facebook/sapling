@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Set up repository
@@ -38,4 +37,4 @@ Conflicting deps
   $ hg id > out.txt 2>&1
   [1]
   $ grep MercurialExtOrderException: < out.txt
-  MercurialExtOrderException: extorder: conflicting extension order
+  edenscm.hgext.extorder.MercurialExtOrderException: extorder: conflicting extension order

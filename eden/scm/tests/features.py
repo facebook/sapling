@@ -5,7 +5,6 @@
 
 narrowheadsincompatiblelist = """
     test-bookmarks.t
-    test-hgext-perfsuite.t
     test-revset2.t
 
     test-revset-t.py
@@ -168,7 +167,6 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-copytrace-mergedriver-t.py
     test-fb-hgext-debugcommitmessage-t.py
     test-fb-hgext-diff-since-last-submit-t.py
-    test-fb-hgext-edrecord.t
     test-fb-hgext-errorredirect.t
     test-fb-hgext-extorder.t
     test-fb-hgext-extutil.py
@@ -182,7 +180,6 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-fbhistedit-stop.t
     test-fb-hgext-generic-bisect.py
     test-fb-hgext-githelp.t
-    test-fb-hgext-grepdiff.t
     test-fb-hgext-grpcheck.t
     test-fb-hgext-morestatus.t
     test-fb-hgext-myparent.t
@@ -461,7 +458,6 @@ segmentedchangelogcompatiblelist = """
     test-fb-hgext-tweakdefaults-remotenames.t
     test-gitlookup-infinitepush.t
     test-globalopts.t
-    test-hgext-perfsuite.t
     test-hgext-stablerev.t
     test-histedit-arguments.t
     test-histedit-base.t
@@ -636,7 +632,6 @@ ignorerevnumincompatiblelist = """
     test-git-export.t
     test-glog-topological-t.py
     test-glog-t.py
-    test-gpg.t
     test-graft-t.py
     test-histedit-commute.t
     test-histedit-edit.t

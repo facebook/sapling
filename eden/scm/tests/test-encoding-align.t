@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Test alignment of multibyte characters

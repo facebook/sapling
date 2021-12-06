@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Test argument handling and various data parsing

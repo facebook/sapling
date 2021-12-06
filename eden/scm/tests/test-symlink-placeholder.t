@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 #require symlink
@@ -72,6 +71,7 @@ Commit shouldn't succeed:
 Write a valid string to the placeholder:
 
   >>> open('b', 'w').write('this')
+  4
   $ hg --config extensions.n=$TESTTMP/nolink.py st --debug
   M b
   $ hg --config extensions.n=$TESTTMP/nolink.py ci -m1

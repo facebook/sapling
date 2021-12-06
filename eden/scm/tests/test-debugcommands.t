@@ -1,4 +1,3 @@
-#require py2
   $ disable treemanifest
   $ setconfig ui.interactive=yes format.usegeneraldelta=yes
 
@@ -63,7 +62,7 @@ debugdelta chain basic output
    {
     "chainid": 1,
     "chainlen": 1,
-    "chainratio": 1.02325581395,
+    "chainratio": 1.0232558139534884,
     "chainsize": 44,
     "compsize": 44,
     "deltatype": "base",
@@ -94,7 +93,7 @@ debugdelta chain with sparse read enabled
    {
     "chainid": 1,
     "chainlen": 1,
-    "chainratio": 1.02325581395,
+    "chainratio": 1.0232558139534884,
     "chainsize": 44,
     "compsize": 44,
     "deltatype": "base",

@@ -38,7 +38,8 @@ class smallcommitmetadata(object):
                 {"node": hex(node), "category": category, "data": data}
                 for ((node, category), data) in self.contents.items()
             ]
-            json.dump(entries, f)
+            serialized = json.dumps(entries)
+            f.write(serialized.encode("utf8"))
 
     def store(self, node, category, data):
         """Adds a new entry with the specified node and category, and updates the data on disk. Returns the removed entry, if any."""

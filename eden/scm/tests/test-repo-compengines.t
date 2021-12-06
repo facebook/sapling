@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 A new repository uses zlib storage, which doesn't need a requirement

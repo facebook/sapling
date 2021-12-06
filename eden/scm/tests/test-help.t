@@ -309,7 +309,6 @@ Test extension help:
        disablesymlinks
                      disables symlink support when enabled
        drop          drop specified changeset from the stack
-       edrecord      (no help text available)
        extdiff       command to allow external programs to compare revisions
        extorder
        extutil       (no help text available)
@@ -322,8 +321,6 @@ Test extension help:
        gitrevset     map a git hash to a Mercurial hash:
        globalrevs    extension for providing strictly increasing revision
                      numbers
-       gpg           commands to sign and verify changesets
-       grepdiff      (no help text available)
        grpcheck      check if the user is in specified groups
        hgevents      publishes state-enter and state-leave events to Watchman
        hgsql         sync hg repos with MySQL
@@ -341,7 +338,6 @@ Test extension help:
        morestatus    make status give a bit more context
        myparent
        ownercheck    prevent operations on repos not owned by the current user
-       perfsuite     (no help text available)
        phabdiff      (no help text available)
        phabstatus    (no help text available)
        phrevset      provides support for Phabricator revsets
@@ -352,8 +348,6 @@ Test extension help:
        rage          upload useful diagnostics and give instructions for asking
                      for help
        remotenames   mercurial extension for improving client/server workflows
-       repogenerator
-                     (no help text available)
        reset         reset the active bookmark and working copy to a desired
                      revision
        schemes       extend schemes with shortcuts to repository swarms

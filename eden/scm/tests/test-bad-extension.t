@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 ensure that failing ui.atexit handlers report sensibly
@@ -39,7 +38,6 @@ another bad extension
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
-  > gpg =
   > badext = $abspathexc
   > baddocext = $abspathdoc
   > badext2 =
@@ -47,7 +45,7 @@ another bad extension
 
   $ hg -q help help 2>&1 |grep extension
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named badext2
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.hgext.badext2'
 
 show traceback
 
@@ -55,9 +53,8 @@ show traceback
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named badext2
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.hgext.badext2'
   Traceback (most recent call last):
-  ImportError: No module named badext2
 
 names of extensions failed to load can be accessed via extensions.notloaded()
 
@@ -81,15 +78,14 @@ show traceback for ImportError of hgext.name if debug is set
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named badext2
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.hgext.badext2'
   Traceback (most recent call last):
-  ImportError: No module named *badext2 (glob)
 
 confirm that there's no crash when an extension's documentation is bad
 
   $ hg help --keyword baddocext
   warning: extension badext is disabled because it cannot be imported from $TESTTMP/badext.py: bit bucket overflow
-  warning: extension badext2 is disabled because it cannot be imported: No module named badext2
+  warning: extension badext2 is disabled because it cannot be imported: No module named 'edenscm.hgext.badext2'
   Topics:
   
    extensions Using Additional Features

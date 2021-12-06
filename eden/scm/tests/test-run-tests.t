@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 This file tests the behavior of run-tests.py itself.
@@ -854,7 +853,7 @@ test --record support
   ----------------------------------------------------------------------
   # Ran 1 tests, 0 skipped, 0 failed.
   $ GIT_DIR=$TESTTMP/record/child1/test-success.t/.git git log --stat
-  commit 7dcd55e4b90850b75e85e73b0fa636d3f76247e2
+  commit b4fb9b2b0bb2a1f8ceaa7c0de15d43c5e6071c14
   Author: test <test@localhost>
   Date:   Sat Jan 1 00:00:00 2000 +0000
   
@@ -863,19 +862,19 @@ test --record support
    x | 0
    1 file changed, 0 insertions(+), 0 deletions(-)
   
-  commit f6293e577088469cb68d70eaebe572c396a89486
+  commit 57159e7279ffd54b69055c5bf4c921712e3b91fd
   Author: test <test@localhost>
   Date:   Sat Jan 1 00:00:00 2000 +0000
   
       $ rm x (line 23)
   
-  commit d30656b881527f71305a5cb0d36735bf04a8824d
+  commit 13f7ea01e107ba9d277ed112fa74afe2b99798d9
   Author: test <test@localhost>
   Date:   Sat Jan 1 00:00:00 2000 +0000
   
       $ printf 'zyx\nwvu\ntsr\n' (line 16)
   
-  commit 749d47a07cbcc6ef6823ebb81e8749aa7728ee58
+  commit 68148d11d68fe4f3e9b7e76678b36b4146d50f30
   Author: test <test@localhost>
   Date:   Sat Jan 1 00:00:00 2000 +0000
   
@@ -884,17 +883,20 @@ test --record support
    x | 0
    1 file changed, 0 insertions(+), 0 deletions(-)
   
-  commit bc24df25828a37502fd35fed6d03ee25839dbdc7
+  commit e23575207b5d3360e05f2bdad43ee8464e798b33
   Author: test <test@localhost>
   Date:   Sat Jan 1 00:00:00 2000 +0000
   
       $ touch x (line 9)
   
-  commit 66e869113273061d628421e8a8167bf7361c5938
+  commit 752d958ab94d1a68a7c1c6def25a5a91514c7c96
   Author: test <test@localhost>
   Date:   Sat Jan 1 00:00:00 2000 +0000
   
       $ echo xyzzy (line 2)
+  
+   .scm.sqlite | Bin 0 -> 4096 bytes
+   1 file changed, 0 insertions(+), 0 deletions(-)
   
   commit 47537d28c96c68884b66c5fd3d3aea8bf44624f1
   Author: test <test@localhost>

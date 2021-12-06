@@ -323,7 +323,10 @@ def _getamendcopies(repo, dest, ancestor):
         # Load the amend copytrace data from this commit.
         encoded = json.loads(db[ctx.node()])
         return dict(
-            (k.decode("base64"), v.decode("base64"))
+            (
+                codecs.decode(k.encode("utf8"), "base64").decode("utf8"),
+                codecs.decode(v.encode("utf8"), "base64").decode("utf8"),
+            )
             for (k, v) in pycompat.iteritems(encoded)
         )
     except Exception:

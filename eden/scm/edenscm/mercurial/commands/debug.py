@@ -2867,7 +2867,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
         # Obtain data on the raw chunks in the revlog.
         segment = r._getsegmentforrevs(rev, rev)[1]
         if segment:
-            chunktype = bytes(segment[0:1])
+            chunktype = bytes(segment[0:1]).decode("utf8")
         else:
             chunktype = "empty"
 
@@ -2934,10 +2934,13 @@ def debugrevlog(ui, repo, file_=None, **opts):
     def fmtchunktype(chunktype):
         if chunktype == "empty":
             return "    %s     : " % chunktype
-        elif chunktype in pycompat.bytestr(string.ascii_letters):
-            return "    0x%s (%s)  : " % (hex(chunktype), chunktype)
+        elif chunktype in string.ascii_letters:
+            return "    0x%s (%s)  : " % (
+                hex(chunktype[0].encode("utf8")),
+                chunktype[0],
+            )
         else:
-            return "    0x%s      : " % hex(chunktype)
+            return "    0x%s      : " % hex(chunktype[0].encode("utf8"))
 
     ui.write("\n")
     ui.write(_x("chunks        : ") + fmt2 % numrevs)

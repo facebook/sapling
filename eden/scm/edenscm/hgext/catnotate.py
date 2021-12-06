@@ -43,12 +43,14 @@ def catnotate(ui, repo, file1, *args, **opts):
         )
         data = ctx[path].data()
         if not opts.get("text") and util.binary(data):
-            fp.write("%s: binary file\n" % path)
+            fp.write(b"%s: binary file\n" % path.encode("utf8"))
             return
 
-        for (num, line) in enumerate(data.split("\n"), start=1):
-            line = line + "\n"
-            fp.write("%s:%s: %s" % (path, num, line))
+        for (num, line) in enumerate(data.split(b"\n"), start=1):
+            line = line + b"\n"
+            fp.write(
+                b"%s:%s: %s" % (path.encode("utf8"), str(num).encode("utf8"), line)
+            )
         fp.close()
 
     # Automation often uses hg cat on single files, so special case it

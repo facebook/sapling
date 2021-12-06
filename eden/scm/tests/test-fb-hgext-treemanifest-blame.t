@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ . "$TESTDIR/library.sh"
@@ -41,8 +40,6 @@ Make local commits on the server
 Run blame on client
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client -q
-  fetching tree '' 11a84bc431b8c59b792f10ed427e7a01fc1a6b75
-  2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client
   $ cat >> .hg/hgrc <<EOF
@@ -56,10 +53,6 @@ Run blame on client
   $ clearcache
   $ hg prefetch -r 'tip^::tip'
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 90044db98b33ed191d9e056e2c2ec65ae7af8338
-  2 trees fetched over 0.00s
-  fetching tree '' 11a84bc431b8c59b792f10ed427e7a01fc1a6b75
-  2 trees fetched over 0.00s
 
 - Verify no trees are downloaded
   $ hg blame -r tip -u subdir/x --pager=off

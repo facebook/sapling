@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ configure mutation-norecord
@@ -70,7 +69,7 @@ Check that commit -i works with no changes
 Committing only one file
 
   $ echo "a" >> a
-  >>> _ = open('b', 'wb').write("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n")
+  >>> _ = open('b', 'w').write("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n")
   $ hg add b
   $ cat <<EOF >testModeCommands
   > TOGGLE

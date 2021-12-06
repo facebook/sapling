@@ -1,4 +1,3 @@
-#require py2
   $ configure modern
   $ enable smartlog
   $ newserver master
@@ -43,6 +42,5 @@ Verify smartlog shows only the configured data
      stable
   
   note: background backup is currently disabled so your commits are not being backed up.
-  abort: none of 'infinitepush', 'default' repositories configured!
-  (see 'hg help config.paths')
+  abort: repository default does not exist!
   [255]

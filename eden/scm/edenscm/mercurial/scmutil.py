@@ -1253,14 +1253,14 @@ def extdatasource(repo, source):
             # treat as a URL or file
             src = url.open(repo.ui, spec)
         for l in src:
-            if " " in l:
-                k, v = l.strip().split(" ", 1)
+            if b" " in l:
+                k, v = l.strip().split(b" ", 1)
             else:
-                k, v = l.strip(), ""
+                k, v = l.strip(), b""
 
-            k = encoding.tolocal(k)
+            k = k.decode("utf8")
             try:
-                data[repo[k].rev()] = encoding.tolocal(v)
+                data[repo[k].rev()] = v.decode("utf8")
             except (error.LookupError, error.RepoLookupError):
                 pass  # we ignore data for nodes that don't exist locally
     finally:

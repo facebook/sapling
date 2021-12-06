@@ -409,7 +409,7 @@ def perfwalk(ui, repo, *pats, **opts):
 def perfannotate(ui, repo, f, **opts):
     timer, fm = gettimer(ui, opts)
     fc = repo["."][f]
-    timer(lambda: len(fc.annotate(True)))
+    timer(lambda: len(list(fc.annotate(True))))
     fm.end()
 
 
@@ -978,7 +978,7 @@ def perftemplating(ui, repo, rev=None, **opts):
             " {author|person}: {desc|firstline}\n",
         )
     )
-    ui.popbuffer()
+    ui.popbufferbytes()
     fm.end()
 
 

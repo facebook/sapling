@@ -1,4 +1,3 @@
-#require py2
   $ configure modern
 
   $ newserver master
