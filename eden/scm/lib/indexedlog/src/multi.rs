@@ -790,6 +790,17 @@ mod tests {
         assert!(mlog2.write_meta(&lock1).is_err());
     }
 
+    fn repair_output(opts: &OpenOptions, path: &Path) -> String {
+        let out = opts.open_options_repair(path).unwrap();
+        // Filter out dynamic content.
+        out.lines()
+            .filter(|l| {
+                !l.contains("bytes in log") && !l.contains("Backed up") && !l.contains("Processing")
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
     #[test]
     fn test_repair() {
         let dir = tempfile::tempdir().unwrap();
@@ -811,18 +822,7 @@ mod tests {
             mlog.write_meta(&lock).unwrap();
         }
 
-        let repair = || -> String {
-            let out = opts.open_options_repair(path).unwrap();
-            // Filter out dynamic content.
-            out.lines()
-                .filter(|l| {
-                    !l.contains("bytes in log")
-                        && !l.contains("Backed up")
-                        && !l.contains("Processing")
-                })
-                .collect::<Vec<_>>()
-                .join("\n")
-        };
+        let repair = || repair_output(&opts, path);
 
         // Check that both logs only have a multiple of N entries.
         let verify = || {
