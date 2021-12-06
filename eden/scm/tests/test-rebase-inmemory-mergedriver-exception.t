@@ -41,7 +41,9 @@ Without IMM:
   rebasing * "B" (B) (glob)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  Exception: some exception in preprocess()
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -55,14 +57,18 @@ With IMM:
   rebasing * "B" (B) (glob)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  Exception: some exception in preprocess()
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge
   rebasing * "B" (B) (glob)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  Exception: some exception in preprocess()
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -124,7 +130,9 @@ With IMM, it's *very* noisy, but we do eventually get to the same place:
   rebasing * "B" (B) (glob)
   in preprocess()
   error: preprocess hook raised an exception: in-memory merge does not support merge conflicts
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.InMemoryMergeConflictsError: in-memory merge does not support merge conflicts
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge

@@ -56,21 +56,14 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
                     obj = __import__("edenscm_hgext_%s" % modname)
                 except (ImportError, SyntaxError):
                     e2 = sys.exc_info()
-                    if ui.tracebackflag:
-                        ui.warn(_("exception from first failed import " "attempt:\n"))
-                    ui.traceback(e1)
-                    if ui.tracebackflag:
-                        ui.warn(_("exception from second failed import " "attempt:\n"))
-                    ui.traceback(e2)
+                    ui.warn(_("exception from first failed import " "attempt:\n"))
+                    ui.traceback(e1, force=True)
+                    ui.warn(_("exception from second failed import " "attempt:\n"))
+                    ui.traceback(e2, force=True)
 
-                    if not ui.tracebackflag:
-                        tracebackhint = _("run with --traceback for stack trace")
-                    else:
-                        tracebackhint = None
                     raise error.HookLoadError(
                         _('%s hook is invalid: import of "%s" failed')
                         % (hname, modname),
-                        hint=tracebackhint,
                     )
         sys.path = oldpaths
         try:
@@ -101,9 +94,7 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
             )
         if throw:
             raise
-        if not ui.tracebackflag:
-            ui.warn(_("(run with --traceback for stack trace)\n"))
-        ui.traceback()
+        ui.traceback(force=True)
         return True, True
     finally:
         duration = util.timer() - starttime

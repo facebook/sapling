@@ -394,7 +394,9 @@ raise an error
   $ hg merge 'desc(b)'
   * preprocess called
   error: preprocess hook failed: foo
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -430,7 +432,9 @@ this shouldn't abort
   $ hg resolve --unmark --all
   * preprocess called
   error: preprocess hook failed: foo
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   $ hg resolve --list
@@ -459,7 +463,9 @@ this should go through at this point
   $ hg merge 'desc(b)'
   * preprocess called
   error: preprocess hook failed: foo
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -470,12 +476,16 @@ XXX this is really confused
   $ hg resolve --mark --all
   * preprocess called
   error: preprocess hook failed: foo
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   * conclude called
   error: conclude hook failed: bar
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.Abort: bar
   warning: merge driver failed to resolve files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   [1]
@@ -607,7 +617,9 @@ this should invoke the merge driver
   $ hg update ".^"
   * preprocess called
   error: preprocess hook failed: foo
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -632,12 +644,16 @@ XXX this is really confused
   $ hg resolve --mark --all
   * preprocess called
   error: preprocess hook failed: foo
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.Abort: foo
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   * conclude called
   error: conclude hook failed: bar
-  (run with --traceback for stack trace)
+  Traceback (most recent call last):
+    # collapsed by devel.collapse-traceback
+  edenscm.mercurial.error.Abort: bar
   warning: merge driver failed to resolve files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   [1]
