@@ -610,6 +610,19 @@ mod tests {
         mopts.open(path).unwrap()
     }
 
+    fn index_open_opts() -> OpenOptions {
+        fn index_func(bytes: &[u8]) -> Vec<log::IndexOutput> {
+            (0..bytes.len() as u64)
+                .map(|i| log::IndexOutput::Reference(i..i + 1))
+                .collect()
+        }
+        let index_def = log::IndexDef::new("x", index_func).lag_threshold(0);
+        OpenOptions::from_name_opts(vec![(
+            "a",
+            log::OpenOptions::new().index_defs(vec![index_def]),
+        )])
+    }
+
     #[test]
     fn test_individual_log_can_be_opened_directly() {
         let dir = tempfile::tempdir().unwrap();
@@ -859,6 +872,66 @@ Repairing Log b
 Log b has valid length 1212 after repair
 MultiMeta is valid"#
         );
+    }
+
+    #[test]
+    fn test_repair_broken_index() {
+        // Test repair where the logs are fine but the indexes are broken.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path();
+        let opts = index_open_opts();
+        let mut mlog = opts.open(&path).unwrap();
+        let mut logs = mlog.detach_logs();
+
+        let repair = || repair_output(&opts, path);
+        let file_size = |path| std::fs::metadata(path).unwrap().len();
+
+        let meta_path = multi_meta_path(path);
+        let meta_log_path = multi_meta_log_path(path).join("log");
+        let index_path = path.join("a").join("index2-x");
+
+        // Write some data. Flush the "log" multiple times to cause index
+        // fragmentation so the rebuilt index would be shorter.
+        let mut meta_log_sizes = Vec::new();
+        let mut index_sizes = Vec::new();
+        for data in [b"abcd", b"abce", b"acde", b"bcde"] {
+            let lock = mlog.lock().unwrap();
+            logs[0].append(data).unwrap();
+            logs[0].sync().unwrap();
+            mlog.write_meta(&lock).unwrap();
+            meta_log_sizes.push(file_size(&meta_log_path));
+            index_sizes.push(file_size(&index_path));
+        }
+        drop(mlog);
+        drop(logs);
+
+        // Corrupt the index and the multimeta log so the repair
+        // logic would revert to a previous MultiMeta, and rebuild
+        // index. If it's not careful, MultiMeta can contain offsets
+        // to the index file that is no longer valid.
+        pwrite(&index_path, -4, b"ffff");
+        pwrite(&meta_log_path, (meta_log_sizes[1] - 5) as _, b"xxxxx");
+        std::fs::remove_file(&meta_path).unwrap();
+
+        let index_len_before = file_size(&index_path);
+        assert_eq!(
+            repair(),
+            r#"Repairing MultiMeta Log:
+  Reset log size to 111
+  Rebuilt index "reverse"
+Repairing Log a
+  Rebuilt index "x"
+Log a has valid length 52 after repair
+MultiMeta is valid"#
+        );
+
+        // Index should be rebuilt (shorter).
+        let index_len_after = file_size(&index_path);
+        assert!(index_len_before > index_len_after);
+
+        // BUG: Still cannot open the MultiLog properly.
+        // This is because the MultiMeta uses an invalid index length.
+        opts.open(path).map(|_| 1).unwrap_err();
     }
 
     #[test]
