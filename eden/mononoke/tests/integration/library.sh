@@ -360,6 +360,20 @@ function write_stub_log_entry {
     --mononoke-config-path "$TESTTMP"/mononoke-config --bookmark master_bookmark "$@"
 }
 
+function mononoke_hyper_repo_builder {
+  local source_repo_book=$1
+  shift
+  local target_repo_book=$1
+  shift
+  GLOG_minloglevel=5 "$MONONOKE_HYPER_REPO_BUILDER" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id $REPOID \
+    --mononoke-config-path "$TESTTMP"/mononoke-config \
+    --source-repo-bookmark-name "$source_repo_book" \
+    --hyper-repo-bookmark-name "$target_repo_book" \
+    "$@"
+}
+
 # Remove the glog prefix
 function strip_glog {
   # based on https://our.internmc.facebook.com/intern/wiki/LogKnock/Log_formats/#regex-for-glog

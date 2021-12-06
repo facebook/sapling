@@ -29,6 +29,7 @@ use crate::tail::{find_source_repos, tail_once};
 const ARG_HYPER_REPO_BOOKMARK_NAME: &str = "hyper-repo-bookmark-name";
 const ARG_SOURCE_REPO: &str = "source-repo";
 const ARG_SOURCE_REPO_BOOKMARK_NAME: &str = "source-repo-bookmark-name";
+const ARG_ONCE: &str = "once";
 const SUBCOMMAND_ADD_SOURCE_REPO: &str = "add-source-repo";
 const SUBCOMMAND_TAIL: &str = "tail";
 
@@ -39,7 +40,7 @@ mod tail;
 async fn subcommand_tail<'a>(
     fb: FacebookInit,
     matches: &'a MononokeMatches<'_>,
-    _sub_m: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), Error> {
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -73,6 +74,9 @@ async fn subcommand_tail<'a>(
         )
         .await?;
 
+        if sub_m.is_present(ARG_ONCE) {
+            break Ok(());
+        }
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
 }
@@ -174,7 +178,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name(SUBCOMMAND_TAIL).about("Tail source repos into hyper repo"),
+            SubCommand::with_name(SUBCOMMAND_TAIL)
+                .about("Tail source repos into hyper repo")
+                .arg(
+                    Arg::with_name(ARG_ONCE)
+                        .long(ARG_ONCE)
+                        .required(false)
+                        .takes_value(false)
+                        .help("Loop only once"),
+                ),
         )
         .get_matches(fb)?;
 
