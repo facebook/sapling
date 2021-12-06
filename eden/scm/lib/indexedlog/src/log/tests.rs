@@ -1337,7 +1337,7 @@ fn test_non_append_only() {
     // This test requires renaming files while mmap is present. That
     // cannot be done in Windows.
     //
-    // This test should fail if utils::epoch returns a constant.
+    // This test should fail if utils::rand_u64 returns a constant.
     let dir = tempdir().unwrap();
 
     let indexes = vec![IndexDef::new("key1", index_ref).lag_threshold(1)];

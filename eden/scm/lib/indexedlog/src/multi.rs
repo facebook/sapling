@@ -28,6 +28,7 @@ use crate::log::LogMetadata;
 use crate::log::{self};
 use crate::repair::OpenOptionsRepair;
 use crate::utils;
+use crate::utils::rand_u64;
 
 /// Options used to configure how a [`MultiLog`] is opened.
 #[derive(Clone, Default)]
@@ -586,18 +587,6 @@ impl MultiMeta {
     /// Bump the version recorded in this [`MultiMeta`].
     fn bump_version(&mut self) {
         self.version.1 += 1;
-    }
-}
-
-fn rand_u64() -> u64 {
-    if cfg!(test) {
-        // For tests, generate different numbers each time.
-        use std::sync::atomic::AtomicU64;
-        use std::sync::atomic::Ordering::SeqCst;
-        static COUNT: AtomicU64 = AtomicU64::new(1000);
-        COUNT.fetch_add(1, SeqCst)
-    } else {
-        rand::random()
     }
 }
 

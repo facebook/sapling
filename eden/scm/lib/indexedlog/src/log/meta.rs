@@ -130,7 +130,7 @@ impl LogMetadata {
         Self {
             primary_len: len,
             indexes: BTreeMap::new(),
-            epoch: utils::epoch(),
+            epoch: utils::rand_u64(),
         }
     }
 

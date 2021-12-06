@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cell::RefCell;
 use std::fs::File;
 use std::fs::{self};
 use std::hash::Hasher;
@@ -393,10 +394,24 @@ pub(crate) fn fix_perm_symlink(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
+thread_local! {
+    static THREAD_RAND_U64: RefCell<u64> = RefCell::new(0);
+}
+
 /// Return a value that is likely changing over time.
 /// This is used to detect non-append-only cases.
-pub(crate) fn epoch() -> u64 {
-    rand::random()
+pub(crate) fn rand_u64() -> u64 {
+    if cfg!(test) {
+        // For tests, generate different numbers each time.
+        let count = THREAD_RAND_U64.with(|i| {
+            *i.borrow_mut() += 1;
+            *i.borrow()
+        });
+        // Ensure the vlq representation is likely stable by setting a high bit.
+        count | (1u64 << 63)
+    } else {
+        rand::random()
+    }
 }
 
 #[cfg(test)]
