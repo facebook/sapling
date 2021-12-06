@@ -101,7 +101,7 @@ class KeySpace {
   static constexpr KeySpaceRecord ReCasDigestProxyHashFamily{
       8,
       "recasdigestproxyhash",
-      Persistent{}};
+      Deprecated{}};
 
   static constexpr const KeySpaceRecord* kAll[] = {
       &BlobFamily,

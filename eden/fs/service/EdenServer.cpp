@@ -1858,9 +1858,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
   } else if (type == "recas") {
 #ifdef EDEN_HAVE_RECAS
     return make_shared<LocalStoreCachedBackingStore>(
-        make_shared<ReCasBackingStore>(localStore_),
-        localStore_,
-        getSharedStats());
+        make_shared<ReCasBackingStore>(), localStore_, getSharedStats());
 #else // EDEN_HAVE_RECAS
     throw std::domain_error(
         "support for RE CAS was not enabled in this EdenFS build");
