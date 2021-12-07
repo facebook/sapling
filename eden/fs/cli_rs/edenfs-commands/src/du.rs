@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-use anyhow::Error;
+use anyhow::anyhow;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::{EdenFsError, Result};
 
@@ -38,9 +38,33 @@ pub struct DiskUsageCmd {
     json: bool,
 }
 
+fn write_title(title: &str) {
+    println!("{}", title);
+    println!("{}", "-".repeat(title.len()));
+}
+
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        Err(EdenFsError::Other(Error::msg("Not implemented yet.")))
+        let mounts = if !self.mounts.is_empty() {
+            (&self.mounts).to_vec()
+        } else {
+            let config_paths: Vec<String> = instance
+                .get_configured_mounts_map()?
+                .keys()
+                .cloned()
+                .collect();
+            if config_paths.is_empty() {
+                return Err(EdenFsError::Other(anyhow!("No EdenFS mount found")));
+            }
+            config_paths.iter().map(PathBuf::from).collect()
+        };
+
+        write_title("Mounts");
+        for path in &mounts {
+            println!("{}", path.display());
+        }
+
+        Ok(0)
     }
 }
