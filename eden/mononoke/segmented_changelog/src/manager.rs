@@ -95,13 +95,14 @@ impl SegmentedChangelogManager {
             format!("repo {}: failed to load segmented changelog", self.repo_id)
         })?;
         Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
+            ctx.clone(),
             self.repo_id,
             owned.iddag,
             owned.idmap,
             Arc::clone(&self.changeset_fetcher),
             Arc::clone(&self.bookmarks),
             self.bookmark_name.clone(),
-        )))
+        )?))
     }
 
     // public for builder only

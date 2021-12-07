@@ -275,7 +275,7 @@ pub trait DagAddHeads {
         &mut self,
         parents: &dyn Parents,
         heads: &VertexListWithOptions,
-    ) -> Result<()>;
+    ) -> Result<bool>;
 }
 
 /// Import a generated `CloneData` object into an empty DAG.

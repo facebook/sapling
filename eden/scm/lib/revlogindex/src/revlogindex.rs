@@ -1827,7 +1827,7 @@ impl RevlogIndex {
         &mut self,
         parents_func: &dyn Parents,
         heads: &VertexListWithOptions,
-    ) -> dag::Result<()> {
+    ) -> dag::Result<bool> {
         if !cfg!(test) {
             panic!(
                 "add_heads should only works for testing \
@@ -1837,6 +1837,7 @@ impl RevlogIndex {
             );
         }
 
+        let mut updated = false;
         // Update IdMap. Keep track of what heads are added.
         for head in heads.vertexes() {
             if !non_blocking_result(self.contains_vertex_name(&head))? {
@@ -1858,11 +1859,12 @@ impl RevlogIndex {
                     }
                     let text = Bytes::from_static(b"DUMMY COMMIT MESSAGE FOR TESTING");
                     self.insert(head.clone(), parent_revs, text);
+                    updated = true;
                 }
             }
         }
 
-        Ok(())
+        Ok(updated)
     }
 }
 
@@ -1872,7 +1874,7 @@ impl DagAddHeads for RevlogIndex {
         &mut self,
         parents_func: &dyn Parents,
         heads: &VertexListWithOptions,
-    ) -> dag::Result<()> {
+    ) -> dag::Result<bool> {
         self.add_heads_for_testing(parents_func, heads)
     }
 }

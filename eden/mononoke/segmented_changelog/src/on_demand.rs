@@ -27,10 +27,12 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
+use crate::dag::ops::DagAddHeads;
+use crate::dag::VertexListWithOptions;
 use crate::idmap::IdMap;
 use crate::parents::FetchParents;
 use crate::read_only::ReadOnlySegmentedChangelog;
-use crate::update::update_sc;
+use crate::update::{head_with_options, server_namedag, ServerNameDag};
 use crate::{
     segmented_changelog_delegate, CloneData, Group, InProcessIdDag, Location, MismatchedHeadsError,
     SegmentedChangelog,
@@ -88,8 +90,7 @@ mod actual_update {
 
 pub struct OnDemandUpdateSegmentedChangelog {
     repo_id: RepositoryId,
-    iddag: Arc<RwLock<InProcessIdDag>>,
-    idmap: Arc<dyn IdMap>,
+    namedag: Arc<RwLock<ServerNameDag>>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
     master_bookmark: BookmarkName,
@@ -98,22 +99,24 @@ pub struct OnDemandUpdateSegmentedChangelog {
 
 impl OnDemandUpdateSegmentedChangelog {
     pub fn new(
+        ctx: CoreContext,
         repo_id: RepositoryId,
         iddag: InProcessIdDag,
         idmap: Arc<dyn IdMap>,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         bookmarks: Arc<dyn Bookmarks>,
         master_bookmark: BookmarkName,
-    ) -> Self {
-        Self {
+    ) -> Result<Self> {
+        let namedag = server_namedag(ctx, iddag, idmap)?;
+        let namedag = Arc::new(RwLock::new(namedag));
+        Ok(Self {
             repo_id,
-            iddag: Arc::new(RwLock::new(iddag)),
-            idmap,
+            namedag,
             changeset_fetcher,
             bookmarks,
             master_bookmark,
             ongoing_update: Arc::new(Mutex::new(None)),
-        }
+        })
     }
 
     pub fn with_periodic_update_to_master_bookmark(
@@ -158,18 +161,11 @@ impl OnDemandUpdateSegmentedChangelog {
             if let Some(fut) = &*ongoing_update {
                 fut.clone().map(|_| Ok(false)).boxed()
             } else {
-                cloned!(
-                    ctx,
-                    self.repo_id,
-                    self.iddag,
-                    self.idmap,
-                    self.changeset_fetcher
-                );
+                cloned!(ctx, self.repo_id, self.namedag, self.changeset_fetcher);
                 let task_ongoing_update = self.ongoing_update.clone();
                 let update_task = async move {
                     let result =
-                        the_actual_update(ctx, repo_id, iddag, idmap, changeset_fetcher, head)
-                            .await;
+                        the_actual_update(ctx, repo_id, namedag, changeset_fetcher, head).await;
                     let mut ongoing_update = task_ongoing_update.lock();
                     *ongoing_update = None;
                     result
@@ -270,7 +266,12 @@ impl OnDemandUpdateSegmentedChangelog {
     }
 
     async fn are_heads_assigned(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<bool> {
-        let dag_id_map = self.idmap.find_many_dag_ids(ctx, heads.to_vec()).await?;
+        let namedag = self.namedag.read().await;
+        let idmap_wrapper = namedag.map();
+        let dag_id_map = idmap_wrapper
+            .clone_idmap()
+            .find_many_dag_ids(ctx, heads.to_vec())
+            .await?;
         if dag_id_map.len() != heads.len() {
             // Maybe heads have duplicated items? Double check.
             let mut heads = heads.to_vec();
@@ -281,9 +282,8 @@ impl OnDemandUpdateSegmentedChangelog {
             }
         }
         // It is safer to check that the dag_ids we got are also in the iddag.
-        let iddag = self.iddag.read().await;
         for (_cs_id, dag_id) in dag_id_map {
-            if !iddag.contains_id(dag_id)? {
+            if !namedag.dag().contains_id(dag_id)? {
                 return Ok(false);
             }
         }
@@ -291,8 +291,10 @@ impl OnDemandUpdateSegmentedChangelog {
     }
 
     async fn is_cs_assigned(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool> {
-        if let Some(dag_id) = self
-            .idmap
+        let namedag = self.namedag.read().await;
+        if let Some(dag_id) = namedag
+            .map()
+            .clone_idmap()
             .find_dag_id(ctx, cs_id)
             .await
             .context("fetching dag_id for csid")?
@@ -300,8 +302,7 @@ impl OnDemandUpdateSegmentedChangelog {
             // Note. This will result in two read locks being acquired for functions that call
             // into build_up. It would be nice to get to one lock being acquired. I tried but
             // had some issues with lifetimes :).
-            let iddag = self.iddag.read().await;
-            if iddag.contains_id(dag_id)? {
+            if namedag.dag().contains_id(dag_id)? {
                 return Ok(true);
             }
         }
@@ -312,17 +313,17 @@ impl OnDemandUpdateSegmentedChangelog {
 async fn the_actual_update(
     ctx: CoreContext,
     repo_id: RepositoryId,
-    iddag: Arc<RwLock<InProcessIdDag>>,
-    idmap: Arc<dyn IdMap>,
+    namedag: Arc<RwLock<ServerNameDag>>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     head: ChangesetId,
 ) -> Result<()> {
     let monitored = async {
-        let mut iddag = iddag.write().await;
-        let parents_fetcher = FetchParents::new(ctx.clone(), changeset_fetcher);
+        let mut namedag = namedag.write().await;
+        let parent_fetcher = FetchParents::new(ctx.clone(), changeset_fetcher);
 
-        update_sc(&ctx, &parents_fetcher, &mut iddag, &idmap, head).await?;
-
+        let heads = VertexListWithOptions::from(vec![head_with_options(head)]);
+        namedag.add_heads(&parent_fetcher, &heads).await?;
+        namedag.map().flush_writes().await?;
         Ok(())
     };
     actual_update::STATS::count.add_value(1);
@@ -362,8 +363,8 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         self.build_up_to_heads(ctx, &[location.descendant])
             .await
             .context("error while getting an up to date dag")?;
-        let iddag = self.iddag.read().await;
-        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
+        let namedag = self.namedag.read().await;
+        let read_dag = ReadOnlySegmentedChangelog::new(namedag.dag(), namedag.map().clone_idmap());
         read_dag
             .location_to_many_changeset_ids(ctx, location, count)
             .await
@@ -379,16 +380,16 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         self.build_up_to_heads(ctx, &master_heads)
             .await
             .context("error while getting an up to date dag")?;
-        let iddag = self.iddag.read().await;
-        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
+        let namedag = self.namedag.read().await;
+        let read_dag = ReadOnlySegmentedChangelog::new(namedag.dag(), namedag.map().clone_idmap());
         read_dag
             .many_changeset_ids_to_locations(ctx, master_heads, cs_ids)
             .await
     }
 
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
-        let iddag = self.iddag.read().await;
-        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
+        let namedag = self.namedag.read().await;
+        let read_dag = ReadOnlySegmentedChangelog::new(namedag.dag(), namedag.map().clone_idmap());
         read_dag.clone_data(ctx).await
     }
 
@@ -401,8 +402,8 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         self.build_up_to_heads(ctx, &[old_master, new_master])
             .await
             .context("error while getting an up to date dag")?;
-        let iddag = self.iddag.read().await;
-        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
+        let namedag = self.namedag.read().await;
+        let read_dag = ReadOnlySegmentedChangelog::new(namedag.dag(), namedag.map().clone_idmap());
         read_dag
             .pull_fast_forward_master(ctx, old_master, new_master)
             .await
@@ -417,8 +418,8 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         ancestor: ChangesetId,
         descendant: ChangesetId,
     ) -> Result<Option<bool>> {
-        let iddag = self.iddag.read().await;
-        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
+        let namedag = self.namedag.read().await;
+        let read_dag = ReadOnlySegmentedChangelog::new(namedag.dag(), namedag.map().clone_idmap());
         read_dag.is_ancestor(ctx, ancestor, descendant).await
     }
 }

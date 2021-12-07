@@ -28,10 +28,6 @@ impl FetchParents {
             changeset_fetcher,
         }
     }
-
-    pub fn get_changeset_fetcher(&self) -> &dyn ChangesetFetcher {
-        &self.changeset_fetcher
-    }
 }
 
 #[async_trait::async_trait]

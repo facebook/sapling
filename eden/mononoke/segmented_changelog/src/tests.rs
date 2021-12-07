@@ -185,9 +185,13 @@ async fn load_owned(
     Ok(OwnedSegmentedChangelog::new(iddag, idmap))
 }
 
-fn new_isolated_on_demand_update(blobrepo: &BlobRepo) -> OnDemandUpdateSegmentedChangelog {
+fn new_isolated_on_demand_update(
+    ctx: CoreContext,
+    blobrepo: &BlobRepo,
+) -> Result<OnDemandUpdateSegmentedChangelog> {
     // feel free to add bookmark_name as a parameter when the need appears
     OnDemandUpdateSegmentedChangelog::new(
+        ctx,
         blobrepo.get_repoid(),
         InProcessIdDag::new_in_process(),
         Arc::new(ConcurrentMemIdMap::new()),
@@ -576,7 +580,7 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     {
         // linear
         let blobrepo = linear::getrepo(fb).await;
-        let sc = new_isolated_on_demand_update(&blobrepo);
+        let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
 
         let known_cs =
             resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -591,7 +595,7 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     {
         // merge_uneven
         let blobrepo = merge_uneven::getrepo(fb).await;
-        let sc = new_isolated_on_demand_update(&blobrepo);
+        let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
 
         let known_cs =
             resolve_cs_id(&ctx, &blobrepo, "264f01429683b3dd8042cb3979e8bf37007118bc").await?;
@@ -658,7 +662,7 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     // commit 5
     let cs5 = resolve_cs_id(&ctx, &blobrepo, "cb15ca4a43a59acff5388cea9648c162afde8372").await?;
 
-    let sc = new_isolated_on_demand_update(&blobrepo);
+    let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
     let answer = try_join_all(vec![
         sc.location_to_changeset_id(&ctx, Location::new(cs10, 5)),
         sc.location_to_changeset_id(&ctx, Location::new(cs6, 1)),
@@ -667,7 +671,7 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     .await?;
     assert_eq!(answer, vec![cs5, cs5, cs5]);
 
-    let sc = new_isolated_on_demand_update(&blobrepo);
+    let sc = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
     let answer = try_join_all(vec![
         sc.changeset_id_to_location(&ctx, vec![cs10], cs5),
         sc.changeset_id_to_location(&ctx, vec![cs6], cs5),
@@ -708,6 +712,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
     ));
     let new_sc = || {
         OnDemandUpdateSegmentedChangelog::new(
+            ctx.clone(),
             blobrepo.get_repoid(),
             InProcessIdDag::new_in_process(),
             Arc::clone(&idmap),
@@ -720,7 +725,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
     let master_cs =
         resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
 
-    let initial = new_sc();
+    let initial = new_sc()?;
 
     let cs7 = resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
     let distance: u64 = 4;
@@ -729,7 +734,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
         .await?;
     assert_eq!(answer, cs7);
 
-    let second = new_sc();
+    let second = new_sc()?;
 
     let cs3 = resolve_cs_id(&ctx, &blobrepo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
     let answer = second
@@ -856,13 +861,14 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
     tokio::time::pause(); // TODO: pause only works with the `current_thread` Runtime.
 
     let on_demand = OnDemandUpdateSegmentedChangelog::new(
+        ctx.clone(),
         blobrepo.get_repoid(),
         InProcessIdDag::new_in_process(),
         Arc::new(ConcurrentMemIdMap::new()),
         blobrepo.get_changeset_fetcher(),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
         bookmark_name.clone(),
-    );
+    )?;
     let sc =
         Arc::new(on_demand).with_periodic_update_to_master_bookmark(&ctx, Duration::from_secs(5));
 
@@ -961,7 +967,7 @@ async fn test_mismatched_heads(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = branch_even::getrepo(fb).await;
 
-    let dag = new_isolated_on_demand_update(&blobrepo);
+    let dag = new_isolated_on_demand_update(ctx.clone(), &blobrepo)?;
     let h1 = resolve_cs_id(&ctx, &blobrepo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
     let h1_parent =
         resolve_cs_id(&ctx, &blobrepo, "b65231269f651cfe784fd1d97ef02a049a37b8a0").await?;

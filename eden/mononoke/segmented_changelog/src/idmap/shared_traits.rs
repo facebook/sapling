@@ -9,7 +9,6 @@ use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 use std::collections::HashMap;
-use std::future::Future;
 use std::sync::Arc;
 
 use crate::dag::errors::{self, BackendError, DagError};
@@ -27,10 +26,6 @@ define_stats! {
     insert_many: timeseries(Sum),
     flush_writes: timeseries(Sum),
 }
-
-/// When the wrapper has this many entries to write out, stop waiting for more
-/// and write immediately
-const WRITE_BATCH_SIZE: usize = 1000;
 
 /// Type conversion - `VertexName` is used in the `dag` crate to abstract over different ID types
 /// such as Mercurial IDs, Bonsai, a theoretical git ID and more.
@@ -54,18 +49,19 @@ pub fn vertex_name_from_cs_id(cs_id: &ChangesetId) -> VertexName {
     VertexName::copy_from(cs_id.blake2().as_ref())
 }
 
-struct IdMapMemWrites<'a> {
+#[derive(Clone)]
+struct IdMapMemWrites {
     /// The actual IdMap
-    inner: &'a dyn IdMap,
+    inner: Arc<dyn IdMap>,
     /// Stores recent writes that haven't yet been persisted to the backing store
-    mem: ConcurrentMemIdMap,
+    mem: Arc<ConcurrentMemIdMap>,
 }
 
-impl<'a> IdMapMemWrites<'a> {
-    pub fn new(inner: &'a dyn IdMap) -> Self {
+impl IdMapMemWrites {
+    pub fn new(inner: Arc<dyn IdMap>) -> Self {
         Self {
             inner,
-            mem: ConcurrentMemIdMap::new(),
+            mem: Arc::new(ConcurrentMemIdMap::new()),
         }
     }
 
@@ -82,7 +78,7 @@ impl<'a> IdMapMemWrites<'a> {
 }
 
 #[async_trait]
-impl<'a> IdMap for IdMapMemWrites<'a> {
+impl IdMap for IdMapMemWrites {
     async fn insert_many(
         &self,
         ctx: &CoreContext,
@@ -95,9 +91,6 @@ impl<'a> IdMap for IdMapMemWrites<'a> {
                 .expect("More than an i64 of writes in one go!"),
         );
         let res = self.mem.insert_many(ctx, mappings).await;
-        if self.mem.len() >= WRITE_BATCH_SIZE {
-            self.flush_writes(ctx).await?;
-        }
         res
     }
 
@@ -196,37 +189,45 @@ impl<'a> IdMap for IdMapMemWrites<'a> {
 /// outside the `closure` to avoid performance issues. Having all `NameSet`
 /// calculations inside the `closure` is fine, even if the final result is
 /// passed out to the enclosing scope
-pub struct IdMapWrapper<'a> {
+#[derive(Clone)]
+pub struct IdMapWrapper {
     verlink: VerLink,
-    inner: Arc<IdMapMemWrites<'a>>,
+    inner: IdMapMemWrites,
     ctx: CoreContext,
 }
 
-impl<'a> IdMapWrapper<'a> {
-    /// Run the given closure with a [`IdMapWrapper`] around the supplied [`IdMap`] and [`CoreContext`]
-    /// This lets you use `dag` crate methods on a server `IdMap`
-    pub async fn run<Fut, T>(
-        ctx: CoreContext,
-        idmap: &'a dyn IdMap,
-        closure: impl FnOnce(IdMapWrapper<'a>) -> Fut,
-    ) -> anyhow::Result<T>
-    where
-        Fut: Future<Output = anyhow::Result<T>>,
-    {
-        let idmap_memwrites = Arc::new(IdMapMemWrites::new(idmap));
-        let wrapper = Self {
+impl IdMapWrapper {
+    /// Create a new wrapper around the server IdMap, using CoreContext
+    /// for calling update functions
+    pub fn new(ctx: CoreContext, idmap: Arc<dyn IdMap>) -> Self {
+        let idmap_memwrites = IdMapMemWrites::new(idmap);
+        Self {
             verlink: VerLink::new(),
-            inner: idmap_memwrites.clone(),
+            inner: idmap_memwrites,
             ctx: ctx.clone(),
-        };
-        let res = closure(wrapper).await;
-        idmap_memwrites.flush_writes(&ctx).await?;
-        res
+        }
+    }
+
+    /// If not called, IdMap changes are discarded when this is dropped
+    pub async fn flush_writes(&self) -> anyhow::Result<()> {
+        self.inner.flush_writes(&self.ctx).await
+    }
+
+    /// Flushes writes and then returns the original IdMap
+    pub async fn finish(self) -> anyhow::Result<Arc<dyn IdMap>> {
+        self.flush_writes().await?;
+        Ok(self.inner.inner)
+    }
+
+    /// Get a clone of the original IdMap fed in.
+    /// If `flush_writes` has not been called, this will not be updated
+    pub fn clone_idmap(&self) -> Arc<dyn IdMap> {
+        self.inner.inner.clone()
     }
 }
 
 #[async_trait]
-impl<'a> PrefixLookup for IdMapWrapper<'a> {
+impl PrefixLookup for IdMapWrapper {
     async fn vertexes_by_hex_prefix(
         &self,
         _hex_prefix: &[u8],
@@ -236,7 +237,7 @@ impl<'a> PrefixLookup for IdMapWrapper<'a> {
     }
 }
 #[async_trait]
-impl<'a> IdConvert for IdMapWrapper<'a> {
+impl IdConvert for IdMapWrapper {
     async fn vertex_id(&self, name: VertexName) -> Result<Id> {
         // NOTE: The server implementation puts all Ids in the "master" group.
         self.vertex_id_with_max_group(&name, Group::MASTER)
@@ -347,7 +348,7 @@ impl<'a> IdConvert for IdMapWrapper<'a> {
 }
 
 #[async_trait]
-impl<'a> IdMapWrite for IdMapWrapper<'a> {
+impl IdMapWrite for IdMapWrapper {
     async fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         // NB: This is only suitable for tailing right now, as it writes on every call
         // Eventually, this needs to use a batching interface

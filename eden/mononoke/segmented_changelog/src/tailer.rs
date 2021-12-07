@@ -22,12 +22,14 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
+use crate::dag::ops::DagAddHeads;
+use crate::dag::VertexListWithOptions;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{CacheHandlers, IdMapFactory};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::parents::FetchParents;
 use crate::types::SegmentedChangelogVersion;
-use crate::update::update_sc;
+use crate::update::{head_with_options, server_namedag};
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::SegmentedChangelogSqlConnections;
 
@@ -169,22 +171,26 @@ impl SegmentedChangelogTailer {
             "repo {}: bookmark {} resolved to {}", self.repo_id, self.bookmark_name, head
         );
 
-        let mut iddag = self
+        let iddag = self
             .iddag_save_store
             .load(&ctx, sc_version.iddag_version)
             .await
             .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
 
-        let new_segment_count = update_sc(
-            &ctx,
-            &FetchParents::new(ctx.clone(), self.changeset_fetcher.clone()),
-            &mut iddag,
-            &idmap,
-            head,
-        )
-        .await?;
+        let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
+        let parent_fetcher = FetchParents::new(ctx.clone(), self.changeset_fetcher.clone());
 
-        if new_segment_count == 0 {
+        let heads = VertexListWithOptions::from(vec![head_with_options(head)]);
+        // Note on memory use: we do not flush the changes out in the middle
+        // of writing to the IdMap.
+        // Thus, if OOMs happen here, the IdMap may need to flush writes to the DB
+        // at interesting points.
+        let changed = namedag.add_heads(&parent_fetcher, &heads).await?;
+
+        let (idmap, iddag) = namedag.into_idmap_dag();
+        let idmap = idmap.finish().await?;
+
+        if !changed {
             info!(
                 ctx.logger(),
                 "repo {}: segmented changelog already up to date, skipping update to iddag",

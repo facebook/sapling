@@ -390,7 +390,7 @@ where
         &mut self,
         parents: &dyn Parents,
         heads: &VertexListWithOptions,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         self.invalidate_snapshot();
 
         // Populate vertex negative cache to reduce round-trips doing remote lookups.
@@ -445,7 +445,14 @@ where
         let mut covered = self.dag().all_ids_in_groups(&Group::ALL)?;
         let mut reserved = calculate_initial_reserved(self, &covered, heads).await?;
         for (head, opts) in heads.vertex_options() {
-            if !self.contains_vertex_name(&head).await? {
+            let need_assigning = match self
+                .vertex_id_with_max_group(&head, opts.highest_group)
+                .await?
+            {
+                Some(id) => !self.dag.contains_id(id)?,
+                None => true,
+            };
+            if need_assigning {
                 let group = opts.highest_group;
                 let prepared_segments = self
                     .assign_head(head.clone(), parents, group, &mut covered, &reserved)
@@ -463,7 +470,7 @@ where
         self.dag
             .build_segments_from_prepared_flat_segments(&outcome)?;
 
-        Ok(())
+        Ok(outcome.segment_count() > 0)
     }
 }
 

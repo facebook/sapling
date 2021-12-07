@@ -18,12 +18,14 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
+use crate::dag::ops::DagAddHeads;
+use crate::dag::VertexListWithOptions;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::IdMapFactory;
 use crate::idmap::SqlIdMapVersionStore;
 use crate::parents::FetchParents;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
-use crate::update::update_sc;
+use crate::update::{head_with_options, server_namedag};
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{InProcessIdDag, SegmentedChangelogSqlConnections};
 
@@ -90,13 +92,24 @@ impl SegmentedChangelogSeeder {
         );
 
         let idmap = self.idmap_factory.for_writer(ctx, idmap_version);
-        let mut iddag = InProcessIdDag::new_in_process();
+        let iddag = InProcessIdDag::new_in_process();
 
         let parents_fetcher = FetchParents::new(ctx.clone(), self.changeset_fetcher.clone());
         // Create a segmented changelog by updating the empty set to a full set
-        for head in heads {
-            update_sc(ctx, &parents_fetcher, &mut iddag, &idmap, head).await?;
-        }
+        let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
+        let heads_with_options = VertexListWithOptions::from(
+            heads
+                .into_iter()
+                .map(|head| head_with_options(head))
+                .collect::<Vec<_>>(),
+        );
+
+        namedag
+            .add_heads(&parents_fetcher, &heads_with_options)
+            .await?;
+
+        let (idmap, iddag) = namedag.into_idmap_dag();
+        idmap.finish().await?;
 
         // Update IdMapVersion
         self.idmap_version_store

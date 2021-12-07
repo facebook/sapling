@@ -69,13 +69,14 @@ pub async fn new_server_segmented_changelog<'a>(
         // All other configuration is ignored, for example there won't be periodic updates
         // following a bookmark.
         return Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
+            ctx.clone(),
             repo_id,
             InProcessIdDag::new_in_process(),
             Arc::new(ConcurrentMemIdMap::new()),
             changeset_fetcher,
             bookmarks,
             bookmarks_name,
-        )));
+        )?));
     }
     let mut idmap_factory = IdMapFactory::new(
         connections.0.clone(),
