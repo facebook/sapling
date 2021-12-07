@@ -73,9 +73,9 @@ const std::error_category& HResultErrorCategory::get() noexcept {
 }
 
 HRESULT exceptionToHResult(const std::exception& ex) noexcept {
+  XLOG(ERR) << folly::exceptionStr(ex);
   if (auto e = dynamic_cast<const std::system_error*>(&ex)) {
     auto code = e->code();
-    XLOG(ERR) << e->what() << ": " << code;
     if (code.category() == HResultErrorCategory::get()) {
       return code.value();
     }
@@ -86,7 +86,6 @@ HRESULT exceptionToHResult(const std::exception& ex) noexcept {
   } else if (auto e = dynamic_cast<const std::bad_alloc*>(&ex)) {
     return E_OUTOFMEMORY;
   } else {
-    XLOG(ERR) << ex.what();
     return HRESULT_FROM_WIN32(ERROR_ERRORS_ENCOUNTERED);
   }
 }

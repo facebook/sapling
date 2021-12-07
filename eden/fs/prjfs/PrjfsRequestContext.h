@@ -40,8 +40,9 @@ class PrjfsRequestContext : public RequestContext {
         finishRequest();
       };
 
-      if (try_.hasException()) {
-        handleException(std::move(try_));
+      auto result = tryToHResult(try_);
+      if (result != S_OK) {
+        sendError(result);
       }
     });
   }
@@ -68,8 +69,6 @@ class PrjfsRequestContext : public RequestContext {
   }
 
  private:
-  void handleException(folly::Try<folly::Unit> try_) const;
-
   detail::RcuLockedPtr channel_;
   int32_t commandId_;
   pid_t clientPid_;

@@ -8,10 +8,11 @@
 #pragma once
 #ifdef _WIN32
 
+#include <folly/Try.h>
+#include <folly/logging/xlog.h>
+#include <folly/portability/Windows.h>
 #include <string>
 #include <system_error>
-#include "folly/logging/xlog.h"
-#include "folly/portability/Windows.h"
 
 namespace facebook {
 namespace eden {
@@ -65,6 +66,16 @@ std::string win32ErrorToString(uint32_t error);
 // appropriate HRESULT code for the exception. again and catch the right
 //
 HRESULT exceptionToHResult(const std::exception& ex) noexcept;
+
+template <typename T>
+HRESULT tryToHResult(const folly::Try<T>& try_) noexcept {
+  if (try_.hasValue()) {
+    return S_OK;
+  } else {
+    auto* exc = try_.tryGetExceptionObject();
+    return exceptionToHResult(*exc);
+  }
+}
 
 // This function can take a function with no args and run it under a try catch
 // block. It will catch the exception and return a HRESULT for that. Use a
