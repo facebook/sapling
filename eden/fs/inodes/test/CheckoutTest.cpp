@@ -1375,6 +1375,84 @@ TEST(Checkout, testSetPathObjectIdLastCheckoutTime) {
   EXPECT_EQ(nsec2.count(), stFile2.mtime.toTimespec().tv_nsec);
 }
 
+TEST(Checkout, testSetPathObjectIdCheckoutSingleFile) {
+  // Start with an empty mount
+  auto builder1 = FakeTreeBuilder{};
+  TestMount testMount{builder1, false};
+
+  std::string contents = "content";
+  testMount.getBackingStore()->putBlob(ObjectId{"2"}, contents)->setReady();
+
+  RelativePathPiece path{"dir/dir2/dir3/file.txt"};
+
+  auto setPathObjectIdResultAndTimes =
+      testMount.getEdenMount()->setPathObjectId(
+          path,
+          RootId{"2"},
+          facebook::eden::ObjectType::REGULAR_FILE,
+          facebook::eden::CheckoutMode::NORMAL,
+          ObjectFetchContext::getNullContext());
+
+  auto executor = testMount.getServerExecutor().get();
+  auto waitedSetPathObjectIdResultAndTimes =
+      std::move(setPathObjectIdResultAndTimes).waitVia(executor);
+  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes.isReady());
+  auto result = std::move(waitedSetPathObjectIdResultAndTimes).get();
+  EXPECT_EQ(0, result.result.conflicts_ref()->size());
+
+  // Confirm that the blob has been updated correctly.
+  EXPECT_FILE_INODE(testMount.getFileInode(path), contents, 0644);
+}
+
+TEST(Checkout, testSetPathObjectIdCheckoutMultipleFiles) {
+  // Start with an empty mount
+  auto builder1 = FakeTreeBuilder{};
+  TestMount testMount{builder1, false};
+
+  std::string contents = "content";
+  std::string contents2 = "content";
+  testMount.getBackingStore()->putBlob(ObjectId{"1"}, contents)->setReady();
+  testMount.getBackingStore()->putBlob(ObjectId{"2"}, contents)->setReady();
+
+  RelativePathPiece path{"dir/dir2/dir3/file.txt"};
+  RelativePathPiece path2{"dir/dir2/dir3/file2.txt"};
+
+  auto setPathObjectIdResultAndTimes =
+      testMount.getEdenMount()->setPathObjectId(
+          path,
+          RootId{"1"},
+          facebook::eden::ObjectType::REGULAR_FILE,
+          facebook::eden::CheckoutMode::NORMAL,
+          ObjectFetchContext::getNullContext());
+
+  auto executor = testMount.getServerExecutor().get();
+  auto waitedSetPathObjectIdResultAndTimes =
+      std::move(setPathObjectIdResultAndTimes).waitVia(executor);
+  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes.isReady());
+  auto result = std::move(waitedSetPathObjectIdResultAndTimes).get();
+  EXPECT_EQ(0, result.result.conflicts_ref()->size());
+
+  // Confirm that the blob has been updated correctly.
+  EXPECT_FILE_INODE(testMount.getFileInode(path), contents, 0644);
+
+  auto setPathObjectIdResultAndTimes2 =
+      testMount.getEdenMount()->setPathObjectId(
+          path2,
+          RootId{"2"},
+          facebook::eden::ObjectType::REGULAR_FILE,
+          facebook::eden::CheckoutMode::NORMAL,
+          ObjectFetchContext::getNullContext());
+
+  auto waitedSetPathObjectIdResultAndTimes2 =
+      std::move(setPathObjectIdResultAndTimes2).waitVia(executor);
+  ASSERT_TRUE(waitedSetPathObjectIdResultAndTimes2.isReady());
+  auto result2 = std::move(waitedSetPathObjectIdResultAndTimes2).get();
+  EXPECT_EQ(0, result2.result.conflicts_ref()->size());
+
+  EXPECT_FILE_INODE(testMount.getFileInode(path), contents, 0644);
+  EXPECT_FILE_INODE(testMount.getFileInode(path2), contents2, 0644);
+}
+
 #endif
 
 namespace {

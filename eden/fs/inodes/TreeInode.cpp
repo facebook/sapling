@@ -3253,6 +3253,19 @@ void TreeInode::saveOverlayPostCheckout(
         }
       }
 
+      // TODO: This check should be removed and instead a
+      // std::optional<ObjectId> should be passed to
+      // TreeInode::saveoverlayPostCheckout. The issue is that setPathRootId
+      // synthesizes a fake Tree and then calls checkout, which might notice
+      // that the previous fake Tree and the current fake Tree have the same
+      // hash, which will incorrectly dematerialized this inode. The fake hash
+      // cannot be reconstituted from the backing store, so this makes the
+      // directory structure unreadable. The correct long-term fix is to remove
+      // getHash() from Tree and pass around ObjectIds explicitly if known.
+      if (tree->getHash().size() == 0) {
+        return std::nullopt;
+      }
+
       // If we're still here we are identical to the source control Tree.
       // We can be dematerialized and marked identical to the input Tree.
       return tree->getHash();

@@ -44,6 +44,18 @@ std::string FakeBackingStore::renderRootId(const RootId& rootId) {
   return rootId.value();
 }
 
+folly::SemiFuture<std::unique_ptr<TreeEntry>>
+FakeBackingStore::getTreeEntryForRootId(
+    const RootId& commitID,
+    TreeEntryType treeEntryType,
+    facebook::eden::PathComponentPiece pathComponentPiece,
+    ObjectFetchContext& /* context */) {
+  return folly::makeSemiFuture(std::make_unique<TreeEntry>(
+      ObjectId{commitID.value()},
+      PathComponent{pathComponentPiece},
+      treeEntryType));
+}
+
 SemiFuture<unique_ptr<Tree>> FakeBackingStore::getRootTree(
     const RootId& commitID,
     ObjectFetchContext& /*context*/) {
