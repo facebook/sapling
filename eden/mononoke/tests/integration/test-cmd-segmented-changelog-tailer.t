@@ -38,22 +38,26 @@ Setup repository
 
   $ quiet default_setup_blobimport "blob_files"
 
-Run Segmented Changelog Tailer. Error because there was no seeding.
+Run Segmented Changelog Tailer. This seeds the segmented changelog.
 
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]
   > master_bookmark="master_bookmark"
   > CONFIG
   $ segmented_changelog_tailer --repo repo &>"$TESTTMP/error.log"
-  [1]
-  $ grep seeded "$TESTTMP/error.log"
-  * maybe repo is not seeded (glob)
+  $ grep -e successfully -e segmented_changelog_tailer "$TESTTMP/error.log"
+  * repo name 'repo' translates to id 0 (glob)
+  * repo 0: SegmentedChangelogTailer initialized (glob)
+  * repo 0: successfully seeded segmented changelog (glob)
+  * repo 0: SegmentedChangelogTailer is done (glob)
 
-Seed repository.
-  $ quiet segmented_changelog_seeder --head=$A
-
-Actually run Segmented Changelog Tailer.
-
+Add a new commit, and see the tailer tail it in properly
+  $ cd repo-hg || exit 1
+  $ echo "segments" > changelog
+  $ hgmn commit -qAm "new"
+  $ hg bookmark -f master_bookmark -r tip
+  $ cd ..
+  $ blobimport repo-hg/.hg repo --derived-data-type fsnodes
   $ quiet segmented_changelog_tailer --repo repo
   $ grep 'successful incremental update' "$TESTTMP/quiet.last.log"
   * repo 0: successful incremental update to segmented changelog (glob)

@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::{Context, Error, Result};
 use fbinit::FacebookInit;
 use futures::stream::{self, TryStreamExt};
 use futures_stats::TimedFutureExt;
@@ -30,9 +30,10 @@ use crate::iddag::IdDagSaveStore;
 use crate::idmap::{cs_id_from_vertex_name, CacheHandlers, IdMapFactory};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::parents::FetchParents;
-use crate::types::SegmentedChangelogVersion;
+use crate::types::{IdMapVersion, SegmentedChangelogVersion};
 use crate::update::{bookmark_with_options, server_namedag};
 use crate::version_store::SegmentedChangelogVersionStore;
+use crate::InProcessIdDag;
 use crate::SegmentedChangelogSqlConnections;
 
 define_stats! {
@@ -146,29 +147,27 @@ impl SegmentedChangelogTailer {
             "repo {}: starting incremental update to segmented changelog", self.repo_id,
         );
 
-        let sc_version = self
-            .sc_version_store
-            .get(&ctx)
-            .await
-            .with_context(|| {
+        let (seeding, idmap_version, iddag) = {
+            let sc_version = self.sc_version_store.get(&ctx).await.with_context(|| {
                 format!(
                     "repo {}: error loading segmented changelog version",
                     self.repo_id
                 )
-            })?
-            .ok_or_else(|| {
-                format_err!(
-                    "repo {}: segmented changelog metadata not found, maybe repo is not seeded",
-                    self.repo_id
-                )
             })?;
-        let idmap = self.idmap_factory.for_writer(ctx, sc_version.idmap_version);
 
-        let iddag = self
-            .iddag_save_store
-            .load(&ctx, sc_version.iddag_version)
-            .await
-            .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
+            match sc_version {
+                Some(sc_version) => {
+                    let iddag = self
+                        .iddag_save_store
+                        .load(&ctx, sc_version.iddag_version)
+                        .await
+                        .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
+                    (false, sc_version.idmap_version, iddag)
+                }
+                None => (true, IdMapVersion(1), InProcessIdDag::new_in_process()),
+            }
+        };
+        let idmap = self.idmap_factory.for_writer(ctx, idmap_version);
 
         let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
 
@@ -262,21 +261,36 @@ impl SegmentedChangelogTailer {
             .with_context(|| format!("repo {}: error saving iddag", self.repo_id))?;
 
         // Update SegmentedChangelogVersion
-        let sc_version = SegmentedChangelogVersion::new(iddag_version, sc_version.idmap_version);
-        self.sc_version_store
-            .update(&ctx, sc_version)
-            .await
-            .with_context(|| {
-                format!(
-                    "repo {}: error updating segmented changelog version store",
-                    self.repo_id
-                )
-            })?;
-
-        info!(
-            ctx.logger(),
-            "repo {}: successful incremental update to segmented changelog", self.repo_id,
-        );
+        let sc_version = SegmentedChangelogVersion::new(iddag_version, idmap_version);
+        if seeding {
+            self.sc_version_store
+                .set(&ctx, sc_version)
+                .await
+                .with_context(|| {
+                    format!(
+                        "repo {}: error updating segmented changelog version store",
+                        self.repo_id
+                    )
+                })?;
+            info!(
+                ctx.logger(),
+                "repo {}: successfully seeded segmented changelog", self.repo_id,
+            );
+        } else {
+            self.sc_version_store
+                .update(&ctx, sc_version)
+                .await
+                .with_context(|| {
+                    format!(
+                        "repo {}: error updating segmented changelog version store",
+                        self.repo_id
+                    )
+                })?;
+            info!(
+                ctx.logger(),
+                "repo {}: successful incremental update to segmented changelog", self.repo_id,
+            );
+        }
 
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
         Ok(owned)
