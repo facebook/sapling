@@ -25,6 +25,6 @@ CREATE TABLE IF NOT EXISTS `chunk` (
 CREATE TABLE IF NOT EXISTS `chunk_generation` (
     `id` VARCHAR(255) NOT NULL,
     `last_seen_generation` BIGINT UNSIGNED NOT NULL,
-    `value_len` INT UNSIGNED DEFAULT NULL,
+    `value_len` INT UNSIGNED NOT NULL,
     PRIMARY KEY (`id`)
 );

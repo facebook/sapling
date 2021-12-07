@@ -42,27 +42,13 @@ Run sqlblob_gc mark, without populating value_len
   Starting sweep on data keys from shard 1
   Completed all sweeps
 
-Run sqlblob_gc generation size reporta again, just to check mark has not broken it
+Run sqlblob_gc generation size report again, just to check mark has not broken it
   $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 generation-size 2>&1 | strip_glog
   Generation | Size
   -----------------
            2 | 199 B
 
-Start again, set value_len to null to simulate the migration process
-  $ for s in 0 1; do sqlite3 "$TESTTMP/blobstore/blobs/shard_${s}.sqlite" "UPDATE chunk_generation SET value_len=NULL"; done
-
-Check that chunk_generations populated and they have no length
-  $ for s in 0 1; do sqlite3 -readonly "$TESTTMP/blobstore/blobs/shard_${s}.sqlite" "SELECT COUNT(1), last_seen_generation, value_len FROM chunk_generation" | sed "s/^/$s /"; done
-  0 0||
-  1 1|2|
-
-Run sqlblob_gc generation size report (i.e. new code before mark, no length populated, so should be zero)
-  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 generation-size 2>&1 | strip_glog
-  Generation | Size
-  -----------------
-           2 | 0 B
-
-Run sqlblob_gc mark, this should now populate value_len
+Run sqlblob_gc mark
   $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 mark 2>&1 | strip_glog
   Starting populating missing value_len
   Completed populating missing value_len
