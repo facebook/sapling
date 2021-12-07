@@ -5,15 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cmdlib::args::{self, MononokeMatches};
-use commit_transformation::{rewrite_commit, upload_commits};
+use commit_transformation::{rewrite_stack_no_merges, upload_commits};
 use context::CoreContext;
 use cross_repo_sync::types::{Source, Target};
-use futures::{compat::Stream01CompatExt, future::try_join_all, TryStreamExt};
+use futures::{compat::Stream01CompatExt, future::try_join_all, stream, StreamExt, TryStreamExt};
 use mononoke_api_types::InnerRepo;
 use mononoke_types::{ChangesetId, MPath};
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -25,6 +25,8 @@ use std::{
 };
 
 use crate::common::{decode_latest_synced_state_extras, encode_latest_synced_state_extras};
+
+const CHUNK_SIZE: usize = 100;
 
 pub async fn find_source_repos<'a>(
     ctx: &CoreContext,
@@ -72,12 +74,12 @@ pub async fn tail_once(
             find_commits_to_replay(ctx, &source_repo, latest_synced_commit, source_bookmark)
                 .await?;
 
-        for cs_id in commits_to_replay {
-            sync_commit(
+        for chunk in commits_to_replay.chunks(CHUNK_SIZE) {
+            sync_commits(
                 ctx,
                 &source_repo,
                 &hyper_repo,
-                cs_id,
+                chunk,
                 hyper_repo_bookmark,
                 &mut latest_replayed_state,
             )
@@ -180,70 +182,79 @@ async fn find_commits_to_replay(
     Ok(cs_ids)
 }
 
-async fn sync_commit(
+async fn sync_commits(
     ctx: &CoreContext,
     source_repo: &InnerRepo,
     hyper_repo: &BlobRepo,
-    cs_id: ChangesetId,
+    cs_ids: &[ChangesetId],
     bookmark_name: &Target<BookmarkName>,
     latest_synced_state: &mut HashMap<String, ChangesetId>,
 ) -> Result<(), Error> {
-    info!(
-        ctx.logger(),
-        "syncing {} from {}",
-        cs_id,
-        source_repo.blob_repo.name()
-    );
+    if cs_ids.is_empty() {
+        return Ok(());
+    }
+
     let hyper_repo_tip_cs_id = hyper_repo
         .get_bonsai_bookmark(ctx.clone(), bookmark_name)
         .await?
         .ok_or_else(|| anyhow!("{} bookmark not found in hyper repo", bookmark_name))?;
 
-    let bcs = cs_id
-        .load(ctx, &source_repo.blob_repo.get_blobstore())
+    let blobstore = source_repo.blob_repo.get_blobstore();
+    let bcss = stream::iter(cs_ids)
+        .map(|cs_id| cs_id.load(ctx, &blobstore))
+        .buffered(CHUNK_SIZE)
+        .try_collect::<Vec<_>>()
         .await?;
 
-    if bcs.is_merge() {
-        return Err(anyhow!("syncing merges is not supported"));
+    for cs in &bcss {
+        if cs.is_merge() {
+            return Err(anyhow!("syncing merges is not implemented yet"));
+        }
     }
 
-    let mut remapped_parents = HashMap::new();
-    let p1 = bcs
-        .parents()
-        .next()
-        .ok_or_else(|| anyhow!("unexpected commit with no parents"))?;
-    remapped_parents.insert(p1, hyper_repo_tip_cs_id);
+    info!(
+        ctx.logger(),
+        "preparing {} commits from {:?} to {:?}, repo {}",
+        bcss.len(),
+        bcss.get(0).map(|cs| cs.get_changeset_id()),
+        bcss.last().map(|cs| cs.get_changeset_id()),
+        source_repo.blob_repo.name()
+    );
 
     let prefix = MPath::new(source_repo.blob_repo.name())?;
     let mover = Arc::new(move |path: &MPath| Ok(vec![prefix.join(path)]));
-    let mut rewritten_commit = rewrite_commit(
+    let rewritten_commits = rewrite_stack_no_merges(
         ctx,
-        bcs.into_mut(),
-        &remapped_parents,
-        mover,
+        bcss,
+        hyper_repo_tip_cs_id,
+        mover.clone(),
         source_repo.blob_repo.clone(),
         None, // force_first_parent
-    )
-    .await?
-    .ok_or_else(|| anyhow!("unexpected empty commit after rewrite"))?;
-
-    latest_synced_state.insert(source_repo.blob_repo.name().to_string(), cs_id);
-    let extra = encode_latest_synced_state_extras(latest_synced_state);
-    rewritten_commit.extra = extra;
-    let rewritten_commit = rewritten_commit.freeze()?;
-    let cs_id = rewritten_commit.get_changeset_id();
-    upload_commits(
-        &ctx,
-        vec![rewritten_commit],
-        &source_repo.blob_repo,
-        hyper_repo,
+        |(cs_id, mut rewritten_commit)| {
+            latest_synced_state.insert(source_repo.blob_repo.name().to_string(), cs_id);
+            let extra = encode_latest_synced_state_extras(latest_synced_state);
+            rewritten_commit.extra = extra;
+            rewritten_commit
+        },
     )
     .await?;
+
+    let rewritten_commits = rewritten_commits
+        .into_iter()
+        .map(|maybe_bcs| maybe_bcs.context("unexpected empty commit after rewrite"))
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    let latest_commit = rewritten_commits
+        .last()
+        .map(|cs| cs.get_changeset_id())
+        .ok_or_else(|| anyhow!("no commits found!"))?;
+
+    upload_commits(&ctx, rewritten_commits, &source_repo.blob_repo, hyper_repo).await?;
 
     let mut txn = hyper_repo.update_bookmark_transaction(ctx.clone());
     txn.update(
         bookmark_name,
-        cs_id,
+        latest_commit,
         hyper_repo_tip_cs_id,
         BookmarkUpdateReason::ManualMove,
         None,
@@ -307,11 +318,11 @@ mod test {
             .await?;
 
         let mut latest_synced_state = HashMap::new();
-        sync_commit(
+        sync_commits(
             &ctx,
             &source_repo,
             &hyper_repo,
-            second_cs_id,
+            &[second_cs_id],
             &Target(BookmarkName::new("main")?),
             &mut latest_synced_state,
         )

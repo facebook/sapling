@@ -12,6 +12,7 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobsync::copy_content;
+use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{future::try_join_all, stream, StreamExt, TryStreamExt};
@@ -213,22 +214,119 @@ async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId
 /// the specified changeset comes first.
 pub async fn rewrite_commit<'a>(
     ctx: &'a CoreContext,
-    mut cs: BonsaiChangesetMut,
+    cs: BonsaiChangesetMut,
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: MultiMover,
     source_repo: BlobRepo,
     force_first_parent: Option<ChangesetId>,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    if !cs.file_changes.is_empty() {
-        let implicit_delete_file_changes = get_implicit_delete_file_changes(
+    let delete_file_changes = if !cs.file_changes.is_empty() {
+        get_implicit_delete_file_changes(
             ctx,
             cs.clone(),
             remapped_parents.keys().cloned(),
             mover.clone(),
             &source_repo,
         )
+        .await?
+    } else {
+        vec![]
+    };
+
+    internal_rewrite_commit_with_implicit_deletes(
+        cs,
+        remapped_parents,
+        mover,
+        force_first_parent,
+        delete_file_changes,
+    )
+}
+
+pub async fn rewrite_stack_no_merges<'a>(
+    ctx: &'a CoreContext,
+    css: Vec<BonsaiChangeset>,
+    mut rewritten_parent: ChangesetId,
+    mover: MultiMover,
+    source_repo: BlobRepo,
+    force_first_parent: Option<ChangesetId>,
+    mut modify_bonsai_cs: impl FnMut((ChangesetId, BonsaiChangesetMut)) -> BonsaiChangesetMut,
+) -> Result<Vec<Option<BonsaiChangeset>>, Error> {
+    borrowed!(mover: &Arc<_>, source_repo);
+
+    for cs in &css {
+        if cs.is_merge() {
+            return Err(anyhow!(
+                "cannot remap merges in a stack - {}",
+                cs.get_changeset_id()
+            ));
+        }
+    }
+
+    let css = stream::iter(css)
+        .map({
+            |cs| async move {
+                let deleted_file_changes = if cs.file_changes().next().is_some() {
+                    let parents = cs.parents();
+                    get_implicit_delete_file_changes(
+                        ctx,
+                        cs.clone().into_mut(),
+                        parents,
+                        mover.clone(),
+                        &source_repo,
+                    )
+                    .await?
+                } else {
+                    vec![]
+                };
+
+                anyhow::Ok((cs, deleted_file_changes))
+            }
+        })
+        .buffered(100)
+        .try_collect::<Vec<_>>()
         .await?;
 
+    let mut res = vec![];
+    for (from_cs, implicit_deletes_file_changes) in css {
+        let from_cs_id = from_cs.get_changeset_id();
+        let from_cs = from_cs.into_mut();
+
+        let mut remapped_parents = HashMap::new();
+        if let Some(parent) = from_cs.parents.get(0) {
+            remapped_parents.insert(*parent, rewritten_parent);
+        }
+
+        let maybe_cs = internal_rewrite_commit_with_implicit_deletes(
+            from_cs,
+            &remapped_parents,
+            mover.clone(),
+            force_first_parent,
+            implicit_deletes_file_changes,
+        )?;
+
+        let maybe_cs = maybe_cs
+            .map(|cs| modify_bonsai_cs((from_cs_id, cs)))
+            .map(|bcs| bcs.freeze())
+            .transpose()?;
+        if let Some(ref cs) = maybe_cs {
+            let to_cs_id = cs.get_changeset_id();
+            rewritten_parent = to_cs_id;
+        }
+
+        res.push(maybe_cs);
+    }
+
+    Ok(res)
+}
+
+pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
+    mut cs: BonsaiChangesetMut,
+    remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
+    mover: MultiMover,
+    force_first_parent: Option<ChangesetId>,
+    implicit_delete_file_changes: Vec<(MPath, FileChange)>,
+) -> Result<Option<BonsaiChangesetMut>, Error> {
+    if !cs.file_changes.is_empty() {
         let path_rewritten_changes: Result<Vec<Vec<_>>, _> = cs
             .file_changes
             .into_iter()
