@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{bail, format_err, Context, Result};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::{FutureExt, TryFutureExt};
@@ -32,9 +32,9 @@ use crate::dag::VertexListWithOptions;
 use crate::idmap::IdMap;
 use crate::parents::FetchParents;
 use crate::read_only::ReadOnlySegmentedChangelog;
-use crate::update::{head_with_options, server_namedag, ServerNameDag};
+use crate::update::{bookmark_with_options, server_namedag, ServerNameDag};
 use crate::{
-    segmented_changelog_delegate, CloneData, Group, InProcessIdDag, Location, MismatchedHeadsError,
+    segmented_changelog_delegate, CloneData, InProcessIdDag, Location, MismatchedHeadsError,
     SegmentedChangelog,
 };
 
@@ -93,7 +93,7 @@ pub struct OnDemandUpdateSegmentedChangelog {
     namedag: Arc<RwLock<ServerNameDag>>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
-    master_bookmark: BookmarkName,
+    master_bookmark: Option<BookmarkName>,
     ongoing_update: Arc<Mutex<Option<TryShared<BoxFuture<'static, Result<()>>>>>>,
 }
 
@@ -105,7 +105,7 @@ impl OnDemandUpdateSegmentedChangelog {
         idmap: Arc<dyn IdMap>,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         bookmarks: Arc<dyn Bookmarks>,
-        master_bookmark: BookmarkName,
+        master_bookmark: Option<BookmarkName>,
     ) -> Result<Self> {
         let namedag = server_namedag(ctx, iddag, idmap)?;
         let namedag = Arc::new(RwLock::new(namedag));
@@ -154,18 +154,24 @@ impl OnDemandUpdateSegmentedChangelog {
     /// Update the Dag to incorporate the commit pointed to by head.
     /// Returns true if it performed an actual update false if it simply waited for ongoing update
     /// to finish.
-    async fn try_update(&self, ctx: &CoreContext, head: ChangesetId) -> Result<bool> {
+    async fn try_update(&self, ctx: &CoreContext, heads: &VertexListWithOptions) -> Result<bool> {
         let to_wait = {
             let mut ongoing_update = self.ongoing_update.lock();
 
             if let Some(fut) = &*ongoing_update {
                 fut.clone().map(|_| Ok(false)).boxed()
             } else {
-                cloned!(ctx, self.repo_id, self.namedag, self.changeset_fetcher);
+                cloned!(
+                    ctx,
+                    heads,
+                    self.repo_id,
+                    self.namedag,
+                    self.changeset_fetcher
+                );
                 let task_ongoing_update = self.ongoing_update.clone();
                 let update_task = async move {
                     let result =
-                        the_actual_update(ctx, repo_id, namedag, changeset_fetcher, head).await;
+                        the_actual_update(ctx, repo_id, namedag, changeset_fetcher, &heads).await;
                     let mut ongoing_update = task_ongoing_update.lock();
                     *ongoing_update = None;
                     result
@@ -181,26 +187,16 @@ impl OnDemandUpdateSegmentedChangelog {
         Ok(to_wait.await?)
     }
 
-    // This functions will take a parameter, Group. It generalizes between updating the dag without
-    // concerning itself with the group that the cs goes in. The functions that call into it have
-    // the resposibility of deciding the Group.
-    async fn build_up_to_cs(
+    async fn build_up_to_vertex_list(
         &self,
         ctx: &CoreContext,
-        cs_id: ChangesetId,
-        group: Group,
+        list: &VertexListWithOptions,
     ) -> Result<()> {
-        if group != Group::MASTER {
-            bail!("building the NON_MASTER group is not implemented for SegmentedChangelog");
-        }
         let update_loop = async {
             let mut tries: i64 = 0;
             loop {
                 tries += 1;
-                if self.try_update(ctx, cs_id).await? {
-                    return Ok(tries);
-                }
-                if self.is_cs_assigned(ctx, cs_id).await? {
+                if self.try_update(ctx, &list).await? {
                     return Ok(tries);
                 }
             }
@@ -222,7 +218,6 @@ impl OnDemandUpdateSegmentedChangelog {
                 let mut scuba = ctx.scuba().clone();
                 scuba.add_future_stats(&stats);
                 scuba.add("repo_id", self.repo_id.id());
-                scuba.add("changeset_id", format!("{}", cs_id));
                 scuba.add("tries", tries);
                 scuba.log_with_msg("segmented_changelog_need_update", None);
             }
@@ -232,18 +227,10 @@ impl OnDemandUpdateSegmentedChangelog {
     }
 
     async fn build_up_to_bookmark(&self, ctx: &CoreContext) -> Result<()> {
-        let bookmark_cs = self
-            .bookmarks
-            .get(ctx.clone(), &self.master_bookmark)
-            .await
-            .with_context(|| {
-                format!(
-                    "error while fetching changeset for bookmark {}",
-                    self.master_bookmark
-                )
-            })?
-            .ok_or_else(|| format_err!("'{}' bookmark could not be found", self.master_bookmark))?;
-        self.build_up_to_cs(&ctx, bookmark_cs, Group::MASTER).await
+        let vertex_list =
+            bookmark_with_options(ctx, self.master_bookmark.as_ref(), self.bookmarks.as_ref())
+                .await?;
+        self.build_up_to_vertex_list(&ctx, &vertex_list).await
     }
 
     async fn build_up_to_heads(&self, ctx: &CoreContext, heads: &[ChangesetId]) -> Result<()> {
@@ -289,25 +276,6 @@ impl OnDemandUpdateSegmentedChangelog {
         }
         Ok(true)
     }
-
-    async fn is_cs_assigned(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool> {
-        let namedag = self.namedag.read().await;
-        if let Some(dag_id) = namedag
-            .map()
-            .clone_idmap()
-            .find_dag_id(ctx, cs_id)
-            .await
-            .context("fetching dag_id for csid")?
-        {
-            // Note. This will result in two read locks being acquired for functions that call
-            // into build_up. It would be nice to get to one lock being acquired. I tried but
-            // had some issues with lifetimes :).
-            if namedag.dag().contains_id(dag_id)? {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
 }
 
 async fn the_actual_update(
@@ -315,13 +283,12 @@ async fn the_actual_update(
     repo_id: RepositoryId,
     namedag: Arc<RwLock<ServerNameDag>>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    head: ChangesetId,
+    heads: &VertexListWithOptions,
 ) -> Result<()> {
     let monitored = async {
         let mut namedag = namedag.write().await;
         let parent_fetcher = FetchParents::new(ctx.clone(), changeset_fetcher);
 
-        let heads = VertexListWithOptions::from(vec![head_with_options(head)]);
         namedag.add_heads(&parent_fetcher, &heads).await?;
         namedag.map().flush_writes().await?;
         Ok(())
@@ -342,7 +309,6 @@ async fn the_actual_update(
     let mut scuba = ctx.scuba().clone();
     scuba.add_future_stats(&stats);
     scuba.add("repo_id", repo_id.id());
-    scuba.add("changeset_id", format!("{}", head));
     scuba.add("success", ret.is_ok());
     let msg = ret.as_ref().err().map(|err| format!("{:?}", err));
     scuba.log_with_msg("segmented_changelog_update", msg);

@@ -17,7 +17,7 @@ use futures::StreamExt;
 use once_cell::sync::Lazy;
 
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, Bookmarks};
+use bookmarks::{BookmarkName, Bookmarks, BookmarksArc};
 use caching_ext::{CachelibHandler, MemcacheHandler};
 use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::{ChangesetEntry, ChangesetsArc, ChangesetsRef};
@@ -36,7 +36,7 @@ use crate::idmap::{CacheHandlers, ConcurrentMemIdMap, IdMap, IdMapFactory, SqlId
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
-use crate::seeder::SegmentedChangelogSeeder;
+use crate::seeder::{SeedHead, SegmentedChangelogSeeder};
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
 use crate::version_store::SegmentedChangelogVersionStore;
@@ -77,7 +77,7 @@ fn new_tailer(
         blobrepo.get_changeset_fetcher(),
         Arc::new(blobrepo.get_blobstore()),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-        BOOKMARK_NAME.clone(),
+        Some(BOOKMARK_NAME.clone()),
         None,
     )
 }
@@ -115,8 +115,11 @@ async fn seed_with_prefetched(
         Arc::new(NoReplicaLagMonitor()),
         Arc::new(blobrepo.get_blobstore()),
         changeset_fetcher,
+        blobrepo.bookmarks_arc(),
     );
-    seeder.run(ctx, heads).await
+    seeder
+        .run(ctx, heads.into_iter().map(SeedHead::from).collect())
+        .await
 }
 
 async fn seed(
@@ -197,7 +200,7 @@ fn new_isolated_on_demand_update(
         Arc::new(ConcurrentMemIdMap::new()),
         blobrepo.get_changeset_fetcher(),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-        BOOKMARK_NAME.clone(),
+        Some(BOOKMARK_NAME.clone()),
     )
 }
 
@@ -718,7 +721,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
             Arc::clone(&idmap),
             blobrepo.get_changeset_fetcher(),
             Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-            BOOKMARK_NAME.clone(),
+            Some(BOOKMARK_NAME.clone()),
         )
     };
 
@@ -867,7 +870,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
         Arc::new(ConcurrentMemIdMap::new()),
         blobrepo.get_changeset_fetcher(),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-        bookmark_name.clone(),
+        Some(bookmark_name.clone()),
     )?;
     let sc =
         Arc::new(on_demand).with_periodic_update_to_master_bookmark(&ctx, Duration::from_secs(5));

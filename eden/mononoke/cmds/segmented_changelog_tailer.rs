@@ -94,14 +94,19 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             .ok_or_else(|| format_err!("unknown repository: {}", reponame))?;
         let repo_id = config.repoid;
 
-        let bookmark_name = &config.segmented_changelog_config.master_bookmark;
-        let track_bookmark = BookmarkName::new(bookmark_name).with_context(|| {
-            format!(
-                "error parsing the name of the bookmark to track: {}",
-                bookmark_name,
-            )
-        })?;
-
+        let bookmarks_name = config
+            .segmented_changelog_config
+            .master_bookmark
+            .as_ref()
+            .map(|name| {
+                BookmarkName::new(name).with_context(|| {
+                    format!(
+                        "failed to interpret {} as bookmark for repo {}",
+                        name, repo_id
+                    )
+                })
+            })
+            .transpose()?;
         info!(
             ctx.logger(),
             "repo name '{}' translates to id {}", reponame, repo_id
@@ -153,7 +158,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             blobrepo.get_changeset_fetcher(),
             Arc::new(blobrepo.get_blobstore()),
             Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-            track_bookmark,
+            bookmarks_name,
             None,
         );
 

@@ -33,7 +33,7 @@ pub struct SegmentedChangelogManager {
     idmap_factory: IdMapFactory,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
-    bookmark_name: BookmarkName,
+    bookmark_name: Option<BookmarkName>,
     update_to_master_bookmark_period: Option<Duration>,
 }
 
@@ -45,7 +45,7 @@ impl SegmentedChangelogManager {
         idmap_factory: IdMapFactory,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         bookmarks: Arc<dyn Bookmarks>,
-        bookmark_name: BookmarkName,
+        bookmark_name: Option<BookmarkName>,
         update_to_master_bookmark_period: Option<Duration>,
     ) -> Self {
         Self {

@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::{format_err, Error, Result};
 use async_trait::async_trait;
 use sql::{queries, Connection};
 use sql_ext::{
@@ -286,82 +286,14 @@ impl IdMap for SqlIdMap {
         ctx: &CoreContext,
         mut mappings: Vec<(DagId, ChangesetId)>,
     ) -> Result<()> {
-        // On correctness. This code is slightly coupled with the IdMap update algorithm.
-        // We need to ensure algorithm correctness with multiple writers and potential failures.
-        // We need to "throttle" writes to prevent replication lag so big transaction are
-        // undesirable.
-        //
-        // The IdMap update happens before the IdDag update so if a process in killed in between
-        // those two steps, the update algorithm has to handle "a lagging" IdDag. The last IdDag
-        // computed may have fewer commits processed than the database IdMap.
-        //
-        // Since we cannot do updates in one transaction the IdMap may have partial data in the
-        // database from an update. To help with this problem we insert IdMap entries in increasing
-        // order by DagId. This results in the invariant that all DagIds between 1 and
-        // last_dag_id are assigned. This means that the IdMap algorithm may have to deal with
-        // multiple "heads".
-        //
-        // Let's look at the situation where we have multiple update processes that start from
-        // different commits then race to update the database. If they insert the same results we
-        // may choose to be optimistic and allow them both to proceed with their process until some
-        // difference is encountered. Updating dag_ids in order should leave the IdMap in a state
-        // that already has to be handled. That said, being pessimistic is easier to reason about
-        // so we rollback the transaction if any dag_id in our batch is already present. What may
-        // happen is that one process updates a batch and second process starts a new update and
-        // wins the race to update. The first process aborts and we are in a state that we
-        // previously described as a requirement for the update algorithm.
         STATS::insert.add_value(mappings.len() as i64);
         mappings.sort();
 
-        // Ensure that we have no gaps in the assignments in the IdMap by validating that mappings
-        // has consecutive DagIds and they start with last_dag_id+1.
-        // This isn't a great place for these checks. I feel pretty clowny adding them here but
-        // they don't hurt. Might remove them later.
-        if let Some(&(first, _)) = mappings.first() {
-            if let Some(&(last, _)) = mappings.last() {
-                if first + mappings.len() as u64 != last + 1 {
-                    return Err(format_err!(
-                        "repo {}: mappings sent for insertion are not consecutive",
-                        self.repo_id
-                    ));
-                }
-            }
-            match self
-                .get_last_entry(ctx)
-                .await
-                .context("error fetching last entry")?
-            {
-                None => {
-                    if first.0 != 0 {
-                        return Err(format_err!(
-                            "repo {}: first dag_id being inserted into idmap {:?} is not 0 ({})",
-                            self.repo_id,
-                            self.version,
-                            first,
-                        ));
-                    }
-                }
-                Some((last_stored, _)) => {
-                    if first != last_stored + 1 {
-                        return Err(format_err!(
-                            "repo {}: smallest dag_id being inserted into idmap {:?} does not follow last entry \
-                             ({} + 1 != {})",
-                            self.repo_id,
-                            self.version,
-                            last_stored,
-                            first
-                        ));
-                    }
-                }
-            }
-        }
-
         // Sanity check for copy mappings - we want to reject inserts to vertex IDs that are
-        // referenced by a copy mapping. The checks above ensure that `first` is the lowest
-        // ID number, so just check first is not a copy referenced ID.
+        // referenced by a copy mapping.
         // This is not perfect (races, replication lag), but should show bugs in tests
-        if let Some(&(first, _)) = mappings.first() {
-            self.check_copy_mapping(&self.connections.read_connection, &first)
+        if let Some(min) = mappings.iter().map(|(id, _cs)| id).min() {
+            self.check_copy_mapping(&self.connections.read_connection, &min)
                 .await?;
         }
 
@@ -551,7 +483,7 @@ mod tests {
     use fbinit::FacebookInit;
 
     use mononoke_types_mocks::changesetid::{
-        AS_CSID, FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
+        AS_CSID, BS_CSID, FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
     };
     use sql_construct::SqlConstruct;
     use sql_ext::replication::NoReplicaLagMonitor;
@@ -987,12 +919,13 @@ mod tests {
             IdMapVersion(1),
         );
         idmap1.insert(&ctx, DagId(0), AS_CSID).await?;
+        idmap1.insert(&ctx, DagId(2), BS_CSID).await?;
 
-        let idmap2 = idmap1.copy(DagId(0), IdMapVersion(2)).await?;
-        idmap2.insert(&ctx, DagId(1), ONES_CSID).await?;
+        let idmap2 = idmap1.copy(DagId(2), IdMapVersion(2)).await?;
+        idmap2.insert(&ctx, DagId(3), ONES_CSID).await?;
 
         assert!(
-            idmap1.insert(&ctx, DagId(2), TWOS_CSID).await.is_err(),
+            idmap1.insert(&ctx, DagId(1), TWOS_CSID).await.is_err(),
             "Inserted into a copy base table"
         );
         Ok(())

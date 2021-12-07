@@ -20,16 +20,15 @@ use blobstore::Blobstore;
 use bookmarks::{BookmarkName, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::RepositoryId;
 
 use crate::dag::ops::DagAddHeads;
-use crate::dag::VertexListWithOptions;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{CacheHandlers, IdMapFactory};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::parents::FetchParents;
 use crate::types::SegmentedChangelogVersion;
-use crate::update::{head_with_options, server_namedag};
+use crate::update::{bookmark_with_options, server_namedag};
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::SegmentedChangelogSqlConnections;
 
@@ -53,7 +52,7 @@ pub struct SegmentedChangelogTailer {
     repo_id: RepositoryId,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
-    bookmark_name: BookmarkName,
+    bookmark_name: Option<BookmarkName>,
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: IdMapFactory,
@@ -67,7 +66,7 @@ impl SegmentedChangelogTailer {
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         blobstore: Arc<dyn Blobstore>,
         bookmarks: Arc<dyn Bookmarks>,
-        bookmark_name: BookmarkName,
+        bookmark_name: Option<BookmarkName>,
         caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
     ) -> Self {
         let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
@@ -114,10 +113,9 @@ impl SegmentedChangelogTailer {
             scuba.add("success", update_result.is_ok());
 
             let msg = match update_result {
-                Ok((_, head_cs)) => {
+                Ok(_) => {
                     STATS::success.add_value(1);
                     STATS::success_per_repo.add_value(1, (self.repo_id.id(),));
-                    scuba.add("changeset_id", format!("{}", head_cs));
                     None
                 }
                 Err(err) => {
@@ -136,7 +134,7 @@ impl SegmentedChangelogTailer {
         }
     }
 
-    pub async fn once(&self, ctx: &CoreContext) -> Result<(OwnedSegmentedChangelog, ChangesetId)> {
+    pub async fn once(&self, ctx: &CoreContext) -> Result<OwnedSegmentedChangelog> {
         info!(
             ctx.logger(),
             "repo {}: starting incremental update to segmented changelog", self.repo_id,
@@ -160,17 +158,6 @@ impl SegmentedChangelogTailer {
             })?;
         let idmap = self.idmap_factory.for_writer(ctx, sc_version.idmap_version);
 
-        let head = self
-            .bookmarks
-            .get(ctx.clone(), &self.bookmark_name)
-            .await
-            .context("fetching master changesetid")?
-            .ok_or_else(|| format_err!("'{}' bookmark could not be found", self.bookmark_name))?;
-        info!(
-            ctx.logger(),
-            "repo {}: bookmark {} resolved to {}", self.repo_id, self.bookmark_name, head
-        );
-
         let iddag = self
             .iddag_save_store
             .load(&ctx, sc_version.iddag_version)
@@ -180,7 +167,9 @@ impl SegmentedChangelogTailer {
         let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
         let parent_fetcher = FetchParents::new(ctx.clone(), self.changeset_fetcher.clone());
 
-        let heads = VertexListWithOptions::from(vec![head_with_options(head)]);
+        let heads =
+            bookmark_with_options(&ctx, self.bookmark_name.as_ref(), self.bookmarks.as_ref())
+                .await?;
         // Note on memory use: we do not flush the changes out in the middle
         // of writing to the IdMap.
         // Thus, if OOMs happen here, the IdMap may need to flush writes to the DB
@@ -197,7 +186,7 @@ impl SegmentedChangelogTailer {
                 self.repo_id
             );
             let owned = OwnedSegmentedChangelog::new(iddag, idmap);
-            return Ok((owned, head));
+            return Ok(owned);
         }
 
         info!(
@@ -230,6 +219,6 @@ impl SegmentedChangelogTailer {
         );
 
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
-        Ok((owned, head))
+        Ok(owned)
     }
 }

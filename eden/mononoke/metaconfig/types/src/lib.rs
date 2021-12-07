@@ -1577,7 +1577,7 @@ pub struct SegmentedChangelogConfig {
     /// SegmentedChangelogBuilder for valid options.
     pub update_algorithm: Option<String>,
     /// The bookmark that is followed to construct the Master group of the Dag.
-    pub master_bookmark: String,
+    pub master_bookmark: Option<String>,
     /// How often the tailer should check for updates on the master_bookmark.
     /// Defaults to 5 minutes.
     pub tailer_update_period: Option<Duration>,
@@ -1634,7 +1634,7 @@ impl Default for SegmentedChangelogConfig {
         SegmentedChangelogConfig {
             enabled: false,
             update_algorithm: None,
-            master_bookmark: String::from("master"),
+            master_bookmark: None,
             tailer_update_period: Some(Duration::from_secs(300)),
             skip_dag_load_at_startup: false,
             reload_dag_save_period: Some(Duration::from_secs(3600)),

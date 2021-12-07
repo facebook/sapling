@@ -1098,7 +1098,7 @@ mod test {
                 segmented_changelog_config: SegmentedChangelogConfig {
                     enabled: true,
                     update_algorithm: Some(String::from("ondemand")),
-                    master_bookmark: String::from("test_bookmark"),
+                    master_bookmark: Some(String::from("test_bookmark")),
                     tailer_update_period: None,
                     skip_dag_load_at_startup: true,
                     reload_dag_save_period: None,
@@ -1170,7 +1170,7 @@ mod test {
                 segmented_changelog_config: SegmentedChangelogConfig {
                     enabled: false,
                     update_algorithm: None,
-                    master_bookmark: String::from("master"),
+                    master_bookmark: None,
                     tailer_update_period: Some(Duration::from_secs(300)),
                     skip_dag_load_at_startup: false,
                     reload_dag_save_period: Some(Duration::from_secs(3600)),

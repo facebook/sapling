@@ -463,7 +463,7 @@ impl Convert for RawSegmentedChangelogConfig {
         Ok(SegmentedChangelogConfig {
             enabled: self.enabled.unwrap_or(default.enabled),
             update_algorithm: self.update_algorithm.or(default.update_algorithm),
-            master_bookmark: self.master_bookmark.unwrap_or(default.master_bookmark),
+            master_bookmark: self.master_bookmark,
             tailer_update_period: maybe_secs_to_duration(
                 self.tailer_update_period_secs,
                 default.tailer_update_period,

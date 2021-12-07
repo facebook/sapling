@@ -57,12 +57,17 @@ pub async fn new_server_segmented_changelog<'a>(
         return Ok(Arc::new(DisabledSegmentedChangelog::new()));
     }
     let repo_id = repo_identity.id();
-    let bookmarks_name = BookmarkName::new(&config.master_bookmark).with_context(|| {
-        format!(
-            "failed to interpret {} as bookmark for repo {}",
-            config.master_bookmark, repo_id
-        )
-    })?;
+    let bookmarks_name = config
+        .master_bookmark
+        .map(|name| {
+            BookmarkName::new(&name).with_context(|| {
+                format!(
+                    "failed to interpret {} as bookmark for repo {}",
+                    name, repo_id
+                )
+            })
+        })
+        .transpose()?;
     if config.skip_dag_load_at_startup {
         // This is a special case. We build Segmented Changelog using an in process iddag and idmap
         // and update then on demand.
