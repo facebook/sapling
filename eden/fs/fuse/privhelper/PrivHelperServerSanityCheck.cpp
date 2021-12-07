@@ -34,6 +34,15 @@ void sanityCheckFs(const std::string& mountPoint) {
   struct statfs fsBuf;
   if (statfs(mountPoint.c_str(), &fsBuf) < 0) {
     auto err = errno;
+    if (err == ENOTCONN) {
+      // Remote filesystems like NFS, AFS, and FUSE return ENOTCONN if
+      // the mount is still in the kernel mount table but the socket
+      // is closed. Allow mounting in that case.
+      //
+      // In all likelihood, this is a mount from a prior EdenFS
+      // process that crashed without unmounting.
+      return;
+    }
     throw std::domain_error(folly::to<std::string>(
         "statfs failed for: ", mountPoint, ": ", folly::errnoStr(err)));
   }
