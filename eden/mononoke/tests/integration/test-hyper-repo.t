@@ -121,7 +121,9 @@ run again, make sure nothing happens
   * using repo "*" repoid RepositoryId(*) (glob)
   * Reloading redacted config from configerator (glob)
 
-
+  $ REPOID=2 mononoke_hyper_repo_builder master_bookmark main_bookmark validate main_bookmark |& grep 'all is well'
+  * all is well! (glob)
+  * all is well! (glob)
 
   $ cd $TESTTMP/hyper_repo
   $ REPONAME=hyper_repo hgmn pull -q

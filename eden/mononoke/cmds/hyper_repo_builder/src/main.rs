@@ -17,21 +17,33 @@ use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use clap::{Arg, ArgMatches, SubCommand};
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
-use cross_repo_sync::types::{Source, Target};
+use cross_repo_sync::{
+    types::{Source, Target},
+    validation::verify_working_copy_inner,
+};
 use fbinit::FacebookInit;
 use futures::future::try_join;
+use slog::info;
 use std::time::Duration;
 
-use crate::tail::{find_source_repos, tail_once};
+use crate::common::{
+    find_source_repos, find_source_repos_and_latest_synced_cs_ids, get_mover_and_reverse_mover,
+};
+use crate::tail::tail_once;
 
+const ARG_CHANGESET: &str = "changeset";
 const ARG_HYPER_REPO_BOOKMARK_NAME: &str = "hyper-repo-bookmark-name";
 const ARG_SOURCE_REPO: &str = "source-repo";
 const ARG_SOURCE_REPO_BOOKMARK_NAME: &str = "source-repo-bookmark-name";
 const ARG_ONCE: &str = "once";
 const SUBCOMMAND_ADD_SOURCE_REPO: &str = "add-source-repo";
 const SUBCOMMAND_TAIL: &str = "tail";
+const SUBCOMMAND_VALIDATE: &str = "validate";
 
 mod add_source_repo;
 mod common;
@@ -49,7 +61,12 @@ async fn subcommand_tail<'a>(
 
     let (source_bookmark, hyper_repo_bookmark) = parse_bookmarks(matches)?;
 
-    let source_repos = find_source_repos(&ctx, &hyper_repo, &hyper_repo_bookmark, matches).await?;
+    let hyper_repo_tip_cs_id = hyper_repo
+        .get_bonsai_bookmark(ctx.clone(), &hyper_repo_bookmark)
+        .await?
+        .ok_or_else(|| anyhow!("{} bookmark not found in hyper repo", hyper_repo_bookmark))?;
+
+    let source_repos = find_source_repos(&ctx, &hyper_repo, hyper_repo_tip_cs_id, matches).await?;
 
     // Let's be extra cautious. hyper repo is expected to be a test repo, so no backup
     // config should be present. If it's present then something might be wrong, and we
@@ -117,12 +134,51 @@ async fn subcommand_add_source_repo<'a>(
     Ok(())
 }
 
+async fn subcommand_validate<'a>(
+    fb: FacebookInit,
+    matches: &'a MononokeMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), Error> {
+    let logger = matches.logger();
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
+    let hyper_repo: BlobRepo = args::open_repo(ctx.fb, ctx.logger(), &matches).await?;
+
+    let hyper_cs_id = sub_m
+        .value_of(ARG_CHANGESET)
+        .ok_or_else(|| anyhow!("{} arg not found", ARG_CHANGESET))?;
+    let hyper_cs_id = helpers::csid_resolve(&ctx, hyper_repo.clone(), hyper_cs_id).await?;
+
+    let source_repos =
+        find_source_repos_and_latest_synced_cs_ids(&ctx, &hyper_repo, hyper_cs_id, matches).await?;
+
+    for (source_repo, source_cs_id) in source_repos {
+        info!(ctx.logger(), "validating {}", source_repo.blob_repo.name());
+
+        let (mover, reverse_mover) = get_mover_and_reverse_mover(&source_repo.blob_repo)?;
+        verify_working_copy_inner(
+            &ctx,
+            &Source(source_repo.blob_repo),
+            &Target(hyper_repo.clone()),
+            source_cs_id,
+            Target(hyper_cs_id),
+            &mover,
+            &reverse_mover,
+            Default::default(), // Visit all prefixes
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
 async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'_>) -> Result<(), Error> {
     match matches.subcommand() {
         (SUBCOMMAND_ADD_SOURCE_REPO, Some(sub_m)) => {
             subcommand_add_source_repo(fb, &matches, &sub_m).await
         }
         (SUBCOMMAND_TAIL, Some(sub_m)) => subcommand_tail(fb, &matches, &sub_m).await,
+        (SUBCOMMAND_VALIDATE, Some(sub_m)) => subcommand_validate(fb, &matches, &sub_m).await,
         (subcommand, _) => Err(anyhow!("unknown subcommand {}!", subcommand)),
     }
 }
@@ -186,6 +242,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .required(false)
                         .takes_value(false)
                         .help("Loop only once"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_VALIDATE)
+                .about("Validate that files in hyper repo are identical to corresponding files in source repo")
+                .arg(
+                    Arg::with_name(ARG_CHANGESET)
+                        .required(true)
+                        .takes_value(true)
+                        .help("bonsai/hg cs id or bookmark in hyper repo"),
                 ),
         )
         .get_matches(fb)?;

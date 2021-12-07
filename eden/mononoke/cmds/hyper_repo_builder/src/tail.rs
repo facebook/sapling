@@ -9,50 +9,26 @@ use anyhow::{anyhow, Context, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
-use cmdlib::args::{self, MononokeMatches};
 use commit_transformation::{rewrite_stack_no_merges, upload_commits};
 use context::CoreContext;
-use cross_repo_sync::types::{Source, Target};
-use futures::{compat::Stream01CompatExt, future::try_join_all, stream, StreamExt, TryStreamExt};
+use cross_repo_sync::{
+    mover_to_multi_mover,
+    types::{Source, Target},
+};
+use futures::{compat::Stream01CompatExt, stream, StreamExt, TryStreamExt};
 use mononoke_api_types::InnerRepo;
-use mononoke_types::{ChangesetId, MPath};
+use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 use slog::info;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
+use std::collections::HashMap;
+
+use crate::common::{
+    decode_latest_synced_state_extras, encode_latest_synced_state_extras,
+    get_mover_and_reverse_mover,
 };
 
-use crate::common::{decode_latest_synced_state_extras, encode_latest_synced_state_extras};
-
 const CHUNK_SIZE: usize = 100;
-
-pub async fn find_source_repos<'a>(
-    ctx: &CoreContext,
-    hyper_repo: &BlobRepo,
-    bookmark_name: &Target<BookmarkName>,
-    matches: &'a MononokeMatches<'_>,
-) -> Result<Vec<InnerRepo>, Error> {
-    let hyper_repo_tip_cs_id = hyper_repo
-        .get_bonsai_bookmark(ctx.clone(), bookmark_name)
-        .await?
-        .ok_or_else(|| anyhow!("{} bookmark not found in hyper repo", bookmark_name))?;
-
-    let hyper_repo_tip = hyper_repo_tip_cs_id
-        .load(ctx, &hyper_repo.get_blobstore())
-        .await?;
-
-    let latest_synced_state = decode_latest_synced_state_extras(hyper_repo_tip.extra())?;
-    let source_repo_names: HashSet<_> = latest_synced_state.into_keys().collect();
-
-    let source_repos: Vec<InnerRepo> = try_join_all(source_repo_names.into_iter().map(|name| {
-        args::open_repo_with_repo_name(ctx.fb, &ctx.logger(), name.to_string(), matches)
-    }))
-    .await?;
-
-    Ok(source_repos)
-}
 
 pub async fn tail_once(
     ctx: &CoreContext,
@@ -221,8 +197,8 @@ async fn sync_commits(
         source_repo.blob_repo.name()
     );
 
-    let prefix = MPath::new(source_repo.blob_repo.name())?;
-    let mover = Arc::new(move |path: &MPath| Ok(vec![prefix.join(path)]));
+    let (mover, _) = get_mover_and_reverse_mover(&source_repo.blob_repo)?;
+    let mover = mover_to_multi_mover(mover);
     let rewritten_commits = rewrite_stack_no_merges(
         ctx,
         bcss,
@@ -276,7 +252,7 @@ mod test {
     use crate::add_source_repo::add_source_repo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
-    use mononoke_types::RepositoryId;
+    use mononoke_types::{MPath, RepositoryId};
     use test_repo_factory::TestRepoFactory;
     use tests_utils::{bookmark, list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
 
