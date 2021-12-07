@@ -8,8 +8,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{format_err, Context, Result};
+use anyhow::{format_err, Context, Error, Result};
 use fbinit::FacebookInit;
+use futures::stream::{self, TryStreamExt};
 use futures_stats::TimedFutureExt;
 use slog::{debug, error, info};
 use sql_ext::replication::ReplicaLagMonitor;
@@ -18,13 +19,15 @@ use stats::prelude::*;
 
 use blobstore::Blobstore;
 use bookmarks::{BookmarkName, Bookmarks};
-use changeset_fetcher::ChangesetFetcher;
+use bulkops::{Direction, PublicChangesetBulkFetch};
+use changeset_fetcher::{ChangesetFetcher, PrefetchedChangesetsFetcher};
 use context::CoreContext;
-use mononoke_types::RepositoryId;
+use mononoke_types::{Generation, RepositoryId};
 
 use crate::dag::ops::DagAddHeads;
+use crate::dag::DagAlgorithm;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{CacheHandlers, IdMapFactory};
+use crate::idmap::{cs_id_from_vertex_name, CacheHandlers, IdMapFactory};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::parents::FetchParents;
 use crate::types::SegmentedChangelogVersion;
@@ -50,7 +53,8 @@ define_stats! {
 
 pub struct SegmentedChangelogTailer {
     repo_id: RepositoryId,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    changeset_fetcher: Arc<PrefetchedChangesetsFetcher>,
+    bulk_fetch: Arc<PublicChangesetBulkFetch>,
     bookmarks: Arc<dyn Bookmarks>,
     bookmark_name: Option<BookmarkName>,
     sc_version_store: SegmentedChangelogVersionStore,
@@ -63,7 +67,8 @@ impl SegmentedChangelogTailer {
         repo_id: RepositoryId,
         connections: SegmentedChangelogSqlConnections,
         replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        changeset_fetcher: Arc<PrefetchedChangesetsFetcher>,
+        bulk_fetch: Arc<PublicChangesetBulkFetch>,
         blobstore: Arc<dyn Blobstore>,
         bookmarks: Arc<dyn Bookmarks>,
         bookmark_name: Option<BookmarkName>,
@@ -79,6 +84,7 @@ impl SegmentedChangelogTailer {
         Self {
             repo_id,
             changeset_fetcher,
+            bulk_fetch,
             bookmarks,
             bookmark_name,
             sc_version_store,
@@ -165,11 +171,65 @@ impl SegmentedChangelogTailer {
             .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
 
         let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
-        let parent_fetcher = FetchParents::new(ctx.clone(), self.changeset_fetcher.clone());
 
         let heads =
             bookmark_with_options(&ctx, self.bookmark_name.as_ref(), self.bookmarks.as_ref())
                 .await?;
+
+        let head_commits: Vec<_> = namedag
+            .heads(namedag.master_group().await?)
+            .await?
+            .iter()
+            .await?
+            .map_ok(|name| cs_id_from_vertex_name(&name))
+            .try_collect()
+            .await?;
+
+        let changeset_fetcher = {
+            let namedag_max_gen = stream::iter(head_commits.iter().map(Ok::<_, Error>))
+                .try_fold(0, {
+                    let fetcher = &self.changeset_fetcher;
+                    move |max, cs_id| async move {
+                        let gen = fetcher.get_generation_number(ctx.clone(), *cs_id).await?;
+                        Ok(max.max(gen.value()))
+                    }
+                })
+                .await?;
+            let heads_min_gen = stream::iter(
+                heads
+                    .vertexes()
+                    .iter()
+                    .map(|name| Ok::<_, Error>(cs_id_from_vertex_name(name))),
+            )
+            .try_fold(Generation::max_gen().value(), {
+                let fetcher = &self.changeset_fetcher;
+                move |min, cs_id| async move {
+                    let gen = fetcher.get_generation_number(ctx.clone(), cs_id).await?;
+                    Ok(min.min(gen.value()))
+                }
+            })
+            .await?;
+
+            if heads_min_gen.saturating_sub(namedag_max_gen) > 1000 {
+                // This has the potential to cause OOM by fetching a large
+                // chunk of the repo
+                let missing = self.bulk_fetch.fetch_bounded(
+                    &ctx,
+                    Direction::NewestFirst,
+                    Some(
+                        self.bulk_fetch
+                            .get_repo_bounds_after_commits(&ctx, head_commits)
+                            .await?,
+                    ),
+                );
+                Arc::new(self.changeset_fetcher.clone_with_extension(missing).await?)
+            } else {
+                self.changeset_fetcher.clone()
+            }
+        };
+
+        let parent_fetcher = FetchParents::new(ctx.clone(), changeset_fetcher);
+
         // Note on memory use: we do not flush the changes out in the middle
         // of writing to the IdMap.
         // Thus, if OOMs happen here, the IdMap may need to flush writes to the DB

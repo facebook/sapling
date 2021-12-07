@@ -12,12 +12,17 @@ use std::time::Duration;
 
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
+use bytes::Bytes;
 use clap::Arg;
 use futures::future::join_all;
+use futures::stream;
 use slog::{error, info};
 
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 use bookmarks::{BookmarkName, Bookmarks};
+use bulkops::PublicChangesetBulkFetch;
+use changeset_fetcher::PrefetchedChangesetsFetcher;
+use changesets::{deserialize_cs_entries, ChangesetsArc};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
@@ -31,6 +36,7 @@ use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
 const ONCE_ARG: &str = "once";
 const REPO_ARG: &str = "repo";
+const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
@@ -54,6 +60,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(false)
                 .required(false)
                 .help("When set, the tailer will perform a single incremental build run."),
+        )
+        .arg(
+            Arg::with_name(ARG_PREFETCHED_COMMITS_PATH)
+                .long(ARG_PREFETCHED_COMMITS_PATH)
+                .takes_value(true)
+                .required(false)
+                .help(
+                    "a file with a serialized list of ChangesetEntry, \
+                which can be used to speed up rebuilding of segmented changelog",
+                ),
         );
     let matches = app.get_matches(fb)?;
 
@@ -80,6 +96,16 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         error!(ctx.logger(), "At least one repo had to be specified");
         return Ok(());
     }
+
+    let prefetched_commits = match matches.value_of(ARG_PREFETCHED_COMMITS_PATH) {
+        Some(path) => {
+            info!(ctx.logger(), "reading prefetched commits from {}", path);
+            let data = tokio::fs::read(path).await?;
+            deserialize_cs_entries(&Bytes::from(data))
+                .with_context(|| format!("failed to parse serialized cs entries from {}", path))?
+        }
+        None => vec![],
+    };
 
     let config_store = matches.config_store();
     let mysql_options = matches.mysql_options();
@@ -151,11 +177,32 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         // BlobRepo is probably prone to more problems from the maintenance perspective.
         let blobrepo: BlobRepo =
             args::open_repo_with_repo_id(ctx.fb, ctx.logger(), repo_id, matches).await?;
+
+        let changeset_fetcher = Arc::new(
+            PrefetchedChangesetsFetcher::new(
+                repo_id,
+                blobrepo.changesets_arc(),
+                stream::iter(prefetched_commits.iter().filter_map(|entry| {
+                    if entry.repo_id == repo_id {
+                        Some(Ok(entry.clone()))
+                    } else {
+                        None
+                    }
+                })),
+            )
+            .await?,
+        );
+
+        let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
+            blobrepo.changesets_arc(),
+            blobrepo.get_phases(),
+        ));
         let segmented_changelog_tailer = SegmentedChangelogTailer::new(
             repo_id,
             segmented_changelog_sql_connections,
             replica_lag_monitor,
-            blobrepo.get_changeset_fetcher(),
+            changeset_fetcher,
+            bulk_fetcher,
             Arc::new(blobrepo.get_blobstore()),
             Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
             bookmarks_name,

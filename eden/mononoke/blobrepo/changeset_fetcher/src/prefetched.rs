@@ -50,6 +50,28 @@ impl PrefetchedChangesetsFetcher {
         })
     }
 
+    pub async fn clone_with_extension(
+        &self,
+        extra: impl Stream<Item = Result<ChangesetEntry, Error>>,
+    ) -> Result<Self> {
+        let repo_id = self.changesets.repo_id();
+        let mut prefetched = self.prefetched.clone();
+        let extra: HashMap<_, _> = extra
+            .and_then(|entry| async move {
+                if entry.repo_id != repo_id {
+                    bail!("Prefetched changesets and supplied repo ID do not match");
+                }
+                Ok((entry.cs_id, entry))
+            })
+            .try_collect()
+            .await?;
+        prefetched.extend(extra);
+        Ok(Self {
+            changesets: self.changesets.clone(),
+            prefetched,
+        })
+    }
+
     async fn get_cs_entry(&self, ctx: CoreContext, cs_id: ChangesetId) -> Result<ChangesetEntry> {
         let prefetched_entry = self.prefetched.get(&cs_id);
         if let Some(prefetched_entry) = prefetched_entry {

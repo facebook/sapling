@@ -18,6 +18,7 @@ use once_cell::sync::Lazy;
 
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Bookmarks, BookmarksArc};
+use bulkops::PublicChangesetBulkFetch;
 use caching_ext::{CachelibHandler, MemcacheHandler};
 use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::{ChangesetEntry, ChangesetsArc, ChangesetsRef};
@@ -66,20 +67,35 @@ where
 
 static BOOKMARK_NAME: Lazy<BookmarkName> = Lazy::new(|| BookmarkName::new("master").unwrap());
 
-fn new_tailer(
+async fn new_tailer(
     blobrepo: &BlobRepo,
     connections: &SegmentedChangelogSqlConnections,
-) -> SegmentedChangelogTailer {
-    SegmentedChangelogTailer::new(
+) -> Result<SegmentedChangelogTailer> {
+    let changeset_fetcher = Arc::new(
+        PrefetchedChangesetsFetcher::new(
+            blobrepo.get_repoid(),
+            blobrepo.changesets_arc(),
+            stream::empty(),
+        )
+        .await?,
+    );
+
+    let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
+        blobrepo.changesets_arc(),
+        blobrepo.get_phases(),
+    ));
+
+    Ok(SegmentedChangelogTailer::new(
         blobrepo.get_repoid(),
         connections.clone(),
         Arc::new(NoReplicaLagMonitor()),
-        blobrepo.get_changeset_fetcher(),
+        changeset_fetcher,
+        bulk_fetcher,
         Arc::new(blobrepo.get_blobstore()),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
         Some(BOOKMARK_NAME.clone()),
         None,
-    )
+    ))
 }
 
 async fn seed_with_prefetched(
@@ -543,7 +559,7 @@ async fn test_changeset_id_to_location_multiple_heads(fb: FacebookInit) -> Resul
         BOOKMARK_NAME.clone(),
     )
     .await;
-    let tailer = new_tailer(&blobrepo, &conns);
+    let tailer = new_tailer(&blobrepo, &conns).await?;
     let _ = tailer.once(&ctx).await?;
     let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
@@ -908,7 +924,7 @@ async fn test_seeder_tailer_and_load(fb: FacebookInit) -> Result<()> {
     let sc = load_owned(&ctx, &blobrepo, &conns).await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
-    let tailer = new_tailer(&blobrepo, &conns);
+    let tailer = new_tailer(&blobrepo, &conns).await?;
     let _ = tailer.once(&ctx).await?;
     let sc = load_owned(&ctx, &blobrepo, &conns).await?;
     let master = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -955,7 +971,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     .await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
-    let tailer = new_tailer(&blobrepo, &conns);
+    let tailer = new_tailer(&blobrepo, &conns).await?;
     let _ = tailer.once(&ctx).await?;
     tokio::time::advance(Duration::from_secs(15)).await;
     sc.wait_for_update().await;
