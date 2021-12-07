@@ -21,6 +21,7 @@ mod debug;
 mod du;
 mod gc;
 mod humantime;
+mod list;
 mod minitop;
 mod pid;
 mod status;
@@ -87,6 +88,7 @@ pub enum TopLevelSubcommand {
     // Top(crate::top::TopCmd),
     Minitop(crate::minitop::MinitopCmd),
     // Du(crate::du::DiskUsageCmd),
+    // List(crate::list::ListCmd),
 }
 
 #[async_trait]
@@ -103,6 +105,7 @@ impl Subcommand for TopLevelSubcommand {
             // Top(cmd) => cmd,
             Minitop(cmd) => cmd,
             // Du(cmd) => cmd,
+            // List(cmd) => cmd,
         };
         sc.run(instance).await
     }
