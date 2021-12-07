@@ -393,7 +393,7 @@ void RpcTcpHandler::dispatchAndReply(
           // XXX: This should never happen.
         } else {
           auto resultBuffer = std::move(result).value();
-          XLOG(DBG1) << "About to write to the socket.";
+          XLOG(DBG7) << "About to write to the socket.";
           sock_->writeChain(&writer_, std::move(resultBuffer));
         }
       })
