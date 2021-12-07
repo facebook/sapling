@@ -21,6 +21,7 @@ use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
 use context::{CoreContext, PerfCounterType};
 use hostname::get_hostname;
 use stats::prelude::*;
+use tunables::tunables;
 
 use crate::dummy::DummyLease;
 use crate::CacheBlobstore;
@@ -132,11 +133,17 @@ impl MemcacheOps {
             backing_store_params.to_string()
         );
 
+        let sitever = if tunables().get_blobstore_memcache_sitever() > 0 {
+            tunables().get_blobstore_memcache_sitever() as u32
+        } else {
+            MC_SITEVER
+        };
+
         Ok(Self {
             lease_type,
             memcache: MemcacheClient::new(fb)?,
-            keygen: KeyGen::new(blob_key, MC_CODEVER, MC_SITEVER),
-            presence_keygen: KeyGen::new(presence_key, MC_CODEVER, MC_SITEVER),
+            keygen: KeyGen::new(blob_key, MC_CODEVER, sitever),
+            presence_keygen: KeyGen::new(presence_key, MC_CODEVER, sitever),
             hostname,
         })
     }

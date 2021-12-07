@@ -234,6 +234,10 @@ pub struct MononokeTunables {
     // Sampling ratio for warm boomark cache.
     // Only tw_task_id % warm_bookmark_cache_loggin_tw_task_sampling == 0 will have sampling enabled
     warm_bookmark_cache_loggin_tw_task_sampling: AtomicI64,
+
+    // Setting this tunable to a new non-zero value and restarting
+    // mononoke hosts will invalidate the cache
+    blobstore_memcache_sitever: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
