@@ -53,9 +53,19 @@ pub enum ConfigError {
 
 impl EdenApiError {
     pub fn is_retryable(&self) -> bool {
+        use http_client::HttpClientError::*;
+        use http_client::TlsErrorKind::*;
         use EdenApiError::*;
         match self {
-            Http(_) | HttpError { .. } => true,
+            Http(client_error) => match client_error {
+                Tls(tls_error) => match tls_error.kind {
+                    ConnectError | RecvError => true,
+                    // Don't retry if there are general auth issues.
+                    _ => false,
+                },
+                _ => true,
+            },
+            HttpError { .. } => true,
             _ => false,
         }
     }

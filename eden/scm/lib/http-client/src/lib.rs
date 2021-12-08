@@ -30,6 +30,7 @@ pub use curl::easy::HttpVersion;
 pub use errors::Abort;
 pub use errors::HttpClientError;
 pub use errors::TlsError;
+pub use errors::TlsErrorKind;
 pub use header::Header;
 pub use progress::Progress;
 pub use receiver::Receiver;
