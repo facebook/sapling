@@ -8,7 +8,12 @@ import ctypes
 import datetime
 import sys
 import types
-from ctypes.wintypes import BOOL as _BOOL, DWORD as _DWORD, HANDLE as _HANDLE
+from ctypes.wintypes import (
+    BOOL as _BOOL,
+    DWORD as _DWORD,
+    HANDLE as _HANDLE,
+    LPWSTR as _LPWSTR,
+)
 from pathlib import Path
 from typing import Iterable, NoReturn, Optional, Type
 
@@ -19,6 +24,10 @@ if sys.platform == "win32":
     _win32 = ctypes.windll.kernel32
     _win32.OpenProcess.argtypes = [_DWORD, _BOOL, _DWORD]
     _win32.OpenProcess.restype = _HANDLE
+
+    psapi = ctypes.windll.psapi
+    psapi.GetProcessImageFileNameW.argstypes = [_HANDLE, _LPWSTR, _DWORD]
+    psapi.GetProcessImageFileNameW.restype = _DWORD
 
     def raise_win_error() -> NoReturn:
         raise ctypes.WinError()
@@ -40,6 +49,13 @@ else:
 
         @staticmethod
         def TerminateProcess(handle: _HANDLE, exit_code: int) -> bool:
+            ...
+
+    class psapi:
+        @staticmethod
+        def GetProcessImageFileNameW(
+            handle: _HANDLE, fileName: _LPWSTR, size: _DWORD
+        ) -> _DWORD:
             ...
 
     def raise_win_error() -> NoReturn:
@@ -82,6 +98,21 @@ def open_process(pid: int, access: int = _PROCESS_QUERY_LIMITED_INFORMATION) -> 
     return Handle(handle_value)
 
 
+def get_process_name(pid: int) -> str:
+    with open_process(pid) as handle:
+        MAX_PATH = 260  # https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=cmd
+        name = ctypes.create_unicode_buffer(MAX_PATH)
+        if (
+            psapi.GetProcessImageFileNameW(
+                handle.handle, ctypes.cast(name, _LPWSTR), _DWORD(MAX_PATH)
+            )
+            == 0
+        ):
+            raise_win_error()
+
+        return name.value
+
+
 class WinProcUtils(proc_utils.ProcUtils):
     def get_edenfs_processes(self) -> Iterable[proc_utils.EdenFSProcess]:
         # TODO: Finding all EdenFS processes is not yet implemented on Windows
@@ -121,7 +152,10 @@ class WinProcUtils(proc_utils.ProcUtils):
         return True
 
     def is_edenfs_process(self, pid: int) -> bool:
-        # For now we just check that the process exists.
-        # In the future it might be nice to also check if the command line or executable
-        # looks like EdenFS, but this is sufficient for now.
-        return self.is_process_alive(pid)
+        try:
+            name = get_process_name(pid)
+            if name is None:
+                return False
+            return name.endswith("edenfs.exe")
+        except Exception:
+            return False
