@@ -63,8 +63,9 @@ pub async fn split_batch_in_linear_stacks(
 /// 1) Merges go to a separate batch
 /// 2) If two commits have two files where one is a prefix of another, then they
 ///    go to a separate stacks (because of the way bonsai interprets these files)
-/// 3) If a file was modified in one commit and delete in other then they go
-///    to different stacks
+/// 3) If there are file conflicts (see SplitOptions for details) then a commit go to a
+///    separate stack.
+/// 4) We check any other requirements set by the SplitOptions.
 pub fn split_bonsais_in_linear_stacks(
     bonsais: &[BonsaiChangeset],
     split_opts: SplitOptions,
@@ -95,8 +96,6 @@ pub fn split_bonsais_in_linear_stacks(
 }
 
 // Stores a linear stack.
-// `file_changes` contains the list of file changes that need to be applied to `parents`
-// to generate derived data for a particular commit.
 #[derive(Clone, Debug)]
 pub struct LinearStack {
     pub parents: Vec<ChangesetId>,
