@@ -6,6 +6,7 @@
 
 # pyre-strict
 
+import os
 import stat
 import unittest
 
@@ -31,7 +32,7 @@ class UtilTest(unittest.TestCase):
     INODE_RESULTS_0 = [
         TreeInodeDebugInfo(
             inodeNumber=1,
-            path=b"some_path/d1",
+            path=os.path.join("some_path", "d1").encode(),
             materialized=True,
             treeHash=b"abc",
             entries=[
@@ -61,8 +62,12 @@ class UtilTest(unittest.TestCase):
         read_files, written_files = util.split_inodes_by_operation_type(
             self.INODE_RESULTS_0
         )
-        self.assertListEqual(read_files, [("some_path/d1/read_file", 300)])
-        self.assertListEqual(written_files, [("some_path/d1/written_file", 400)])
+        self.assertListEqual(
+            read_files, [(os.path.join("some_path", "d1", "read_file"), 300)]
+        )
+        self.assertListEqual(
+            written_files, [(os.path.join("some_path", "d1", "written_file"), 400)]
+        )
 
     INODE_RESULTS_1 = [
         TreeInodeDebugInfo(
@@ -103,7 +108,7 @@ class UtilTest(unittest.TestCase):
     INODE_RESULTS_2 = [
         TreeInodeDebugInfo(
             inodeNumber=1,
-            path=b"some_path/d1",
+            path=os.path.join("some_path", "d1").encode(),
             materialized=True,
             treeHash=b"abc",
             entries=[
@@ -121,7 +126,7 @@ class UtilTest(unittest.TestCase):
         ),
         TreeInodeDebugInfo(
             inodeNumber=3,
-            path=b"some_path/d1",
+            path=os.path.join("some_path", "d1").encode(),
             materialized=True,
             treeHash=b"abc",
             entries=[
@@ -142,8 +147,12 @@ class UtilTest(unittest.TestCase):
         read_files, written_files = util.split_inodes_by_operation_type(
             self.INODE_RESULTS_2
         )
-        self.assertListEqual(read_files, [("some_path/d1/read_file", 300)])
-        self.assertListEqual(written_files, [("some_path/d1/written_file", 400)])
+        self.assertListEqual(
+            read_files, [(os.path.join("some_path", "d1", "read_file"), 300)]
+        )
+        self.assertListEqual(
+            written_files, [(os.path.join("some_path", "d1", "written_file"), 400)]
+        )
 
     INODE_RESULTS_3 = [
         TreeInodeDebugInfo(
