@@ -104,6 +104,7 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                   PathComponent{kConfigTable},
                   false,
                   ImmediateFuture<uint64_t>(dotEdenConfig_.size()));
+              return folly::Try{ret};
             }
           }
         }
