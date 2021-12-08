@@ -29,6 +29,7 @@ use crate::utils::get_executable;
 use crate::EdenFsClient;
 
 /// These paths are relative to the user's client directory.
+const CLIENTS_DIR: &str = "clients";
 const CONFIG_JSON: &str = "config.json";
 
 #[derive(Debug)]
@@ -156,6 +157,10 @@ impl EdenFsInstance {
             .with_context(|| format!("Failed to read from {:?}", directory_map))?;
         serde_json::from_str::<BTreeMap<String, String>>(&buff)
             .with_context(|| format!("Failed to parse directory map: {:?}", &buff))
+    }
+
+    pub fn clients_dir(&self) -> PathBuf {
+        self.config_dir.join(CLIENTS_DIR)
     }
 }
 

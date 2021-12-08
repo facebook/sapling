@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use thrift_types::edenfs::client::EdenService;
 
+pub mod checkout;
 pub mod instance;
 mod utils;
 

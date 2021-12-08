@@ -8,11 +8,10 @@
 //! edenfsctl list
 
 use async_trait::async_trait;
-use structopt::StructOpt;
-
-use anyhow::Error;
+use edenfs_client::checkout::get_mounts;
 use edenfs_client::EdenFsInstance;
-use edenfs_error::{EdenFsError, Result};
+use edenfs_error::{Result, ResultExt};
+use structopt::StructOpt;
 
 use crate::ExitCode;
 
@@ -26,6 +25,15 @@ pub struct ListCmd {
 #[async_trait]
 impl crate::Subcommand for ListCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
-        Err(EdenFsError::Other(Error::msg("Not implemented yet.")))
+        let mounts = get_mounts(&instance).await?;
+        if self.json {
+            println!("{}", serde_json::to_string_pretty(&mounts).from_err()?);
+        } else {
+            for (_, mount) in mounts {
+                println!("{}", mount);
+            }
+        }
+
+        Ok(0)
     }
 }
