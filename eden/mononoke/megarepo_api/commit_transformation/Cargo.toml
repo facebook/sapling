@@ -13,6 +13,7 @@ blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 blobsync = { version = "0.1.0", path = "../../blobrepo/blobsync" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
