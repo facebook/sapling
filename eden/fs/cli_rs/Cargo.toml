@@ -22,6 +22,7 @@ members = [
   "edenfs-commands",
   "edenfs-config",
   "edenfs-error",
+  "edenfs-utils",
   "edenfsctl",
   "stack-config",
   "stack-config-derive",

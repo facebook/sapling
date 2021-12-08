@@ -20,7 +20,6 @@ mod config;
 mod debug;
 mod du;
 mod gc;
-mod humantime;
 mod list;
 mod minitop;
 mod pid;

@@ -25,8 +25,8 @@ use edenfs_error::{Result, ResultExt};
 
 use thrift_types::edenfs::types::{pid_t, AccessCounts, GetAccessCountsResult};
 
-use crate::humantime::{HumanTime, TimeUnit};
 use crate::ExitCode;
+use edenfs_utils::humantime::{HumanTime, TimeUnit};
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Simple monitoring of EdenFS accesses by process.")]

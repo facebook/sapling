@@ -14,8 +14,8 @@ use structopt::StructOpt;
 
 use edenfs_client::{DaemonHealthy, EdenFsInstance};
 use edenfs_error::Result;
+use edenfs_utils::humantime::HumanTime;
 
-use crate::humantime::HumanTime;
 use crate::ExitCode;
 
 #[derive(StructOpt, Debug)]

@@ -9,7 +9,7 @@ use std::fmt;
 use std::time::Duration;
 
 #[derive(PartialEq, PartialOrd)]
-pub(crate) enum TimeUnit {
+pub enum TimeUnit {
     Days,
     Hours,
     Minutes,
@@ -19,7 +19,7 @@ pub(crate) enum TimeUnit {
     Nanoseconds,
 }
 
-pub(crate) struct HumanTime {
+pub struct HumanTime {
     days: u16,
     hours: u16,
     minutes: u16,
@@ -33,7 +33,7 @@ impl HumanTime {
     /// Returns a string representing the human time like "1d" for 1 day
     /// with the highest time unit that has a value that is > 0
     /// up to the lowest_time_unit given.
-    pub(crate) fn simple_human_time(&self, lowest_time_unit: TimeUnit) -> String {
+    pub fn simple_human_time(&self, lowest_time_unit: TimeUnit) -> String {
         if self.days > 0 && lowest_time_unit >= TimeUnit::Days {
             format!("{}d", self.days)
         } else if self.hours > 0 && lowest_time_unit >= TimeUnit::Hours {
