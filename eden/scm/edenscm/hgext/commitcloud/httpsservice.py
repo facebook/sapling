@@ -66,11 +66,15 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         self.debugrequests = ui.config("commitcloud", "debugrequests")
         self.url = ui.config("commitcloud", "url")
         self._sockettimeout = DEFAULT_TIMEOUT
+        self.user_agent = "EdenSCM {}".format(util.version())
         self._unix_socket_proxy = (
             ui.config("auth_proxy", "unix_socket_path")
             if ui.config("auth_proxy", "commitcloud_use_uds")
             else None
         )
+
+        if self._unix_socket_proxy:
+            self.user_agent += "+x2pagentd"
 
         if not self.url:
             raise ccerror.ConfigurationError(
@@ -89,6 +93,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "Content-Type": "application/json",
             "Accept-Encoding": "none, gzip",
             "Content-Encoding": "gzip",
+            "User-Agent": self.user_agent,
         }
 
         if self.token:
