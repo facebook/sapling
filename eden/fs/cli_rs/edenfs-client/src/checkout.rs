@@ -6,6 +6,7 @@
  */
 
 use edenfs_error::{EdenFsError, Result, ResultExt};
+use edenfs_utils::path_from_bytes;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -236,13 +237,11 @@ impl EdenFsCheckout {
     fn from_mount_info(path: PathBuf, thrift_mount: MountInfo) -> Result<EdenFsCheckout> {
         Ok(EdenFsCheckout {
             path,
-            data_dir: PathBuf::from(std::str::from_utf8(&thrift_mount.edenClientPath).from_err()?),
+            data_dir: path_from_bytes(&thrift_mount.edenClientPath)?,
             state: Some(thrift_mount.state),
             configured: false,
             backing_repo: match thrift_mount.backingRepoPath {
-                Some(path_string) => {
-                    Some(PathBuf::from(std::str::from_utf8(&path_string).from_err()?))
-                }
+                Some(path_string) => Some(path_from_bytes(&path_string)?),
                 None => None,
             },
         })
@@ -329,7 +328,7 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     let mut mount_points = BTreeMap::new();
     if let Some(mounts) = mounted_checkouts {
         for thrift_mount in mounts {
-            let path = PathBuf::from(std::str::from_utf8(&thrift_mount.mountPoint).from_err()?);
+            let path = path_from_bytes(&thrift_mount.mountPoint)?;
             mount_points.insert(
                 path.clone(),
                 EdenFsCheckout::from_mount_info(path.clone(), thrift_mount)?,

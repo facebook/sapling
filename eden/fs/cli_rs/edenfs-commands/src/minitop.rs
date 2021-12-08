@@ -22,11 +22,12 @@ use structopt::StructOpt;
 use anyhow::anyhow;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::{Result, ResultExt};
+use edenfs_utils::humantime::{HumanTime, TimeUnit};
+use edenfs_utils::path_from_bytes;
 
 use thrift_types::edenfs::types::{pid_t, AccessCounts, GetAccessCountsResult};
 
 use crate::ExitCode;
-use edenfs_utils::humantime::{HumanTime, TimeUnit};
 
 #[derive(StructOpt, Debug)]
 #[structopt(about = "Simple monitoring of EdenFS accesses by process.")]
@@ -155,8 +156,7 @@ impl TrackedProcesses {
     }
 
     fn extract_mount(path: &[u8]) -> anyhow::Result<String> {
-        let path = std::str::from_utf8(path)?;
-        let path = Path::new(&path);
+        let path = path_from_bytes(path)?;
         let filename = path
             .file_name()
             .ok_or_else(|| anyhow!("filename is missing"))?;

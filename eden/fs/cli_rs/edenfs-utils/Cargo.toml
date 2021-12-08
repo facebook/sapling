@@ -6,3 +6,6 @@ version = "0.1.0"
 authors = ["Facebook Source Control Team <sourcecontrol-dev@fb.com>"]
 edition = "2021"
 license = "GPLv2+"
+
+[dependencies]
+edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
