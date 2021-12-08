@@ -171,12 +171,12 @@ class ListMountInfo(typing.NamedTuple):
 
     def to_json_dict(self) -> Dict[str, Any]:
         return {
-            "data_dir": str(self.data_dir),
+            "data_dir": self.data_dir.as_posix(),
             "state": MountState._VALUES_TO_NAMES.get(self.state)
             if self.state is not None
             else "NOT_RUNNING",
             "configured": self.configured,
-            "backing_repo": str(self.backing_repo)
+            "backing_repo": self.backing_repo.as_posix()
             if self.backing_repo is not None
             else None,
         }

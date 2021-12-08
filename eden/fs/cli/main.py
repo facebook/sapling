@@ -608,7 +608,8 @@ class ListCmd(Subcmd):
         out: ui.Output, mount_points: Dict[Path, ListMountInfo]
     ) -> None:
         data = {
-            str(mount.path): mount.to_json_dict() for mount in mount_points.values()
+            mount.path.as_posix(): mount.to_json_dict()
+            for mount in mount_points.values()
         }
         json_str = json.dumps(data, sort_keys=True, indent=2)
         out.writeln(json_str)
@@ -631,7 +632,7 @@ class ListCmd(Subcmd):
                 state_name = MountState._VALUES_TO_NAMES[mount_info.state]
                 state_str = f" ({state_name})"
 
-            out.writeln(f"{path}{state_str}{suffix}")
+            out.writeln(f"{path.as_posix()}{state_str}{suffix}")
 
 
 class RepoError(Exception):
