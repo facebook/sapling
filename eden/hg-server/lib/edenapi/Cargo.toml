@@ -24,7 +24,7 @@ hg-http = { path = "../hg-http" }
 http = "0.2"
 http-client = { path = "../http-client" }
 indicatif = { version = "0.15", features = ["with_rayon"] }
-itertools = "0.10.1"
+itertools = "0.10.3"
 log = { version = "0.4.14", features = ["kv_unstable", "kv_unstable_std"] }
 percent-encoding = "2.1"
 serde = { version = "1.0.126", features = ["derive", "rc"] }

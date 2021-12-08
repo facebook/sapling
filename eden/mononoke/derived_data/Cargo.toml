@@ -15,7 +15,7 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data_manager = { version = "0.1.0", path = "manager" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
-itertools = "0.10.1"
+itertools = "0.10.3"
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 repo_derived_data = { version = "0.1.0", path = "../repo_attributes/repo_derived_data" }

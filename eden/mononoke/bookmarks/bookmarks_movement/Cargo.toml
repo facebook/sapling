@@ -28,7 +28,7 @@ futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimen
 git_mapping_pushrebase_hook = { version = "0.1.0", path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
 globalrev_pushrebase_hook = { version = "0.1.0", path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }
 hooks = { version = "0.1.0", path = "../../hooks" }
-itertools = "0.10.1"
+itertools = "0.10.3"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

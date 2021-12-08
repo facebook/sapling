@@ -14,7 +14,7 @@ failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimenta
 futures = "0.1.31"
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 hex = "0.4.3"
-itertools = "0.10.1"
+itertools = "0.10.3"
 limited_async_read = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }

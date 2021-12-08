@@ -29,7 +29,7 @@ hooks_content_stores = { version = "0.1.0", path = "content-stores" }
 hyper = { version = "0.14.7", features = ["client", "http1", "http2"] }
 hyper-tls = "0.5"
 ipnetwork = "0.15"
-itertools = "0.10.1"
+itertools = "0.10.3"
 lazy_static = "1.0"
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
