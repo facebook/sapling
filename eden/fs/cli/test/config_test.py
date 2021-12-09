@@ -270,9 +270,11 @@ experimental_systemd = false
 testoption = "My user ID is ${USER_ID}."
 """
         )
+
+        uid = os.getuid() if sys.platform != "win32" else 0
         self.assertEqual(
             config.get_config_value("testsection.testoption", default=""),
-            f"My user ID is {os.getuid()}.",
+            f"My user ID is {uid}.",
         )
 
     def test_default_fallback_systemd_xdg_runtime_dir_is_run_user_uid(self) -> None:
