@@ -9,6 +9,7 @@
 import contextlib
 import signal
 import subprocess
+import sys
 import threading
 import time
 import typing
@@ -19,7 +20,7 @@ from eden.fs.cli.daemon import wait_for_shutdown
 
 class WaitForShutdownTest(unittest.TestCase):
     def test_waiting_for_exited_process_finishes_immediately(self) -> None:
-        process = AutoReapingChildProcess(["true"])
+        process = AutoReapingChildProcess(["python3", "-c", "0"])
         process.wait()
 
         stop_watch = StopWatch()
@@ -28,17 +29,23 @@ class WaitForShutdownTest(unittest.TestCase):
         self.assertLessEqual(stop_watch.elapsed, 3)
 
     def test_waiting_for_exiting_process_finishes_without_sigkill(self) -> None:
-        process = AutoReapingChildProcess(["sleep", "1"])
+        process = AutoReapingChildProcess(
+            ["python3", "-c", "import time; time.sleep(1)"]
+        )
         wait_for_shutdown(process.pid, timeout=5)
         returncode = process.wait()
         self.assertEqual(returncode, 0, "Process should have exited cleanly")
 
     def test_waiting_for_alive_process_kills_with_sigkill(self) -> None:
-        process = AutoReapingChildProcess(["sleep", "30"])
+        process = AutoReapingChildProcess(
+            ["python3", "-c", "import time; time.sleep(30)"]
+        )
         wait_for_shutdown(process.pid, timeout=1)
         returncode = process.wait()
         self.assertEqual(
-            returncode, -signal.SIGKILL, "Process should have exited with SIGKILL"
+            returncode,
+            -signal.SIGKILL if sys.platform != "win32" else 1,
+            "Process should have exited with SIGKILL",
         )
 
 
