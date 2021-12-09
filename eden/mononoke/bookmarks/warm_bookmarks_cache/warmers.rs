@@ -53,7 +53,7 @@ pub fn create_public_phase_warmer(ctx: &CoreContext) -> Warmer {
             async move {
                 repo.blob_repo
                     .phases()
-                    .add_reachable_as_public(ctx, vec![cs_id])
+                    .add_reachable_as_public(&ctx, vec![cs_id])
                     .await?;
                 Ok(())
             }
@@ -69,7 +69,7 @@ pub fn create_public_phase_warmer(ctx: &CoreContext) -> Warmer {
                     .blob_repo
                     .phases()
                     .get_store()
-                    .get_public(ctx.clone(), vec![*cs_id], false /* ephemeral derive */)
+                    .get_public(ctx, vec![*cs_id], false /* ephemeral derive */)
                     .await?;
 
                 Ok(maybe_public.contains(cs_id))

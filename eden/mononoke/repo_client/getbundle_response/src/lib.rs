@@ -120,7 +120,7 @@ pub async fn create_getbundle_response(
     let phases = blobrepo.phases();
     let (draft_commits, commits_to_send) = try_join!(
         find_new_draft_commits_and_derive_filenodes_for_public_roots(
-            ctx, blobrepo, &common, heads, &phases
+            ctx, blobrepo, &common, heads, phases
         ),
         find_commits_to_send(ctx, blobrepo, &common, heads, &lca_hint),
     )?;
@@ -186,7 +186,7 @@ pub async fn create_getbundle_response(
 
     // Phases part has to be after the changegroup part.
     if return_phases {
-        let phase_heads = find_phase_heads(ctx, blobrepo, heads, &phases).await?;
+        let phase_heads = find_phase_heads(ctx, blobrepo, heads, phases).await?;
         parts.push(parts::phases_part(
             ctx.clone(),
             old_stream::iter_ok(phase_heads),

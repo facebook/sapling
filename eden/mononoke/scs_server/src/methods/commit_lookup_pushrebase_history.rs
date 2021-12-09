@@ -83,11 +83,7 @@ impl RepoChangesetsPushrebaseHistory {
         let is_public = repo
             .blob_repo()
             .phases()
-            .get_public(
-                self.ctx.clone(),
-                vec![*bcs_id],
-                true, /* ephemeral_derive */
-            )
+            .get_public(&self.ctx, vec![*bcs_id], true /* ephemeral_derive */)
             .await
             .map_err(errors::internal_error)?
             .contains(bcs_id);

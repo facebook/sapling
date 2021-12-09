@@ -1229,7 +1229,7 @@ impl RepoContext {
 
         // get phases
         let public_phases = phases
-            .get_public(self.ctx.clone(), changesets.clone(), false)
+            .get_public(&self.ctx, changesets.clone(), false)
             .await?;
 
         // partition
@@ -1257,9 +1257,7 @@ impl RepoContext {
             visited.extend(parents.iter().cloned());
 
             // get phases for the parents
-            let public_phases = phases
-                .get_public(self.ctx.clone(), parents.clone(), false)
-                .await?;
+            let public_phases = phases.get_public(&self.ctx, parents.clone(), false).await?;
 
             // partition
             let (new_public, new_draft): (Vec<_>, Vec<_>) = parents

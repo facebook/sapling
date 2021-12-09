@@ -643,7 +643,7 @@ where
             let public_unsynced_ancestors = source_repo
                 .phases()
                 .get_public(
-                    ctx.clone(),
+                    ctx,
                     unsynced_ancestors.clone(),
                     false, /* ephemeral_derive */
                 )

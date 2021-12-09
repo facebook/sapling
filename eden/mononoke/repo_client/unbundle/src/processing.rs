@@ -458,7 +458,7 @@ async fn run_pushrebase(
     };
 
     repo.phases()
-        .add_reachable_as_public(ctx.clone(), vec![pushrebased_rev.clone()])
+        .add_reachable_as_public(ctx, vec![pushrebased_rev.clone()])
         .await
         .context("While marking pushrebased changeset as public")?;
 

@@ -469,11 +469,7 @@ impl AffectedChangesets {
 
                     let public = repo
                         .phases()
-                        .get_public(
-                            ctx.clone(),
-                            cs_ids.clone(),
-                            false, /* ephemeral_derive */
-                        )
+                        .get_public(ctx, cs_ids.clone(), false /* ephemeral_derive */)
                         .await?;
                     if public == cs_ids.into_iter().collect::<HashSet<_>>() {
                         return Ok(());
@@ -555,7 +551,7 @@ pub async fn find_draft_ancestors(
 
     while let Some(cs_id) = queue.pop_front() {
         let public = phases
-            .get_public(ctx.clone(), vec![cs_id], false /*ephemeral_derive*/)
+            .get_public(ctx, vec![cs_id], false /*ephemeral_derive*/)
             .await?;
 
         if public.contains(&cs_id) {

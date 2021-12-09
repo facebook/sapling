@@ -759,7 +759,7 @@ impl HgRepoContext {
         // make sure filenodes are derived before sending
         let (_draft_commits, missing_commits) = try_join!(
             find_new_draft_commits_and_derive_filenodes_for_public_roots(
-                &ctx, blob_repo, &common, &heads, &phases
+                &ctx, blob_repo, &common, &heads, phases
             ),
             find_commits_to_send(&ctx, blob_repo, &common, &heads, &lca_hint),
         )?;

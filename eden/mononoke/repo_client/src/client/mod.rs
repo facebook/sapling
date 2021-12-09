@@ -1450,7 +1450,7 @@ impl HgCommands for RepoClient {
                 }
 
                 let found_hg_changesets = phases_hint
-                    .get_public(ctx, bcs_ids, false)
+                    .get_public(&ctx, bcs_ids, false)
                     .map_ok(move |public_csids| {
                         public_csids
                             .into_iter()

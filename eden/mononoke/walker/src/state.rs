@@ -760,7 +760,7 @@ impl VisitOne for WalkState {
 
         let is_public = phases_store
             .get_public(
-                ctx.clone(),
+                ctx,
                 vec![*bcs_id],
                 !self.enable_derive, /* emphemeral_derive */
             )

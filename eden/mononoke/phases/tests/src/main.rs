@@ -67,11 +67,11 @@ async fn set_bookmark(
 }
 
 async fn is_public(
-    phases: &impl Phases,
+    phases: &dyn Phases,
     ctx: &CoreContext,
     csid: ChangesetId,
 ) -> Result<bool, Error> {
-    let public = phases.get_public(ctx.clone(), vec![csid], false).await?;
+    let public = phases.get_public(ctx, vec![csid], false).await?;
     Ok(public.contains(&csid))
 }
 
@@ -157,38 +157,38 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
     let phases = repo.phases();
 
     assert_eq!(
-        is_public(&phases, &ctx, public_bookmark_commit).await?,
+        is_public(phases, &ctx, public_bookmark_commit).await?,
         true,
         "slow path: get phase for a Public commit which is also a public bookmark"
     );
 
     assert_eq!(
-        is_public(&phases, &ctx, public_commit).await?,
+        is_public(phases, &ctx, public_commit).await?,
         true,
         "slow path: get phase for a Public commit"
     );
 
     assert_eq!(
-        is_public(&phases, &ctx, other_public_commit).await?,
+        is_public(phases, &ctx, other_public_commit).await?,
         true,
         "slow path: get phase for other Public commit"
     );
 
     assert_eq!(
-        is_public(&phases, &ctx, draft_commit).await?,
+        is_public(phases, &ctx, draft_commit).await?,
         false,
         "slow path: get phase for a Draft commit"
     );
 
     assert_eq!(
-        is_public(&phases, &ctx, other_draft_commit).await?,
+        is_public(phases, &ctx, other_draft_commit).await?,
         false,
         "slow path: get phase for other Draft commit"
     );
 
     let public = phases
         .get_public(
-            ctx.clone(),
+            &ctx,
             vec![
                 public_commit,
                 other_public_commit,
@@ -209,13 +209,13 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
     );
 
     assert_eq!(
-        is_public(&phases, &ctx, public_commit).await?,
+        is_public(phases, &ctx, public_commit).await?,
         true,
         "sql: make sure that phase was written to the db for public commit"
     );
 
     assert_eq!(
-        is_public(&phases, &ctx, draft_commit).await?,
+        is_public(phases, &ctx, draft_commit).await?,
         false,
         "sql: make sure that phase was not written to the db for draft commit"
     );
@@ -275,7 +275,7 @@ async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     let phases = repo.phases();
     // get phases mapping for all `bcss` in the same order
     let get_phases_map = || {
-        phases.get_public(ctx.clone(), bcss.clone(), false).map_ok({
+        phases.get_public(ctx, bcss.clone(), false).map_ok({
             cloned!(bcss);
             move |public| {
                 bcss.iter()
@@ -288,16 +288,14 @@ async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     // all phases are draft
     assert_eq!(get_phases_map().await?, [false; 7]);
 
-    phases
-        .add_reachable_as_public(ctx.clone(), vec![bcss[1]])
-        .await?;
+    phases.add_reachable_as_public(ctx, vec![bcss[1]]).await?;
     assert_eq!(
         get_phases_map().await?,
         [true, true, false, false, false, false, false],
     );
 
     phases
-        .add_reachable_as_public(ctx.clone(), vec![bcss[2], bcss[5]])
+        .add_reachable_as_public(ctx, vec![bcss[2], bcss[5]])
         .await?;
     assert_eq!(
         get_phases_map().await?,

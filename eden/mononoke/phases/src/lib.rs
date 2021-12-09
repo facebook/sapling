@@ -15,7 +15,7 @@ pub use sql_store::SqlPhasesStore;
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use ascii::AsciiString;
-use auto_impl::auto_impl;
+use async_trait::async_trait;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures::future::{try_join, BoxFuture, FutureExt};
@@ -124,22 +124,22 @@ impl ConvIr<Phase> for Phase {
 }
 
 /// This is the primary interface for clients to interact with Phases
-#[auto_impl(&, Arc, Box)]
 #[facet::facet]
+#[async_trait]
 pub trait Phases: Send + Sync {
     /// mark all commits reachable from heads as public
-    fn add_reachable_as_public(
+    async fn add_reachable_as_public(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         heads: Vec<ChangesetId>,
-    ) -> BoxFuture<'static, Result<Vec<ChangesetId>, Error>>;
+    ) -> Result<Vec<ChangesetId>>;
 
-    fn get_public(
+    async fn get_public(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
-    ) -> BoxFuture<'static, Result<HashSet<ChangesetId>, Error>>;
+    ) -> Result<HashSet<ChangesetId>>;
 
     /// Return a copy of this phases object with the set of public
     /// heads frozen.
@@ -249,24 +249,23 @@ impl SqlPhases {
     }
 }
 
+#[async_trait]
 impl Phases for SqlPhases {
-    fn get_public(
+    async fn get_public(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
-    ) -> BoxFuture<'static, Result<HashSet<ChangesetId>, Error>> {
-        let this = self.clone();
-        async move { this.get_public_derive(&ctx, csids, ephemeral_derive).await }.boxed()
+    ) -> Result<HashSet<ChangesetId>> {
+        self.get_public_derive(ctx, csids, ephemeral_derive).await
     }
 
-    fn add_reachable_as_public(
+    async fn add_reachable_as_public(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         heads: Vec<ChangesetId>,
-    ) -> BoxFuture<'static, Result<Vec<ChangesetId>, Error>> {
-        let this = self.clone();
-        async move { mark_reachable_as_public(&ctx, &this, &heads, false).await }.boxed()
+    ) -> Result<Vec<ChangesetId>> {
+        mark_reachable_as_public(ctx, self, &heads, false).await
     }
 
     fn with_frozen_public_heads(&self, heads: Vec<ChangesetId>) -> ArcPhases {

@@ -324,7 +324,7 @@ impl<'a> Blobimport<'a> {
                 let public = blobrepo
                     .phases()
                     .get_public(
-                        ctx.clone(),
+                        &ctx,
                         hg_to_bcs_ids
                             .clone()
                             .into_iter()

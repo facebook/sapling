@@ -478,11 +478,15 @@ impl UploadChangesets {
                 .boxed()
                 .compat()
                 .and_then(move |shared| {
-                    phases
-                        .add_reachable_as_public(ctx, vec![shared.0.get_changeset_id()])
-                        .map_ok(move |_| (revidx, shared))
-                        .boxed()
-                        .compat()
+                    cloned!(ctx, phases);
+                    async move {
+                        phases
+                            .add_reachable_as_public(&ctx, vec![shared.0.get_changeset_id()])
+                            .await?;
+                        Ok((revidx, shared))
+                    }
+                    .boxed()
+                    .compat()
                 })
                 .boxify()
             })
