@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use borrowed::borrowed;
-use clap::Arg;
+use bulkops::{Direction, PublicChangesetBulkFetch};
+use clap::{Arg, ArgGroup};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
@@ -24,23 +25,44 @@ use serde::Serialize;
 use skeleton_manifest::RootSkeletonManifestId;
 
 const ARG_IN_FILE: &str = "input-file";
+const ARG_ALL_COMMITS: &str = "all-commits-in-repo";
 
 async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(), Error> {
     let logger = matches.logger();
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let repo: BlobRepo = args::open_repo(fb, ctx.logger(), &matches).await?;
+    let fetcher;
 
-    let input_file = matches
-        .value_of(ARG_IN_FILE)
-        .ok_or_else(|| anyhow!("{} not set", ARG_IN_FILE))?;
-
-    let csids = helpers::csids_resolve_from_file(&ctx, &repo, input_file).await?;
+    let csids = {
+        match (
+            matches.value_of(ARG_IN_FILE),
+            matches.is_present(ARG_ALL_COMMITS),
+        ) {
+            (Some(input_file), false) => stream::iter(
+                helpers::csids_resolve_from_file(&ctx, &repo, input_file)
+                    .await?
+                    .into_iter()
+                    .map(Ok::<_, Error>),
+            )
+            .left_stream(),
+            (None, true) => {
+                fetcher =
+                    PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.get_phases());
+                fetcher
+                    .fetch_ids(&ctx, Direction::OldestFirst, None)
+                    .map_ok(|((cs_id, _bound), _fetch_bounds)| cs_id)
+                    .right_stream()
+            }
+            (None, false) => bail!("Neither {} nor {} set", ARG_IN_FILE, ARG_ALL_COMMITS),
+            (Some(_), true) => bail!("Both {} nor {} set", ARG_IN_FILE, ARG_ALL_COMMITS),
+        }
+    };
 
     borrowed!(ctx, repo);
-    let commit_stats = stream::iter(csids)
-        .map(|cs_id| async move { find_commit_stat(&ctx, &repo, cs_id).await })
-        .buffered(100)
+    let commit_stats = csids
+        .map_ok(|cs_id| async move { find_commit_stat(&ctx, &repo, cs_id).await })
+        .try_buffered(100)
         .try_collect::<Vec<_>>()
         .await?;
 
@@ -57,6 +79,7 @@ struct CommitStat {
     largest_touched_dir_name: String,
     num_changed_files: u64,
     sum_of_sizes_of_all_changed_directories: u64,
+    copy_froms: u64,
 }
 
 async fn find_commit_stat(
@@ -66,9 +89,14 @@ async fn find_commit_stat(
 ) -> Result<CommitStat, Error> {
     let bcs = cs_id.load(ctx, repo.blobstore()).await?;
     let mut paths = vec![];
-    for (path, _) in bcs.file_changes() {
+    let mut copy_froms = 0;
+    for (path, file_change) in bcs.file_changes() {
         paths.extend(path.clone().into_parent_dir_iter());
+        if file_change.copy_from().is_some() {
+            copy_froms += 1;
+        }
     }
+
     let root_skeleton_id = RootSkeletonManifestId::derive(&ctx, repo, cs_id).await?;
     let entries = root_skeleton_id
         .skeleton_manifest_id()
@@ -111,6 +139,7 @@ async fn find_commit_stat(
         largest_touched_dir_name,
         num_changed_files: bcs.file_changes_map().len() as u64,
         sum_of_sizes_of_all_changed_directories,
+        copy_froms,
     };
 
     Ok(stat)
@@ -125,9 +154,19 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .arg(
             Arg::with_name(ARG_IN_FILE)
                 .long(ARG_IN_FILE)
-                .required(true)
                 .takes_value(true)
                 .help("Filename with commit hashes or bookmarks"),
+        )
+        .arg(
+            Arg::with_name(ARG_ALL_COMMITS)
+                .long(ARG_ALL_COMMITS)
+                .takes_value(false)
+                .help("Examine all public commits in this repo"),
+        )
+        .group(
+            ArgGroup::with_name("source")
+                .args(&[ARG_IN_FILE, ARG_ALL_COMMITS])
+                .required(true),
         )
         .get_matches(fb)?;
 
