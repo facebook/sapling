@@ -667,7 +667,12 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
                 path.basename(),
                 ctx->getFetchContext())
             .thenValue([](std::shared_ptr<TreeEntry> treeEntry) {
-              return std::make_shared<Tree>(std::vector<TreeEntry>{*treeEntry});
+              // Make up a fake ObjectId for this tree.
+              // WARNING: This is dangerous -- this ObjectId cannot be used to
+              // look up this synthesized tree from the BackingStore.
+              ObjectId fakeObjectId{};
+              return std::make_shared<Tree>(
+                  std::vector<TreeEntry>{*treeEntry}, fakeObjectId);
             });
 
   return collectSafe(getTargetTreeInodeFuture, getRootTreeFuture)

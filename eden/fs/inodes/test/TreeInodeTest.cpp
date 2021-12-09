@@ -31,20 +31,31 @@
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 
-static DirEntry makeDirEntry() {
+namespace {
+std::string testHashHex{
+    "faceb00c"
+    "deadbeef"
+    "c00010ff"
+    "1badb002"
+    "8badf00d"};
+
+ObjectId testHash(testHashHex);
+
+DirEntry makeDirEntry() {
   return DirEntry{S_IFREG | 0644, 1_ino, ObjectId{}};
 }
 
-static TreeEntry makeTreeEntry(folly::StringPiece name) {
+TreeEntry makeTreeEntry(folly::StringPiece name) {
   return TreeEntry{
       ObjectId{}, PathComponent{name}, TreeEntryType::REGULAR_FILE};
 }
+} // namespace
 
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
   DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
-  Tree tree{{makeTreeEntry("one"), makeTreeEntry("two")}};
+  Tree tree{{makeTreeEntry("one"), makeTreeEntry("two")}, testHash};
 
   EXPECT_FALSE(findEntryDifferences(dir, tree));
 }
@@ -53,7 +64,7 @@ TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
   DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
-  Tree tree{{makeTreeEntry("one"), makeTreeEntry("three")}};
+  Tree tree{{makeTreeEntry("one"), makeTreeEntry("three")}, testHash};
 
   auto differences = findEntryDifferences(dir, tree);
   EXPECT_TRUE(differences);
@@ -64,7 +75,7 @@ TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
   DirContents dir(CaseSensitivity::Sensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
-  Tree tree{{makeTreeEntry("one")}};
+  Tree tree{{makeTreeEntry("one")}, testHash};
 
   auto differences = findEntryDifferences(dir, tree);
   EXPECT_TRUE(differences);
@@ -76,7 +87,8 @@ TEST(TreeInode, findEntryDifferencesWithOneAddition) {
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
   Tree tree{
-      {makeTreeEntry("one"), makeTreeEntry("two"), makeTreeEntry("three")}};
+      {makeTreeEntry("one"), makeTreeEntry("two"), makeTreeEntry("three")},
+      testHash};
 
   auto differences = findEntryDifferences(dir, tree);
   EXPECT_TRUE(differences);

@@ -17,9 +17,7 @@ namespace facebook::eden {
 
 class Tree {
  public:
-  explicit Tree(
-      std::vector<TreeEntry>&& entries,
-      const ObjectId& hash = ObjectId())
+  explicit Tree(std::vector<TreeEntry>&& entries, const ObjectId& hash)
       : hash_(hash), entries_(std::move(entries)) {}
 
   const ObjectId& getHash() const {

@@ -39,7 +39,7 @@ TEST(Tree, testGetEntryPtr) {
   vector<TreeEntry> entries;
   entries.emplace_back(
       testHash, PathComponent{"a_file"}, TreeEntryType::REGULAR_FILE);
-  Tree tree(std::move(entries));
+  Tree tree(std::move(entries), testHash);
 
   // Verify existent path.
   PathComponentPiece existentPath("a_file");
@@ -84,7 +84,7 @@ TEST(Tree, testSize) {
   for (auto i = 0; i < numEntries; ++i) {
     entries.emplace_back(entry);
   }
-  Tree tree(std::move(entries));
+  Tree tree(std::move(entries), testHash);
 
   // testing the actual size is diffcult without just copy pasting the
   // size caalculations, so we are just testing that the size estimate is
