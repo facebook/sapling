@@ -6,75 +6,84 @@
  */
 
 use super::{IsWarmFn, Warmer, WarmerFn};
-use anyhow::Error;
+use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
-use futures::future::{FutureExt, TryFutureExt};
-use futures_ext::FutureExt as OldFutureExt;
+use futures::future::FutureExt;
 use futures_watchdog::WatchdogExt;
-use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
-use phases::PhasesRef;
+use phases::PhasesArc;
+use repo_derived_data::RepoDerivedDataArc;
 use slog::{info, o};
 
-pub fn create_derived_data_warmer<D: BonsaiDerivable + BonsaiDerived>(ctx: &CoreContext) -> Warmer {
-    info!(ctx.logger(), "Warming {}", D::DERIVABLE_NAME);
-    let warmer: Box<WarmerFn> =
-        Box::new(|ctx: CoreContext, repo: InnerRepo, cs_id: ChangesetId| {
+pub fn create_derived_data_warmer<Derivable, Repo>(ctx: &CoreContext, repo: &Repo) -> Warmer
+where
+    Derivable: BonsaiDerivable,
+    Repo: RepoDerivedDataArc,
+{
+    info!(ctx.logger(), "Warming {}", Derivable::NAME);
+    let repo_derived_data = repo.repo_derived_data_arc();
+
+    let warmer: Box<WarmerFn> = Box::new({
+        cloned!(repo_derived_data);
+        move |ctx: &CoreContext, cs_id: ChangesetId| {
+            cloned!(repo_derived_data);
             async move {
-                D::derive(&ctx, &repo.blob_repo, cs_id).await?;
+                repo_derived_data.derive::<Derivable>(ctx, cs_id).await?;
                 Ok(())
             }
             .boxed()
-            .compat()
-            .boxify()
-        });
+        }
+    });
 
-    let is_warm: Box<IsWarmFn> =
-        Box::new(|ctx: &CoreContext, repo: &InnerRepo, cs_id: &ChangesetId| {
-            let logger = ctx.logger().new(o!("type" => D::DERIVABLE_NAME));
-            D::is_derived(&ctx, &repo.blob_repo, &cs_id)
-                .watched(logger)
-                .map_err(Error::from)
-                .boxed()
-        });
+    let is_warm: Box<IsWarmFn> = Box::new({
+        move |ctx: &CoreContext, cs_id: ChangesetId| {
+            let logger = ctx.logger().new(o!("type" => Derivable::NAME));
+            cloned!(repo_derived_data);
+            async move {
+                let maybe_derived = repo_derived_data
+                    .fetch_derived::<Derivable>(ctx, cs_id)
+                    .await?;
+                Ok(maybe_derived.is_some())
+            }
+            .watched(logger)
+            .boxed()
+        }
+    });
+
     Warmer {
         warmer,
         is_warm,
-        name: D::NAME.to_string(),
+        name: Derivable::NAME.to_string(),
     }
 }
 
-pub fn create_public_phase_warmer(ctx: &CoreContext) -> Warmer {
+pub fn create_public_phase_warmer(ctx: &CoreContext, repo: &impl PhasesArc) -> Warmer {
     info!(ctx.logger(), "Warming public phases");
-    let warmer: Box<WarmerFn> =
-        Box::new(|ctx: CoreContext, repo: InnerRepo, cs_id: ChangesetId| {
+    let phases = repo.phases_arc();
+    let warmer: Box<WarmerFn> = Box::new({
+        cloned!(phases);
+        move |ctx: &CoreContext, cs_id: ChangesetId| {
+            cloned!(phases);
             async move {
-                repo.blob_repo
-                    .phases()
-                    .add_reachable_as_public(&ctx, vec![cs_id])
-                    .await?;
+                phases.add_reachable_as_public(ctx, vec![cs_id]).await?;
                 Ok(())
             }
             .boxed()
-            .compat()
-            .boxify()
-        });
+        }
+    });
 
-    let is_warm: Box<IsWarmFn> =
-        Box::new(|ctx: &CoreContext, repo: &InnerRepo, cs_id: &ChangesetId| {
-            async move {
-                let maybe_public = repo
-                    .blob_repo
-                    .phases()
-                    .get_public(ctx, vec![*cs_id], false /* ephemeral derive */)
-                    .await?;
+    let is_warm: Box<IsWarmFn> = Box::new(move |ctx: &CoreContext, cs_id: ChangesetId| {
+        cloned!(phases);
+        async move {
+            let maybe_public = phases
+                .get_public(ctx, vec![cs_id], false /* ephemeral derive */)
+                .await?;
 
-                Ok(maybe_public.contains(cs_id))
-            }
-            .boxed()
-        });
+            Ok(maybe_public.contains(&cs_id))
+        }
+        .boxed()
+    });
     Warmer {
         warmer,
         is_warm,

@@ -6,8 +6,12 @@
  */
 
 use blobrepo::BlobRepo;
+use bookmarks::{BookmarkUpdateLog, Bookmarks};
 use ephemeral_blobstore::RepoEphemeralBlobstore;
 use mutable_renames::MutableRenames;
+use phases::Phases;
+use repo_derived_data::RepoDerivedData;
+use repo_identity::RepoIdentity;
 use segmented_changelog_types::SegmentedChangelog;
 use skiplist::SkiplistIndex;
 
@@ -17,7 +21,7 @@ use skiplist::SkiplistIndex;
 #[facet::container]
 #[derive(Clone)]
 pub struct InnerRepo {
-    #[delegate()]
+    #[delegate(dyn Bookmarks, dyn BookmarkUpdateLog, dyn Phases, RepoDerivedData, RepoIdentity)]
     pub blob_repo: BlobRepo,
 
     #[facet]

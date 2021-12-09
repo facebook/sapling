@@ -19,7 +19,7 @@ use context::CoreContext;
 use derived_data_manager::{BonsaiDerivable, DerivationError, DerivedDataManager};
 use derived_data_remote::DerivationClient;
 use filenodes::Filenodes;
-use metaconfig_types::DerivedDataConfig;
+use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
 use mononoke_types::{ChangesetId, RepositoryId};
 use repo_blobstore::RepoBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -128,6 +128,11 @@ impl RepoDerivedData {
     /// Current derived data configuration for this repo.
     pub fn config(&self) -> &DerivedDataConfig {
         &self.config
+    }
+
+    /// Config for the currently active derived data.
+    pub fn active_config(&self) -> &DerivedDataTypesConfig {
+        self.manager.config()
     }
 
     /// Derived data lease for this repo.
