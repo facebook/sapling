@@ -12,6 +12,7 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/MappedDiskVector.h"
+#include "eden/fs/utils/StaticAssert.h"
 
 namespace facebook {
 namespace eden {
@@ -333,7 +334,7 @@ class InodeTable {
 }; // namespace eden
 
 static_assert(
-    sizeof(InodeMetadata) == 40,
+    CheckSize<InodeMetadata, 40>(),
     "Don't change InodeMetadata without implementing a migration path");
 
 using InodeMetadataTable = InodeTable<InodeMetadata>;

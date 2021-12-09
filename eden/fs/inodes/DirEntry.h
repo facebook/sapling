@@ -13,6 +13,7 @@
 #include "eden/fs/utils/CaseSensitivity.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathMap.h"
+#include "eden/fs/utils/StaticAssert.h"
 
 namespace facebook {
 namespace eden {
@@ -233,7 +234,7 @@ class DirEntry {
   };
 };
 
-static_assert(sizeof(DirEntry) == 40, "DirEntry is five words");
+static_assert(CheckSize<DirEntry, 40>(), "DirEntry is five words");
 
 /**
  * Represents a directory in the overlay.

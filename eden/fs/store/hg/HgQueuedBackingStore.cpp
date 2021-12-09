@@ -36,6 +36,7 @@
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/StaticAssert.h"
 #include "folly/ScopeGuard.h"
 #include "folly/String.h"
 
@@ -44,10 +45,11 @@ namespace facebook::eden {
 namespace {
 // 100,000 hg object fetches in a short term is plausible.
 constexpr size_t kTraceBusCapacity = 100000;
-static_assert(sizeof(HgImportTraceEvent) == 56);
+static_assert(CheckSize<HgImportTraceEvent, 56>());
 // TraceBus is double-buffered, so the following capacity should be doubled.
 // 10 MB overhead per backing repo is tolerable.
-static_assert(kTraceBusCapacity * sizeof(HgImportTraceEvent) == 5600000);
+static_assert(
+    CheckEqual<5600000, kTraceBusCapacity * sizeof(HgImportTraceEvent)>());
 } // namespace
 
 HgImportTraceEvent::HgImportTraceEvent(

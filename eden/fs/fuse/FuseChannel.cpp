@@ -24,6 +24,7 @@
 #include "eden/fs/telemetry/FsEventLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/IDGen.h"
+#include "eden/fs/utils/StaticAssert.h"
 #include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/Thread.h"
@@ -210,9 +211,9 @@ std::string fallocate(FuseArg arg) {
 // FUSE TraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
 // so limit total memory usage to around 4 MB per mount.
 constexpr size_t kTraceBusCapacity = 25000;
-static_assert(sizeof(FuseTraceEvent) >= 72);
-static_assert(sizeof(FuseTraceEvent) <= 72);
-static_assert(kTraceBusCapacity * sizeof(FuseTraceEvent) == 1800000);
+static_assert(CheckSize<FuseTraceEvent, 72>());
+static_assert(
+    CheckEqual<1800000, kTraceBusCapacity * sizeof(FuseTraceEvent)>());
 
 // This is the minimum size used by libfuse so we use it too!
 constexpr size_t MIN_BUFSIZE = 0x21000;

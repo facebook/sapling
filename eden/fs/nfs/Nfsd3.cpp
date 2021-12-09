@@ -25,6 +25,7 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/IDGen.h"
+#include "eden/fs/utils/StaticAssert.h"
 #include "eden/fs/utils/SystemError.h"
 
 namespace folly {
@@ -35,8 +36,8 @@ namespace facebook::eden {
 
 namespace {
 constexpr size_t kTraceBusCapacity = 25000;
-static_assert(sizeof(NfsTraceEvent) == 40);
-static_assert(kTraceBusCapacity * sizeof(NfsTraceEvent) == 1000000);
+static_assert(CheckSize<NfsTraceEvent, 40>());
+static_assert(CheckEqual<1000000, kTraceBusCapacity * sizeof(NfsTraceEvent)>());
 
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
