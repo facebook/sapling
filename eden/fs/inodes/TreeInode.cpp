@@ -3599,7 +3599,8 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
   // prefetch to the punch and cause a full blob fetch.
   // So when metadata prefetching is turned on we can
   // just skip this.
-  if (getMount()->getServerState()->getEdenConfig()->useScs.getValue()) {
+  auto config = getMount()->getServerState()->getEdenConfig();
+  if (config->useScs.getValue() || config->useAuxMetadata.getValue()) {
     XLOG(DBG4) << "skipping prefetch for " << getLogPath()
                << ": metadata prefetching is turned on in the backing store";
     return;
