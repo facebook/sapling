@@ -13,6 +13,7 @@ from ctypes.wintypes import (
     DWORD as _DWORD,
     HANDLE as _HANDLE,
     LPWSTR as _LPWSTR,
+    LPDWORD as _LPDWORD,
 )
 from pathlib import Path
 from typing import Iterable, NoReturn, Optional, Type
@@ -24,6 +25,9 @@ if sys.platform == "win32":
     _win32 = ctypes.windll.kernel32
     _win32.OpenProcess.argtypes = [_DWORD, _BOOL, _DWORD]
     _win32.OpenProcess.restype = _HANDLE
+
+    _win32.GetExitCodeProcess.argtypes = [_HANDLE, _LPDWORD]
+    _win32.GetExitCodeProcess.restype = _BOOL
 
     psapi = ctypes.windll.psapi
     psapi.GetProcessImageFileNameW.argstypes = [_HANDLE, _LPWSTR, _DWORD]
@@ -49,6 +53,10 @@ else:
 
         @staticmethod
         def TerminateProcess(handle: _HANDLE, exit_code: int) -> bool:
+            ...
+
+        @staticmethod
+        def GetExitCodeProcess(handle: _HANDLE, exit_code: _LPDWORD) -> _BOOL:
             ...
 
     class psapi:
@@ -87,7 +95,8 @@ class Handle:
 
     def close(self) -> None:
         if self.handle:
-            _win32.CloseHandle(self.handle)
+            if _win32.CloseHandle(self.handle) == 0:
+                raise_win_error()
             self.handle = _HANDLE()
 
 
@@ -111,6 +120,18 @@ def get_process_name(pid: int) -> str:
             raise_win_error()
 
         return name.value
+
+
+def get_exit_code(pid: int) -> Optional[int]:
+    with open_process(pid) as handle:
+        STILL_ACTIVE = 259
+        exit_code = _LPDWORD()
+        if _win32.GetExitCodeProcess(handle.handle, exit_code) == 0:
+            raise_win_error()
+
+        if exit_code[0].value == STILL_ACTIVE:
+            return None
+        return int(exit_code[0].value)
 
 
 class WinProcUtils(proc_utils.ProcUtils):
@@ -141,15 +162,12 @@ class WinProcUtils(proc_utils.ProcUtils):
 
     def is_process_alive(self, pid: int) -> bool:
         try:
-            handle = open_process(pid)
+            return get_exit_code(pid) is None
         except PermissionError:
             # The process exists, but we don't have permission to query it.
             return True
         except OSError:
             return False
-
-        handle.close()
-        return True
 
     def is_edenfs_process(self, pid: int) -> bool:
         try:

@@ -92,10 +92,9 @@ def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
     proc_utils: proc_utils_mod.ProcUtils = proc_utils_mod.new()
     try:
         proc_utils.kill_process(pid)
-    except PermissionError:
+    except PermissionError as ex:
         raise ShutdownError(
-            "Received a permissions when attempting to kill edenfs. "
-            "Perhaps edenfs failed to drop root privileges properly?"
+            f"Received a permission error when attempting to kill edenfs: {ex}"
         )
 
     if timeout <= 0:
