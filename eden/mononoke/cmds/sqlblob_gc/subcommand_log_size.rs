@@ -9,8 +9,7 @@ use std::{collections::HashMap, ops::Range};
 
 use anyhow::Result;
 use bytesize::ByteSize;
-use clap::{App, Arg, ArgMatches, SubCommand};
-use fbinit::FacebookInit;
+use clap::{App, ArgMatches, SubCommand};
 use futures::stream::{self, StreamExt, TryStreamExt};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
@@ -18,18 +17,9 @@ use slog::Logger;
 use sqlblob::Sqlblob;
 
 pub const LOG_SIZE: &str = "generation-size";
-const ARG_SCUBA_TABLE: &str = "scuba-table";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name(LOG_SIZE)
-        .about("measure generation sizes")
-        .arg(
-            Arg::with_name(ARG_SCUBA_TABLE)
-                .long(ARG_SCUBA_TABLE)
-                .takes_value(true)
-                .required(false)
-                .help("Scuba table to log sizes to. If not specified, will print to stdout"),
-        )
+    SubCommand::with_name(LOG_SIZE).about("measure generation sizes")
 }
 
 fn print_sizes(sizes: &HashMap<Option<u64>, u64>) {
@@ -53,12 +43,12 @@ fn print_sizes(sizes: &HashMap<Option<u64>, u64>) {
 }
 
 pub async fn subcommand_log_size(
-    fb: FacebookInit,
     _logger: Logger,
-    sub_matches: &'_ ArgMatches<'_>,
+    _sub_matches: &'_ ArgMatches<'_>,
     max_parallelism: usize,
     sqlblob: Sqlblob,
     shard_range: Range<usize>,
+    scuba_sample_builder: MononokeScubaSampleBuilder,
 ) -> Result<()> {
     let sizes: Vec<_> = shard_range
         .map(|shard| sqlblob.get_chunk_sizes_by_generation(shard))
@@ -72,12 +62,6 @@ pub async fn subcommand_log_size(
             Ok(acc)
         })
         .await?;
-
-    let scuba_sample_builder = MononokeScubaSampleBuilder::with_opt_table(
-        fb,
-        sub_matches.value_of(ARG_SCUBA_TABLE).map(String::from),
-    );
-
     for (generation, size) in &sizes {
         let mut sample = scuba_sample_builder.clone();
         sample.add_opt("generation", *generation);
@@ -85,7 +69,7 @@ pub async fn subcommand_log_size(
         sample.log();
     }
 
-    if sub_matches.value_of(ARG_SCUBA_TABLE).is_none() {
+    if scuba_sample_builder.is_discard() {
         print_sizes(&sizes);
     }
     Ok(())

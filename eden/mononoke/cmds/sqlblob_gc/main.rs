@@ -28,6 +28,7 @@ const ARG_INNER_ID: &str = "inner-blobstore-id";
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("SQLblob GC")
+        .with_scuba_logging_args()
         .with_advanced_args_hidden()
         .with_all_repos()
         .build()
@@ -192,12 +193,12 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
             (subcommand_log_size::LOG_SIZE, Some(sub_m)) => {
                 subcommand_log_size::subcommand_log_size(
-                    fb,
                     logger,
                     sub_m,
                     max_parallelism,
                     blobstore,
                     shard_range,
+                    matches.scuba_sample_builder(),
                 )
                 .await
             }
