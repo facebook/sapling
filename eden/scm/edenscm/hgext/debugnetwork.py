@@ -125,7 +125,7 @@ def checkspeedhttp(ui, url, opts):
     upload = ui.configbytes("debugnetwork", "speed-test-upload-size", 1000000)
     unixsocketpath = ui.config("auth_proxy", "unix_socket_path")
 
-    if unixsocketpath and not pycompat.iswindows:
+    if unixsocketpath:
         ui.status(_("Traffic will go through the x2pagentd."), component="debugnetwork")
         conn = httpclient.HTTPConnection(
             url.host,
