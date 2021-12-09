@@ -127,13 +127,26 @@ impl ConvIr<Phase> for Phase {
 #[facet::facet]
 #[async_trait]
 pub trait Phases: Send + Sync {
-    /// mark all commits reachable from heads as public
+    /// Mark all commits reachable from heads as public.  Returns all
+    /// the newly public commits.
     async fn add_reachable_as_public(
         &self,
         ctx: &CoreContext,
         heads: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>>;
 
+    /// Add the given commits as public.  The caller is responsible
+    /// for ensuring that the ancestors of all of these commits are
+    /// already public, and the commits are provided in topological
+    /// order.
+    async fn add_public_with_known_public_ancestors(
+        &self,
+        ctx: &CoreContext,
+        csids: Vec<ChangesetId>,
+    ) -> Result<()>;
+
+    /// Returns the commits that are public.  This method will attempt
+    /// to check if any of these commits have recently become public.
     async fn get_public(
         &self,
         ctx: &CoreContext,
@@ -141,11 +154,21 @@ pub trait Phases: Send + Sync {
         ephemeral_derive: bool,
     ) -> Result<HashSet<ChangesetId>>;
 
+    /// Returns the commits that are known to be public in the cache.
+    /// Commits that have recently become public might not be included,
+    /// however this method is more performant than `get_public`.
+    async fn get_cached_public(
+        &self,
+        ctx: &CoreContext,
+        csids: Vec<ChangesetId>,
+    ) -> Result<HashSet<ChangesetId>>;
+
+    /// List all public commits.
+    async fn list_all_public(&self, ctx: &CoreContext) -> Result<Vec<ChangesetId>>;
+
     /// Return a copy of this phases object with the set of public
     /// heads frozen.
     fn with_frozen_public_heads(&self, heads: Vec<ChangesetId>) -> ArcPhases;
-
-    fn get_store(&self) -> &SqlPhases;
 }
 
 pub type HeadsFetcher =
@@ -190,7 +213,7 @@ impl SqlPhases {
             .await
     }
 
-    pub async fn list_all_public(&self, ctx: CoreContext) -> Result<Vec<ChangesetId>, Error> {
+    pub async fn list_all_public(&self, ctx: &CoreContext) -> Result<Vec<ChangesetId>, Error> {
         self.phases_store.list_all_public(ctx, self.repo_id).await
     }
 
@@ -260,12 +283,32 @@ impl Phases for SqlPhases {
         self.get_public_derive(ctx, csids, ephemeral_derive).await
     }
 
+    async fn get_cached_public(
+        &self,
+        ctx: &CoreContext,
+        csids: Vec<ChangesetId>,
+    ) -> Result<HashSet<ChangesetId>> {
+        self.get_public_raw(ctx, &csids).await
+    }
+
+    async fn list_all_public(&self, ctx: &CoreContext) -> Result<Vec<ChangesetId>> {
+        self.list_all_public(ctx).await
+    }
+
     async fn add_reachable_as_public(
         &self,
         ctx: &CoreContext,
         heads: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>> {
         mark_reachable_as_public(ctx, self, &heads, false).await
+    }
+
+    async fn add_public_with_known_public_ancestors(
+        &self,
+        ctx: &CoreContext,
+        csids: Vec<ChangesetId>,
+    ) -> Result<()> {
+        self.add_public_raw(ctx, csids).await
     }
 
     fn with_frozen_public_heads(&self, heads: Vec<ChangesetId>) -> ArcPhases {
@@ -279,10 +322,6 @@ impl Phases for SqlPhases {
             heads_fetcher,
             repo_id: self.repo_id,
         })
-    }
-
-    fn get_store(&self) -> &SqlPhases {
-        self
     }
 }
 

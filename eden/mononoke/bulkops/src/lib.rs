@@ -137,7 +137,7 @@ impl PublicChangesetBulkFetch {
         d: Direction,
         repo_bounds: Option<(u64, u64)>,
     ) -> impl Stream<Item = Result<((ChangesetId, u64), (u64, u64)), Error>> + 'a {
-        let phases = self.phases.get_store();
+        let phases = self.phases.as_ref();
         let repo_bounds = if let Some(repo_bounds) = repo_bounds {
             future::ok(repo_bounds).left_future()
         } else {
@@ -208,8 +208,8 @@ impl PublicChangesetBulkFetch {
             )
             .and_then(move |(mut ids, completed_bounds)| async move {
                 if !ids.is_empty() {
-                    let cs_ids = ids.iter().map(|(cs_id, _)| cs_id);
-                    let public = phases.get_public_raw(ctx, cs_ids).await?;
+                    let cs_ids = ids.iter().map(|(cs_id, _)| *cs_id).collect();
+                    let public = phases.get_cached_public(ctx, cs_ids).await?;
                     ids.retain(|(id, _)| public.contains(&id));
                 }
                 Ok::<_, Error>(stream::iter(
@@ -267,20 +267,22 @@ mod tests {
     use bookmarks::BookmarkName;
     use fixtures::branch_wide;
     use mononoke_types::ChangesetId;
-    use phases::{mark_reachable_as_public, PhasesArc, PhasesRef};
+    use phases::{PhasesArc, PhasesRef};
 
     async fn get_test_repo(ctx: &CoreContext, fb: FacebookInit) -> Result<BlobRepo, Error> {
         let blobrepo = branch_wide::getrepo(fb).await;
 
         // our function avoids derivation so we need to explicitly do the derivation for
         // phases to have any data
-        let sql_phases = blobrepo.phases().get_store();
         let master = BookmarkName::new("master")?;
         let master = blobrepo
             .get_bonsai_bookmark(ctx.clone(), &master)
             .await?
             .unwrap();
-        mark_reachable_as_public(&ctx, sql_phases, &[master], false).await?;
+        blobrepo
+            .phases()
+            .add_reachable_as_public(&ctx, vec![master])
+            .await?;
 
         Ok(blobrepo)
     }

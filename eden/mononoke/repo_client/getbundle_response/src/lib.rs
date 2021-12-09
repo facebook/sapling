@@ -796,13 +796,8 @@ async fn traverse_draft_commits(
         .await?;
 
     // Find the initial set of public changesets.
-    let mut public_changesets = phases
-        .get_store()
-        .get_public_raw(
-            &ctx,
-            hg_bonsai_heads.iter().map(|(_hg_cs_id, bcs_id)| bcs_id),
-        )
-        .await?;
+    let bonsai_heads = hg_bonsai_heads.iter().map(|(_, bcs_id)| *bcs_id).collect();
+    let mut public_changesets = phases.get_cached_public(&ctx, bonsai_heads).await?;
 
     // Call the draft head callback for each of the draft heads.
     let mut seen = HashSet::new();
@@ -846,7 +841,7 @@ async fn traverse_draft_commits(
 
         let (new_next_changesets, new_public_changesets) = try_join!(
             repo.get_hg_bonsai_mapping(ctx.clone(), parents.clone()),
-            phases.get_store().get_public_raw(&ctx, &parents)
+            phases.get_cached_public(&ctx, parents)
         )?;
         next_changesets = new_next_changesets;
         public_changesets = new_public_changesets;

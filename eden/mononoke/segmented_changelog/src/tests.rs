@@ -25,7 +25,7 @@ use changesets::{ChangesetEntry, ChangesetsArc, ChangesetsRef};
 use context::CoreContext;
 use fixtures::{branch_even, linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
 use mononoke_types::{ChangesetId, RepositoryId};
-use phases::{mark_reachable_as_public, PhasesArc, PhasesRef};
+use phases::{PhasesArc, PhasesRef};
 use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
@@ -107,8 +107,10 @@ async fn seed_with_prefetched(
 ) -> Result<()> {
     // Does it make sense to seed up to the master commit instead of head?
     // Something to consider. Depends how it's used by tests.
-    let sql_phases = blobrepo.phases().get_store();
-    mark_reachable_as_public(&ctx, sql_phases, &heads, false).await?;
+    blobrepo
+        .phases()
+        .add_reachable_as_public(ctx, heads.clone())
+        .await?;
 
     let prefetched = match prefetched {
         None => stream::empty().boxed(),

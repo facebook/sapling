@@ -142,7 +142,7 @@ impl SqlPhasesStore {
 
     pub async fn list_all_public(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<Vec<ChangesetId>, Error> {
         STATS::list_all.add_value(1);

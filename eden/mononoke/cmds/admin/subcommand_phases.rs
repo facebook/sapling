@@ -165,9 +165,9 @@ async fn add_public_phases(
     while let Some(chunk) = chunks.try_next().await? {
         let count = chunk.len();
         let changesets = repo.get_hg_bonsai_mapping(ctx.clone(), chunk).await?;
+        let csids = changesets.into_iter().map(|(_, csid)| csid).collect();
         phases
-            .get_store()
-            .add_public_raw(&ctx, changesets.into_iter().map(|(_, cs)| cs).collect())
+            .add_public_with_known_public_ancestors(&ctx, csids)
             .await?;
         entries_processed += count;
         print!("\x1b[Khashes processed: {}\r", entries_processed);
@@ -182,10 +182,7 @@ async fn subcommand_list_public_impl(
     ty: String,
     repo: BlobRepo,
 ) -> Result<(), Error> {
-    let phases = repo.phases();
-    let sql_phases = phases.get_store();
-
-    let public = sql_phases.list_all_public(ctx.clone()).await?;
+    let public = repo.phases().list_all_public(&ctx).await?;
     if ty == "bonsai" {
         for p in public {
             println!("{}", p);
