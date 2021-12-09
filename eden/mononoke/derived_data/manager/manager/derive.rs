@@ -264,10 +264,6 @@ impl DerivedDataManager {
 
                 let derived = derived?;
 
-                // Flush the blobstore.  If it has been set up to cache
-                // writes, these must be flushed before we write the mapping.
-                derivation_ctx.flush(&ctx).await?;
-
                 // We may now store the mapping, and flush the blobstore to
                 // ensure the mapping is persisted.
                 let (persist_stats, persisted) = derived
@@ -275,7 +271,6 @@ impl DerivedDataManager {
                     .store_mapping(&ctx, derivation_ctx, csid)
                     .timed()
                     .await;
-                derivation_ctx.flush(&ctx).await?;
 
                 self.log_mapping_insertion(
                     &ctx,
@@ -630,12 +625,12 @@ impl DerivedDataManager {
             )
         };
         self.check_enabled::<Derivable>()?;
-        let mut derivation_ctx = self.derivation_context(rederivation);
+        let mut derivation_ctx = self.derivation_context(rederivation.clone());
 
         // Enable write batching, so that writes are stored in memory
         // before being flushed.
         derivation_ctx.enable_write_batching();
-        borrowed!(derivation_ctx);
+        let derivation_ctx_ref = &derivation_ctx;
 
         let mut scuba = ctx.scuba().clone();
         scuba
@@ -649,7 +644,7 @@ impl DerivedDataManager {
 
         // Load all of the bonsais for this batch.
         let bonsais = stream::iter(csids.into_iter().map(|csid| async move {
-            let bonsai = csid.load(ctx, derivation_ctx.blobstore()).await?;
+            let bonsai = csid.load(ctx, derivation_ctx_ref.blobstore()).await?;
             Ok::<_, Error>(bonsai)
         }))
         .buffered(100)
@@ -680,7 +675,7 @@ impl DerivedDataManager {
         // data type derived
         let ancestor_checks = async move {
             stream::iter(ancestors)
-                .map(|csid| derivation_ctx.fetch_dependency::<Derivable>(ctx, csid))
+                .map(|csid| derivation_ctx_ref.fetch_dependency::<Derivable>(ctx, csid))
                 .buffered(100)
                 .try_for_each(|_| async { Ok(()) })
                 .await
@@ -699,7 +694,7 @@ impl DerivedDataManager {
                 .map(|csid| async move {
                     Derivable::Dependencies::check_dependencies(
                         ctx,
-                        derivation_ctx,
+                        derivation_ctx_ref,
                         csid,
                         &mut HashSet::new(),
                     )
@@ -744,6 +739,7 @@ impl DerivedDataManager {
         );
         self.log_batch_derivation_start::<Derivable>(&ctx, &mut derived_data_scuba, csid_range);
         let (overall_stats, result) = async {
+            let derivation_ctx_ref = &derivation_ctx;
             let (batch_stats, derived) = match batch_options {
                 BatchDeriveOptions::Parallel { gap_size } => {
                     derived_data_scuba.add("parallel", true);
@@ -751,7 +747,7 @@ impl DerivedDataManager {
                         derived_data_scuba.add("gap_size", gap_size);
                     }
                     let (stats, derived) =
-                        Derivable::derive_batch(ctx, derivation_ctx, bonsais, gap_size)
+                        Derivable::derive_batch(ctx, derivation_ctx_ref, bonsais, gap_size)
                             .try_timed()
                             .await
                             .with_context(|| {
@@ -774,11 +770,11 @@ impl DerivedDataManager {
                     let mut per_commit_derived = HashMap::new();
                     for bonsai in bonsais {
                         let csid = bonsai.get_changeset_id();
-                        let parents = derivation_ctx
+                        let parents = derivation_ctx_ref
                             .fetch_unknown_parents(ctx, Some(&per_commit_derived), &bonsai)
                             .await?;
                         let (stats, derived) =
-                            Derivable::derive_single(ctx, derivation_ctx, bonsai, parents)
+                            Derivable::derive_single(ctx, derivation_ctx_ref, bonsai, parents)
                                 .try_timed()
                                 .await
                                 .with_context(|| {
@@ -801,12 +797,17 @@ impl DerivedDataManager {
                 .add_future_stats(&stats)
                 .log_with_msg("Flushed derived blobs", None);
 
+            let mut derivation_ctx = self.derivation_context(rederivation.clone());
+            derivation_ctx.enable_write_batching();
             // Write all mapping values, and flush the blobstore to ensure they
             // are persisted.
             let (persist_stats, persisted) = async {
+                let derivation_ctx_ref = &derivation_ctx;
                 let csids = stream::iter(derived.into_iter())
                     .map(|(csid, derived)| async move {
-                        derived.store_mapping(ctx, derivation_ctx, csid).await?;
+                        derived
+                            .store_mapping(ctx, &derivation_ctx_ref, csid)
+                            .await?;
                         Ok::<_, Error>(csid)
                     })
                     .buffer_unordered(100)
@@ -814,8 +815,10 @@ impl DerivedDataManager {
                     .await?;
 
                 derivation_ctx.flush(ctx).await?;
-                for csid in csids {
-                    derivation_ctx.mark_derived::<Derivable>(csid);
+                if let Some(rederivation) = rederivation {
+                    for csid in csids {
+                        rederivation.mark_derived(Derivable::NAME, csid);
+                    }
                 }
                 Ok::<_, Error>(())
             }

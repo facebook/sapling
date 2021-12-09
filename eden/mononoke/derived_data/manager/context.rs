@@ -257,7 +257,14 @@ impl DerivationContext {
     }
 
     /// Flush any pending writes for this derivation context.
-    pub(crate) async fn flush(&self, ctx: &CoreContext) -> Result<()> {
+    /// NOTE - this method INTENTIONALLY consumes DerivationContext.
+    /// Making `persist()` clears the cache and then persists it to underlying blobstore,
+    /// however these operations are not atomic i.e. if anyone tries to read
+    /// a key after the cache was cleaned but before it was saved to underlying blobstore
+    /// then they might not found the data they were looking for.
+    /// Make sure that there are no users of `blobstore_write_cache` when you call
+    /// flush()! See D32638849 for more details
+    pub(crate) async fn flush(self, ctx: &CoreContext) -> Result<()> {
         if let Some((_, blobstore)) = &self.blobstore_write_cache {
             blobstore.persist(ctx).await?;
         }
