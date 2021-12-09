@@ -71,6 +71,10 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<WorkingDirectoryParents> parents,
       std::unique_ptr<ResetParentCommitsParams> params) override;
 
+  folly::SemiFuture<folly::Unit> semifuture_synchronizeWorkingCopy(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<SynchronizeWorkingCopyParams> params) override;
+
   void getBindMounts(
       std::vector<std::string>& out,
       std::unique_ptr<std::string> mountPointPtr) override;
@@ -85,7 +89,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void getSHA1(
       std::vector<SHA1Result>& out,
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::vector<std::string>> paths) override;
+      std::unique_ptr<std::vector<std::string>> paths,
+      std::unique_ptr<SyncBehavior> sync) override;
 
   ImmediateFuture<BlobMetadata> getBlobMetadataForPath(
       AbsolutePathPiece mountPoint,
@@ -117,12 +122,14 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   folly::SemiFuture<std::unique_ptr<std::vector<EntryInformationOrError>>>
   semifuture_getEntryInformation(
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::vector<std::string>> paths) override;
+      std::unique_ptr<std::vector<std::string>> paths,
+      std::unique_ptr<SyncBehavior> sync) override;
 
   folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>
   semifuture_getFileInformation(
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::vector<std::string>> paths) override;
+      std::unique_ptr<std::vector<std::string>> paths,
+      std::unique_ptr<SyncBehavior> sync) override;
 
   folly::SemiFuture<std::unique_ptr<GetAttributesFromFilesResult>>
   semifuture_getAttributesFromFiles(
@@ -190,7 +197,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::vector<TreeInodeDebugInfo>& inodeInfo,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> path,
-      int64_t flags) override;
+      int64_t flags,
+      std::unique_ptr<SyncBehavior> sync) override;
 
   void debugOutstandingFuseCalls(
       std::vector<FuseCall>& outstandingCalls,

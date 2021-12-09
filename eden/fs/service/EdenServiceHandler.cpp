@@ -513,12 +513,39 @@ void EdenServiceHandler::resetParentCommits(
   edenMount->resetParent(parent1);
 }
 
+namespace {
+/**
+ * Convert the passed in SyncBehavior to a chrono type.
+ *
+ * When the SyncBehavior is unset, this default to a timeout of 60 seconds.
+ */
+std::chrono::seconds getSyncTimeout(const SyncBehavior& sync) {
+  auto seconds = sync.syncTimeoutSeconds_ref().value_or(60);
+  return std::chrono::seconds{seconds};
+}
+} // namespace
+
+folly::SemiFuture<folly::Unit>
+EdenServiceHandler::semifuture_synchronizeWorkingCopy(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<SynchronizeWorkingCopyParams> /*params*/) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+  auto mountPath = AbsolutePathPiece{*mountPoint};
+  auto edenMount = server_->getMount(mountPath);
+
+  // TODO(xavierd): Actually synchronize the working copy.
+
+  return folly::unit;
+}
+
 void EdenServiceHandler::getSHA1(
     vector<SHA1Result>& out,
     unique_ptr<string> mountPoint,
-    unique_ptr<vector<string>> paths) {
+    unique_ptr<vector<string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
   TraceBlock block("getSHA1");
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *mountPoint, getSyncTimeout(*sync).count(), toLogArg(*paths));
   vector<ImmediateFuture<Hash20>> futures;
   auto mountPath = AbsolutePathPiece{*mountPoint};
   for (const auto& path : *paths) {
@@ -1209,8 +1236,10 @@ void EdenServiceHandler::debugGetRawJournal(
 folly::SemiFuture<std::unique_ptr<std::vector<EntryInformationOrError>>>
 EdenServiceHandler::semifuture_getEntryInformation(
     std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::vector<std::string>> paths) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
+    std::unique_ptr<std::vector<std::string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *mountPoint, getSyncTimeout(*sync).count(), toLogArg(*paths));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto rootInode = edenMount->getRootInode();
@@ -1249,8 +1278,10 @@ EdenServiceHandler::semifuture_getEntryInformation(
 folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>
 EdenServiceHandler::semifuture_getFileInformation(
     std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::vector<std::string>> paths) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
+    std::unique_ptr<std::vector<std::string>> paths,
+    std::unique_ptr<SyncBehavior> sync) {
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, *mountPoint, getSyncTimeout(*sync).count(), toLogArg(*paths));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto rootInode = edenMount->getRootInode();
@@ -1308,8 +1339,10 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
   auto mountPath = AbsolutePathPiece{mountPoint};
   auto paths = params->get_paths();
   auto reqBitmask = params->get_requestedAttributes();
+  auto syncTimeout = getSyncTimeout(*params->sync_ref());
   // Get requested attributes for each path
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, mountPoint, toLogArg(paths));
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG3, mountPoint, syncTimeout.count(), toLogArg(paths));
   vector<ImmediateFuture<BlobMetadata>> futures;
   for (const auto& p : paths) {
     futures.emplace_back(
@@ -2052,13 +2085,15 @@ void EdenServiceHandler::debugInodeStatus(
     vector<TreeInodeDebugInfo>& inodeInfo,
     unique_ptr<string> mountPoint,
     unique_ptr<std::string> path,
-    int64_t flags) {
+    int64_t flags,
+    std::unique_ptr<SyncBehavior> sync) {
   if (0 == flags) {
     flags = eden_constants::DIS_REQUIRE_LOADED_ |
         eden_constants::DIS_COMPUTE_BLOB_SIZES_;
   }
 
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path, flags);
+  auto helper = INSTRUMENT_THRIFT_CALL(
+      DBG2, *mountPoint, *path, flags, getSyncTimeout(*sync).count());
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
 

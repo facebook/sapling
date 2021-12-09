@@ -21,6 +21,7 @@ from facebook.eden.ttypes import (
     FileAttributes,
     GetAttributesFromFilesParams,
     GetAttributesFromFilesResult,
+    SyncBehavior,
 )
 
 from .lib import testcase
@@ -59,7 +60,7 @@ class ThriftTest(testcase.EdenRepoTest):
     def get_loaded_inodes_count(self, path: str) -> int:
         with self.get_thrift_client() as client:
             result = client.debugInodeStatus(
-                self.mount_path_bytes, os.fsencode(path), flags=0
+                self.mount_path_bytes, os.fsencode(path), flags=0, sync=SyncBehavior()
             )
         inode_count = 0
         for item in result:
@@ -109,12 +110,18 @@ class ThriftTest(testcase.EdenRepoTest):
         with self.get_thrift_client() as client:
             self.assertEqual(
                 [result_for_hello, result_for_adir_file],
-                client.getSHA1(self.mount_path_bytes, [b"hello", b"adir/file"]),
+                client.getSHA1(
+                    self.mount_path_bytes,
+                    [b"hello", b"adir/file"],
+                    sync=SyncBehavior(),
+                ),
             )
 
     def test_get_sha1_throws_for_path_with_dot_components(self) -> None:
         with self.get_thrift_client() as client:
-            results = client.getSHA1(self.mount_path_bytes, [b"./hello"])
+            results = client.getSHA1(
+                self.mount_path_bytes, [b"./hello"], sync=SyncBehavior()
+            )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(
             results[0],
@@ -125,26 +132,32 @@ class ThriftTest(testcase.EdenRepoTest):
 
     def test_get_sha1_throws_for_empty_string(self) -> None:
         with self.get_thrift_client() as client:
-            results = client.getSHA1(self.mount_path_bytes, [b""])
+            results = client.getSHA1(self.mount_path_bytes, [b""], sync=SyncBehavior())
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "path cannot be the empty string")
 
     def test_get_sha1_throws_for_directory(self) -> None:
         with self.get_thrift_client() as client:
-            results = client.getSHA1(self.mount_path_bytes, [b"adir"])
+            results = client.getSHA1(
+                self.mount_path_bytes, [b"adir"], sync=SyncBehavior(60)
+            )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "adir: Is a directory")
 
     def test_get_sha1_throws_for_non_existent_file(self) -> None:
         with self.get_thrift_client() as client:
-            results = client.getSHA1(self.mount_path_bytes, [b"i_do_not_exist"])
+            results = client.getSHA1(
+                self.mount_path_bytes, [b"i_do_not_exist"], sync=SyncBehavior()
+            )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "i_do_not_exist: No such file or directory")
 
     def test_get_sha1_throws_for_symlink(self) -> None:
         """Fails because caller should resolve the symlink themselves."""
         with self.get_thrift_client() as client:
-            results = client.getSHA1(self.mount_path_bytes, [b"slink"])
+            results = client.getSHA1(
+                self.mount_path_bytes, [b"slink"], sync=SyncBehavior()
+            )
         self.assertEqual(1, len(results))
         self.assert_sha1_error(results[0], "slink: file is a symlink: Invalid argument")
 

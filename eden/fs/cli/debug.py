@@ -44,6 +44,7 @@ from facebook.eden.ttypes import (
     NoValueForKeyError,
     TimeSpec,
     TreeInodeDebugInfo,
+    SyncBehavior,
 )
 from fb303_core import BaseService
 from thrift.protocol.TSimpleJSONProtocol import TSimpleJSONProtocolFactory
@@ -520,7 +521,10 @@ class InodeCmd(Subcmd):
         instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
         with instance.get_thrift_client_legacy() as client:
             results = client.debugInodeStatus(
-                bytes(checkout.path), bytes(rel_path), flags=0
+                bytes(checkout.path),
+                bytes(rel_path),
+                flags=0,
+                sync=SyncBehavior(),
             )
 
         out.write(b"%d loaded TreeInodes\n" % len(results))
@@ -550,7 +554,10 @@ class MaterializedCmd(Subcmd):
 
         with instance.get_thrift_client_legacy() as client:
             results = client.debugInodeStatus(
-                bytes(checkout.path), bytes(rel_path), DIS_REQUIRE_MATERIALIZED
+                bytes(checkout.path),
+                bytes(rel_path),
+                DIS_REQUIRE_MATERIALIZED,
+                sync=SyncBehavior(),
             )
 
         if not results:
@@ -664,7 +671,7 @@ class FileStatsCMD(Subcmd):
 
         with instance.get_thrift_client_legacy() as client:
             inode_results = client.debugInodeStatus(
-                bytes(checkout.path), bytes(rel_path), flags=0
+                bytes(checkout.path), bytes(rel_path), flags=0, sync=SyncBehavior()
             )
 
         read_files, written_files = split_inodes_by_operation_type(inode_results)

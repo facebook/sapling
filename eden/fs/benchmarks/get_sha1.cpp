@@ -64,7 +64,8 @@ void recordThriftSample(
   // see notes in recordFilesystemSample about these DoNotOptimize protecting
   // ordering here
   benchmark::DoNotOptimize(file);
-  client->sync_getSHA1(res, repo_path.native(), {file});
+  auto sync = SyncBehavior{};
+  client->sync_getSHA1(res, repo_path.native(), {file}, sync);
   benchmark::DoNotOptimize(res);
   auto duration = std::chrono::nanoseconds(getTime() - start);
   sample =

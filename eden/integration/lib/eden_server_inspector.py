@@ -8,7 +8,7 @@ import os
 from typing import Iterable
 
 from eden.thrift.legacy import EdenClient
-from facebook.eden.ttypes import TimeSpec
+from facebook.eden.ttypes import TimeSpec, SyncBehavior
 
 from . import edenclient
 
@@ -43,7 +43,10 @@ class EdenServerInspector(object):
         """
         with self.create_thrift_client() as client:
             debug_info = client.debugInodeStatus(
-                os.fsencode(self._mount_point), os.fsencode(path), flags=0
+                os.fsencode(self._mount_point),
+                os.fsencode(path),
+                flags=0,
+                sync=SyncBehavior(),
             )
         count = 0
         for tree_inode_debug_info in debug_info:
@@ -54,7 +57,10 @@ class EdenServerInspector(object):
         """path: relative path to a directory under the mount."""
         with self.create_thrift_client() as client:
             debug_info = client.debugInodeStatus(
-                os.fsencode(self._mount_point), os.fsencode(path), flags=0
+                os.fsencode(self._mount_point),
+                os.fsencode(path),
+                flags=0,
+                sync=SyncBehavior(),
             )
         for tree_inode_debug_info in debug_info:
             parent_dir = tree_inode_debug_info.path.decode("utf-8")

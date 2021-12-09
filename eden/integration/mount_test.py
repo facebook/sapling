@@ -21,6 +21,7 @@ from facebook.eden.ttypes import (
     UnblockFaultArg,
     WorkingDirectoryParents,
     ResetParentCommitsParams,
+    SyncBehavior,
 )
 from fb303_core.ttypes import fb303_status
 from thrift.Thrift import TException  # @manual=//thrift/lib/py:base
@@ -169,7 +170,9 @@ class MountTest(testcase.EdenRepoTest):
         null_commit = b"\00" * 20
 
         with self.assertRaisesRegex(EdenError, error_regex) as ctx:
-            client.getFileInformation(mountPoint=bytes(mount_path), paths=[b""])
+            client.getFileInformation(
+                mountPoint=bytes(mount_path), paths=[b""], sync=SyncBehavior()
+            )
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
         with self.assertRaisesRegex(EdenError, error_regex) as ctx:
