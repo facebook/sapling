@@ -41,7 +41,7 @@ class PhabricatorGraphQLClient(object):
             raise arcconfig.ArcConfigError(
                 "The arcrc was missing valid authentication (either OAuth or CATs). "
                 "For humans, follow the instructions at "
-                "https://our.intern.facebook.com/intern/jf/authenticate/ "
+                "https://www.internalfb.com/intern/jf/authenticate/ "
                 "to get a Phabricator OAuth token. "
                 "For bots, see http://fburl.com/botdiffs for more info."
             )

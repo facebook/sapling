@@ -159,7 +159,7 @@ _hg_prompt() {
   builtin printf "%s" "$br"
 }
 
-# cf. https://our.intern.facebook.com/intern/qa/4964/how-do-i-show-the-mercurial-bookmarkgit-branch-in?answerID=540621130023036
+# cf. https://www.internalfb.com/intern/qa/4964/how-do-i-show-the-mercurial-bookmarkgit-branch-in?answerID=540621130023036
 _hg_dirty() {
   if [ -n "${SHOW_DIRTY_STATE}" ] &&
      [ "$(hg config shell.showDirtyState)" != "false" ]; then
