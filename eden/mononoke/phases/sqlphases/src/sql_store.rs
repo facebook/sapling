@@ -16,13 +16,14 @@ use context::{CoreContext, PerfCounterType};
 use maplit::hashset;
 use memcache::KeyGen;
 use mononoke_types::{ChangesetId, RepositoryId};
+use phases::Phase;
 use sql::{queries, Connection};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::Phase;
+use crate::sql_phases::SqlPhase;
 
 // 6 hours in sec
 pub const TTL_DRAFT_SEC: u64 = 21600;
@@ -37,7 +38,7 @@ define_stats! {
 
 pub struct Caches {
     pub memcache: MemcacheHandler, // Memcache Client for temporary caching
-    pub cache_pool: CachelibHandler<Phase>,
+    pub cache_pool: CachelibHandler<SqlPhase>,
     pub keygen: KeyGen,
 }
 
@@ -75,7 +76,7 @@ impl SqlPhasesStore {
             .await
             .with_context(|| "Error fetching phases via cache")?
             .into_iter()
-            .map(|(_, val)| val)
+            .map(|(_, val)| val.into())
             .next();
 
         Ok(res)
@@ -100,7 +101,7 @@ impl SqlPhasesStore {
         Ok(cs_to_phase
             .into_iter()
             .filter_map(|(key, value)| {
-                if value == Phase::Public {
+                if value == SqlPhase(Phase::Public) {
                     Some(key)
                 } else {
                     None
@@ -121,7 +122,7 @@ impl SqlPhasesStore {
         STATS::add_many.add_value(1);
         let phases: Vec<_> = csids
             .iter()
-            .map(|csid| (&repoid, csid, &Phase::Public))
+            .map(|csid| (&repoid, csid, &SqlPhase(Phase::Public)))
             .collect();
 
         ctx.perf_counters()
@@ -132,7 +133,7 @@ impl SqlPhasesStore {
             let ctx = (ctx, repoid, self);
             let phases = csids
                 .iter()
-                .map(|csid| (csid, &Phase::Public))
+                .map(|csid| (csid, &SqlPhase(Phase::Public)))
                 .collect::<Vec<_>>();
             fill_cache(ctx, phases).await;
         }
@@ -153,7 +154,7 @@ impl SqlPhasesStore {
     }
 }
 
-impl MemcacheEntity for Phase {
+impl MemcacheEntity for SqlPhase {
     fn serialize(&self) -> Bytes {
         Bytes::from(self.to_string())
     }
@@ -165,8 +166,8 @@ impl MemcacheEntity for Phase {
 
 type CacheRequest<'a> = (&'a CoreContext, RepositoryId, &'a SqlPhasesStore);
 
-impl EntityStore<Phase> for CacheRequest<'_> {
-    fn cachelib(&self) -> &CachelibHandler<Phase> {
+impl EntityStore<SqlPhase> for CacheRequest<'_> {
+    fn cachelib(&self) -> &CachelibHandler<SqlPhase> {
         let (_, _, phases) = self;
         &phases.caches.cache_pool
     }
@@ -181,8 +182,8 @@ impl EntityStore<Phase> for CacheRequest<'_> {
         &phases.caches.memcache
     }
 
-    fn cache_determinator(&self, phase: &Phase) -> CacheDisposition {
-        let ttl = if phase == &Phase::Public {
+    fn cache_determinator(&self, phase: &SqlPhase) -> CacheDisposition {
+        let ttl = if phase == &SqlPhase(Phase::Public) {
             CacheTtl::NoTtl
         } else {
             CacheTtl::Ttl(Duration::from_secs(TTL_DRAFT_SEC))
@@ -195,7 +196,7 @@ impl EntityStore<Phase> for CacheRequest<'_> {
 }
 
 #[async_trait]
-impl KeyedEntityStore<ChangesetId, Phase> for CacheRequest<'_> {
+impl KeyedEntityStore<ChangesetId, SqlPhase> for CacheRequest<'_> {
     fn get_cache_key(&self, cs_id: &ChangesetId) -> String {
         let (_, repo_id, _) = self;
         get_cache_key(*repo_id, cs_id)
@@ -204,7 +205,7 @@ impl KeyedEntityStore<ChangesetId, Phase> for CacheRequest<'_> {
     async fn get_from_db(
         &self,
         cs_ids: HashSet<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Phase>, Error> {
+    ) -> Result<HashMap<ChangesetId, SqlPhase>, Error> {
         let (ctx, repo_id, mapping) = self;
 
         let cs_ids: Vec<_> = cs_ids.into_iter().collect();
@@ -223,7 +224,7 @@ pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
 }
 
 queries! {
-    write InsertPhase(values: (repo_id: RepositoryId, cs_id: ChangesetId, phase: Phase)) {
+    write InsertPhase(values: (repo_id: RepositoryId, cs_id: ChangesetId, phase: SqlPhase)) {
         none,
         mysql("INSERT INTO phases (repo_id, cs_id, phase) VALUES {values} ON DUPLICATE KEY UPDATE phase = VALUES(phase)")
         // sqlite query currently doesn't support changing the value
@@ -235,7 +236,7 @@ queries! {
     read SelectPhases(
         repo_id: RepositoryId,
         >list cs_ids: ChangesetId
-    ) -> (ChangesetId, Phase) {
+    ) -> (ChangesetId, SqlPhase) {
         mysql(
             "SELECT cs_id, phase
             FROM phases FORCE INDEX(PRIMARY)

@@ -61,7 +61,7 @@ use metaconfig_types::{
 use mutable_renames::{ArcMutableRenames, MutableRenames, SqlMutableRenamesStore};
 use newfilenodes::NewFilenodesBuilder;
 use parking_lot::Mutex;
-use phases::{ArcPhases, SqlPhasesBuilder};
+use phases::ArcPhases;
 use pushrebase_mutation_mapping::{
     ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
 };
@@ -79,6 +79,7 @@ use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use slog::o;
 use sql::SqlConnectionsWithSchema;
 use sql_construct::{SqlConstruct, SqlConstructFromDatabaseConfig};
+use sqlphases::SqlPhasesBuilder;
 use thiserror::Error;
 use tunables::tunables;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;

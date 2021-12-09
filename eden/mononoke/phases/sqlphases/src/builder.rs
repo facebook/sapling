@@ -5,19 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use crate::{
-    sql_store::{Caches, SqlPhasesStore},
-    ArcPhases, HeadsFetcher, SqlPhases,
-};
+use std::sync::Arc;
+
 use cachelib::VolatileLruCachePool;
 use changeset_fetcher::ChangesetFetcher;
 use fbinit::FacebookInit;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::RepositoryId;
+use phases::ArcPhases;
 use sql::Connection;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
-use std::sync::Arc;
+
+use crate::sql_phases::{HeadsFetcher, SqlPhases};
+use crate::sql_store::{Caches, SqlPhasesStore};
 
 // Memcache constants, should be changed when we want to invalidate memcache
 // entries
@@ -53,12 +54,7 @@ impl SqlPhasesBuilder {
         heads_fetcher: HeadsFetcher,
     ) -> ArcPhases {
         let phases_store = self.phases_store();
-        let phases = SqlPhases {
-            phases_store,
-            changeset_fetcher,
-            heads_fetcher,
-            repo_id,
-        };
+        let phases = SqlPhases::new(phases_store, repo_id, changeset_fetcher, heads_fetcher);
         Arc::new(phases)
     }
 
@@ -98,11 +94,11 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesBuilder {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Phase;
     use anyhow::Error;
     use context::CoreContext;
     use maplit::hashset;
     use mononoke_types_mocks::changesetid::*;
+    use phases::Phase;
 
     #[fbinit::test]
     async fn add_get_phase_sql_test(fb: FacebookInit) -> Result<(), Error> {

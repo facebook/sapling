@@ -62,6 +62,7 @@ segmented_changelog = { version = "0.1.0", path = "../../segmented_changelog" }
 segmented_changelog_types = { version = "0.1.0", path = "../../segmented_changelog/types" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+sqlphases = { version = "0.1.0", path = "../../phases/sqlphases" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 

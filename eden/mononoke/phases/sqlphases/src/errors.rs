@@ -8,7 +8,9 @@
 use thiserror::Error;
 
 #[derive(Debug, Eq, Error, PartialEq)]
-pub enum PhasesError {
-    #[error("invalid phase enumeration value: {0}")]
-    EnumError(u32),
+pub enum SqlPhasesError {
+    #[error("invalid phase value: {0}")]
+    ValueError(String),
+    #[error("failed to parse phase value from {0} bytes")]
+    ParseError(usize),
 }

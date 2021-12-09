@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use thiserror::Error;
+mod builder;
+mod errors;
+mod sql_phases;
+mod sql_store;
 
-#[derive(Debug, Eq, Error, PartialEq)]
-pub enum PhasesError {
-    #[error("invalid phase enumeration value: {0}")]
-    EnumError(u32),
-}
+pub use builder::SqlPhasesBuilder;
+pub use errors::SqlPhasesError;

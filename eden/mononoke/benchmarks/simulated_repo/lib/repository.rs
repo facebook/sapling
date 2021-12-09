@@ -43,7 +43,7 @@ use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath, RepositoryId,
 };
 use newfilenodes::NewFilenodesBuilder;
-use phases::{ArcPhases, SqlPhasesBuilder};
+use phases::ArcPhases;
 use pushrebase_mutation_mapping::{
     ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
 };
@@ -58,6 +58,7 @@ use segmented_changelog::DisabledSegmentedChangelog;
 use segmented_changelog_types::ArcSegmentedChangelog;
 use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use sql_construct::SqlConstruct;
+use sqlphases::SqlPhasesBuilder;
 use std::{sync::Arc, time::Duration};
 
 pub type Normal = rand_distr::Normal<f64>;

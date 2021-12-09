@@ -47,7 +47,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::SqlMutableCounters;
 use mutable_renames::{ArcMutableRenames, MutableRenames, SqlMutableRenamesStore};
 use newfilenodes::NewFilenodesBuilder;
-use phases::{ArcPhases, SqlPhasesBuilder};
+use phases::ArcPhases;
 use pushrebase_mutation_mapping::{
     ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
 };
@@ -64,6 +64,7 @@ use skeleton_manifest::RootSkeletonManifestId;
 use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use sql::{rusqlite::Connection as SqliteConnection, Connection, SqlConnectionsWithSchema};
 use sql_construct::SqlConstruct;
+use sqlphases::SqlPhasesBuilder;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 use unodes::RootUnodeManifestId;
 

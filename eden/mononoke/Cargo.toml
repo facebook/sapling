@@ -341,6 +341,7 @@ members = [
   "observability",
   "permission_checker",
   "phases",
+  "phases/sqlphases",
   "pushrebase",
   "pushrebase/pushrebase_hook",
   "pushrebase_mutation_mapping",
