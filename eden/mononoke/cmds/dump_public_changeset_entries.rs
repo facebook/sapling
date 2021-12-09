@@ -14,6 +14,7 @@ use cmdlib::args::{self, RepoRequirement};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::TryStreamExt;
+use phases::PhasesArc;
 
 const ARG_OUT_FILENAME: &str = "out-filename";
 
@@ -50,7 +51,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         let repo: BlobRepo = blob_repo_fut.await?;
 
         let fetcher =
-            PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.get_phases());
+            PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.phases_arc());
 
         let css = fetcher
             .fetch(&ctx, Direction::OldestFirst)

@@ -36,6 +36,7 @@ use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
 use movers::Mover;
+use phases::PhasesRef;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -640,7 +641,7 @@ where
 
         if source_repo_is_small {
             let public_unsynced_ancestors = source_repo
-                .get_phases()
+                .phases()
                 .get_public(
                     ctx.clone(),
                     unsynced_ancestors.clone(),

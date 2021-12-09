@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{self, format_err, Context, Error};
@@ -33,19 +34,16 @@ use mononoke_types::{
     hash::{Sha1, Sha256},
     BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId, RepoPath,
 };
+use phases::PhasesRef;
+use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_client::{
     find_commits_to_send, find_new_draft_commits_and_derive_filenodes_for_public_roots,
     gettreepack_entries,
 };
-
 use segmented_changelog::{CloneData, Location};
-use std::collections::HashSet;
-use std::sync::Arc;
 use tunables::tunables;
 use unbundle::upload_changeset;
-
-use reachabilityindex::LeastCommonAncestorsHint;
 
 use super::{HgFileContext, HgTreeContext};
 
@@ -756,7 +754,7 @@ impl HgRepoContext {
         let ctx = self.ctx().clone();
         let blob_repo = self.blob_repo();
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.repo.skiplist_index().clone();
-        let phases = blob_repo.get_phases();
+        let phases = blob_repo.phases();
         let common: HashSet<_> = common.into_iter().collect();
         // make sure filenodes are derived before sending
         let (_draft_commits, missing_commits) = try_join!(

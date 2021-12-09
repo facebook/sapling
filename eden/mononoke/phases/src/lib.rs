@@ -8,9 +8,7 @@
 mod errors;
 pub use errors::ErrorKind;
 mod factory;
-pub use factory::{
-    ArcSqlPhasesFactory, SqlPhasesFactory, SqlPhasesFactoryArc, SqlPhasesFactoryRef,
-};
+pub use factory::SqlPhasesBuilder;
 mod sql_store;
 pub use sql_store::SqlPhasesStore;
 
@@ -127,6 +125,7 @@ impl ConvIr<Phase> for Phase {
 
 /// This is the primary interface for clients to interact with Phases
 #[auto_impl(&, Arc, Box)]
+#[facet::facet]
 pub trait Phases: Send + Sync {
     /// mark all commits reachable from heads as public
     fn add_reachable_as_public(
@@ -141,6 +140,10 @@ pub trait Phases: Send + Sync {
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
     ) -> BoxFuture<'static, Result<HashSet<ChangesetId>, Error>>;
+
+    /// Return a copy of this phases object with the set of public
+    /// heads frozen.
+    fn with_frozen_public_heads(&self, heads: Vec<ChangesetId>) -> ArcPhases;
 
     fn get_store(&self) -> &SqlPhases;
 }
@@ -264,6 +267,19 @@ impl Phases for SqlPhases {
     ) -> BoxFuture<'static, Result<Vec<ChangesetId>, Error>> {
         let this = self.clone();
         async move { mark_reachable_as_public(&ctx, &this, &heads, false).await }.boxed()
+    }
+
+    fn with_frozen_public_heads(&self, heads: Vec<ChangesetId>) -> ArcPhases {
+        let heads_fetcher = Arc::new(move |_ctx: &CoreContext| {
+            let heads = heads.clone();
+            async move { Ok(heads) }.boxed()
+        });
+        Arc::new(SqlPhases {
+            phases_store: self.phases_store.clone(),
+            changeset_fetcher: self.changeset_fetcher.clone(),
+            heads_fetcher,
+            repo_id: self.repo_id,
+        })
     }
 
     fn get_store(&self) -> &SqlPhases {

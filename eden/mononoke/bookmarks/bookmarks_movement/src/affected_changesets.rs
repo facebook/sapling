@@ -25,6 +25,7 @@ use futures_ext::FbStreamExt;
 use hooks::{CrossRepoPushSource, HookManager};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
+use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scribe_commit_queue::{self, ChangedFilesInfo, LogToScribe};
@@ -467,7 +468,7 @@ impl AffectedChangesets {
                         .collect::<Vec<_>>();
 
                     let public = repo
-                        .get_phases()
+                        .phases()
                         .get_public(
                             ctx.clone(),
                             cs_ids.clone(),
@@ -545,7 +546,7 @@ pub async fn find_draft_ancestors(
         .clone()
         .log_with_msg("Started finding draft ancestors", None);
 
-    let phases = repo.get_phases();
+    let phases = repo.phases();
     let mut queue = VecDeque::new();
     let mut visited = HashSet::new();
     let mut drafts = vec![];

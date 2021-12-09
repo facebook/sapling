@@ -16,6 +16,7 @@ use futures::{
     future::{self, TryFutureExt},
     stream::{Stream, StreamExt, TryStreamExt},
 };
+use phases::PhasesArc;
 use tokio::runtime::Handle;
 
 use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP};
@@ -126,7 +127,7 @@ fn main(fb: fbinit::FacebookInit) {
                     blobrepo.name().to_string(),
                     PublicChangesetBulkFetch::new(
                         blobrepo.get_changesets_object(),
-                        blobrepo.get_phases(),
+                        blobrepo.phases_arc(),
                     ),
                 )
             })

@@ -267,15 +267,14 @@ mod tests {
     use bookmarks::BookmarkName;
     use fixtures::branch_wide;
     use mononoke_types::ChangesetId;
-    use phases::mark_reachable_as_public;
+    use phases::{mark_reachable_as_public, PhasesArc, PhasesRef};
 
     async fn get_test_repo(ctx: &CoreContext, fb: FacebookInit) -> Result<BlobRepo, Error> {
         let blobrepo = branch_wide::getrepo(fb).await;
 
         // our function avoids derivation so we need to explicitly do the derivation for
         // phases to have any data
-        let phases = blobrepo.get_phases();
-        let sql_phases = phases.get_store();
+        let sql_phases = blobrepo.phases().get_store();
         let master = BookmarkName::new("master")?;
         let master = blobrepo
             .get_bonsai_bookmark(ctx.clone(), &master)
@@ -290,7 +289,7 @@ mod tests {
         step_size: u64,
         blobrepo: &BlobRepo,
     ) -> Result<PublicChangesetBulkFetch, Error> {
-        PublicChangesetBulkFetch::new(blobrepo.get_changesets_object(), blobrepo.get_phases())
+        PublicChangesetBulkFetch::new(blobrepo.get_changesets_object(), blobrepo.phases_arc())
             .with_step(step_size)
     }
 
@@ -394,7 +393,7 @@ mod tests {
         let blobrepo = get_test_repo(&ctx, fb).await?;
 
         let fetcher =
-            PublicChangesetBulkFetch::new(blobrepo.get_changesets_object(), blobrepo.get_phases());
+            PublicChangesetBulkFetch::new(blobrepo.get_changesets_object(), blobrepo.phases_arc());
         // If we give empty known heads, we expect all IDs in the repo
         assert_eq!(
             (1, 8),

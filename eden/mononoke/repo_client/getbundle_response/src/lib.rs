@@ -47,7 +47,7 @@ use mercurial_types::{
     NULL_CSID,
 };
 use mononoke_types::{hash::Sha256, ChangesetId, ContentId, Generation};
-use phases::{Phase, Phases};
+use phases::{Phase, Phases, PhasesRef};
 use rate_limiting::Metric;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
@@ -117,7 +117,7 @@ pub async fn create_getbundle_response(
     let heads_len = heads.len();
     let common: HashSet<_> = common.into_iter().collect();
 
-    let phases = blobrepo.get_phases();
+    let phases = blobrepo.phases();
     let (draft_commits, commits_to_send) = try_join!(
         find_new_draft_commits_and_derive_filenodes_for_public_roots(
             ctx, blobrepo, &common, heads, &phases
@@ -638,7 +638,7 @@ pub async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
     repo: &BlobRepo,
     common: &HashSet<HgChangesetId>,
     heads: &[HgChangesetId],
-    phases: &Arc<dyn Phases>,
+    phases: &dyn Phases,
 ) -> Result<HashSet<HgChangesetId>, Error> {
     let (draft, public_heads) =
         find_new_draft_commits_and_public_roots(ctx, repo, common, heads, phases).await?;
@@ -688,7 +688,7 @@ async fn find_new_draft_commits_and_public_roots(
     repo: &BlobRepo,
     common: &HashSet<HgChangesetId>,
     heads: &[HgChangesetId],
-    phases: &Arc<dyn Phases>,
+    phases: &dyn Phases,
 ) -> Result<(HashSet<HgChangesetId>, HashSet<ChangesetId>), Error> {
     // Remove the common heads.
     let new_heads: Vec<_> = heads
@@ -752,7 +752,7 @@ async fn find_phase_heads(
     ctx: &CoreContext,
     repo: &BlobRepo,
     heads: &[HgChangesetId],
-    phases: &Arc<dyn Phases>,
+    phases: &dyn Phases,
 ) -> Result<Vec<(HgChangesetId, Phase)>, Error> {
     // Traverse the draft commits, collecting phase heads for the draft heads
     // and public commits that we encounter.
@@ -784,7 +784,7 @@ async fn find_phase_heads(
 async fn traverse_draft_commits(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    phases: &Arc<dyn Phases>,
+    phases: &dyn Phases,
     heads: &[HgChangesetId],
     mut public_callback: impl FnMut(ChangesetId, HgChangesetId),
     mut draft_head_callback: impl FnMut(ChangesetId, HgChangesetId),

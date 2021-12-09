@@ -29,6 +29,7 @@ use futures::{
 };
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
+use phases::PhasesArc;
 use slog::{info, Logger};
 use std::{
     cmp::{max, min},
@@ -238,7 +239,7 @@ where
             .map(|chunking| {
                 let heads_fetcher = PublicChangesetBulkFetch::new(
                     repo_params.repo.get_changesets_object(),
-                    repo_params.repo.get_phases(),
+                    repo_params.repo.phases_arc(),
                 )
                 .with_read_from_master(false)
                 .with_step(MAX_FETCH_STEP);

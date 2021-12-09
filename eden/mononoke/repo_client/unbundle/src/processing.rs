@@ -22,6 +22,7 @@ use hooks::HookManager;
 use mercurial_bundle_replay_data::BundleReplayData;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
+use phases::PhasesRef;
 use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
@@ -456,7 +457,7 @@ async fn run_pushrebase(
         }
     };
 
-    repo.get_phases()
+    repo.phases()
         .add_reachable_as_public(ctx.clone(), vec![pushrebased_rev.clone()])
         .await
         .context("While marking pushrebased changeset as public")?;

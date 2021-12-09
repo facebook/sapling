@@ -30,14 +30,14 @@ use filestore::FilestoreConfig;
 use futures::{
     future::{try_join, BoxFuture},
     stream::FuturesUnordered,
-    FutureExt, Stream, TryStreamExt,
+    Stream, TryStreamExt,
 };
 use mercurial_mutation::{ArcHgMutationStore, HgMutationStore};
 use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, Globalrev, MononokeId, RepositoryId,
 };
-use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
+use phases::Phases;
 use pushrebase_mutation_mapping::{ArcPushrebaseMutationMapping, PushrebaseMutationMapping};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
 use repo_derived_data::RepoDerivedData;
@@ -105,7 +105,7 @@ pub struct BlobRepoInner {
     pub bookmark_update_log: dyn BookmarkUpdateLog,
 
     #[facet]
-    pub sql_phases_factory: SqlPhasesFactory,
+    pub phases: dyn Phases,
 
     #[facet]
     pub filestore_config: FilestoreConfig,
@@ -134,7 +134,7 @@ pub struct BlobRepo {
         RepoBonsaiSvnrevMapping,
         dyn Bookmarks,
         dyn BookmarkUpdateLog,
-        SqlPhasesFactory,
+        dyn Phases,
         FilestoreConfig,
         dyn Filenodes,
         dyn HgMutationStore,
@@ -376,29 +376,8 @@ impl BlobRepo {
         self.inner.repoid
     }
 
-    pub fn get_phases(&self) -> Arc<dyn Phases> {
-        self.inner.sql_phases_factory.get_phases(
-            self.get_repoid(),
-            self.get_changeset_fetcher(),
-            self.get_heads_fetcher(),
-        )
-    }
-
     pub fn name(&self) -> &String {
         &self.inner.reponame
-    }
-
-    pub fn get_heads_fetcher(&self) -> HeadsFetcher {
-        let this = self.clone();
-        Arc::new(move |ctx: &CoreContext| {
-            this.get_bonsai_heads_maybe_stale(ctx.clone())
-                .try_collect()
-                .boxed()
-        })
-    }
-
-    pub fn get_phases_factory(&self) -> &SqlPhasesFactory {
-        self.inner.sql_phases_factory.as_ref()
     }
 
     pub fn get_changesets_object(&self) -> Arc<dyn Changesets> {

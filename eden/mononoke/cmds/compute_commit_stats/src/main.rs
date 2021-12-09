@@ -21,6 +21,7 @@ use fbinit::FacebookInit;
 use futures::{stream, StreamExt, TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use mononoke_types::ChangesetId;
+use phases::PhasesArc;
 use serde::Serialize;
 use skeleton_manifest::RootSkeletonManifestId;
 
@@ -48,7 +49,7 @@ async fn run<'a>(fb: FacebookInit, matches: &'a MononokeMatches<'a>) -> Result<(
             .left_stream(),
             (None, true) => {
                 fetcher =
-                    PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.get_phases());
+                    PublicChangesetBulkFetch::new(repo.get_changesets_object(), repo.phases_arc());
                 fetcher
                     .fetch_ids(&ctx, Direction::OldestFirst, None)
                     .map_ok(|((cs_id, _bound), _fetch_bounds)| cs_id)

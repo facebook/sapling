@@ -69,6 +69,7 @@ mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "../mononoke_hg_sync_job" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
+phases = { version = "0.1.0", path = "../phases" }
 prefixblob = { version = "0.1.0", path = "../blobstore/prefixblob" }
 prettytable-rs = "0.8"
 pushrebase = { version = "0.1.0", path = "../pushrebase" }

@@ -15,7 +15,7 @@ use futures_ext::FutureExt as OldFutureExt;
 use futures_watchdog::WatchdogExt;
 use mononoke_api_types::InnerRepo;
 use mononoke_types::ChangesetId;
-use phases::Phases;
+use phases::{Phases, PhasesRef};
 use slog::{info, o};
 
 pub fn create_derived_data_warmer<D: BonsaiDerivable + BonsaiDerived>(ctx: &CoreContext) -> Warmer {
@@ -52,7 +52,7 @@ pub fn create_public_phase_warmer(ctx: &CoreContext) -> Warmer {
         Box::new(|ctx: CoreContext, repo: InnerRepo, cs_id: ChangesetId| {
             async move {
                 repo.blob_repo
-                    .get_phases()
+                    .phases()
                     .add_reachable_as_public(ctx, vec![cs_id])
                     .await?;
                 Ok(())
@@ -67,7 +67,7 @@ pub fn create_public_phase_warmer(ctx: &CoreContext) -> Warmer {
             async move {
                 let maybe_public = repo
                     .blob_repo
-                    .get_phases()
+                    .phases()
                     .get_store()
                     .get_public(ctx.clone(), vec![*cs_id], false /* ephemeral derive */)
                     .await?;

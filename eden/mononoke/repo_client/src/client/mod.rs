@@ -60,6 +60,7 @@ use metaconfig_types::{RepoClientKnobs, RepoReadOnly};
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use mononoke_types::{hash::GitSha1, ChangesetId};
 use nonzero_ext::nonzero;
+use phases::PhasesArc;
 use rand::{self, Rng};
 use rate_limiting::Metric;
 use regex::Regex;
@@ -1435,7 +1436,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        let phases_hint = self.repo.blobrepo().get_phases().clone();
+        let phases_hint = self.repo.blobrepo().phases_arc();
         self.known_impl(
             nodes,
             ops::KNOWN,

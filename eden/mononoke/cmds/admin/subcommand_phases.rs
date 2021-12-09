@@ -22,6 +22,7 @@ use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
+use phases::PhasesRef;
 use slog::{info, Logger};
 
 use crate::error::SubcommandError;
@@ -145,7 +146,7 @@ async fn add_public_phases(
     path: impl AsRef<str>,
     chunk_size: usize,
 ) -> Result<(), Error> {
-    let phases = repo.get_phases();
+    let phases = repo.phases();
     let file = File::open(path.as_ref()).map_err(Error::from)?;
     let hg_changesets = BufReader::new(file)
         .lines()
@@ -181,7 +182,7 @@ async fn subcommand_list_public_impl(
     ty: String,
     repo: BlobRepo,
 ) -> Result<(), Error> {
-    let phases = repo.get_phases();
+    let phases = repo.phases();
     let sql_phases = phases.get_store();
 
     let public = sql_phases.list_all_public(ctx.clone()).await?;
@@ -215,7 +216,7 @@ pub async fn subcommand_fetch_phase_impl<'a>(
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let hash = hash?;
-    let phases = repo.get_phases();
+    let phases = repo.phases();
 
     let bcs_id = if ty == "bonsai" {
         ChangesetId::from_str(&hash)?

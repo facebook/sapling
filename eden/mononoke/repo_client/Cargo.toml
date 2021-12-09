@@ -43,6 +43,7 @@ mononoke_repo = { version = "0.1.0", path = "mononoke_repo" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
 percent-encoding = "2.1"
+phases = { version = "0.1.0", path = "../phases" }
 rand = { version = "0.8", features = ["small_rng"] }
 rate_limiting = { version = "0.1.0", path = "../rate_limiting" }
 regex = "1.5.4"

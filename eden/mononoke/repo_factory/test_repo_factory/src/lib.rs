@@ -19,7 +19,7 @@ use bonsai_hg_mapping::{ArcBonsaiHgMapping, SqlBonsaiHgMappingBuilder};
 use bonsai_svnrev_mapping::{
     ArcRepoBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
 };
-use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
+use bookmarks::{bookmark_heads_fetcher, ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::{InProcessLease, LeaseOps};
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changeset_info::ChangesetInfo;
@@ -47,7 +47,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::SqlMutableCounters;
 use mutable_renames::{ArcMutableRenames, MutableRenames, SqlMutableRenamesStore};
 use newfilenodes::NewFilenodesBuilder;
-use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
+use phases::{ArcPhases, SqlPhasesBuilder};
 use pushrebase_mutation_mapping::{
     ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
 };
@@ -150,7 +150,7 @@ impl TestRepoFactory {
         metadata_con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiSvnrevMapping::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlBonsaiHgMappingBuilder::CREATION_QUERY)?;
-        metadata_con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
+        metadata_con.execute_batch(SqlPhasesBuilder::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlPushrebaseMutationMappingConnection::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlLongRunningRequestsQueue::CREATION_QUERY)?;
         metadata_con.execute_batch(SqlMutableRenamesStore::CREATION_QUERY)?;
@@ -285,12 +285,17 @@ impl TestRepoFactory {
         sql_bookmarks.clone()
     }
 
-    /// Construct a SQL Phases Factory.
-    pub fn sql_phases_factory(&self) -> Result<ArcSqlPhasesFactory> {
-        // TODO(mbthomas) we should be constructing Arc<Phases> directly.
-        Ok(Arc::new(SqlPhasesFactory::from_sql_connections(
-            self.metadata_db.clone().into(),
-        )))
+    /// Construct Phases.
+    pub fn phases(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        bookmarks: &ArcBookmarks,
+        changeset_fetcher: &ArcChangesetFetcher,
+    ) -> ArcPhases {
+        let sql_phases_builder =
+            SqlPhasesBuilder::from_sql_connections(self.metadata_db.clone().into());
+        let heads_fetcher = bookmark_heads_fetcher(bookmarks.clone());
+        sql_phases_builder.build(repo_identity.id(), changeset_fetcher.clone(), heads_fetcher)
     }
 
     /// Construct Bonsai Hg Mapping using the in-memory metadata database.

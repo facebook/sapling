@@ -49,7 +49,7 @@ use mononoke_types::{
     unode::UnodeEntry, BlameId, ChangesetId, ContentId, DeletedManifestId, FastlogBatchId,
     FileUnodeId, FsnodeId, MPath, ManifestUnodeId, RepositoryId, SkeletonManifestId,
 };
-use phases::{HeadsFetcher, Phase, Phases};
+use phases::{Phase, Phases, PhasesRef};
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::{info, warn, Logger};
@@ -1821,12 +1821,10 @@ where
 
     async move {
         let published_bookmarks = Arc::new(published_bookmarks.await?);
-        let heads_fetcher: HeadsFetcher = Arc::new({
-            cloned!(published_bookmarks);
-            move |_ctx: &CoreContext| {
-                future::ok(published_bookmarks.iter().map(|(_, csid)| *csid).collect()).boxed()
-            }
-        });
+        let heads = published_bookmarks
+            .iter()
+            .map(|(_, csid)| *csid)
+            .collect::<Vec<_>>();
 
         cloned!(
             repo_params.repo,
@@ -1853,11 +1851,7 @@ where
             keep_edge_paths: type_params.keep_edge_paths,
             visitor: visitor.clone(),
             required_node_data_types,
-            phases_store: repo.get_phases_factory().get_phases(
-                repo.get_repoid(),
-                repo.get_changeset_fetcher(),
-                heads_fetcher,
-            ),
+            phases_store: repo.phases().with_frozen_public_heads(heads),
             bonsai_hg_mapping: repo.get_bonsai_hg_mapping().clone(),
             repo_id: repo.get_repoid(),
         });

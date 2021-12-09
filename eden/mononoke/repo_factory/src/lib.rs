@@ -8,15 +8,11 @@
 //! Repository factory.
 #![feature(trait_alias)]
 
-use context::CoreContext;
-use skiplist::{ArcSkiplistIndex, SkiplistIndex};
-use sql_construct::{SqlConstruct, SqlConstructFromDatabaseConfig};
 use std::collections::HashMap;
 use std::future::Future;
 use std::hash::Hash;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
-use tunables::tunables;
 
 use anyhow::{Context, Result};
 use async_once_cell::AsyncOnceCell;
@@ -34,7 +30,7 @@ use bonsai_svnrev_mapping::{
     ArcRepoBonsaiSvnrevMapping, BonsaiSvnrevMapping, CachingBonsaiSvnrevMapping,
     RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
 };
-use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks, CachedBookmarks};
+use bookmarks::{bookmark_heads_fetcher, ArcBookmarkUpdateLog, ArcBookmarks, CachedBookmarks};
 use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, CachelibBlobstoreOptions,
     InProcessLease, LeaseOps, MemcacheOps,
@@ -42,6 +38,7 @@ use cacheblob::{
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changesets::ArcChangesets;
 use changesets_impl::{CachingChangesets, SqlChangesetsBuilder};
+use context::CoreContext;
 use context::SessionContainer;
 use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 #[cfg(fbcode_build)]
@@ -64,7 +61,7 @@ use metaconfig_types::{
 use mutable_renames::{ArcMutableRenames, MutableRenames, SqlMutableRenamesStore};
 use newfilenodes::NewFilenodesBuilder;
 use parking_lot::Mutex;
-use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
+use phases::{ArcPhases, SqlPhasesBuilder};
 use pushrebase_mutation_mapping::{
     ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
 };
@@ -78,9 +75,12 @@ use requests_table::{ArcLongRunningRequestsQueue, SqlLongRunningRequestsQueue};
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
 use segmented_changelog_types::ArcSegmentedChangelog;
+use skiplist::{ArcSkiplistIndex, SkiplistIndex};
 use slog::o;
 use sql::SqlConnectionsWithSchema;
+use sql_construct::{SqlConstruct, SqlConstructFromDatabaseConfig};
 use thiserror::Error;
+use tunables::tunables;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 
 pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
@@ -550,18 +550,22 @@ impl RepoFactory {
         sql_bookmarks.clone()
     }
 
-    pub async fn sql_phases_factory(
+    pub async fn phases(
         &self,
+        repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-    ) -> Result<ArcSqlPhasesFactory> {
-        let mut sql_phases_factory = self
-            .open::<SqlPhasesFactory>(&repo_config.storage_config.metadata)
+        bookmarks: &ArcBookmarks,
+        changeset_fetcher: &ArcChangesetFetcher,
+    ) -> Result<ArcPhases> {
+        let mut sql_phases_builder = self
+            .open::<SqlPhasesBuilder>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::Phases)?;
         if let Some(pool) = self.maybe_volatile_pool("phases")? {
-            sql_phases_factory.enable_caching(self.env.fb, pool);
+            sql_phases_builder.enable_caching(self.env.fb, pool);
         }
-        Ok(Arc::new(sql_phases_factory))
+        let heads_fetcher = bookmark_heads_fetcher(bookmarks.clone());
+        Ok(sql_phases_builder.build(repo_identity.id(), changeset_fetcher.clone(), heads_fetcher))
     }
 
     pub async fn bonsai_hg_mapping(

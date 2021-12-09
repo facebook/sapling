@@ -21,7 +21,7 @@ use bonsai_hg_mapping::{
 use bonsai_svnrev_mapping::{
     ArcRepoBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
 };
-use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
+use bookmarks::{bookmark_heads_fetcher, ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ArcChangesets, ChangesetEntry, ChangesetInsert, Changesets, SortOrder};
@@ -43,7 +43,7 @@ use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath, RepositoryId,
 };
 use newfilenodes::NewFilenodesBuilder;
-use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
+use phases::{ArcPhases, SqlPhasesBuilder};
 use pushrebase_mutation_mapping::{
     ArcPushrebaseMutationMapping, SqlPushrebaseMutationMappingConnection,
 };
@@ -177,8 +177,15 @@ impl BenchmarkRepoFactory {
         sql_bookmarks.clone()
     }
 
-    pub fn sql_phases_factory(&self) -> Result<ArcSqlPhasesFactory> {
-        Ok(Arc::new(SqlPhasesFactory::with_sqlite_in_memory()?))
+    pub fn phases(
+        &self,
+        repo_identity: &ArcRepoIdentity,
+        bookmarks: &ArcBookmarks,
+        changeset_fetcher: &ArcChangesetFetcher,
+    ) -> Result<ArcPhases> {
+        let sql_phases_builder = SqlPhasesBuilder::with_sqlite_in_memory()?;
+        let heads_fetcher = bookmark_heads_fetcher(bookmarks.clone());
+        Ok(sql_phases_builder.build(repo_identity.id(), changeset_fetcher.clone(), heads_fetcher))
     }
 
     pub fn bonsai_hg_mapping(&self) -> Result<ArcBonsaiHgMapping> {

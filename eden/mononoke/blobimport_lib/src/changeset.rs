@@ -42,6 +42,7 @@ use mercurial_types::{
     NULL_HASH,
 };
 use mononoke_types::{BonsaiChangeset, ContentMetadata};
+use phases::PhasesArc;
 use slog::info;
 
 use crate::concurrency::JobProcessor;
@@ -463,7 +464,7 @@ impl UploadChangesets {
                 parent_changeset_handles.insert(csid, cshandle.clone());
 
                 cloned!(ctx);
-                let phases = blobrepo.get_phases();
+                let phases = blobrepo.phases_arc();
 
                 // Uploading changeset and populate phases
                 // We know they are public.

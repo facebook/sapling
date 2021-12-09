@@ -7,7 +7,7 @@
 
 use crate::{
     sql_store::{Caches, SqlPhasesStore},
-    HeadsFetcher, Phases, SqlPhases,
+    ArcPhases, HeadsFetcher, SqlPhases,
 };
 use cachelib::VolatileLruCachePool;
 use changeset_fetcher::ChangesetFetcher;
@@ -24,36 +24,35 @@ use std::sync::Arc;
 const MC_CODEVER: u32 = 0;
 const MC_SITEVER: u32 = 0;
 
-/// Factory that can be used to produce SqlPhasesStore object
-/// Primarily intended to be used by BlobRepo
-#[facet::facet]
+/// Builder that can be used to produce SqlPhasesStore object.  Primarily
+/// intended to be used by Repo factories.
 #[derive(Clone)]
-pub struct SqlPhasesFactory {
+pub struct SqlPhasesBuilder {
     write_connection: Connection,
     read_connection: Connection,
     read_master_connection: Connection,
     caches: Arc<Caches>,
 }
 
-impl SqlPhasesFactory {
+impl SqlPhasesBuilder {
     pub fn enable_caching(&mut self, fb: FacebookInit, cache_pool: VolatileLruCachePool) {
         let caches = Caches {
             memcache: MemcacheClient::new(fb)
                 .expect("Memcache initialization failed")
                 .into(),
-            keygen: Self::get_key_gen(),
+            keygen: Self::key_gen(),
             cache_pool: cache_pool.into(),
         };
         self.caches = Arc::new(caches);
     }
 
-    pub fn get_phases(
-        &self,
+    pub fn build(
+        self,
         repo_id: RepositoryId,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         heads_fetcher: HeadsFetcher,
-    ) -> Arc<dyn Phases> {
-        let phases_store = self.get_phases_store();
+    ) -> ArcPhases {
+        let phases_store = self.phases_store();
         let phases = SqlPhases {
             phases_store,
             changeset_fetcher,
@@ -63,28 +62,28 @@ impl SqlPhasesFactory {
         Arc::new(phases)
     }
 
-    fn get_key_gen() -> KeyGen {
+    fn key_gen() -> KeyGen {
         let key_prefix = "scm.mononoke.phases";
         KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER)
     }
 
-    fn get_phases_store(&self) -> SqlPhasesStore {
+    fn phases_store(self) -> SqlPhasesStore {
         SqlPhasesStore {
-            write_connection: self.write_connection.clone(),
-            read_connection: self.read_connection.clone(),
-            read_master_connection: self.read_master_connection.clone(),
-            caches: self.caches.clone(),
+            write_connection: self.write_connection,
+            read_connection: self.read_connection,
+            read_master_connection: self.read_master_connection,
+            caches: self.caches,
         }
     }
 }
 
-impl SqlConstruct for SqlPhasesFactory {
+impl SqlConstruct for SqlPhasesBuilder {
     const LABEL: &'static str = "phases";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-phases.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        let caches = Arc::new(Caches::new_mock(Self::get_key_gen()));
+        let caches = Arc::new(Caches::new_mock(Self::key_gen()));
         Self {
             write_connection: connections.write_connection,
             read_connection: connections.read_connection,
@@ -94,7 +93,7 @@ impl SqlConstruct for SqlPhasesFactory {
     }
 }
 
-impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesFactory {}
+impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesBuilder {}
 
 #[cfg(test)]
 mod tests {
@@ -109,27 +108,31 @@ mod tests {
     async fn add_get_phase_sql_test(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
-        let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
-        let phases = phases_factory.get_phases_store();
+        let phases_builder = SqlPhasesBuilder::with_sqlite_in_memory()?;
+        let phases_store = phases_builder.phases_store();
 
-        phases
+        phases_store
             .add_public_raw(&ctx, repo_id, vec![ONES_CSID])
             .await?;
 
         assert_eq!(
-            phases.get_single_raw(&ctx, repo_id, ONES_CSID).await?,
+            phases_store
+                .get_single_raw(&ctx, repo_id, ONES_CSID)
+                .await?,
             Some(Phase::Public),
             "sql: get phase for the existing changeset"
         );
 
         assert_eq!(
-            phases.get_single_raw(&ctx, repo_id, TWOS_CSID).await?,
+            phases_store
+                .get_single_raw(&ctx, repo_id, TWOS_CSID)
+                .await?,
             None,
             "sql: get phase for non existing changeset"
         );
 
         assert_eq!(
-            phases
+            phases_store
                 .get_public_raw(&ctx, repo_id, &[ONES_CSID, TWOS_CSID])
                 .await?,
             hashset! {ONES_CSID},

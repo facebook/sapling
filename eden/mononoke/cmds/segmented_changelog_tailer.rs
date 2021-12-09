@@ -30,6 +30,7 @@ use cmdlib::{
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
+use phases::PhasesArc;
 use segmented_changelog::{SegmentedChangelogSqlConnections, SegmentedChangelogTailer};
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
@@ -195,7 +196,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
         let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
             blobrepo.changesets_arc(),
-            blobrepo.get_phases(),
+            blobrepo.phases_arc(),
         ));
         let segmented_changelog_tailer = SegmentedChangelogTailer::new(
             repo_id,

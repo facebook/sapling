@@ -54,7 +54,6 @@ mod hg_changeset;
 mod hg_sync;
 mod list_ancestors;
 mod mutable_counters;
-mod phases;
 mod pushrebase;
 mod rebase;
 mod redaction;
@@ -64,6 +63,7 @@ mod split_commit;
 mod subcommand_blame;
 mod subcommand_deleted_manifest;
 mod subcommand_fsnodes;
+mod subcommand_phases;
 mod subcommand_skeleton_manifests;
 mod subcommand_unodes;
 mod truncate_segmented_changelog;
@@ -92,7 +92,7 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(mutable_counters::build_subcommand())
         .subcommand(redaction::build_subcommand())
         .subcommand(filenodes::build_subcommand())
-        .subcommand(phases::build_subcommand())
+        .subcommand(subcommand_phases::build_subcommand())
         .subcommand(filestore::build_subcommand())
         .subcommand(subcommand_unodes::build_subcommand())
         .subcommand(subcommand_fsnodes::build_subcommand())
@@ -175,8 +175,8 @@ fn main(fb: FacebookInit) -> ExitCode {
             (filestore::FILESTORE, Some(sub_m)) => {
                 filestore::execute_command(fb, logger, &matches, sub_m).await
             }
-            (phases::PHASES, Some(sub_m)) => {
-                phases::subcommand_phases(fb, logger, &matches, sub_m).await
+            (subcommand_phases::PHASES, Some(sub_m)) => {
+                subcommand_phases::subcommand_phases(fb, logger, &matches, sub_m).await
             }
             (subcommand_unodes::UNODES, Some(sub_m)) => {
                 subcommand_unodes::subcommand_unodes(fb, logger, &matches, sub_m).await

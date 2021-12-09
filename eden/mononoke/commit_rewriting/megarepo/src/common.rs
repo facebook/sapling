@@ -12,6 +12,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange};
+use phases::PhasesRef;
 use slog::info;
 use sorted_vector_map::SortedVectorMap;
 
@@ -77,7 +78,7 @@ async fn save_and_maybe_mark_public(
     save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone()).await?;
 
     if mark_public {
-        repo.get_phases()
+        repo.phases()
             .add_reachable_as_public(ctx.clone(), vec![bcs_id])
             .await?;
         info!(ctx.logger(), "Marked as public {:?}", bcs_id);

@@ -19,7 +19,7 @@ use fixtures::linear;
 use maplit::hashset;
 use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::ChangesetId;
-use phases::Phases;
+use phases::{Phases, PhasesRef};
 use std::str::FromStr;
 
 async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> Result<(), Error> {
@@ -154,7 +154,7 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
         .await?
         .ok_or_else(|| Error::msg("Invalid cs: public_bookmark_commit"))?;
 
-    let phases = repo.get_phases();
+    let phases = repo.phases();
 
     assert_eq!(
         is_public(&phases, &ctx, public_bookmark_commit).await?,
@@ -272,7 +272,7 @@ async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let phases = repo.get_phases();
+    let phases = repo.phases();
     // get phases mapping for all `bcss` in the same order
     let get_phases_map = || {
         phases.get_public(ctx.clone(), bcss.clone(), false).map_ok({

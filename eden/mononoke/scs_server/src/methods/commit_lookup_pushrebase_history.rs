@@ -12,6 +12,7 @@ use context::CoreContext;
 use metaconfig_types::CommonCommitSyncConfig;
 use mononoke_api::{Mononoke, RepoContext};
 use mononoke_types::ChangesetId;
+use phases::PhasesRef;
 use source_control as thrift;
 use synced_commit_mapping::SyncedCommitSourceRepo;
 
@@ -81,7 +82,7 @@ impl RepoChangesetsPushrebaseHistory {
         let repo = self.repo(repo_name).await?;
         let is_public = repo
             .blob_repo()
-            .get_phases()
+            .phases()
             .get_public(
                 self.ctx.clone(),
                 vec![*bcs_id],

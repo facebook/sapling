@@ -8,11 +8,13 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use context::CoreContext;
-use futures::future::BoxFuture;
-use futures::stream::BoxStream;
+use futures::future::{BoxFuture, FutureExt};
+use futures::stream::{BoxStream, TryStreamExt};
 use mononoke_types::ChangesetId;
 
 mod cache;
@@ -84,4 +86,27 @@ pub trait Bookmarks: Send + Sync + 'static {
     fn drop_caches(&self) {
         // No-op by default.
     }
+}
+
+/// Construct a heads fetcher (function that returns all the heads in the
+/// repo) that uses the publishing bookmarks as all heads.
+pub fn bookmark_heads_fetcher(
+    bookmarks: ArcBookmarks,
+) -> Arc<dyn Fn(&CoreContext) -> BoxFuture<'static, Result<Vec<ChangesetId>>> + Send + Sync> {
+    Arc::new({
+        move |ctx: &CoreContext| {
+            bookmarks
+                .list(
+                    ctx.clone(),
+                    Freshness::MaybeStale,
+                    &BookmarkPrefix::empty(),
+                    BookmarkKind::ALL_PUBLISHING,
+                    &BookmarkPagination::FromStart,
+                    std::u64::MAX,
+                )
+                .map_ok(|(_, cs_id)| cs_id)
+                .try_collect()
+                .boxed()
+        }
+    })
 }

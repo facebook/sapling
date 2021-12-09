@@ -54,6 +54,7 @@ use mononoke_types::{
 };
 use mutable_renames::{MutableRenames, SqlMutableRenamesStore};
 use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
+use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
@@ -1224,7 +1225,7 @@ impl RepoContext {
         // initialize visited
         let mut visited: HashSet<_> = changesets.iter().cloned().collect();
 
-        let phases = self.blob_repo().get_phases();
+        let phases = self.blob_repo().phases();
 
         // get phases
         let public_phases = phases

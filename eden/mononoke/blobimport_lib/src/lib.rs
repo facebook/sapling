@@ -37,6 +37,7 @@ use derived_data_utils::derive_data_for_csids;
 use mercurial_revlog::{revlog::RevIdx, RevlogRepo};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::{ChangesetId, RepositoryId};
+use phases::PhasesRef;
 use synced_commit_mapping::{
     SyncedCommitMapping, SyncedCommitMappingEntry, SyncedCommitSourceRepo,
 };
@@ -321,7 +322,7 @@ impl<'a> Blobimport<'a> {
                     .await?;
 
                 let public = blobrepo
-                    .get_phases()
+                    .phases()
                     .get_public(
                         ctx.clone(),
                         hg_to_bcs_ids

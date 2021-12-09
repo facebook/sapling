@@ -30,6 +30,7 @@ mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+phases = { version = "0.1.0", path = "../phases" }
 reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 remotefilelog = { version = "0.1.0", path = "../repo_client/remotefilelog" }
 repo_blobstore = { version = "0.1.0", path = "../blobrepo/repo_blobstore" }
