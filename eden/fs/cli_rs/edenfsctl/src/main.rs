@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#[cfg(unix)]
-use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 use anyhow::{anyhow, Context, Result};
@@ -37,7 +35,7 @@ fn python_fallback() -> Result<Command> {
     }
 }
 
-fn fallback() -> Result<()> {
+fn fallback() -> Result<i32> {
     let mut cmd = python_fallback()?;
     // skip arg0
     cmd.args(std::env::args().skip(1));
@@ -48,25 +46,11 @@ fn fallback() -> Result<()> {
     cmd.env_remove("PYTHONHOME");
     cmd.env_remove("PYTHONPATH");
 
-    #[cfg(windows)]
-    {
-        // Windows doesn't have exec, so we have to open a subprocess
-        let status = cmd
-            .status()
-            .with_context(|| format!("failed to execute: {:?}", cmd))?;
-        std::process::exit(
-            status
-                .code()
-                .expect(format!("{:?} didn't set an error code", cmd).as_str()),
-        )
-    }
-
-    #[cfg(unix)]
-    {
-        // `.exec()` should take over the process, if we ever get to return this Err, then it means
-        // exec has failed, hence an error.
-        Err(cmd.exec()).with_context(|| format!("failed to execute {:?}", cmd))
-    }
+    // Create a subprocess to run Python edenfsctl
+    let status = cmd
+        .status()
+        .with_context(|| format!("failed to execute: {:?}", cmd))?;
+    Ok(status.code().unwrap_or(1))
 }
 
 /// Setup tracing logging. If we are in development mode, we use the fancier logger, otherwise a
@@ -86,17 +70,16 @@ fn setup_logging() {
     }
 }
 
-fn rust_main(cmd: edenfs_commands::MainCommand) -> Result<()> {
+fn rust_main(cmd: edenfs_commands::MainCommand) -> Result<i32> {
     if cmd.debug {
         setup_logging();
     }
-    match cmd.run() {
-        Ok(code) => std::process::exit(code),
-        Err(e) => Err(e.into()),
-    }
+    Ok(cmd.run()?)
 }
 
-fn main() -> Result<()> {
+/// This function takes care of the fallback logic, hijack supported subcommand
+/// to Rust implementation and forward the rest to Python.
+fn wrapper_main() -> Result<i32> {
     if std::env::var("EDENFSCTL_ONLY_RUST").is_ok() {
         let cmd = edenfs_commands::MainCommand::from_args();
         rust_main(cmd)
@@ -105,14 +88,18 @@ fn main() -> Result<()> {
     } else {
         match edenfs_commands::MainCommand::from_args_safe() {
             Ok(cmd) => rust_main(cmd),
-            Err(e) if e.kind == clap::ErrorKind::HelpDisplayed => {
-                // If we get a help message, we don't want to fallback to the Python version. The
-                // help flag has been disabled for the main command and debug subcommand so they
-                // will fallback correct while we still show help message for enabled commands
-                // correctly.
-                e.exit();
-            }
+            // If we get a help message, we don't want to fallback to the Python version. The
+            // help flag has been disabled for the main command and debug subcommand so they
+            // will fallback correct while we still show help message for enabled commands
+            // correctly.
+            Err(e) if e.kind == clap::ErrorKind::HelpDisplayed => Ok(0),
             Err(_) => fallback(),
         }
     }
+}
+
+fn main() -> Result<()> {
+    let code = wrapper_main()?;
+
+    std::process::exit(code)
 }
