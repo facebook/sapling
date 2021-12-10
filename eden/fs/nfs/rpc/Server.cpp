@@ -371,7 +371,7 @@ void RpcTcpHandler::dispatchAndReply(
 
                 // We don't know how much dispatchRpc wrote to the iobufQueue,
                 // thus let's clear it and write an error onto it.
-                iobufQueue->clear();
+                iobufQueue->reset();
                 folly::io::QueueAppender errSer(iobufQueue.get(), 1024);
                 XdrTrait<uint32_t>::serialize(
                     errSer, 0); // reserve space for fragment header
