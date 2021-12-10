@@ -8,8 +8,15 @@
 use std::process::Command;
 
 use anyhow::{anyhow, Context, Result};
+use fbinit::FacebookInit;
 use structopt::{clap, StructOpt};
 use tracing_subscriber::filter::EnvFilter;
+
+#[cfg(fbcode_build)]
+use crate::facebook::EdenFsSample;
+
+#[cfg(fbcode_build)]
+mod facebook;
 
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {
@@ -98,8 +105,28 @@ fn wrapper_main() -> Result<i32> {
     }
 }
 
-fn main() -> Result<()> {
-    let code = wrapper_main()?;
+#[fbinit::main]
+fn main(_fb: FacebookInit) -> Result<()> {
+    #[cfg(fbcode_build)]
+    let mut sample = EdenFsSample::build(_fb);
 
-    std::process::exit(code)
+    let code = match wrapper_main() {
+        Ok(code) => Ok(code),
+        Err(e) => {
+            #[cfg(fbcode_build)]
+            sample.as_mut().map(|sample| sample.set_exception(&e));
+            Err(e)
+        }
+    };
+
+    #[cfg(fbcode_build)]
+    if let Some(mut sample) = sample {
+        sample.set_exit_code(*code.as_ref().unwrap_or(&1));
+        sample.send();
+    }
+
+    match code {
+        Ok(code) => std::process::exit(code),
+        Err(e) => Err(e),
+    }
 }

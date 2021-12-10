@@ -10,5 +10,8 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.51"
 edenfs-commands = { version = "0.1.0", path = "../edenfs-commands" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 structopt = "0.3.23"
+sysinfo = "=0.17.2"
+tracing = "0.1.29"
 tracing-subscriber = { version = "0.3.3", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
