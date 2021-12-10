@@ -20,8 +20,8 @@ use std::time::SystemTime;
 use structopt::StructOpt;
 
 use anyhow::anyhow;
-use edenfs_client::EdenFsInstance;
-use edenfs_error::{Result, ResultExt};
+use edenfs_client::{EdenFsClient, EdenFsInstance};
+use edenfs_error::{EdenFsError, Result, ResultExt};
 use edenfs_utils::humantime::{HumanTime, TimeUnit};
 use edenfs_utils::path_from_bytes;
 
@@ -52,6 +52,10 @@ fn parse_refresh_rate(arg: &str) -> Duration {
 
     Duration::new(seconds, 0)
 }
+
+const COUNTER_REGEX: &str = r"store\.hg\..*";
+const PENDING_IMPORT_OBJECT_TYPES: &[&str] = &["blob", "tree"];
+const STATS_NOT_AVAILABLE: i64 = -1;
 
 const UNKNOWN_COMMAND: &str = "<unknown>";
 const COLUMN_TITLES: &[&str] = &[
@@ -247,6 +251,39 @@ impl TrackedProcesses {
     }
 }
 
+struct PendingImportStat {
+    count: i64,
+    max_duration_us: i64,
+}
+
+async fn get_pending_import_counts(
+    client: &EdenFsClient,
+) -> Result<BTreeMap<String, PendingImportStat>> {
+    let mut imports = BTreeMap::<String, PendingImportStat>::new();
+
+    client.flushStatsNow();
+    let counters = client.getRegexCounters(COUNTER_REGEX).await.from_err()?;
+    for import_type in PENDING_IMPORT_OBJECT_TYPES {
+        let counter_prefix = format!("store.hg.pending_import.{}", import_type);
+        let number_requests = counters
+            .get(&format!("{}.count", counter_prefix))
+            .unwrap_or(&STATS_NOT_AVAILABLE);
+        let longest_outstanding_request_us = counters
+            .get(&format!("{}.max_duration_us", counter_prefix))
+            .unwrap_or(&STATS_NOT_AVAILABLE);
+
+        imports.insert(
+            import_type.to_string(),
+            PendingImportStat {
+                count: *number_requests,
+                max_duration_us: *longest_outstanding_request_us,
+            },
+        );
+    }
+
+    Ok(imports)
+}
+
 #[async_trait]
 impl crate::Subcommand for MinitopCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
@@ -258,6 +295,9 @@ impl crate::Subcommand for MinitopCmd {
         execute!(stdout, terminal::DisableLineWrap).from_err()?;
 
         loop {
+            // Update pending imports summary stats
+            let pending_imports = get_pending_import_counts(&client).await?;
+
             // Update currently tracked processes (and add new ones if they haven't been tracked yet)
             let counts = client
                 .getAccessCounts(self.refresh_rate.as_secs().try_into().from_err()?)
@@ -284,6 +324,21 @@ impl crate::Subcommand for MinitopCmd {
                         fetch_counts,
                     )?;
                 }
+            }
+
+            // Render pending trees/blobs
+            for import_type in PENDING_IMPORT_OBJECT_TYPES {
+                let pending_blob_counts = pending_imports
+                    .get(&import_type.to_string())
+                    .ok_or_else(|| {
+                        EdenFsError::Other(anyhow!("Did not fetch pending {} info", import_type))
+                    })?;
+                println!(
+                    "total pending {}: {} ({:.3}s)",
+                    import_type,
+                    pending_blob_counts.count,
+                    pending_blob_counts.max_duration_us as f64 / 1000000.0,
+                );
             }
 
             // Render aggregated processes
