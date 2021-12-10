@@ -19,6 +19,7 @@ class CmdError(Exception):
 class Subcmd(abc.ABC):
     NAME: Optional[str] = None
     HELP: Optional[str] = None
+    DESCRIPTION: Optional[str] = None
     ALIASES: Optional[List[str]] = None
 
     def __init__(self, parser: argparse.ArgumentParser) -> None:
@@ -39,6 +40,9 @@ class Subcmd(abc.ABC):
             # is present and None.  It only hides the command from the help
             # output if the 'help' argument is not present at all.
             kwargs["help"] = help
+        description = self.get_description()
+        if description is not None:
+            kwargs["description"] = description
         parser = subparsers.add_parser(self.get_name(), **kwargs)
         parser.set_defaults(func=self.run)
         self.setup_parser(parser)
@@ -50,6 +54,9 @@ class Subcmd(abc.ABC):
 
     def get_help(self) -> Optional[str]:
         return self.HELP
+
+    def get_description(self) -> Optional[str]:
+        return self.DESCRIPTION
 
     def get_aliases(self) -> List[str]:
         if self.ALIASES is None:

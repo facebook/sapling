@@ -109,6 +109,9 @@ def _find_checkout_and_patterns(
 class GlobCmd(Subcmd):
     NAME = "glob"
     HELP = "Print matching filenames"
+    DESCRIPTION = """Print matching filenames. Glob patterns can be provided
+    either via stdin or a pattern file. This command does not do any filtering
+    based on source control state or gitignore files."""
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         _add_common_arguments(parser)
@@ -137,6 +140,10 @@ class GlobCmd(Subcmd):
 class PrefetchCmd(Subcmd):
     NAME = "prefetch"
     HELP = "Prefetch content for matching file patterns"
+    DESCRIPTION = """Prefetch content for matching file patterns.
+    Glob patterns can be provided either via stdin or a pattern file.
+    This command does not do any filtering based on source control state or
+    gitignore files."""
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         _add_common_arguments(parser)
