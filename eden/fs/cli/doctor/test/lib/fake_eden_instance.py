@@ -5,7 +5,6 @@
 # GNU General Public License version 2.
 
 import binascii
-import collections
 import os
 import shutil
 import stat
