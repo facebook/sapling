@@ -840,6 +840,36 @@ struct CommitFindFilesParams {
   4: optional list<string> prefixes;
 }
 
+/// Parameters for the `commit_history` method.
+///
+/// By default, this will include all commits that are ancestors of
+/// the target commit (including the commit itself).  This can be filtered
+/// in a number of ways:
+///
+/// * `after_timestamp` will exclude any ancestors that are older than
+///   this timestamp.  Traversal will stop at the first ancestor on each branch
+///   that is too old, so if commits have been made out of order there may be
+///   some ancestors with newer timestamps that are not returned.
+///
+/// * `before_timestamp` will exclude any ancestors that are newer than
+///   this timestamp.
+///
+/// * `descendants_of` will restrict traversal to only those commits which
+///   are **between** the target commit and this commit.  This means any
+///   branches that are merged in after the `decendants_of` commit will
+///   be excluded.  Use this when you want to find all the commits that
+///   are between two commits.
+///
+/// * `exclude_changeset_and_ancestors` will prune traversal at the given
+///   commit and any of its ancestors.  Unlike `descendants_of`, other
+///   merged in branches will still be included, which may be a large
+///   number of commits.
+///
+/// These options can be combined.  In particular, since `descendants_of`
+/// is an inclusive range of commits, and `exclude_changeset_and_ancestors`
+/// excludes the target commits, a half-open range of commits
+/// `(ancestor, descendant]` can be obtained by setting both of these to
+/// the ancestor commit.
 struct CommitHistoryParams {
   /// Return history in the given format.
   1: HistoryFormat format;
@@ -902,6 +932,12 @@ struct CommitPathBlameParams {
   4: optional set<BlameFormatOption> format_options;
 }
 
+/// Parameters for the `commit_path_history` method.
+///
+/// By default, this will include all commits that are ancestors of
+/// the target commit (including the commit itself) that modify the target
+/// path.  This can be filtered in the same ways as the `commit_path` method.
+/// See `CommitHistoryParams` for more details.
 struct CommitPathHistoryParams {
   /// Return history in the given format.
   1: HistoryFormat format;

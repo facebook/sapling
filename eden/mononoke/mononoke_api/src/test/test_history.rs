@@ -518,5 +518,36 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
         .await?;
     assert_eq!(history, vec![]);
 
+    // Setting both descendendants_of and exclude_changeset_and_ancestors
+    // lets us filter out the descendant.
+    let cs = repo
+        .changeset(changesets["c2"])
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .history(ChangesetHistoryOptions {
+            descendants_of: Some(changesets["b2"]),
+            exclude_changeset_and_ancestors: Some(changesets["b2"]),
+            ..Default::default()
+        })
+        .await
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        history,
+        vec![
+            changesets["c2"],
+            changesets["m2"],
+            changesets["e2"],
+            changesets["e3"],
+            changesets["a4"],
+            changesets["b3"],
+            changesets["c1"],
+            changesets["e1"],
+            changesets["m1"],
+        ]
+    );
+
     Ok(())
 }

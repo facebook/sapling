@@ -869,23 +869,27 @@ impl ChangesetContext {
                 cloned!(descendants_of, exclude_changeset);
                 async move {
                     if let Some(changeset_id) = queue.pop_front() {
-                        // Terminate in three cases:
+                        // Terminate in three cases.  The order is important:
+                        // cases that do not yield the current changeset must
+                        // come first.
+                        //
                         // 1. When `until_timestamp` is reached
                         if let Some(terminate) = terminate {
                             if terminate(changeset_id).await? {
                                 return Ok(Some((None, (visited, queue))));
                             }
                         }
-                        // 2. When we reach the `descendants_of` ancestor
-                        if let Some(ancestor) = descendants_of.as_ref() {
-                            if changeset_id == ancestor.id() {
-                                return Ok(Some((Some(changeset_id), (visited, queue))));
-                            }
-                        }
-                        // 3. When we reach the `exclude_changeset_and_ancestors`
+                        // 2. When we reach the `exclude_changeset_and_ancestors`
                         if let Some(ancestor) = exclude_changeset.as_ref() {
                             if changeset_id == ancestor.id() {
                                 return Ok(Some((None, (visited, queue))));
+                            }
+                        }
+                        // 3. When we reach the `descendants_of` ancestor.
+                        //    This case includes the changeset.
+                        if let Some(ancestor) = descendants_of.as_ref() {
+                            if changeset_id == ancestor.id() {
+                                return Ok(Some((Some(changeset_id), (visited, queue))));
                             }
                         }
                         let mut parents = self
