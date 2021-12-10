@@ -12,7 +12,9 @@ use anyhow::{anyhow, Context, Error, Result};
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::batch::{split_bonsais_in_linear_stacks, FileConflicts, SplitOptions};
+use derived_data::batch::{
+    split_bonsais_in_linear_stacks, FileConflicts, SplitOptions, DEFAULT_STACK_FILE_CHANGES_LIMIT,
+};
 use derived_data_manager::DerivationContext;
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use lock_ext::LockExt;
@@ -36,6 +38,7 @@ pub async fn derive_blame_v2_in_batch(
         SplitOptions {
             file_conflicts: FileConflicts::AnyChange,
             copy_info: true,
+            file_changes_limit: DEFAULT_STACK_FILE_CHANGES_LIMIT,
         },
     )?;
     let bonsais = Mutex::new(

@@ -10,7 +10,10 @@ use async_trait::async_trait;
 use bonsai_hg_mapping::BonsaiHgMappingEntry;
 use context::CoreContext;
 use derived_data::{
-    batch::{split_bonsais_in_linear_stacks, FileConflicts, SplitOptions},
+    batch::{
+        split_bonsais_in_linear_stacks, FileConflicts, SplitOptions,
+        DEFAULT_STACK_FILE_CHANGES_LIMIT,
+    },
     impl_bonsai_derived_via_manager,
 };
 use derived_data_manager::{dependencies, BonsaiDerivable, DerivationContext};
@@ -88,6 +91,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
             SplitOptions {
                 file_conflicts: FileConflicts::ChangeDelete,
                 copy_info: true,
+                file_changes_limit: DEFAULT_STACK_FILE_CHANGES_LIMIT,
             },
         )?;
         let mut res: HashMap<ChangesetId, Self> = HashMap::new();

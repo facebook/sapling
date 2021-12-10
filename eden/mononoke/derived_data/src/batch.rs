@@ -17,6 +17,7 @@ use mononoke_types::{BonsaiChangeset, FileChange, MPath};
 use mononoke_types::{ChangesetId, ContentId, FileType};
 
 pub type FileToContent = BTreeMap<MPath, Option<(ContentId, FileType)>>;
+pub const DEFAULT_STACK_FILE_CHANGES_LIMIT: u64 = 10000;
 
 #[derive(Copy, Clone, Debug)]
 pub enum FileConflicts {
@@ -31,6 +32,8 @@ pub struct SplitOptions {
     pub file_conflicts: FileConflicts,
     // Commits with copy info shouldn't be stacked with any other commit
     pub copy_info: bool,
+    // Limits how many file changes should be in a single stack
+    pub file_changes_limit: u64,
 }
 
 impl From<FileConflicts> for SplitOptions {
@@ -38,6 +41,8 @@ impl From<FileConflicts> for SplitOptions {
         Self {
             file_conflicts: fc,
             copy_info: false,
+            // Pick a reasonable default
+            file_changes_limit: DEFAULT_STACK_FILE_CHANGES_LIMIT,
         }
     }
 }
@@ -100,6 +105,7 @@ pub fn split_bonsais_in_linear_stacks(
 pub struct LinearStack {
     pub parents: Vec<ChangesetId>,
     pub stack_items: Vec<StackItem>,
+    total_file_changes_len: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -114,6 +120,7 @@ impl LinearStack {
         Self {
             parents,
             stack_items: vec![],
+            total_file_changes_len: 0,
         }
     }
 
@@ -130,6 +137,7 @@ impl LinearStack {
             .collect::<BTreeMap<_, _>>();
 
 
+        self.total_file_changes_len += file_changes.len() as u64;
         let mut combined_file_changes = self.get_last_file_changes().cloned().unwrap_or_default();
         combined_file_changes.extend(file_changes.clone());
         self.stack_items.push(StackItem {
@@ -159,6 +167,12 @@ impl LinearStack {
         // The next commit should be stacked on top of the previous one
         let prev_cs_id = prev.get_changeset_id();
         if next.parents().find(|p| *p == prev_cs_id).is_none() {
+            return false;
+        }
+
+        // Check if stack will get too big
+        let next_len = next.file_changes().len() as u64;
+        if self.total_file_changes_len + next_len > split_opts.file_changes_limit {
             return false;
         }
 
@@ -370,6 +384,71 @@ mod test {
         Ok(())
     }
 
+    #[fbinit::test]
+    async fn test_split_batch_in_linear_stacks_with_limit(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = test_repo_factory::build_empty()?;
+
+        let file1 = "file1";
+        let root = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(file1, "content1")
+            .commit()
+            .await?;
+        let file2 = "file2";
+        let second = CreateCommitContext::new(&ctx, &repo, vec![root])
+            .add_file(file2, "content2")
+            .commit()
+            .await?;
+
+        let linear_stacks = split_batch_in_linear_stacks(
+            &ctx,
+            repo.blobstore(),
+            vec![root, second],
+            SplitOptions {
+                file_conflicts: FileConflicts::ChangeDelete,
+                copy_info: false,
+                file_changes_limit: 1,
+            },
+        )
+        .await?;
+        assert_linear_stacks(
+            &ctx,
+            &repo,
+            linear_stacks.clone(),
+            vec![
+                (
+                    vec![],
+                    vec![btreemap! {file1 => Some(("content1".to_string(), FileType::Regular))}],
+                ),
+                (
+                    vec![root],
+                    vec![btreemap! {
+                        file2 => Some(("content2".to_string(), FileType::Regular)),
+                    }],
+                ),
+            ],
+        )
+        .await?;
+
+        // Check that per_commit_file_changes are correct
+        assert_eq!(
+            linear_stacks[0].stack_items[0]
+                .per_commit_file_changes
+                .keys()
+                .collect::<Vec<_>>(),
+            vec![&MPath::new(file1)?]
+        );
+
+        assert_eq!(
+            linear_stacks[1].stack_items[0]
+                .per_commit_file_changes
+                .keys()
+                .collect::<Vec<_>>(),
+            vec![&MPath::new(file2)?]
+        );
+
+        Ok(())
+    }
     #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_merge(fb: FacebookInit) -> Result<(), Error> {
         let repo = test_repo_factory::build_empty()?;
@@ -674,6 +753,7 @@ mod test {
             SplitOptions {
                 file_conflicts: FileConflicts::ChangeDelete,
                 copy_info: true,
+                file_changes_limit: DEFAULT_STACK_FILE_CHANGES_LIMIT,
             },
         )
         .await?;
@@ -719,6 +799,7 @@ mod test {
             let LinearStack {
                 parents,
                 stack_items,
+                ..
             } = linear_stack;
 
             let mut paths_for_the_whole_stack = vec![];

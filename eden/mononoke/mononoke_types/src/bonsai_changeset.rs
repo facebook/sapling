@@ -193,7 +193,7 @@ impl BonsaiChangeset {
     /// Get the files changed in this changeset. The items returned are guaranteed
     /// to be in depth-first traversal order: once all the changes to a particular
     /// tree have been applied, it will never be referred to again.
-    pub fn file_changes(&self) -> impl Iterator<Item = (&MPath, &FileChange)> {
+    pub fn file_changes(&self) -> impl ExactSizeIterator<Item = (&MPath, &FileChange)> {
         self.inner.file_changes.iter()
     }
 
