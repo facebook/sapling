@@ -655,6 +655,12 @@ class CloneCmd(Subcmd):
             action="store_true",
             help="Allow repo with null revision (no revisions)",
         )
+        parser.add_argument(
+            "--allow-nested-checkout",
+            "-n",
+            action="store_true",
+            help="Allow creation of nested checkout (not recommended)",
+        )
 
         # Optional arguments to control how to start the daemon if clone needs
         # to start edenfs.  We do not show these in --help by default These
@@ -721,6 +727,30 @@ class CloneCmd(Subcmd):
 
         args.path = os.path.realpath(args.path)
         args.nfs = args.nfs or is_nfs_default()
+
+        # Check if requested path is inside an existing checkout
+        instance = EdenInstance(args.config_dir, args.etc_eden_dir, args.home_dir)
+        existing_checkout, rel_path = config_mod.detect_nested_checkout(
+            args.path,
+            instance,
+        )
+        if existing_checkout is not None and rel_path is not None:
+            if args.allow_nested_checkout:
+                print(
+                    """\
+Warning: Creating a nested checkout. This is not recommended because it
+may cause `eden doctor` and `eden rm` to encounter spurious behavior."""
+                )
+            else:
+                print_stderr(
+                    f"""\
+error: destination path {args.path} is within an existing checkout {existing_checkout.path}.
+
+Nested checkouts are usually not intended/recommended and may cause
+`eden doctor` and `eden rm` to encounter spurious behavior. If you DO
+want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n."""
+                )
+                return 1
 
         # Find the repository information
         try:
