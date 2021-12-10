@@ -46,7 +46,13 @@ impl IdDagSaveStore {
             None => return Ok(None),
             Some(b) => b,
         };
-        let iddag: InProcessIdDag = mincode::deserialize(&bytes.into_raw_bytes())?;
+
+        let iddag = tokio::task::spawn_blocking(move || {
+            let iddag: InProcessIdDag = mincode::deserialize(&bytes.into_raw_bytes())?;
+            anyhow::Ok(iddag)
+        })
+        .await??;
+
         Ok(Some(iddag))
     }
 
