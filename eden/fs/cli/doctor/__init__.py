@@ -457,6 +457,19 @@ def check_mount(
                 "unknown state {checkout.state}"
             )
         )
+    # Check if this checkout is nested inside another one
+    existing_checkout, rel_path = config_mod.detect_nested_checkout(
+        checkout.path,
+        instance,
+    )
+    if existing_checkout is not None and rel_path is not None:
+        tracker.add_problem(
+            Problem(
+                f"""\
+edenfs reports that checkout {checkout.path} is nested within an existing checkout {existing_checkout.path}
+Nested checkouts are usually not intended and can cause spurious behavior.\n"""
+            )
+        )
 
 
 def check_mount_overlay_type(
