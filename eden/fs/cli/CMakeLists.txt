@@ -3,7 +3,15 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+option(INCLUDE_FB_DOCTOR_LIB "Enable Facebook specific doctor libraries" OFF)
+
 file(GLOB EDENFSCTL_SRCS "*.py" "doctor/*.py")
+
+if (INCLUDE_FB_DOCTOR_LIB)
+  file(GLOB EDENFSCTL_FB_DOCTOR_SRCS "doctor/facebook/*.py")
+  list(APPEND EDENFSCTL_SRCS ${EDENFSCTL_FB_DOCTOR_SRCS})
+endif()
+
 add_fb_python_executable(
   edenfsctl.real
   MAIN_MODULE eden.fs.cli.main:zipapp_main
