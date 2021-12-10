@@ -18,7 +18,13 @@ from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, Union
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 from eden.fs.cli import mtab, version as version_mod
-from eden.fs.cli.config import CheckoutConfig, EdenCheckout, EdenInstance, HealthStatus
+from eden.fs.cli.config import (
+    CheckoutConfig,
+    EdenCheckout,
+    EdenInstance,
+    HealthStatus,
+    ListMountInfo,
+)
 from fb303_core.ttypes import fb303_status
 
 from .fake_client import FakeClient
@@ -207,6 +213,24 @@ class FakeEdenInstance:
 
     def get_mount_paths(self) -> Iterable[str]:
         return self._checkouts_by_path.keys()
+
+    # TODO: Improve this mock. The real get_mounts() requests info from thrift.
+    def get_mounts(self) -> Dict[Path, ListMountInfo]:
+        mount_points: Dict[Path, ListMountInfo] = {}
+        for strPath, checkout in self._checkouts_by_path.items():
+            path = Path(strPath)
+            data_dir = checkout.state_dir
+            # For mocking purposes, this is being filled in with some default values
+            # If you want an actual implementation of get_mounts(), You will need to
+            # rewrite this function to determine actual values for ListMountInfo
+            mount_points[path] = ListMountInfo(
+                path=path,
+                data_dir=data_dir,
+                state=None,
+                configured=True,
+                backing_repo=None,
+            )
+        return mount_points
 
     def mount(self, path: str, read_only: bool) -> int:
         assert self._status in (
