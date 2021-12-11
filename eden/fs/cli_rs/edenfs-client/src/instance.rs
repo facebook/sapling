@@ -9,8 +9,6 @@
 //! [`EdenFsClient`]).
 
 use std::collections::BTreeMap;
-use std::fs::File;
-use std::io::Read;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -150,13 +148,13 @@ impl EdenFsInstance {
     /// as defined in EdenFS's config.json.
     pub fn get_configured_mounts_map(&self) -> Result<BTreeMap<String, String>, anyhow::Error> {
         let directory_map = self.config_dir.join(CONFIG_JSON);
-        let mut file = File::open(&directory_map)
-            .with_context(|| format!("Failed to read directory map from {:?}", directory_map))?;
-        let mut buff = String::new();
-        file.read_to_string(&mut buff)
-            .with_context(|| format!("Failed to read from {:?}", directory_map))?;
-        serde_json::from_str::<BTreeMap<String, String>>(&buff)
-            .with_context(|| format!("Failed to parse directory map: {:?}", &buff))
+        match std::fs::read_to_string(&directory_map) {
+            Ok(buff) => serde_json::from_str::<BTreeMap<String, String>>(&buff)
+                .with_context(|| format!("Failed to parse directory map: {:?}", &buff)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(BTreeMap::new()),
+            Err(e) => Err(e)
+                .with_context(|| format!("Failed to read directory map from {:?}", directory_map)),
+        }
     }
 
     pub fn clients_dir(&self) -> PathBuf {
