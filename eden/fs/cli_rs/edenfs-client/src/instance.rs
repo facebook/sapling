@@ -146,11 +146,17 @@ impl EdenFsInstance {
 
     /// Returns a map of mount paths to mount names
     /// as defined in EdenFS's config.json.
-    pub fn get_configured_mounts_map(&self) -> Result<BTreeMap<String, String>, anyhow::Error> {
+    pub fn get_configured_mounts_map(&self) -> Result<BTreeMap<PathBuf, String>, anyhow::Error> {
         let directory_map = self.config_dir.join(CONFIG_JSON);
         match std::fs::read_to_string(&directory_map) {
-            Ok(buff) => serde_json::from_str::<BTreeMap<String, String>>(&buff)
-                .with_context(|| format!("Failed to parse directory map: {:?}", &buff)),
+            Ok(buff) => {
+                let string_map = serde_json::from_str::<BTreeMap<String, String>>(&buff)
+                    .with_context(|| format!("Failed to parse directory map: {:?}", &buff))?;
+                Ok(string_map
+                    .into_iter()
+                    .map(|(key, val)| (key.into(), val))
+                    .collect())
+            }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(BTreeMap::new()),
             Err(e) => Err(e)
                 .with_context(|| format!("Failed to read directory map from {:?}", directory_map)),

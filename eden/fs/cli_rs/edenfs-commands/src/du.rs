@@ -49,7 +49,7 @@ impl crate::Subcommand for DiskUsageCmd {
         let mounts = if !self.mounts.is_empty() {
             (&self.mounts).to_vec()
         } else {
-            let config_paths: Vec<String> = instance
+            let config_paths: Vec<PathBuf> = instance
                 .get_configured_mounts_map()?
                 .keys()
                 .cloned()
@@ -57,7 +57,7 @@ impl crate::Subcommand for DiskUsageCmd {
             if config_paths.is_empty() {
                 return Err(EdenFsError::Other(anyhow!("No EdenFS mount found")));
             }
-            config_paths.iter().map(PathBuf::from).collect()
+            config_paths
         };
 
         write_title("Mounts");

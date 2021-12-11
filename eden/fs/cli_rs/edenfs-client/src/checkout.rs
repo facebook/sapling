@@ -311,7 +311,7 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     let mut configs: Vec<(PathBuf, PathBuf, CheckoutConfig)> = Vec::new();
     for (mount_path, client_name) in instance.get_configured_mounts_map()? {
         configs.push((
-            PathBuf::from(mount_path),
+            mount_path,
             config_directory(instance, &client_name),
             CheckoutConfig::parse_config(config_directory(instance, &client_name))?,
         ));
