@@ -298,7 +298,7 @@ pub trait MegarepoOp {
         // with a file or a directory from the target - if target commit
         // has these entries then we have a conflict
         let additions = additions_merge
-            .find_files(None, None)
+            .find_files_unordered(None, None)
             .await?
             .map_err(MegarepoError::internal)
             .try_collect::<Vec<_>>()
@@ -432,7 +432,7 @@ pub trait MegarepoOp {
             .await?
             .ok_or_else(|| MegarepoError::internal(anyhow!("changeset not found")))?;
         let moved_paths: Vec<_> = source_changeset
-            .find_files(None, None)
+            .find_files_unordered(None, None)
             .await
             .map_err(MegarepoError::internal)?
             .map_err(MegarepoError::internal)

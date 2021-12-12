@@ -22,7 +22,9 @@ use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::future::{self, try_join, try_join_all, FutureExt, Shared};
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
-use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
+use manifest::{
+    Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, ManifestOrderedOps, PathOrPrefix,
+};
 use maplit::hashset;
 use mercurial_types::Globalrev;
 pub use mononoke_types::Generation;
@@ -62,6 +64,11 @@ pub struct ChangesetHistoryOptions {
     pub until_timestamp: Option<i64>,
     pub descendants_of: Option<ChangesetId>,
     pub exclude_changeset_and_ancestors: Option<ChangesetId>,
+}
+
+pub enum ChangesetFileOrdering {
+    Unordered,
+    Ordered { after: Option<MononokePath> },
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -769,12 +776,22 @@ impl ChangesetContext {
         return Ok(change_contexts);
     }
 
-    pub async fn find_files(
+    pub async fn find_files_unordered(
         &self,
         prefixes: Option<Vec<MononokePath>>,
         basenames: Option<Vec<String>>,
     ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
-        let root = self.root_fsnode_id().await?;
+        self.find_files(prefixes, basenames, ChangesetFileOrdering::Unordered)
+            .await
+    }
+
+    pub async fn find_files(
+        &self,
+        prefixes: Option<Vec<MononokePath>>,
+        basenames: Option<Vec<String>>,
+        ordering: ChangesetFileOrdering,
+    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
+        let root = self.root_skeleton_manifest_id().await?;
         let prefixes = match prefixes {
             Some(prefixes) => prefixes
                 .into_iter()
@@ -782,19 +799,31 @@ impl ChangesetContext {
                 .collect(),
             None => vec![PathOrPrefix::Prefix(None)],
         };
-        let mpaths = root
-            .fsnode_id()
-            .find_entries(
-                self.ctx().clone(),
-                self.repo().blob_repo().get_blobstore(),
-                prefixes,
-            )
-            .try_filter_map(|(path, entry)| async move {
-                match (path, entry) {
-                    (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
-                    _ => Ok(None),
-                }
-            });
+        let entries = match ordering {
+            ChangesetFileOrdering::Unordered => root
+                .skeleton_manifest_id()
+                .find_entries(
+                    self.ctx().clone(),
+                    self.repo().blob_repo().get_blobstore(),
+                    prefixes,
+                )
+                .left_stream(),
+            ChangesetFileOrdering::Ordered { after } => root
+                .skeleton_manifest_id()
+                .find_entries_ordered(
+                    self.ctx().clone(),
+                    self.repo().blob_repo().get_blobstore(),
+                    prefixes,
+                    after.map(MononokePath::into_mpath),
+                )
+                .right_stream(),
+        };
+        let mpaths = entries.try_filter_map(|(path, entry)| async move {
+            match (path, entry) {
+                (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
+                _ => Ok(None),
+            }
+        });
         let mpaths = match basenames {
             Some(basenames) => {
                 let basename_set = basenames

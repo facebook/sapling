@@ -829,9 +829,10 @@ struct CommitFindFilesParams {
   /// response is necessary to find the remaining files.
   1: i64 limit;
 
-  /// Start listing files after this path, to be used for paging (not
-  /// implemented yet).
-  /// 2: optional string after,
+  /// Start listing files after this path, to be used for paging.  If
+  /// specified, files will be listed ordered (use the empty string to
+  /// start finding from the beginning).
+  2: optional string after;
 
   /// Return entries that have these basenames.
   3: optional list<string> basenames;

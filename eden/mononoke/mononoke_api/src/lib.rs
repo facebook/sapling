@@ -42,7 +42,7 @@ mod xrepo;
 mod test;
 
 pub use crate::changeset::{
-    ChangesetContext, ChangesetDiffItem, ChangesetHistoryOptions, Generation,
+    ChangesetContext, ChangesetDiffItem, ChangesetFileOrdering, ChangesetHistoryOptions, Generation,
 };
 pub use crate::changeset_path::{
     unified_diff, ChangesetPathContentContext, ChangesetPathHistoryOptions, CopyInfo, PathEntry,

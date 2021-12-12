@@ -15,8 +15,8 @@ use itertools::{Either, Itertools};
 use maplit::btreeset;
 use mononoke_api::{
     unified_diff, CandidateSelectionHintArgs, ChangesetContext, ChangesetDiffItem,
-    ChangesetHistoryOptions, ChangesetId, ChangesetPathDiffContext, ChangesetSpecifier, CopyInfo,
-    MononokeError, MononokePath, UnifiedDiffMode,
+    ChangesetFileOrdering, ChangesetHistoryOptions, ChangesetId, ChangesetPathDiffContext,
+    ChangesetSpecifier, CopyInfo, MononokeError, MononokePath, UnifiedDiffMode,
 };
 use source_control as thrift;
 
@@ -453,9 +453,18 @@ impl SourceControlServiceImpl {
             ),
             None => None,
         };
+        let ordering = match &params.after {
+            Some(after) => {
+                let after = Some(MononokePath::try_from(after).map_err(|e| {
+                    errors::invalid_request(format!("invalid continuation path '{}': {}", after, e))
+                })?);
+                ChangesetFileOrdering::Ordered { after }
+            }
+            None => ChangesetFileOrdering::Unordered,
+        };
 
-        let files: Vec<_> = changeset
-            .find_files(prefixes, params.basenames)
+        let files = changeset
+            .find_files(prefixes, params.basenames, ordering)
             .await?
             .take(limit)
             .map_ok(|path| path.to_string())
