@@ -14,11 +14,82 @@ use context::CoreContext;
 use futures::future::FutureExt;
 use futures::pin_mut;
 use futures::stream::{BoxStream, StreamExt};
-use mononoke_types::MPath;
+use mononoke_types::{MPath, MPathElement};
 use nonzero_ext::nonzero;
 
 use crate::select::select_path_tree;
 use crate::{Entry, Manifest, OrderedManifest, PathOrPrefix, PathTree, StoreLoadable};
+
+/// Track where we are relative to the `after` parameter.
+enum After {
+    /// Include everything.
+    All,
+
+    /// Include all contents, but omit the directory itself.
+    AllContents,
+
+    /// Include everything in this directory after the named element and the
+    /// subpath within that element.
+    After(MPathElement, Option<MPath>),
+}
+
+impl After {
+    fn new(mpath_opt: Option<&MPath>) -> Self {
+        match mpath_opt {
+            None => After::AllContents,
+            Some(mpath) => {
+                let (elem, rest) = mpath.split_first();
+                After::After(elem.clone(), rest)
+            }
+        }
+    }
+
+    /// Returns true if this element should be skipped entirely.
+    ///
+    /// We don't skip entries that match exactly, even though they themselves
+    /// will not be included.  If the element name matches then we still want
+    /// to descend into subdirectories.
+    fn skip(&self, name: &MPathElement) -> bool {
+        match self {
+            After::All | After::AllContents => false,
+            After::After(elem, _) => name < elem,
+        }
+    }
+
+    /// Returns true if this directory itself should be included.
+    fn include_self(&self) -> bool {
+        match self {
+            After::All => true,
+            After::AllContents | After::After(..) => false,
+        }
+    }
+
+    /// Returns true if a file with the given name in this directory should be
+    /// included.
+    fn include_file(&self, name: &MPathElement) -> bool {
+        match self {
+            After::All | After::AllContents => true,
+            After::After(elem, _) => name > elem,
+        }
+    }
+
+    /// Enter a subdirectory.  The directory must be one that should be
+    /// entered (i.e. skip is false).  Returns an instance of `After` suitable
+    /// for the subdirectory.
+    fn enter_dir(&self, name: &MPathElement) -> After {
+        match self {
+            After::All | After::AllContents => After::All,
+            After::After(elem, rest) => {
+                if name == elem {
+                    After::new(rest.as_ref())
+                } else {
+                    debug_assert!(name > elem);
+                    After::All
+                }
+            }
+        }
+    }
+}
 
 pub trait ManifestOrderedOps<Store>
 where
@@ -32,6 +103,7 @@ where
         ctx: CoreContext,
         store: Store,
         paths_or_prefixes: I,
+        after: Option<Option<MPath>>,
     ) -> BoxStream<
         'static,
         Result<
@@ -57,7 +129,22 @@ where
         // determining what can be scheduled.
         let queue_max = nonzero!(2560usize);
 
-        let init = Some((queue_max.get(), (self.clone(), selector, None, false)));
+        let after = match after {
+            None => {
+                // If `after` is `None`, then we include everything.
+                After::All
+            }
+            Some(mpath_opt) => {
+                // If `after` is `Some(None)`, then we include everything
+                // after the root (i.e. not the root itself).
+                After::new(mpath_opt.as_ref())
+            }
+        };
+
+        let init = Some((
+            queue_max.get(),
+            (self.clone(), selector, None, false, after),
+        ));
         (async_stream::stream! {
             let store = &store;
             borrowed!(ctx, store);
@@ -65,7 +152,7 @@ where
                 schedule_max,
                 queue_max,
                 init,
-                move |(manifest_id, selector, path, recursive)| {
+                move |(manifest_id, selector, path, recursive, after)| {
                     let PathTree {
                         subentries,
                         value: select,
@@ -77,40 +164,58 @@ where
                         let mut output = Vec::new();
 
                         if recursive || select.is_recursive() {
-                            output.push(OrderedTraversal::Output((
-                                path.clone(),
-                                Entry::Tree(manifest_id),
-                            )));
+                            if after.include_self() {
+                                output.push(OrderedTraversal::Output((
+                                    path.clone(),
+                                    Entry::Tree(manifest_id),
+                                )));
+                            }
                             for (name, entry) in manifest.list_weighted() {
+                                if after.skip(&name) {
+                                    continue;
+                                }
                                 let path = Some(MPath::join_opt_element(path.as_ref(), &name));
                                 match entry {
                                     Entry::Leaf(leaf) => {
-                                        output.push(OrderedTraversal::Output((
-                                            path.clone(),
-                                            Entry::Leaf(leaf),
-                                        )));
+                                        if after.include_file(&name) {
+                                            output.push(OrderedTraversal::Output((
+                                                path.clone(),
+                                                Entry::Leaf(leaf),
+                                            )));
+                                        }
                                     }
                                     Entry::Tree((weight, manifest_id)) => {
                                         output.push(OrderedTraversal::Recurse(
                                             weight,
-                                            (manifest_id, Default::default(), path, true),
+                                            (
+                                                manifest_id,
+                                                Default::default(),
+                                                path,
+                                                true,
+                                                after.enter_dir(&name),
+                                            ),
                                         ));
                                     }
                                 }
                             }
                         } else {
-                            if select.is_selected() {
+                            if after.include_self() && select.is_selected() {
                                 output.push(OrderedTraversal::Output((
                                     path.clone(),
                                     Entry::Tree(manifest_id),
                                 )));
                             }
                             for (name, selector) in subentries {
+                                if after.skip(&name) {
+                                    continue;
+                                }
                                 if let Some(entry) = manifest.lookup_weighted(&name) {
                                     let path = Some(MPath::join_opt_element(path.as_ref(), &name));
                                     match entry {
                                         Entry::Leaf(leaf) => {
-                                            if selector.value.is_selected() {
+                                            if after.include_file(&name)
+                                                && selector.value.is_selected()
+                                            {
                                                 output.push(OrderedTraversal::Output((
                                                     path.clone(),
                                                     Entry::Leaf(leaf),
@@ -120,7 +225,13 @@ where
                                         Entry::Tree((weight, manifest_id)) => {
                                             output.push(OrderedTraversal::Recurse(
                                                 weight,
-                                                (manifest_id, selector, path, false),
+                                                (
+                                                    manifest_id,
+                                                    selector,
+                                                    path,
+                                                    false,
+                                                    after.enter_dir(&name),
+                                                ),
                                             ));
                                         }
                                     }
@@ -129,7 +240,8 @@ where
                         }
 
                         Ok::<_, Error>(output)
-                    }.boxed()
+                    }
+                    .boxed()
                 },
             );
 

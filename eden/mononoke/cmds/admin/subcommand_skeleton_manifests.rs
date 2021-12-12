@@ -162,6 +162,7 @@ async fn subcommand_tree(
                 ctx.clone(),
                 repo.get_blobstore(),
                 vec![PathOrPrefix::Prefix(path)],
+                None,
             )
             .left_stream()
     } else {
