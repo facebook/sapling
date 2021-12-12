@@ -9,7 +9,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 
 use context::CoreContext;
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::stream::{self, FuturesOrdered, StreamExt, TryStreamExt};
 use futures::{future, try_join};
 use itertools::{Either, Itertools};
 use maplit::btreeset;
@@ -398,24 +398,66 @@ impl SourceControlServiceImpl {
                     .collect::<Result<Vec<_>, _>>()?,
             ),
         };
-        let diff = base_changeset
-            .diff(
-                &other_changeset,
-                !params.skip_copies_renames,
-                paths,
-                diff_items,
-            )
-            .await?;
-        let (diff_files, diff_trees) = stream::iter(diff)
-            .map(into_compare_path)
-            .buffer_unordered(CONCURRENCY_LIMIT)
-            .try_collect::<Vec<_>>()
-            .await?
-            .into_iter()
-            .partition_map(|diff| match diff {
-                CommitComparePath::File(entry) => Either::Left(entry),
-                CommitComparePath::Tree(entry) => Either::Right(entry),
-            });
+        let (diff_files, diff_trees) = match params.ordered_params {
+            None => {
+                let diff = base_changeset
+                    .diff_unordered(
+                        &other_changeset,
+                        !params.skip_copies_renames,
+                        paths,
+                        diff_items,
+                    )
+                    .await?;
+                stream::iter(diff)
+                    .map(into_compare_path)
+                    .buffer_unordered(CONCURRENCY_LIMIT)
+                    .try_collect::<Vec<_>>()
+                    .await?
+                    .into_iter()
+                    .partition_map(|diff| match diff {
+                        CommitComparePath::File(entry) => Either::Left(entry),
+                        CommitComparePath::Tree(entry) => Either::Right(entry),
+                    })
+            }
+            Some(ordered_params) => {
+                let limit: usize = check_range_and_convert(
+                    "limit",
+                    ordered_params.limit,
+                    0..=source_control::COMMIT_COMPARE_ORDERED_MAX_LIMIT,
+                )?;
+                let after = ordered_params
+                    .after_path
+                    .map(|after| {
+                        MononokePath::try_from(&after).map_err(|e| {
+                            errors::invalid_request(format!(
+                                "invalid continuation path '{}': {}",
+                                after, e
+                            ))
+                        })
+                    })
+                    .transpose()?;
+                let diff = base_changeset
+                    .diff(
+                        &other_changeset,
+                        !params.skip_copies_renames,
+                        paths,
+                        diff_items,
+                        ChangesetFileOrdering::Ordered { after },
+                        Some(limit),
+                    )
+                    .await?;
+                diff.into_iter()
+                    .map(into_compare_path)
+                    .collect::<FuturesOrdered<_>>()
+                    .try_collect::<Vec<_>>()
+                    .await?
+                    .into_iter()
+                    .partition_map(|diff| match diff {
+                        CommitComparePath::File(entry) => Either::Left(entry),
+                        CommitComparePath::Tree(entry) => Either::Right(entry),
+                    })
+            }
+        };
 
         let other_commit_ids =
             map_commit_identity(&other_changeset, &params.identity_schemes).await?;

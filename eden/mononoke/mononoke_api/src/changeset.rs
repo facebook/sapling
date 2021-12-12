@@ -473,6 +473,25 @@ impl ChangesetContext {
             .map(|id| Self::new(self.repo.clone(), *id)))
     }
 
+    pub async fn diff_unordered(
+        &self,
+        other: &ChangesetContext,
+        include_copies_renames: bool,
+        path_restrictions: Option<Vec<MononokePath>>,
+        diff_items: BTreeSet<ChangesetDiffItem>,
+    ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
+        self.diff(
+            other,
+            include_copies_renames,
+            path_restrictions,
+            diff_items,
+            ChangesetFileOrdering::Unordered,
+            None,
+        )
+        .await
+    }
+
+
     /// Returns differences between this changeset and some other changeset.
     ///
     /// `self` is considered the "new" changeset (so files missing there are "Removed")
@@ -486,6 +505,8 @@ impl ChangesetContext {
         include_copies_renames: bool,
         path_restrictions: Option<Vec<MononokePath>>,
         diff_items: BTreeSet<ChangesetDiffItem>,
+        ordering: ChangesetFileOrdering,
+        limit: Option<usize>,
     ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
         // Helper to that checks if a path is within the givien path restrictions
         fn within_restrictions(
@@ -602,25 +623,50 @@ impl ChangesetContext {
         let diff_files = diff_items.contains(&ChangesetDiffItem::FILES);
         let diff_trees = diff_items.contains(&ChangesetDiffItem::TREES);
 
-        let change_contexts = other_manifest_root // yes, we start from "other" as manfest.diff() is backwards
-            .fsnode_id()
-            .filtered_diff(
-                self.ctx().clone(),
-                self.repo().blob_repo().get_blobstore(),
-                self_manifest_root.fsnode_id().clone(),
-                self.repo().blob_repo().get_blobstore(),
-                Some,
-                {
-                    cloned!(path_restrictions);
-                    move |tree_diff| match tree_diff {
-                        ManifestDiff::Added(path, ..)
-                        | ManifestDiff::Changed(path, ..)
-                        | ManifestDiff::Removed(path, ..) => {
-                            within_restrictions(path.as_ref(), &path_restrictions)
-                        }
-                    }
-                },
-            )
+        let recurse_pruner = {
+            cloned!(path_restrictions);
+            move |tree_diff: &ManifestDiff<_>| match tree_diff {
+                ManifestDiff::Added(path, ..)
+                | ManifestDiff::Changed(path, ..)
+                | ManifestDiff::Removed(path, ..) => {
+                    within_restrictions(path.as_ref(), &path_restrictions)
+                }
+            }
+        };
+
+        let diff = match ordering {
+            ChangesetFileOrdering::Unordered => {
+                // We start from "other" as manfest.diff() is backwards
+                other_manifest_root
+                    .fsnode_id()
+                    .filtered_diff(
+                        self.ctx().clone(),
+                        self.repo().blob_repo().get_blobstore(),
+                        self_manifest_root.fsnode_id().clone(),
+                        self.repo().blob_repo().get_blobstore(),
+                        Some,
+                        recurse_pruner,
+                    )
+                    .left_stream()
+            }
+            ChangesetFileOrdering::Ordered { after } => {
+                // We start from "other" as manfest.diff() is backwards
+                other_manifest_root
+                    .fsnode_id()
+                    .filtered_diff_ordered(
+                        self.ctx().clone(),
+                        self.repo().blob_repo().get_blobstore(),
+                        self_manifest_root.fsnode_id().clone(),
+                        self.repo().blob_repo().get_blobstore(),
+                        after.map(MononokePath::into_mpath),
+                        Some,
+                        recurse_pruner,
+                    )
+                    .right_stream()
+            }
+        };
+
+        let change_contexts = diff
             .try_filter_map(|diff_entry| {
                 future::ok(match diff_entry {
                     ManifestDiff::Added(Some(path), entry @ ManifestEntry::Leaf(_)) => {
@@ -771,6 +817,7 @@ impl ChangesetContext {
                     _ => None,
                 })
             })
+            .take(limit.unwrap_or(usize::MAX))
             .try_collect::<Vec<_>>()
             .await?;
         return Ok(change_contexts);

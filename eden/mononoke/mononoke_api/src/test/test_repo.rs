@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{anyhow, Error};
 use blobstore::Loadable;
 use bytes::Bytes;
 use cacheblob::InProcessLease;
@@ -17,13 +17,13 @@ use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures::stream::TryStreamExt;
-use maplit::{btreeset, hashmap};
+use maplit::hashmap;
 
 use crate::{
-    BookmarkFreshness, ChangesetDiffItem, ChangesetFileOrdering, ChangesetId, ChangesetIdPrefix,
-    ChangesetPathDiffContext, ChangesetPrefixSpecifier, ChangesetSpecifier,
-    ChangesetSpecifierPrefixResolution, CoreContext, FileId, FileMetadata, FileType, HgChangesetId,
-    HgChangesetIdPrefix, Mononoke, MononokePath, TreeEntry, TreeId,
+    BookmarkFreshness, ChangesetFileOrdering, ChangesetId, ChangesetIdPrefix,
+    ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution, CoreContext,
+    FileId, FileMetadata, FileType, HgChangesetId, HgChangesetIdPrefix, Mononoke, MononokePath,
+    TreeEntry, TreeId,
 };
 use cross_repo_sync::{update_mapping_with_version, CommitSyncRepos, CommitSyncer};
 use cross_repo_sync_test_utils::init_small_large_repo;
@@ -1030,228 +1030,6 @@ async fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
 
     // invalid hex string
     assert!(HgChangesetIdPrefix::from_str("607314euuuuu").is_err());
-
-    Ok(())
-}
-
-#[fbinit::test]
-async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let blobrepo = test_repo_factory::build_empty()?;
-    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
-        .add_file("file_to_move", "context1")
-        .commit()
-        .await?;
-
-    let commit_with_move = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
-        .add_file_with_copy_info("file_moved", "context", (root, "file_to_move"))
-        .delete_file("file_to_move")
-        .commit()
-        .await?;
-
-    let mononoke =
-        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
-
-    let repo = mononoke
-        .repo(ctx.clone(), "test")
-        .await?
-        .expect("repo exists");
-    let commit_with_move_ctx = repo
-        .changeset(commit_with_move)
-        .await?
-        .ok_or(anyhow!("commit not found"))?;
-    let diff = commit_with_move_ctx
-        .diff(
-            &repo.changeset(root).await?.context("commit not found")?,
-            true, /* include_copies_renames */
-            None, /* path_restrictions */
-            btreeset! {ChangesetDiffItem::FILES},
-        )
-        .await?;
-
-    assert_eq!(diff.len(), 1);
-    match diff.get(0) {
-        Some(ChangesetPathDiffContext::Moved(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("file_moved")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
-        }
-        _ => {
-            panic!("unexpected diff");
-        }
-    }
-    Ok(())
-}
-
-#[fbinit::test]
-async fn test_diff_with_multiple_copies(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let blobrepo = test_repo_factory::build_empty()?;
-    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
-        .add_file("file_to_copy", "context1")
-        .commit()
-        .await?;
-
-    let commit_with_copies = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
-        .add_file_with_copy_info("copy_one", "context", (root, "file_to_copy"))
-        .add_file_with_copy_info("copy_two", "context", (root, "file_to_copy"))
-        .commit()
-        .await?;
-
-    let mononoke =
-        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
-
-    let repo = mononoke
-        .repo(ctx.clone(), "test")
-        .await?
-        .expect("repo exists");
-    let commit_with_copies_ctx = repo
-        .changeset(commit_with_copies)
-        .await?
-        .ok_or(anyhow!("commit not found"))?;
-    let diff = commit_with_copies_ctx
-        .diff(
-            &repo.changeset(root).await?.context("commit not found")?,
-            true, /* include_copies_renames */
-            None, /* path_restrictions */
-            btreeset! {ChangesetDiffItem::FILES},
-        )
-        .await?;
-
-    assert_eq!(diff.len(), 2);
-    match diff.get(0) {
-        Some(ChangesetPathDiffContext::Copied(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_one")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_copy")?);
-        }
-        other => panic!("unexpected diff: {:?}", other),
-    }
-    match diff.get(1) {
-        Some(ChangesetPathDiffContext::Copied(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_two")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_copy")?);
-        }
-        other => panic!("unexpected diff: {:?}", other),
-    }
-    Ok(())
-}
-
-#[fbinit::test]
-async fn test_diff_with_multiple_moves(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let blobrepo = test_repo_factory::build_empty()?;
-    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
-        .add_file("file_to_move", "context1")
-        .commit()
-        .await?;
-
-    let commit_with_moves = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
-        .add_file_with_copy_info("copy_one", "context", (root, "file_to_move"))
-        .add_file_with_copy_info("copy_two", "context", (root, "file_to_move"))
-        .add_file_with_copy_info("copy_zzz", "context", (root, "file_to_move"))
-        .delete_file("file_to_move")
-        .commit()
-        .await?;
-
-    let mononoke =
-        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
-
-    let repo = mononoke
-        .repo(ctx.clone(), "test")
-        .await?
-        .expect("repo exists");
-    let commit_with_moves_ctx = repo
-        .changeset(commit_with_moves)
-        .await?
-        .ok_or(anyhow!("commit not found"))?;
-    let diff = commit_with_moves_ctx
-        .diff(
-            &repo.changeset(root).await?.context("commit not found")?,
-            true, /* include_copies_renames */
-            None, /* path_restrictions */
-            btreeset! {ChangesetDiffItem::FILES},
-        )
-        .await?;
-
-    assert_eq!(diff.len(), 3);
-    // The first copy of the file becomes a move.
-    match diff.get(0) {
-        Some(ChangesetPathDiffContext::Moved(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_one")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
-        }
-        other => panic!("unexpected diff: {:?}", other),
-    }
-    match diff.get(1) {
-        Some(ChangesetPathDiffContext::Copied(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_two")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
-        }
-        other => panic!("unexpected diff: {:?}", other),
-    }
-    match diff.get(2) {
-        Some(ChangesetPathDiffContext::Copied(to, from)) => {
-            assert_eq!(to.path(), &MononokePath::try_from("copy_zzz")?);
-            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
-        }
-        other => panic!("unexpected diff: {:?}", other),
-    }
-    Ok(())
-}
-
-#[fbinit::test]
-async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
-    let ctx = CoreContext::test_mock(fb);
-    let mononoke = Mononoke::new_test(
-        ctx.clone(),
-        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
-    )
-    .await?;
-    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
-
-    // Case one: dirs added
-    let cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?;
-    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
-    let other_cs_id = HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8")?;
-    let other_cs = repo
-        .changeset(other_cs_id)
-        .await?
-        .expect("other changeset exists");
-
-    let diff: Vec<_> = cs
-        .diff(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
-        .await?;
-    assert_eq!(diff.len(), 5);
-    match diff.get(0) {
-        Some(ChangesetPathDiffContext::Added(path)) => {
-            assert_eq!(path.path(), &MononokePath::try_from("dir2")?);
-        }
-        _ => {
-            panic!("unexpected diff");
-        }
-    }
-
-    // Case two: dir (with subdirs) replaced with file
-    let cs_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?;
-    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
-    let other_cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?;
-    let other_cs = repo
-        .changeset(other_cs_id)
-        .await?
-        .expect("other changeset exists");
-
-    // Added
-    let diff: Vec<_> = cs
-        .diff(&other_cs, false, None, btreeset! {ChangesetDiffItem::TREES})
-        .await?;
-    assert_eq!(diff.len(), 4);
-    match diff.get(0) {
-        Some(ChangesetPathDiffContext::Removed(path)) => {
-            assert_eq!(path.path(), &MononokePath::try_from("dir1")?);
-        }
-        _ => {
-            panic!("unexpected diff");
-        }
-    }
 
     Ok(())
 }

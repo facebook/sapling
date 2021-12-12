@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+mod test_changeset_diff;
 mod test_file_diff;
 mod test_history;
 mod test_repo;

@@ -11,6 +11,10 @@ use crate::changeset_path::ChangesetPathContentContext;
 ///
 /// A ChangesetPathDiffContext shows the difference between two corresponding
 /// files in the commits.
+///
+/// The changed, copied and moved variants contain the items in the same
+/// order as the commits that were compared, i.e. in `a.diff(b)`, they
+/// will contain `(a, b)`.  This usually means the destination is first.
 #[derive(Clone, Debug)]
 pub enum ChangesetPathDiffContext {
     Added(ChangesetPathContentContext),

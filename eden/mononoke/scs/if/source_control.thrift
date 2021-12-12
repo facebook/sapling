@@ -776,6 +776,17 @@ struct CommitCommonBaseWithParams {
   2: set<CommitIdentityScheme> identity_schemes;
 }
 
+const i64 COMMIT_COMPARE_ORDERED_MAX_LIMIT = 10000;
+
+struct CommitCompareOrderedParams {
+  // Restrict the set of paths to those after this path.  Set this
+  // to continue diffing after a previous ordered request reached
+  // its limit.
+  1: optional Path after_path;
+  // Limit the number of returned paths to this many.
+  2: i64 limit;
+}
+
 struct CommitCompareParams {
   /// Commit to compare with. By default it's the commit's first parent.
   1: optional CommitId other_commit_id;
@@ -787,6 +798,8 @@ struct CommitCompareParams {
   4: optional list<Path> paths;
   /// What to compare (default is FILES)
   5: set<CommitCompareItem> compare_items;
+  /// If present, perform the compare in path order with these parameters.
+  6: optional CommitCompareOrderedParams ordered_params;
 }
 
 struct CommitFileDiffsParamsPathPair {
