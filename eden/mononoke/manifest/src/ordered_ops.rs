@@ -5,18 +5,21 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Ordering;
+use std::iter::Peekable;
 use std::marker::Unpin;
 
 use anyhow::Error;
 use borrowed::borrowed;
 use bounded_traversal::OrderedTraversal;
 use context::CoreContext;
-use futures::future::FutureExt;
+use futures::future::{self, FutureExt};
 use futures::pin_mut;
-use futures::stream::{BoxStream, StreamExt};
+use futures::stream::{self, BoxStream, StreamExt};
 use mononoke_types::{MPath, MPathElement};
 use nonzero_ext::nonzero;
 
+use crate::ops::Diff;
 use crate::select::select_path_tree;
 use crate::{Entry, Manifest, OrderedManifest, PathOrPrefix, PathTree, StoreLoadable};
 
@@ -146,7 +149,6 @@ where
             (self.clone(), selector, None, false, after),
         ));
         (async_stream::stream! {
-            let store = &store;
             borrowed!(ctx, store);
             let s = bounded_traversal::bounded_traversal_ordered_stream(
                 schedule_max,
@@ -251,6 +253,374 @@ where
             }
         })
         .boxed()
+    }
+
+    /// Returns ordered differences between two manifests.
+    ///
+    /// `self` is considered the "old" manifest (so entries missing there are "Added")
+    /// `other` is considered the "new" manifest (so entries missing there are "Removed")
+    fn diff_ordered(
+        &self,
+        ctx: CoreContext,
+        store: Store,
+        other: Self,
+        after: Option<Option<MPath>>,
+    ) -> BoxStream<
+        'static,
+        Result<
+            Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
+            Error,
+        >,
+    > {
+        self.filtered_diff_ordered(ctx, store.clone(), other, store, after, Some, |_| true)
+    }
+
+    /// Do a diff, but with knobs to filter_map output and prune some subtrees.
+    /// `output_filter` let's us configure what will be returned from filtered_diff. it accepts
+    /// every diff entry and returns Option<Out>, so it acts similar to filter_map() function
+    /// recurse_pruner is a function that allows us to skip iterating over some subtrees
+    fn filtered_diff_ordered<FilterMap, Out, RecursePruner>(
+        &self,
+        ctx: CoreContext,
+        store: Store,
+        other: Self,
+        other_store: Store,
+        after: Option<Option<MPath>>,
+        output_filter: FilterMap,
+        recurse_pruner: RecursePruner,
+    ) -> BoxStream<'static, Result<Out, Error>>
+    where
+        FilterMap: Fn(
+                Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
+            ) -> Option<Out>
+            + Send
+            + Sync
+            + 'static,
+        RecursePruner: Fn(&Diff<Self>) -> bool + Send + Sync + 'static,
+        Out: Send + Unpin + 'static,
+    {
+        if self == &other {
+            return stream::empty().boxed();
+        }
+
+        // Schedule a maximum of 256 concurrently unfolding directories.
+        let schedule_max = nonzero!(256usize);
+
+        // Allow queueing of up to 2,560 items, which would be 10 items per
+        // directory at the maximum concurrency level.  Experiments show this
+        // is a good balance of queueing items while not spending too long
+        // determining what can be scheduled.
+        let queue_max = nonzero!(2560usize);
+
+        let after = match after {
+            None => {
+                // If `after` is `None`, then we include everything.
+                After::All
+            }
+            Some(mpath_opt) => {
+                // If `after` is `Some(None)`, then we include everything
+                // after the root (i.e. not the root itself).
+                After::new(mpath_opt.as_ref())
+            }
+        };
+
+        let init = Some((
+            queue_max.get(),
+            (Diff::Changed(None, self.clone(), other), after),
+        ));
+
+        (async_stream::stream! {
+            borrowed!(ctx, store, other_store, output_filter, recurse_pruner);
+
+            let s = bounded_traversal::bounded_traversal_ordered_stream(
+                schedule_max,
+                queue_max,
+                init,
+                move |(input, after)| {
+                    async move {
+                        let mut output = Vec::new();
+
+                        let push_output = |output: &mut Vec<_>, out| {
+                            if let Some(out) = output_filter(out) {
+                                output.push(OrderedTraversal::Output(out));
+                            }
+                        };
+
+                        let push_recurse = |output: &mut Vec<_>, weight, recurse, after| {
+                            if recurse_pruner(&recurse) {
+                                output.push(OrderedTraversal::Recurse(weight, (recurse, after)));
+                            }
+                        };
+
+                        match input {
+                            Diff::Changed(path, left, right) => {
+                                let (left_mf, right_mf) = future::try_join(
+                                    left.load(ctx, store),
+                                    right.load(ctx, other_store),
+                                )
+                                .await?;
+
+                                if after.include_self() {
+                                    push_output(
+                                        &mut output,
+                                        Diff::Changed(
+                                            path.clone(),
+                                            Entry::Tree(left),
+                                            Entry::Tree(right),
+                                        ),
+                                    );
+                                }
+
+                                let iter = EntryDiffIterator::new(
+                                    left_mf.list_weighted(),
+                                    right_mf.list_weighted(),
+                                );
+                                for (name, left, right) in iter {
+                                    if after.skip(&name) || left == right {
+                                        continue;
+                                    }
+                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    match (left, right) {
+                                        (Some(Entry::Leaf(left)), Some(Entry::Leaf(right))) => {
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Changed(
+                                                        path,
+                                                        Entry::Leaf(left),
+                                                        Entry::Leaf(right),
+                                                    ),
+                                                );
+                                            }
+                                        }
+                                        (
+                                            Some(Entry::Leaf(left)),
+                                            Some(Entry::Tree((weight, tree))),
+                                        ) => {
+                                            // Removed file comes before all
+                                            // files in the dir it is replaced
+                                            // by.
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Removed(path.clone(), Entry::Leaf(left)),
+                                                );
+                                            }
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Added(path, tree),
+                                                after.enter_dir(&name),
+                                            );
+                                        }
+                                        (Some(Entry::Leaf(left)), None) => {
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Removed(path, Entry::Leaf(left)),
+                                                );
+                                            }
+                                        }
+                                        (
+                                            Some(Entry::Tree((weight, tree))),
+                                            Some(Entry::Leaf(right)),
+                                        ) => {
+                                            // Added file comes before all
+                                            // files in the dir it replaces
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Added(path.clone(), Entry::Leaf(right)),
+                                                );
+                                            }
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Removed(path, tree),
+                                                after.enter_dir(&name),
+                                            );
+                                        }
+                                        (
+                                            Some(Entry::Tree((left_weight, left))),
+                                            Some(Entry::Tree((right_weight, right))),
+                                        ) => {
+                                            // Approximate recursion weight
+                                            // using `max`.  The theoretical
+                                            // max is actually the sum of the
+                                            // weights, but that is likely to
+                                            // be overkill most of the time.
+                                            let weight = left_weight.max(right_weight);
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Changed(path, left, right),
+                                                after.enter_dir(&name),
+                                            );
+                                        }
+                                        (Some(Entry::Tree((weight, tree))), None) => {
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Removed(path, tree),
+                                                after.enter_dir(&name),
+                                            );
+                                        }
+                                        (None, Some(Entry::Leaf(right))) => {
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Added(path.clone(), Entry::Leaf(right)),
+                                                );
+                                            }
+                                        }
+                                        (None, Some(Entry::Tree((weight, tree)))) => {
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Added(path, tree),
+                                                after.enter_dir(&name),
+                                            );
+                                        }
+                                        (None, None) => {}
+                                    }
+                                }
+                            }
+                            Diff::Added(path, tree) => {
+                                if after.include_self() {
+                                    push_output(
+                                        &mut output,
+                                        Diff::Added(path.clone(), Entry::Tree(tree.clone())),
+                                    );
+                                }
+                                let manifest = tree.load(ctx, other_store).await?;
+                                for (name, entry) in manifest.list_weighted() {
+                                    if after.skip(&name) {
+                                        continue;
+                                    }
+                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    match entry {
+                                        Entry::Tree((weight, tree)) => {
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Added(path, tree),
+                                                after.enter_dir(&name),
+                                            );
+                                        }
+                                        Entry::Leaf(leaf) => {
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Added(path, Entry::Leaf(leaf)),
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Diff::Removed(path, tree) => {
+                                if after.include_self() {
+                                    push_output(
+                                        &mut output,
+                                        Diff::Removed(path.clone(), Entry::Tree(tree.clone())),
+                                    );
+                                }
+                                let manifest = tree.load(ctx, store).await?;
+                                for (name, entry) in manifest.list_weighted() {
+                                    if after.skip(&name) {
+                                        continue;
+                                    }
+                                    let path = Some(MPath::join_opt_element(path.as_ref(), &name));
+                                    match entry {
+                                        Entry::Tree((weight, tree)) => {
+                                            push_recurse(
+                                                &mut output,
+                                                weight,
+                                                Diff::Removed(path, tree),
+                                                after.enter_dir(&name),
+                                            );
+                                        }
+                                        Entry::Leaf(leaf) => {
+                                            if after.include_file(&name) {
+                                                push_output(
+                                                    &mut output,
+                                                    Diff::Removed(path, Entry::Leaf(leaf)),
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Ok(output)
+                    }
+                    .boxed()
+                },
+            );
+
+            pin_mut!(s);
+            while let Some(value) = s.next().await {
+                yield value;
+            }
+        })
+        .boxed()
+    }
+}
+
+struct EntryDiffIterator<I>
+where
+    I: Iterator,
+{
+    left: Peekable<I>,
+    right: Peekable<I>,
+}
+
+impl<I> EntryDiffIterator<I>
+where
+    I: Iterator,
+{
+    fn new(left: I, right: I) -> Self {
+        Self {
+            left: left.peekable(),
+            right: right.peekable(),
+        }
+    }
+}
+
+impl<I, Name, Value> Iterator for EntryDiffIterator<I>
+where
+    I: Iterator<Item = (Name, Value)>,
+    Name: Ord,
+{
+    type Item = (Name, Option<Value>, Option<Value>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match (self.left.peek(), self.right.peek()) {
+            (Some((left_name, _)), Some((right_name, _))) => match left_name.cmp(right_name) {
+                Ordering::Less => {
+                    let (name, left) = self.left.next().unwrap();
+                    Some((name, Some(left), None))
+                }
+                Ordering::Equal => {
+                    let (name, left) = self.left.next().unwrap();
+                    let (_, right) = self.right.next().unwrap();
+                    Some((name, Some(left), Some(right)))
+                }
+                Ordering::Greater => {
+                    let (name, right) = self.right.next().unwrap();
+                    Some((name, None, Some(right)))
+                }
+            },
+            (Some(_), None) => {
+                let (name, left) = self.left.next().unwrap();
+                Some((name, Some(left), None))
+            }
+            (None, Some(_)) => {
+                let (name, right) = self.right.next().unwrap();
+                Some((name, None, Some(right)))
+            }
+            (None, None) => None,
+        }
     }
 }
 

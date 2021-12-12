@@ -197,6 +197,13 @@ impl<T, L> Entry<T, L> {
             Entry::Leaf(leaf) => Entry::Leaf(leaf),
         }
     }
+
+    pub fn is_tree(&self) -> bool {
+        match self {
+            Entry::Tree(_) => true,
+            _ => false,
+        }
+    }
 }
 
 #[async_trait]

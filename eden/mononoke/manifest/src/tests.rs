@@ -8,8 +8,8 @@
 pub(crate) use crate::{
     bonsai::BonsaiEntry,
     derive_batch::{derive_manifests_for_simple_stack_of_commits, ManifestChanges},
-    derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps, PathOrPrefix,
-    PathTree, TreeInfo,
+    derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps,
+    ManifestOrderedOps, OrderedManifest, PathOrPrefix, PathTree, TreeInfo,
 };
 use anyhow::{Error, Result};
 use async_trait::async_trait;
@@ -134,6 +134,31 @@ impl Manifest for TestManifestU64 {
     }
     fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
         self.0.get(name).cloned()
+    }
+}
+
+// Implement OrderedManifests for tests.  Ideally we'd need to know the
+// descendant count, but since we don't, just make something up (10).  The
+// code still works if this estimate is wrong, but it may schedule the
+// wrong number of child manifest expansions when this happens.
+impl OrderedManifest for TestManifestU64 {
+    fn list_weighted(
+        &self,
+    ) -> Box<dyn Iterator<Item = (MPathElement, Entry<(usize, Self::TreeId), Self::LeafId>)>> {
+        let iter = self.0.clone().into_iter().map(|entry| match entry {
+            (elem, Entry::Leaf(leaf)) => (elem, Entry::Leaf(leaf)),
+            (elem, Entry::Tree(tree)) => (elem, Entry::Tree((10, tree))),
+        });
+        Box::new(iter)
+    }
+    fn lookup_weighted(
+        &self,
+        name: &MPathElement,
+    ) -> Option<Entry<(usize, Self::TreeId), Self::LeafId>> {
+        self.0.get(name).cloned().map(|entry| match entry {
+            Entry::Leaf(leaf) => Entry::Leaf(leaf),
+            Entry::Tree(tree) => Entry::Tree((10, tree)),
+        })
     }
 }
 
@@ -999,6 +1024,26 @@ fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>> {
         .collect()
 }
 
+fn describe_diff_item(diff: Diff<Entry<TestManifestIdU64, TestLeafId>>) -> String {
+    match diff {
+        Diff::Added(path, entry) => format!(
+            "A {}{}",
+            MPath::display_opt(path.as_ref()),
+            if entry.is_tree() { "/" } else { "" }
+        ),
+        Diff::Removed(path, entry) => format!(
+            "R {}{}",
+            MPath::display_opt(path.as_ref()),
+            if entry.is_tree() { "/" } else { "" }
+        ),
+        Diff::Changed(path, entry, _) => format!(
+            "C {}{}",
+            MPath::display_opt(path.as_ref()),
+            if entry.is_tree() { "/" } else { "" }
+        ),
+    }
+}
+
 #[fbinit::test]
 async fn test_find_entries(fb: FacebookInit) -> Result<()> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
@@ -1216,6 +1261,30 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
     assert_eq!(changed, make_paths(&["/", "dir", "dir/changed_file"])?);
 
     let diffs: Vec<_> = mf0
+        .diff_ordered(ctx.clone(), blobstore.clone(), mf1, None)
+        .map_ok(describe_diff_item)
+        .try_collect()
+        .await?;
+
+    assert_eq!(
+        diffs,
+        vec![
+            "C (none)/",
+            "A added_file",
+            "C dir/",
+            "A dir/added_dir/",
+            "A dir/added_dir/3",
+            "C dir/changed_file",
+            "R dir/removed_dir/",
+            "R dir/removed_dir/3",
+            "R dir/removed_file",
+            "A dir_file_conflict",
+            "R dir_file_conflict/",
+            "R dir_file_conflict/5",
+        ]
+    );
+
+    let diffs: Vec<_> = mf0
         .filtered_diff(
             ctx.clone(),
             blobstore.clone(),
@@ -1280,6 +1349,53 @@ async fn test_diff(fb: FacebookInit) -> Result<()> {
     );
     assert_eq!(changed, make_paths(&["/", "dir", "dir/changed_file"])?);
 
+    let diffs: Vec<_> = mf0
+        .filtered_diff_ordered(
+            ctx.clone(),
+            blobstore.clone(),
+            mf1,
+            blobstore.clone(),
+            Some(Some(MPath::new("dir")?)),
+            |diff| {
+                let path = match &diff {
+                    Diff::Added(path, ..) | Diff::Removed(path, ..) | Diff::Changed(path, ..) => {
+                        path
+                    }
+                };
+
+                let badpath = MPath::new("dir/added_dir/3").unwrap();
+                if &Some(badpath) != path {
+                    Some(diff)
+                } else {
+                    None
+                }
+            },
+            |diff| {
+                let path = match diff {
+                    Diff::Added(path, ..) | Diff::Removed(path, ..) | Diff::Changed(path, ..) => {
+                        path
+                    }
+                };
+
+                let badpath = MPath::new("dir/removed_dir").unwrap();
+                &Some(badpath) != path
+            },
+        )
+        .map_ok(describe_diff_item)
+        .try_collect()
+        .await?;
+
+    assert_eq!(
+        diffs,
+        vec![
+            "A dir/added_dir/",
+            "C dir/changed_file",
+            "R dir/removed_file",
+            "A dir_file_conflict",
+            "R dir_file_conflict/",
+            "R dir_file_conflict/5",
+        ]
+    );
     Ok(())
 }
 
