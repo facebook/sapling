@@ -75,7 +75,7 @@ mod test {
 
         let origin = Arc::new(Memblob::default());
         let backup = Arc::new(Memblob::default());
-        let filestore = FilestoreConfig::default();
+        let filestore = FilestoreConfig::no_chunking_filestore();
 
         let verifier = DarkstormVerifier::new(origin.clone(), backup.clone(), filestore);
 

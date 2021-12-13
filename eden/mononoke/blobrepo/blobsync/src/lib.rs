@@ -159,7 +159,7 @@ mod test {
 
         borrowed!(ctx, bs1, bs2);
 
-        let default_filestore_config = FilestoreConfig::default();
+        let default_filestore_config = FilestoreConfig::no_chunking_filestore();
 
         let bytes = b"hello world";
         let req = request(bytes);

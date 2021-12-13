@@ -68,9 +68,9 @@ pub struct FilestoreConfig {
     pub concurrency: usize,
 }
 
-impl Default for FilestoreConfig {
-    fn default() -> Self {
-        FilestoreConfig {
+impl FilestoreConfig {
+    pub fn no_chunking_filestore() -> Self {
+        Self {
             chunk_size: None,
             concurrency: 1,
         }

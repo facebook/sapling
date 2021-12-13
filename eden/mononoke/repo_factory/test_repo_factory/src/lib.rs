@@ -431,7 +431,7 @@ impl TestRepoFactory {
                 chunk_size: Some(p.chunk_size),
                 concurrency: p.concurrency,
             })
-            .unwrap_or_default();
+            .unwrap_or_else(|| FilestoreConfig::no_chunking_filestore());
         Arc::new(filestore_config)
     }
 

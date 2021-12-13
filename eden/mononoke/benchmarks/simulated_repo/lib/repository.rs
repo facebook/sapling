@@ -284,7 +284,7 @@ impl BenchmarkRepoFactory {
     }
 
     pub fn filestore_config(&self) -> ArcFilestoreConfig {
-        Arc::new(FilestoreConfig::default())
+        Arc::new(FilestoreConfig::no_chunking_filestore())
     }
 
     pub fn skiplist_index(&self) -> ArcSkiplistIndex {
