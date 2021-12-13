@@ -138,9 +138,8 @@ mod tests {
         segs.push_edge(Id(107), &[Id(106)]);
 
         // Check that adjacent segments are merged.
-        let dbg: Vec<String> = segs.segments.iter().map(|s| format!("{:?}", s)).collect();
         assert_eq!(
-            dbg,
+            dbg(&segs),
             [
                 "FlatSegment { low: 0, high: 1, parents: [] }",
                 "FlatSegment { low: 2, high: 4, parents: [] }",
@@ -164,13 +163,16 @@ mod tests {
         segs2.push_edge(Id(13), &[Id(12)]);
         segs2.push_edge(Id(14), &[Id(11)]);
         segs1.merge(segs2);
-        let dbg: Vec<String> = segs1.segments.iter().map(|s| format!("{:?}", s)).collect();
         assert_eq!(
-            dbg,
+            dbg(&segs1),
             [
                 "FlatSegment { low: 10, high: 13, parents: [] }",
                 "FlatSegment { low: 14, high: 14, parents: [11] }"
             ]
         );
+    }
+
+    fn dbg(segs: &PreparedFlatSegments) -> Vec<String> {
+        segs.segments.iter().map(|s| format!("{:?}", s)).collect()
     }
 }
