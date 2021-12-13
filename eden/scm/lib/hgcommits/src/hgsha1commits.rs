@@ -156,18 +156,6 @@ impl AppendCommits for HgCommits {
         zstore.flush()?;
         Ok(())
     }
-
-    async fn import_clone_data(&mut self, _clone_data: dag::CloneData<Vertex>) -> Result<()> {
-        Err(crate::Error::Unsupported(
-            "import_clone_data is not supported for this backend",
-        ))
-    }
-
-    async fn import_pull_data(&mut self, _clone_data: dag::CloneData<Vertex>) -> Result<()> {
-        Err(crate::Error::Unsupported(
-            "import_pull_data is not supported for this backend",
-        ))
-    }
 }
 
 #[async_trait::async_trait]

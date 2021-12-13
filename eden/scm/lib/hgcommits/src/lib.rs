@@ -50,7 +50,7 @@ pub trait StreamCommitText {
 }
 
 #[async_trait::async_trait]
-pub trait AppendCommits {
+pub trait AppendCommits: Send + Sync {
     /// Add commits. They stay in-memory until `flush`.
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()>;
 
@@ -67,15 +67,30 @@ pub trait AppendCommits {
     /// Add nodes to the graph without data (commit message).
     /// This is only supported by lazy backends.
     /// Use `flush` to write changes to disk.
-    async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()>;
+    async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()> {
+        let _ = graph_nodes;
+        Err(crate::Error::Unsupported(
+            "add_graph_nodes is not supported by this backend",
+        ))
+    }
 
     /// Import clone data and flush.
     /// This is only supported by lazy backends and can only be used in an empty repo.
-    async fn import_clone_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()>;
+    async fn import_clone_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
+        let _ = clone_data;
+        Err(crate::Error::Unsupported(
+            "import_clone_data is not supported by this backend",
+        ))
+    }
 
     /// Import data from master fast forward pull.
     /// This is only supported by lazy backends. Can be used on non-empty repo.
-    async fn import_pull_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()>;
+    async fn import_pull_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
+        let _ = clone_data;
+        Err(crate::Error::Unsupported(
+            "import_pull_data is not supported by this backend",
+        ))
+    }
 }
 
 pub trait DescribeBackend {

@@ -115,24 +115,6 @@ impl AppendCommits for GitSegmentedCommits {
     async fn flush_commit_data(&mut self) -> Result<()> {
         Ok(())
     }
-
-    async fn add_graph_nodes(&mut self, _graph_nodes: &[crate::GraphNode]) -> Result<()> {
-        Err(crate::Error::Unsupported(
-            "add_graph_nodes is not supported for git backend",
-        ))
-    }
-
-    async fn import_clone_data(&mut self, _clone_data: dag::CloneData<Vertex>) -> Result<()> {
-        Err(crate::Error::Unsupported(
-            "import_clone_data is not supported for git backend",
-        ))
-    }
-
-    async fn import_pull_data(&mut self, _clone_data: dag::CloneData<Vertex>) -> Result<()> {
-        Err(crate::Error::Unsupported(
-            "import_pull_data is not supported for git backend",
-        ))
-    }
 }
 
 #[async_trait::async_trait]
