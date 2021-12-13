@@ -7,9 +7,17 @@
 
 //! This tool can be used to build a large test repo (hyper repo) from a few other repos.
 //! This tool mirrors all commits from a given small repo bookmark into a hyper repo.
+//! This tool can be used to check e.g. speed of derived data derivation.
 //! All files from small repos are put in a large repo in a folder with the same name
 //! as small repo e.g. file "1.txt" from "small_repo_1" will become "small_repo_1/1.txt" file
 //! in hyper repo.
+//! To start using it use "add-source-repo" to add a new repo to a hyper repo. Add as many repos
+//! as you like.
+//! Then use "tail" to tail new commits from source repos to hyper repos
+//!
+//! LIMITATIONS:
+//! 1) Non-forward bookmark moves are not supported
+//! 2) Syncing merges is not supported
 
 #![deny(warnings)]
 
