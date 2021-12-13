@@ -7,13 +7,14 @@
 
 use std::collections::HashSet;
 
-use serde::Serialize;
+use serde::Deserialize;
 
 use crate::Group;
 use crate::VertexName;
 
 /// A list of [`VertexName`]s (usually heads) with options attached to each vertex.
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Deserialize)]
+#[serde(transparent)]
 pub struct VertexListWithOptions {
     list: Vec<(VertexName, VertexOptions)>,
 }
@@ -21,7 +22,7 @@ pub struct VertexListWithOptions {
 /// Options attached to a vertex. Usually the vertex is a head. The head and its
 /// ancestors are going to be inserted to the graph. The options controls some
 /// details about the insertion.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[non_exhaustive]
 pub struct VertexOptions {
     /// How many ids to reserve for this vertex. Suppose this vertex has id `n`,
