@@ -114,7 +114,7 @@ def commitfilteredctx(repo, ctx, match, allowempty):
     exclude = set(f for f in initialfiles if match(f))
 
     # No files matched commit, so nothing excluded
-    if not exclude:
+    if initialfiles and not exclude:
         return None
 
     files = initialfiles - exclude

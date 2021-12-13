@@ -3,6 +3,7 @@
 Test uncommit - set up the config
 
   $ configure mutation-norecord
+  $ enable amend
 
 Build up a repo
 
@@ -120,6 +121,12 @@ Uncommit of non-existent and unchanged files has no effect
   [1]
   $ hg status
 
+Uncommit empty commit
+  $ echo temp > temp && hg add temp && hg commit -m empty
+  $ hg rm temp && hg amend
+  $ hg diff -r .^
+  $ hg uncommit
+
 Try partial uncommit, also moves bookmark
 
   $ hg bookmark
@@ -141,6 +148,10 @@ Try partial uncommit, also moves bookmark
   $ hg log -G -T '{node} {desc}' --hidden
   @  3727deee06f72f5ffa8db792ee299cf39e3e190b new change abcde
   │
+  │ o  5d2fdaa86d070e06669eb141937268780b14861d empty
+  │ │
+  │ │ x  aa5000ec01a38397e1e2ad1eddc643c151459a9b empty
+  │ ├─╯
   │ o  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
   ├─╯
   │ o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
@@ -263,6 +274,10 @@ Partial uncommit in the middle, does not move bookmark
   │ │ ├─╯
   │ │ o  3727deee06f72f5ffa8db792ee299cf39e3e190b new change abcde
   │ │ │
+  │ │ │ o  5d2fdaa86d070e06669eb141937268780b14861d empty
+  │ │ │ │
+  │ │ │ │ x  aa5000ec01a38397e1e2ad1eddc643c151459a9b empty
+  │ │ │ ├─╯
   │ │ │ o  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
   │ │ ├─╯
   │ │ │ o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
