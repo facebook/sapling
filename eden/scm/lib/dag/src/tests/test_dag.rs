@@ -217,13 +217,15 @@ impl TestDag {
         new_master: impl Into<Vertex>,
     ) -> Result<()> {
         self.set_remote(server);
+        let new_master = new_master.into();
         let missing = server
             .dag
-            .only(new_master.into().into(), old_master.into().into())
+            .only(new_master.clone().into(), old_master.into().into())
             .await?;
         let data = server.dag.export_pull_data(&missing).await?;
         debug!("pull_ff data: {:?}", &data);
-        self.dag.import_pull_data(data).await?;
+        let heads = VertexListWithOptions::from(vec![new_master]).with_highest_group(Group::MASTER);
+        self.dag.import_pull_data(data, &heads).await?;
         Ok(())
     }
 

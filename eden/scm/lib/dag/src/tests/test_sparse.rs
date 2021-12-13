@@ -176,7 +176,12 @@ async fn test_basic_pull() {
     let missing = server.dag.only("D".into(), "B".into()).await.unwrap();
     let pull_data = server.dag.export_pull_data(&missing).await.unwrap();
 
-    client.dag.import_pull_data(pull_data).await.unwrap();
+    let heads = VertexListWithOptions::from(&["D".into()][..]).with_highest_group(Group::MASTER);
+    client
+        .dag
+        .import_pull_data(pull_data, &heads)
+        .await
+        .unwrap();
 
     assert_eq!(server.render_graph(), client.render_graph());
 }

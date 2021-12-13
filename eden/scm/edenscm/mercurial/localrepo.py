@@ -1037,9 +1037,14 @@ class localrepository(object):
             fastpathcommits, fastpathsegments = 0, 0
             for (old, new) in fastpath:
                 fastpulldata = self.edenapi.pullfastforwardmaster(self.name, old, new)
+                vertexopts = {
+                    "reserve_size": 0,
+                    "highest_group": 0,
+                }
                 try:
                     commits, segments = self.changelog.inner.importpulldata(
-                        fastpulldata
+                        fastpulldata,
+                        [(new, vertexopts)],
                     )
                     self.ui.status(
                         _("imported commit graph for %s (%s)\n")

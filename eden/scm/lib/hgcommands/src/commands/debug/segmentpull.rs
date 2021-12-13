@@ -67,8 +67,10 @@ pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
         flat_segments: pull_data.flat_segments,
         idmap,
     };
+    let heads = VertexListWithOptions::from(vec![VertexName::copy_from(opts.to.as_bytes())])
+        .with_highest_group(Group::MASTER);
 
-    block_on(namedag.import_pull_data(vertex_pull_data))
+    block_on(namedag.import_pull_data(vertex_pull_data, &heads))
         .context("error importing segmented changelog")??;
 
     let master = VertexName::copy_from(&to.into_byte_array());

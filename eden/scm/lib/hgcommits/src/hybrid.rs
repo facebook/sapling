@@ -24,6 +24,7 @@ use dag::CloneData;
 use dag::Location;
 use dag::Set;
 use dag::Vertex;
+use dag::VertexListWithOptions;
 use edenapi::types::CommitLocationToHashRequest;
 use edenapi::EdenApi;
 use futures::stream;
@@ -320,7 +321,11 @@ impl AppendCommits for HybridCommits {
         Ok(())
     }
 
-    async fn import_pull_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
+    async fn import_pull_data(
+        &mut self,
+        clone_data: CloneData<Vertex>,
+        heads: &VertexListWithOptions,
+    ) -> Result<()> {
         if self.revlog.is_some() {
             return Err(crate::Error::Unsupported(
                 "import_pull_data is not supported for revlog backend",
@@ -331,7 +336,7 @@ impl AppendCommits for HybridCommits {
                 "import_pull_data can only be used in commit graph with lazy vertexes",
             ));
         }
-        self.commits.dag.import_pull_data(clone_data).await?;
+        self.commits.dag.import_pull_data(clone_data, heads).await?;
         Ok(())
     }
 }

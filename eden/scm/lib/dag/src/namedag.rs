@@ -583,12 +583,27 @@ where
     P: Open<OpenTarget = Self> + TryClone + Send + Sync + 'static,
     S: IntVersion + TryClone + Persist + Send + Sync + 'static,
 {
-    async fn import_pull_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
+    async fn import_pull_data(
+        &mut self,
+        clone_data: CloneData<VertexName>,
+        heads: &VertexListWithOptions,
+    ) -> Result<()> {
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "import_pull_data called with pending heads ({:?})",
                 &self.pending_heads.vertexes(),
             ));
+        }
+        for (head, opts) in heads.vertex_options() {
+            if opts.highest_group != Group::MASTER {
+                return programming(format!(
+                    concat!(
+                        "import_pull_data called with non-master head ({:?}). ",
+                        "This is unsupported because the pull data is lazy and can only be inserted to the master group.",
+                    ),
+                    head
+                ));
+            }
         }
 
         for id in clone_data.flat_segments.parents_head_and_roots() {

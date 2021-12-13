@@ -14,6 +14,7 @@ use std::io;
 use dag::errors::NotFoundError;
 use dag::CloneData;
 use dag::Vertex;
+use dag::VertexListWithOptions;
 use futures::future::try_join_all;
 use futures::stream::BoxStream;
 use minibytes::Bytes;
@@ -85,8 +86,12 @@ pub trait AppendCommits: Send + Sync {
 
     /// Import data from master fast forward pull.
     /// This is only supported by lazy backends. Can be used on non-empty repo.
-    async fn import_pull_data(&mut self, clone_data: CloneData<Vertex>) -> Result<()> {
-        let _ = clone_data;
+    async fn import_pull_data(
+        &mut self,
+        clone_data: CloneData<Vertex>,
+        heads: &VertexListWithOptions,
+    ) -> Result<()> {
+        let _ = (clone_data, heads);
         Err(crate::Error::Unsupported(
             "import_pull_data is not supported by this backend",
         ))

@@ -13,6 +13,7 @@ use anyhow::Result;
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
 use cpython_ext::convert::BytesLike;
+use cpython_ext::convert::Serde;
 use cpython_ext::ExtractInner;
 use cpython_ext::PyCell;
 use cpython_ext::PyNone;
@@ -135,12 +136,12 @@ py_class!(pub class commits |py| {
 
     /// Import pull data(inside PyCell) and flush.
     /// Returns (commit_count, segment_count) on success.
-    def importpulldata(&self, data: PyCell) -> PyResult<(u64, usize)> {
+    def importpulldata(&self, data: PyCell, heads: Serde<VertexListWithOptions>) -> PyResult<(u64, usize)> {
         let data: Box<CloneData<Vertex>> = data.take(py).ok_or_else(|| format_err!("Data is not CloneData")).map_pyerr(py)?;
         let commits = data.flat_segments.vertex_count();
         let segments = data.flat_segments.segment_count();
         let mut inner = self.inner(py).borrow_mut();
-        block_on(inner.import_pull_data(*data)).map_pyerr(py)?;
+        block_on(inner.import_pull_data(*data, &heads.0)).map_pyerr(py)?;
         Ok((commits, segments))
     }
 
