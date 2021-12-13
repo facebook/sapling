@@ -17,10 +17,10 @@ use crate::ops::CheckIntegrity;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagExportCloneData;
+use crate::ops::DagExportPullData;
 use crate::ops::DagImportCloneData;
 use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
-use crate::ops::DagPullFastForwardMasterData;
 use crate::ops::IdConvert;
 use crate::protocol;
 use crate::protocol::RemoteIdConvertProtocol;
@@ -219,7 +219,7 @@ impl TestDag {
         self.set_remote(server);
         let data = server
             .dag
-            .pull_fast_forward_master(old_master.into(), new_master.into())
+            .export_pull_data(old_master.into(), new_master.into())
             .await?;
         debug!("pull_ff data: {:?}", &data);
         self.dag.import_pull_data(data).await?;

@@ -47,10 +47,10 @@ use crate::ops::CheckIntegrity;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagExportCloneData;
+use crate::ops::DagExportPullData;
 use crate::ops::DagImportCloneData;
 use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
-use crate::ops::DagPullFastForwardMasterData;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
 use crate::ops::IntVersion;
@@ -817,7 +817,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<IS, M, P, S> DagPullFastForwardMasterData for AbstractNameDag<IdDag<IS>, M, P, S>
+impl<IS, M, P, S> DagExportPullData for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
@@ -825,7 +825,7 @@ where
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
-    async fn pull_fast_forward_master(
+    async fn export_pull_data(
         &self,
         old_master: VertexName,
         new_master: VertexName,

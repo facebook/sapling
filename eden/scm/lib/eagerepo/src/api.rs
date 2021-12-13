@@ -12,7 +12,7 @@ use configmodel::Config;
 use configmodel::ConfigExt;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagExportCloneData;
-use dag::ops::DagPullFastForwardMasterData;
+use dag::ops::DagExportPullData;
 use dag::ops::PrefixLookup;
 use dag::protocol::AncestorPath;
 use dag::protocol::RemoteIdConvertProtocol;
@@ -239,7 +239,7 @@ impl EdenApi for EagerRepo {
         let new_master = VertexName(new_master.into_byte_array().to_vec().into());
         let clone_data = self
             .dag()
-            .pull_fast_forward_master(old_master, new_master)
+            .export_pull_data(old_master, new_master)
             .await
             .map_err(map_dag_err)?;
         convert_clone_data(clone_data)

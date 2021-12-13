@@ -300,9 +300,9 @@ pub trait DagExportCloneData {
 }
 
 #[async_trait::async_trait]
-pub trait DagPullFastForwardMasterData {
+pub trait DagExportPullData {
     /// Pull fast forward master and return CloneData
-    async fn pull_fast_forward_master(
+    async fn export_pull_data(
         &self,
         old_master: VertexName,
         new_master: VertexName,

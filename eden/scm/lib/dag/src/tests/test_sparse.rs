@@ -13,9 +13,9 @@ use super::ProtocolMonitor;
 use super::TestDag;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
+use crate::ops::DagExportPullData;
 use crate::ops::DagImportPullData;
 use crate::ops::DagPersistent;
-use crate::ops::DagPullFastForwardMasterData;
 use crate::ops::IdConvert;
 use crate::Group;
 use crate::Id;
@@ -175,7 +175,7 @@ async fn test_basic_pull() {
 
     let pull_data = server
         .dag
-        .pull_fast_forward_master(VertexName("B".into()), VertexName("D".into()))
+        .export_pull_data(VertexName("B".into()), VertexName("D".into()))
         .await
         .unwrap();
 
