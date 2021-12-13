@@ -2202,17 +2202,19 @@ fn update_reserved(reserved: &mut IdSet, covered: &IdSet, low: Id, reserve_size:
     if reserve_size == 0 {
         return;
     }
-    let span = find_free_span(covered, low, reserve_size as _);
+    let span = find_free_span(covered, low, reserve_size as _, true);
     reserved.push(span);
 }
 
 /// Find a span with constraints:
 /// - does not overlap with `covered`.
 /// - `span.low` >= the given `low`.
-/// - `span.high - span.low` is `reserve_size`.
+/// - if `shrink_to_fit` is `false`, `span.high - span.low` must be `reserve_size`.
+/// - if `shrink_to_fit` is `true`, the span can be smaller than `reserve_size` to
+///   fill up existing gaps in `covered`.
 ///
 /// `reserve_size` cannot be 0.
-fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64) -> IdSpan {
+fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64, shrink_to_fit: bool) -> IdSpan {
     assert!(reserve_size > 0);
     let mut low = low;
     let mut high;
@@ -2225,7 +2227,7 @@ fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64) -> IdSpan {
             // Overlap with existing covered spans. Decrease `high` so it
             // no longer overlap.
             let last_free = span.low - 1;
-            if last_free >= low {
+            if last_free >= low && shrink_to_fit {
                 // Use the remaining part of the previous reservation.
                 //   [----------reserved--------------]
                 //             [--intersected--]
@@ -2253,6 +2255,9 @@ fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64) -> IdSpan {
         break;
     }
     let span = IdSpan::new(low, high);
+    if !shrink_to_fit {
+        assert_eq!(span.count(), reserve_size);
+    }
     span
 }
 
