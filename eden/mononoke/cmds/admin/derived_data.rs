@@ -16,7 +16,7 @@ use cmdlib::{
     args::{self, MononokeMatches},
     helpers::{self, csid_resolve},
 };
-use context::CoreContext;
+use context::{CoreContext, SessionClass};
 use derived_data::BonsaiDerived;
 use derived_data_manager::BonsaiDerivable;
 use derived_data_utils::{
@@ -191,7 +191,7 @@ pub async fn subcommand_derived_data<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let mut ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).await?;
 
     match sub_m.subcommand() {
@@ -298,9 +298,12 @@ pub async fn subcommand_derived_data<'a>(
             if arg_matches.is_present(ARG_REDERIVE) {
                 info!(ctx.logger(), "about to rederive {} commits", csids.len());
                 derived_utils.regenerate(&csids);
+                // Force this binary to write to all blobstores
+                ctx.session_mut()
+                    .override_session_class(SessionClass::Background);
             } else {
                 info!(ctx.logger(), "about to derive {} commits", csids.len());
-            }
+            };
 
             for csid in csids {
                 info!(ctx.logger(), "deriving {}", csid);
