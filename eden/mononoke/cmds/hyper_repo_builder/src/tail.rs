@@ -6,10 +6,10 @@
  */
 
 use anyhow::{anyhow, Context, Error};
-use blobrepo::BlobRepo;
+use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
-use commit_transformation::{rewrite_stack_no_merges, upload_commits};
+use commit_transformation::{copy_file_contents, rewrite_stack_no_merges};
 use context::CoreContext;
 use cross_repo_sync::{
     mover_to_multi_mover,
@@ -17,7 +17,7 @@ use cross_repo_sync::{
 };
 use futures::{compat::Stream01CompatExt, stream, StreamExt, TryStreamExt};
 use mononoke_api_types::InnerRepo;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, DateTime, FileChange};
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 use slog::info;
@@ -197,6 +197,32 @@ async fn sync_commits(
         source_repo.blob_repo.name()
     );
 
+    let mut files_to_sync = vec![];
+    for bcs in &bcss {
+        let new_files_to_sync = bcs.file_changes().filter_map(|(_, change)| match change {
+            FileChange::Change(tc) => Some(tc.content_id()),
+            FileChange::UntrackedChange(uc) => Some(uc.content_id()),
+            FileChange::Deletion | FileChange::UntrackedDeletion => None,
+        });
+        files_to_sync.extend(new_files_to_sync);
+    }
+    info!(
+        ctx.logger(),
+        "started syncing {} file contents",
+        files_to_sync.len()
+    );
+    copy_file_contents(
+        ctx,
+        &source_repo.blob_repo,
+        hyper_repo,
+        files_to_sync,
+        |i| {
+            info!(ctx.logger(), "copied {} files", i);
+        },
+    )
+    .await?;
+    info!(ctx.logger(), "synced file contents");
+
     let (mover, _) = get_mover_and_reverse_mover(&source_repo.blob_repo)?;
     let mover = mover_to_multi_mover(mover);
     let rewritten_commits = rewrite_stack_no_merges(
@@ -210,6 +236,10 @@ async fn sync_commits(
             latest_synced_state.insert(source_repo.blob_repo.name().to_string(), cs_id);
             let extra = encode_latest_synced_state_extras(latest_synced_state);
             rewritten_commit.extra = extra;
+            // overwrite the date so that it's closer to when the commit actually
+            // created in hyper repo rather than when it's created in source repo.
+            // This makes it easier to track e.g. derivation delay.
+            rewritten_commit.author_date = DateTime::now();
             rewritten_commit
         },
     )
@@ -224,8 +254,7 @@ async fn sync_commits(
         .last()
         .map(|cs| cs.get_changeset_id())
         .ok_or_else(|| anyhow!("no commits found!"))?;
-
-    upload_commits(&ctx, rewritten_commits, &source_repo.blob_repo, hyper_repo).await?;
+    save_bonsai_changesets(rewritten_commits, ctx.clone(), hyper_repo.clone()).await?;
 
     let mut txn = hyper_repo.update_bookmark_transaction(ctx.clone());
     txn.update(
