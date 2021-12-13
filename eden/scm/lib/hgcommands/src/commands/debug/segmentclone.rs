@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -63,7 +63,7 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
 
     let len = clone_data.idmap.len();
     let bar = ProgressBar::register_new("Building", len as _, "commits");
-    let idmap: HashMap<dag::Id, dag::Vertex> = clone_data
+    let idmap: BTreeMap<_, _> = clone_data
         .idmap
         .into_iter()
         .map(|(k, v)| {
@@ -71,7 +71,6 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
             (k, VertexName::copy_from(&v.into_byte_array()))
         })
         .collect();
-
 
     let master = idmap.iter().max_by_key(|i| i.0).map(|i| i.1.clone());
     if let Some(master) = master {

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -17,7 +17,7 @@ use crate::segment::PreparedFlatSegments;
 #[derive(Serialize, Deserialize)]
 pub struct CloneData<Name> {
     pub flat_segments: PreparedFlatSegments,
-    pub idmap: HashMap<Id, Name>,
+    pub idmap: BTreeMap<Id, Name>,
 }
 
 impl<Name> CloneData<Name> {
@@ -46,7 +46,7 @@ where
         };
         CloneData {
             flat_segments,
-            idmap: HashMap::arbitrary(g),
+            idmap: Arbitrary::arbitrary(g),
         }
     }
 }

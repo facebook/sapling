@@ -146,7 +146,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
             .context("error retrieving mappings for dag universal ids")?;
         let clone_data = CloneData {
             flat_segments,
-            idmap,
+            idmap: idmap.into_iter().collect(),
         };
         Ok(clone_data)
     }
@@ -192,7 +192,7 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
 
         let pull_data = CloneData {
             flat_segments,
-            idmap,
+            idmap: idmap.into_iter().collect(),
         };
         Ok(pull_data)
     }

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
@@ -80,7 +80,7 @@ impl ToApi for WireCloneData {
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        let mut idmap = HashMap::new();
+        let mut idmap = BTreeMap::new();
         for wie in self.idmap {
             idmap.insert(wie.dag_id.to_api()?, wie.hg_id.to_api()?);
         }

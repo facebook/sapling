@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -689,7 +689,7 @@ impl HgRepoContext {
     ) -> Result<CloneData<HgChangesetId>, MononokeError> {
         const CHUNK_SIZE: usize = 1000;
         let idmap_list = m_clone_data.idmap.into_iter().collect::<Vec<_>>();
-        let mut hg_idmap = HashMap::new();
+        let mut hg_idmap = BTreeMap::new();
         for chunk in idmap_list.chunks(CHUNK_SIZE) {
             let csids = chunk.iter().map(|(_, csid)| *csid).collect::<Vec<_>>();
             let mapping = self

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-
 use anyhow::Context;
 use async_runtime::block_unless_interrupted as block_on;
 use cliparser::define_flags;
@@ -57,7 +55,7 @@ pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
         pull_data.idmap.len()
     ))?;
 
-    let idmap: HashMap<dag::Id, dag::Vertex> = pull_data
+    let idmap = pull_data
         .idmap
         .into_iter()
         .map(|(k, v)| (k, VertexName::copy_from(&v.into_byte_array())))

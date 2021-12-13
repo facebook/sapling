@@ -794,7 +794,7 @@ where
     S: TryClone + Send + Sync + 'static,
 {
     async fn export_clone_data(&self) -> Result<CloneData<VertexName>> {
-        let idmap: HashMap<Id, VertexName> = {
+        let idmap: BTreeMap<Id, VertexName> = {
             let ids: Vec<Id> = self.dag.universal_ids()?.into_iter().collect();
             tracing::debug!("export: {} universally known vertexes", ids.len());
             let names = {
@@ -848,7 +848,7 @@ where
         let flat_segments = self.dag.idset_to_flat_segments(id_set)?;
         let ids: Vec<_> = flat_segments.parents_head_and_roots().into_iter().collect();
 
-        let idmap: HashMap<Id, VertexName> = {
+        let idmap: BTreeMap<Id, VertexName> = {
             tracing::debug!("pull: {} vertexes in idmap", ids.len());
             let names = {
                 let fallible_names = self.vertex_name_batch(&ids).await?;
