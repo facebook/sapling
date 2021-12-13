@@ -133,7 +133,7 @@ pub mod derived_data_service {
             lease: Arc<dyn LeaseOps>,
             scuba: MononokeScubaSampleBuilder,
             config: DerivedDataConfig,
-            derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
+            derivation_service_client: Option<Arc<dyn DerivationClient>>,
         ) -> Result<Self> {
             let manager = DerivedDataManager::new(
                 repo_id,

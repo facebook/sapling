@@ -151,21 +151,12 @@ impl DerivedDataManager {
                     )
                     .await
                 {
-                    Ok(response) => match response {
-                        Some(_) => {
-                            return Ok((
-                                csid,
-                                derivation_ctx
-                                    .fetch_derived::<Derivable>(ctx, csid)
-                                    .await?
-                                    .ok_or_else(|| anyhow!("failed to derive {}", csid))?,
-                            ));
-                        }
-                        None => {
-                            tokio::time::sleep(RETRY_DELAY).await;
-                            continue;
-                        }
-                    },
+                    Ok(Some(data)) => {
+                        return Ok((csid, Derivable::from_thrift(data)?));
+                    }
+                    Ok(None) => {
+                        tokio::time::sleep(RETRY_DELAY).await;
+                    }
                     Err(e) => {
                         if attempt >= RETRY_ATTEMPTS_LIMIT {
                             self.derived_data_scuba::<Derivable>(discovery_stats)
@@ -174,7 +165,6 @@ impl DerivedDataManager {
                             break;
                         }
                         attempt += 1;
-                        continue;
                     }
                 }
             }

@@ -46,7 +46,7 @@ impl RepoDerivedData {
         lease: Arc<dyn LeaseOps>,
         scuba: MononokeScubaSampleBuilder,
         config: DerivedDataConfig,
-        derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
+        derivation_service_client: Option<Arc<dyn DerivationClient>>,
     ) -> Result<RepoDerivedData> {
         let config_name = config.enabled_config_name.clone();
         let manager = DerivedDataManager::new(

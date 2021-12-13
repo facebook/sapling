@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use derived_data_service_if::types as thrift;
 use mononoke_types::ChangesetId;
 
 #[derive(Clone, Debug)]
@@ -17,13 +18,11 @@ pub struct RemoteDerivationOptions {
 
 #[async_trait]
 pub trait DerivationClient: Send + Sync {
-    type Output;
-
     async fn derive_remotely(
         &self,
         repo_name: String,
         derived_data_type: String,
         cs_id: ChangesetId,
         config_name: String,
-    ) -> Result<Option<Self::Output>>;
+    ) -> Result<Option<thrift::DerivedData>>;
 }

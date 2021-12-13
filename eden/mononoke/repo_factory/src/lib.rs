@@ -923,8 +923,8 @@ fn build_scuba(
 fn get_derivation_client(
     fb: FacebookInit,
     remote_derivation_options: RemoteDerivationOptions,
-) -> Result<Option<Arc<dyn DerivationClient<Output = ()>>>> {
-    let derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>> =
+) -> Result<Option<Arc<dyn DerivationClient>>> {
+    let derivation_service_client: Option<Arc<dyn DerivationClient>> =
         if remote_derivation_options.derive_remotely {
             #[cfg(fbcode_build)]
             {

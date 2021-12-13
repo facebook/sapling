@@ -54,7 +54,7 @@ pub struct DerivedDataManagerInner {
     /// the persistent blobstore must be derived BEFORE deriving data in the bubble.
     secondary: Option<SecondaryManagerData>,
     /// If this client is set, then derivation will be done remotely on derived data service
-    derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
+    derivation_service_client: Option<Arc<dyn DerivationClient>>,
 }
 
 pub struct DerivationAssignment {
@@ -91,7 +91,7 @@ impl DerivedDataManager {
         scuba: MononokeScubaSampleBuilder,
         config_name: String,
         config: DerivedDataTypesConfig,
-        derivation_service_client: Option<Arc<dyn DerivationClient<Output = ()>>>,
+        derivation_service_client: Option<Arc<dyn DerivationClient>>,
     ) -> Self {
         let lease = DerivedDataLease::new(lease);
         DerivedDataManager {
@@ -222,7 +222,7 @@ impl DerivedDataManager {
         self.inner.filenodes.as_deref().context("Missing filenodes")
     }
 
-    pub fn derivation_service_client(&self) -> Option<&dyn DerivationClient<Output = ()>> {
+    pub fn derivation_service_client(&self) -> Option<&dyn DerivationClient> {
         self.inner.derivation_service_client.as_deref()
     }
 }
