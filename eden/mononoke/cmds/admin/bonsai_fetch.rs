@@ -12,7 +12,7 @@ use clap::{App, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
-use ephemeral_blobstore::RepoEphemeralBlobstore;
+use ephemeral_blobstore::RepoEphemeralStore;
 use fbinit::FacebookInit;
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime, FileChange};
 use repo_blobstore::RepoBlobstore;
@@ -65,7 +65,7 @@ pub async fn subcommand_bonsai_fetch<'a>(
         #[facet]
         blobstore: RepoBlobstore,
         #[facet]
-        ephemeral_blobstore: RepoEphemeralBlobstore,
+        ephemeral_blobstore: RepoEphemeralStore,
     }
     let container: BonsaiFetchContainer = args::open_repo(fb, &logger, &matches).await?;
     let blobstore = if let Some(bubble_id) = bubble {

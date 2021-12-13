@@ -387,7 +387,7 @@ impl EdenApiHandler for FetchSnapshotHandler {
         let repo = &repo;
         let cs_id = ChangesetId::from(request.cs_id);
         let bubble_id = repo
-            .ephemeral_blobstore()
+            .ephemeral_store()
             .bubble_from_changeset(&cs_id)
             .await?
             .context("Snapshot not in a bubble")?;

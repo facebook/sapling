@@ -13,7 +13,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use ephemeral_blobstore::BubbleId;
-use ephemeral_blobstore::RepoEphemeralBlobstore;
+use ephemeral_blobstore::RepoEphemeralStore;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
@@ -57,7 +57,7 @@ pub struct CustomRepo {
     pub blob_repo: BlobRepo,
 
     #[facet]
-    pub ephemeral_blobstore: RepoEphemeralBlobstore,
+    pub ephemeral_blobstore: RepoEphemeralStore,
 }
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {

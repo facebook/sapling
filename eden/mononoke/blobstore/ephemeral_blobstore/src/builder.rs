@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Ephemeral Blobstore Builder
+//! Ephemeral Store Builder
 
 use std::sync::Arc;
 
@@ -15,15 +15,15 @@ use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
 use std::time::Duration;
 
-use crate::store::RepoEphemeralBlobstore;
+use crate::store::RepoEphemeralStore;
 
-/// Ephemeral Blobstore Builder.
-pub struct RepoEphemeralBlobstoreBuilder {
+/// Ephemeral Store Builder.
+pub struct RepoEphemeralStoreBuilder {
     /// Database used to manage the ephemeral blobstore metadata.
     connections: SqlConnections,
 }
 
-impl SqlConstruct for RepoEphemeralBlobstoreBuilder {
+impl SqlConstruct for RepoEphemeralStoreBuilder {
     const LABEL: &'static str = "ephemeral_blobstore";
 
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-ephemeral-blobstore.sql");
@@ -33,15 +33,15 @@ impl SqlConstruct for RepoEphemeralBlobstoreBuilder {
     }
 }
 
-impl RepoEphemeralBlobstoreBuilder {
+impl RepoEphemeralStoreBuilder {
     pub fn build(
         self,
         repo_id: RepositoryId,
         blobstore: Arc<dyn Blobstore>,
         initial_bubble_lifespan: Duration,
         bubble_expiration_grace: Duration,
-    ) -> RepoEphemeralBlobstore {
-        RepoEphemeralBlobstore::new(
+    ) -> RepoEphemeralStore {
+        RepoEphemeralStore::new(
             repo_id,
             self.connections,
             blobstore,

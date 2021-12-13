@@ -29,7 +29,7 @@ use dbbookmarks::{ArcSqlBookmarks, SqlBookmarksBuilder};
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_manager::BonsaiDerivable;
-use ephemeral_blobstore::{ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore};
+use ephemeral_blobstore::{ArcRepoEphemeralStore, RepoEphemeralStore};
 use fastlog::RootFastlog;
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
@@ -441,11 +441,8 @@ impl TestRepoFactory {
     }
 
     /// Disabled ephemeral repo
-    pub fn repo_ephemeral_blobstore(
-        &self,
-        repo_identity: &ArcRepoIdentity,
-    ) -> ArcRepoEphemeralBlobstore {
-        Arc::new(RepoEphemeralBlobstore::disabled(repo_identity.id()))
+    pub fn repo_ephemeral_store(&self, repo_identity: &ArcRepoIdentity) -> ArcRepoEphemeralStore {
+        Arc::new(RepoEphemeralStore::disabled(repo_identity.id()))
     }
 
     /// Mutable renames

@@ -46,9 +46,7 @@ use derived_data_client_library::Client as DerivationServiceClient;
 use derived_data_manager::{ArcDerivedDataManagerSet, DerivedDataManagerSet};
 use derived_data_remote::{DerivationClient, RemoteDerivationOptions};
 use environment::{Caching, MononokeEnvironment};
-use ephemeral_blobstore::{
-    ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore, RepoEphemeralBlobstoreBuilder,
-};
+use ephemeral_blobstore::{ArcRepoEphemeralStore, RepoEphemeralStore, RepoEphemeralStoreBuilder};
 use fbinit::FacebookInit;
 use filenodes::ArcFilenodes;
 use filestore::{ArcFilestoreConfig, FilestoreConfig};
@@ -827,14 +825,14 @@ impl RepoFactory {
             .await
     }
 
-    pub async fn repo_ephemeral_blobstore(
+    pub async fn repo_ephemeral_store(
         &self,
         repo_identity: &ArcRepoIdentity,
         repo_config: &ArcRepoConfig,
-    ) -> Result<ArcRepoEphemeralBlobstore> {
+    ) -> Result<ArcRepoEphemeralStore> {
         if let Some(ephemeral_config) = &repo_config.storage_config.ephemeral_blobstore {
             let blobstore = self.blobstore(&ephemeral_config.blobstore).await?;
-            let ephemeral_blobstore = RepoEphemeralBlobstoreBuilder::with_database_config(
+            let ephemeral_blobstore = RepoEphemeralStoreBuilder::with_database_config(
                 self.env.fb,
                 &ephemeral_config.metadata,
                 &self.env.mysql_options,
@@ -848,9 +846,7 @@ impl RepoFactory {
             );
             Ok(Arc::new(ephemeral_blobstore))
         } else {
-            Ok(Arc::new(RepoEphemeralBlobstore::disabled(
-                repo_identity.id(),
-            )))
+            Ok(Arc::new(RepoEphemeralStore::disabled(repo_identity.id())))
         }
     }
 

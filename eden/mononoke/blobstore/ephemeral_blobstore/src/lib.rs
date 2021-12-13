@@ -21,9 +21,9 @@ mod store;
 mod view;
 
 pub use crate::bubble::{Bubble, BubbleId, StorageLocation};
-pub use crate::builder::RepoEphemeralBlobstoreBuilder;
+pub use crate::builder::RepoEphemeralStoreBuilder;
 pub use crate::changesets::EphemeralChangesets;
 pub use crate::error::EphemeralBlobstoreError;
 pub use crate::handle::EphemeralHandle;
-pub use crate::store::{ArcRepoEphemeralBlobstore, RepoEphemeralBlobstore};
+pub use crate::store::{ArcRepoEphemeralStore, RepoEphemeralStore};
 pub use crate::view::EphemeralRepoView;

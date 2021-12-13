@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Ephemeral Blobstore
+//! Ephemeral Store
 
 use std::sync::Arc;
 
@@ -21,16 +21,16 @@ use std::time::Duration;
 use crate::bubble::{Bubble, BubbleId};
 use crate::error::EphemeralBlobstoreError;
 
-/// Ephemeral Blobstore.
+/// Ephemeral Store.
 #[derive(Derivative)]
 #[derivative(Debug)]
-struct RepoEphemeralBlobstoreInner {
+struct RepoEphemeralStoreInner {
     /// The backing blobstore where blobs are stored, without any redaction
     /// or repo prefix wrappers.
     pub(crate) blobstore: Arc<dyn Blobstore>,
 
     #[derivative(Debug = "ignore")]
-    /// Database used to manage the ephemeral blobstore.
+    /// Database used to manage the ephemeral store.
     pub(crate) connections: SqlConnections,
 
     /// Initial value of the lifespan for bubbles in this store, i.e. the
@@ -44,14 +44,14 @@ struct RepoEphemeralBlobstoreInner {
     pub(crate) bubble_expiration_grace: ChronoDuration,
 }
 
-/// Ephemeral Blobstore.
+/// Ephemeral Store
 #[facet::facet]
 #[derive(Debug, Clone)]
-pub struct RepoEphemeralBlobstore {
+pub struct RepoEphemeralStore {
     /// Repo this belongs to
     repo_id: RepositoryId,
 
-    inner: Option<Arc<RepoEphemeralBlobstoreInner>>,
+    inner: Option<Arc<RepoEphemeralStoreInner>>,
 }
 
 queries! {
@@ -87,7 +87,7 @@ fn to_chrono(duration: Duration) -> ChronoDuration {
     ChronoDuration::from_std(duration).unwrap_or_else(|_| ChronoDuration::max_value())
 }
 
-impl RepoEphemeralBlobstoreInner {
+impl RepoEphemeralStoreInner {
     async fn create_bubble(&self, custom_duration: Option<Duration>) -> Result<Bubble> {
         let created_at = DateTime::now();
         let duration = match custom_duration {
@@ -155,7 +155,7 @@ impl RepoEphemeralBlobstoreInner {
     }
 }
 
-impl RepoEphemeralBlobstore {
+impl RepoEphemeralStore {
     pub(crate) fn new(
         repo_id: RepositoryId,
         connections: SqlConnections,
@@ -165,7 +165,7 @@ impl RepoEphemeralBlobstore {
     ) -> Self {
         Self {
             repo_id,
-            inner: Some(Arc::new(RepoEphemeralBlobstoreInner {
+            inner: Some(Arc::new(RepoEphemeralStoreInner {
                 blobstore,
                 connections,
                 initial_bubble_lifespan: to_chrono(initial_bubble_lifespan),
@@ -181,7 +181,7 @@ impl RepoEphemeralBlobstore {
         }
     }
 
-    fn inner(&self) -> Result<&RepoEphemeralBlobstoreInner, EphemeralBlobstoreError> {
+    fn inner(&self) -> Result<&RepoEphemeralStoreInner, EphemeralBlobstoreError> {
         self.inner
             .as_deref()
             .ok_or_else(|| EphemeralBlobstoreError::NoEphemeralBlobstore(self.repo_id))
@@ -205,7 +205,7 @@ impl RepoEphemeralBlobstore {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::builder::RepoEphemeralBlobstoreBuilder;
+    use crate::builder::RepoEphemeralStoreBuilder;
     use blobstore::{BlobstoreBytes, BlobstoreKeyParam, BlobstoreKeySource};
     use context::CoreContext;
     use fbinit::FacebookInit;
@@ -233,7 +233,7 @@ mod test {
             REPO_ZERO,
             MononokeScubaSampleBuilder::with_discard(),
         );
-        let eph = RepoEphemeralBlobstoreBuilder::with_sqlite_in_memory()?.build(
+        let eph = RepoEphemeralStoreBuilder::with_sqlite_in_memory()?.build(
             REPO_ZERO,
             blobstore.clone(),
             Duration::from_secs(30 * 24 * 60 * 60),

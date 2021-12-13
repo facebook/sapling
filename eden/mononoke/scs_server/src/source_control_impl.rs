@@ -10,7 +10,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use ephemeral_blobstore::{BubbleId, RepoEphemeralBlobstore};
+use ephemeral_blobstore::{BubbleId, RepoEphemeralStore};
 use fbinit::FacebookInit;
 use futures::future::BoxFuture;
 use futures::try_join;
@@ -224,7 +224,7 @@ impl SourceControlServiceImpl {
         bubble_fetcher: F,
     ) -> Result<RepoContext, errors::ServiceError>
     where
-        F: FnOnce(RepoEphemeralBlobstore) -> R,
+        F: FnOnce(RepoEphemeralStore) -> R,
         R: Future<Output = anyhow::Result<Option<BubbleId>>>,
     {
         let repo = self
@@ -238,7 +238,7 @@ impl SourceControlServiceImpl {
     fn bubble_fetcher_for_changeset(
         &self,
         specifier: ChangesetSpecifier,
-    ) -> impl FnOnce(RepoEphemeralBlobstore) -> BoxFuture<'static, anyhow::Result<Option<BubbleId>>>
+    ) -> impl FnOnce(RepoEphemeralStore) -> BoxFuture<'static, anyhow::Result<Option<BubbleId>>>
     {
         move |ephemeral| async move { specifier.bubble_id(ephemeral).await }.boxed()
     }

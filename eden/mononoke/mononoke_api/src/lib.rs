@@ -15,7 +15,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Error};
 pub use bookmarks::BookmarkName;
 use ephemeral_blobstore::BubbleId;
-use ephemeral_blobstore::RepoEphemeralBlobstore;
+use ephemeral_blobstore::RepoEphemeralStore;
 use futures::{future, Future};
 use futures_watchdog::WatchdogExt;
 use mononoke_types::RepositoryId;
@@ -144,7 +144,7 @@ impl Mononoke {
         bubble_fetcher: F,
     ) -> Result<Option<RepoContext>, MononokeError>
     where
-        F: FnOnce(RepoEphemeralBlobstore) -> R,
+        F: FnOnce(RepoEphemeralStore) -> R,
         R: Future<Output = anyhow::Result<Option<BubbleId>>>,
     {
         match self.repos.get(name.as_ref()) {

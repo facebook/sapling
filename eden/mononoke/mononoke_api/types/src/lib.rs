@@ -7,7 +7,7 @@
 
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateLog, Bookmarks};
-use ephemeral_blobstore::RepoEphemeralBlobstore;
+use ephemeral_blobstore::RepoEphemeralStore;
 use mutable_renames::MutableRenames;
 use phases::Phases;
 use repo_derived_data::RepoDerivedData;
@@ -31,7 +31,7 @@ pub struct InnerRepo {
     pub segmented_changelog: dyn SegmentedChangelog,
 
     #[facet]
-    pub ephemeral_blobstore: RepoEphemeralBlobstore,
+    pub ephemeral_store: RepoEphemeralStore,
 
     #[facet]
     pub mutable_renames: MutableRenames,

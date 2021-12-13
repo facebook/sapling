@@ -28,7 +28,7 @@ use cross_repo_sync::{
     CommitSyncRepos, CommitSyncer,
 };
 use derived_data_manager::BonsaiDerivable as NewBonsaiDerivable;
-use ephemeral_blobstore::RepoEphemeralBlobstore;
+use ephemeral_blobstore::RepoEphemeralStore;
 use ephemeral_blobstore::{Bubble, BubbleId, StorageLocation};
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
@@ -322,7 +322,7 @@ impl Repo {
             blob_repo,
             skiplist_index: Arc::new(SkiplistIndex::new()),
             segmented_changelog: Arc::new(DisabledSegmentedChangelog::new()),
-            ephemeral_blobstore: Arc::new(RepoEphemeralBlobstore::disabled(repo_id)),
+            ephemeral_store: Arc::new(RepoEphemeralStore::disabled(repo_id)),
             mutable_renames: Arc::new(MutableRenames::new(
                 repo_id,
                 SqlMutableRenamesStore::with_sqlite_in_memory()?,
@@ -422,9 +422,9 @@ impl Repo {
         &self.inner.skiplist_index
     }
 
-    /// The ephemeral blobstore for the referenced repository
-    pub fn ephemeral_blobstore(&self) -> &Arc<RepoEphemeralBlobstore> {
-        &self.inner.ephemeral_blobstore
+    /// The ephemeral store for the referenced repository
+    pub fn ephemeral_store(&self) -> &Arc<RepoEphemeralStore> {
+        &self.inner.ephemeral_store
     }
 
     /// The commit sync mapping for the referenced repository
@@ -743,19 +743,18 @@ impl RepoContext {
         bubble_fetcher: F,
     ) -> Result<Self, MononokeError>
     where
-        F: FnOnce(RepoEphemeralBlobstore) -> R,
+        F: FnOnce(RepoEphemeralStore) -> R,
         R: Future<Output = anyhow::Result<Option<BubbleId>>>,
     {
         // Check the user is permitted to access this repo.
         repo.check_permissions(&ctx, "read").await?;
-        let blob_repo = if let Some(bubble_id) =
-            bubble_fetcher((**repo.ephemeral_blobstore()).clone()).await?
-        {
-            let bubble = repo.ephemeral_blobstore().open_bubble(bubble_id).await?;
-            repo.blob_repo().with_bubble(bubble)
-        } else {
-            repo.blob_repo().clone()
-        };
+        let blob_repo =
+            if let Some(bubble_id) = bubble_fetcher((**repo.ephemeral_store()).clone()).await? {
+                let bubble = repo.ephemeral_store().open_bubble(bubble_id).await?;
+                repo.blob_repo().with_bubble(bubble)
+            } else {
+                repo.blob_repo().clone()
+            };
         Ok(Self {
             repo,
             ctx,
@@ -809,9 +808,9 @@ impl RepoContext {
         self.repo.skiplist_index()
     }
 
-    /// The ephemeral blobstore for the referenced repository
-    pub fn ephemeral_blobstore(&self) -> &Arc<RepoEphemeralBlobstore> {
-        self.repo.ephemeral_blobstore()
+    /// The ephemeral store for the referenced repository
+    pub fn ephemeral_store(&self) -> &Arc<RepoEphemeralStore> {
+        self.repo.ephemeral_store()
     }
 
     /// The segmeneted changelog for the referenced repository.
@@ -862,11 +861,7 @@ impl RepoContext {
 
     /// Load bubble from id
     pub async fn open_bubble(&self, bubble_id: BubbleId) -> Result<Bubble, MononokeError> {
-        Ok(self
-            .repo
-            .ephemeral_blobstore()
-            .open_bubble(bubble_id)
-            .await?)
+        Ok(self.repo.ephemeral_store().open_bubble(bubble_id).await?)
     }
 
     async fn changesets(
@@ -891,7 +886,7 @@ impl RepoContext {
             Bubble(id) => Some(id),
             UnknownBubble => match self
                 .repo
-                .ephemeral_blobstore()
+                .ephemeral_store()
                 .bubble_from_changeset(&changeset_id)
                 .await?
             {

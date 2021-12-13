@@ -6,7 +6,7 @@
  */
 
 use anyhow::{Context, Result};
-use ephemeral_blobstore::{BubbleId, RepoEphemeralBlobstore};
+use ephemeral_blobstore::{BubbleId, RepoEphemeralStore};
 use std::fmt;
 
 /// A changeset ID.  This is the canonical ID for a changeset.
@@ -79,7 +79,7 @@ impl ChangesetSpecifier {
 
     pub async fn bubble_id(
         &self,
-        ephemeral_blobstore: RepoEphemeralBlobstore,
+        ephemeral_blobstore: RepoEphemeralStore,
     ) -> Result<Option<BubbleId>> {
         use ChangesetSpecifier::*;
         Ok(match self {
