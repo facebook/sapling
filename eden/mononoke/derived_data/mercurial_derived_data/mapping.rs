@@ -21,8 +21,14 @@ use futures::future::try_join_all;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use slog::debug;
+use stats::prelude::*;
 use std::collections::HashMap;
 use tunables::tunables;
+
+define_stats! {
+    prefix = "mononoke.derived_data.hgchangesets";
+    new_parallel: timeseries(Rate, Sum),
+}
 
 use derived_data_service_if::types as thrift;
 
@@ -86,6 +92,7 @@ impl BonsaiDerivable for MappedHgChangesetId {
             return Ok(res);
         }
 
+        STATS::new_parallel.add_value(1);
         let linear_stacks = split_bonsais_in_linear_stacks(
             &bonsais,
             SplitOptions {

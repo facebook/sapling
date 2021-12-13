@@ -17,10 +17,16 @@ use derived_data_manager::{BonsaiDerivable, DerivationContext};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use itertools::Itertools;
 use mononoke_types::{ChangesetId, FsnodeId};
+use stats::prelude::*;
 use tunables::tunables;
 
 use crate::derive::{derive_fsnode, derive_fsnodes_stack};
 use crate::RootFsnodeId;
+
+define_stats! {
+    prefix = "mononoke.derived_data.fsnodes";
+    new_parallel: timeseries(Rate, Sum),
+}
 
 /// Derive a batch of fsnodes, potentially doing it faster than deriving fsnodes sequentially.
 /// The primary purpose of this is to be used while backfilling fsnodes for a large repository.
@@ -101,6 +107,7 @@ pub async fn derive_fsnode_in_batch(
             )
             .await?;
         } else {
+            STATS::new_parallel.add_value(1);
             new_batch_derivation(
                 ctx,
                 derivation_ctx,

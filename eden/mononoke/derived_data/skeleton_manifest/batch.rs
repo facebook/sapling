@@ -17,10 +17,16 @@ use derived_data_manager::{BonsaiDerivable, DerivationContext};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
+use stats::prelude::*;
 use tunables::tunables;
 
 use crate::derive::{derive_skeleton_manifest, derive_skeleton_manifest_stack};
 use crate::{RootSkeletonManifestId, SkeletonManifestId};
+
+define_stats! {
+    prefix = "mononoke.derived_data.skeleton_manifest";
+    new_parallel: timeseries(Rate, Sum),
+}
 
 /// Derive a batch of skeleton manifests, potentially doing it faster than
 /// deriving skeleton manifests sequentially.  The primary purpose of this is
@@ -79,6 +85,7 @@ pub async fn derive_skeleton_manifests_in_batch(
             )
             .await?;
         } else {
+            STATS::new_parallel.add_value(1);
             new_batch_derivation(
                 ctx,
                 derivation_ctx,

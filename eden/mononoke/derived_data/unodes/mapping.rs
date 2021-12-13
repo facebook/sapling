@@ -20,9 +20,15 @@ use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,
 };
 use slog::debug;
+use stats::prelude::*;
 use std::collections::HashMap;
 
 use derived_data_service_if::types as thrift;
+
+define_stats! {
+    prefix = "mononoke.derived_data.unodes";
+    new_parallel: timeseries(Rate, Sum),
+}
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct RootUnodeManifestId(pub ManifestUnodeId);
@@ -119,6 +125,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
             return Ok(res);
         }
 
+        STATS::new_parallel.add_value(1);
         let batch_len = bonsais.len();
         let stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::ChangeDelete.into())?;
 
