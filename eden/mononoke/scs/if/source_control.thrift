@@ -766,9 +766,14 @@ struct CommitInfoParams {
   1: set<CommitIdentityScheme> identity_schemes;
 }
 
+/// Parameters for the `commit_is_ancestor_of` method.
+///
+/// This method takes a commit specifier (the target commit), and checks
+/// whether it is an ancestor of some other commit in the same repository.
 struct CommitIsAncestorOfParams {
-  /// Other commit to check if this commit is an ancestor of.
-  1: CommitId other_commit_id;
+  /// Potentially descendant commit id to check whether or not the target
+  /// commit is an ancestor of.
+  1: CommitId descendant_commit_id;
 }
 
 struct CommitCommonBaseWithParams {

@@ -27,7 +27,7 @@ pub(super) const NAME: &str = "is-ancestor";
 
 pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
     let cmd = SubCommand::with_name(NAME)
-        .about("Finds a whether the first provided commit is ancestor of the second one.")
+        .about("Finds whether the first provided commit is an ancestor of the second one.")
         .setting(AppSettings::ColoredHelp);
     let cmd = add_repo_args(cmd);
     let cmd = add_scheme_args(cmd);
@@ -68,7 +68,7 @@ pub(super) async fn run(
         ..Default::default()
     };
     let params = thrift::CommitIsAncestorOfParams {
-        other_commit_id: ids[1].clone(),
+        descendant_commit_id: ids[1].clone(),
         ..Default::default()
     };
     let response = connection.commit_is_ancestor_of(&commit, &params).await?;

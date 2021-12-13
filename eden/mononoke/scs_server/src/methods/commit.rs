@@ -338,7 +338,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitIsAncestorOfParams,
     ) -> Result<bool, errors::ServiceError> {
         let (_repo, changeset, other_changeset) = self
-            .repo_changeset_pair(ctx, &commit, &params.other_commit_id)
+            .repo_changeset_pair(ctx, &commit, &params.descendant_commit_id)
             .await?;
         let is_ancestor_of = changeset.is_ancestor_of(other_changeset.id()).await?;
         Ok(is_ancestor_of)
