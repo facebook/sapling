@@ -217,10 +217,11 @@ impl TestDag {
         new_master: impl Into<Vertex>,
     ) -> Result<()> {
         self.set_remote(server);
-        let data = server
+        let missing = server
             .dag
-            .export_pull_data(old_master.into(), new_master.into())
+            .only(new_master.into().into(), old_master.into().into())
             .await?;
+        let data = server.dag.export_pull_data(&missing).await?;
         debug!("pull_ff data: {:?}", &data);
         self.dag.import_pull_data(data).await?;
         Ok(())

@@ -301,12 +301,9 @@ pub trait DagExportCloneData {
 
 #[async_trait::async_trait]
 pub trait DagExportPullData {
-    /// Pull fast forward master and return CloneData
-    async fn export_pull_data(
-        &self,
-        old_master: VertexName,
-        new_master: VertexName,
-    ) -> Result<CloneData<VertexName>>;
+    /// Export `CloneData` for vertexes in the given set.
+    /// The set is typcially calculated by `only(heads, common)`.
+    async fn export_pull_data(&self, set: &NameSet) -> Result<CloneData<VertexName>>;
 }
 
 /// Persistent the DAG on disk.

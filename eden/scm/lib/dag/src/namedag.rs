@@ -825,28 +825,10 @@ where
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
-    async fn export_pull_data(
-        &self,
-        old_master: VertexName,
-        new_master: VertexName,
-    ) -> Result<CloneData<VertexName>> {
-        let old = self.map.vertex_id(old_master).await?;
-        let new = self.map.vertex_id(new_master).await?;
-        let master_group = self.dag.master_group()?;
+    async fn export_pull_data(&self, set: &NameSet) -> Result<CloneData<VertexName>> {
+        let id_set = self.to_id_set(&set).await?;
 
-        if !master_group.contains(old) {
-            return programming(format!("old vertex {} is not in master group", old));
-        }
-
-        if !master_group.contains(new) {
-            return programming(format!("new vertex {} is not in master group", new));
-        }
-
-        let old_ancestors = self.dag.ancestors(old.into())?;
-        let new_ancestors = self.dag.ancestors(new.into())?;
-
-        let missing_set = new_ancestors.difference(&old_ancestors);
-        let flat_segments = self.dag.idset_to_flat_segments(missing_set)?;
+        let flat_segments = self.dag.idset_to_flat_segments(id_set)?;
         let ids: Vec<_> = flat_segments.parents_head_and_roots().into_iter().collect();
 
         let idmap: HashMap<Id, VertexName> = {

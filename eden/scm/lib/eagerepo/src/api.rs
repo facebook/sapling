@@ -235,11 +235,16 @@ impl EdenApi for EagerRepo {
         new_master: HgId,
     ) -> Result<dag::CloneData<HgId>, EdenApiError> {
         debug!("pull_fast_forward_master");
-        let old_master = VertexName(old_master.into_byte_array().to_vec().into());
-        let new_master = VertexName(new_master.into_byte_array().to_vec().into());
+        let old_master = Vertex::copy_from(old_master.as_ref());
+        let new_master = Vertex::copy_from(new_master.as_ref());
+        let set = self
+            .dag()
+            .only(new_master.into(), old_master.into())
+            .await
+            .map_err(map_dag_err)?;
         let clone_data = self
             .dag()
-            .export_pull_data(old_master, new_master)
+            .export_pull_data(&set)
             .await
             .map_err(map_dag_err)?;
         convert_clone_data(clone_data)

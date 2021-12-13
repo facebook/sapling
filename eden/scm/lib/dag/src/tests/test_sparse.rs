@@ -173,11 +173,8 @@ async fn test_basic_pull() {
     let mut client = server.client().await;
     client.drawdag("A-B", &["B"]);
 
-    let pull_data = server
-        .dag
-        .export_pull_data(VertexName("B".into()), VertexName("D".into()))
-        .await
-        .unwrap();
+    let missing = server.dag.only("D".into(), "B".into()).await.unwrap();
+    let pull_data = server.dag.export_pull_data(&missing).await.unwrap();
 
     client.dag.import_pull_data(pull_data).await.unwrap();
 
