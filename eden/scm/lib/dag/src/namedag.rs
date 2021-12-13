@@ -69,6 +69,7 @@ use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::types_ext::PreparedFlatSegmentsExt;
 use crate::IdSet;
+use crate::IdSpan;
 use crate::Level;
 use crate::Result;
 use crate::VerLink;
@@ -2201,6 +2202,18 @@ fn update_reserved(reserved: &mut IdSet, covered: &IdSet, low: Id, reserve_size:
     if reserve_size == 0 {
         return;
     }
+    let span = find_free_span(covered, low, reserve_size as _);
+    reserved.push(span);
+}
+
+/// Find a span with constraints:
+/// - does not overlap with `covered`.
+/// - `span.low` >= the given `low`.
+/// - `span.high - span.low` is `reserve_size`.
+///
+/// `reserve_size` cannot be 0.
+fn find_free_span(covered: &IdSet, low: Id, reserve_size: u64) -> IdSpan {
+    assert!(reserve_size > 0);
     let mut low = low;
     let mut high;
     loop {
@@ -2239,7 +2252,8 @@ fn update_reserved(reserved: &mut IdSet, covered: &IdSet, low: Id, reserve_size:
         }
         break;
     }
-    reserved.push(low..=high);
+    let span = IdSpan::new(low, high);
+    span
 }
 
 fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
