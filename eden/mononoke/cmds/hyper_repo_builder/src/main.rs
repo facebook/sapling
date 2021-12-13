@@ -38,9 +38,11 @@ use crate::tail::tail_once;
 
 const ARG_CHANGESET: &str = "changeset";
 const ARG_HYPER_REPO_BOOKMARK_NAME: &str = "hyper-repo-bookmark-name";
+const ARG_PER_COMMIT_FILE_CHANGES_LIMIT: &str = "per-commit-file-changes-limit";
 const ARG_SOURCE_REPO: &str = "source-repo";
 const ARG_SOURCE_REPO_BOOKMARK_NAME: &str = "source-repo-bookmark-name";
 const ARG_ONCE: &str = "once";
+const DEFAULT_FILE_CHANGES_LIMIT: usize = 10000;
 const SUBCOMMAND_ADD_SOURCE_REPO: &str = "add-source-repo";
 const SUBCOMMAND_TAIL: &str = "tail";
 const SUBCOMMAND_VALIDATE: &str = "validate";
@@ -128,6 +130,11 @@ async fn subcommand_add_source_repo<'a>(
         &hyper_repo,
         &source_bookmark,
         &hyper_repo_bookmark,
+        Some(args::get_usize(
+            sub_m,
+            ARG_PER_COMMIT_FILE_CHANGES_LIMIT,
+            DEFAULT_FILE_CHANGES_LIMIT,
+        )),
     )
     .await?;
 
@@ -231,6 +238,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .required(true)
                         .takes_value(true)
                         .help("new repo to add to a hyper repo"),
+                )
+                .arg(
+                    Arg::with_name(ARG_PER_COMMIT_FILE_CHANGES_LIMIT)
+                        .long(ARG_PER_COMMIT_FILE_CHANGES_LIMIT)
+                        .required(false)
+                        .takes_value(true)
+                        .help("limits how many commits created in the initial commit that introduces the source repo")
                 ),
         )
         .subcommand(

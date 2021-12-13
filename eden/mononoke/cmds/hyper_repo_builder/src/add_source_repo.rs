@@ -31,6 +31,7 @@ pub async fn add_source_repo(
     hyper_repo: &BlobRepo,
     source_bookmark: &Source<BookmarkName>,
     hyper_repo_bookmark: &Target<BookmarkName>,
+    per_commit_file_changes_limit: Option<usize>,
 ) -> Result<(), Error> {
     let source_bcs_id = source_repo
         .get_bonsai_bookmark(ctx.clone(), source_bookmark)
@@ -92,6 +93,7 @@ pub async fn add_source_repo(
         }),
         parent,
         source_bcs_id,
+        per_commit_file_changes_limit,
     )
     .await?;
 
@@ -134,41 +136,76 @@ async fn create_new_bonsai_changeset_for_source_repo(
     leaf_entries: impl Iterator<Item = (MPath, (FileType, u64, ContentId))>,
     hyper_parent: Option<ChangesetId>,
     source_bcs_id: ChangesetId,
+    limit: Option<usize>,
 ) -> Result<ChangesetId, Error> {
-    let file_changes = leaf_entries.map(|(path, (ty, size, content_id))| {
-        (path, FileChange::tracked(content_id, ty, size, None))
-    });
+    let file_changes = leaf_entries
+        .map(|(path, (ty, size, content_id))| {
+            (path, FileChange::tracked(content_id, ty, size, None))
+        })
+        .collect::<Vec<_>>();
 
-    let mut extra = match hyper_parent {
-        Some(parent) => {
-            let parent = parent.load(ctx, &hyper_repo.get_blobstore()).await?;
-            decode_latest_synced_state_extras(parent.extra())?
+    let file_changes_per_commit = match limit {
+        // `if !file_changes.is_empty()` makes sure that if file changes are empty then we still
+        // create a bonsai changeset for them.
+        Some(limit) if !file_changes.is_empty() => file_changes.chunks(limit).collect::<Vec<_>>(),
+        _ => {
+            vec![file_changes.as_ref()]
         }
-        None => Default::default(),
     };
 
-    // Append extra that shows what was the latest replayed commit from a given source-repo
-    extra.insert(source_repo.name().to_string(), source_bcs_id);
+    let len = file_changes_per_commit.len();
+    info!(ctx.logger(), "about to create {} commits", len);
 
-    let bcs = BonsaiChangesetMut {
-        parents: hyper_parent.into_iter().collect(),
-        author: "hyperrepo".to_string(),
-        author_date: DateTime::now(),
-        committer: None,
-        committer_date: None,
-        message: format!(
-            "Introducing new source repo {} to hyper repo {}",
-            source_repo.name(),
-            hyper_repo.name()
-        ),
-        file_changes: file_changes.collect(),
-        is_snapshot: false,
-        extra: encode_latest_synced_state_extras(&extra),
+    let mut bcss = vec![];
+    let mut parent = hyper_parent;
+    for (idx, chunk) in file_changes_per_commit.into_iter().enumerate() {
+        let mut bcs = BonsaiChangesetMut {
+            parents: parent.into_iter().collect(),
+            author: "hyperrepo".to_string(),
+            author_date: DateTime::now(),
+            committer: None,
+            committer_date: None,
+            message: format!(
+                "Introducing new source repo {} to hyper repo {}, idx {} out of {}",
+                source_repo.name(),
+                hyper_repo.name(),
+                idx,
+                len
+            ),
+            file_changes: chunk.into_iter().cloned().collect(),
+            is_snapshot: false,
+            extra: Default::default(),
+        };
+
+        if idx + 1 == len {
+            // Intentionally add extras only on top commit to make it easier to tell
+            // apart last commit (i.e. commit that has all files from the source)
+            // from intermediate commits.
+            let mut extra = match hyper_parent {
+                Some(parent) => {
+                    let parent = parent.load(ctx, &hyper_repo.get_blobstore()).await?;
+                    decode_latest_synced_state_extras(parent.extra())?
+                }
+                None => Default::default(),
+            };
+
+            // Append extra that shows what was the latest replayed commit from a given source-repo
+            extra.insert(source_repo.name().to_string(), source_bcs_id);
+
+            bcs.extra = encode_latest_synced_state_extras(&extra);
+        }
+
+        let bcs = bcs.freeze()?;
+        info!(ctx.logger(), "creating {}", bcs.get_changeset_id());
+        parent = Some(bcs.get_changeset_id());
+        bcss.push(bcs);
     }
-    .freeze()?;
 
-    let cs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), hyper_repo.clone()).await?;
+    let cs_id = bcss
+        .last()
+        .ok_or_else(|| anyhow!("no commits were created"))?
+        .get_changeset_id();
+    save_bonsai_changesets(bcss, ctx.clone(), hyper_repo.clone()).await?;
 
     Ok(cs_id)
 }
@@ -224,7 +261,15 @@ mod tests {
 
         let book = Source(BookmarkName::new("main")?);
         let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
-        let res = add_source_repo(&ctx, &source_repo, &hyper_repo, &book, &hyper_repo_book).await;
+        let res = add_source_repo(
+            &ctx,
+            &source_repo,
+            &hyper_repo,
+            &book,
+            &hyper_repo_book,
+            None,
+        )
+        .await;
         // Expect it to fail because source repo doesn't have a bookmark
         assert!(res.is_err());
 
@@ -236,7 +281,15 @@ mod tests {
         bookmark(&ctx, &source_repo, &book.0)
             .set_to(root_cs_id)
             .await?;
-        add_source_repo(&ctx, &source_repo, &hyper_repo, &book, &hyper_repo_book).await?;
+        add_source_repo(
+            &ctx,
+            &source_repo,
+            &hyper_repo,
+            &book,
+            &hyper_repo_book,
+            None,
+        )
+        .await?;
 
         assert_eq!(
             list_working_copy_utf8(
@@ -265,6 +318,7 @@ mod tests {
             &hyper_repo,
             &book,
             &hyper_repo_book,
+            None,
         )
         .await?;
         assert_eq!(
@@ -324,9 +378,112 @@ mod tests {
             &hyper_repo,
             &Source(BookmarkName::new("main")?),
             &Target(BookmarkName::new("hyper_repo_main")?),
+            None,
         )
         .await;
         assert!(res.is_err());
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn add_source_repo_simple_with_limit(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut test_repo_factory = TestRepoFactory::new()?;
+
+        let source_repo: BlobRepo = test_repo_factory
+            .with_id(RepositoryId::new(0))
+            .with_name("source_repo")
+            .build()?;
+        let hyper_repo: BlobRepo = test_repo_factory
+            .with_id(RepositoryId::new(2))
+            .with_name("hyper_repo")
+            .build()?;
+
+        let book = Source(BookmarkName::new("main")?);
+        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
+
+        let root_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
+            .add_file("1.txt", "content_1")
+            .add_file("2.txt", "content_2")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &source_repo, &book.0)
+            .set_to(root_cs_id)
+            .await?;
+        add_source_repo(
+            &ctx,
+            &source_repo,
+            &hyper_repo,
+            &book,
+            &hyper_repo_book,
+            Some(1),
+        )
+        .await?;
+
+        let tip = resolve_cs_id(&ctx, &hyper_repo, &hyper_repo_book.0).await?;
+        assert_eq!(
+            list_working_copy_utf8(&ctx, &hyper_repo, tip,).await?,
+            hashmap! {
+                MPath::new("source_repo/1.txt")? => "content_1".to_string(),
+                MPath::new("source_repo/2.txt")? => "content_2".to_string(),
+            }
+        );
+
+        let tip = tip.load(&ctx, hyper_repo.blobstore()).await?;
+        assert_eq!(
+            tip.file_changes().map(|(path, _)| path).collect::<Vec<_>>(),
+            vec![&MPath::new("source_repo/2.txt")?],
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn add_source_repo_empty_wc(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let mut test_repo_factory = TestRepoFactory::new()?;
+
+        let source_repo: BlobRepo = test_repo_factory
+            .with_id(RepositoryId::new(0))
+            .with_name("source_repo")
+            .build()?;
+        let hyper_repo: BlobRepo = test_repo_factory
+            .with_id(RepositoryId::new(2))
+            .with_name("hyper_repo")
+            .build()?;
+
+        let book = Source(BookmarkName::new("main")?);
+        let hyper_repo_book = Target(BookmarkName::new("hyper_repo_main")?);
+
+        let root_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
+            .add_file("1.txt", "content_1")
+            .commit()
+            .await?;
+        let next_cs_id = CreateCommitContext::new(&ctx, &source_repo, vec![root_cs_id])
+            .delete_file("1.txt")
+            .commit()
+            .await?;
+        bookmark(&ctx, &source_repo, &book.0)
+            .set_to(next_cs_id)
+            .await?;
+
+        add_source_repo(
+            &ctx,
+            &source_repo,
+            &hyper_repo,
+            &book,
+            &hyper_repo_book,
+            Some(1),
+        )
+        .await?;
+
+        let tip = resolve_cs_id(&ctx, &hyper_repo, &hyper_repo_book.0).await?;
+        assert_eq!(
+            list_working_copy_utf8(&ctx, &hyper_repo, tip,).await?,
+            hashmap! {}
+        );
 
         Ok(())
     }

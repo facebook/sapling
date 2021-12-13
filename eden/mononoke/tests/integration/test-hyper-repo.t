@@ -47,6 +47,8 @@ blobimport hg servers repos into Mononoke repos
   * Reloading redacted config from configerator (glob)
   * found 1 files in source repo, copying them to hyper repo... (glob)
   * Finished copying (glob)
+  * about to create 1 commits (glob)
+  * creating * (glob)
   $ REPOID=2 mononoke_hyper_repo_builder master_bookmark main_bookmark add-source-repo --source-repo second_source_repo
   * using repo "second_source_repo" repoid RepositoryId(1) (glob)
   * Reloading redacted config from configerator (glob)
@@ -54,6 +56,8 @@ blobimport hg servers repos into Mononoke repos
   * Reloading redacted config from configerator (glob)
   * found 1 files in source repo, copying them to hyper repo... (glob)
   * Finished copying (glob)
+  * about to create 1 commits (glob)
+  * creating * (glob)
 
   $ cd $TESTTMP
   $ mononoke

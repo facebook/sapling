@@ -360,6 +360,7 @@ mod test {
             &hyper_repo,
             &book,
             &hyper_repo_book,
+            None,
         )
         .await?;
 
