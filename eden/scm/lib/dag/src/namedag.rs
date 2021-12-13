@@ -591,10 +591,12 @@ where
             ));
         }
 
-        if let Some(highest_seg) = clone_data.flat_segments.segments.range(..).rev().next() {
-            let id = highest_seg.high;
+        for id in clone_data.flat_segments.parents_head_and_roots() {
             if !clone_data.idmap.contains_key(&id) {
-                return programming(format!("server does not provide name for head {:?}", id));
+                return programming(format!(
+                    "server does not provide name for id {:?} in pull data",
+                    id
+                ));
             }
         }
 
