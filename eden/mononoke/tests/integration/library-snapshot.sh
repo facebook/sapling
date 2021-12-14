@@ -44,6 +44,9 @@ R deleted_file_then_untracked_modify
 ? untracked_file"
 
 function assert_on_base_snapshot {
+    # Using subshell to set pipefail
+    (
+    set -e -o pipefail
     [[ "$(hg log -T "{node}" -r .)" = "$BASE_SNAPSHOT_COMMIT" ]]
     [[ "$(hg st)" = "$BASE_STATUS" ]]
     [[ "$(cat modified_file)" = "b" ]]
@@ -54,4 +57,5 @@ function assert_on_base_snapshot {
     [[ ! -f added_file_then_missing ]]
     [[ ! -f missing_file ]]
     echo snapshot is correct!
+    )
 }
