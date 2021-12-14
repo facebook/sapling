@@ -14,8 +14,8 @@ use async_trait::async_trait;
 use bytes::Bytes;
 
 use caching_ext::{
-    get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
-    MemcacheEntity, MemcacheHandler,
+    get_or_fill_chunked, CacheDisposition, CacheTtl, CachelibHandler, EntityStore,
+    KeyedEntityStore, MemcacheEntity, MemcacheHandler,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -94,6 +94,10 @@ impl CachedIdMap {
     }
 }
 
+// Number of entries to fetch from DB into cache at a time
+const CHUNK_SIZE: usize = 1000;
+const PARALLEL_CHUNKS: usize = 10;
+
 #[async_trait]
 impl IdMap for CachedIdMap {
     async fn insert_many(
@@ -111,12 +115,17 @@ impl IdMap for CachedIdMap {
         dag_ids: Vec<DagId>,
     ) -> Result<HashMap<DagId, ChangesetId>> {
         let ctx = (ctx, self);
-        let res = get_or_fill(ctx, dag_ids.into_iter().collect())
-            .await
-            .with_context(|| "Error fetching many changeset ids via cache")?
-            .into_iter()
-            .map(|(k, v)| (k, v.0))
-            .collect();
+        let res = get_or_fill_chunked(
+            ctx,
+            dag_ids.into_iter().collect(),
+            CHUNK_SIZE,
+            PARALLEL_CHUNKS,
+        )
+        .await
+        .with_context(|| "Error fetching many changeset ids via cache")?
+        .into_iter()
+        .map(|(k, v)| (k, v.0))
+        .collect();
         Ok(res)
     }
 
@@ -126,12 +135,17 @@ impl IdMap for CachedIdMap {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, DagId>> {
         let ctx = (ctx, self, DagIdStaleness::Fresh);
-        let res = get_or_fill(ctx, cs_ids.into_iter().collect())
-            .await
-            .with_context(|| "Error fetching many changeset ids via cache")?
-            .into_iter()
-            .map(|(k, v)| (k, v.0))
-            .collect();
+        let res = get_or_fill_chunked(
+            ctx,
+            cs_ids.into_iter().collect(),
+            CHUNK_SIZE,
+            PARALLEL_CHUNKS,
+        )
+        .await
+        .with_context(|| "Error fetching many changeset ids via cache")?
+        .into_iter()
+        .map(|(k, v)| (k, v.0))
+        .collect();
         Ok(res)
     }
 
@@ -141,12 +155,17 @@ impl IdMap for CachedIdMap {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, DagId>> {
         let ctx = (ctx, self, DagIdStaleness::MaybeStale);
-        let res = get_or_fill(ctx, cs_ids.into_iter().collect())
-            .await
-            .with_context(|| "Error fetching many changeset ids via cache")?
-            .into_iter()
-            .map(|(k, v)| (k, v.0))
-            .collect();
+        let res = get_or_fill_chunked(
+            ctx,
+            cs_ids.into_iter().collect(),
+            CHUNK_SIZE,
+            PARALLEL_CHUNKS,
+        )
+        .await
+        .with_context(|| "Error fetching many changeset ids via cache")?
+        .into_iter()
+        .map(|(k, v)| (k, v.0))
+        .collect();
         Ok(res)
     }
 
