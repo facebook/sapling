@@ -14,6 +14,7 @@ mod mock_store;
 
 use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
+use std::future::Future;
 use std::hash::Hash;
 use std::time::Duration;
 
@@ -23,7 +24,8 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
 use cloned::cloned;
-use futures::stream::{self, StreamExt};
+use futures::stream::{self, StreamExt, TryStreamExt};
+use itertools::Itertools;
 use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
 use stats::prelude::*;
 
@@ -125,16 +127,30 @@ pub trait KeyedEntityStore<K, V>: EntityStore<V> {
     async fn get_from_db(&self, keys: HashSet<K>) -> Result<HashMap<K, V>, Error>;
 }
 
-pub async fn get_or_fill<K, V>(
+pub fn get_or_fill<K, V>(
     store: impl KeyedEntityStore<K, V>,
     keys: HashSet<K>,
+) -> impl Future<Output = Result<HashMap<K, V>, Error>>
+where
+    K: Hash + Eq + Clone,
+    // TODO: We should relax the bounds on cachelib's set_cached. We don't need all of this:
+    V: Abomonation + MemcacheEntity + Send + Clone + 'static,
+{
+    get_or_fill_chunked(store, keys, usize::MAX, 1)
+}
+
+pub async fn get_or_fill_chunked<K, V>(
+    store: impl KeyedEntityStore<K, V>,
+    keys: HashSet<K>,
+    fetch_chunk: usize,
+    parallel_chunks: usize,
 ) -> Result<HashMap<K, V>, Error>
 where
     K: Hash + Eq + Clone,
     // TODO: We should relax the bounds on cachelib's set_cached. We don't need all of this:
     V: Abomonation + MemcacheEntity + Send + Clone + 'static,
 {
-    let mut ret = HashMap::<K, V>::new();
+    let mut ret = HashMap::<K, V>::with_capacity(keys.len());
 
     let stats = store.stats();
 
@@ -194,42 +210,66 @@ where
         to_fetch_from_store
     };
 
-    let mut key_mapping = HashMap::new();
-    let to_fetch_from_store: HashSet<K> = to_fetch_from_store
-        .into_iter()
-        .map(|(key, cachelib_key, memcache_key)| {
-            key_mapping.insert(key.clone(), (cachelib_key, memcache_key));
-            key
-        })
-        .collect();
-
     if !to_fetch_from_store.is_empty() {
-        let n_keys = to_fetch_from_store.len();
-
-        let data = store
-            .get_from_db(to_fetch_from_store)
-            .await
-            .with_context(|| "Error reading from store")?;
-
-        stats.origin_hit.add_value(data.len() as i64);
-        stats.origin_miss.add_value((n_keys - data.len()) as i64);
-
-        fill_caches_by_key(
-            store,
-            data.iter().map(|(key, v)| {
-                let (cachelib_key, memcache_key) = key_mapping
-                    .remove(&key)
-                    .expect("caching_ext: Missing entry in key_mapping, this should not happen");
-
-                (cachelib_key, memcache_key, v)
-            }),
-        )
-        .await;
-
-        ret.extend(data);
-    };
+        let to_fetch_from_store: Vec<_> = to_fetch_from_store
+            .into_iter()
+            .chunks(fetch_chunk)
+            .into_iter()
+            .map(|chunk| {
+                let mut keys = HashSet::new();
+                let mut key_mapping = HashMap::new();
+                for (key, cachelib_key, memcache_key) in chunk {
+                    keys.insert(key.clone());
+                    key_mapping.insert(key.clone(), (cachelib_key, memcache_key));
+                }
+                fill_one_chunk(&store, keys, key_mapping)
+            })
+            .collect();
+        stream::iter(to_fetch_from_store)
+            .buffer_unordered(parallel_chunks)
+            .try_fold(&mut ret, |ret, chunk| async move {
+                ret.extend(chunk);
+                Ok::<_, Error>(ret)
+            })
+            .await?;
+    }
 
     Ok(ret)
+}
+
+async fn fill_one_chunk<K, V>(
+    store: &impl KeyedEntityStore<K, V>,
+    keys: HashSet<K>,
+    mut key_mapping: HashMap<K, (CachelibKey, MemcacheKey)>,
+) -> Result<HashMap<K, V>, Error>
+where
+    K: Hash + Eq + Clone,
+    // TODO: We should relax the bounds on cachelib's set_cached. We don't need all of this:
+    V: Abomonation + MemcacheEntity + Send + Clone + 'static,
+{
+    let n_keys = keys.len();
+
+    let stats = store.stats();
+    let data = store
+        .get_from_db(keys)
+        .await
+        .with_context(|| "Error reading from store")?;
+
+    stats.origin_hit.add_value(data.len() as i64);
+    stats.origin_miss.add_value((n_keys - data.len()) as i64);
+
+    fill_caches_by_key(
+        store,
+        data.iter().map(|(key, v)| {
+            let (cachelib_key, memcache_key) = key_mapping
+                .remove(key)
+                .expect("caching_ext: Missing entry in key_mapping, this should not happen");
+
+            (cachelib_key, memcache_key, v)
+        }),
+    )
+    .await;
+    Ok(data)
 }
 
 pub async fn fill_cache<'a, K, V>(
@@ -557,6 +597,39 @@ mod test {
             res,
             hashmap! { "key0".into() => e0, "key1".into() => e1, "key2".into() => e2 }
         );
+        assert_eq!(store.calls.load(Ordering::Relaxed), 1);
+        assert_eq!(store.cachelib.gets_count(), 3);
+        assert_eq!(store.memcache.gets_count(), 3);
+        assert_eq!(store.keys.load(Ordering::Relaxed), 3);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn fetch_from_db_chunked() -> Result<(), Error> {
+        let mut store = TestStore::new();
+
+        let e0 = TestEntity(vec![0]);
+        let e1 = TestEntity(vec![1]);
+        let e2 = TestEntity(vec![2]);
+
+        store.data.insert("key0".into(), e0.clone());
+        store.data.insert("key1".into(), e1.clone());
+        store.data.insert("key2".into(), e2.clone());
+
+        let res = get_or_fill_chunked(
+            &store,
+            hashset! { "key0".into(), "key1".into(), "key2".into() },
+            1,
+            3,
+        )
+        .await?;
+
+        assert_eq!(
+            res,
+            hashmap! { "key0".into() => e0, "key1".into() => e1, "key2".into() => e2 }
+        );
+        assert_eq!(store.calls.load(Ordering::Relaxed), 3);
         assert_eq!(store.cachelib.gets_count(), 3);
         assert_eq!(store.memcache.gets_count(), 3);
         assert_eq!(store.keys.load(Ordering::Relaxed), 3);
