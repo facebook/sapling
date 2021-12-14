@@ -313,6 +313,7 @@ struct CommitCompareFile {
 struct CommitCompareTree {
   1: optional TreePathInfo base_tree;
   2: optional TreePathInfo other_tree;
+  3: CopyInfo copy_info; /// Different than NONE only when commit is compared with parent
 }
 
 enum CommitCompareItem {
@@ -805,6 +806,9 @@ struct CommitCompareParams {
   5: set<CommitCompareItem> compare_items;
   /// If present, perform the compare in path order with these parameters.
   6: optional CommitCompareOrderedParams ordered_params;
+  /// Whether to find parents via the commit ancestry, or via mutable copy
+  /// information.
+  7: bool follow_mutable_file_history;
 }
 
 struct CommitFileDiffsParamsPathPair {
@@ -980,6 +984,9 @@ struct CommitPathHistoryParams {
   8: optional CommitId descendants_of;
   /// Exclude commit and all of its ancestor from results.
   9: optional CommitId exclude_changeset_and_ancestors;
+  /// Use mutable copy information to identify ancestry, instead of
+  /// using commit parents to identify ancestry
+  10: optional bool follow_mutable_file_history;
 }
 
 struct TreeExistsParams {}
