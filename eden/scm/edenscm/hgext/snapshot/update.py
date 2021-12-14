@@ -103,11 +103,15 @@ def update(ui, repo, csid, clean=False):
                 if fctx.exists():
                     fctx.remove()
             elif fc == "UntrackedDeletion":
-                # Untracked deletion means the file was tracked, so add it, in case it
-                # was hg added and then deleted
-                # Using dirstate directly so we don't need to create a dummy file
                 if repo.dirstate[path] == "?":
+                    # File was hg added then deleted
                     repo.dirstate.add(path)
+                elif repo.dirstate[path] == "r":
+                    # Missing file, but its marked as deleted. To mark it as missing,
+                    # we need to first create a dummy file and mark it as normal
+                    repo.wwrite(path, b"", "")
+                    repo.dirstate.normal(path)
+                    fctx = wctx[path]
                 if fctx.exists():
                     fctx.remove()
             elif "Change" in fc:
