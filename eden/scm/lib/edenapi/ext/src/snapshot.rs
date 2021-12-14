@@ -19,6 +19,7 @@ use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::BonsaiChangesetContent;
 use edenapi_types::BonsaiFileChange;
+use edenapi_types::FileType;
 use edenapi_types::SnapshotRawData;
 use edenapi_types::SnapshotRawFiles;
 use edenapi_types::UploadSnapshotResponse;
@@ -65,17 +66,30 @@ pub async fn upload_snapshot(
             untracked.into_iter().map(|(p, t)| (p, t, Untracked)),
         )
         // rel_path is relative to the repo root
-        .map(|(rel_path, file_type, tracked)| {
+        .map(|(rel_path, file_type, tracked)| -> anyhow::Result<_> {
             let mut abs_path = root.clone();
             abs_path.push(&rel_path);
-            let bytes = std::fs::read(abs_path.as_repo_path().as_str())?;
-            let content_id = calc_contentid(&bytes);
+            let abs_path = abs_path.as_repo_path().as_str();
+            let content = match file_type {
+                FileType::Symlink => {
+                    let link = std::fs::read_link(abs_path)?;
+                    let to = link
+                        .to_str()
+                        .context("symlink is not valid UTF-8")?
+                        .as_bytes();
+                    Bytes::copy_from_slice(to)
+                }
+                FileType::Regular | FileType::Executable => {
+                    Bytes::from_owner(std::fs::read(abs_path)?)
+                }
+            };
+            let content_id = calc_contentid(&content);
             Ok((
                 (rel_path, file_type, content_id, tracked),
-                (content_id, Bytes::from_owner(bytes)),
+                (content_id, content),
             ))
         })
-        .collect::<Result<Vec<_>, std::io::Error>>()?
+        .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .unzip();
 
