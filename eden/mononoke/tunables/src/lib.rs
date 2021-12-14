@@ -238,6 +238,10 @@ pub struct MononokeTunables {
     // Setting this tunable to a new non-zero value and restarting
     // mononoke hosts will invalidate the cache
     blobstore_memcache_sitever: AtomicI64,
+
+    // Setting this tunable to a new non-zero value and restarting
+    // mononoke hosts will invalidate bonsai_hg_mapping cache
+    bonsai_hg_mapping_sitever: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

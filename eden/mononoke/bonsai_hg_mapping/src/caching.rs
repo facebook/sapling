@@ -24,6 +24,7 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use tunables::tunables;
 
 define_stats! {
     prefix = "mononoke.bonsai_hg_mapping";
@@ -88,11 +89,13 @@ impl CachingBonsaiHgMapping {
     fn create_key_gen() -> KeyGen {
         let key_prefix = "scm.mononoke.bonsai_hg_mapping";
 
-        KeyGen::new(
-            key_prefix,
-            thrift::MC_CODEVER as u32,
-            thrift::MC_SITEVER as u32,
-        )
+        let sitever = if tunables().get_bonsai_hg_mapping_sitever() > 0 {
+            tunables().get_bonsai_hg_mapping_sitever() as u32
+        } else {
+            thrift::MC_SITEVER as u32
+        };
+
+        KeyGen::new(key_prefix, thrift::MC_CODEVER as u32, sitever)
     }
 }
 
