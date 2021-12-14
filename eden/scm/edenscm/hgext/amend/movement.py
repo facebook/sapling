@@ -425,7 +425,15 @@ def _findstackbottom(ui, repo):
     """Find the lowest non-public ancestor of the current changeset."""
     if repo["."].phase() == phases.public:
         raise error.Abort(_("current changeset is public"))
-    return next(repo.nodes("first(draft() & ::.)"), None)
+    bottoms = list(repo.nodes("roots(draft() & ::.)"))
+    if len(bottoms) > 1:
+        ui.warn(_("current stack has multiple bottom changesets, namely:\n"))
+        _showchangesets(ui, repo, nodes=bottoms)
+        raise error.Abort(
+            _("ambiguous bottom changeset"),
+        )
+    else:
+        return next(iter(bottoms), None)
 
 
 def _showchangesets(ui, repo, contexts=None, revs=None, nodes=None, indices=False):

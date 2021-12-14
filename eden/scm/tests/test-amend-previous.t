@@ -178,3 +178,13 @@ Test multiple parents
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [f07e66] (bookmark) r2
   (activating bookmark bookmark)
+
+Mix with bottom:
+  $ hg debugmakepublic 'desc(r4)'
+  $ hg up 'desc(merge)' -q
+  $ hg prev --bottom
+  current stack has multiple bottom changesets, namely:
+  [f2987e] (top) r5
+  [830512] a
+  abort: ambiguous bottom changeset
+  [255]
