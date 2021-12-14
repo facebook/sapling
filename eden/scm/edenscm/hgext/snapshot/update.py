@@ -111,16 +111,22 @@ def update(ui, repo, csid, clean=False):
                 if fctx.exists():
                     fctx.remove()
             elif "Change" in fc:
-                files2download.append((path, fc["Change"]["upload_token"]))
                 filetype = fc["Change"]["file_type"]
                 if filetype == "Executable":
                     files2exec.append(path)
+                files2download.append((path, fc["Change"]["upload_token"], filetype))
             elif "UntrackedChange" in fc:
                 wctx.forget([path], quiet=True)
-                files2download.append((path, fc["UntrackedChange"]["upload_token"]))
                 filetype = fc["UntrackedChange"]["file_type"]
                 if filetype == "Executable":
                     files2exec.append(path)
+                files2download.append(
+                    (
+                        path,
+                        fc["UntrackedChange"]["upload_token"],
+                        filetype,
+                    )
+                )
 
         repo.edenapi.downloadfiles(getreponame(repo), repo.root, files2download)
 

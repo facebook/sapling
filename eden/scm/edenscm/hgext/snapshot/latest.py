@@ -46,17 +46,23 @@ def _isworkingcopy(ui, repo, csid, maxuntrackedsize):
         elif "Change" in fc:
             if path not in wc.added and path not in wc.modified:
                 return False, incorrectmod.format(path)
-            files2check.append((path, fc["Change"]["upload_token"]))
             filetype = fc["Change"]["file_type"]
             if filetype != filetypefromfile(wctx[path]):
                 return False, incorrectfiletype.format(path)
+            files2check.append((path, fc["Change"]["upload_token"], filetype))
         elif "UntrackedChange" in fc:
             if path not in wc.untracked:
                 return False, incorrectmod.format(path)
-            files2check.append((path, fc["UntrackedChange"]["upload_token"]))
             filetype = fc["UntrackedChange"]["file_type"]
             if filetype != filetypefromfile(wctx[path]):
                 return False, incorrectfiletype.format(path)
+            files2check.append(
+                (
+                    path,
+                    fc["UntrackedChange"]["upload_token"],
+                    filetype,
+                )
+            )
 
     differentfiles = repo.edenapi.checkfiles(repo.root, files2check)
     if differentfiles:

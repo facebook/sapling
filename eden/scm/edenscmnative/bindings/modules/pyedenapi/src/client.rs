@@ -36,6 +36,7 @@ use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileEntry;
 use edenapi_types::FileSpec;
+use edenapi_types::FileType;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgMutationEntryContent;
 use edenapi_types::HistoryEntry;
@@ -420,12 +421,12 @@ py_class!(pub class client |py| {
         repo: String,
         root: Serde<RepoPathBuf>,
         // (path to download, content id)
-        files: Vec<(PyPathBuf, Serde<UploadToken>)>,
+        files: Vec<(PyPathBuf, Serde<UploadToken>, Serde<FileType>)>,
     ) -> PyResult<bool> {
         let api = self.inner(py).as_ref();
         let files = files
             .into_iter()
-            .map(|(p, t)| Ok((to_path(py, &p)?, t.0)))
+            .map(|(p, token, tp)| Ok((to_path(py, &p)?, token.0, tp.0)))
             .collect::<Result<Vec<_>, PyErr>>()?;
         py.allow_threads(|| block_unless_interrupted(download_files(api, &repo, &root.0, files)))
             .map_pyerr(py)?
@@ -437,11 +438,11 @@ py_class!(pub class client |py| {
     def checkfiles(
         &self,
         root: Serde<RepoPathBuf>,
-        files: Vec<(PyPathBuf, Serde<UploadToken>)>
+        files: Vec<(PyPathBuf, Serde<UploadToken>, Serde<FileType>)>
     ) -> PyResult<Vec<PyPathBuf>> {
         let files = files
             .into_iter()
-            .map(|(p, t)| Ok((to_path(py, &p)?, t.0)))
+            .map(|(p, token, tp)| Ok((to_path(py, &p)?, token.0, tp.0)))
             .collect::<Result<Vec<_>, PyErr>>()?;
         py.allow_threads(|| block_unless_interrupted(check_files(&root.0, files)))
             .map_pyerr(py)?
