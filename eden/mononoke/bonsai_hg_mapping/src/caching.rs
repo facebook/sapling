@@ -12,8 +12,8 @@ use bonsai_hg_mapping_entry_thrift as thrift;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
 use caching_ext::{
-    get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
-    MemcacheEntity, MemcacheHandler,
+    get_or_fill_chunked, CacheDisposition, CacheTtl, CachelibHandler, EntityStore,
+    KeyedEntityStore, MemcacheEntity, MemcacheHandler,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -108,6 +108,9 @@ fn memcache_serialize(entry: &BonsaiHgMappingEntry) -> Bytes {
     compact_protocol::serialize(&entry.clone().into_thrift())
 }
 
+const CHUNK_SIZE: usize = 1000;
+const PARALLEL_CHUNKS: usize = 1;
+
 #[async_trait]
 impl BonsaiHgMapping for CachingBonsaiHgMapping {
     async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
@@ -123,18 +126,26 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
         let ctx = (ctx, repo_id, self);
 
         let res = match cs {
-            BonsaiOrHgChangesetIds::Bonsai(cs_ids) => {
-                get_or_fill(ctx, cs_ids.into_iter().collect())
-                    .await?
-                    .into_iter()
-                    .map(|(_, val)| val)
-                    .collect()
-            }
-            BonsaiOrHgChangesetIds::Hg(hg_ids) => get_or_fill(ctx, hg_ids.into_iter().collect())
-                .await?
-                .into_iter()
-                .map(|(_, val)| val)
-                .collect(),
+            BonsaiOrHgChangesetIds::Bonsai(cs_ids) => get_or_fill_chunked(
+                ctx,
+                cs_ids.into_iter().collect(),
+                CHUNK_SIZE,
+                PARALLEL_CHUNKS,
+            )
+            .await?
+            .into_iter()
+            .map(|(_, val)| val)
+            .collect(),
+            BonsaiOrHgChangesetIds::Hg(hg_ids) => get_or_fill_chunked(
+                ctx,
+                hg_ids.into_iter().collect(),
+                CHUNK_SIZE,
+                PARALLEL_CHUNKS,
+            )
+            .await?
+            .into_iter()
+            .map(|(_, val)| val)
+            .collect(),
         };
 
         Ok(res)
