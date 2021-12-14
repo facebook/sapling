@@ -82,6 +82,10 @@ TEST(proc_util, splitTest) {
 }
 
 static AbsolutePath dataPath(PathComponentPiece name) {
+  if (auto test_data = std::getenv("TEST_DATA")) {
+    return realpath(test_data) + name;
+  }
+
   auto thisFile = realpath(__FILE__);
   return thisFile.dirname() + "test-data"_relpath + name;
 }
