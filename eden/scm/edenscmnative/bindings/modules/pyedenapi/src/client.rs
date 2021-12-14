@@ -21,6 +21,7 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use edenapi::Builder;
 use edenapi::EdenApi;
+use edenapi_ext::download_files;
 use edenapi_ext::upload_snapshot;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::CommitGraphEntry;
@@ -55,6 +56,7 @@ use types::RepoPathBuf;
 
 use crate::pyext::EdenApiPyExt;
 use crate::stats::stats;
+use crate::util::to_path;
 
 // Python wrapper around an EdenAPI client.
 //
@@ -419,7 +421,15 @@ py_class!(pub class client |py| {
         // (path to download, content id)
         files: Vec<(PyPathBuf, Serde<UploadToken>)>,
     ) -> PyResult<bool> {
-        self.inner(py).as_ref().downloadfiles_py(py, repo, root, files)
+        let api = self.inner(py).as_ref();
+        let files = files
+            .into_iter()
+            .map(|(p, t)| Ok((to_path(py, &p)?, t.0)))
+            .collect::<Result<Vec<_>, PyErr>>()?;
+        py.allow_threads(|| block_unless_interrupted(download_files(api, &repo, &root.0, files)))
+            .map_pyerr(py)?
+            .map_pyerr(py)
+            .map(|_| true)
     }
 
     /// Checks which files differ from

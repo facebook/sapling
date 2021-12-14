@@ -29,7 +29,6 @@ use edenapi::Response;
 use edenapi::Stats;
 use edenapi_ext::calc_contentid;
 use edenapi_ext::check_files;
-use edenapi_ext::download_files;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::CommitGraphEntry;
@@ -776,23 +775,6 @@ pub trait EdenApiPyExt: EdenApi {
         .map_pyerr(py)?
         .map_pyerr(py)
         .map(Serde)
-    }
-
-    fn downloadfiles_py(
-        &self,
-        py: Python,
-        repo: String,
-        root: Serde<RepoPathBuf>,
-        files: Vec<(PyPathBuf, Serde<UploadToken>)>,
-    ) -> PyResult<bool> {
-        let files = files
-            .into_iter()
-            .map(|(p, t)| Ok((to_path(py, &p)?, t.0)))
-            .collect::<Result<Vec<_>, PyErr>>()?;
-        py.allow_threads(|| block_unless_interrupted(download_files(self, &repo, &root.0, files)))
-            .map_pyerr(py)?
-            .map_pyerr(py)
-            .map(|_| true)
     }
 
     fn checkfiles_py(
