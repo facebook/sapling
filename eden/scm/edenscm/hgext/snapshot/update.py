@@ -88,7 +88,9 @@ def update(ui, repo, csid, clean=False):
             if haschanges:
                 # We might be able to reuse files that were already downloaded locally,
                 # so let's not delete files related to the snapshot
-                _fullclean(ui, repo, [path for (path, _) in snapshot["file_changes"]])
+                _fullclean(
+                    ui, repo, [f"path:{path}" for (path, _) in snapshot["file_changes"]]
+                )
 
         files2download = []
         files2exec = []
