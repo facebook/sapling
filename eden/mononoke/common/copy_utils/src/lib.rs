@@ -202,7 +202,7 @@ async fn create_changesets(
         parent = cs_id;
     }
 
-    save_bonsai_changesets(changesets, ctx.clone(), repo.clone()).await?;
+    save_bonsai_changesets(changesets, ctx.clone(), repo).await?;
 
     Ok(cs_ids)
 }

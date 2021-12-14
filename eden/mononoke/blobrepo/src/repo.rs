@@ -440,7 +440,7 @@ impl BlobRepo {
 pub async fn save_bonsai_changesets(
     bonsai_changesets: Vec<BonsaiChangeset>,
     ctx: CoreContext,
-    container: impl ChangesetsRef + RepoBlobstoreRef,
+    container: &(impl ChangesetsRef + RepoBlobstoreRef),
 ) -> Result<(), Error> {
     let complete_changesets = container.changesets();
     let blobstore = container.repo_blobstore();

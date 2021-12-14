@@ -146,7 +146,7 @@ impl GenManifest {
                 None => Err(Error::msg("empty changes iterator")),
                 Some(csid) => {
                     store_changes.try_for_each(|_| future::ok(())).await?;
-                    save_bonsai_changesets(changesets, ctx, repo).await?;
+                    save_bonsai_changesets(changesets, ctx, &repo).await?;
                     Ok(csid)
                 }
             }

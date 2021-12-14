@@ -220,7 +220,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let bcs = create_bonsai_changeset(vec![]);
         let bcs_id = bcs.get_changeset_id();
-        save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+        save_bonsai_changesets(vec![bcs], ctx.clone(), &repo)
             .await
             .unwrap();
 
@@ -315,7 +315,7 @@ mod tests {
         }
 
         let latest = parents.get(0).unwrap();
-        save_bonsai_changesets(bonsais, ctx.clone(), repo.clone())
+        save_bonsai_changesets(bonsais, ctx.clone(), &repo)
             .await
             .unwrap();
 
@@ -361,7 +361,7 @@ mod tests {
         }
 
         let latest = parents.get(0).unwrap();
-        save_bonsai_changesets(bonsais, ctx.clone(), repo.clone())
+        save_bonsai_changesets(bonsais, ctx.clone(), &repo)
             .await
             .unwrap();
 
@@ -433,7 +433,7 @@ mod tests {
             let merge_bcs_id = bcs.get_changeset_id();
 
             bonsais.push(bcs);
-            save_bonsai_changesets(bonsais, ctx.clone(), repo.clone())
+            save_bonsai_changesets(bonsais, ctx.clone(), &repo)
                 .await
                 .unwrap();
 
@@ -630,7 +630,7 @@ mod tests {
         println!("e = {}", e.get_changeset_id());
         bonsais.push(e.clone());
 
-        save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()).await?;
+        save_bonsai_changesets(bonsais, ctx.clone(), &repo).await?;
 
         verify_all_entries_for_commit(&ctx, &repo, e.get_changeset_id()).await;
         Ok(())

@@ -205,7 +205,7 @@ async fn create_new_bonsai_changeset_for_source_repo(
         .last()
         .ok_or_else(|| anyhow!("no commits were created"))?
         .get_changeset_id();
-    save_bonsai_changesets(bcss, ctx.clone(), hyper_repo.clone()).await?;
+    save_bonsai_changesets(bcss, ctx.clone(), &hyper_repo).await?;
 
     Ok(cs_id)
 }

@@ -463,7 +463,7 @@ pub async fn upload_commits<'a>(
         files_to_sync.extend(new_files_to_sync);
     }
     copy_file_contents(ctx, source_repo, target_repo, files_to_sync, |_| {}).await?;
-    save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone()).await?;
+    save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo).await?;
     Ok(())
 }
 
@@ -803,7 +803,7 @@ mod test {
             maybe_rewritten.ok_or_else(|| anyhow!("can't rewrite commit {}", bcs_id))?;
         let rewritten = rewritten.freeze()?;
 
-        save_bonsai_changesets(vec![rewritten.clone()], ctx.clone(), repo.clone()).await?;
+        save_bonsai_changesets(vec![rewritten.clone()], ctx.clone(), repo).await?;
 
         Ok(rewritten.get_changeset_id())
     }

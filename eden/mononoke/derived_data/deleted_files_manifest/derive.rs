@@ -1028,7 +1028,7 @@ mod tests {
         .freeze()
         .unwrap();
 
-        save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), repo.clone())
+        save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), &repo)
             .await
             .unwrap();
         bcs

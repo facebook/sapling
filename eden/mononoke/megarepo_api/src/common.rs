@@ -154,7 +154,7 @@ pub trait MegarepoOp {
             .save_in_changeset(ctx, repo.blob_repo(), &mut bcs)
             .await?;
         let merge = bcs.freeze()?;
-        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo().clone()).await?;
+        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo()).await?;
 
         // We don't want to have deletion commit on our mainline. So we'd like to create a new
         // merge commit whose parent is not a deletion commit. For that we take the manifest
@@ -243,7 +243,7 @@ pub trait MegarepoOp {
             is_snapshot: false,
         };
         let merge = bcs.freeze()?;
-        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo().clone()).await?;
+        save_bonsai_changesets(vec![merge.clone()], ctx.clone(), repo.blob_repo()).await?;
 
         Ok(merge.get_changeset_id())
     }
@@ -275,7 +275,7 @@ pub trait MegarepoOp {
         save_bonsai_changesets(
             vec![old_target_with_removed_files.clone()],
             ctx.clone(),
-            repo.blob_repo().clone(),
+            repo.blob_repo(),
         )
         .await?;
 
@@ -609,7 +609,7 @@ pub trait MegarepoOp {
                 .map(|(_, css)| css.moved.clone())
                 .collect(),
             ctx.clone(),
-            repo.clone(),
+            &repo,
         )
         .await?;
 
@@ -857,7 +857,7 @@ pub trait MegarepoOp {
         }
         let final_merge = final_merge.freeze()?;
         merges.push(final_merge.clone());
-        save_bonsai_changesets(merges, ctx.clone(), repo.clone()).await?;
+        save_bonsai_changesets(merges, ctx.clone(), repo).await?;
 
         Ok(final_merge.get_changeset_id())
     }

@@ -919,7 +919,7 @@ async fn create_rebased_changesets(
         rebased.push(bcs_new);
     }
 
-    save_bonsai_changesets(rebased, ctx.clone(), repo.clone()).await?;
+    save_bonsai_changesets(rebased, ctx.clone(), &repo).await?;
     Ok((
         remapping
             .get(&head)

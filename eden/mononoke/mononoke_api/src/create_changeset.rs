@@ -287,7 +287,7 @@ impl RepoContext {
     async fn save_changeset(
         &self,
         changeset: BonsaiChangeset,
-        container: impl ChangesetsRef + RepoBlobstoreRef,
+        container: &(impl ChangesetsRef + RepoBlobstoreRef),
     ) -> Result<(), MononokeError> {
         blobrepo::save_bonsai_changesets(vec![changeset], self.ctx().clone(), container).await?;
         Ok(())
@@ -515,11 +515,10 @@ impl RepoContext {
 
         let new_changeset_id = new_changeset.get_changeset_id();
         if let Some(bubble) = &bubble {
-            self.save_changeset(new_changeset, bubble.repo_view(self.blob_repo()))
+            self.save_changeset(new_changeset, &bubble.repo_view(self.blob_repo()))
                 .await?;
         } else {
-            self.save_changeset(new_changeset, self.blob_repo().clone())
-                .await?;
+            self.save_changeset(new_changeset, self.blob_repo()).await?;
         }
 
         Ok(ChangesetContext::new(self.clone(), new_changeset_id))

@@ -303,7 +303,7 @@ pub async fn gitimport_acc<Acc: GitimportAccumulator>(
 
                     // We know that the commits are in order (this is guaranteed by the Walk), so we
                     // can insert them as-is, one by one, without extra dependency / ordering checks.
-                    let (stats, ()) = save_bonsai_changesets(vbcs, ctx.clone(), repo.clone())
+                    let (stats, ()) = save_bonsai_changesets(vbcs, ctx.clone(), &repo)
                         .try_timed()
                         .await?;
                     debug!(
@@ -454,7 +454,7 @@ async fn import_bonsai_changeset(
     let bcs = generate_bonsai_changeset(metadata, parents, file_changes, prefs)?;
     let bcs_id = bcs.get_changeset_id();
 
-    save_bonsai_changesets(vec![bcs.clone()], ctx.clone(), repo.clone()).await?;
+    save_bonsai_changesets(vec![bcs.clone()], ctx.clone(), repo).await?;
 
     if prefs.bonsai_git_mapping {
         repo.bonsai_git_mapping()

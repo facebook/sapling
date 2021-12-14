@@ -1307,8 +1307,7 @@ async fn init_repos(
             rewritten.parents.push(initial_commit_in_target);
 
             let rewritten = rewritten.freeze()?;
-            save_bonsai_changesets(vec![rewritten.clone()], ctx.clone(), target_repo.clone())
-                .await?;
+            save_bonsai_changesets(vec![rewritten.clone()], ctx.clone(), &target_repo).await?;
             rewritten.get_changeset_id()
         }
         None => initial_commit_in_target,

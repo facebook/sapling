@@ -85,7 +85,7 @@ pub async fn subcommand_create_bonsai<'a>(
         }
     }
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), blobrepo.clone())
+    save_bonsai_changesets(vec![bcs], ctx.clone(), &blobrepo)
         .map_err(|e| SubcommandError::Error(anyhow!(e)))
         .await?;
     let hg_cs = blobrepo.get_hg_from_bonsai_changeset(ctx, bcs_id).await?;

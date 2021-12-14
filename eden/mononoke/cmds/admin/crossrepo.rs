@@ -741,7 +741,7 @@ async fn create_commit_for_mapping_change(
     .freeze()?;
 
     let large_cs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), large_repo.0.clone()).await?;
+    save_bonsai_changesets(vec![bcs], ctx.clone(), &large_repo.0).await?;
 
     Ok(Large(large_cs_id))
 }

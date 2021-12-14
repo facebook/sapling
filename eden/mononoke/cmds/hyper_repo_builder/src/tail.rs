@@ -254,7 +254,7 @@ async fn sync_commits(
         .last()
         .map(|cs| cs.get_changeset_id())
         .ok_or_else(|| anyhow!("no commits found!"))?;
-    save_bonsai_changesets(rewritten_commits, ctx.clone(), hyper_repo.clone()).await?;
+    save_bonsai_changesets(rewritten_commits, ctx.clone(), hyper_repo).await?;
 
     let mut txn = hyper_repo.update_bookmark_transaction(ctx.clone());
     txn.update(

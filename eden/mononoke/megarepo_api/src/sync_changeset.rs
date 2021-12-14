@@ -214,7 +214,7 @@ impl<'a> SyncChangeset<'a> {
         save_bonsai_changesets(
             moved_commits.iter().map(|css| css.moved.clone()).collect(),
             ctx.clone(),
-            target_repo.blob_repo().clone(),
+            target_repo.blob_repo(),
         )
         .await?;
 

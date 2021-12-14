@@ -969,7 +969,7 @@ mod tests {
         .freeze()
         .unwrap();
 
-        save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), repo.clone()).await?;
+        save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), &repo).await?;
         Ok(bcs)
     }
 

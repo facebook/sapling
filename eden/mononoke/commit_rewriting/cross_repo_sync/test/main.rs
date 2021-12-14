@@ -134,7 +134,7 @@ async fn create_initial_commit_with_contents<'a>(
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
         .await
         .unwrap();
 
@@ -168,7 +168,7 @@ async fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
         .await
         .unwrap();
 
@@ -463,7 +463,7 @@ async fn create_commit_from_parent_and_changes<'a>(
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
         .await
         .unwrap();
 
@@ -501,7 +501,7 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
         .await
         .unwrap();
 
@@ -673,7 +673,7 @@ async fn megarepo_copy_file(
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
         .await
         .unwrap();
 
@@ -923,7 +923,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
         .await
         .unwrap();
 
@@ -2002,7 +2002,7 @@ async fn create_merge(
     .unwrap();
 
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo)
         .await
         .unwrap();
 

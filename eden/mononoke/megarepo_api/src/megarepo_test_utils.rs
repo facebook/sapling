@@ -115,8 +115,7 @@ impl MegarepoTest {
             .await?;
         let init_target_cs = init_target_cs.freeze()?;
         let init_target_cs_id = init_target_cs.get_changeset_id();
-        blobrepo::save_bonsai_changesets(vec![init_target_cs], ctx.clone(), self.blobrepo.clone())
-            .await?;
+        blobrepo::save_bonsai_changesets(vec![init_target_cs], ctx.clone(), &self.blobrepo).await?;
 
         bookmark(&ctx, &self.blobrepo, target.bookmark.clone())
             .set_to(init_target_cs_id)

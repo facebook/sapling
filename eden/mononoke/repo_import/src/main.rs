@@ -197,7 +197,7 @@ async fn rewrite_file_paths(
     bonsai_changesets = sort_bcs(&bonsai_changesets)?;
     let bcs_ids = get_cs_ids(&bonsai_changesets);
     info!(ctx.logger(), "Saving shifted bonsai changesets");
-    save_bonsai_changesets(bonsai_changesets, ctx.clone(), repo.clone()).await?;
+    save_bonsai_changesets(bonsai_changesets, ctx.clone(), repo).await?;
     info!(ctx.logger(), "Saved shifted bonsai changesets");
     Ok(bcs_ids)
 }
@@ -564,7 +564,7 @@ async fn merge_imported_commit(
         "Created merge bonsai: {} and changeset: {:?}", merged_cs_id, merged_cs
     );
 
-    save_bonsai_changesets(vec![merged_cs], ctx.clone(), repo.clone()).await?;
+    save_bonsai_changesets(vec![merged_cs], ctx.clone(), repo).await?;
     info!(ctx.logger(), "Finished merging");
     Ok(merged_cs_id)
 }
@@ -1051,7 +1051,7 @@ async fn repo_import(
             bonsai_values.iter().map(|(id, _)| id.clone()).collect();
 
         info!(ctx.logger(), "Saving gitimported bonsai changesets");
-        save_bonsai_changesets(gitimport_bcs.clone(), ctx.clone(), repo.clone()).await?;
+        save_bonsai_changesets(gitimport_bcs.clone(), ctx.clone(), &repo).await?;
         info!(ctx.logger(), "Saved gitimported bonsai changesets");
 
         recovery_fields.import_stage = ImportStage::RewritePaths;
