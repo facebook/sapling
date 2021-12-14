@@ -93,7 +93,7 @@ def update(ui, repo, csid, clean=False):
                 )
 
         files2download = []
-        files2exec = []
+        pathtype = []
 
         wctx = repo[None]
         for (path, fc) in snapshot["file_changes"]:
@@ -118,14 +118,12 @@ def update(ui, repo, csid, clean=False):
                     fctx.remove()
             elif "Change" in fc:
                 filetype = fc["Change"]["file_type"]
-                if filetype == "Executable":
-                    files2exec.append(path)
+                pathtype.append((path, filetype))
                 files2download.append((path, fc["Change"]["upload_token"], filetype))
             elif "UntrackedChange" in fc:
                 wctx.forget([path], quiet=True)
                 filetype = fc["UntrackedChange"]["file_type"]
-                if filetype == "Executable":
-                    files2exec.append(path)
+                pathtype.append((path, filetype))
                 files2download.append(
                     (
                         path,
@@ -142,8 +140,13 @@ def update(ui, repo, csid, clean=False):
             quiet=True,
         )
 
-        for path in files2exec:
-            wctx[path].setflags(l=False, x=True)
+        for (path, filetype) in pathtype:
+            if filetype == "Executable":
+                if not wctx[path].isexec():
+                    wctx[path].setflags(l=False, x=True)
+            else:
+                if wctx[path].isexec():
+                    wctx[path].setflags(l=False, x=False)
 
         # TODO(yancouto): Also update bubble here, need to get it from server
         storelatest(repo.metalog(), csid, None)
