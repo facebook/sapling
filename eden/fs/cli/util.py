@@ -320,13 +320,6 @@ class Repo(abc.ABC):
         """
         pass
 
-    @abc.abstractmethod
-    def cat_file(self, commit: str, path: str) -> bytes:
-        """
-        Returns the file contents for the given file at the given commit.
-        """
-        pass
-
 
 class HgRepo(Repo):
     HEAD = "."
@@ -365,9 +358,6 @@ class HgRepo(Repo):
         out = self._run_hg(["log", "-r", commit, "-T{node}"], stderr_output)
         return out.strip().decode("utf-8")
 
-    def cat_file(self, commit: str, path: str) -> bytes:
-        return self._run_hg(["cat", "-r", commit, path])
-
 
 class GitRepo(Repo):
     HEAD = "HEAD"
@@ -388,9 +378,6 @@ class GitRepo(Repo):
         out = self._run_git(["rev-parse", commit])
         return out.strip().decode("utf-8")
 
-    def cat_file(self, commit: str, path: str) -> bytes:
-        return self._run_git(["cat-file", "blob", ":".join((commit, path))])
-
 
 class ReCasRepo(Repo):
     HEAD = "HEAD"
@@ -407,9 +394,6 @@ class ReCasRepo(Repo):
         raise NotImplementedError(
             "get_comit_hash is not supposed to be called for ReCasRepo"
         )
-
-    def cat_file(self, commit: str, path: str) -> bytes:
-        raise NotImplementedError("cat_file is not supposed to be called for ReCasRepo")
 
 
 def mkscratch_bin() -> Path:
@@ -505,38 +489,6 @@ def get_repo(path: str, backing_store_type: Optional[str] = None) -> Optional[Re
             return None
 
         path = parent
-
-
-def get_project_id(repo: Repo, rev: Optional[str]) -> Optional[str]:
-    contents = None
-    if rev is not None:
-        try:
-            contents = repo.cat_file(rev, ".arcconfig")
-        except subprocess.CalledProcessError:
-            # Most likely .arcconfig does not exist.
-            pass
-        except NotImplementedError:
-            # for repo not support cat
-            pass
-
-    if contents is None:
-        try:
-            contents = repo.cat_file(repo.HEAD, ".arcconfig")
-        except subprocess.CalledProcessError:
-            # Most likely .arcconfig does not exist.
-            # We cannot determine the project ID.
-            return None
-        except NotImplementedError:
-            # for repo not support cat
-            return None
-
-    try:
-        data = json.loads(contents)
-    except Exception:
-        # .arcconfig does not contain valid JSON data for some reason.
-        return None
-
-    return typing.cast(Optional[str], data.get("project_id", None))
 
 
 def print_stderr(message: str, *args: Any, **kwargs: Any) -> None:

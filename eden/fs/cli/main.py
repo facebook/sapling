@@ -754,7 +754,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
 
         # Find the repository information
         try:
-            repo, repo_type, repo_config = self._get_repo_info(
+            repo, repo_config = self._get_repo_info(
                 instance,
                 args.repo,
                 args.rev,
@@ -827,10 +827,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
             if exit_code != 0:
                 return exit_code
 
-        if repo_type is not None:
-            print(f"Cloning new {repo_type} repository at {args.path}...")
-        else:
-            print(f"Cloning new repository at {args.path}...")
+        print(f"Cloning new repository at {args.path}...")
 
         try:
             instance.clone(repo_config, args.path, commit)
@@ -860,7 +857,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
         nfs: bool,
         overlay_type: Optional[str],
         backing_store_type: Optional[str] = None,
-    ) -> Tuple[util.Repo, Optional[str], config_mod.CheckoutConfig]:
+    ) -> Tuple[util.Repo, config_mod.CheckoutConfig]:
         # Check to see if repo_arg points to an existing Eden mount
         checkout_config = instance.get_checkout_config_for_path(repo_arg)
         if checkout_config is not None:
@@ -871,7 +868,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
                     f"{checkout_config.backing_repo} but unable to find a "
                     "repository at that location"
                 )
-            return repo, None, checkout_config
+            return repo, checkout_config
 
         # Confirm that repo_arg looks like an existing repository path.
         repo = util.get_repo(repo_arg, backing_store_type)
@@ -887,8 +884,6 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
 
         # This is a valid repository path.
         # Prepare a CheckoutConfig object for it.
-        project_id = util.get_project_id(repo, rev)
-        repo_type = project_id
         repo_config = config_mod.CheckoutConfig(
             backing_repo=Path(repo.source),
             scm_type=repo.type,
@@ -904,7 +899,7 @@ want nested checkouts, re-run `eden clone` with --allow-nested-checkout or -n.""
             enable_tree_overlay=enable_tree_overlay,
         )
 
-        return repo, repo_type, repo_config
+        return repo, repo_config
 
 
 @subcmd("config", "Query EdenFS configuration")
