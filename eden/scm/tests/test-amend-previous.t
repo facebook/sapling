@@ -188,3 +188,12 @@ Mix with bottom:
   [830512] a
   abort: ambiguous bottom changeset
   [255]
+  $ hg --config ui.interactive=true previous --bottom <<EOF
+  > 2
+  > EOF
+  current stack has multiple bottom changesets, namely:
+  (1) [f2987e] (top) r5
+  (2) [830512] a
+  which changeset to move to [1-2/(c)ancel]?  2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [830512] a

@@ -428,7 +428,9 @@ def _findstackbottom(ui, repo):
     bottoms = list(repo.nodes("roots(draft() & ::.)"))
     if len(bottoms) > 1:
         ui.warn(_("current stack has multiple bottom changesets, namely:\n"))
-        _showchangesets(ui, repo, nodes=bottoms)
+        _showchangesets(ui, repo, nodes=bottoms, indices=ui.interactive())
+        if ui.interactive():
+            return _choosenode(ui, bottoms)
         raise error.Abort(
             _("ambiguous bottom changeset"),
         )
