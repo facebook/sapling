@@ -210,6 +210,50 @@ Make sure runlog works with rust renderer.
     "progress": []
   } (no-eol)
 
+Make sure progress updates when runlog.progress_refresh set.
+  $ rm $TESTTMP/go
+  $ hg progresstest --waitfile=$TESTTMP/go --config runlog.progress_refresh=0.001 1 &
+  $ waitforrunlog
+  {
+    "id": ".*", (re)
+    "command": [
+      "progresstest",
+      "--waitfile=$TESTTMP/go",
+      "--config",
+      "runlog.progress_refresh=0.001",
+      "1"
+    ],
+    "pid": \d+, (re)
+    "start_time": ".*", (re)
+    "end_time": null,
+    "exit_code": null,
+    "progress": []
+  } (no-eol)
+  $ waitforrunlog
+  {
+    "id": ".*", (re)
+    "command": [
+      "progresstest",
+      "--waitfile=$TESTTMP/go",
+      "--config",
+      "runlog.progress_refresh=0.001",
+      "1"
+    ],
+    "pid": \d+, (re)
+    "start_time": ".*", (re)
+    "end_time": null,
+    "exit_code": null,
+    "progress": [
+      {
+        "topic": "eating",
+        "unit": "apples",
+        "total": 1,
+        "position": 1
+      }
+    ]
+  } (no-eol)
+
+
 Test we don't clean up entries with chance=0
   $ setconfig runlog.cleanup_chance=0 runlog.cleanup_threshold=0
   $ rm -f .hg/runlog/*

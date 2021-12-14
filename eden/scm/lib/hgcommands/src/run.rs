@@ -386,9 +386,9 @@ fn spawn_progress_thread(
                     if let Err(err) = run_logger.update_progress(progress) {
                         let _ = write!(stderr, "Error updating runlog progress: {}\n", err);
                     }
-                }
 
-                last_runlog_time = Some(now);
+                    last_runlog_time = Some(now);
+                }
             }
 
             registry.remove_orphan_progress_bar();
