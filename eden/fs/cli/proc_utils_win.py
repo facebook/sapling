@@ -107,31 +107,29 @@ def open_process(pid: int, access: int = _PROCESS_QUERY_LIMITED_INFORMATION) -> 
     return Handle(handle_value)
 
 
-def get_process_name(pid: int) -> str:
-    with open_process(pid) as handle:
-        MAX_PATH = 260  # https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=cmd
-        name = ctypes.create_unicode_buffer(MAX_PATH)
-        if (
-            psapi.GetProcessImageFileNameW(
-                handle.handle, ctypes.cast(name, _LPWSTR), _DWORD(MAX_PATH)
-            )
-            == 0
-        ):
-            raise_win_error()
+def get_process_name(handle: Handle) -> str:
+    MAX_PATH = 260  # https://docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=cmd
+    name = ctypes.create_unicode_buffer(MAX_PATH)
+    if (
+        psapi.GetProcessImageFileNameW(
+            handle.handle, ctypes.cast(name, _LPWSTR), _DWORD(MAX_PATH)
+        )
+        == 0
+    ):
+        raise_win_error()
 
-        return name.value
+    return name.value
 
 
-def get_exit_code(pid: int) -> Optional[int]:
-    with open_process(pid) as handle:
-        STILL_ACTIVE = 259
-        exit_code = _LPDWORD()
-        if _win32.GetExitCodeProcess(handle.handle, exit_code) == 0:
-            raise_win_error()
+def get_exit_code(handle: Handle) -> Optional[int]:
+    STILL_ACTIVE = 259
+    exit_code = _LPDWORD()
+    if _win32.GetExitCodeProcess(handle.handle, exit_code) == 0:
+        raise_win_error()
 
-        if exit_code[0].value == STILL_ACTIVE:
-            return None
-        return int(exit_code[0].value)
+    if exit_code[0].value == STILL_ACTIVE:
+        return None
+    return int(exit_code[0].value)
 
 
 class WinProcUtils(proc_utils.ProcUtils):
@@ -162,7 +160,8 @@ class WinProcUtils(proc_utils.ProcUtils):
 
     def is_process_alive(self, pid: int) -> bool:
         try:
-            return get_exit_code(pid) is None
+            with open_process(pid) as handle:
+                return get_exit_code(handle) is None
         except PermissionError:
             # The process exists, but we don't have permission to query it.
             return True
@@ -171,9 +170,13 @@ class WinProcUtils(proc_utils.ProcUtils):
 
     def is_edenfs_process(self, pid: int) -> bool:
         try:
-            name = get_process_name(pid)
-            if name is None:
-                return False
-            return name.endswith("edenfs.exe")
+            with open_process(pid) as handle:
+                if get_exit_code(handle) is None:
+                    return False
+
+                name = get_process_name(handle)
+                if name is None:
+                    return False
+                return name.endswith("edenfs.exe")
         except Exception:
             return False
