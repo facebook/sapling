@@ -7,6 +7,36 @@
 # shellcheck source=fbcode/eden/mononoke/tests/integration/library.sh
 . "${TEST_FIXTURES}/library.sh"
 
+function base_snapshot_repo_setup {
+    if [ $# -eq  0 ]; then
+        echo "Must provide at least one clone name"
+        exit 1
+    fi
+    INFINITEPUSH_ALLOW_WRITES=true setup_common_config
+    cd "$TESTTMP"
+    cat >> "$HGRCPATH" <<EOF
+[extensions]
+snapshot =
+commitcloud =
+infinitepush =
+amend =
+EOF
+
+    hginit_treemanifest repo
+    cd repo
+    mkcommit "base_commit"
+
+    cd "$TESTTMP"
+    for clone in "$@"; do
+        hgclone_treemanifest ssh://user@dummy/repo "$clone"
+    done
+    blobimport repo/.hg repo
+
+    # start mononoke
+    mononoke
+    wait_for_mononoke
+}
+
 function base_commit_and_snapshot {
     export BASE_SNAPSHOT_COMMIT
     # Make an interesting commit and snapshot that tests all types of file changes
