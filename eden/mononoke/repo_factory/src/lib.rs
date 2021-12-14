@@ -138,6 +138,7 @@ pub struct RepoFactory {
     blobstore_override: Option<Arc<dyn RepoFactoryOverride<Arc<dyn Blobstore>>>>,
     scrub_handler: Arc<dyn ScrubHandler>,
     blobstore_component_sampler: Option<Arc<dyn ComponentSamplingHandler>>,
+    bonsai_hg_mapping_overwrite: bool,
 }
 
 impl RepoFactory {
@@ -153,6 +154,7 @@ impl RepoFactory {
             scrub_handler: default_scrub_handler(),
             blobstore_component_sampler: None,
             redaction_config: common.redaction_config.clone(),
+            bonsai_hg_mapping_overwrite: false,
         }
     }
 
@@ -174,6 +176,11 @@ impl RepoFactory {
         handler: Arc<dyn ComponentSamplingHandler>,
     ) -> &mut Self {
         self.blobstore_component_sampler = Some(handler);
+        self
+    }
+
+    pub fn with_bonsai_hg_mapping_override(&mut self) -> &mut Self {
+        self.bonsai_hg_mapping_overwrite = true;
         self
     }
 
@@ -575,7 +582,13 @@ impl RepoFactory {
             .open::<SqlBonsaiHgMappingBuilder>(&repo_config.storage_config.metadata)
             .await
             .context(RepoFactoryError::BonsaiHgMapping)?;
-        let bonsai_hg_mapping = builder.build(self.env.rendezvous_options);
+
+        let bonsai_hg_mapping = if self.bonsai_hg_mapping_overwrite {
+            builder.build_with_overwrite(self.env.rendezvous_options)
+        } else {
+            builder.build(self.env.rendezvous_options)
+        };
+
         if let Some(pool) = self.maybe_volatile_pool("bonsai_hg_mapping")? {
             Ok(Arc::new(CachingBonsaiHgMapping::new(
                 self.env.fb,

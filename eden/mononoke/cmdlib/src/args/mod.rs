@@ -266,7 +266,7 @@ pub fn create_repo<'a, R: 'a>(
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
-    open_repo_internal(fb, logger, matches, true, None)
+    open_repo_internal(fb, logger, matches, true, None, None)
 }
 
 /// Create a new repo object -- for local instances, expect its contents to be empty.
@@ -280,7 +280,7 @@ pub fn create_repo_unredacted<'a, R: 'a>(
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
-    open_repo_internal(fb, logger, matches, true, Some(Redaction::Disabled))
+    open_repo_internal(fb, logger, matches, true, Some(Redaction::Disabled), None)
 }
 
 /// Open an existing repo object -- for local instances, expect contents to already be there.
@@ -293,7 +293,20 @@ pub fn open_repo<'a, R: 'a>(
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
-    open_repo_internal(fb, logger, matches, false, None)
+    open_repo_internal(fb, logger, matches, false, None, None)
+}
+
+#[inline]
+pub fn open_repo_with_factory<'a, R: 'a>(
+    fb: FacebookInit,
+    logger: &'a Logger,
+    matches: &'a MononokeMatches<'a>,
+    repo_factory: RepoFactory,
+) -> impl Future<Output = Result<R, Error>> + 'a
+where
+    R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
+{
+    open_repo_internal(fb, logger, matches, false, None, Some(repo_factory))
 }
 
 /// Open an existing repo object -- for local instances, expect contents to already be there.
@@ -307,28 +320,40 @@ pub fn open_repo_unredacted<'a, R: 'a>(
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
-    open_repo_internal(fb, logger, matches, false, Some(Redaction::Disabled))
+    open_repo_internal(fb, logger, matches, false, Some(Redaction::Disabled), None)
+}
+
+pub fn get_repo_factory<'a>(matches: &'a MononokeMatches<'a>) -> Result<RepoFactory, Error> {
+    let config_store = matches.config_store();
+    let common_config = load_common_config(config_store, &matches)?;
+    Ok(RepoFactory::new(
+        matches.environment().clone(),
+        &common_config,
+    ))
 }
 
 /// Open an existing repo object by ID -- for local instances, expect contents to already be there.
 /// It useful when we need to open more than 1 mononoke repo based on command line arguments
 #[inline]
-pub fn open_repo_by_id<'a, R: 'a>(
+pub async fn open_repo_by_id<'a, R: 'a>(
     _: FacebookInit,
     logger: &'a Logger,
     matches: &'a MononokeMatches<'a>,
     repo_id: RepositoryId,
-) -> impl Future<Output = Result<R, Error>> + 'a
+) -> Result<R, Error>
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
+    let repo_factory = get_repo_factory(matches)?;
     open_repo_internal_with_repo_id(
         logger,
         RepoIdentifier::Id(repo_id),
         matches,
         false, // use CreateStorage::ExistingOnly when creating blobstore
         None,  // do not override redaction config
+        repo_factory,
     )
+    .await
 }
 
 pub async fn open_source_repo<'a, R: 'a>(
@@ -341,12 +366,15 @@ where
 {
     let config_store = matches.config_store();
     let source_repo_id = get_source_repo_id(&config_store, matches)?;
+    let repo_factory = get_repo_factory(matches)?;
+
     open_repo_internal_with_repo_id(
         logger,
         RepoIdentifier::Id(source_repo_id),
         matches,
         false, // use CreateStorage::ExistingOnly when creating blobstore
         None,  // do not override redaction config
+        repo_factory,
     )
     .await
 }
@@ -361,12 +389,15 @@ where
 {
     let config_store = matches.config_store();
     let source_repo_id = get_target_repo_id(&config_store, matches)?;
+    let repo_factory = get_repo_factory(matches)?;
+
     open_repo_internal_with_repo_id(
         logger,
         RepoIdentifier::Id(source_repo_id),
         matches,
         false, // use CreateStorage::ExistingOnly when creating blobstore
         None,  // do not override redaction config
+        repo_factory,
     )
     .await
 }
@@ -467,18 +498,26 @@ async fn open_repo_internal<R>(
     matches: &MononokeMatches<'_>,
     create: bool,
     redaction_override: Option<Redaction>,
+    maybe_repo_factory: Option<RepoFactory>,
 ) -> Result<R, Error>
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
     let config_store = matches.config_store();
     let repo_id = get_repo_id(config_store, matches)?;
+
+    let repo_factory = match maybe_repo_factory {
+        Some(repo_factory) => repo_factory,
+        None => get_repo_factory(matches)?,
+    };
+
     open_repo_internal_with_repo_id(
         logger,
         RepoIdentifier::Id(repo_id),
         matches,
         create,
         redaction_override,
+        repo_factory,
     )
     .await
 }
@@ -489,12 +528,12 @@ async fn open_repo_internal_with_repo_id<R>(
     matches: &MononokeMatches<'_>,
     create: bool,
     redaction_override: Option<Redaction>,
+    repo_factory: RepoFactory,
 ) -> Result<R, Error>
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
     let config_store = matches.config_store();
-    let common_config = load_common_config(config_store, &matches)?;
 
     let (reponame, repo_id, mut config) = match repo_id {
         RepoIdentifier::Id(repo_id) => {
@@ -521,8 +560,6 @@ where
         _ => {}
     };
 
-    let repo_factory = RepoFactory::new(matches.environment().clone(), &common_config);
-
     if let Some(redaction_override) = redaction_override {
         config.redaction = redaction_override;
     }
@@ -541,7 +578,17 @@ pub async fn open_repo_with_repo_id<'a, R: 'a>(
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
-    open_repo_internal_with_repo_id(logger, RepoIdentifier::Id(repo_id), matches, false, None).await
+    let repo_factory = get_repo_factory(matches)?;
+
+    open_repo_internal_with_repo_id(
+        logger,
+        RepoIdentifier::Id(repo_id),
+        matches,
+        false,
+        None,
+        repo_factory,
+    )
+    .await
 }
 
 pub async fn open_repo_with_repo_name<'a, R: 'a>(
@@ -553,12 +600,15 @@ pub async fn open_repo_with_repo_name<'a, R: 'a>(
 where
     R: for<'builder> facet::AsyncBuildable<'builder, RepoFactoryBuilder<'builder>>,
 {
+    let repo_factory = get_repo_factory(matches)?;
+
     open_repo_internal_with_repo_id(
         logger,
         RepoIdentifier::Name(repo_name),
         matches,
         false,
         None,
+        repo_factory,
     )
     .await
 }

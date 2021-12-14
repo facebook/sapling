@@ -477,3 +477,43 @@ async fn test_get_hg_in_range(fb: FacebookInit) {
     )
     .await;
 }
+
+#[fbinit::test]
+async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
+    let mapping = SqlBonsaiHgMappingBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .build_with_overwrite(RendezVousOptions::for_test());
+
+    let ctx = CoreContext::test_mock(fb);
+    let entry = BonsaiHgMappingEntry {
+        repo_id: REPO_ZERO,
+        hg_cs_id: hg::ONES_CSID,
+        bcs_id: bonsai::ONES_CSID,
+    };
+
+    assert_eq!(
+        true,
+        mapping
+            .add(&ctx, entry.clone())
+            .await
+            .expect("Adding new entry failed")
+    );
+
+    let entry = BonsaiHgMappingEntry {
+        repo_id: REPO_ZERO,
+        hg_cs_id: hg::ONES_CSID,
+        bcs_id: bonsai::TWOS_CSID,
+    };
+    assert_eq!(
+        true,
+        mapping
+            .add(&ctx, entry.clone())
+            .await
+            .expect("Adding new entry failed")
+    );
+
+    let result = mapping.get(&ctx, REPO_ZERO, hg::ONES_CSID.into()).await?;
+    assert_eq!(result, vec![entry.clone()]);
+
+    Ok(())
+}

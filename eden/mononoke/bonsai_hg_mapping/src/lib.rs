@@ -219,9 +219,14 @@ pub struct SqlBonsaiHgMapping {
     write_connection: Connection,
     read_connection: RendezVousConnection,
     read_master_connection: RendezVousConnection,
+    // Option that forces all `add()` method calls to overwrite values
+    // that set in the database. This should be used only when we try to
+    // fix broken entries in the db.
+    overwrite: bool,
 }
 
 queries! {
+    // Sett almost identical ReplaceMapping below
     write InsertMapping(values: (
         repo_id: RepositoryId,
         hg_cs_id: HgChangesetId,
@@ -229,6 +234,16 @@ queries! {
     )) {
         insert_or_ignore,
         "{insert_or_ignore} INTO bonsai_hg_mapping (repo_id, hg_cs_id, bcs_id) VALUES {values}"
+    }
+    
+    // Sett almost identical InsertMapping above
+    write ReplaceMapping(values: (
+        repo_id: RepositoryId,
+        hg_cs_id: HgChangesetId,
+        bcs_id: ChangesetId,
+    )) {
+        none,
+        "REPLACE INTO bonsai_hg_mapping (repo_id, hg_cs_id, bcs_id) VALUES {values}"
     }
 
     read SelectMappingByBonsai(
@@ -280,6 +295,14 @@ impl SqlConstruct for SqlBonsaiHgMappingBuilder {
 
 impl SqlBonsaiHgMappingBuilder {
     pub fn build(self, opts: RendezVousOptions) -> SqlBonsaiHgMapping {
+        self.build_impl(opts, false)
+    }
+
+    pub fn build_with_overwrite(self, opts: RendezVousOptions) -> SqlBonsaiHgMapping {
+        self.build_impl(opts, true)
+    }
+
+    fn build_impl(self, opts: RendezVousOptions, overwrite: bool) -> SqlBonsaiHgMapping {
         let connections = self.connections;
 
         SqlBonsaiHgMapping {
@@ -290,6 +313,7 @@ impl SqlBonsaiHgMappingBuilder {
                 "read_master",
                 opts,
             ),
+            overwrite,
         }
     }
 }
@@ -352,14 +376,22 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             bcs_id,
         } = entry.clone();
 
-        let result =
-            InsertMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)]).await?;
 
-        if result.affected_rows() == 1 {
-            Ok(true)
+        if self.overwrite {
+            let result =
+                ReplaceMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)])
+                    .await?;
+            Ok(result.affected_rows() >= 1)
         } else {
-            self.verify_consistency(entry).await?;
-            Ok(false)
+            let result =
+                InsertMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)])
+                    .await?;
+            if result.affected_rows() == 1 {
+                Ok(true)
+            } else {
+                self.verify_consistency(entry).await?;
+                Ok(false)
+            }
         }
     }
 
