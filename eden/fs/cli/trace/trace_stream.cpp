@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#include <cpptoml.h>
 #include <fmt/core.h>
+#include <folly/Portability.h>
 #include <folly/init/Init.h>
 #include <folly/io/async/AsyncSocket.h>
 #include <folly/io/async/ScopedEventBaseThread.h>
@@ -309,6 +311,17 @@ int trace_fs(
   fmt::print("{} was unmounted\n", FLAGS_mountRoot);
   return 0;
 }
+
+AbsolutePath getSocketPath(AbsolutePathPiece mountRoot) {
+  if constexpr (folly::kIsWindows) {
+    auto configPath = mountRoot + ".eden"_pc + "config"_pc;
+    auto config = cpptoml::parse_file(configPath.stringPiece().toString());
+    auto socketPath = *config->get_qualified_as<std::string>("Config.socket");
+    return AbsolutePath{socketPath};
+  } else {
+    return mountRoot + ".eden"_pc + "socket"_pc;
+  }
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -319,9 +332,8 @@ int main(int argc, char** argv) {
 
   folly::ScopedEventBaseThread evbThread;
 
-  // TODO: Implement Windows client logic.
   AbsolutePath mountRoot{FLAGS_mountRoot};
-  AbsolutePath socketPath = mountRoot + ".eden"_pc + "socket"_pc;
+  AbsolutePath socketPath = getSocketPath(mountRoot);
 
   auto channel = folly::via(
                      evbThread.getEventBase(),
