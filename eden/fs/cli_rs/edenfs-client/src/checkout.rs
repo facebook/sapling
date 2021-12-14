@@ -125,7 +125,7 @@ fn default_guid() -> Uuid {
 }
 
 fn default_case_sensitive() -> bool {
-    cfg!(linux)
+    cfg!(target_os = "linux")
 }
 
 fn default_require_utf8_path() -> bool {
