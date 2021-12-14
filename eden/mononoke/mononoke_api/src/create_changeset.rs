@@ -8,6 +8,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use bytes::Bytes;
+use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
 use context::CoreContext;
 use ephemeral_blobstore::Bubble;
@@ -20,9 +21,11 @@ use futures::{
 use futures_stats::TimedFutureExt;
 use manifest::PathTree;
 use mononoke_types::{
-    BonsaiChangesetMut, ChangesetId, DateTime as MononokeDateTime, FileChange, MPath,
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime as MononokeDateTime, FileChange,
+    MPath,
 };
 use repo_blobstore::RepoBlobstore;
+use repo_blobstore::RepoBlobstoreRef;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::changeset::ChangesetContext;
@@ -281,6 +284,15 @@ async fn verify_prefix_files_deleted(
 }
 
 impl RepoContext {
+    async fn save_changeset(
+        &self,
+        changeset: BonsaiChangeset,
+        container: impl ChangesetsRef + RepoBlobstoreRef,
+    ) -> Result<(), MononokeError> {
+        blobrepo::save_bonsai_changesets(vec![changeset], self.ctx().clone(), container).await?;
+        Ok(())
+    }
+
     // TODO(T105334556): This should require draft_write permission
     /// Create a new changeset in the repository.
     ///
@@ -503,20 +515,13 @@ impl RepoContext {
 
         let new_changeset_id = new_changeset.get_changeset_id();
         if let Some(bubble) = &bubble {
-            blobrepo::save_bonsai_changesets(
-                vec![new_changeset],
-                self.ctx().clone(),
-                bubble.repo_view(self.blob_repo()),
-            )
-            .await?;
+            self.save_changeset(new_changeset, bubble.repo_view(self.blob_repo()))
+                .await?;
         } else {
-            blobrepo::save_bonsai_changesets(
-                vec![new_changeset],
-                self.ctx().clone(),
-                self.blob_repo().clone(),
-            )
-            .await?;
+            self.save_changeset(new_changeset, self.blob_repo().clone())
+                .await?;
         }
+
         Ok(ChangesetContext::new(self.clone(), new_changeset_id))
     }
 }
