@@ -28,7 +28,6 @@ use edenapi::EdenApiError;
 use edenapi::Response;
 use edenapi::Stats;
 use edenapi_ext::calc_contentid;
-use edenapi_ext::check_files;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::CommitGraphEntry;
@@ -62,7 +61,6 @@ use revisionstore::HgIdMutableDeltaStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use types::HgId;
-use types::RepoPathBuf;
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
@@ -71,7 +69,6 @@ use crate::util::meta_to_dict;
 use crate::util::to_contentid;
 use crate::util::to_keys;
 use crate::util::to_keys_with_parents;
-use crate::util::to_path;
 use crate::util::to_trees_upload_items;
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -775,22 +772,6 @@ pub trait EdenApiPyExt: EdenApi {
         .map_pyerr(py)?
         .map_pyerr(py)
         .map(Serde)
-    }
-
-    fn checkfiles_py(
-        &self,
-        py: Python,
-        root: Serde<RepoPathBuf>,
-        files: Vec<(PyPathBuf, Serde<UploadToken>)>,
-    ) -> PyResult<Vec<PyPathBuf>> {
-        let files = files
-            .into_iter()
-            .map(|(p, t)| Ok((to_path(py, &p)?, t.0)))
-            .collect::<Result<Vec<_>, PyErr>>()?;
-        py.allow_threads(|| block_unless_interrupted(check_files(&root.0, files)))
-            .map_pyerr(py)?
-            .map_pyerr(py)
-            .map(|v| v.into_iter().map(Into::into).collect())
     }
 
     fn downloadfiletomemory_py(

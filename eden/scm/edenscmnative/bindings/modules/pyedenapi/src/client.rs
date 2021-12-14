@@ -21,6 +21,7 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use edenapi::Builder;
 use edenapi::EdenApi;
+use edenapi_ext::check_files;
 use edenapi_ext::download_files;
 use edenapi_ext::upload_snapshot;
 use edenapi_types::AnyFileContentId;
@@ -438,7 +439,14 @@ py_class!(pub class client |py| {
         root: Serde<RepoPathBuf>,
         files: Vec<(PyPathBuf, Serde<UploadToken>)>
     ) -> PyResult<Vec<PyPathBuf>> {
-        self.inner(py).as_ref().checkfiles_py(py, root, files)
+        let files = files
+            .into_iter()
+            .map(|(p, t)| Ok((to_path(py, &p)?, t.0)))
+            .collect::<Result<Vec<_>, PyErr>>()?;
+        py.allow_threads(|| block_unless_interrupted(check_files(&root.0, files)))
+            .map_pyerr(py)?
+            .map_pyerr(py)
+            .map(|v| v.into_iter().map(Into::into).collect())
     }
 
     /// Download file from given upload token to memory
