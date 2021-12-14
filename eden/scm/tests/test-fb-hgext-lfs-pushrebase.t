@@ -38,7 +38,7 @@
 
 # clone a client
 
-  $ hg clone ssh://user@dummy/master client --noupdate
+  $ hg clone --no-shallow ssh://user@dummy/master client --noupdate
   streaming all changes
   5 files to transfer, * of data (glob)
   transferred 2.01 KB in 0.0 seconds (1.97 MB/sec)

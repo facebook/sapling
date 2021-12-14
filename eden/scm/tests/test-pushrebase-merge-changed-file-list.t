@@ -28,7 +28,7 @@ Set up server repository
 
 Clone client repository
   $ cd ..
-  $ hg clone ssh://user@dummy/server client -q
+  $ hg clone --no-shallow ssh://user@dummy/server client -q
   $ cd client
   $ setconfig extensions.pushrebase=
   $ setconfig extensions.remotenames=
