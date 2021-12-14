@@ -68,6 +68,7 @@ impl CatGroup {
 #[derive(Clone)]
 pub struct CatsSection<'a> {
     groups: Vec<CatGroup>,
+    #[allow(dead_code)]
     config: &'a dyn Config,
 }
 

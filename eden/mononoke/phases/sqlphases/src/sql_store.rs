@@ -57,6 +57,7 @@ impl Caches {
 pub struct SqlPhasesStore {
     pub(crate) write_connection: Connection,
     pub(crate) read_connection: Connection,
+    #[allow(dead_code)]
     pub(crate) read_master_connection: Connection,
     pub(crate) caches: Arc<Caches>,
 }

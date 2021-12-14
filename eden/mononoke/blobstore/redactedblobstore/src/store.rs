@@ -109,6 +109,7 @@ impl RedactedBlobs {
 
 #[derive(Debug)]
 struct InnerConfig {
+    #[allow(dead_code)]
     raw_config: Arc<RedactionSets>,
     map: Arc<HashMap<String, RedactedMetadata>>,
 }

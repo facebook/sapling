@@ -105,6 +105,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 mod test {
     use super::*;
 

@@ -166,6 +166,7 @@ pub trait BlobstoreSyncQueue: Send + Sync {
 #[derive(Clone)]
 pub struct SqlBlobstoreSyncQueue {
     write_connection: Arc<Connection>,
+    #[allow(dead_code)]
     read_connection: Connection,
     read_master_connection: Connection,
     write_sender: Arc<

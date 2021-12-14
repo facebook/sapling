@@ -24,6 +24,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct StoreFile {
     key: Option<Key>,
+    #[allow(dead_code)]
     parents: Option<Parents>,
     entry_metadata: Option<Metadata>,
 
@@ -41,6 +42,7 @@ enum StoreFileKind {
     /// access to another store, unlike an LfsPointer.
     File {
         stripped_content: Option<Bytes>,
+        #[allow(dead_code)]
         copied_from: Option<Key>,
     },
 

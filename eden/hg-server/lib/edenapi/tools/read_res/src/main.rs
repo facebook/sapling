@@ -164,6 +164,7 @@ struct CommitRevlogDataShowArgs {
 struct CommitRevlogDataCheckArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
+    #[allow(dead_code)]
     #[structopt(long, short, help = "Only look at the first N entries")]
     limit: Option<usize>,
 }
@@ -173,6 +174,7 @@ struct CommitRevlogDataCheckArgs {
 struct CommitLocationToHashArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
+    #[allow(dead_code)]
     #[structopt(long, short, help = "Output file (stdout used if omitted)")]
     output: Option<PathBuf>,
     #[structopt(long, short, help = "Look at items starting with index start")]
@@ -186,6 +188,7 @@ struct CommitLocationToHashArgs {
 struct CommitHashToLocationArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
+    #[allow(dead_code)]
     #[structopt(long, short, help = "Output file (stdout used if omitted)")]
     output: Option<PathBuf>,
     #[structopt(long, short, help = "Look at items starting with index start")]
@@ -206,6 +209,7 @@ struct CloneArgs {
 struct BookmarkArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
     input: Option<PathBuf>,
+    #[allow(dead_code)]
     #[structopt(long, short, help = "Output file (stdout used if omitted)")]
     output: Option<PathBuf>,
     #[structopt(long, short, help = "Only look at the first N entries")]

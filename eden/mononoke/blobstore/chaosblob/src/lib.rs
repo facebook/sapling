@@ -51,6 +51,7 @@ pub struct ChaosBlobstore<T> {
     blobstore: T,
     sample_threshold_read: f32,
     sample_threshold_write: f32,
+    #[allow(dead_code)]
     options: ChaosOptions,
 }
 

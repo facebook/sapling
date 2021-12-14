@@ -414,6 +414,7 @@ fn get_required_config<T: FromConfigValue>(
 /// been appropriately parsed and validated.
 #[derive(Debug)]
 pub(crate) struct Config {
+    #[allow(dead_code)]
     pub(crate) repo_name: String,
     pub(crate) server_url: Url,
     pub(crate) cert: Option<PathBuf>,

@@ -30,6 +30,7 @@ pub struct DarkstormGlobalrevSyncer {
 
 #[derive(Clone)]
 struct HgsqlConnection {
+    #[allow(dead_code)]
     connection: Connection,
 }
 

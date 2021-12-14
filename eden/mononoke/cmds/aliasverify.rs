@@ -56,6 +56,7 @@ enum Mode {
 struct AliasVerification {
     logger: Logger,
     blobrepo: BlobRepo,
+    #[allow(dead_code)]
     repoid: RepositoryId,
     mode: Mode,
     err_cnt: Arc<AtomicUsize>,

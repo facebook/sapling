@@ -53,6 +53,7 @@ pub struct MononokeRepo {
     repo: Arc<Repo>,
     bookmark_attrs: BookmarkAttrs,
     streaming_clone: SqlStreamingCloneConfig,
+    #[allow(dead_code)]
     mutable_counters: Arc<dyn MutableCounters>,
     // Reverse filler queue for recording accepted infinitepush bundles
     // This field is `None` if we don't want recording to happen

@@ -66,6 +66,7 @@ const CHUNK_HEADER3_LEN: usize = 20 + 20 + 20 + 20 + 20 + 2 + 4;
 
 #[derive(Debug)]
 pub struct CgUnpacker {
+    #[allow(dead_code)]
     logger: Logger,
     state: State,
     version: CgVersion,

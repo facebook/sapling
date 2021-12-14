@@ -21,6 +21,7 @@ use super::{HgDataContext, HgDataId, HgRepoContext};
 
 #[derive(Clone)]
 pub struct HgTreeContext {
+    #[allow(dead_code)]
     repo: HgRepoContext,
     envelope: HgManifestEnvelope,
 }

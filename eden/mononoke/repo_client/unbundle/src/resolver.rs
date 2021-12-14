@@ -836,6 +836,7 @@ struct Bundle2Resolver<'r> {
     ctx: &'r CoreContext,
     repo: &'r BlobRepo,
     infinitepush_writes_allowed: bool,
+    #[allow(dead_code)]
     pushrebase_flags: PushrebaseFlags,
 }
 

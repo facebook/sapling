@@ -97,14 +97,18 @@ pub struct MononokeRateLimitConfig {
     pub region_weight: f64,
     pub rate_limits: Vec<RateLimit>,
     pub load_shed_limits: Vec<LoadShedLimit>,
+    #[allow(dead_code)]
     commits_per_author: RateLimitBody,
+    #[allow(dead_code)]
     total_file_changes: Option<RateLimitBody>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RateLimit {
     pub body: RateLimitBody,
+    #[allow(dead_code)]
     target: Option<Target>,
+    #[allow(dead_code)]
     metric: Metric,
 }
 

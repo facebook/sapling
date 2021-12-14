@@ -16,8 +16,10 @@ use crate::{datastore::Metadata, indexedlogdatastore::Entry};
 #[derive(Clone, Debug)]
 pub struct StoreTree {
     key: Option<Key>,
+    #[allow(dead_code)]
     parents: Option<Parents>,
     raw_content: Option<Bytes>,
+    #[allow(dead_code)]
     entry_metadata: Option<Metadata>,
 }
 

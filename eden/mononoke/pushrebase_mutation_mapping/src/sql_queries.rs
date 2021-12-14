@@ -87,6 +87,7 @@ impl SqlPushrebaseMutationMapping {
 
 #[derive(Clone)]
 pub struct SqlPushrebaseMutationMappingConnection {
+    #[allow(dead_code)]
     write_connection: Connection,
     read_connection: Connection,
     read_master_connection: Connection,

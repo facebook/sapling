@@ -208,7 +208,7 @@ macro_rules! blobstore_test_impl {
                 let state = $state;
                 let factory = $new_cb;
                 // This is really just checking that the constructed type is Sized
-                Box::new(factory(state, PutBehaviour::Overwrite)?);
+                let _ = Box::new(factory(state, PutBehaviour::Overwrite)?);
                 Ok(())
             }
         }
