@@ -143,18 +143,16 @@ class EdenServer : private TakeoverHandler {
    * asynchronous preparation steps is tracked in the returned Future object.
    *
    * The returned future will complete until the EdenServer is running
-   * successfully and accepting thrift connections.
+   * successfully and accepting thrift connections and when all mount points
+   * have been remountd.
    *
-   * If waitForMountCompletion is true the returned future will also not
-   * become ready until all configured mount points have been remounted.
    * If an error occurs remounting some mount points the Future will complete
    * with an exception, but the server will still continue to run.  Everything
    * will be running normally except for the mount points that failed to be
    * remounted.
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> prepare(
-      std::shared_ptr<StartupLogger> logger,
-      bool waitForMountCompletion = true);
+      std::shared_ptr<StartupLogger> logger);
 
   /**
    * Run the EdenServer.
@@ -482,8 +480,7 @@ class EdenServer : private TakeoverHandler {
    * prepareImpl() contains the bulk of the implementation of prepare()
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> prepareImpl(
-      std::shared_ptr<StartupLogger> logger,
-      bool waitForMountCompletion);
+      std::shared_ptr<StartupLogger> logger);
   FOLLY_NODISCARD std::vector<folly::Future<folly::Unit>> prepareMountsTakeover(
       std::shared_ptr<StartupLogger> logger,
       std::vector<TakeoverData::MountInfo>&& takeoverMounts);

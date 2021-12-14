@@ -811,10 +811,8 @@ void EdenServer::serve() const {
   getServer()->serve();
 }
 
-Future<Unit> EdenServer::prepare(
-    std::shared_ptr<StartupLogger> logger,
-    bool waitForMountCompletion) {
-  return prepareImpl(std::move(logger), waitForMountCompletion)
+Future<Unit> EdenServer::prepare(std::shared_ptr<StartupLogger> logger) {
+  return prepareImpl(std::move(logger))
       .ensure(
           // Mark the server state as RUNNING once we finish setting up the
           // mount points. Even if an error occurs we still transition to the
@@ -823,9 +821,7 @@ Future<Unit> EdenServer::prepare(
           [this] { runningState_.wlock()->state = RunState::RUNNING; });
 }
 
-Future<Unit> EdenServer::prepareImpl(
-    std::shared_ptr<StartupLogger> logger,
-    bool waitForMountCompletion) {
+Future<Unit> EdenServer::prepareImpl(std::shared_ptr<StartupLogger> logger) {
   bool doingTakeover = false;
   if (!edenDir_.acquireLock()) {
     // Another edenfs process is already running.
@@ -927,16 +923,10 @@ Future<Unit> EdenServer::prepareImpl(
     mountFutures = prepareMounts(logger);
   }
 
-  if (waitForMountCompletion) {
-    // Return a future that will complete only when all mount points have
-    // started and the thrift server is also running.
-    mountFutures.emplace_back(std::move(thriftRunningFuture));
-    return folly::collectAllUnsafe(mountFutures).unit();
-  } else {
-    // Don't wait for the mount futures.
-    // Only return the thrift future.
-    return thriftRunningFuture;
-  }
+  // Return a future that will complete only when all mount points have
+  // started and the thrift server is also running.
+  mountFutures.emplace_back(std::move(thriftRunningFuture));
+  return folly::collectAllUnsafe(mountFutures).unit();
 }
 
 std::shared_ptr<cpptoml::table> EdenServer::parseConfig() {

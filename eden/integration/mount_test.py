@@ -236,25 +236,6 @@ class MountTest(testcase.EdenRepoTest):
 
         self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
 
-    def test_start_no_mount_wait(self) -> None:
-        self.eden.shutdown()
-        self.eden.start(
-            extra_args=[
-                "--noWaitForMounts",
-                "--enable_fault_injection",
-                "--fault_injection_block_mounts",
-            ]
-        )
-        self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
-
-        # Unblock mounting and wait for the mount to transition to running
-        with self.eden.get_thrift_client() as client:
-            self.assertEqual(fb303_status.ALIVE, client.getStatus())
-            client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
-            self._wait_for_mount_running(client)
-
-        self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
-
     def _wait_for_mount_running(
         self, client: EdenClient, path: Optional[Path] = None
     ) -> None:

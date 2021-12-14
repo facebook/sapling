@@ -41,11 +41,6 @@
 
 DEFINE_bool(edenfs, false, "This legacy argument is ignored.");
 DEFINE_bool(allowRoot, false, "Allow running eden directly as root");
-DEFINE_bool(
-    noWaitForMounts,
-    false,
-    "Report successful startup without waiting for all configured mounts "
-    "to be remounted.");
 
 // Set the default log level for all eden logs to DBG2
 // Also change the "default" log handler (which logs to stderr) to log
@@ -279,7 +274,7 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         std::move(hiveLogger),
         main.getEdenfsVersion());
 
-    prepareFuture = server->prepare(startupLogger, !FLAGS_noWaitForMounts);
+    prepareFuture = server->prepare(startupLogger);
   } catch (const std::exception& ex) {
     auto startTimeInSeconds =
         std::chrono::duration<double>{daemonStart.elapsed()}.count();
