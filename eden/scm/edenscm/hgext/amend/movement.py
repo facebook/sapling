@@ -199,7 +199,10 @@ def _findtarget(ui, repo, n, opts, reverse):
         # walking up the stack.
         return _findstacktop(ui, repo, newest)
     elif bottom:
-        return _findstackbottom(ui, repo)
+        return _findstackbottom(
+            ui,
+            repo,
+        )
     elif reverse:
         return _findprevtarget(ui, repo, n, bookmark, newest)
     else:
@@ -251,17 +254,22 @@ def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
             ui.status(
                 _("changeset %s has multiple parents, namely:\n") % short(ctx.node())
             )
-            _showchangesets(ui, repo, contexts=parents)
-            raise error.Abort(
-                _("ambiguous previous changeset"),
-                hint=_(
-                    "use the --newest flag to always "
-                    "pick the newest parent at each step"
-                ),
+            parents = _showchangesets(
+                ui, repo, contexts=parents, indices=ui.interactive()
             )
-
-        # Get the parent with the highest revision number.
-        ctx = max(parents, key=lambda x: x.rev())
+            if ui.interactive():
+                ctx = _choosenode(ui, parents)
+            else:
+                raise error.Abort(
+                    _("ambiguous previous changeset"),
+                    hint=_(
+                        "use the --newest flag to always "
+                        "pick the newest parent at each step"
+                    ),
+                )
+        else:
+            # Get the parent with the highest revision number.
+            ctx = max(parents, key=lambda x: x.rev())
 
     return ctx.node()
 

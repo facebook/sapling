@@ -130,3 +130,51 @@ Test dirty working copy and --clean.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [*] r3 (glob)
   $ hg st
+
+Test multiple parents
+  $ hg up 'desc(r3)' -q
+  $ echo a > a && hg add a && hg commit -m a
+  $ hg merge 'desc(r5)' -q && hg commit -m merge
+  $ showgraph
+  @    55f23eb33584 merge
+  ├─╮
+  │ o  8305126fd490 a
+  │ │
+  o │  f2987ebe5838 r5
+  │ │
+  o │  aa70f0fe546a r4
+  ├─╯
+  o  cb14eba0ad9c r3
+  │
+  o  f07e66f449d0 r2
+  │
+  o  09bb8c08de89 r1
+  │
+  o  fdaccbb26270 r0
+  $ hg previous
+  changeset 55f23eb33584 has multiple parents, namely:
+  [f2987e] (top) r5
+  [830512] a
+  abort: ambiguous previous changeset
+  (use the --newest flag to always pick the newest parent at each step)
+  [255]
+  $ hg --config ui.interactive=true previous 3 <<EOF
+  > 1
+  > EOF
+  changeset 55f23eb33584 has multiple parents, namely:
+  (1) [f2987e] (top) r5
+  (2) [830512] a
+  which changeset to move to [1-2/(c)ancel]?  1
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [cb14eb] r3
+  $ hg up 'desc(merge)' -q
+  $ hg --config ui.interactive=true previous 3 <<EOF
+  > 2
+  > EOF
+  changeset 55f23eb33584 has multiple parents, namely:
+  (1) [f2987e] (top) r5
+  (2) [830512] a
+  which changeset to move to [1-2/(c)ancel]?  2
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [f07e66] (bookmark) r2
+  (activating bookmark bookmark)
