@@ -21,6 +21,7 @@ use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
 use edenapi::Builder;
 use edenapi::EdenApi;
+use edenapi_ext::upload_snapshot;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::CommitGraphEntry;
 use edenapi_types::CommitHashLookupResponse;
@@ -385,8 +386,20 @@ py_class!(pub class client |py| {
         custom_duration_secs: Option<u64>,
         copy_from_bubble_id: Option<u64>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
+        let api = self.inner(py).as_ref();
         let copy_from_bubble_id = copy_from_bubble_id.and_then(NonZeroU64::new);
-        self.inner(py).as_ref().uploadsnapshot_py(py, repo, data, custom_duration_secs, copy_from_bubble_id)
+        py.allow_threads(|| {
+            block_unless_interrupted(upload_snapshot(
+                api,
+                repo,
+                data.0,
+                custom_duration_secs,
+                copy_from_bubble_id,
+            ))
+        })
+        .map_pyerr(py)?
+        .map_pyerr(py)
+        .map(Serde)
     }
 
     /// Fetch snapshot information

@@ -8,7 +8,6 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::bail;
@@ -31,7 +30,6 @@ use edenapi::Stats;
 use edenapi_ext::calc_contentid;
 use edenapi_ext::check_files;
 use edenapi_ext::download_files;
-use edenapi_ext::upload_snapshot;
 use edenapi_types::AnyFileContentId;
 use edenapi_types::AnyId;
 use edenapi_types::CommitGraphEntry;
@@ -52,11 +50,9 @@ use edenapi_types::HistoryEntry;
 use edenapi_types::IndexableId;
 use edenapi_types::LandStackResponse;
 use edenapi_types::LookupResult;
-use edenapi_types::SnapshotRawData;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
 use edenapi_types::UploadHgChangeset;
-use edenapi_types::UploadSnapshotResponse;
 use edenapi_types::UploadToken;
 use futures::prelude::*;
 use futures::stream;
@@ -758,28 +754,6 @@ pub trait EdenApiPyExt: EdenApi {
         let responses_py = responses.map_ok(|r| Serde(r.token)).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((responses_py.into(), stats_py))
-    }
-
-    fn uploadsnapshot_py(
-        &self,
-        py: Python,
-        repo: String,
-        data: Serde<SnapshotRawData>,
-        custom_duration_secs: Option<u64>,
-        copy_from_bubble_id: Option<NonZeroU64>,
-    ) -> PyResult<Serde<UploadSnapshotResponse>> {
-        py.allow_threads(|| {
-            block_unless_interrupted(upload_snapshot(
-                self,
-                repo,
-                data.0,
-                custom_duration_secs,
-                copy_from_bubble_id,
-            ))
-        })
-        .map_pyerr(py)?
-        .map_pyerr(py)
-        .map(Serde)
     }
 
     fn fetchsnapshot_py(
