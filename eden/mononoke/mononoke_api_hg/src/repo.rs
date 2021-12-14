@@ -687,28 +687,28 @@ impl HgRepoContext {
         &self,
         m_clone_data: CloneData<ChangesetId>,
     ) -> Result<CloneData<HgChangesetId>, MononokeError> {
-        const CHUNK_SIZE: usize = 1000;
-        let idmap_list = m_clone_data.idmap.into_iter().collect::<Vec<_>>();
         let mut hg_idmap = BTreeMap::new();
-        for chunk in idmap_list.chunks(CHUNK_SIZE) {
-            let csids = chunk.iter().map(|(_, csid)| *csid).collect::<Vec<_>>();
-            let mapping = self
-                .blob_repo()
-                .get_hg_bonsai_mapping(self.ctx().clone(), csids)
-                .await
-                .context("error fetching hg bonsai mapping")?
-                .into_iter()
-                .map(|(hgid, csid)| (csid, hgid))
-                .collect::<HashMap<_, _>>();
-            for (v, csid) in chunk {
-                let hgid = mapping.get(&csid).ok_or_else(|| {
-                    MononokeError::from(format_err!(
-                        "failed to find bonsai '{}' mapping to hg",
-                        csid
-                    ))
-                })?;
-                hg_idmap.insert(*v, *hgid);
-            }
+        let csids = m_clone_data
+            .idmap
+            .iter()
+            .map(|(_, csid)| *csid)
+            .collect::<Vec<_>>();
+        let mapping = self
+            .blob_repo()
+            .get_hg_bonsai_mapping(self.ctx().clone(), csids)
+            .await
+            .context("error fetching hg bonsai mapping")?
+            .into_iter()
+            .map(|(hgid, csid)| (csid, hgid))
+            .collect::<HashMap<_, _>>();
+        for (v, csid) in m_clone_data.idmap {
+            let hgid = mapping.get(&csid).ok_or_else(|| {
+                MononokeError::from(format_err!(
+                    "failed to find bonsai '{}' mapping to hg",
+                    csid
+                ))
+            })?;
+            hg_idmap.insert(v, *hgid);
         }
         let hg_clone_data = CloneData {
             flat_segments: m_clone_data.flat_segments,
