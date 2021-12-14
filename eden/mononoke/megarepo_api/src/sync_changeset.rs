@@ -6,8 +6,8 @@
  */
 
 use crate::common::{
-    find_bookmark_and_value, find_source_config, find_target_bookmark_and_value,
-    find_target_sync_config, MegarepoOp, SourceAndMovedChangesets,
+    find_source_config, find_target_bookmark_and_value, find_target_sync_config, MegarepoOp,
+    SourceAndMovedChangesets,
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -28,7 +28,6 @@ use mononoke_api::Mononoke;
 use mononoke_api::RepoContext;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use mutable_renames::MutableRenames;
-use reachabilityindex::LeastCommonAncestorsHint;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -287,44 +286,25 @@ impl<'a> SyncChangeset<'a> {
 // We allow syncing changeset from a source if one of its parents was the latest synced changeset
 // from this source into this target.
 async fn validate_can_sync_changeset(
-    ctx: &CoreContext,
+    _ctx: &CoreContext,
     target: &Target,
     source_cs: &BonsaiChangeset,
     commit_remapping_state: &CommitRemappingState,
-    source_repo: &RepoContext,
+    _source_repo: &RepoContext,
     source: &Source,
 ) -> Result<(), MegarepoError> {
     match &source.revision {
         SourceRevision::hash(_) => {
+            /* If the revision is hardcoded hash it should be changed using remerge_source */
             return Err(MegarepoError::request(anyhow!(
                 "can't sync changeset from source {} because this source points to a changeset",
                 source.source_name,
             )));
         }
-        SourceRevision::bookmark(bookmark) => {
-            let (_, source_bookmark_value) =
-                find_bookmark_and_value(ctx, source_repo, &bookmark).await?;
-
-            if source_bookmark_value != source_cs.get_changeset_id() {
-                let is_ancestor = source_repo
-                    .skiplist_index()
-                    .is_ancestor(
-                        ctx,
-                        &source_repo.blob_repo().get_changeset_fetcher(),
-                        source_cs.get_changeset_id(),
-                        source_bookmark_value,
-                    )
-                    .await
-                    .map_err(MegarepoError::internal)?;
-
-                if !is_ancestor {
-                    return Err(MegarepoError::request(anyhow!(
-                        "{} is not an ancestor of source bookmark {}",
-                        source_bookmark_value,
-                        bookmark,
-                    )));
-                }
-            }
+        SourceRevision::bookmark(_bookmark) => {
+            /* If the source is following a git repo branch we can't verify much as the bookmark
+            doesn't have to exist in the megarepo */
+            ()
         }
         SourceRevision::UnknownField(_) => {
             return Err(MegarepoError::internal(anyhow!(
@@ -492,18 +472,6 @@ mod test {
             .add_file("anotherfile", "anothercontent")
             .commit()
             .await?;
-
-        println!("Syncing a commit that's not ancestor of target bookmark");
-        let res = sync_changeset
-            .sync(
-                &ctx,
-                source_cs_id,
-                &source_name,
-                &target,
-                latest_target_cs_id,
-            )
-            .await;
-        assert!(res.is_err());
 
         bookmark(&ctx, &test.blobrepo, source_name.to_string())
             .set_to(source_cs_id)
