@@ -84,18 +84,9 @@ pub(crate) fn map_commit_ids<'a>(
 /// Map a commit ID to its scheme name and string representation.
 pub(crate) fn map_commit_id(id: &thrift::CommitId) -> Option<(String, String)> {
     match id {
-        thrift::CommitId::bonsai(hash) => Some((
-            String::from("bonsai"),
-            hex_string(hash).expect("hex_string should not fail"),
-        )),
-        thrift::CommitId::hg(hash) => Some((
-            String::from("hg"),
-            hex_string(hash).expect("hex_string should not fail"),
-        )),
-        thrift::CommitId::git(hash) => Some((
-            String::from("git"),
-            hex_string(hash).expect("hex_string should not fail"),
-        )),
+        thrift::CommitId::bonsai(hash) => Some((String::from("bonsai"), hex_string(hash))),
+        thrift::CommitId::hg(hash) => Some((String::from("hg"), hex_string(hash))),
+        thrift::CommitId::git(hash) => Some((String::from("git"), hex_string(hash))),
         thrift::CommitId::globalrev(rev) => Some((String::from("globalrev"), rev.to_string())),
         thrift::CommitId::svnrev(rev) => Some((String::from("svnrev"), rev.to_string())),
         _ => None,
@@ -249,27 +240,15 @@ impl fmt::Display for CommitId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             CommitId::Resolve(id) => write!(f, "commit id '{}'", id),
-            CommitId::BonsaiId(bonsai) => write!(
-                f,
-                "bonsai id '{}'",
-                hex_string(bonsai).expect("hex_string should not fail")
-            ),
+            CommitId::BonsaiId(bonsai) => write!(f, "bonsai id '{}'", hex_string(bonsai)),
             CommitId::EphemeralBonsai(bonsai, bubble_id) => write!(
                 f,
                 "bonsai id '{}' on bubble {}",
-                hex_string(bonsai).expect("hex_string should not fail"),
+                hex_string(bonsai),
                 bubble_id.map_or_else(|| "unknown".to_string(), |id| id.to_string()),
             ),
-            CommitId::HgId(id) => write!(
-                f,
-                "hg commit id '{}'",
-                hex_string(id).expect("hex_string should not fail")
-            ),
-            CommitId::GitSha1(id) => write!(
-                f,
-                "git sha1 '{}'",
-                hex_string(id).expect("hex_string should not fail")
-            ),
+            CommitId::HgId(id) => write!(f, "hg commit id '{}'", hex_string(id)),
+            CommitId::GitSha1(id) => write!(f, "git sha1 '{}'", hex_string(id)),
             CommitId::Globalrev(rev) => write!(f, "globalrev '{}'", rev),
             CommitId::Svnrev(rev) => write!(f, "svn revision '{}'", rev),
             CommitId::Bookmark(bookmark) => write!(f, "bookmark '{}'", bookmark),

@@ -59,7 +59,7 @@ impl Render for CatOutput {
             }),
             Err(_) => json!({
                 "offset": self.offset,
-                "hex": faster_hex::hex_string(self.data.as_slice())?
+                "hex": faster_hex::hex_string(self.data.as_slice())
             }),
         };
         Ok(serde_json::to_writer(w, &output)?)

@@ -31,6 +31,7 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sha-1 = "0.8"
 sha2 = "0.8"
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tunables = { version = "0.1.0", path = "../../tunables" }

@@ -419,7 +419,7 @@ impl Params {
         for csid in csids {
             hasher.input(csid.blake2().as_ref());
         }
-        let res = faster_hex::hex_string(&hasher.result())?;
+        let res = faster_hex::hex_string(&hasher.result());
         Ok(res)
     }
 }

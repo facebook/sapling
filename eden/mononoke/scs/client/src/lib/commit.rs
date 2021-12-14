@@ -59,7 +59,7 @@ impl TryFrom<&thrift::CommitInfo> for CommitInfo {
         for (name, value) in commit.extra.iter() {
             match std::str::from_utf8(value) {
                 Ok(value) => extra.insert(name.clone(), value.to_string()),
-                Err(_) => extra_hex.insert(name.clone(), faster_hex::hex_string(value)?),
+                Err(_) => extra_hex.insert(name.clone(), faster_hex::hex_string(value)),
             };
         }
         Ok(CommitInfo {

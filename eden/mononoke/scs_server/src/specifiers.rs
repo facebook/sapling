@@ -78,7 +78,7 @@ impl SpecifierExt for thrift::TreeSpecifier {
             thrift::TreeSpecifier::by_id(tree_id) => format!(
                 "repo={} tree={}",
                 tree_id.repo.name,
-                hex_string(&tree_id.id).expect("hex_string should never fail")
+                hex_string(&tree_id.id)
             ),
             thrift::TreeSpecifier::UnknownField(n) => format!("unknown tree specifier type {}", n),
         }
@@ -116,17 +116,17 @@ impl SpecifierExt for thrift::FileSpecifier {
             thrift::FileSpecifier::by_id(file_id) => format!(
                 "repo={} file={}",
                 file_id.repo.name,
-                hex_string(&file_id.id).expect("hex_string should never fail"),
+                hex_string(&file_id.id),
             ),
             thrift::FileSpecifier::by_sha1_content_hash(hash) => format!(
                 "repo={} file_sha1={}",
                 hash.repo.name,
-                hex_string(&hash.content_hash).expect("hex_string should never fail"),
+                hex_string(&hash.content_hash),
             ),
             thrift::FileSpecifier::by_sha256_content_hash(hash) => format!(
                 "repo={} file_sha256={}",
                 hash.repo.name,
-                hex_string(&hash.content_hash).expect("hex_string should never fail"),
+                hex_string(&hash.content_hash),
             ),
             thrift::FileSpecifier::UnknownField(n) => format!("unknown file specifier type {}", n),
         }

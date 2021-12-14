@@ -27,6 +27,7 @@ metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 slog = { version = "2.7", features = ["max_level_trace", "nested-values"] }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
 tunables = { version = "0.1.0", path = "../../tunables" }
 

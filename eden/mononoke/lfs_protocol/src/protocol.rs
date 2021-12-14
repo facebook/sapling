@@ -96,7 +96,7 @@ pub struct Sha256(pub [u8; 32]);
 
 impl Sha256 {
     fn to_hex(&self) -> String {
-        hex_string(&self.0).expect("failed to hex encode")
+        hex_string(&self.0)
     }
 }
 

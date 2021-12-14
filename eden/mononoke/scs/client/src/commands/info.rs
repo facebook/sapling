@@ -240,9 +240,9 @@ fn tree_info(
     entry_type: thrift::EntryType,
     info: thrift::TreeInfo,
 ) -> Result<Box<dyn Render>, Error> {
-    let id = faster_hex::hex_string(&info.id)?;
-    let simple_format_sha1 = faster_hex::hex_string(&info.simple_format_sha1)?;
-    let simple_format_sha256 = faster_hex::hex_string(&info.simple_format_sha256)?;
+    let id = faster_hex::hex_string(&info.id);
+    let simple_format_sha1 = faster_hex::hex_string(&info.simple_format_sha1);
+    let simple_format_sha256 = faster_hex::hex_string(&info.simple_format_sha256);
     let output = Box::new(TreeInfoOutput {
         path,
         r#type: entry_type.to_string().to_lowercase(),
@@ -263,9 +263,9 @@ fn file_info(
     entry_type: thrift::EntryType,
     info: thrift::FileInfo,
 ) -> Result<Box<dyn Render>, Error> {
-    let id = faster_hex::hex_string(&info.id)?;
-    let content_sha1 = faster_hex::hex_string(&info.content_sha1)?;
-    let content_sha256 = faster_hex::hex_string(&info.content_sha256)?;
+    let id = faster_hex::hex_string(&info.id);
+    let content_sha1 = faster_hex::hex_string(&info.content_sha1);
+    let content_sha256 = faster_hex::hex_string(&info.content_sha256);
     let output = Box::new(FileInfoOutput {
         path,
         r#type: entry_type.to_string().to_lowercase(),

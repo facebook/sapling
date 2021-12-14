@@ -195,10 +195,10 @@ fn list_output(
             async move {
                 let entry_output = match entry.info {
                     thrift::EntryInfo::tree(info) => {
-                        let id = faster_hex::hex_string(&info.id)?;
-                        let simple_format_sha1 = faster_hex::hex_string(&info.simple_format_sha1)?;
+                        let id = faster_hex::hex_string(&info.id);
+                        let simple_format_sha1 = faster_hex::hex_string(&info.simple_format_sha1);
                         let simple_format_sha256 =
-                            faster_hex::hex_string(&info.simple_format_sha256)?;
+                            faster_hex::hex_string(&info.simple_format_sha256);
                         LsEntryOutput::Tree {
                             id,
                             simple_format_sha1,
@@ -211,9 +211,9 @@ fn list_output(
                         }
                     }
                     thrift::EntryInfo::file(info) => {
-                        let id = faster_hex::hex_string(&info.id)?;
-                        let content_sha1 = faster_hex::hex_string(&info.content_sha1)?;
-                        let content_sha256 = faster_hex::hex_string(&info.content_sha256)?;
+                        let id = faster_hex::hex_string(&info.id);
+                        let content_sha1 = faster_hex::hex_string(&info.content_sha1);
+                        let content_sha256 = faster_hex::hex_string(&info.content_sha256);
                         let link_target = if long && entry.r#type == thrift::EntryType::LINK {
                             fetch_link_target(connection.clone(), repo.clone(), info.id.clone())
                                 .await

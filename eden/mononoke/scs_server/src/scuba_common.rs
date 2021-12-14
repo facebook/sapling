@@ -9,7 +9,7 @@ use megarepo_config::Target;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 pub(crate) fn hex(v: &[u8]) -> String {
-    faster_hex::hex_string(v).expect("hex_string should never fail")
+    faster_hex::hex_string(v)
 }
 
 pub(crate) enum Reported {

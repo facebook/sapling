@@ -220,7 +220,7 @@ macro_rules! impl_from_request_binary_id(
                     errors::invalid_request(format!(
                         "invalid {} ({}): {}",
                         $name,
-                        hex_string(&id).expect("hex_string should never fail"),
+                        hex_string(&id),
                         e,
                     ))})
             }

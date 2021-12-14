@@ -226,14 +226,14 @@ impl CommitIdExt for thrift::CommitId {
     /// the generated crate.
     fn to_string(&self) -> String {
         match self {
-            thrift::CommitId::bonsai(id) => hex_string(&id).expect("hex_string should never fail"),
+            thrift::CommitId::bonsai(id) => hex_string(&id),
             thrift::CommitId::ephemeral_bonsai(ephemeral) => format!(
                 "{} (bubble {})",
-                hex_string(&ephemeral.bonsai_id).expect("hex_string should never fail"),
+                hex_string(&ephemeral.bonsai_id),
                 ephemeral.bubble_id
             ),
-            thrift::CommitId::hg(id) => hex_string(&id).expect("hex_string should never fail"),
-            thrift::CommitId::git(id) => hex_string(&id).expect("hex_string should never fail"),
+            thrift::CommitId::hg(id) => hex_string(&id),
+            thrift::CommitId::git(id) => hex_string(&id),
             thrift::CommitId::globalrev(rev) => rev.to_string(),
             thrift::CommitId::svnrev(rev) => rev.to_string(),
             thrift::CommitId::UnknownField(t) => format!("unknown id type ({})", t),
