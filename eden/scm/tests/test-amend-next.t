@@ -290,6 +290,18 @@ Test interactive:
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark bottom)
   [ae9b2b] branch a
+  $ hg up bottom -q
+  $ hg --config ui.interactive=true next --top <<EOF
+  > 3
+  > EOF
+  current stack has multiple heads, namely:
+  (1) [f2987e] (top) r5
+  (2) [ae9b2b] branch a
+  (3) [9913ce] branch b
+  which changeset to move to [1-3/(c)ancel]?  3
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark bottom)
+  [9913ce] branch b
 
 
 Test next prefer draft commit.

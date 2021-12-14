@@ -400,14 +400,17 @@ def _findstacktop(ui, repo, newest=False):
             # would result in different destination changesets.
             return _findnexttarget(ui, repo, newest=True, top=True)
         ui.warn(_("current stack has multiple heads, namely:\n"))
-        _showchangesets(ui, repo, nodes=heads)
+        _showchangesets(ui, repo, nodes=heads, indices=ui.interactive())
+        if ui.interactive():
+            return _choosenode(ui, heads)
         raise error.Abort(
             _("ambiguous next changeset"),
             hint=_(
                 "use the --newest flag to always pick the newest child at each step"
             ),
         )
-    return next(iter(heads), None)
+    else:
+        return next(iter(heads), None)
 
 
 def _findstackbottom(ui, repo):
