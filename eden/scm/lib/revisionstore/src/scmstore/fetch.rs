@@ -153,7 +153,7 @@ impl<T: StoreValue> CommonFetchState<T> {
 
 #[derive(Debug, Error)]
 pub enum KeyFetchError {
-    #[error("Key fetch failed: {key}")]
+    #[error("Key fetch failed: {key}: {errors:?}")]
     KeyedError { key: Key, errors: Vec<Error> },
     #[error(transparent)]
     Other(Error),
