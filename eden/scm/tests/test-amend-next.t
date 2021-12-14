@@ -253,10 +253,52 @@ Test --towards flag.
   abort: the current changeset is not an ancestor of 'other'
   [255]
 
-Test next prefer draft commit.
-  $ hg up 'desc(r3)'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+Test interactive:
+  $ hg up 'desc(test)' -q && touch a && hg add a && hg commit -m "branch a"
+  $ hg up 'desc(test)' -q && touch b && hg add b && hg commit -m "branch b"
+  $ hg up bottom -q
   $ showgraph
+  o   branch b
+  │
+  │ o   branch a
+  ├─╯
+  o  other test
+  │
+  │ o  top r5
+  │ │
+  │ o   r4
+  ├─╯
+  o  bookmark r3
+  │
+  o   r2
+  │
+  o   r1
+  │
+  @  bottom r0
+  $ hg --config ui.interactive=true next 5 <<EOF
+  > 2
+  > 1
+  > EOF
+  changeset cb14eba0ad9c has multiple children, namely:
+  (1) [aa70f0] r4
+  (2) [2341c6] (other) test
+  which changeset to move to [1-2/(c)ancel]?  2
+  changeset 2341c6305f4b has multiple children, namely:
+  (1) [ae9b2b] branch a
+  (2) [9913ce] branch b
+  which changeset to move to [1-2/(c)ancel]?  1
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark bottom)
+  [ae9b2b] branch a
+
+
+Test next prefer draft commit.
+  $ hg up 'desc(r3)' -q
+  $ showgraph
+  o   branch b
+  │
+  │ o   branch a
+  ├─╯
   o  other test
   │
   │ o  top r5

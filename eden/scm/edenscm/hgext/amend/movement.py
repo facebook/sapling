@@ -113,7 +113,7 @@ def _moverelative(ui, repo, args, opts, reverse=False):
     if n <= 0:
         return
 
-    if ui.configbool("amend", "alwaysnewest"):
+    if ui.configbool("amend", "alwaysnewest") and not ui.interactive():
         opts["newest"] = True
 
     # Check that the given combination of arguments is valid.
@@ -204,7 +204,15 @@ def _findtarget(ui, repo, n, opts, reverse):
         return _findprevtarget(ui, repo, n, bookmark, newest)
     else:
         return _findnexttarget(
-            ui, repo, n, bookmark, newest, rebase, top, towards, nextpreferdraft
+            ui,
+            repo,
+            n,
+            bookmark,
+            newest,
+            rebase,
+            top,
+            towards,
+            nextpreferdraft,
         )
 
 
@@ -331,7 +339,12 @@ def _findnexttarget(
         # Are there multiple children?
         if len(children) > 1 and not newest:
             ui.status(_("changeset %s has multiple children, namely:\n") % short(node))
-            _showchangesets(ui, repo, nodes=children)
+            children = [
+                c.node()
+                for c in _showchangesets(
+                    ui, repo, nodes=children, indices=ui.interactive()
+                )
+            ]
             # if theres only one nonobsolete we're guessing it's the one
             nonobschildren = list(filter(lambda c: not repo[c].obsolete(), children))
             draftchildren = list(filter(lambda c: repo[c].mutable(), children))
@@ -341,6 +354,8 @@ def _findnexttarget(
             elif preferdraft and len(draftchildren) == 1:
                 node = draftchildren[0]
                 ui.status(_("choosing the only draft child: %s\n") % short(node))
+            elif ui.interactive():
+                node = _choosenode(ui, children)
             else:
                 raise error.Abort(
                     _("ambiguous next changeset"),
@@ -354,6 +369,22 @@ def _findnexttarget(
             node = max(children, key=lambda childnode: repo[childnode].rev())
 
     return node
+
+
+def _choosenode(ui, nodes):
+    pref = " $$ &"
+    n = len(nodes)
+    options = pref + pref.join(map(str, range(1, n + 1)))
+    cancel = _("(c)ancel")
+    cancelclean = _("cancel")
+    options = f" [1-{n}/{cancel}]? $$ &{cancelclean}{options}"
+    choice = ui.promptchoice(_("which changeset to move to{}").format(options))
+    if choice == 0:
+        raise error.Abort(
+            _("cancelling as requested"),
+        )
+    else:
+        return nodes[choice - 1]
 
 
 def _findstacktop(ui, repo, newest=False):
@@ -386,7 +417,7 @@ def _findstackbottom(ui, repo):
     return next(repo.nodes("first(draft() & ::.)"), None)
 
 
-def _showchangesets(ui, repo, contexts=None, revs=None, nodes=None):
+def _showchangesets(ui, repo, contexts=None, revs=None, nodes=None, indices=False):
     """Pretty print a list of changesets. Can take a list of
     change contexts, a list of revision numbers, or a list of
     commit hashes.
@@ -402,8 +433,12 @@ def _showchangesets(ui, repo, contexts=None, revs=None, nodes=None):
         "{desc|firstline}\n"
     }
     displayer = cmdutil.show_changeset(ui, repo, showopts)
-    for ctx in sorted(contexts, key=lambda c: c.rev()):
+    contexts = sorted(contexts, key=lambda c: c.rev())
+    for idx, ctx in enumerate(contexts, start=1):
+        if indices:
+            ui.status(_("({}) ").format(idx))
         displayer.show(ctx)
+    return contexts
 
 
 def _setbookmark(repo, tr, bookmark, node):
