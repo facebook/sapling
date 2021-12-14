@@ -302,14 +302,8 @@ impl EdenApi for EagerRepo {
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Vec<CommitHashToLocationResponse>> {
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
-            let heads: Vec<Vertex> = master_heads
-                .into_iter()
-                .map(|i| Vertex::copy_from(i.as_ref()))
-                .collect();
-            let names: Vec<Vertex> = hgids
-                .into_iter()
-                .map(|i| Vertex::copy_from(i.as_ref()))
-                .collect();
+            let heads: Vec<Vertex> = to_vec_vertex(&master_heads);
+            let names: Vec<Vertex> = to_vec_vertex(&hgids);
             self.dag()
                 .resolve_names_to_relative_paths(heads, names)
                 .await
@@ -570,6 +564,10 @@ fn check_convert_to_hgid<'a>(vertexes: impl Iterator<Item = &'a Vertex>) -> eden
         let _ = HgId::from_slice(v.as_ref()).map_err(|e| EdenApiError::Other(e.into()))?;
     }
     Ok(())
+}
+
+fn to_vec_vertex(ids: &[HgId]) -> Vec<Vertex> {
+    ids.iter().map(|i| Vertex::copy_from(i.as_ref())).collect()
 }
 
 fn convert_clone_data(
