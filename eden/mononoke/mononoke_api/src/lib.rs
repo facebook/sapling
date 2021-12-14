@@ -11,12 +11,13 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::{anyhow, Context, Error};
 pub use bookmarks::BookmarkName;
 use ephemeral_blobstore::BubbleId;
 use ephemeral_blobstore::RepoEphemeralStore;
-use futures::{future, Future};
+use futures::{stream, Future, StreamExt};
 use futures_watchdog::WatchdogExt;
 use mononoke_types::RepositoryId;
 use repo_factory::RepoFactory;
@@ -78,29 +79,41 @@ pub struct Mononoke {
 impl Mononoke {
     /// Create a Mononoke instance.
     pub async fn new(env: &MononokeApiEnvironment, configs: RepoConfigs) -> Result<Self, Error> {
-        let repos = future::try_join_all(
+        let start = Instant::now();
+        let repos = stream::iter(
             configs
                 .repos
                 .into_iter()
-                .filter(move |&(_, ref config)| config.enabled)
-                .map({
-                    move |(name, config)| async move {
-                        let logger = &env.repo_factory.env.logger;
-                        info!(logger, "Initializing repo: {}", &name);
+                .filter(move |&(_, ref config)| config.enabled),
+        )
+        .map({
+            move |(name, config)| async move {
+                let logger = &env.repo_factory.env.logger;
+                info!(logger, "Initializing repo: {}", &name);
 
-                        let repo = Repo::new(env, name.clone(), config)
-                            .watched(logger.new(o!("repo" => name.clone())))
-                            .await
-                            .with_context(|| format!("could not initialize repo '{}'", &name))?;
-                        debug!(logger, "Initialized {}", &name);
-                        Ok::<_, Error>((name, Arc::new(repo)))
-                    }
-                }),
-        );
+                let repo = Repo::new(env, name.clone(), config)
+                    .watched(logger.new(o!("repo" => name.clone())))
+                    .await
+                    .with_context(|| format!("could not initialize repo '{}'", &name))?;
+                debug!(logger, "Initialized {}", &name);
+                Ok::<_, Error>((name, Arc::new(repo)))
+            }
+        })
+        .buffer_unordered(30)
+        .collect::<Vec<_>>();
 
         // There are lots of deep FuturesUnordered here that have caused inefficient polling with
         // Tokio coop in the past.
-        let repos_vec = tokio::task::unconstrained(repos).await?;
+        let repos_vec = tokio::task::unconstrained(repos)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
+
+        info!(
+            &env.repo_factory.env.logger,
+            "All repos initialized. It took: {} seconds",
+            start.elapsed().as_secs()
+        );
 
         Self::new_from_repos(repos_vec)
     }
