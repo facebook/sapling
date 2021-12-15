@@ -23,7 +23,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -68,7 +67,6 @@ Issue622: hg init && hg pull -u URL doesn't checkout default branch
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test 'file:' uri handling:

@@ -199,7 +199,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
   $ rm .hg/strip-backup/*
   $ hg log --graph
   o  commit:      264128213d29

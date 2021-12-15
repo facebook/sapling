@@ -92,7 +92,6 @@ Pull exactly up to d into the client
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   { metrics : { scmstore : { file : { api : { hg : { prefetch : { calls : 1}}}}},
                 ssh : { connections : 1,
                         read : { bytes : 1086},

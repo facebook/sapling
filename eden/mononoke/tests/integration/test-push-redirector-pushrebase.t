@@ -96,7 +96,6 @@ Normal pushrebase with many commits
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ log -r master_bookmark
   @  The staunchest tramp to ply his trade [public;rev=6;beb30dc3a35c] default/master_bookmark

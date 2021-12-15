@@ -103,7 +103,6 @@ Switch workspace from a draft commit that is an ancestor of a main bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -229,7 +228,6 @@ Switch between workspaces w1 and w2 in client2
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
@@ -324,7 +322,6 @@ Commit changes to be able to switch
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   remote: pushing 2 commits:
   remote:     dfa54c832678  new file
   remote:     5fe2dc2fae70  new file

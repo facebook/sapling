@@ -74,11 +74,9 @@ Create another client and use it to modify the commits and create some new ones.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 2 files
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -153,11 +151,9 @@ Now cloud sync.  The sets of commits should be merged.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 2 files
   remote: pushing 4 commits:
   remote:     dae3b312bb78  Z
   remote:     c70a9bd6bfd1  E
@@ -191,11 +187,9 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 2 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm

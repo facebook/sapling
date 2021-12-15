@@ -86,7 +86,6 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
   updating to active bookmark bmnottracking
   nothing to rebase
   $ hg rebase -d 'desc(untrackedremotecommit)'
@@ -114,7 +113,6 @@ Tests the behavior of a pull followed by a pull --rebase
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg debugmakepublic 4557926d2166
   $ hg pull --rebase
   pulling from $TESTTMP/remoterepo (glob)
@@ -187,7 +185,6 @@ Test pull with --rebase and --tool
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 2 changes to 2 files
   rebasing 1d01e32a0efb "somelocalchanges" (tracking2)
   merging editedbyboth
   $ printdag

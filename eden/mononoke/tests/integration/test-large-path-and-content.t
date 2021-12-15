@@ -60,7 +60,6 @@ pull on repo2
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   $ hgmn log
   commit:      b8119d283b73
@@ -111,7 +110,6 @@ pull on repo3
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   $ hgmn log
   commit:      8fffbbe6af55

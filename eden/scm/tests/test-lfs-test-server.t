@@ -57,7 +57,6 @@ XXX: This test is currently broken if lfs-test-server is installed.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
 Clear the cache to force a download
   $ rm -rf `hg config lfs.usercache`
@@ -88,7 +87,6 @@ When the server has some blobs already
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 3 changes to 3 files
 
 Fail to push if LFS blob is not uploaded to the server
   $ echo "[extensions]" >> .hg/hgrc
@@ -104,7 +102,6 @@ Fail to push if LFS blob is not uploaded to the server
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   transaction abort!
   rollback completed
   abort: LFS server error. Remote object for file unknown not found: *u'oid': u'384d99297e974dab7d66361be0276032f5045185d6ce42601f43973e721f1dd9'* (glob)

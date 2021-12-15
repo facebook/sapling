@@ -100,7 +100,6 @@ Let the background sync we started earlier continue, and start a concurrent clou
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
   remote: pushing 1 commit:
   remote:     1292cc1f1c17  commit2

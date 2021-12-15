@@ -47,7 +47,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -76,7 +75,6 @@ Fake land the commit
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 2 changes to 2 files
   $ tglogp
   o  67d363c9001e public 'public-commit-2'
   │
@@ -140,7 +138,6 @@ Pull so that we have the public commit and sync again.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 2 changes to 2 files
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized

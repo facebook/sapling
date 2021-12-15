@@ -134,7 +134,6 @@ blobimport
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   adding remote bookmark head_bookmark
   adding remote bookmark pre_merge_head_bookmark
   adding remote bookmark small_repo_head_bookmark

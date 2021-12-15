@@ -111,7 +111,6 @@ check unhydrated infinitepush pulls
 -- do a public pull.
   $ hgmn pull |& grep "changesets"
   adding changesets
-  added * changesets with 0 changes to 0 files (glob)
   $ tglogpnr -r "draft()"
 
 -- update to a public parent of the susequently pulled draft commit
@@ -150,7 +149,6 @@ check unhydrated infinitepush pulls
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   bundle2-input-part: total payload size * (glob)
   bundle2-input-bundle: 0 parts total
   remotenames: skipped syncing local bookmarks
@@ -193,7 +191,6 @@ check hydrated infinitepush pulls
 -- do a public pull.
   $ hgmn pull |& grep "changesets"
   adding changesets
-  added * changesets with 0 changes to 0 files (glob)
   $ tglogpnr -r "draft()"
 
 -- update to a public parent of the susequently pulled draft commit
@@ -232,7 +229,6 @@ check hydrated infinitepush pulls
   adding manifests
   adding file changes
   adding newfile revisions
-  added 2 changesets with 2 changes to 1 files
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size * (glob)
@@ -272,7 +268,6 @@ check unhydrated infinitepush pulls if special config option is passed
 -- do a public pull.
   $ hgmn pull |& grep "changesets"
   adding changesets
-  added * changesets with 0 changes to 0 files (glob)
   $ tglogpnr -r "draft()"
 
 -- update to a public parent of the susequently pulled draft commit
@@ -311,7 +306,6 @@ check unhydrated infinitepush pulls if special config option is passed
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   bundle2-input-part: total payload size * (glob)
   bundle2-input-bundle: 0 parts total
   remotenames: skipped syncing local bookmarks

@@ -337,8 +337,6 @@ class cg1unpacker(object):
         def revmap(x):
             return cl.rev(x)
 
-        changesets = files = revisions = 0
-
         try:
             # The transaction may already carry source information. In this
             # case we use the top level data. We overwrite the argument
@@ -391,16 +389,8 @@ class cg1unpacker(object):
 
             # process the files
             repo.ui.status_err(_("adding file changes\n"))
-            newrevs, newfiles = _addchangegroupfiles(repo, self, revmap, trp, needfiles)
-            revisions += newrevs
-            files += newfiles
+            _addchangegroupfiles(repo, self, revmap, trp, needfiles)
 
-            htext = ""
-
-            repo.ui.status_err(
-                _("added %d changesets" " with %d changes to %d files%s\n")
-                % (changesets, revisions, files, htext)
-            )
             repo.invalidatevolatilesets()
 
             if len(cgnodes) > 0:

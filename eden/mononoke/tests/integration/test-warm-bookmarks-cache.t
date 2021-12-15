@@ -43,7 +43,6 @@ Setup repository
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg log -r master_bookmark -T '{node}\n'
   3dee7c6d777101a0f12a87a1394b35b4a249c700

@@ -71,7 +71,6 @@ Push commits that will be obsoleted
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log -r "all()"
@@ -108,7 +107,6 @@ Push commits that will not be obsoleted
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ log -r "all()"
   @  3 [public;rev=7;6398085ceb9d] default/master_bookmark

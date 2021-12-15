@@ -48,7 +48,6 @@ pull from generaldelta to generaldelta
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   fetching tree '' 126c4ddee02e922d5f05b4304b80e383a53a82e6
   1 trees fetched over 0.00s
@@ -62,7 +61,6 @@ push from generaldelta to generaldelta
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
 pull from generaldelta to non-generaldelta
   $ cd ../shallow-plain
   $ hg pull -u
@@ -71,7 +69,6 @@ pull from generaldelta to non-generaldelta
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   fetching tree '' bc905f0fce7a7e7dfb60db06ddf9df54b3983840
   1 trees fetched over 0.00s
@@ -85,5 +82,4 @@ push from non-generaldelta to generaldelta
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
 

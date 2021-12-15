@@ -143,7 +143,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   adding changesets
   adding manifests
   adding file changes
-  added 11 changesets with 8 changes to 3 files
   updating to branch f1
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd issue4041

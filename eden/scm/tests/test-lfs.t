@@ -64,7 +64,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
 
 # Unknown URL scheme
 
@@ -89,7 +88,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
 
 # Check the blobstore is not yet populated
   $ [ -d .hg/store/lfs/objects ]
@@ -180,7 +178,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 10 changes to 4 files
 
   $ hg --cwd .. init repo5
   $ hg --cwd ../repo5 pull ../repo3
@@ -189,7 +186,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 10 changes to 4 files
 
   $ cd ..
 
@@ -593,7 +589,6 @@ remote store.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 2 changes to 1 files
   $ hg -R repo14 -q verify
 
 lfs -> normal -> lfs round trip conversions are possible.  The threshold for the

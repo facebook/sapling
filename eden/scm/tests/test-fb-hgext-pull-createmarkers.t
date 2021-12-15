@@ -71,7 +71,6 @@ The first client works on several diffs while the second client lands one of her
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 1 changes to 4 files
   updating bookmark master
   remote: pushing 3 changesets:
   remote:     1a07332e9fa1  add c
@@ -104,7 +103,6 @@ the remote
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 3 files
   $ hg log -G -T '"{desc}" {remotebookmarks}'
   o  "add e
   │
@@ -146,7 +144,6 @@ changesets
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
 
 (Note: pullcreatemarkers created two markers, however only one of them was
 counted in the message as the first commit had previously been obsoleted

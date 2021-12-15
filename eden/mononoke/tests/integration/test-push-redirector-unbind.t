@@ -110,7 +110,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
 
 -- Step 3. now do merge in the large repo that fixed working copy and push it
   $ REPONAME=large-mon hgmn up master_bookmark
@@ -198,7 +197,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg log -r master_bookmark
   commit:      9f6b8b8acc0b

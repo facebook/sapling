@@ -58,7 +58,6 @@ Second client: pull scratch commit and update to it
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg up 2d9cfa751213
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
@@ -90,7 +89,6 @@ Second client: pull new scratch commits and update to all of them
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 5 changes to 5 files
   $ hg up 1c2153299e05
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up 2db33e8c1f93
@@ -123,7 +121,6 @@ Second client: pull regex file an make sure it is readable
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 6 changes to 6 files
   $ hg log -r 2eea49d22494 --stat
   commit:      2eea49d22494
   user:        test

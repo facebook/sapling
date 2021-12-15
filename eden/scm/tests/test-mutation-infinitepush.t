@@ -52,7 +52,6 @@ Pull the branch back into the original repo.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
   $ hg up -q tip
 
 We have the predecessor chain that links all versions of the commits.

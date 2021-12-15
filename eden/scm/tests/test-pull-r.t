@@ -49,7 +49,6 @@ don't show "(+1 heads)" message when pulling closed head
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 1 files
   $ hg heads -q --closed
   1a1aa123db21
   effea6de0384

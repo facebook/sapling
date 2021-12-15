@@ -40,7 +40,6 @@ Test that pushing to a remotename preserves commit hash if no rebase happens
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
   updating bookmark master
   remote: pushing 1 changeset:
   remote:     ea98a8f95390  changed message
@@ -82,7 +81,6 @@ Test that pushing to a remotename gets rebased
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files
   updating bookmark master
   remote: pushing 1 changeset:
   remote:     5c3cfb78df2f  client's commit
@@ -211,7 +209,6 @@ Test a push that comes with out-of-date bookmark discovery
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files
   updating bookmark bm
   remote: moved bookmark to rev 1
   remote: pushing 1 changeset:
@@ -292,7 +289,6 @@ Test force pushes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
   updating bookmark master
   remote: pushing 1 changeset:
   remote:     1846eede8b68  b
@@ -309,7 +305,6 @@ Test force pushes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{desc} {remotebookmarks}'
   o  aa
   │
@@ -350,7 +345,6 @@ Test 'hg push' with a tracking bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files
   updating bookmark master
   remote: pushing 1 changeset:
   remote:     d2ae7f538514  b
@@ -391,7 +385,6 @@ Test push --to to a repo without pushrebase on (i.e. the default remotenames beh
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{shortest(node)} {bookmarks}'
   @  d2ae clientfeature
   │

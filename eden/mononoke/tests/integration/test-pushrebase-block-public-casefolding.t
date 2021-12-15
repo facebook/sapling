@@ -221,7 +221,6 @@ we can land something that doesn't introduce a new case conflict
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark other
 
 we can't land if we try to make an existing case conflict worse
@@ -260,5 +259,4 @@ we can land it if we also fix all of the related case conflicts
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark other

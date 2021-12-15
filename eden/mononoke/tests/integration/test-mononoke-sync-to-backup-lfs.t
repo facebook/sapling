@@ -72,7 +72,6 @@ Perform LFS push
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Check LFS is not in backup
@@ -86,7 +85,6 @@ Check LFS is not in backup
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -107,7 +105,6 @@ Check LFS is in backup
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

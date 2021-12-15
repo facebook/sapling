@@ -41,7 +41,6 @@ Make first commit public (by doing push) and then backup new commit
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
   $ mkcommit newcommit
   $ hg cloud backup
   backing up stack rooted at 94a60f5ad8b2

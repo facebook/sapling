@@ -41,7 +41,6 @@ Setup client
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 2 changesets with 2 changes to 2 files
   $ hg up 00e8a1efc6e28bc6f64a6e5f365f5ad0a2cebb11
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a > file1

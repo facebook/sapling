@@ -84,7 +84,6 @@ Pull a non-tree scratch branch into a normal client
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
   $ hg log -r tip -vp
   commit:      ebde88dba372
   bookmark:    default/scratch/nontree
@@ -110,7 +109,6 @@ Pull a treeonly scratch branch into a normal client
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
 - Verify no new manifest revlog entry was written
 - ...but we can still read the manifest
   $ hg log -r 02c12aef64ff --stat -T '{node}\n'
@@ -133,7 +131,6 @@ Pull just part of a treeonly scratch branch (this causes rebundling on the serve
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg log -r 02c12aef64ff  --stat
   commit:      02c12aef64ff
   user:        test
@@ -152,7 +149,6 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 2 changes to 1 files
   $ hg log -G
   o  commit:      5a7a7de8a420
   │  bookmark:    default/scratch/foo
@@ -185,7 +181,6 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg log -r 3ef288300b64 --stat
   commit:      3ef288300b64
   user:        test
@@ -202,7 +197,6 @@ Pull a normal scratch branch into a treeonly client
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 2 changes to 1 files
   $ hg log -r 3ef288300b64 -T ' ' --stat
     bar/car |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
@@ -260,11 +254,9 @@ treemanifest data for the public commits.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
   $ hg log -G -T '{node|short} {phase} {desc}'
   o  02c12aef64ff draft add subdir/a

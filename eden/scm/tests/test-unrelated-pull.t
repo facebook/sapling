@@ -28,7 +28,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
   $ hg heads
   commit:      9a79c33a9db3

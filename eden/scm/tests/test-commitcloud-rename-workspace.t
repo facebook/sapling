@@ -182,7 +182,6 @@ Back to client1
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   commitcloud: commits synchronized
   finished in * (glob)
 

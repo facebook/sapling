@@ -68,7 +68,6 @@ pull them
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg log -T '{node}\n'
   4b747ca852a40a105b9bb71cd4d07248ea80f704
@@ -97,7 +96,6 @@ pull them
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg log -T '{node}\n'
   8b374fd7e2ef1cc418b9c68f484ebd2cb6c6c6a1

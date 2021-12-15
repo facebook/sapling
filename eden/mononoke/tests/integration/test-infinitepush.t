@@ -122,7 +122,6 @@ Do infinitepush (aka commit cloud) push
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   $ hgmn up -q 47da8b81097c
   $ cat newfile
   new
@@ -258,7 +257,6 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   $ hgmn up -q "007299f6399f"
   $ cat newfile2
   new2
@@ -334,7 +332,6 @@ Pushbackup to mononoke peer with compression enabled
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   $ hgmn up -q 2cfeca6399fd
   $ cat aa
   aa
@@ -390,7 +387,6 @@ Check phases on another side (for pull command and pull -r)
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
 
   $ tglogp
   @  2cfeca6399fd public 'newrepo'
@@ -409,7 +405,6 @@ Check phases on another side (for pull command and pull -r)
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
 
   $ tglogp
   @  2cfeca6399fd public 'newrepo'
@@ -465,7 +460,6 @@ Check phases on another side (for pull command and pull -r)
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
 
   $ tglogp
   o  eca836c7c651 draft 'change on top of the release'
@@ -487,7 +481,6 @@ Check phases on another side (for pull command and pull -r)
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
 
   $ tglogp
   o  eca836c7c651 draft 'change on top of the release'
@@ -520,7 +513,6 @@ Test phases with pushrebase
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
   $ tglogp

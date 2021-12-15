@@ -41,7 +41,6 @@ Create a remote bookmark
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
 
 Test that we can still push a head that advances a remote bookmark
 
@@ -55,7 +54,6 @@ Test that we can still push a head that advances a remote bookmark
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
 
 Test --delete
 
@@ -86,7 +84,6 @@ remote or local repo
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
 
 
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'

@@ -88,7 +88,6 @@ Do a pushrebase, while preservation is enabled
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ ls $TESTTMP/blobstore/blobs | grep rawbundle2 | wc -l
   2

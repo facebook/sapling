@@ -56,7 +56,6 @@ Test that config allows anonymous heads to be pushed
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
 Test that forceto works
 
@@ -92,7 +91,6 @@ Test that --create is required to create new bookmarks
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   exporting bookmark @
 
 Test that --non-forward-move is required to move bookmarks to odd locations
@@ -155,7 +153,6 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating bookmark @
   $ hg push --to @ -r 'desc(a)'
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
@@ -214,7 +211,6 @@ Test that rebasing and pushing works as expected
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   o  b  default/@
   │
@@ -249,7 +245,6 @@ Test that rebasing and pushing works as expected
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating bookmark @
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c headc default/@

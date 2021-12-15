@@ -18,7 +18,6 @@
   remote: adding changesets (?)
   remote: adding manifests (?)
   remote: adding file changes (?)
-  remote: added 2 changesets with 2 changes to 2 files (?)
   $ cd ..
 
 Shallow clone from full

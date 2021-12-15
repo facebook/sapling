@@ -110,7 +110,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   updating bookmark master
   remote: pushing 1 changeset:
   remote:     e68715a0fc4c  x4

@@ -46,7 +46,6 @@ Before the change
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   exporting bookmark new_bookmark
 
   $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
@@ -133,7 +132,6 @@ Before the change
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 0 changes to 0 files
   $ REPONAME=large-mon hgmn up bookprefix/new_bookmark
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

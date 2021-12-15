@@ -77,7 +77,6 @@ Delete a file, make sure that file_size_hook is not called on deleted files
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Send large file
@@ -109,7 +108,6 @@ Bypass large file hook
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Send large file inside a directory

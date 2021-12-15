@@ -211,7 +211,6 @@ Sync from the second client - the commit should appear
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -244,7 +243,6 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 2 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -330,7 +328,6 @@ Sync the amended commit to the other client
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 02f6fc2b7154 has been moved remotely to 48610b1a7ec0
@@ -395,7 +392,6 @@ Expected result: the message telling that revision has been moved to another rev
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 2 files
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 48610b1a7ec0 has been moved remotely to 41f3b9359864
@@ -455,7 +451,6 @@ Expected result: client2 should be moved to the amended version
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 41f3b9359864 has been moved remotely to 8134e74ecdc8
@@ -510,11 +505,9 @@ Expected result: move should not happen, expect a message that move is ambiguous
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 41f3b9359864 has been replaced remotely with multiple revisions
@@ -572,7 +565,6 @@ Expected result: client2 should be moved to fada67350ab0
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision abd5311ab3c6 has been moved remotely to fada67350ab0
@@ -960,11 +952,9 @@ And the commits should now be availble in the other client.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -1036,11 +1026,9 @@ Commit still becomes available in the other repo
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 3 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
@@ -1103,11 +1091,9 @@ Sync this onto the second client, the remote bookmarks don't change.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog
@@ -1130,7 +1116,6 @@ Do a pull on this client.  The remote bookmarks now get updated.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg trglog
   o  97250524560a 'public 2'  default/publicbookmark2
   │
@@ -1159,11 +1144,9 @@ Rebase the commits again, and resync to the first client.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ hg trglog
@@ -1264,11 +1247,9 @@ Reconnect to the default repository.  This should work and pull in the commits.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 3 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   hint[commitcloud-switch]: the following commitcloud workspaces (backups) are available for this repo:

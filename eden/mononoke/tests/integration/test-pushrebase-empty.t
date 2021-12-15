@@ -38,7 +38,6 @@ Push single empty commit
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Push empty and non-empty commit in a stack
@@ -53,7 +52,6 @@ Push empty and non-empty commit in a stack
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Push stack of empty commits
@@ -70,5 +68,4 @@ Push stack of empty commits
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark

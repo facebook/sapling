@@ -84,7 +84,6 @@ Push to a new public branch
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
   $ hg book --list-subs
      remote/master             9da34b1aa207
      remote/other              4c8ee072cf16

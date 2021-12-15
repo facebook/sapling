@@ -77,4 +77,3 @@ Pull just one head to trigger rebundle
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 2 files

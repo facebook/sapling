@@ -124,7 +124,6 @@ Check that the draft scratch bookmark shows up on the client as expected.
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 1 files
 
   $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
   74903ee2450a "public commit" 
@@ -224,7 +223,6 @@ Check that the bookmarks show as expected on the client.
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 1 files
 
   $ hg pull -B scratch/anotherdraft
   pulling from ssh://user@dummy/server
@@ -232,7 +230,6 @@ Check that the bookmarks show as expected on the client.
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 1 files
 
   $ hg log -r "all()" -T '{node|short} "{desc}" {remotebookmarks}\n'
   74903ee2450a "public commit" default/scratch/public

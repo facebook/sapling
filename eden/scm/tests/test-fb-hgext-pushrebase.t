@@ -106,7 +106,6 @@ Stack of non-conflicting commits should be accepted
   adding file changes
   adding a revisions
   adding b revisions
-  added 3 changesets with 1 changes to 2 files
   updating bookmark main
   preparing listkeys for "bookmarks"
   sending listkeys command
@@ -174,7 +173,6 @@ Push using changegroup2
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 2 files
   updating bookmark main
   remote: pushing 2 changesets:
   remote:     46a2df24e272  b => xxx
@@ -382,7 +380,6 @@ Pushing a merge should rebase only the latest side of the merge
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 0 changes to 3 files
   updating bookmark main
   remote: pushing 5 changesets:
   remote:     e6b7549904cd  branch left
@@ -468,7 +465,6 @@ With evolution enabled, should set obsolescence markers
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 0 changes to 4 files
   updating bookmark main
   remote: pushing 2 changesets:
   remote:     9467a8ee5d0d  b => k
@@ -588,7 +584,6 @@ Test that the prepushrebase hook can run against the bundle repo
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd prepushrebaseclient
@@ -761,7 +756,6 @@ Test date rewriting
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
   updating bookmark master
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{desc} {date|isodate}'
@@ -792,7 +786,6 @@ Test date rewriting with a merge commit
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 2 files
   updating bookmark master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -833,7 +826,6 @@ Test pushrebase on merge commit where master is on the p2 side
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 2 files
   updating bookmark master
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R ../p2mergeserver log -G -T '{desc}'
@@ -891,7 +883,6 @@ Test force pushes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{desc} {bookmarks}'
   o  aa
   │
@@ -950,7 +941,6 @@ phase is updated correctly with the marker information.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files
   updating bookmark main
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up tip -q

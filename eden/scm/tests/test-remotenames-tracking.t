@@ -96,7 +96,6 @@ Test push tracking
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating bookmark b
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c default/b

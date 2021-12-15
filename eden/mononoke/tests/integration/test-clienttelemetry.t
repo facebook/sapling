@@ -48,7 +48,6 @@ set up the local repo
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   $ hgmn pull -q
   $ hgmn pull --config clienttelemetry.announceremotehostname=False
   pulling from ssh://user@dummy/repo
@@ -57,4 +56,3 @@ set up the local repo
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files

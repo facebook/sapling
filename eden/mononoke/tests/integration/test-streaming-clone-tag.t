@@ -40,7 +40,6 @@ Clone - check that no bytes were transferred from streaming clone because no tag
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -59,6 +58,5 @@ Now clone with tag, make sure that streaming clone was used
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

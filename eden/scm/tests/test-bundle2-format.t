@@ -825,7 +825,6 @@ Support for changegroup
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 7 changes to 7 files
 
   $ hg log -G
   o  02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
@@ -1017,7 +1016,6 @@ Support for changegroup
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 3 files
 
 with reply
 
@@ -1034,13 +1032,11 @@ with reply
   0030: 2d 74 6f 31 72 65 74 75 72 6e 31 00 00 00 00 00 |-to1return1.....|
   0040: 00 00 1b 06 6f 75 74 70 75 74 00 00 00 01 00 01 |....output......|
   0050: 0b 01 69 6e 2d 72 65 70 6c 79 2d 74 6f 31 00 00 |..in-reply-to1..|
-  0060: 00 64 61 64 64 69 6e 67 20 63 68 61 6e 67 65 73 |.dadding changes|
+  0060: 00 37 61 64 64 69 6e 67 20 63 68 61 6e 67 65 73 |.7adding changes|
   0070: 65 74 73 0a 61 64 64 69 6e 67 20 6d 61 6e 69 66 |ets.adding manif|
   0080: 65 73 74 73 0a 61 64 64 69 6e 67 20 66 69 6c 65 |ests.adding file|
-  0090: 20 63 68 61 6e 67 65 73 0a 61 64 64 65 64 20 30 | changes.added 0|
-  00a0: 20 63 68 61 6e 67 65 73 65 74 73 20 77 69 74 68 | changesets with|
-  00b0: 20 30 20 63 68 61 6e 67 65 73 20 74 6f 20 33 20 | 0 changes to 3 |
-  00c0: 66 69 6c 65 73 0a 00 00 00 00 00 00 00 00       |files.........|
+  0090: 20 63 68 61 6e 67 65 73 0a 00 00 00 00 00 00 00 | changes........|
+  00a0: 00                                              |.|
 
 Check handling of exception during generation.
 ----------------------------------------------
@@ -1149,7 +1145,6 @@ Simple case where it just work: GZ
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 3 files
 Simple case where it just work: BZ
 ----------------------------------
 
@@ -1241,7 +1236,6 @@ Simple case where it just work: BZ
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 3 files
 
 unknown compression while unbundling
 -----------------------------

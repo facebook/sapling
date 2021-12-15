@@ -44,14 +44,12 @@ Continue testing
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
   $ hg pull beta
   pulling from $TESTTMP/beta
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg co -C default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit e
@@ -250,7 +248,6 @@ Test custom paths dont override default
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
   $ hg book --remote
      default/bar               4538525df7e2
      default/baz               4538525df7e2

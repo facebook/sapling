@@ -33,7 +33,6 @@ check custom patch options are honored
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -70,7 +69,6 @@ Clone and apply patch:
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd d

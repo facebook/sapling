@@ -67,7 +67,6 @@ fast-forward the bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark main
 
 fast-forward the bookmark over a commit that fails the hook
@@ -96,7 +95,6 @@ bypass the hook, the push will now work
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark main
 
 attempt a non-fast-forward push over a commit that fails the hook
@@ -125,7 +123,6 @@ bypass the hook, and it should work
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark main
 
 attempt a move to a completely unrelated commit (no common ancestor), with an ancestor that
@@ -155,5 +152,4 @@ bypass the hook, and it should work
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark main

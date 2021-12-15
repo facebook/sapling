@@ -128,7 +128,6 @@ Push files
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
 
   $ tglogpnr
   o  064d994d0240 public 'add censored c'  default/master_bookmark

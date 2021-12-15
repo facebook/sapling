@@ -55,7 +55,6 @@ Unbundle full.hg in test
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 7 changes to 4 files
 
 Verify empty
 
@@ -68,7 +67,6 @@ Pull full.hg into test (using --cwd)
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 7 changes to 4 files
 
 Verify that there are no leaked temporary files after pull (issue2797)
 
@@ -81,7 +79,6 @@ Pull full.hg into empty (using --cwd)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files
 
 Rollback empty
 
@@ -93,7 +90,6 @@ Pull full.hg into empty again (using --cwd)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files
 
 Pull full.hg into test (using -R)
 
@@ -101,7 +97,6 @@ Pull full.hg into test (using -R)
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 7 changes to 4 files
 
 Pull full.hg into empty (using -R)
 
@@ -109,7 +104,6 @@ Pull full.hg into empty (using -R)
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 7 changes to 4 files
 
 Rollback empty
 
@@ -121,7 +115,6 @@ Pull full.hg into empty again (using -R)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files
 
   $ rm -r empty empty_server
   $ newclientrepo empty
@@ -136,7 +129,6 @@ Pull ../full.hg into empty (with hook)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files
   changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=unbundle HG_TXNID=TXN:$ID$ HG_URL=bundle:../full.hg
 
 Rollback empty
@@ -150,7 +142,6 @@ Pull full.hg into empty again (using -R; with hook)
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files
   changegroup hook: HG_BUNDLE2=1 HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_NODE_LAST=aa35859c02ea8bd48da5da68cd2740ac71afcbaf HG_SOURCE=unbundle HG_TXNID=TXN:$ID$ HG_URL=bundle:full.hg
 
 Unbundle incremental bundles into fresh empty in one go
@@ -166,11 +157,9 @@ Unbundle incremental bundles into fresh empty in one go
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 View full contents of the bundle

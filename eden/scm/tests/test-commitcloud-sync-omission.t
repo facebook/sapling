@@ -167,13 +167,11 @@ Connect to commit cloud
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   pulling 7f958333fe84 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   1f9ebd6d1390 not found, omitting oldbook bookmark
   df4f53cec30a is older than 14 days, omitting mytag bookmark
   commitcloud: commits synchronized
@@ -215,7 +213,6 @@ Sync these commits to the first client - it has everything
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -310,7 +307,6 @@ Second client syncs that in, but still leaves the old commits missing
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -383,7 +379,6 @@ Second client syncs the old stack in, and now has the bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -437,17 +432,14 @@ Connect to commit cloud
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   pulling 2b8dce7bd745 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
   1c1b7955142c not found, omitting midbook bookmark
   df4f53cec30a is older than 14 days, omitting mytag bookmark
   commitcloud: commits synchronized
@@ -573,7 +565,6 @@ A full sync pulls the old commits in
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: latest 2 years of commits synchronized
@@ -663,7 +654,6 @@ Pull in some of the commits by setting max age manually
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp
@@ -801,7 +791,6 @@ Pull this into client1
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
 Move midbook to the public commit.
   $ hg book -fr 'desc(public1)' midbook
@@ -845,7 +834,6 @@ from the cloud workspace, but the sync should still work.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 3 files
   f770b7f72fa5 not found, omitting midbook bookmark
   commitcloud: commits synchronized
   finished in 0.00 sec

@@ -76,7 +76,6 @@ Clone server one more time and pull scratch bookmark. Make sure it is remote
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg book --remote
      default/scratch/mybranch  620472ff5c0c
      default/scratch/serverbook ac312cb08db5
@@ -130,7 +129,6 @@ Go back to client, make pull and make sure that we pulled remote branches
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   $ hg dbsh -c 'ui.write("".join(sorted(repo.svfs.readutf8("remotenames").splitlines(True))))'
   620472ff5c0c4a560a3ffd98c07f0c9ecad33f64 bookmarks default/scratch/mybranch
   64d557aa86fdc42384b193f7eab99059da84f1f0 bookmarks default/scratch/serverbook

@@ -67,7 +67,6 @@ create new commits in repo2 and check that they are seen as outgoing
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .repo_name
@@ -91,7 +90,6 @@ create new commits in repo2 and check that they are seen as outgoing
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   exporting bookmark forcepushrebase
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
   "forcepushrebase"

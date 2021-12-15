@@ -29,7 +29,6 @@ Pushrebase commit 1
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
   $ hgmn up master_bookmark
@@ -67,7 +66,6 @@ Check that the filenode for 1 does not point to the draft commit in a new clone
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   $ hgmn up master_bookmark
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hgmn debugsh -c 'ui.write("%s\n" % m.node.hex(repo["."].filectx("1").getnodeinfo()[2]))'
@@ -126,7 +124,6 @@ Push stack
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg hide -r ".^ + ." -q
   $ hgmn up -q master_bookmark
@@ -158,7 +155,6 @@ Push fast-forward
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ log -r "all()"
   @  5 [public;rev=12;59e5396444cf] default/master_bookmark
@@ -226,7 +222,6 @@ Push a merge commit with both parents not ancestors of destination bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hgmn up master_bookmark -q && hg hide -r "13+14+15" -q
   $ log -r "all()"
@@ -286,7 +281,6 @@ Push-rebase of a commit with p2 being the ancestor of the destination bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg hide -r . -q && hgmn up master_bookmark -q
   $ hg log -r master_bookmark -T '{node}\n'
@@ -370,7 +364,6 @@ Test creating a bookmark and new head
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   exporting bookmark newbook
 
 Test non-fast-forward force pushrebase
@@ -399,7 +392,6 @@ Test non-fast-forward force pushrebase
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark newbook
 -- "20 draft newbook" gets moved to 26 and 20 gets hidden.
   $ log -r "20::"
@@ -425,7 +417,6 @@ Test non-fast-forward force pushrebase
   adding changesets
   adding manifests
   adding file changes
-  added 12 changesets with 0 changes to 0 files
   $ hgmn up newbook
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hgmn debugsh -c 'ui.write("%s\n" % m.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
@@ -468,7 +459,6 @@ Check that we can replace a file with a directory
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark newbook
 
   $ ls A

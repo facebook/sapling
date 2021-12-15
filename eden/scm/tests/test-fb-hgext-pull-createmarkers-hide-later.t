@@ -89,7 +89,6 @@ hide them since there is a non-hidden successor.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 2 files
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   o  "add c
   │
@@ -147,7 +146,6 @@ until now had non-hidden successors.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   o  "add d
   │

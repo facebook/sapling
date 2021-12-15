@@ -65,7 +65,6 @@ Rebase C (draft) to b2 (B) when the server already knows C:
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark b2
   remote: pushing 1 changeset:
   remote:     dc0947a82db8  C

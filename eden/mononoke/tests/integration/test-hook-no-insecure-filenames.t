@@ -42,7 +42,6 @@ Add a legitimate file with hg in its name
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Add a dir with a naughty .Git directory inside
@@ -188,7 +187,6 @@ Add a legitimate dir with git in its name
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Add a legitimate dir with jgit in its name
@@ -201,7 +199,6 @@ Add a legitimate dir with jgit in its name
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Add a legitimate dir with xGit in its name
@@ -215,7 +212,6 @@ Add a legitimate dir with xGit in its name
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Add a file with an ignorable unicode char in it

@@ -126,7 +126,6 @@ Sync from the second client - the commits should appear
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -161,7 +160,6 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   commitcloud: commits synchronized
   finished in * (glob)
 
@@ -202,7 +200,6 @@ On the second client sync it
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: current revision 58508421158d has been moved remotely to 8e3f03f8d9db
@@ -300,7 +297,6 @@ Commit still becomes available in the other repo
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 0 changes to 0 files
   commitcloud: commits synchronized
   finished in * (glob)
 

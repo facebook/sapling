@@ -20,7 +20,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
   $ hg up -q "min(all())"
@@ -97,7 +96,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
   $ hg up -q "min(all())"
@@ -110,7 +108,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
   $ hg up -q "min(all())"

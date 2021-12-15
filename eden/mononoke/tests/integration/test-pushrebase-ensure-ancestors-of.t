@@ -95,7 +95,6 @@ Now push this commit to another bookmark
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   exporting bookmark another_bookmark
 
 And try to move "ancestor" bookmark there, it should fail

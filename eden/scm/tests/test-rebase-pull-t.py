@@ -67,7 +67,6 @@ sh % "hg pull --rebase" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
     rebasing ff8d69a621f9 "L1"'''
 
 sh % "tglog" == r"""
@@ -141,7 +140,6 @@ sh % "hg pull --rebase" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
     nothing to rebase - updating instead
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     updating bookmark norebase"""
@@ -202,7 +200,6 @@ sh % "hg pull --rev tip --rebase" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 2 changesets with 2 changes to 2 files
     rebasing ff8d69a621f9 "L1"'''
 sh % "tglog" == r"""
     @  518d153c0ba3 'L1'
@@ -240,7 +237,6 @@ sh % "hg pull --rebase" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
     rebasing 518d153c0ba3 "L1"'''
 sh % "tglog" == r"""
     @  0d0727eb7ce0 'L1'
@@ -286,7 +282,6 @@ sh % "hg pull --rebase" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
     rebasing 0d0727eb7ce0 "L1"
     rebasing c1f58876e3bf "L2"'''
 sh % "tglog" == r"""
@@ -323,7 +318,6 @@ sh % "hg pull --rebase" == r'''
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
     nothing to rebase - updating instead
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     updated to "65bc164c1d9b: R6"

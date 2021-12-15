@@ -48,7 +48,6 @@ Bundle and extract again
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 6 changes to 6 files
   $ hg update
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat a.lnk && echo

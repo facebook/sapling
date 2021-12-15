@@ -40,7 +40,6 @@ Unbundling a full bundle
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
 
 Pulling from a shallow bundle
 
@@ -51,7 +50,6 @@ Pulling from a shallow bundle
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
 
 Pulling from a full bundle
 

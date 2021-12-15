@@ -38,7 +38,6 @@ sh % "hg push -f ../a" == r"""
     searching for changes
     adding changesets
     adding manifests
-    adding file changes
-    added 1 changesets with 0 changes to 0 files"""
+    adding file changes"""
 
 sh % "cd .."

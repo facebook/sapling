@@ -265,7 +265,6 @@ test pushing bookmarks works
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   exporting bookmark bm4
   $ cd ../repo1
   $ hg bookmarks

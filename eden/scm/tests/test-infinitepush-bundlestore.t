@@ -87,7 +87,6 @@ From another client we can get the scratchbranch if we ask for it explicitely
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg log -G
   o  commit:      20759b6926ce
   │  bookmark:    default/scratch/mybranch
@@ -181,7 +180,6 @@ Pull scratch and non-scratch bookmark at the same time
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 2 files
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   o  new scratch commit draft
   │
@@ -366,7 +364,6 @@ Use --force because this push creates new head
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
   $ hg -R ../repo log -G -T '{desc} {phase} {bookmarks}'
   o  newcommit draft main
   │
@@ -444,7 +441,6 @@ Scratch pull of pruned commits
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 6 files
   adding remote bookmark main
   adding remote bookmark newbook
   adding remote bookmark scratch/serversidebook
@@ -486,7 +482,6 @@ Have to use full hash because short hashes are not supported yet
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 6 files
   $ hg log -G -T '{node|short} {desc} {bookmarks}'
   @  fe8283fe1190 peercommit
   │
@@ -593,11 +588,9 @@ Pull two bookmarks from the second client
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg log -r scratch/secondpart -T '{node}'
   8db3891c220e216f6da214e8254bd4371f55efca (no-eol)
   $ hg log -r scratch/firstpart -T '{node}'
@@ -619,7 +612,6 @@ Make sure testpullbycommithash2 has not fetched
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   o  testpullbycommithash1 draft
   │
@@ -637,7 +629,6 @@ Make sure phase on the client is public.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{desc} {phase} {bookmarks} {node|short}'
   o  publiccommit draft  a79b6597f322
   │
@@ -660,11 +651,9 @@ Make sure phase on the client is public.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg log -r scratch/scratchontopofpublic -T '{phase}'
   draft (no-eol)
 Strip scratchontopofpublic commit and do hg update

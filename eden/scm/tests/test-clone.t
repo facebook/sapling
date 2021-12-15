@@ -127,7 +127,6 @@ Use --pull:
   adding changesets
   adding manifests
   adding file changes
-  added 11 changesets with 11 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R g verify
@@ -236,7 +235,6 @@ Testing clone --pull -u:
   adding changesets
   adding manifests
   adding file changes
-  added 14 changesets with 14 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -360,7 +358,6 @@ Testing -u -r <branch>:
   adding changesets
   adding manifests
   adding file changes
-  added 13 changesets with 13 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -390,7 +387,6 @@ Testing -r <branch>:
   adding changesets
   adding manifests
   adding file changes
-  added 13 changesets with 13 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

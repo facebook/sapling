@@ -176,7 +176,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating bookmark master
 
   $ cd ../master
@@ -201,7 +200,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ hg update tip
@@ -307,7 +305,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
 
   $ hg update tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -344,7 +341,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 6 changesets with 5 changes to 1 files
   updating bookmark master
 
   $ cd ../shallow

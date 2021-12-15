@@ -93,7 +93,6 @@ setup hg server repo
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   updating bookmark head_bookmark
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   o    * [MEGAREPO GRADUAL MERGE] gradual merge (2) (glob)

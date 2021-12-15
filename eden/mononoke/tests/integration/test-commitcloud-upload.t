@@ -188,7 +188,6 @@ Try pull an uploaded commit from another client
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
 
   $ tglogm
   o  65289540f44d 'New files Dir2'
@@ -232,7 +231,6 @@ Also, check that upload will not reupload file contents again.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
 
   $ tglogm --hidden
   o  a8c7c28d0391 'New files Dir2'
@@ -292,7 +290,6 @@ Back to client1 and sync.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   commitcloud: commits synchronized
   finished in * (glob)
 

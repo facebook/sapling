@@ -154,7 +154,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   $ hg update tip -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
   $ echo x > x

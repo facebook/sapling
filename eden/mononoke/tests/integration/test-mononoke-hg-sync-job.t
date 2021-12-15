@@ -205,7 +205,6 @@ Make a commit that makes a file executable and a commit that adds a symlink. Mak
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hgmn up -q 2
   $ ln -s pushcommit symlink_to_pushcommit
@@ -218,7 +217,6 @@ Make a commit that makes a file executable and a commit that adds a symlink. Mak
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Continue replay

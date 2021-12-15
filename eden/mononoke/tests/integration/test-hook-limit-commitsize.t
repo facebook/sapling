@@ -25,7 +25,6 @@ Small commit
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Large file
@@ -87,7 +86,6 @@ Bypass
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Removing files whose total size is large should work
@@ -113,5 +111,4 @@ Removing files whose total size is large should work
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark

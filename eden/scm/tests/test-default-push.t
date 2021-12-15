@@ -35,7 +35,6 @@ Push should push to 'default' when 'default-push' not set:
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
 Push should push to 'default-push' when set:
 
@@ -47,7 +46,6 @@ Push should push to 'default-push' when set:
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
 But push should push to 'default' if explicitly specified (issue5000):
 
@@ -71,7 +69,6 @@ Push should push to 'default-push' when 'default' is not set
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
   $ cd ..
 
@@ -106,7 +103,6 @@ Windows needs a leading slash to make a URL that passes all of the checks
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
 :pushrev is used when no -r is passed
 
@@ -125,7 +121,6 @@ Windows needs a leading slash to make a URL that passes all of the checks
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
   $ hg --config 'paths.default:pushrev=draft()' push -f
   pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
@@ -133,7 +128,6 @@ Windows needs a leading slash to make a URL that passes all of the checks
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
 Invalid :pushrev raises appropriately
 

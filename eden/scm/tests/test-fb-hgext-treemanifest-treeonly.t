@@ -143,7 +143,6 @@ Test pulling new commits from a hybrid server
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
 
   $ hg log -r tip --stat --pager=off
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
@@ -277,7 +276,6 @@ Test bundling
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 2 files
   $ hg log -r 'tip^::tip' -G -T "{desc}\n" --stat
   o  modify y
   │   y |  1 +
@@ -374,7 +372,6 @@ Test prefetch
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   $ cd ..
 
 Test converting server to treeonly
@@ -410,7 +407,6 @@ Test pulling to a treeonly client from a treeonly server
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   $ hg log -r tip -T '{desc}\n' --stat
   fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
@@ -458,7 +454,6 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 4 changesets with 3 changes to 2 files
   $ hg --cwd ../master debugindex .hg/store/00manifesttree.i | tail -4
        4       218      61      2       3 e249b5cd4abe 9bd1ef658bef 000000000000
        5       279      61      3       5 5f15f80c2b54 14bce01d0d73 000000000000
@@ -508,7 +503,6 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 4 changesets with 0 changes to 2 files
   $ hg -R ../master log -r tip --stat
   commit:      5f0bc1aaff22
   user:        test
@@ -716,7 +710,6 @@ old repository into another repo.
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 2 changesets with 2 changes to 1 files
 
   $ hg log -G -T '{node}'
   @  0a0cac7a2bb2ff6613da8280f7f356863cee022b

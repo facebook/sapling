@@ -42,8 +42,7 @@ sh % "hg push --pushvars 'DEBUG=1' --pushvars 'BYPASS_REVIEW=true' --config 'pus
     searching for changes
     adding changesets
     adding manifests
-    adding file changes
-    added 1 changesets with 1 changes to 1 files"""
+    adding file changes"""
 
 # Setting pushvars.sever = true and then pushing.
 
@@ -58,7 +57,6 @@ sh % "hg push --pushvars 'DEBUG=1' --pushvars 'BYPASS_REVIEW=true'" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
     HG_USERVAR_BYPASS_REVIEW=true
     HG_USERVAR_DEBUG=1"""
 
@@ -72,7 +70,6 @@ sh % "hg push --pushvars 'DEBUG='" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
     HG_USERVAR_DEBUG="""
 
 # Test pushing bad vars
@@ -114,7 +111,6 @@ sh % "hg push --pushvars 'A=1' --pushvars 'B=2'" == r"""
     adding changesets
     adding manifests
     adding file changes
-    added 1 changesets with 1 changes to 1 files
     Got pushvar: USERVAR_A=1
     Got pushvar: USERVAR_B=2"""
 sh % 'cp "$TESTTMP/hgrc.bak" "$HGRCPATH"'
@@ -141,7 +137,6 @@ sh % "hg push --pushvars 'PUSH_REASON=I want to'" == r"""
     searching for changes
     adding changesets
     adding manifests
-    adding file changes
-    added 1 changesets with 1 changes to 1 files"""
+    adding file changes"""
 sh % 'hg blackbox --pattern \'{"legacy_log": {"service": "pushreason"}}\'' == "* [legacy][pushreason] bypassing push block with reason: I want to (glob)"
 sh % 'cp "$TESTTMP/hgrc.bak" "$HGRCPATH"'

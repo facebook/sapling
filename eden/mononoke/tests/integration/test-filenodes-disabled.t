@@ -82,7 +82,6 @@ Now pull and update to them
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hgmn up -q master_bookmark
   $ ls

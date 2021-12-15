@@ -86,7 +86,6 @@ Make a push from the client
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files
   remote: pushing 1 changeset:
   remote:     772868146114  client push
   remote: 2 new changesets from the server will be downloaded

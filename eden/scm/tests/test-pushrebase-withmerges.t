@@ -85,7 +85,6 @@ Push in from the client.
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 1 changes to 3 files
   updating bookmark @
   remote: pushing 5 changesets:
   remote:     c85f9ce7b342  alpha

@@ -56,7 +56,6 @@ Pushrebase some commits from the client
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 2 changes to 4 files
   updating bookmark master
   remote: pushing 2 changesets:
   remote:     b0c40d8745c8  c1
@@ -180,7 +179,6 @@ Push this commit to the server.  We should create local mutation information.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 2 changes to 3 files
   updating bookmark master
   remote: pushing 1 changeset:
   remote:     254a42c0dcef  c4 (amended)

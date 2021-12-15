@@ -36,7 +36,6 @@ Pushing a merge
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ mononoke_admin filenodes validate "$(hg log -r master_bookmark -T '{node}')"
   * using repo "repo" repoid RepositoryId(0) (glob)

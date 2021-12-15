@@ -15,7 +15,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 9 changesets with 7 changes to 4 files
 
   $ for i in 0 1 2 3 4 5 6 7 8; do
   >    echo
@@ -29,7 +28,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-1
@@ -37,7 +35,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
   warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-2
@@ -45,7 +42,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 1 files
   warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-3
@@ -53,7 +49,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 4 changes to 1 files
   warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-4
@@ -61,7 +56,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
   warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-5
@@ -69,7 +63,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 1 files
   warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-6
@@ -77,7 +70,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 5 changes to 2 files
   warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-7
@@ -85,7 +77,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 6 changes to 3 files
   warning: verify does not actually check anything in this repo
   
   pushing to test-revflag-8
@@ -93,7 +84,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 5 changes to 2 files
   warning: verify does not actually check anything in this repo
 
   $ cd test-revflag-8
@@ -104,7 +94,6 @@ Testing of the '--rev' flag
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 2 changes to 3 files
 
   $ hg verify
   warning: verify does not actually check anything in this repo
@@ -150,7 +139,6 @@ Test push hook locking
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   lock:          user *, process * (*s) (glob)
   wlock:         free
   undolog/lock:  absent
@@ -165,7 +153,6 @@ Test push hook locking
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
   lock:          user *, process * (*s) (glob)
   wlock:         user *, process * (*s) (glob)
   undolog/lock:  absent
@@ -183,14 +170,12 @@ Test bare push with multiple race checking options
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ hg -R test-revflag push -r 'desc(0.0)' test-bare-push-unrelated-concurrency --config server.concurrent-push-mode=check-related
   pushing to test-bare-push-unrelated-concurrency
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
 SEC: check for unsafe ssh url
 

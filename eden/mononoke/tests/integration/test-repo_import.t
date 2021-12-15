@@ -198,7 +198,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   adding remote bookmark repo_import_new_repo
   $ hgmn up master_bookmark

@@ -69,7 +69,6 @@ Prefetch should fail with corruption error
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
 
   $ hgmn prefetch -r ":"

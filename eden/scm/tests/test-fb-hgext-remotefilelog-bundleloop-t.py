@@ -32,5 +32,4 @@ sh % "echo remotefilelog" >> ".hg/requires"
 sh % 'hg unbundle "$TESTTMP/bundle"' == r"""
     adding changesets
     adding manifests
-    adding file changes
-    added 4 changesets with 8 changes to 6 files"""
+    adding file changes"""

@@ -82,7 +82,6 @@ pull the infinitepush commit
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -117,7 +116,6 @@ push the commit back to the Mercurial server to check the null linkrevs don't le
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 2 changesets with 2 changes to 2 files
   exporting bookmark test
   $ cd $TESTTMP/repo-hg
   $ hg debugindex file
@@ -151,7 +149,6 @@ pull only the master branch into another repo
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   $ hgmn up master_bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -191,7 +188,6 @@ pull the infinitepush commit again in a new repo
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   $ hgmn up 60ab8a6c8e652ea968be7ffdb658b49de35d3621
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debughistorypack ../cachepath/repo-pull2/packs/e5e1a8b81e9d2360fe54412f8370812c06c6cadb

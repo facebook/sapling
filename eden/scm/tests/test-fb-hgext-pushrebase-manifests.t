@@ -153,7 +153,6 @@ blocking. There shouldn't be any "[client1 push]" output here.
   [client2 push] adding changesets
   [client2 push] adding manifests
   [client2 push] adding file changes
-  [client2 push] added 2 changesets with 1 changes to 2 files
   [client2 push] updating bookmark master
   [client2 push] remote: read manifest outside the lock :)
   [client2 push] remote: read manifest outside the lock :)
@@ -186,7 +185,6 @@ Check that the first push is still running/blocked...
   [client1 push] adding changesets
   [client1 push] adding manifests
   [client1 push] adding file changes
-  [client1 push] added 4 changesets with 2 changes to 3 files
   [client1 push] updating bookmark master
   [client1 push] remote: read manifest outside the lock :)
   [client1 push] remote: read manifest outside the lock :)

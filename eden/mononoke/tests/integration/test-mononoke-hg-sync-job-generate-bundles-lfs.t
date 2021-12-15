@@ -81,7 +81,6 @@ Push to Mononoke
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
   $ LONG2="$(yes B 2>/dev/null | head -c 30)"
@@ -98,7 +97,6 @@ Push to Mononoke
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg mv lfs-largefile lfs-renamed-largefile
   $ hg commit -Aqm "move lfs-large file"
@@ -113,7 +111,6 @@ Push to Mononoke
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Push normal file

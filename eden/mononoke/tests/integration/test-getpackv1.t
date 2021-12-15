@@ -117,7 +117,6 @@ Rename a file and then prefetch it
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   $ cd $TESTTMP/repo3
   $ hgmn pull -q
   $ hgmn prefetch -r 4 --debug 2>&1 | grep "getpackv1 command"

@@ -93,7 +93,6 @@
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
   updating bookmark master_bookmark
 
 # Check that an upload was sent to the LFS server

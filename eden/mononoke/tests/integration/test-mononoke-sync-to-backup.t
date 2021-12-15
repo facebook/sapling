@@ -136,7 +136,6 @@ Do a manual move
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 0 changes to 0 files
   adding remote bookmark master_bookmark
   $ hgmn log -r master_bookmark -T '{node}\n'
   f5fb745185a2d197d092e7dfffe147f36de1af76

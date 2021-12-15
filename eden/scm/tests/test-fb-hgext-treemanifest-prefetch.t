@@ -237,7 +237,6 @@ Test prefetching certain revs during pull
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   prefetching tree for 311cac64787d
   fetching tree '' 22febde2554a1c6f8e4d8052a0501e3d895d73d9
   1 trees fetched over 0.00s

@@ -47,7 +47,6 @@ Make server treeonly and push trees to it
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
   updating bookmark foo
   remote: pushing 2 changesets:
   remote:     e297a1e684b7  C

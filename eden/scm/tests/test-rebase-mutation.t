@@ -68,7 +68,6 @@ simple rebase
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 8 changes to 8 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd simple
@@ -147,7 +146,6 @@ empty changeset
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 8 changes to 8 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd empty
@@ -380,7 +378,6 @@ be rebased.
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 8 changes to 8 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hidden
@@ -564,7 +561,6 @@ test on rebase dropping a merge
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 8 changes to 8 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd dropmerge

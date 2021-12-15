@@ -170,7 +170,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
@@ -261,7 +260,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
   updating bookmark master
 
   $ hg update tip

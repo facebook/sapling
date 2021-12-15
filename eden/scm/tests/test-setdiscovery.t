@@ -438,7 +438,6 @@ The graph looks like:
   adding changesets
   adding manifests
   adding file changes
-  added 304 changesets with 0 changes to 0 files
   updating to branch b
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

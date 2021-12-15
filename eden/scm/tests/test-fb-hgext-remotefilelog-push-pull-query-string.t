@@ -61,7 +61,6 @@ as well
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
   $ hg log -r .
   commit:      421535db10b6
   bookmark:    default/master

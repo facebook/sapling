@@ -59,7 +59,6 @@ expanding an unknown scheme emits the input
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
 
   $ mkcommit something
   $ hg push -r . --to scratch/test123 --create
@@ -74,4 +73,3 @@ expanding an unknown scheme emits the input
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 1 changes to 1 files

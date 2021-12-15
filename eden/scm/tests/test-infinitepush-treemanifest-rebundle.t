@@ -105,7 +105,6 @@ trees for the infinitepush commits.
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 1 files
 
 Make sure we can check out the commit we pulled
 

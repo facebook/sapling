@@ -33,7 +33,6 @@ Negative testing
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Positive testing
@@ -89,7 +88,6 @@ Files with bad markers should be accepted with these suffixes
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Negative Testing
@@ -104,7 +102,6 @@ File is considered binary if it contains \0
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Test bypass
@@ -117,7 +114,6 @@ Test bypass
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Test markers not on the first line

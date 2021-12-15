@@ -29,7 +29,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
 
   $ hg verify
   warning: verify does not actually check anything in this repo

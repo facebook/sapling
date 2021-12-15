@@ -73,7 +73,6 @@ Perform LFS push
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 # Rename a file
@@ -90,7 +89,6 @@ Perform LFS push
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Verify that if we fail to upload LFS blobs first, the push fails
@@ -166,7 +164,6 @@ Create a new client repository, using getpack (with its own cachepath)
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
  
   $ hgmn update -r master_bookmark -v
   resolving manifests

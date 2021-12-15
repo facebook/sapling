@@ -114,7 +114,6 @@ Pull the amended stack to the other repo
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   $ tglogp
   o  a24671c3bce2 draft 'B1'
   │
@@ -153,7 +152,6 @@ Pull the amended stack to the other repo.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   $ tglogm
   o  6473983c899c 'B1'
   │
@@ -203,7 +201,6 @@ Pull the modified stack to the other repo.
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   $ tglogm
   o  853e5ba9bd35 'B1'
   │

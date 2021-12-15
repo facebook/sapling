@@ -72,7 +72,6 @@ blobimport hg servers repos into Mononoke repos
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hyper_repo
@@ -103,7 +102,6 @@ push one more commit
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 now tail it to the hyper repo

@@ -91,7 +91,6 @@ configure an extension so that a push happens right after pulldiscovery
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
   $ hg bookmarks
@@ -105,7 +104,6 @@ pull again to ensure the new version makes it into repo-pull
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ hg bookmarks
      master_bookmark           e5c8b04bf9a0

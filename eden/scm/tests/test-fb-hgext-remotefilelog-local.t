@@ -102,7 +102,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
 
   $ hg rebase -d tip
   rebasing 9abfe7bca547 "a"
@@ -130,7 +129,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -159,7 +157,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 3 changes to 3 files
 
   $ hg log -r 'max(desc(a))' --stat
   commit:      19edf50f4de7

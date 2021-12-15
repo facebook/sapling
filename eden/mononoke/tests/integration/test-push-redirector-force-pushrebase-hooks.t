@@ -121,7 +121,6 @@ there, we are ok to create it.  Create a commit on top of that that is backsynce
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
   $ backsync_large_to_small 2>&1 | grep "syncing bookmark"
   * syncing bookmark master_bookmark to * (glob)

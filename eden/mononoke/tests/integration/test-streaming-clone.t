@@ -50,7 +50,6 @@ Try creating again, this should fail
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -78,7 +77,6 @@ Try creating again, this should fail
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ diff repo-streamclone/.hg/store/00changelog.i repo-hg/.hg/store/00changelog.i
@@ -132,7 +130,6 @@ Push a few new commits and update streaming clone
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 0 changes to 0 files
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -164,7 +161,6 @@ Clone it again to make sure saved streaming chunks are valid
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-streamclone-3

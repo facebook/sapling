@@ -18,7 +18,6 @@
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -39,5 +38,4 @@ remotenames
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
   nothing to rebase - working directory parent is also destination

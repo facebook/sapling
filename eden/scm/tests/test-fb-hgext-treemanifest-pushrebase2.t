@@ -63,7 +63,6 @@ Push a commit that client1 doesnt have
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 6 changes to 6 files
   $ hg up -q tip
 - Add a bunch of files, to force it to choose to make a delta
   $ echo >> file1
@@ -100,7 +99,6 @@ Push treeonly merge commit to a treeonly server
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 9 changes to 9 files
   updating bookmark foo
   remote: pushing 3 changesets:
   remote:     a1d68bae23ee  Edit file

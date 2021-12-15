@@ -95,7 +95,6 @@ pull these draft commits
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
 
   $ graphlog
   o  fc8f2fba9ac9 draft 'draft2'
@@ -166,7 +165,6 @@ pull all of these commits
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 0 changes to 0 files
 
 the server will have returned phaseheads information that makes 'draft1' and
 'branch1' public, and everything else draft

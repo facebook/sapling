@@ -37,5 +37,5 @@ sh % "hg pull ../client1" == r"""
     requesting all changes
     adding changesets
     adding manifests
-    adding file changes
-    added 1 changesets with 2 changes to 2 files"""
+    adding file changes"""
+

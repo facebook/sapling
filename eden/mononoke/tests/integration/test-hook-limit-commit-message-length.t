@@ -27,7 +27,6 @@ Ok commit message - should pass
   adding changesets
   adding manifests
   adding file changes
-  added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
 Commit message too long - should fail
