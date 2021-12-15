@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 use anyhow::anyhow;
+use edenfs_client::checkout::find_checkout;
 use edenfs_client::EdenFsInstance;
 use edenfs_error::{EdenFsError, Result};
 
@@ -39,13 +40,14 @@ pub struct DiskUsageCmd {
 }
 
 fn write_title(title: &str) {
-    println!("{}", title);
+    println!("\n{}", title);
     println!("{}", "-".repeat(title.len()));
 }
 
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+        // Get mount configuration info
         let mounts = if !self.mounts.is_empty() {
             (&self.mounts).to_vec()
         } else {
@@ -60,11 +62,27 @@ impl crate::Subcommand for DiskUsageCmd {
             config_paths
         };
 
+        let mut backing_repos = Vec::new();
+
+        for mount in &mounts {
+            let checkout = find_checkout(&instance, mount)?;
+            if let Some(b) = checkout.backing_repo() {
+                backing_repos.push(b);
+            }
+        }
         write_title("Mounts");
         for path in &mounts {
             println!("{}", path.display());
         }
 
+        write_title("Backing repos");
+        for backing in backing_repos {
+            println!("{}", backing.display());
+        }
+        println!(
+            "\nCAUTION: You can lose work and break things by manually deleting data \
+            from the backing repo directory!"
+        );
         Ok(0)
     }
 }

@@ -5,11 +5,14 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::anyhow;
 use edenfs_error::{EdenFsError, Result, ResultExt};
 use edenfs_utils::path_from_bytes;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
 use std::fmt;
+use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
@@ -221,8 +224,10 @@ where
 /// Represents an edenfs checkout with mount information as well as information from configuration
 #[derive(Serialize)]
 pub struct EdenFsCheckout {
+    /// E.g., /data/sandcastle/boxes/fbsource
     #[serde(skip)]
     path: PathBuf,
+    /// E.g., /home/unixname/local/.eden/clients/fbsource
     data_dir: PathBuf,
     /// This is None when it's just configured but not actively mounted in eden
     #[serde(serialize_with = "serialize_state")]
@@ -234,6 +239,10 @@ pub struct EdenFsCheckout {
 }
 
 impl EdenFsCheckout {
+    pub fn backing_repo(&self) -> Option<PathBuf> {
+        self.backing_repo.clone()
+    }
+
     fn from_mount_info(path: PathBuf, thrift_mount: MountInfo) -> Result<EdenFsCheckout> {
         Ok(EdenFsCheckout {
             path,
@@ -351,4 +360,72 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     }
 
     Ok(mount_points)
+}
+
+/// If the path provided is an eden checkout, this returns an object representing that checkout.
+/// Otherwise, if the path provided is not an eden checkout, this returns None.
+pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsCheckout> {
+    // Resolve symlinks and get absolute path
+    let path = path.canonicalize().from_err()?;
+
+    // Check if it is a mounted checkout
+    let (checkout_root, checkout_state_dir) = if cfg!(windows) {
+        // On Windows, walk the path backwards until both parent and dir point to "C:\"
+        todo!("Windows not implemented yet");
+    } else {
+        // We will get an error if any of these symlinks do not exist
+        let eden_socket_path = fs::read_link(path.join(".eden").join("socket"));
+        match eden_socket_path {
+            Ok(_) => {
+                let root = fs::read_link(path.join(".eden").join("root")).ok();
+                let state_dir = fs::read_link(path.join(".eden").join("client")).ok();
+                (root, state_dir)
+            }
+            Err(_) => (None, None),
+        }
+    };
+
+    if checkout_root.is_none() {
+        // Find `checkout_path` that `path` is a sub path of
+        let all_checkouts = instance.get_configured_mounts_map()?;
+        if let Some(item) = all_checkouts
+            .iter()
+            .find(|&(checkout_path, _)| path.starts_with(checkout_path))
+        {
+            let (checkout_path, checkout_name) = item;
+            let checkout_state_dir = config_directory(instance, checkout_name);
+            Ok(EdenFsCheckout::from_config(
+                PathBuf::from(checkout_path),
+                checkout_state_dir.clone(),
+                CheckoutConfig::parse_config(checkout_state_dir)?,
+            ))
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "Checkout path {} is not handled by EdenFS",
+                path.display()
+            )))
+        }
+    } else if checkout_state_dir.is_none() {
+        let all_checkouts = instance.get_configured_mounts_map()?;
+        let checkout_path = checkout_root.unwrap();
+        if let Some(checkout_name) = all_checkouts.get(&checkout_path) {
+            let checkout_state_dir = config_directory(instance, checkout_name);
+            Ok(EdenFsCheckout::from_config(
+                checkout_path,
+                checkout_state_dir.clone(),
+                CheckoutConfig::parse_config(checkout_state_dir)?,
+            ))
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "unknown checkout {}",
+                checkout_path.display()
+            )))
+        }
+    } else {
+        Ok(EdenFsCheckout::from_config(
+            checkout_root.unwrap(),
+            checkout_state_dir.as_ref().unwrap().clone(),
+            CheckoutConfig::parse_config(checkout_state_dir.unwrap())?,
+        ))
+    }
 }
