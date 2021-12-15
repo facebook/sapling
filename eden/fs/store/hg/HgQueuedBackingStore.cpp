@@ -497,7 +497,8 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   }
 
   if (type != ObjectFetchContext::ObjectType::Tree &&
-      isRecordingFetch_.load(std::memory_order_relaxed)) {
+      isRecordingFetch_.load(std::memory_order_relaxed) &&
+      context.getCause() != ObjectFetchContext::Cause::Prefetch) {
     auto guard = fetchedFilePaths_.wlock();
     for (const auto& hash : hashes) {
       guard->emplace(hash.path().stringPiece().str());

@@ -158,11 +158,6 @@ class ThriftFetchContext : public ObjectFetchContext {
       std::optional<pid_t> pid,
       folly::StringPiece endpoint)
       : pid_(pid), endpoint_(endpoint) {}
-  explicit ThriftFetchContext(
-      std::optional<pid_t> pid,
-      folly::StringPiece endpoint,
-      bool prefetchMetadata)
-      : pid_(pid), endpoint_(endpoint), prefetchMetadata_(prefetchMetadata) {}
 
   std::optional<pid_t> getClientPid() const override {
     return pid_;
@@ -170,6 +165,30 @@ class ThriftFetchContext : public ObjectFetchContext {
 
   Cause getCause() const override {
     return ObjectFetchContext::Cause::Thrift;
+  }
+
+  std::optional<folly::StringPiece> getCauseDetail() const override {
+    return endpoint_;
+  }
+
+ private:
+  std::optional<pid_t> pid_;
+  folly::StringPiece endpoint_;
+};
+
+class PrefetchFetchContext : public ObjectFetchContext {
+ public:
+  explicit PrefetchFetchContext(
+      std::optional<pid_t> pid,
+      folly::StringPiece endpoint)
+      : pid_(pid), endpoint_(endpoint) {}
+
+  std::optional<pid_t> getClientPid() const override {
+    return pid_;
+  }
+
+  Cause getCause() const override {
+    return ObjectFetchContext::Cause::Prefetch;
   }
 
   std::optional<folly::StringPiece> getCauseDetail() const override {
@@ -209,7 +228,8 @@ class ThriftLogHelper {
         itcLineNumber_(itcLineNumber),
         level_(level),
         itcLogger_(logger),
-        fetchContext_{pid, itcFunctionName} {}
+        fetchContext_{pid, itcFunctionName},
+        prefetchFetchContext_{pid, itcFunctionName} {}
 
   ~ThriftLogHelper() {
     // Logging completion time for the request
@@ -219,6 +239,10 @@ class ThriftLogHelper {
         itcFunctionName_,
         itcTimer_.elapsed().count(),
         EDEN_MICRO);
+  }
+
+  PrefetchFetchContext& getPrefetchFetchContext() {
+    return prefetchFetchContext_;
   }
 
   ThriftFetchContext& getFetchContext() {
@@ -237,6 +261,7 @@ class ThriftLogHelper {
   folly::Logger itcLogger_;
   folly::stop_watch<std::chrono::microseconds> itcTimer_ = {};
   ThriftFetchContext fetchContext_;
+  PrefetchFetchContext prefetchFetchContext_;
 };
 
 template <typename ReturnType>
@@ -1425,7 +1450,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::globFilesImpl(
       ? std::make_shared<GlobNode::PrefetchList>()
       : nullptr;
 
-  auto& fetchContext = helper->getFetchContext();
+  auto& fetchContext = helper->getPrefetchFetchContext();
   fetchContext.setPrefetchMetadata(globOptions.prefetchMetadata);
 
   // These hashes must outlive the GlobResult created by evaluate as the
@@ -2268,7 +2293,21 @@ void EdenServiceHandler::stopRecordingBackingStoreFetch(
   for (const auto& backingStore : server_->getBackingStores()) {
     auto filePaths = backingStore->stopRecordingFetch();
     // recording is only implemented for HgQueuedBackingStore at the moment
-    if (!filePaths.empty()) {
+    // TODO: remove these dynamic casts in favor of a QueryInterface method
+    // BackingStore -> LocalStoreCachedBackingStore
+    std::shared_ptr<HgQueuedBackingStore> hgBackingStore{nullptr};
+    auto localStoreCachedBackingStore =
+        std::dynamic_pointer_cast<LocalStoreCachedBackingStore>(backingStore);
+    if (!localStoreCachedBackingStore) {
+      // BackingStore -> HgQueuedBackingStore
+      hgBackingStore =
+          std::dynamic_pointer_cast<HgQueuedBackingStore>(backingStore);
+    } else {
+      // LocalStoreCachedBackingStore -> HgQueuedBackingStore
+      hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+          localStoreCachedBackingStore->getBackingStore());
+    }
+    if (hgBackingStore) {
       (*results.fetchedFilePaths_ref())["HgQueuedBackingStore"].insert(
           filePaths.begin(), filePaths.end());
     }

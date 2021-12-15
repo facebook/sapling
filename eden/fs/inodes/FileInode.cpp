@@ -1143,6 +1143,13 @@ void FileInode::logAccess(ObjectFetchContext& fetchContext) {
     return;
   }
 
+  // Don't log file accesses that originate from a prefetch. In practice, this
+  // case should not be hit, but since we have the data for free here let's
+  // safeguard against it anyway
+  if (fetchContext.getCause() == ObjectFetchContext::Cause::Prefetch) {
+    return;
+  }
+
   std::optional<std::string> fetchDetail;
 
   const auto& detail = fetchContext.getCauseDetail();
