@@ -242,6 +242,10 @@ pub struct MononokeTunables {
     // Setting this tunable to a new non-zero value and restarting
     // mononoke hosts will invalidate bonsai_hg_mapping cache
     bonsai_hg_mapping_sitever: AtomicI64,
+
+    // Setting this will add "_rust" to verify_integrity executable path hence switching it to the
+    // rust binary path
+    use_verify_integrity_rust_client: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
