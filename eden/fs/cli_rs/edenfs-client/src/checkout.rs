@@ -362,6 +362,56 @@ pub async fn get_mounts(instance: &EdenFsInstance) -> Result<BTreeMap<PathBuf, E
     Ok(mount_points)
 }
 
+#[cfg(windows)]
+#[derive(Deserialize)]
+struct WindowsEdenConfigInner {
+    socket: PathBuf,
+    root: PathBuf,
+    client: PathBuf,
+}
+
+#[cfg(windows)]
+#[derive(Deserialize)]
+struct WindowsEdenConfig {
+    #[serde(rename = "Config")]
+    config: WindowsEdenConfigInner,
+}
+
+#[cfg(windows)]
+fn get_checkout_root_state(path: &Path) -> Result<(Option<PathBuf>, Option<PathBuf>)> {
+    let mut checkout_root = None;
+    let mut checkout_state_dir = None;
+
+    // On Windows, walk backwards through the path until you find the `.eden` folder
+    let mut curr_dir = Some(path.clone());
+    while let Some(candidate_dir) = curr_dir {
+        if candidate_dir.join(".eden").exists() {
+            let config_file = candidate_dir.join(".eden").join("config");
+            let config = std::fs::read_to_string(config_file).from_err()?;
+            let config = toml::from_str::<WindowsEdenConfig>(&config).from_err()?;
+            checkout_root = Some(config.config.root);
+            checkout_state_dir = Some(config.config.client);
+            break;
+        } else {
+            curr_dir = candidate_dir.parent();
+        }
+    }
+    Ok((checkout_root, checkout_state_dir))
+}
+
+#[cfg(not(windows))]
+fn get_checkout_root_state(path: &Path) -> Result<(Option<PathBuf>, Option<PathBuf>)> {
+    // We will get an error if any of these symlinks do not exist
+    let eden_socket_path = fs::read_link(path.join(".eden").join("socket"));
+    if eden_socket_path.is_ok() {
+        let checkout_root = fs::read_link(path.join(".eden").join("root")).ok();
+        let checkout_state_dir = fs::read_link(path.join(".eden").join("client")).ok();
+        Ok((checkout_root, checkout_state_dir))
+    } else {
+        Ok((None, None))
+    }
+}
+
 /// If the path provided is an eden checkout, this returns an object representing that checkout.
 /// Otherwise, if the path provided is not an eden checkout, this returns None.
 pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsCheckout> {
@@ -369,21 +419,7 @@ pub fn find_checkout(instance: &EdenFsInstance, path: &Path) -> Result<EdenFsChe
     let path = path.canonicalize().from_err()?;
 
     // Check if it is a mounted checkout
-    let (checkout_root, checkout_state_dir) = if cfg!(windows) {
-        // On Windows, walk the path backwards until both parent and dir point to "C:\"
-        todo!("Windows not implemented yet");
-    } else {
-        // We will get an error if any of these symlinks do not exist
-        let eden_socket_path = fs::read_link(path.join(".eden").join("socket"));
-        match eden_socket_path {
-            Ok(_) => {
-                let root = fs::read_link(path.join(".eden").join("root")).ok();
-                let state_dir = fs::read_link(path.join(".eden").join("client")).ok();
-                (root, state_dir)
-            }
-            Err(_) => (None, None),
-        }
-    };
+    let (checkout_root, checkout_state_dir) = get_checkout_root_state(&path)?;
 
     if checkout_root.is_none() {
         // Find `checkout_path` that `path` is a sub path of
