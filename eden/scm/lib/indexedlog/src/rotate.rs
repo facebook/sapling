@@ -56,10 +56,10 @@ const LATEST_FILE: &str = "latest";
 /// Options used to configure how a [`RotateLog`] is opened.
 #[derive(Clone)]
 pub struct OpenOptions {
-    pub max_bytes_per_log: u64,
-    pub max_log_count: u8,
-    pub log_open_options: log::OpenOptions,
-    pub auto_sync_threshold: Option<u64>,
+    pub(crate) max_bytes_per_log: u64,
+    pub(crate) max_log_count: u8,
+    pub(crate) log_open_options: log::OpenOptions,
+    pub(crate) auto_sync_threshold: Option<u64>,
 }
 
 impl OpenOptions {
