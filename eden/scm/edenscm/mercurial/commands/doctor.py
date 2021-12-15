@@ -573,8 +573,18 @@ def indent(message):
 
 
 def runedenfsdoctor(ui):
-    ui.write(_("running 'edenfsctl doctor'\n"))
-    os.system("edenfsctl doctor")
+    useedendoctor = "HG_DOCTOR_SKIP_EDEN_DOCTOR" not in os.environ
+    if useedendoctor:
+        ui.write(_("running 'edenfsctl doctor'\n"))
+        os.system("edenfsctl doctor")
+    else:
+        ui.write(
+            _(
+                "skipping running 'edenfsctl doctor' because "
+                "HG_DOCTOR_SKIP_EDEN_DOCTOR is set. Our caller is likely "
+                "'edenfsctl doctor'. \n"
+            )
+        )
 
 
 def runglobalindexedlogdoctor(ui):
