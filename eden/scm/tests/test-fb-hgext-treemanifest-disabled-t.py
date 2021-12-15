@@ -38,4 +38,3 @@ sh % "hg pull ../client1" == r"""
     adding changesets
     adding manifests
     adding file changes"""
-
