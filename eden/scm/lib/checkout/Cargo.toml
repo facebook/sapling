@@ -13,7 +13,6 @@ minibytes = { path = "../minibytes" }
 parking_lot = "0.10.2"
 pathmatcher = { path = "../pathmatcher" }
 progress-model = { path = "../progress/model" }
-revisionstore = { path = "../revisionstore" }
 status = { path = "../status" }
 storemodel = { path = "../storemodel" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }

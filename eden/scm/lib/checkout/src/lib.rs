@@ -35,10 +35,6 @@ use minibytes::Bytes;
 use parking_lot::Mutex;
 use progress_model::ProgressBar;
 use progress_model::Registry;
-use revisionstore::scmstore::FileStore;
-use revisionstore::trait_impls::ArcFileStore;
-use revisionstore::trait_impls::ClonableRemoteDataStore;
-use revisionstore::RemoteDataStore;
 use storemodel::ReadFileContents;
 use tracing::debug;
 use tracing::warn;
@@ -276,44 +272,14 @@ impl CheckoutPlan {
         Ok(stats)
     }
 
-    pub async fn apply_read_store(&self, store: Arc<FileStore>) -> Result<CheckoutStats> {
-        let store = ArcFileStore(store);
-        self.apply_store(&store).await
-    }
-
-    pub async fn apply_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
+    pub async fn apply_store_dry_run(
         &self,
-        store: &DS,
-    ) -> Result<CheckoutStats> {
-        let store = ClonableRemoteDataStore(store);
-        self.apply_store(&store).await
-    }
-
-    pub async fn apply_remote_data_store_dry_run<DS: RemoteDataStore + Clone + 'static>(
-        &self,
-        store: &DS,
+        store: &dyn ReadFileContents<Error = anyhow::Error>,
     ) -> Result<(usize, u64)> {
         let keys = self
             .update_content
             .iter()
             .map(UpdateContentAction::make_key);
-        let store = ClonableRemoteDataStore(store);
-        let mut stream = store.read_file_contents(keys.collect()).await;
-        let (mut count, mut size) = (0, 0);
-        while let Some(result) = stream.next().await {
-            let (bytes, _) = result?;
-            count += 1;
-            size += bytes.len() as u64;
-        }
-        Ok((count, size))
-    }
-
-    pub async fn apply_read_store_dry_run(&self, store: Arc<FileStore>) -> Result<(usize, u64)> {
-        let keys = self
-            .update_content
-            .iter()
-            .map(UpdateContentAction::make_key);
-        let store = ArcFileStore(store);
         let mut stream = store.read_file_contents(keys.collect()).await;
         let (mut count, mut size) = (0, 0);
         while let Some(result) = stream.next().await {
@@ -338,7 +304,7 @@ impl CheckoutPlan {
     pub async fn check_unknown_files(
         &self,
         manifest: &impl Manifest,
-        store: Arc<FileStore>,
+        store: &dyn ReadFileContents<Error = anyhow::Error>,
         tree_state: &mut TreeState,
     ) -> Result<Vec<RepoPathBuf>> {
         let vfs = &self.checkout.vfs;
@@ -401,7 +367,6 @@ impl CheckoutPlan {
             return Ok(unknowns);
         }
 
-        let store = ArcFileStore(store);
         let check_content = store
             .read_file_contents(check_content)
             .await

@@ -37,6 +37,8 @@ use pyrevisionstore::contentstore;
 use pyrevisionstore::filescmstore;
 use pystatus::status as PyStatus;
 use pytreestate::treestate as PyTreeState;
+use revisionstore::trait_impls::ArcFileStore;
+use revisionstore::trait_impls::ClonableRemoteDataStore;
 use revisionstore::LegacyStore;
 use tracing::warn;
 use treestate::filestate::FileStateV2;
@@ -102,11 +104,12 @@ py_class!(class checkoutplan |py| {
         let state = state.get_state(py);
         let manifest = manifest.get_underlying(py);
         let store = scmstore.extract_inner(py);
+        let store = ArcFileStore(store);
         let unknown = py.allow_threads(move || -> Result<_> {
             let mut state = state.lock();
             let manifest = manifest.read();
             try_block_unless_interrupted(
-            plan.check_unknown_files(&*manifest, store, &mut state))
+            plan.check_unknown_files(&*manifest, &store, &mut state))
         }).map_pyerr(py)?;
         Ok(unknown.into_iter().map(|p|p.to_string()).collect())
     }
@@ -124,8 +127,9 @@ py_class!(class checkoutplan |py| {
             .or_else(|_| filescmstore::downcast_from(py, store.clone_ref(py)).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>))?;
 
         let plan = self.plan(py);
+        let store = ClonableRemoteDataStore(&store);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_remote_data_store(&store)
+            plan.apply_store(&store)
         )).map_pyerr(py)?;
         Ok(PyNone)
     }
@@ -135,24 +139,27 @@ py_class!(class checkoutplan |py| {
             .or_else(|_| filescmstore::downcast_from(py, store.clone_ref(py)).map(|s|  s.extract_inner(py) as Arc<dyn LegacyStore>))?;
 
         let plan = self.plan(py);
+        let store = ClonableRemoteDataStore(&store);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_remote_data_store_dry_run(&store)
+            plan.apply_store_dry_run(&store)
         )).map_pyerr(py)
     }
 
     def apply_scmstore_dry_run(&self, scmstore: &filescmstore) -> PyResult<(usize, u64)> {
         let store = scmstore.extract_inner(py);
+        let store = ArcFileStore(store);
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_read_store_dry_run(store)
+            plan.apply_store_dry_run(&store)
         )).map_pyerr(py)
     }
 
     def apply_scmstore(&self, scmstore: &filescmstore) -> PyResult<PyNone> {
         let store = scmstore.extract_inner(py);
+        let store = ArcFileStore(store);
         let plan = self.plan(py);
         py.allow_threads(|| try_block_unless_interrupted(
-            plan.apply_read_store(store)
+            plan.apply_store(&store)
         )).map_pyerr(py)?;
         Ok(PyNone)
     }
