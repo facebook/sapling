@@ -54,14 +54,30 @@ pub enum ConfigError {
 impl EdenApiError {
     pub fn is_retryable(&self) -> bool {
         use http_client::HttpClientError::*;
-        use http_client::TlsErrorKind::*;
         use EdenApiError::*;
         match self {
             Http(client_error) => match client_error {
                 Tls(_) => false,
                 _ => true,
             },
-            HttpError { .. } => true,
+            HttpError { status, message: _ } => {
+                // 300-399
+                if status.is_redirection() {
+                    false
+                // 400-499
+                } else if status.is_client_error() {
+                    match *status {
+                        StatusCode::REQUEST_TIMEOUT => true,
+                        StatusCode::TOO_MANY_REQUESTS => true,
+                        _ => false,
+                    }
+                // 500-599
+                } else if status.is_server_error() {
+                    true
+                } else {
+                    false
+                }
+            }
             _ => false,
         }
     }
