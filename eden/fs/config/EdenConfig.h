@@ -697,7 +697,7 @@ class EdenConfig : private ConfigSettingManager {
    */
   ConfigSetting<bool> enablePrefetchProfiles{
       "prefetch-profiles:prefetching-enabled",
-      false,
+      true,
       this};
 
   /**
