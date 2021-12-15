@@ -30,6 +30,7 @@ use crate::log::FlushFilterOutput;
 use crate::log::IndexDef;
 use crate::log::Log;
 use crate::log::{self};
+use crate::repair::OpenOptionsOutput;
 use crate::repair::OpenOptionsRepair;
 use crate::utils;
 
@@ -312,6 +313,14 @@ impl OpenOptions {
 impl OpenOptionsRepair for OpenOptions {
     fn open_options_repair(&self, dir: impl AsRef<Path>) -> crate::Result<String> {
         OpenOptions::repair(self, dir.as_ref())
+    }
+}
+
+impl OpenOptionsOutput for OpenOptions {
+    type Output = RotateLog;
+
+    fn open_path(&self, path: &Path) -> crate::Result<Self::Output> {
+        self.open(path)
     }
 }
 

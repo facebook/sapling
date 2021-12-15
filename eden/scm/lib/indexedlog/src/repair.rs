@@ -32,6 +32,13 @@ pub trait OpenOptionsRepair {
     fn open_options_repair(&self, path: impl AsRef<Path>) -> crate::Result<String>;
 }
 
+/// Defines the output of OpenOptions.
+pub trait OpenOptionsOutput {
+    type Output;
+
+    fn open_path(&self, path: &Path) -> crate::Result<Self::Output>;
+}
+
 impl<T: DefaultOpenOptions<O>, O: OpenOptionsRepair> Repair<O> for T {
     fn repair(path: impl AsRef<Path>) -> crate::Result<String> {
         T::default_open_options().open_options_repair(path.as_ref())

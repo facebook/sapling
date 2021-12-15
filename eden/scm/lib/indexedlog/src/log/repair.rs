@@ -18,12 +18,14 @@ use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::lock::ScopedDirLock;
 use crate::log::GenericPath;
+use crate::log::Log;
 use crate::log::LogMetadata;
 use crate::log::OpenOptions;
 use crate::log::META_FILE;
 use crate::log::PRIMARY_FILE;
 use crate::log::PRIMARY_HEADER;
 use crate::log::PRIMARY_START_OFFSET;
+use crate::repair::OpenOptionsOutput;
 use crate::repair::OpenOptionsRepair;
 use crate::utils::mmap_path;
 use crate::utils::{self};
@@ -242,6 +244,14 @@ impl OpenOptions {
 impl OpenOptionsRepair for OpenOptions {
     fn open_options_repair(&self, dir: impl AsRef<Path>) -> crate::Result<String> {
         OpenOptions::repair(self, dir.as_ref())
+    }
+}
+
+impl OpenOptionsOutput for OpenOptions {
+    type Output = Log;
+
+    fn open_path(&self, path: &Path) -> crate::Result<Self::Output> {
+        self.open(path)
     }
 }
 

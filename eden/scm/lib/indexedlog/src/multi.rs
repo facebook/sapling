@@ -26,6 +26,7 @@ use crate::lock::ScopedDirLock;
 use crate::log::GenericPath;
 use crate::log::LogMetadata;
 use crate::log::{self};
+use crate::repair::OpenOptionsOutput;
 use crate::repair::OpenOptionsRepair;
 use crate::utils;
 use crate::utils::rand_u64;
@@ -470,6 +471,14 @@ impl OpenOptionsRepair for OpenOptions {
         }
 
         Ok(out)
+    }
+}
+
+impl OpenOptionsOutput for OpenOptions {
+    type Output = MultiLog;
+
+    fn open_path(&self, path: &Path) -> crate::Result<Self::Output> {
+        self.open(path)
     }
 }
 
