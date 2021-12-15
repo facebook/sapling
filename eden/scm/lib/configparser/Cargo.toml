@@ -32,7 +32,7 @@ sha2 = { version = "0.8", optional = true }
 tempfile = { version = "3.2", optional = true }
 tracing = "0.1.29"
 types = { path = "../types", optional = true }
-url = { version = "2.2.2", optional = true }
+url = "2.2.2"
 util = { path = "../util" }
 version = { path = "../version" }
 zstd = { version = "=0.8.0+zstd.1.4.9", optional = true }
@@ -46,4 +46,4 @@ tempfile = "3.2"
 
 [features]
 default = []
-fb = ["filetime", "hgtime", "hostcaps", "hostcaps/fb", "http-client", "os_info", "regex", "serde", "serde_json", "serde_urlencoded", "sha2", "sha2", "tempfile", "types", "url", "zstd"]
+fb = ["filetime", "hgtime", "hostcaps", "hostcaps/fb", "http-client", "os_info", "regex", "serde", "serde_json", "serde_urlencoded", "sha2", "sha2", "tempfile", "types", "zstd"]

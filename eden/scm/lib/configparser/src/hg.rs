@@ -25,6 +25,7 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use anyhow::Result;
 use minibytes::Text;
+use url::Url;
 use util::path::expand_path;
 
 use crate::config::ConfigSet;
@@ -473,8 +474,18 @@ fn read_repo_name(config: &ConfigSet, repo_path: &Path) -> crate::Result<String>
         Ok(name) => (name, ".hg/reponame"),
         Err(e) => {
             tracing::warn!("repo name: no .hg/reponame: {:?}", &e);
-            let name: String = config.get_or_default("remotefilelog", "reponame")?;
-            (name, "remotefilelog.reponame")
+            let mut name: String = config.get_or_default("remotefilelog", "reponame")?;
+            let mut source = "remotefilelog.reponame";
+            if name.is_empty() {
+                tracing::warn!("repo name: no remotefilelog.reponame");
+                let path: String = config.get_or_default("paths", "default")?;
+                let name = get_url_basename(&path).unwrap_or_default();
+                if name.is_empty() {
+                    tracing::warn!("repo name: no path.default reponame: {}", &path);
+                }
+                source = "paths.default";
+            }
+            (name, source)
         }
     };
 
@@ -558,6 +569,20 @@ impl ConfigSet {
 
         errors
     }
+}
+
+fn get_url_basename(s: &str) -> Option<String> {
+    // Use a base_url to support non-absolute urls.
+    let base_url = Url::parse("file:///.").unwrap();
+    let parse_opts = Url::options().base_url(Some(&base_url));
+    if let Ok(url) = parse_opts.parse(s) {
+        // Try the last segment in url path.
+        let basename = url.path_segments().and_then(|s| s.rev().next());
+        // Try the hostname. ex. in "fb://fbsource", "fbsource" is a host not a path.
+        let basename = basename.or_else(|| url.host_str());
+        return basename.map(|s| s.to_string());
+    }
+    None
 }
 
 #[cfg(feature = "fb")]
