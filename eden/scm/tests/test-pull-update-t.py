@@ -16,7 +16,7 @@ sh % "echo 1" > "foo"
 sh % "hg ci -Am m" == "adding foo"
 
 sh % "cd .."
-sh % "hg clone t tt" == r"""
+sh % "hg clone --no-shallow t tt" == r"""
     updating to branch default
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "cd tt"

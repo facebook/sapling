@@ -1506,8 +1506,8 @@ def cat(ui, repo, file1, *pats, **opts):
         (
             "",
             "shallow",
-            False,
-            _("create a shallow clone which uses remote file history"),
+            True,
+            _("use remotefilelog (only turn it off in legacy tests) (ADVANCED)"),
         ),
     ]
     + remoteopts,

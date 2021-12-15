@@ -28,11 +28,6 @@ Setup client
   $ cd client
   $ echo aaaaaaaaaaa > largefile
   $ hg ci -Aqm commit
-  $ hg debugdata largefile 0
-  version https://git-lfs.github.com/spec/v1
-  oid sha256:ab483e1d855ad0ea27a68eeea02a04c1de6ccd2dc2c05e3a48c9a1ebb8af5f99
-  size 12
-  x-is-binary 0
 
   $ hg push -r . --to scratch/lfscommit --create
   pushing to ssh://user@dummy/repo

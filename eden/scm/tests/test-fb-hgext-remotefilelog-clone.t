@@ -78,23 +78,6 @@
 
   $ cd ..
 
-# full clone from shallow
-
-Note: the output to STDERR comes from a different process to the output on
-STDOUT and their relative ordering is not deterministic. As a result, the test
-was failing sporadically. To avoid this, we capture STDERR to a file and
-check its contents separately.
-
-  $ TEMP_STDERR=full-clone-from-shallow.stderr.tmp
-  $ hg clone --noupdate ssh://user@dummy/shallow full 2>$TEMP_STDERR
-  streaming all changes
-  [255]
-- sort because the order is non-deterministic because of stderr pipe buffering
-  $ cat $TEMP_STDERR | sort
-  abort: unexpected response from remote server: empty string
-  remote: abort: Cannot clone from a shallow repo to a full repo.
-  $ rm $TEMP_STDERR
-
 # getbundle full clone
 
   $ printf '[server]\npreferuncompressed=False\n' >> master/.hg/hgrc

@@ -138,7 +138,7 @@ Bookmark stays active after --continue
 
 Check that the right ancestors is used while rebasing a merge (issue4041)
 
-  $ hg clone "$TESTDIR/bundles/issue4041.hg" issue4041
+  $ hg clone --no-shallow "$TESTDIR/bundles/issue4041.hg" issue4041
   requesting all changes
   adding changesets
   adding manifests

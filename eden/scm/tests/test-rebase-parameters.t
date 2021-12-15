@@ -126,7 +126,7 @@ These work:
 Rebase with no arguments (from 3 onto 8):
 
   $ cd ..
-  $ hg clone -q -u . a2heads a1
+  $ cp -R a2heads a1
   $ cd a1
   $ hg up -q -C 'desc(D)'
 
@@ -154,8 +154,9 @@ Rebase with no arguments (from 3 onto 8):
 
 Rebase with base == '.' => same as no arguments (from 3 onto 8):
 
-  $ hg clone -q -u 3 a2heads a2
+  $ cp -R a2heads a2
   $ cd a2
+  $ hg update -q 'desc(D)'
 
   $ hg rebase --base .
   rebasing f68855660cff "B"
@@ -214,7 +215,7 @@ Rebase with dest == branch(.) => same as no arguments (from 3 onto 8):
 
 Specify only source (from 2 onto 8):
 
-  $ hg clone -q -u . a2heads a4
+  $ cp -R a2heads a4
   $ cd a4
 
   $ hg rebase --source 'desc("C")'
@@ -273,7 +274,7 @@ Specify only dest (from 3 onto 6):
 
 Specify only base (from 1 onto 8):
 
-  $ hg clone -q -u . a2heads a6
+  $ cp -R a2heads a6
   $ cd a6
 
   $ hg rebase --base 'desc("D")'
@@ -301,7 +302,7 @@ Specify only base (from 1 onto 8):
 
 Specify source and dest (from 2 onto 7):
 
-  $ hg clone -q -u . a a7
+  $ cp -R a a7
   $ cd a7
 
   $ hg rebase --source 'desc(C)' --dest 'desc(H)'
@@ -332,7 +333,7 @@ Specify source and dest (from 2 onto 7):
 
 Specify base and dest (from 1 onto 7):
 
-  $ hg clone -q -u . a a8
+  $ cp -R a a8
   $ cd a8
 
   $ hg rebase --base 'desc(D)' --dest 'desc(H)'
@@ -364,7 +365,7 @@ Specify base and dest (from 1 onto 7):
 
 Specify only revs (from 2 onto 8)
 
-  $ hg clone -q -u . a2heads a9
+  $ cp -R a2heads a9
   $ cd a9
 
   $ hg rebase --rev 'desc("C")::'
@@ -390,7 +391,7 @@ Specify only revs (from 2 onto 8)
 
 Rebasing both a single revision and a merge in one command
 
-  $ hg clone -q -u . a aX
+  $ cp -R a aX
   $ cd aX
   $ hg rebase -r 9da08f1f4bcc -r 6 --dest 'desc(I)'
   rebasing 9da08f1f4bcc "D"
@@ -417,7 +418,7 @@ Test --tool parameter:
 
   $ cd ..
 
-  $ hg clone -q -u . b b1
+  $ cp -R b b1
   $ cd b1
 
   $ hg rebase -s 'desc(c2b)' -d 56daeba07f4b2d0735ba0d40955813b42b4e4a4b --tool internal:local
@@ -429,7 +430,7 @@ Test --tool parameter:
   $ cd ..
 
 
-  $ hg clone -q -u . b b2
+  $ cp -R b b2
   $ cd b2
 
   $ hg rebase -s 'desc(c2b)' -d 56daeba07f4b2d0735ba0d40955813b42b4e4a4b --tool internal:other
@@ -441,7 +442,7 @@ Test --tool parameter:
   $ cd ..
 
 
-  $ hg clone -q -u . b b3
+  $ cp -R b b3
   $ cd b3
 
   $ hg rebase -s 'desc(c2b)' -d 56daeba07f4b2d0735ba0d40955813b42b4e4a4b --tool internal:fail

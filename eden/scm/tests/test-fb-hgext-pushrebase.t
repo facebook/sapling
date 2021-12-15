@@ -117,8 +117,6 @@ Stack of non-conflicting commits should be accepted
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: 0e3997dc0733, local: 0e3997dc0733+, remote: 4cfedb0dc25f
-   a: remote is newer -> g
-  getting a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ log -R ../server

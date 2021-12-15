@@ -37,11 +37,11 @@ sh % "hg ci -Am C2" == "adding C2"
 
 sh % "cd .."
 
-sh % "hg clone a b" == r"""
+sh % "hg clone --no-shallow a b" == r"""
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 
-sh % "hg clone a c" == r"""
+sh % "hg clone --no-shallow a c" == r"""
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 

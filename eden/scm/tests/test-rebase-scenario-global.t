@@ -75,9 +75,6 @@ can abort or warn for colliding untracked files)
   HG: user: test
   HG: branch 'default'
   HG: added D
-  $ cat D.orig
-  collide
-  $ rm D.orig
 
   $ tglog
   o  bdad251407f5 'D'
@@ -109,9 +106,6 @@ that we can ignore for colliding untracked files)
 
   $ HGEDITOR=cat hg rebase -s 'desc(D)' -d 'desc(F)' --config merge.checkunknown=ignore
   rebasing b3325c91a4d9 "D"
-  $ cat D.orig
-  collide
-  $ rm D.orig
 
   $ tglog
   o  80272bc566a5 'D'
