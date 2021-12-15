@@ -35,7 +35,6 @@ use crate::util::get_cache_path;
 use crate::util::get_indexedlogdatastore_aux_path;
 use crate::util::get_indexedlogdatastore_path;
 use crate::util::get_local_path;
-use crate::util::get_repo_name;
 use crate::ContentStore;
 use crate::EdenApiFileStore;
 use crate::EdenApiTreeStore;
@@ -187,10 +186,9 @@ impl<'a> FileStoreBuilder<'a> {
     }
 
     fn build_edenapi(&self) -> Result<Arc<EdenApiFileStore>> {
-        let reponame = get_repo_name(self.config)?;
         let client = Builder::from_config(self.config)?.build()?;
 
-        Ok(EdenApiFileStore::new(reponame, client))
+        Ok(EdenApiFileStore::new(client))
     }
 
     pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {
@@ -495,10 +493,9 @@ impl<'a> TreeStoreBuilder<'a> {
     }
 
     fn build_edenapi(&self) -> Result<Arc<EdenApiTreeStore>> {
-        let reponame = get_repo_name(self.config)?;
         let client = Builder::from_config(self.config)?.build()?;
 
-        Ok(EdenApiTreeStore::new(reponame, client))
+        Ok(EdenApiTreeStore::new(client))
     }
 
     pub fn build_indexedlog_local(&self) -> Result<Option<Arc<IndexedLogHgIdDataStore>>> {

@@ -47,26 +47,18 @@ pub extern "C" fn rust_edenapi_client_new(
 
 fn edenapi_trees_blocking(
     client: *mut Client,
-    repo: *const u8,
-    repo_len: size_t,
     keys: *const Key,
     keys_len: size_t,
     attrs: TreeAttributes,
 ) -> Result<Vec<Result<TreeEntry, EdenApiServerError>>, Error> {
     assert!(!client.is_null());
     let client: &Client = unsafe { &*client };
-    let repo = unsafe { ptr_len_to_slice(repo, repo_len) }?;
-    let repo: &str = std::str::from_utf8(repo)?;
     let keys: &[Key] = unsafe { std::slice::from_raw_parts(keys, keys_len) };
-    let repo = repo.to_string();
     let keys: Vec<ApiKey> = keys
         .iter()
         .map(|k| k.try_into())
         .collect::<Result<Vec<ApiKey>, _>>()?;
-    Ok(
-        BlockingResponse::from_async(client.trees(repo, keys, Some(attrs.into())))
-            .map(|f| f.entries)?,
-    )
+    Ok(BlockingResponse::from_async(client.trees(keys, Some(attrs.into()))).map(|f| f.entries)?)
 }
 
 #[no_mangle]
@@ -78,5 +70,6 @@ pub extern "C" fn rust_edenapi_trees_blocking(
     keys_len: size_t,
     attrs: TreeAttributes,
 ) -> TreeEntryFetch {
-    edenapi_trees_blocking(client, repo, repo_len, keys, keys_len, attrs).into()
+    let _ = (repo, repo_len);
+    edenapi_trees_blocking(client, keys, keys_len, attrs).into()
 }

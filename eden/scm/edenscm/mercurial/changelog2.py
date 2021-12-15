@@ -131,7 +131,6 @@ class changelog(object):
             segmentsdir,
             hgcommitsdir,
             repo.edenapi,
-            repo.name,
             lazyhash=lazyhash,
             lazyhashdir=lazyhashdir,
         )

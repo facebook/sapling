@@ -8,7 +8,9 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use anyhow::{bail, Context, Result};
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Result;
 use crossbeam::channel;
 use edenapi::api::EdenApi;
 use edenapi_types::AnyFileContentId;
@@ -165,7 +167,6 @@ async fn symlink(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<()> {
 
 pub async fn download_files(
     api: &(impl EdenApi + ?Sized),
-    repo: &String,
     root: &RepoPathBuf,
     files: impl IntoIterator<Item = (RepoPathBuf, UploadToken, FileType)>,
 ) -> Result<()> {
@@ -181,7 +182,7 @@ pub async fn download_files(
         }
         let content = match content {
             Some(bytes) => bytes,
-            None => api.download_file(repo.clone(), value.token).await?,
+            None => api.download_file(value.token).await?,
         };
         let (write_paths, symlink_paths): (Vec<_>, Vec<_>) = paths
             .into_iter()

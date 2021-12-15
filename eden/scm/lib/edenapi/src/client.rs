@@ -428,7 +428,6 @@ impl Client {
 
     pub(crate) async fn fetch_trees(
         &self,
-        _repo: String,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
@@ -559,7 +558,7 @@ impl EdenApi for Client {
         Ok(ResponseMeta::from(&res))
     }
 
-    async fn capabilities(&self, _repo: String) -> Result<Vec<String>, EdenApiError> {
+    async fn capabilities(&self) -> Result<Vec<String>, EdenApiError> {
         tracing::info!("Requesting capabilities for repo {}", &self.repo_name());
         let url = self.build_url("capabilities")?;
         let req = self.configure_request(Request::get(url))?;
@@ -570,11 +569,7 @@ impl EdenApi for Client {
         Ok(caps)
     }
 
-    async fn files(
-        &self,
-        _repo: String,
-        keys: Vec<Key>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileEntry>, EdenApiError> {
         tracing::info!("Requesting content for {} file(s)", keys.len());
 
         let prog = self.inner.file_progress.create_or_extend(keys.len() as u64);
@@ -590,11 +585,7 @@ impl EdenApi for Client {
             .await
     }
 
-    async fn files_attrs(
-        &self,
-        _repo: String,
-        reqs: Vec<FileSpec>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> Result<Response<FileEntry>, EdenApiError> {
         tracing::info!("Requesting attributes for {} file(s)", reqs.len());
 
         let prog = self.inner.file_progress.create_or_extend(reqs.len() as u64);
@@ -612,7 +603,6 @@ impl EdenApi for Client {
 
     async fn history(
         &self,
-        _repo: String,
         keys: Vec<Key>,
         length: Option<u32>,
     ) -> Result<Response<HistoryEntry>, EdenApiError> {
@@ -642,7 +632,6 @@ impl EdenApi for Client {
 
     async fn trees(
         &self,
-        _repo: String,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
@@ -663,7 +652,6 @@ impl EdenApi for Client {
 
     async fn commit_revlog_data(
         &self,
-        _repo: String,
         hgids: Vec<HgId>,
     ) -> Result<Response<CommitRevlogData>, EdenApiError> {
         tracing::info!("Requesting revlog data for {} commit(s)", hgids.len());
@@ -683,7 +671,6 @@ impl EdenApi for Client {
 
     async fn hash_prefixes_lookup(
         &self,
-        _repo: String,
         prefixes: Vec<String>,
     ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
         tracing::info!("Requesting full hashes for {} prefix(es)", prefixes.len());
@@ -702,11 +689,7 @@ impl EdenApi for Client {
             .await
     }
 
-    async fn bookmarks(
-        &self,
-        _repo: String,
-        bookmarks: Vec<String>,
-    ) -> Result<Vec<BookmarkEntry>, EdenApiError> {
+    async fn bookmarks(&self, bookmarks: Vec<String>) -> Result<Vec<BookmarkEntry>, EdenApiError> {
         tracing::info!("Requesting '{}' bookmarks", bookmarks.len());
         let url = self.build_url(paths::BOOKMARKS)?;
         let bookmark_req = BookmarkRequest { bookmarks };
@@ -721,7 +704,6 @@ impl EdenApi for Client {
 
     async fn set_bookmark(
         &self,
-        _repo: String,
         bookmark: String,
         to: Option<HgId>,
         from: Option<HgId>,
@@ -751,7 +733,6 @@ impl EdenApi for Client {
     /// and updating the bookmark to the top of the rebased stack
     async fn land_stack(
         &self,
-        _repo: String,
         bookmark: String,
         head: HgId,
         base: HgId,
@@ -783,7 +764,7 @@ impl EdenApi for Client {
         self.fetch_single::<LandStackResponse>(req).await
     }
 
-    async fn clone_data(&self, _repo: String) -> Result<CloneData<HgId>, EdenApiError> {
+    async fn clone_data(&self) -> Result<CloneData<HgId>, EdenApiError> {
         tracing::info!(
             "Requesting clone data for the '{}' repository",
             self.repo_name(),
@@ -794,7 +775,6 @@ impl EdenApi for Client {
 
     async fn pull_fast_forward_master(
         &self,
-        _repo: String,
         old_master: HgId,
         new_master: HgId,
     ) -> Result<CloneData<HgId>, EdenApiError> {
@@ -815,7 +795,6 @@ impl EdenApi for Client {
 
     async fn commit_location_to_hash(
         &self,
-        _repo: String,
         requests: Vec<CommitLocationToHashRequest>,
     ) -> Result<Vec<CommitLocationToHashResponse>, EdenApiError> {
         tracing::info!(
@@ -845,7 +824,6 @@ impl EdenApi for Client {
 
     async fn commit_hash_to_location(
         &self,
-        _repo: String,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
     ) -> Result<Vec<CommitHashToLocationResponse>, EdenApiError> {
@@ -877,7 +855,6 @@ impl EdenApi for Client {
 
     async fn commit_known(
         &self,
-        _repo: String,
         hgids: Vec<HgId>,
     ) -> Result<Vec<CommitKnownResponse>, EdenApiError> {
         let anyids: Vec<_> = hgids
@@ -885,9 +862,7 @@ impl EdenApi for Client {
             .cloned()
             .map(|hgid| AnyId::HgChangesetId(hgid))
             .collect();
-        let entries = self
-            .lookup_batch(String::new(), anyids.clone(), None, None)
-            .await?;
+        let entries = self.lookup_batch(anyids.clone(), None, None).await?;
 
         let into_hgid = |id: IndexableId| match id.id {
             AnyId::HgChangesetId(hgid) => Ok(hgid),
@@ -921,7 +896,6 @@ impl EdenApi for Client {
 
     async fn commit_graph(
         &self,
-        _repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
     ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
@@ -946,7 +920,6 @@ impl EdenApi for Client {
 
     async fn lookup_batch(
         &self,
-        _repo: String,
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
@@ -979,7 +952,6 @@ impl EdenApi for Client {
 
     async fn process_files_upload(
         &self,
-        _repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
@@ -998,12 +970,7 @@ impl EdenApi for Client {
             .collect();
 
         let entries = self
-            .lookup_batch(
-                String::new(),
-                anyids.clone(),
-                bubble_id,
-                copy_from_bubble_id,
-            )
+            .lookup_batch(anyids.clone(), bubble_id, copy_from_bubble_id)
             .await?;
         for entry in entries {
             if let LookupResult::Present(token) = entry.result {
@@ -1065,7 +1032,6 @@ impl EdenApi for Client {
 
     async fn upload_filenodes_batch(
         &self,
-        _repo: String,
         items: Vec<HgFilenodeData>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
         tracing::info!("Requesting hg filenodes upload for {} item(s)", items.len());
@@ -1092,7 +1058,6 @@ impl EdenApi for Client {
 
     async fn upload_trees_batch(
         &self,
-        _repo: String,
         items: Vec<UploadTreeEntry>,
     ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
         tracing::info!("Requesting trees upload for {} item(s)", items.len());
@@ -1120,7 +1085,6 @@ impl EdenApi for Client {
     // the request isn't batched, batching should be done outside if needed
     async fn upload_changesets(
         &self,
-        _repo: String,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
@@ -1150,7 +1114,6 @@ impl EdenApi for Client {
 
     async fn upload_bonsai_changeset(
         &self,
-        _repo: String,
         changeset: BonsaiChangesetContent,
         bubble_id: Option<std::num::NonZeroU64>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
@@ -1173,7 +1136,6 @@ impl EdenApi for Client {
 
     async fn ephemeral_prepare(
         &self,
-        _repo: String,
         custom_duration: Option<Duration>,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
         tracing::info!("Preparing ephemeral bubble");
@@ -1198,7 +1160,6 @@ impl EdenApi for Client {
 
     async fn fetch_snapshot(
         &self,
-        _repo: String,
         request: FetchSnapshotRequest,
     ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
         tracing::info!("Fetching snapshot {}", request.cs_id,);
@@ -1212,11 +1173,7 @@ impl EdenApi for Client {
         Ok(self.fetch::<FetchSnapshotResponse>(vec![request])?)
     }
 
-    async fn download_file(
-        &self,
-        _repo: String,
-        token: UploadToken,
-    ) -> Result<Bytes, EdenApiError> {
+    async fn download_file(&self, token: UploadToken) -> Result<Bytes, EdenApiError> {
         tracing::info!("Downloading file");
         let url = self.build_url(paths::DOWNLOAD_FILE)?;
         let metadata = token.data.metadata.clone();
@@ -1247,7 +1204,6 @@ impl EdenApi for Client {
 
     async fn commit_mutations(
         &self,
-        _repo: String,
         commits: Vec<HgId>,
     ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
         tracing::info!("Requesting mutation info for {} commits", commits.len());

@@ -328,7 +328,7 @@ py_class!(pub class commits |py| {
     /// (for testing).
     @staticmethod
     def openhybrid(
-        revlogdir: Option<&PyPath>, segmentsdir: &PyPath, commitsdir: &PyPath, edenapi: PyClient, reponame: String,
+        revlogdir: Option<&PyPath>, segmentsdir: &PyPath, commitsdir: &PyPath, edenapi: PyClient,
         lazyhash: bool = false, lazyhashdir: Option<&PyPath> = None
     ) -> PyResult<Self> {
         let client = edenapi.extract_inner(py);
@@ -337,7 +337,6 @@ py_class!(pub class commits |py| {
             segmentsdir.as_path(),
             commitsdir.as_path(),
             client,
-            reponame,
         ).map_pyerr(py)?;
         if let Some(dir) = lazyhashdir {
             inner.enable_lazy_commit_hashes_from_local_segments( dir.as_path()).map_pyerr(py)?;

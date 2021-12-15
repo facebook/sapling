@@ -16,23 +16,11 @@ TOKEN_KEY = "token"
 INDEX_KEY = "index"
 
 
-def getreponame(repo):
-    """get the configured reponame for this repo"""
-    reponame = repo.ui.config(
-        "remotefilelog",
-        "reponame",
-        os.path.basename(repo.ui.config("paths", "default")),
-    )
-    if not reponame:
-        raise error.Abort(repo.ui, _("unknown repo"))
-    return reponame
-
-
 def _filtercommits(repo, nodes):
     """Returns list of missing commits"""
     try:
         with repo.ui.timesection("http.edenapi.upload_filter_commits"):
-            stream = repo.edenapi.commitknown(getreponame(repo), nodes)
+            stream = repo.edenapi.commitknown(nodes)
             return [
                 item["hgid"] for item in stream if item["known"].get("Ok") is not True
             ]
@@ -45,7 +33,6 @@ def _filteruploaded(repo, files, trees):
     try:
         with repo.ui.timesection("http.edenapi.upload_lookup"):
             stream = repo.edenapi.lookup_filenodes_and_trees(
-                getreponame(repo),
                 [fctx.filenode() for fctx in files],
                 [tree[0] for tree in trees],
             )
@@ -89,7 +76,7 @@ def _uploadfilenodes(repo, fctxs):
     dpack, _hpack = repo.fileslog.getmutablelocalpacks()
     try:
         with repo.ui.timesection("http.edenapi.upload_files"):
-            stream, _stats = repo.edenapi.uploadfiles(dpack, getreponame(repo), keys)
+            stream, _stats = repo.edenapi.uploadfiles(dpack, keys)
             items = list(stream)
             repo.ui.status(
                 _n(
@@ -112,7 +99,7 @@ def _uploadtrees(repo, trees):
 
     try:
         with repo.ui.timesection("http.edenapi.upload_trees"):
-            stream, _stats = repo.edenapi.uploadtrees(getreponame(repo), trees)
+            stream, _stats = repo.edenapi.uploadtrees(trees)
             trees = list(stream)
             repo.ui.status(
                 _n(
@@ -134,9 +121,7 @@ def _uploadchangesets(repo, changesets, mutations):
         return uploaded, failed
     try:
         with repo.ui.timesection("http.edenapi.upload_changesets"):
-            stream, _stats = repo.edenapi.uploadchangesets(
-                getreponame(repo), changesets, mutations
-            )
+            stream, _stats = repo.edenapi.uploadchangesets(changesets, mutations)
             foundids = {item["data"]["id"]["HgChangesetId"] for item in stream}
             repo.ui.status(
                 _n(

@@ -37,7 +37,7 @@ define_flags! {
         dest: String,
     }
 }
-pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
+pub fn run(opts: StatusOpts, _io: &IO, mut config: ConfigSet) -> Result<u8> {
     let reponame = opts.reponame;
     let destination = PathBuf::from(&opts.dest);
 
@@ -47,9 +47,15 @@ pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
         );
     }
 
+    config.set(
+        "remotefilelog",
+        "reponame",
+        Some(reponame.clone()),
+        &"arg".into(),
+    );
     let edenapi_client = edenapi::Builder::from_config(&config)?.build()?;
 
-    let clone_data = match block_unless_interrupted(edenapi_client.clone_data(reponame.clone())) {
+    let clone_data = match block_unless_interrupted(edenapi_client.clone_data()) {
         Err(e) => Err(anyhow::Error::from(e)),
         Ok(Err(e)) => Err(anyhow::Error::from(e)),
         Ok(Ok(v)) => Ok(v),

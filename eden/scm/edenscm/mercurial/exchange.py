@@ -1765,7 +1765,7 @@ def _pullcommitgraph(pullop):
     assert heads is not None
 
     commits = repo.changelog.inner
-    items = repo.edenapi.commitgraph(repo.name, heads, pullop.common)
+    items = repo.edenapi.commitgraph(heads, pullop.common)
     traceenabled = tracing.isenabled(tracing.LEVEL_DEBUG, target="pull::httpgraph")
     graphnodes = []
     for item in items:
@@ -1788,7 +1788,7 @@ def _pullcommitgraph(pullop):
                 for node, _ps in graphnodes
                 if repo._phasecache.phase(repo, repo[node].rev()) != phases.public
             }
-            mutations = repo.edenapi.commitmutations(repo.name, list(allnodes))
+            mutations = repo.edenapi.commitmutations(list(allnodes))
             mutations = [
                 mutation.createsyntheticentry(
                     repo,

@@ -49,14 +49,13 @@ impl EdenApiHistoryStore {
 impl RemoteHistoryStore for EdenApiHistoryStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         let client = self.remote.client.clone();
-        let repo = self.remote.repo.clone();
         let keys = hgid_keys(keys);
 
         let response = async move {
             let prog =
                 ProgressBar::register_new("Downloading file history over HTTP", 0, "entries");
 
-            let mut response = client.history(repo, keys, None).await?;
+            let mut response = client.history(keys, None).await?;
             while let Some(entry) = response.entries.try_next().await? {
                 self.store.add_entry(&entry)?;
                 prog.increase_position(1);
@@ -112,7 +111,7 @@ mod tests {
         let history = hashmap! { k.clone() => n.clone() };
 
         let client = FakeEdenApi::new().history(history).into_arc();
-        let remote = EdenApiRemoteStore::<File>::new("repo", client);
+        let remote = EdenApiRemoteStore::<File>::new(client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -140,7 +139,7 @@ mod tests {
     #[should_panic]
     fn test_tree_history() {
         let client = FakeEdenApi::new().into_arc();
-        let remote = EdenApiRemoteStore::<Tree>::new("repo", client);
+        let remote = EdenApiRemoteStore::<Tree>::new(client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new().unwrap();

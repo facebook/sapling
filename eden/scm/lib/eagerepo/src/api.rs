@@ -63,11 +63,11 @@ impl EdenApi for EagerRepo {
         Ok(default_response_meta())
     }
 
-    async fn capabilities(&self, _repo: String) -> Result<Vec<String>, EdenApiError> {
+    async fn capabilities(&self) -> Result<Vec<String>, EdenApiError> {
         Ok(vec!["segmented-changelog".to_string()])
     }
 
-    async fn files(&self, _repo: String, keys: Vec<Key>) -> edenapi::Result<Response<FileEntry>> {
+    async fn files(&self, keys: Vec<Key>) -> edenapi::Result<Response<FileEntry>> {
         debug!("files {}", debug_key_list(&keys));
         let mut values = Vec::with_capacity(keys.len());
         for key in keys {
@@ -90,11 +90,7 @@ impl EdenApi for EagerRepo {
         Ok(convert_to_response(values))
     }
 
-    async fn files_attrs(
-        &self,
-        _repo: String,
-        reqs: Vec<FileSpec>,
-    ) -> edenapi::Result<Response<FileEntry>> {
+    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> edenapi::Result<Response<FileEntry>> {
         debug!("files {}", debug_spec_list(&reqs));
         let mut values = Vec::with_capacity(reqs.len());
         for spec in reqs {
@@ -121,7 +117,6 @@ impl EdenApi for EagerRepo {
 
     async fn history(
         &self,
-        _repo: String,
         keys: Vec<Key>,
         _length: Option<u32>,
     ) -> edenapi::Result<Response<HistoryEntry>> {
@@ -172,7 +167,6 @@ impl EdenApi for EagerRepo {
 
     async fn trees(
         &self,
-        _repo: String,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> edenapi::Result<Response<Result<TreeEntry, edenapi::types::EdenApiServerError>>> {
@@ -205,7 +199,6 @@ impl EdenApi for EagerRepo {
 
     async fn commit_revlog_data(
         &self,
-        _repo: String,
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Response<CommitRevlogData>> {
         debug!("revlog_data {}", debug_hgid_list(&hgids));
@@ -222,7 +215,7 @@ impl EdenApi for EagerRepo {
         Ok(convert_to_response(values))
     }
 
-    async fn clone_data(&self, _repo: String) -> edenapi::Result<dag::CloneData<HgId>> {
+    async fn clone_data(&self) -> edenapi::Result<dag::CloneData<HgId>> {
         debug!("clone_data");
         let clone_data = self.dag().export_clone_data().await.map_err(map_dag_err)?;
         convert_clone_data(clone_data)
@@ -230,7 +223,6 @@ impl EdenApi for EagerRepo {
 
     async fn pull_fast_forward_master(
         &self,
-        _repo: String,
         old_master: HgId,
         new_master: HgId,
     ) -> Result<dag::CloneData<HgId>, EdenApiError> {
@@ -252,7 +244,6 @@ impl EdenApi for EagerRepo {
 
     async fn commit_location_to_hash(
         &self,
-        _repo: String,
         requests: Vec<CommitLocationToHashRequest>,
     ) -> edenapi::Result<Vec<CommitLocationToHashResponse>> {
         let path_names: Vec<(AncestorPath, Vec<Vertex>)> = {
@@ -297,7 +288,6 @@ impl EdenApi for EagerRepo {
 
     async fn commit_hash_to_location(
         &self,
-        _repo: String,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
     ) -> edenapi::Result<Vec<CommitHashToLocationResponse>> {
@@ -338,11 +328,7 @@ impl EdenApi for EagerRepo {
         values
     }
 
-    async fn commit_known(
-        &self,
-        _repo: String,
-        hgids: Vec<HgId>,
-    ) -> edenapi::Result<Vec<CommitKnownResponse>> {
+    async fn commit_known(&self, hgids: Vec<HgId>) -> edenapi::Result<Vec<CommitKnownResponse>> {
         debug!("commit_known {}", debug_hgid_list(&hgids));
         let mut values = Vec::new();
         for id in hgids {
@@ -358,7 +344,6 @@ impl EdenApi for EagerRepo {
 
     async fn commit_graph(
         &self,
-        _repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
     ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
@@ -391,11 +376,7 @@ impl EdenApi for EagerRepo {
         values
     }
 
-    async fn bookmarks(
-        &self,
-        _repo: String,
-        bookmarks: Vec<String>,
-    ) -> edenapi::Result<Vec<BookmarkEntry>> {
+    async fn bookmarks(&self, bookmarks: Vec<String>) -> edenapi::Result<Vec<BookmarkEntry>> {
         debug!("bookmarks {}", debug_string_list(&bookmarks),);
         let mut values = Vec::new();
         let map = self.get_bookmarks_map().map_err(map_crate_err)?;
@@ -412,7 +393,6 @@ impl EdenApi for EagerRepo {
 
     async fn hash_prefixes_lookup(
         &self,
-        _repo: String,
         prefixes: Vec<String>,
     ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
         prefixes
@@ -443,12 +423,11 @@ impl EdenApi for EagerRepo {
 
     async fn commit_mutations(
         &self,
-        repo: String,
         mut commits: Vec<HgId>,
     ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
         commits.sort();
         debug!("commit_mutations {}", debug_hgid_list(&commits));
-        let _ = (repo, commits);
+        let _ = (commits,);
         Ok(vec![])
     }
 }

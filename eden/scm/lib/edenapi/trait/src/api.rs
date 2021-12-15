@@ -55,89 +55,73 @@ pub trait EdenApi: Send + Sync + 'static {
         Err(EdenApiError::NotSupported)
     }
 
-    async fn capabilities(&self, repo: String) -> Result<Vec<String>, EdenApiError> {
-        let _ = repo;
+    async fn capabilities(&self) -> Result<Vec<String>, EdenApiError> {
         Err(EdenApiError::NotSupported)
     }
 
-    async fn files(
-        &self,
-        repo: String,
-        keys: Vec<Key>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
-        let _ = (repo, keys);
+    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileEntry>, EdenApiError> {
+        let _ = keys;
         Err(EdenApiError::NotSupported)
     }
 
-    async fn files_attrs(
-        &self,
-        repo: String,
-        reqs: Vec<FileSpec>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
-        let _ = (repo, reqs);
+    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> Result<Response<FileEntry>, EdenApiError> {
+        let _ = reqs;
         Err(EdenApiError::NotSupported)
     }
 
     async fn history(
         &self,
-        repo: String,
         keys: Vec<Key>,
         length: Option<u32>,
     ) -> Result<Response<HistoryEntry>, EdenApiError> {
-        let _ = (repo, keys, length);
+        let _ = (keys, length);
         Err(EdenApiError::NotSupported)
     }
 
     async fn trees(
         &self,
-        repo: String,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        let _ = (repo, keys, attributes);
+        let _ = (keys, attributes);
         Err(EdenApiError::NotSupported)
     }
 
     async fn commit_revlog_data(
         &self,
-        repo: String,
         hgids: Vec<HgId>,
     ) -> Result<Response<CommitRevlogData>, EdenApiError> {
-        let _ = (repo, hgids);
+        let _ = hgids;
         Err(EdenApiError::NotSupported)
     }
 
-    async fn clone_data(&self, repo: String) -> Result<CloneData<HgId>, EdenApiError> {
-        let _ = repo;
+    async fn clone_data(&self) -> Result<CloneData<HgId>, EdenApiError> {
         Err(EdenApiError::NotSupported)
     }
 
     async fn pull_fast_forward_master(
         &self,
-        repo: String,
         old_master: HgId,
         new_master: HgId,
     ) -> Result<CloneData<HgId>, EdenApiError> {
-        let _ = (repo, old_master, new_master);
+        let _ = (old_master, new_master);
         Err(EdenApiError::NotSupported)
     }
 
     async fn commit_location_to_hash(
         &self,
-        repo: String,
         requests: Vec<CommitLocationToHashRequest>,
     ) -> Result<Vec<CommitLocationToHashResponse>, EdenApiError> {
-        let _ = (repo, requests);
+        let _ = requests;
         Err(EdenApiError::NotSupported)
     }
 
     async fn commit_hash_to_location(
         &self,
-        repo: String,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
     ) -> Result<Vec<CommitHashToLocationResponse>, EdenApiError> {
-        let _ = (repo, master_heads, hgids);
+        let _ = (master_heads, hgids);
         Err(EdenApiError::NotSupported)
     }
 
@@ -145,10 +129,9 @@ pub trait EdenApi: Send + Sync + 'static {
     /// This is similar to the "known" command in HG wireproto.
     async fn commit_known(
         &self,
-        repo: String,
         hgids: Vec<HgId>,
     ) -> Result<Vec<CommitKnownResponse>, EdenApiError> {
-        let _ = (repo, hgids);
+        let _ = hgids;
         Err(EdenApiError::NotSupported)
     }
 
@@ -162,43 +145,36 @@ pub trait EdenApi: Send + Sync + 'static {
     /// it should be an error.
     async fn commit_graph(
         &self,
-        repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
     ) -> Result<Vec<CommitGraphEntry>, EdenApiError> {
-        let _ = (repo, heads, common);
+        let _ = (heads, common);
         Err(EdenApiError::NotSupported)
     }
 
     /// Return matching full hashes of hex hash prefix
     async fn hash_prefixes_lookup(
         &self,
-        repo: String,
         prefixes: Vec<String>,
     ) -> Result<Vec<CommitHashLookupResponse>, EdenApiError> {
-        let _ = (repo, prefixes);
+        let _ = prefixes;
         Err(EdenApiError::NotSupported)
     }
 
-    async fn bookmarks(
-        &self,
-        repo: String,
-        bookmarks: Vec<String>,
-    ) -> Result<Vec<BookmarkEntry>, EdenApiError> {
-        let _ = (repo, bookmarks);
+    async fn bookmarks(&self, bookmarks: Vec<String>) -> Result<Vec<BookmarkEntry>, EdenApiError> {
+        let _ = bookmarks;
         Err(EdenApiError::NotSupported)
     }
 
     /// Create, delete, or move a bookmark
     async fn set_bookmark(
         &self,
-        repo: String,
         bookmark: String,
         to: Option<HgId>,
         from: Option<HgId>,
         pushvars: HashMap<String, String>,
     ) -> Result<(), EdenApiError> {
-        let _ = (repo, bookmark, to, from, pushvars);
+        let _ = (bookmark, to, from, pushvars);
         Err(EdenApiError::NotSupported)
     }
 
@@ -206,13 +182,12 @@ pub trait EdenApi: Send + Sync + 'static {
     /// and updating the bookmark to the top of the rebased stack.
     async fn land_stack(
         &self,
-        repo: String,
         bookmark: String,
         head: HgId,
         base: HgId,
         pushvars: HashMap<String, String>,
     ) -> Result<LandStackResponse, EdenApiError> {
-        let _ = (repo, bookmark, head, base, pushvars);
+        let _ = (bookmark, head, base, pushvars);
         Err(EdenApiError::NotSupported)
     }
 
@@ -220,100 +195,91 @@ pub trait EdenApi: Send + Sync + 'static {
     /// Supports: file content, hg filenode, hg tree, hg changeset
     async fn lookup_batch(
         &self,
-        repo: String,
         items: Vec<AnyId>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
     ) -> Result<Vec<LookupResponse>, EdenApiError> {
-        let _ = (repo, items, bubble_id, copy_from_bubble_id);
+        let _ = (items, bubble_id, copy_from_bubble_id);
         Err(EdenApiError::NotSupported)
     }
 
     /// Upload files content
     async fn process_files_upload(
         &self,
-        repo: String,
         data: Vec<(AnyFileContentId, Bytes)>,
         bubble_id: Option<NonZeroU64>,
         copy_from_bubble_id: Option<NonZeroU64>,
     ) -> Result<Response<UploadToken>, EdenApiError> {
-        let _ = (repo, data, bubble_id, copy_from_bubble_id);
+        let _ = (data, bubble_id, copy_from_bubble_id);
         Err(EdenApiError::NotSupported)
     }
 
     /// Upload list of hg filenodes
     async fn upload_filenodes_batch(
         &self,
-        repo: String,
         items: Vec<HgFilenodeData>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        let _ = (repo, items);
+        let _ = items;
         Err(EdenApiError::NotSupported)
     }
 
     /// Upload list of trees
     async fn upload_trees_batch(
         &self,
-        repo: String,
         items: Vec<UploadTreeEntry>,
     ) -> Result<Response<UploadTreeResponse>, EdenApiError> {
-        let _ = (repo, items);
+        let _ = items;
         Err(EdenApiError::NotSupported)
     }
 
     /// Upload list of changesets
     async fn upload_changesets(
         &self,
-        repo: String,
         changesets: Vec<UploadHgChangeset>,
         mutations: Vec<HgMutationEntryContent>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        let _ = (repo, changesets, mutations);
+        let _ = (changesets, mutations);
         Err(EdenApiError::NotSupported)
     }
 
     async fn upload_bonsai_changeset(
         &self,
-        repo: String,
         changeset: BonsaiChangesetContent,
         bubble_id: Option<NonZeroU64>,
     ) -> Result<Response<UploadTokensResponse>, EdenApiError> {
-        let _ = (repo, changeset, bubble_id);
+        let _ = (changeset, bubble_id);
         Err(EdenApiError::NotSupported)
     }
 
     async fn ephemeral_prepare(
         &self,
-        repo: String,
         custom_duration: Option<Duration>,
     ) -> Result<Response<EphemeralPrepareResponse>, EdenApiError> {
-        let _ = (repo, custom_duration);
+        let _ = custom_duration;
         Err(EdenApiError::NotSupported)
     }
 
     /// Fetch information about the requested snapshot
     async fn fetch_snapshot(
         &self,
-        repo: String,
         request: FetchSnapshotRequest,
     ) -> Result<Response<FetchSnapshotResponse>, EdenApiError> {
-        let _ = (repo, request);
+        let _ = request;
         Err(EdenApiError::NotSupported)
     }
 
     /// Download single file from upload token
-    async fn download_file(&self, repo: String, token: UploadToken) -> Result<Bytes, EdenApiError> {
-        let _ = (repo, token);
+    async fn download_file(&self, token: UploadToken) -> Result<Bytes, EdenApiError> {
+        let _ = token;
         Err(EdenApiError::NotSupported)
     }
 
     /// Download mutation info related to given commits
     async fn commit_mutations(
         &self,
-        repo: String,
         commits: Vec<HgId>,
     ) -> Result<Vec<CommitMutationsResponse>, EdenApiError> {
-        let _ = (repo, commits);
+        let _ = commits;
         Err(EdenApiError::NotSupported)
     }
 }

@@ -543,7 +543,7 @@ class basetreemanifestlog(object):
     def edenapistore(self, repo):
         edenapi = repo.nullableedenapi
         if usehttpfetching(repo) and edenapi:
-            return edenapi.treestore(repo.name)
+            return edenapi.treestore()
         return None
 
     def makeruststore(self):
@@ -1376,7 +1376,7 @@ def _existonserver(repo, mfnode):
     Return True if the server has the mfnode, False otherwise.
     """
     stream, _stats = repo.edenapi.trees(
-        repo.name, [("", mfnode)], {"parents": False, "manifest_blob": False}
+        [("", mfnode)], {"parents": False, "manifest_blob": False}
     )
     try:
         list(stream)

@@ -34,7 +34,6 @@ class eagerpeer(repository.peer):
 
         self._url = path
         self._ui = ui
-        self._reponame = "dummy"
         self._reload()
 
     def _reload(self):
@@ -87,7 +86,7 @@ class eagerpeer(repository.peer):
         """heads: [node], common: [node]
         Returns a list of [(node, parents)], parents is a list of node.
         """
-        items = self.edenapi.commitgraph(self._reponame, heads, common)
+        items = self.edenapi.commitgraph(heads, common)
         shouldtrace = tracing.isenabled(tracing.LEVEL_TRACE)
         for item in items:
             node = item["hgid"]
@@ -101,7 +100,7 @@ class eagerpeer(repository.peer):
     # Clone using dag::CloneData (designed for lazy backend)
 
     def clonedata(self):
-        return self.edenapi.clonedata(self._reponame)
+        return self.edenapi.clonedata()
 
     # The Python "peer" interface.
     # Prefer using EdenAPI to implement them.
@@ -154,7 +153,7 @@ class eagerpeer(repository.peer):
 
     def known(self, nodes):
         assert isinstance(nodes, list)
-        stream = self.edenapi.commitknown(self._reponame, nodes)
+        stream = self.edenapi.commitknown(nodes)
         knownnodes = set()
         # ex. [{'hgid': '11111111111111111111', 'known': {'Ok': False}}]
         for res in stream:
@@ -181,7 +180,7 @@ class eagerpeer(repository.peer):
             if not isinstance(patterns, list):
                 patterns = sorted(patterns)
             # XXX: glob patterns are ignored.
-            books = self.edenapi.bookmarks(self._reponame, patterns)
+            books = self.edenapi.bookmarks(patterns)
             for k, v in books.items():
                 # ex. {'a': '3131313131313131313131313131313131313131', 'b': None}
                 if v is not None:

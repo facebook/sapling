@@ -39,9 +39,7 @@ impl RetryableStreamRequest for RetryableTrees {
 
     async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError> {
         let keys: Vec<Key> = self.keys.iter().cloned().collect();
-        client
-            .fetch_trees(Default::default(), keys, self.attributes.clone())
-            .await
+        client.fetch_trees(keys, self.attributes.clone()).await
     }
 
     fn received_item(&mut self, item: &Self::Item) {

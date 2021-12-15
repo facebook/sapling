@@ -294,7 +294,7 @@ def _showbookmarks(ui, remotebookmarks, **opts):
 
 
 def _http_bookmark_fetch(repo, names):
-    bookmarks = repo.edenapi.bookmarks(repo.name, names)
+    bookmarks = repo.edenapi.bookmarks(names)
     return util.sortdict(((bm, n) for (bm, n) in bookmarks.items() if n is not None))
 
 

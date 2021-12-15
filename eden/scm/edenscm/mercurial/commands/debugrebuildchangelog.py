@@ -71,10 +71,9 @@ def debugrebuildchangelog(ui, repo, **opts):
             segmentsdir=repo.svfs.join(_withsuffix(changelog2.SEGMENTS_DIR, tmpsuffix)),
             commitsdir=repo.svfs.join(_withsuffix(changelog2.HGCOMMITS_DIR, tmpsuffix)),
             edenapi=api,
-            reponame=repo.name,
             lazyhash=True,
         )
-        data = api.clonedata(repo.name)
+        data = api.clonedata()
         hgcommits.importclonedata(data)
 
         # The "try" block also protects repo lock.__exit__, etc.

@@ -50,7 +50,6 @@ impl<T: EdenApiStoreKind> EdenApiDataStore<T> {
 impl RemoteDataStore for EdenApiDataStore<File> {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let client = self.remote.client.clone();
-        let repo = self.remote.repo.clone();
         let hgidkeys = hgid_keys(keys);
 
         let response = async move {
@@ -60,7 +59,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
                 "files",
             );
 
-            let response = File::prefetch_files(client, repo, hgidkeys).await?;
+            let response = File::prefetch_files(client, hgidkeys).await?;
             // store.add_file() may compress the data before writing it to the store. This can slow
             // things down enough that we don't pull responses off the queue fast enough and
             // edenapi starts queueing all the responses in memory. Let's write to the store in
@@ -108,7 +107,6 @@ impl RemoteDataStore for EdenApiDataStore<File> {
 impl RemoteDataStore for EdenApiDataStore<Tree> {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let client = self.remote.client.clone();
-        let repo = self.remote.repo.clone();
         let hgidkeys = hgid_keys(keys);
 
         let response = async move {
@@ -118,7 +116,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
                 "trees",
             );
 
-            let mut response = Tree::prefetch_trees(client, repo, hgidkeys, None).await?;
+            let mut response = Tree::prefetch_trees(client, hgidkeys, None).await?;
             while let Some(Ok(entry)) = response.entries.try_next().await? {
                 self.store.add_tree(&entry)?;
                 prog.increase_position(1);
@@ -222,7 +220,7 @@ mod tests {
         let files = hashmap! { k.clone() => d.data.clone() };
 
         let client = FakeEdenApi::new().files(files).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo", client);
+        let remote_files = EdenApiRemoteStore::<File>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = FileStore::empty();
@@ -259,7 +257,7 @@ mod tests {
         let trees = hashmap! { k.clone() => d.data.clone() };
 
         let client = FakeEdenApi::new().trees(trees).into_arc();
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client);
+        let remote_trees = EdenApiRemoteStore::<Tree>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = TreeStore::empty();
@@ -294,7 +292,7 @@ mod tests {
     #[test]
     fn test_not_found() -> Result<()> {
         let client = FakeEdenApi::new().into_arc();
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client);
+        let remote_trees = EdenApiRemoteStore::<Tree>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = TreeStore::empty();
@@ -319,7 +317,7 @@ mod tests {
         let files = hashmap! { k.clone() => d.data.clone() };
 
         let client = FakeEdenApi::new().files(files).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo", client);
+        let remote_files = EdenApiRemoteStore::<File>::new(client);
 
         // Set up local cache store to write received data.
         let mut store = FileStore::empty();

@@ -894,7 +894,7 @@ class localrepository(object):
         return low
 
     def _http_prefix_lookup(self, prefixes):
-        responses = self.edenapi.hashlookup(self.name, prefixes)
+        responses = self.edenapi.hashlookup(prefixes)
         for resp in responses:
             hgids = resp["hgids"]
             hashrange = resp["request"]["InclusiveRange"]
@@ -970,9 +970,7 @@ class localrepository(object):
                     self.ui.configbool("pull", "httpbookmarks")
                     and self.nullableedenapi is not None
                 ):
-                    fetchedbookmarks = self.edenapi.bookmarks(
-                        self.name, list(bookmarknames)
-                    )
+                    fetchedbookmarks = self.edenapi.bookmarks(list(bookmarknames))
                     tracing.debug(
                         "edenapi fetched bookmarks: %s" % str(fetchedbookmarks),
                         target="pull::httpbookmarks",
@@ -1036,7 +1034,7 @@ class localrepository(object):
             fastpathheads = set()
             fastpathcommits, fastpathsegments = 0, 0
             for (old, new) in fastpath:
-                fastpulldata = self.edenapi.pullfastforwardmaster(self.name, old, new)
+                fastpulldata = self.edenapi.pullfastforwardmaster(old, new)
                 vertexopts = {
                     "reserve_size": 0,
                     "highest_group": 0,

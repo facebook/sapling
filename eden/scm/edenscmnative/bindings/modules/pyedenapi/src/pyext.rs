@@ -87,12 +87,11 @@ pub trait EdenApiPyExt: EdenApi {
     fn files_py(
         &self,
         py: Python,
-        repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
     ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
         let keys = to_keys(py, &keys)?;
         let entries = py
-            .allow_threads(|| block_unless_interrupted(self.files(repo, keys)))
+            .allow_threads(|| block_unless_interrupted(self.files(keys)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;
@@ -102,13 +101,12 @@ pub trait EdenApiPyExt: EdenApi {
     fn history_py(
         &self,
         py: Python,
-        repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
         length: Option<u32>,
     ) -> PyResult<TStream<anyhow::Result<Serde<HistoryEntry>>>> {
         let keys = to_keys(py, &keys)?;
         let entries = py
-            .allow_threads(|| block_unless_interrupted(self.history(repo, keys, length)))
+            .allow_threads(|| block_unless_interrupted(self.history(keys, length)))
             .map_pyerr(py)?
             .map_pyerr(py)?
             .entries;
@@ -119,7 +117,6 @@ pub trait EdenApiPyExt: EdenApi {
         &self,
         py: Python,
         store: PyObject,
-        repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<TreeAttributes>,
     ) -> PyResult<stats> {
@@ -134,7 +131,7 @@ pub trait EdenApiPyExt: EdenApi {
                         keys.len() as u64,
                         "trees",
                     );
-                    let response = self.trees(repo, keys, attributes).await?;
+                    let response = self.trees(keys, attributes).await?;
                     write_trees(response, store, prog).await
                 })
             })
@@ -147,7 +144,6 @@ pub trait EdenApiPyExt: EdenApi {
     fn trees_py(
         &self,
         py: Python,
-        repo: String,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
         attributes: Option<TreeAttributes>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<TreeEntry>>>, PyFuture)> {
@@ -155,7 +151,7 @@ pub trait EdenApiPyExt: EdenApi {
         let (trees, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.trees(repo, keys, attributes).await?;
+                    let response = self.trees(keys, attributes).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })
@@ -174,13 +170,12 @@ pub trait EdenApiPyExt: EdenApi {
     fn commit_revlog_data_py(
         &self,
         py: Python,
-        repo: String,
         nodes: Vec<HgId>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitRevlogData>>>, PyFuture)> {
         let (commits, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.commit_revlog_data(repo, nodes).await?;
+                    let response = self.commit_revlog_data(nodes).await?;
                     let commits = response.entries;
                     let stats = response.stats;
                     Ok::<_, EdenApiError>((commits, stats))
@@ -194,9 +189,9 @@ pub trait EdenApiPyExt: EdenApi {
         Ok((commits_py.into(), stats_py))
     }
 
-    fn bookmarks_py(&self, py: Python, repo: String, bookmarks: Vec<String>) -> PyResult<PyDict> {
+    fn bookmarks_py(&self, py: Python, bookmarks: Vec<String>) -> PyResult<PyDict> {
         let response = py
-            .allow_threads(|| block_unless_interrupted(self.bookmarks(repo, bookmarks)))
+            .allow_threads(|| block_unless_interrupted(self.bookmarks(bookmarks)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
@@ -210,7 +205,6 @@ pub trait EdenApiPyExt: EdenApi {
     fn set_bookmark_py(
         &self,
         py: Python,
-        repo: String,
         bookmark: String,
         to: Option<HgId>,
         from: Option<HgId>,
@@ -218,7 +212,7 @@ pub trait EdenApiPyExt: EdenApi {
     ) -> PyResult<bool> {
         py.allow_threads(|| {
             block_unless_interrupted(async move {
-                self.set_bookmark(repo, bookmark, to, from, pushvars.into_iter().collect())
+                self.set_bookmark(bookmark, to, from, pushvars.into_iter().collect())
                     .await?;
                 Ok::<(), EdenApiError>(())
             })
@@ -232,7 +226,6 @@ pub trait EdenApiPyExt: EdenApi {
     fn land_stack_py(
         &self,
         py: Python,
-        repo: String,
         bookmark: String,
         head: HgId,
         base: HgId,
@@ -242,7 +235,7 @@ pub trait EdenApiPyExt: EdenApi {
             .allow_threads(|| {
                 block_unless_interrupted(async move {
                     let response = self
-                        .land_stack(repo, bookmark, head, base, pushvars.into_iter().collect())
+                        .land_stack(bookmark, head, base, pushvars.into_iter().collect())
                         .await?;
                     Ok::<_, EdenApiError>(response)
                 })
@@ -256,13 +249,10 @@ pub trait EdenApiPyExt: EdenApi {
     fn hash_lookup_py(
         &self,
         py: Python,
-        repo: String,
         hash_prefixes: Vec<String>,
     ) -> PyResult<Serde<Vec<CommitHashLookupResponse>>> {
         let items = py
-            .allow_threads(|| {
-                block_unless_interrupted(self.hash_prefixes_lookup(repo, hash_prefixes))
-            })
+            .allow_threads(|| block_unless_interrupted(self.hash_prefixes_lookup(hash_prefixes)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(items))
@@ -271,7 +261,6 @@ pub trait EdenApiPyExt: EdenApi {
     fn commit_location_to_hash_py(
         &self,
         py: Python,
-        repo: String,
         requests: Vec<(HgId, u64, u64)>,
     ) -> PyResult<Serde<Vec<CommitLocationToHashResponse>>> {
         let requests = requests
@@ -282,9 +271,7 @@ pub trait EdenApiPyExt: EdenApi {
             })
             .collect();
         let responses = py
-            .allow_threads(|| {
-                block_unless_interrupted(self.commit_location_to_hash(repo, requests))
-            })
+            .allow_threads(|| block_unless_interrupted(self.commit_location_to_hash(requests)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
@@ -294,13 +281,12 @@ pub trait EdenApiPyExt: EdenApi {
     fn commit_hash_to_location_py(
         &self,
         py: Python,
-        repo: String,
         master_heads: Vec<HgId>,
         hgids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<CommitHashToLocationResponse>>> {
         let responses = py
             .allow_threads(|| {
-                block_unless_interrupted(self.commit_hash_to_location(repo, master_heads, hgids))
+                block_unless_interrupted(self.commit_hash_to_location(master_heads, hgids))
             })
             .map_pyerr(py)?
             .map_pyerr(py)?;
@@ -311,11 +297,10 @@ pub trait EdenApiPyExt: EdenApi {
     fn commit_known_py(
         &self,
         py: Python,
-        repo: String,
         hgids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<CommitKnownResponse>>> {
         let responses = py
-            .allow_threads(|| block_unless_interrupted(self.commit_known(repo, hgids)))
+            .allow_threads(|| block_unless_interrupted(self.commit_known(hgids)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
         Ok(Serde(responses))
@@ -324,12 +309,11 @@ pub trait EdenApiPyExt: EdenApi {
     fn commit_graph_py(
         &self,
         py: Python,
-        repo: String,
         heads: Vec<HgId>,
         common: Vec<HgId>,
     ) -> PyResult<Serde<Vec<CommitGraphEntry>>> {
         let responses = py
-            .allow_threads(|| block_unless_interrupted(self.commit_graph(repo, heads, common)))
+            .allow_threads(|| block_unless_interrupted(self.commit_graph(heads, common)))
             .map_pyerr(py)?
             .map_pyerr(py)?;
 
@@ -337,11 +321,11 @@ pub trait EdenApiPyExt: EdenApi {
     }
 
     /// Get the "CloneData" serialized using mincode.
-    fn clone_data_py(&self, py: Python, repo: String) -> PyResult<PyCell> {
+    fn clone_data_py(&self, py: Python) -> PyResult<PyCell> {
         let data = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    self.clone_data(repo).await.map(|data| {
+                    self.clone_data().await.map(|data| {
                         data.convert_vertex(|hgid| VertexName(hgid.as_ref().to_vec().into()))
                     })
                 })
@@ -355,17 +339,13 @@ pub trait EdenApiPyExt: EdenApi {
     fn pull_fast_forward_master_py(
         &self,
         py: Python,
-        repo: String,
         old_master: HgId,
         new_master: HgId,
     ) -> PyResult<PyCell> {
         let data = {
             py.allow_threads(|| {
                 block_unless_interrupted(async move {
-                    match self
-                        .pull_fast_forward_master(repo, old_master, new_master)
-                        .await
-                    {
+                    match self.pull_fast_forward_master(old_master, new_master).await {
                         Err(e) => Err(e),
                         Ok(data) => Ok(data.convert_vertex(|hgid| {
                             VertexName(hgid.into_byte_array().to_vec().into())
@@ -382,12 +362,10 @@ pub trait EdenApiPyExt: EdenApi {
     fn lookup_file_contents(
         &self,
         py: Python,
-        repo: String,
         ids: Vec<PyBytes>,
     ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
         self.lookup_py(
             py,
-            repo,
             ids.into_iter()
                 .map(|id| {
                     AnyId::AnyFileContentId(AnyFileContentId::ContentId(to_contentid(py, &id)))
@@ -399,44 +377,35 @@ pub trait EdenApiPyExt: EdenApi {
     fn lookup_commits(
         &self,
         py: Python,
-        repo: String,
         nodes: Vec<HgId>,
     ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
-        self.lookup_py(
-            py,
-            repo,
-            nodes.into_iter().map(AnyId::HgChangesetId).collect(),
-        )
+        self.lookup_py(py, nodes.into_iter().map(AnyId::HgChangesetId).collect())
     }
 
     fn lookup_filenodes(
         &self,
         py: Python,
-        repo: String,
         ids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
-        self.lookup_py(py, repo, ids.into_iter().map(AnyId::HgFilenodeId).collect())
+        self.lookup_py(py, ids.into_iter().map(AnyId::HgFilenodeId).collect())
     }
 
     fn lookup_trees(
         &self,
         py: Python,
-        repo: String,
         ids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
-        self.lookup_py(py, repo, ids.into_iter().map(AnyId::HgTreeId).collect())
+        self.lookup_py(py, ids.into_iter().map(AnyId::HgTreeId).collect())
     }
 
     fn lookup_filenodes_and_trees(
         &self,
         py: Python,
-        repo: String,
         filenodes_ids: Vec<HgId>,
         trees_ids: Vec<HgId>,
     ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
         self.lookup_py(
             py,
-            repo,
             filenodes_ids
                 .into_iter()
                 .map(AnyId::HgFilenodeId)
@@ -445,12 +414,7 @@ pub trait EdenApiPyExt: EdenApi {
         )
     }
 
-    fn lookup_py(
-        &self,
-        py: Python,
-        repo: String,
-        ids: Vec<AnyId>,
-    ) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
+    fn lookup_py(&self, py: Python, ids: Vec<AnyId>) -> PyResult<Serde<Vec<(usize, UploadToken)>>> {
         let responses = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
@@ -468,7 +432,6 @@ pub trait EdenApiPyExt: EdenApi {
                             map
                         });
                     self.lookup_batch(
-                        repo,
                         indexable_ids.iter().map(|(id, _)| id.id.clone()).collect(),
                         None,
                         None,
@@ -500,7 +463,6 @@ pub trait EdenApiPyExt: EdenApi {
         &self,
         py: Python,
         store: PyObject,
-        repo: String,
         keys: Vec<(PyPathBuf /* path */, Serde<HgId> /* hgid */)>,
     ) -> PyResult<(TStream<anyhow::Result<Serde<UploadToken>>>, PyFuture)> {
         let keys = to_keys(py, &keys)?;
@@ -549,7 +511,7 @@ pub trait EdenApiPyExt: EdenApi {
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.process_files_upload(repo, data, None, None).await?;
+                    let response = self.process_files_upload(data, None, None).await?;
                     let file_content_tokens = response
                         .entries
                         .try_collect::<Vec<_>>()
@@ -585,7 +547,6 @@ pub trait EdenApiPyExt: EdenApi {
         &self,
         py: Python,
         store: PyObject,
-        repo: String,
         keys: Vec<(
             PyPathBuf,   /* path */
             Serde<HgId>, /* hgid */
@@ -647,7 +608,7 @@ pub trait EdenApiPyExt: EdenApi {
                     let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
                     // upload file contents first, receiving upload tokens
                     let file_content_tokens = self
-                        .process_files_upload(repo.clone(), upload_data, None, None)
+                        .process_files_upload(upload_data, None, None)
                         .await?
                         .entries
                         .try_collect::<Vec<_>>()
@@ -675,7 +636,7 @@ pub trait EdenApiPyExt: EdenApi {
 
                     // upload hg filenodes
                     let response = self
-                        .upload_filenodes_batch(repo, filenodes_data)
+                        .upload_filenodes_batch(filenodes_data)
                         .await?;
 
                     Ok::<_, EdenApiError>((response.entries, response.stats))
@@ -693,7 +654,6 @@ pub trait EdenApiPyExt: EdenApi {
     fn uploadtrees_py(
         &self,
         py: Python,
-        repo: String,
         items: Vec<(
             Serde<HgId>, /* hgid */
             Serde<HgId>, /* p1 */
@@ -705,7 +665,7 @@ pub trait EdenApiPyExt: EdenApi {
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.upload_trees_batch(repo, items).await?;
+                    let response = self.upload_trees_batch(items).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })
@@ -722,7 +682,6 @@ pub trait EdenApiPyExt: EdenApi {
     fn uploadchangesets_py(
         &self,
         py: Python,
-        repo: String,
         changesets: Vec<(
             HgId,               /* hgid (node_id) */
             HgChangesetContent, /* changeset content */
@@ -740,7 +699,7 @@ pub trait EdenApiPyExt: EdenApi {
         let (responses, stats) = py
             .allow_threads(|| {
                 block_unless_interrupted(async move {
-                    let response = self.upload_changesets(repo, changesets, mutations).await?;
+                    let response = self.upload_changesets(changesets, mutations).await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })
             })
@@ -755,13 +714,12 @@ pub trait EdenApiPyExt: EdenApi {
     fn fetchsnapshot_py(
         &self,
         py: Python,
-        repo: String,
         data: Serde<FetchSnapshotRequest>,
     ) -> PyResult<Serde<FetchSnapshotResponse>> {
         py.allow_threads(|| {
             block_unless_interrupted(async move {
                 let cs_id = data.0.cs_id;
-                self.fetch_snapshot(repo, data.0)
+                self.fetch_snapshot(data.0)
                     .await?
                     .entries
                     .next()
@@ -774,13 +732,8 @@ pub trait EdenApiPyExt: EdenApi {
         .map(Serde)
     }
 
-    fn downloadfiletomemory_py(
-        &self,
-        py: Python,
-        repo: String,
-        token: Serde<UploadToken>,
-    ) -> PyResult<PyBytes> {
-        py.allow_threads(|| block_unless_interrupted(self.download_file(repo.clone(), token.0)))
+    fn downloadfiletomemory_py(&self, py: Python, token: Serde<UploadToken>) -> PyResult<PyBytes> {
+        py.allow_threads(|| block_unless_interrupted(self.download_file(token.0)))
             .map_pyerr(py)?
             .map_pyerr(py)
             .map(|data| PyBytes::new(py, &data))

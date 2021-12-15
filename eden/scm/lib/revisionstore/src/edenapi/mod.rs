@@ -48,18 +48,11 @@ pub type EdenApiTreeStore = EdenApiRemoteStore<Tree>;
 #[derive(Clone)]
 pub struct EdenApiRemoteStore<T> {
     client: Arc<dyn EdenApi>,
-    repo: String,
     _phantom: PhantomData<T>,
 }
 
 impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
     /// Create a new EdenApiRemoteStore using the given EdenAPI client.
-    ///
-    /// In the current design of Mercurial's data storage layer, stores are
-    /// typically tied to a particular repo. The `EdenApi` trait itself is
-    /// repo-agnostic and requires the caller to specify the desired repo. As
-    /// a result, an `EdenApiStore` needs to be passed the name of the repo
-    /// it belongs to so it can pass it to the underlying EdenAPI client.edenapi
     ///
     /// The current design of the storage layer also requires a distinction
     /// between stores that provide file data and stores that provide tree data.
@@ -71,12 +64,11 @@ impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
     /// data would be created as follows:
     ///
     /// ```rust,ignore
-    /// let store = EdenApiStore::<File>::new(repo, edenapi);
+    /// let store = EdenApiStore::<File>::new(edenapi);
     /// ```
-    pub fn new(repo: impl ToString, client: Arc<dyn EdenApi>) -> Arc<Self> {
+    pub fn new(client: Arc<dyn EdenApi>) -> Arc<Self> {
         Arc::new(Self {
             client,
-            repo: repo.to_string(),
             _phantom: PhantomData,
         })
     }
@@ -125,21 +117,21 @@ impl EdenApiFileStore {
         &self,
         keys: Vec<Key>,
     ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
-        BlockingResponse::from_async(self.client.files(self.repo.clone(), keys))
+        BlockingResponse::from_async(self.client.files(keys))
     }
 
     pub fn files_attrs_blocking(
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
-        BlockingResponse::from_async(self.client.files_attrs(self.repo.clone(), reqs))
+        BlockingResponse::from_async(self.client.files_attrs(reqs))
     }
 
     pub async fn files_attrs(
         &self,
         reqs: Vec<FileSpec>,
     ) -> Result<Response<FileEntry>, EdenApiError> {
-        self.client.files_attrs(self.repo.clone(), reqs).await
+        self.client.files_attrs(reqs).await
     }
 }
 
@@ -149,7 +141,7 @@ impl EdenApiTreeStore {
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<BlockingResponse<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        BlockingResponse::from_async(self.client.trees(self.repo.clone(), keys, attributes))
+        BlockingResponse::from_async(self.client.trees(keys, attributes))
     }
 }
 
@@ -159,7 +151,6 @@ impl EdenApiTreeStore {
 pub trait EdenApiStoreKind: Send + Sync + 'static {
     async fn prefetch_files(
         _client: Arc<dyn EdenApi>,
-        _repo: String,
         _keys: Vec<Key>,
     ) -> Result<Response<FileEntry>, EdenApiError> {
         unimplemented!("fetching files not supported for this store")
@@ -167,7 +158,6 @@ pub trait EdenApiStoreKind: Send + Sync + 'static {
 
     async fn prefetch_trees(
         _client: Arc<dyn EdenApi>,
-        _repo: String,
         _keys: Vec<Key>,
         _attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
@@ -179,10 +169,9 @@ pub trait EdenApiStoreKind: Send + Sync + 'static {
 impl EdenApiStoreKind for File {
     async fn prefetch_files(
         client: Arc<dyn EdenApi>,
-        repo: String,
         keys: Vec<Key>,
     ) -> Result<Response<FileEntry>, EdenApiError> {
-        client.files(repo, keys).await
+        client.files(keys).await
     }
 }
 
@@ -190,11 +179,10 @@ impl EdenApiStoreKind for File {
 impl EdenApiStoreKind for Tree {
     async fn prefetch_trees(
         client: Arc<dyn EdenApi>,
-        repo: String,
         keys: Vec<Key>,
         attributes: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        client.trees(repo, keys, attributes).await
+        client.trees(keys, attributes).await
     }
 }
 

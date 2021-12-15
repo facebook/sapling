@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from edenscm.mercurial.edenapi_upload import (
-    getreponame,
     filetypefromfile,
     parentsfromctx,
     uploadhgchangesets,
@@ -98,7 +97,6 @@ def createremote(ui, repo, **opts):
         previousbubble = fetchlatestbubble(repo.metalog())
 
         response = repo.edenapi.uploadsnapshot(
-            getreponame(repo),
             {
                 "files": {
                     "root": repo.root,

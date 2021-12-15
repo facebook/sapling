@@ -33,7 +33,6 @@ define_flags! {
 }
 
 pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
-    let reponame = repo.repo_name().unwrap();
     let repopath = repo.path();
     let config = repo.config();
 
@@ -45,9 +44,8 @@ pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
 
     let from = HgId::from_hex(opts.from.as_bytes()).unwrap();
     let to = HgId::from_hex(opts.to.as_bytes()).unwrap();
-    let pull_data =
-        block_on(edenapi_client.pull_fast_forward_master(reponame.to_string(), from, to))
-            .context("error pulling segmented changelog")??;
+    let pull_data = block_on(edenapi_client.pull_fast_forward_master(from, to))
+        .context("error pulling segmented changelog")??;
 
     io.write(format!(
         "Got {} segments and {} ids\n",

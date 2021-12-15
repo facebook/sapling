@@ -143,7 +143,6 @@ def _flattenresponse(response, sort=False):
 @command(
     "debugapi",
     [
-        ("", "reponame", "", _("repository name")),
         ("e", "endpoint", "", _("name of the endpoint")),
         ("i", "input", [], _("input in Python literal format")),
         ("f", "input-file", [], _("input file in Python literal format")),
@@ -163,11 +162,6 @@ def debugapi(ui, repo=None, **opts):
     """
     import ast
 
-    reponame = (
-        opts.get("reponame")
-        or (repo and repo.name)
-        or ui.config("remotefilelog", "reponame")
-    )
     endpoint = opts.get("endpoint") or "health"
 
     inputs = opts.get("input") or []
@@ -181,12 +175,7 @@ def debugapi(ui, repo=None, **opts):
     client = repo and repo.edenapi or edenapi.getclient(ui)
     func = getattr(client, endpoint)
 
-    # health endpoint does not require reponame
-    if reponame and endpoint not in {"health"}:
-        response = func(reponame, *params)
-    else:
-        response = func(*params)
-
+    response = func(*params)
     response = _flattenresponse(response, sort=opts.get("sort"))
     formatted = bindings.pprint.pformat(response)
     ui.write(_("%s\n") % formatted)

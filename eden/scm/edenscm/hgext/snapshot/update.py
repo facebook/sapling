@@ -4,9 +4,6 @@
 # GNU General Public License version 2.
 
 from edenscm.mercurial import hg, scmutil, cmdutil, error
-from edenscm.mercurial.edenapi_upload import (
-    getreponame,
-)
 from edenscm.mercurial.i18n import _
 
 from .metalog import storelatest
@@ -43,7 +40,6 @@ def _fullclean(ui, repo, exclude):
 
 def fetchsnapshot(repo, csid):
     return repo.edenapi.fetchsnapshot(
-        getreponame(repo),
         {
             "cs_id": csid,
         },
@@ -132,7 +128,7 @@ def update(ui, repo, csid, clean=False):
                     )
                 )
 
-        repo.edenapi.downloadfiles(getreponame(repo), repo.root, files2download)
+        repo.edenapi.downloadfiles(repo.root, files2download)
 
         # Need to add changed files after they are populated in the working dir
         wctx.add(

@@ -625,7 +625,7 @@ def wraprepo(repo):
         @perftrace.tracefunc("HTTP On-Demand Fetch Trees")
         def _httpgetdesignatednodes(self, keys):
             dpack, _hpack = self.manifestlog.getmutablesharedpacks()
-            self.edenapi.storetrees(dpack, self.name, keys)
+            self.edenapi.storetrees(dpack, keys)
             return True
 
         def forcebfsprefetch(self, rootdir, mfnodes, depth=None):
@@ -983,7 +983,7 @@ class basetreemanifestlog(object):
 
     def edenapistore(self, repo):
         if usehttpfetching(repo):
-            return repo.edenapi.treestore(repo.name)
+            return repo.edenapi.treestore()
         return None
 
     def makeruststore(self):
@@ -2470,7 +2470,7 @@ def _existonserver(repo, mfnode):
     Return True if the server has the mfnode, False otherwise.
     """
     stream, _stats = repo.edenapi.trees(
-        repo.name, [("", mfnode)], {"parents": False, "manifest_blob": False}
+        [("", mfnode)], {"parents": False, "manifest_blob": False}
     )
     try:
         list(stream)

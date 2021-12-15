@@ -60,7 +60,6 @@ pub struct HybridCommits {
     revlog: Option<RevlogCommits>,
     commits: HgCommits,
     client: Arc<dyn EdenApi>,
-    reponame: String,
     lazy_hash_desc: String,
 }
 
@@ -70,7 +69,6 @@ const EDENSCM_REMOTE_NAME_THRESHOLD: &str = "EDENSCM_REMOTE_NAME_THRESHOLD";
 
 struct EdenApiProtocol {
     client: Arc<dyn EdenApi>,
-    reponame: String,
 
     /// Manually disabled names defined by `EDENSCM_DISABLE_REMOTE_RESOLVE`
     /// in the form `hex1,hex2,...`.
@@ -129,9 +127,8 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
                 .iter()
                 .map(|v| Id20::from_slice(v.as_ref()).map_err(to_dag_error))
                 .collect::<dag::Result<Vec<_>>>()?;
-            let repo = self.reponame.clone();
             self.client
-                .commit_hash_to_location(repo, heads, hgids)
+                .commit_hash_to_location(heads, hgids)
                 .await
                 .map_err(to_dag_error)?
         };
@@ -176,9 +173,8 @@ impl RemoteIdConvertProtocol for EdenApiProtocol {
                     count: path.batch_size,
                 });
             }
-            let repo = self.reponame.clone();
             self.client
-                .commit_location_to_hash(repo, requests)
+                .commit_location_to_hash(requests)
                 .await
                 .map_err(to_dag_error)?
         };
@@ -205,7 +201,6 @@ impl HybridCommits {
         dag_path: &Path,
         commits_path: &Path,
         client: Arc<dyn EdenApi>,
-        reponame: String,
     ) -> Result<Self> {
         let commits = HgCommits::new(dag_path, commits_path)?;
         let revlog = match revlog_dir {
@@ -216,7 +211,6 @@ impl HybridCommits {
             revlog,
             commits,
             client,
-            reponame,
             lazy_hash_desc: "not lazy".to_string(),
         })
     }
@@ -242,7 +236,6 @@ impl HybridCommits {
             None
         };
         let protocol = EdenApiProtocol {
-            reponame: self.reponame.clone(),
             client: self.client.clone(),
             disabled_names,
             remote_id_threshold,
@@ -251,7 +244,7 @@ impl HybridCommits {
             remote_name_current: Default::default(),
         };
         self.commits.dag.set_remote_protocol(Arc::new(protocol));
-        self.lazy_hash_desc = format!("lazy, using EdenAPI (repo = {})", &self.reponame);
+        self.lazy_hash_desc = format!("lazy, using EdenAPI");
     }
 
     /// Enable fetching commit hashes lazily via another "segments".
@@ -359,12 +352,7 @@ impl StreamCommitText for HybridCommits {
     ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
         let zstore = self.commits.commit_data_store();
         let client = self.client.clone();
-        let reponame = self.reponame.clone();
-        let resolver = Resolver {
-            client,
-            zstore,
-            reponame,
-        };
+        let resolver = Resolver { client, zstore };
         let buffer_size = 10000;
         let retry_limit = 0;
         let stream = HybridStream::new(input, resolver, buffer_size, retry_limit);
@@ -387,7 +375,6 @@ impl StripCommits for HybridCommits {
 struct Resolver {
     client: Arc<dyn EdenApi>,
     zstore: Arc<RwLock<Zstore>>,
-    reponame: String,
 }
 
 impl Drop for Resolver {
@@ -416,9 +403,8 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
             .iter()
             .map(|i| Id20::from_slice(i.as_ref()))
             .collect::<std::result::Result<Vec<_>, _>>()?;
-        let reponame = self.reponame.clone();
         let client = self.client.clone();
-        let response = client.commit_revlog_data(reponame, ids).await?;
+        let response = client.commit_revlog_data(ids).await?;
         let zstore = self.zstore.clone();
         let commits = response.entries.map(move |e| {
             let e = e?;

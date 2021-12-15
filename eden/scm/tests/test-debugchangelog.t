@@ -295,7 +295,7 @@ Revlog -> Lazy:
       Zstore (incomplete, draft)
       EdenAPI (remaining, public)
       Revlog (not used)
-  Commit Hashes: lazy, using EdenAPI (repo = reponame-default)
+  Commit Hashes: lazy, using EdenAPI
 
 --remove-backup removes backup files
 

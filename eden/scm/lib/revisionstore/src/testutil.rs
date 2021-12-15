@@ -314,11 +314,7 @@ impl EdenApi for FakeEdenApi {
         Ok(ResponseMeta::default())
     }
 
-    async fn files(
-        &self,
-        _repo: String,
-        keys: Vec<Key>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileEntry>, EdenApiError> {
         Self::get_files(
             &self.files,
             keys.into_iter().map(|key| FileSpec {
@@ -331,17 +327,12 @@ impl EdenApi for FakeEdenApi {
         )
     }
 
-    async fn files_attrs(
-        &self,
-        _repo: String,
-        reqs: Vec<FileSpec>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> Result<Response<FileEntry>, EdenApiError> {
         Self::get_files(&self.files, reqs.into_iter())
     }
 
     async fn history(
         &self,
-        _repo: String,
         keys: Vec<Key>,
         _length: Option<u32>,
     ) -> Result<Response<HistoryEntry>, EdenApiError> {
@@ -361,7 +352,6 @@ impl EdenApi for FakeEdenApi {
 
     async fn trees(
         &self,
-        _repo: String,
         keys: Vec<Key>,
         _attrs: Option<TreeAttributes>,
     ) -> Result<Response<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {

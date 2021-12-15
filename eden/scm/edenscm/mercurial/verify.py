@@ -59,7 +59,7 @@ def checklazychangelogwithserver(repo):
         return 0
     ui = repo.ui
     with progress.spinner(ui, _("getting initial clone data")):
-        data = repo.edenapi.clonedata(repo.name)
+        data = repo.edenapi.clonedata()
     with tempfile.TemporaryDirectory(prefix="hg-check-cl") as tmpdir:
         with progress.spinner(ui, _("importing clone data")):
             commits = bindings.dag.commits.openhybrid(
@@ -67,7 +67,6 @@ def checklazychangelogwithserver(repo):
                 os.path.join(tmpdir, "segments"),  # segments dir
                 os.path.join(tmpdir, "hgcommits"),  # hgcommits dir
                 repo.edenapi,
-                repo.name,
                 lazyhash=True,
             )
             commits.importclonedata(data)

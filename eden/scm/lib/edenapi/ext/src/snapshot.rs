@@ -31,7 +31,6 @@ use crate::util::calc_contentid;
 
 pub async fn upload_snapshot(
     api: &(impl EdenApi + ?Sized),
-    repo: String,
     data: SnapshotRawData,
     custom_duration_secs: Option<u64>,
     copy_from_bubble_id: Option<NonZeroU64>,
@@ -102,7 +101,7 @@ pub async fn upload_snapshot(
         .collect();
 
     let prepare_response = {
-        api.ephemeral_prepare(repo.clone(), custom_duration_secs.map(Duration::from_secs))
+        api.ephemeral_prepare(custom_duration_secs.map(Duration::from_secs))
             .await?
             .entries
             .next()
@@ -113,29 +112,23 @@ pub async fn upload_snapshot(
     let file_content_tokens = {
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
         // upload file contents first, receiving upload tokens
-        api.process_files_upload(
-            repo.clone(),
-            upload_data,
-            Some(bubble_id),
-            copy_from_bubble_id,
-        )
-        .await?
-        .entries
-        .try_collect::<Vec<_>>()
-        .await?
-        .into_iter()
-        .map(|token| {
-            let content_id = match token.data.id {
-                AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
-                _ => bail!(downcast_error),
-            };
-            Ok((content_id, token))
-        })
-        .collect::<Result<BTreeMap<_, _>, _>>()?
+        api.process_files_upload(upload_data, Some(bubble_id), copy_from_bubble_id)
+            .await?
+            .entries
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .map(|token| {
+                let content_id = match token.data.id {
+                    AnyId::AnyFileContentId(AnyFileContentId::ContentId(id)) => id,
+                    _ => bail!(downcast_error),
+                };
+                Ok((content_id, token))
+            })
+            .collect::<Result<BTreeMap<_, _>, _>>()?
     };
     let mut response = api
         .upload_bonsai_changeset(
-            repo,
             BonsaiChangesetContent {
                 hg_parents,
                 author,

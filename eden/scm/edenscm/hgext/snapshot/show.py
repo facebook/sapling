@@ -6,9 +6,6 @@
 from edenscm.mercurial import error, scmutil
 from edenscm.mercurial.cmdutil import changeset_printer, jsonchangeset
 from edenscm.mercurial.context import memctx, memfilectx
-from edenscm.mercurial.edenapi_upload import (
-    getreponame,
-)
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid
 from edenscm.mercurial.util import pickle
@@ -50,7 +47,7 @@ def _snapshot2ctx(repo, snapshot):
             key = token2cacheable(token)
             if key not in cache:
                 # Possible future optimisation: Download files in parallel
-                cache[key] = repo.edenapi.downloadfiletomemory(getreponame(repo), token)
+                cache[key] = repo.edenapi.downloadfiletomemory(token)
             islink = change["file_type"] == "Symlink"
             isexec = change["file_type"] == "Executable"
             return memfilectx(
@@ -80,7 +77,6 @@ def _snapshot2ctx(repo, snapshot):
 def show(ui, repo, csid, **opts):
     try:
         snapshot = repo.edenapi.fetchsnapshot(
-            getreponame(repo),
             {
                 "cs_id": bytes.fromhex(csid),
             },

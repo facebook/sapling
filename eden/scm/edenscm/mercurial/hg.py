@@ -629,15 +629,13 @@ def clone(
                                 "clone", "prefer-edenapi-clonedata"
                             )
                         )
-                        and "segmented-changelog"
-                        in destrepo.edenapi.capabilities(destrepo.name)
+                        and "segmented-changelog" in destrepo.edenapi.capabilities()
                     )
                 )
             ):
                 clonecodepath = "segments"
                 ui.status(_("fetching lazy changelog\n"))
-                reponame = destrepo.name
-                data = destrepo.edenapi.clonedata(reponame)
+                data = destrepo.edenapi.clonedata()
                 clonemod.segmentsclone(srcpeer.url(), data, destrepo)
             # Can we use EdenAPI CloneData provided by the peer interface?
             elif srcpeer.capable("clonedata") and shallow and not update:
