@@ -23,6 +23,7 @@ from eden.fs.cli import (
     version,
 )
 from eden.fs.cli.config import EdenCheckout, EdenInstance
+from eden.fs.cli.doctor.util import CheckoutInfo
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
 
@@ -71,31 +72,6 @@ def cure_what_ails_you(
     return EdenDoctor(
         instance, dry_run, mount_table, fs_util, proc_utils, kerberos_checker, out
     ).cure_what_ails_you()
-
-
-class CheckoutInfo:
-    def __init__(
-        self,
-        instance: EdenInstance,
-        path: Path,
-        running_state_dir: Optional[Path] = None,
-        configured_state_dir: Optional[Path] = None,
-        state: Optional[MountState] = None,
-    ) -> None:
-        self.instance = instance
-        self.path = path
-        self.running_state_dir = running_state_dir
-        self.configured_state_dir = configured_state_dir
-        self.state = state
-
-    def get_checkout(self) -> EdenCheckout:
-        state_dir = (
-            self.running_state_dir
-            if self.running_state_dir is not None
-            else self.configured_state_dir
-        )
-        assert state_dir is not None
-        return EdenCheckout(self.instance, self.path, state_dir)
 
 
 class EdenDoctorChecker:
