@@ -30,7 +30,7 @@ mincode = { path = "../mincode" }
 minibytes = { path = "../minibytes", features = ["frombytes"] }
 mpatch = { path = "../mpatch" }
 once_cell = "1.8"
-parking_lot = "0.10.2"
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 progress = { path = "../progress" }
 quickcheck = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }

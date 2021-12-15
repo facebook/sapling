@@ -30,7 +30,7 @@ libc = "0.2.98"
 metrics-render = { path = "../metrics/render" }
 mincode = { path = "../mincode" }
 once_cell = "1.8"
-parking_lot = "0.10.2"
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 procinfo = { path = "../procinfo" }
 progress-model = { path = "../progress/model" }
 progress-render = { path = "../progress/render" }

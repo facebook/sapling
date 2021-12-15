@@ -21,7 +21,7 @@ itertools = "0.10.3"
 metrics = { path = "../metrics" }
 minibytes = { path = "../minibytes" }
 once_cell = "1.8"
-parking_lot = "0.10.2"
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 percent-encoding = "2.1"
 pprint = { path = "../pprint" }
 progress-model = { path = "../progress/model" }

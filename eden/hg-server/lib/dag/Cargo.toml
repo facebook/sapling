@@ -34,7 +34,7 @@ indexmap = { version = "1.7.0", features = ["rayon", "serde-1"] }
 itertools = "0.10.3"
 minibytes = { path = "../minibytes" }
 nonblocking = { path = "../nonblocking" }
-parking_lot = "0.10.2"
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 quickcheck = { version = "1.0", optional = true }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 tempfile = { version = "3.2", optional = true }

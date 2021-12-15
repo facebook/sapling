@@ -20,7 +20,7 @@ http = "0.2"
 maplit = "1.0"
 once_cell = "1.8"
 openssl = "0.10.35"
-parking_lot = "0.10.2"
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 paste = "1.0"
 pin-project = "0.4.28"
 regex = "1.5.4"

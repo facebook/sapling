@@ -11,7 +11,7 @@ indexedlog = { path = "../indexedlog" }
 lazy_static = "1.0"
 mincode = { path = "../mincode" }
 minibytes = { path = "../minibytes" }
-parking_lot = "0.10.2"
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 tracing = "0.1.29"
 types = { path = "../types" }

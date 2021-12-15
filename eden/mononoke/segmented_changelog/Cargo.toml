@@ -30,7 +30,7 @@ memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mincode = { version = "0.1.0", path = "../../scm/lib/mincode" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-parking_lot = "0.10.2"
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 rand = { version = "0.8", features = ["small_rng"] }
 reloader = { version = "0.1.0", path = "../common/reloader" }
 repo_identity = { version = "0.1.0", path = "../repo_attributes/repo_identity" }

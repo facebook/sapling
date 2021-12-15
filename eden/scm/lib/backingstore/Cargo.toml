@@ -18,7 +18,7 @@ libc = "0.2.98"
 log = { version = "0.4.14", features = ["kv_unstable", "kv_unstable_std"] }
 manifest = { path = "../manifest" }
 manifest-tree = { path = "../manifest-tree" }
-parking_lot = "0.10.2"
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 revisionstore = { path = "../revisionstore" }
 tracing = "0.1.29"
 tracing-collector = { path = "../tracing-collector" }

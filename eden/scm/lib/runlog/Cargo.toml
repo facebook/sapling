@@ -10,7 +10,7 @@ chrono = { version = "0.4", features = ["clock", "serde", "std"], default-featur
 clidispatch = { path = "../clidispatch" }
 fs2 = "0.4"
 libc = "0.2.98"
-parking_lot = "0.10.2"
+parking_lot = { version = "0.11.2", features = ["send_guard"] }
 progress-model = { path = "../progress/model" }
 rand = { version = "0.8", features = ["small_rng"] }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
