@@ -80,6 +80,16 @@ impl<'a> Builder<'a> {
             }
         }
 
+        let reponame = match self.config.get("remotefilelog", "reponame") {
+            Some(name) => name.to_string(),
+            None => String::new(),
+        };
+        if reponame.is_empty() {
+            return Err(EdenApiError::BadConfig(ConfigError::Invalid(
+                "remotefilelog.reponame".into(),
+                anyhow!("reponame is not set"),
+            )));
+        }
         let client = Arc::new(
             HttpClientBuilder::from_config(self.config)?
                 .correlator(self.correlator)
@@ -150,10 +160,12 @@ impl HttpClientBuilder {
         // the `clidispatch` crate. Unforunately, not all callsites presently have access to a
         // populated `Repo` object, and it isn't trivial to just initialize one (requires a path to
         // the on-disk repo) or to plumb one through (which might not be possible for usage outside
-        // of a Mercurial process, such as by EdenFS). For now, let's just do what the Python code
-        // does and default to "unknown" when the repo name is missing.
-        let repo_name =
-            get_config::<String>(config, "remotefilelog", "reponame")?.unwrap_or("unknown".into());
+        // of a Mercurial process, such as by EdenFS). For now, let's just allow setting the
+        // reponame later via `repo_name` method.
+        let mut repo_name = get_config::<String>(config, "remotefilelog", "reponame")?;
+        if repo_name.as_deref() == Some("") {
+            repo_name = None;
+        }
 
         let server_url = get_required_config::<String>(config, "edenapi", "url")?
             .parse::<Url>()
@@ -229,7 +241,7 @@ impl HttpClientBuilder {
             get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(10);
 
         Ok(HttpClientBuilder {
-            repo_name: Some(repo_name),
+            repo_name,
             server_url: Some(server_url),
             cert,
             key,

@@ -5,17 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 use async_trait::async_trait;
 use types::Key;
 
+use super::RetryableStreamRequest;
 use crate::client::Client;
 use crate::errors::EdenApiError;
 use crate::response::Response;
-use crate::types::{FileEntry, FileSpec};
-
-use super::RetryableStreamRequest;
+use crate::types::FileEntry;
+use crate::types::FileSpec;
 
 pub(crate) struct RetryableFiles {
     keys: HashSet<Key>,
@@ -32,13 +33,9 @@ impl RetryableFiles {
 impl RetryableStreamRequest for RetryableFiles {
     type Item = FileEntry;
 
-    async fn perform(
-        &self,
-        client: Client,
-        repo: String,
-    ) -> Result<Response<Self::Item>, EdenApiError> {
+    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError> {
         let keys = self.keys.iter().cloned().collect();
-        client.fetch_files(repo, keys).await
+        client.fetch_files(keys).await
     }
 
     fn received_item(&mut self, item: &Self::Item) {
@@ -61,13 +58,9 @@ impl RetryableFileAttrs {
 impl RetryableStreamRequest for RetryableFileAttrs {
     type Item = FileEntry;
 
-    async fn perform(
-        &self,
-        client: Client,
-        repo: String,
-    ) -> Result<Response<Self::Item>, EdenApiError> {
+    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError> {
         let reqs = self.reqs.values().cloned().collect();
-        client.fetch_files_attrs(repo, reqs).await
+        client.fetch_files_attrs(reqs).await
     }
 
     fn received_item(&mut self, item: &Self::Item) {

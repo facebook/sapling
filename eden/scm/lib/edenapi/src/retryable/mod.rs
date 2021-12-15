@@ -20,7 +20,8 @@ use crate::errors::EdenApiError;
 mod files;
 mod trees;
 
-pub(crate) use files::{RetryableFileAttrs, RetryableFiles};
+pub(crate) use files::RetryableFileAttrs;
+pub(crate) use files::RetryableFiles;
 pub(crate) use trees::RetryableTrees;
 
 const MAX_RETRIES: usize = 3;
@@ -28,11 +29,7 @@ const MAX_RETRIES: usize = 3;
 pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
     type Item: Send + 'static;
 
-    async fn perform(
-        &self,
-        client: Client,
-        repo: String,
-    ) -> Result<Response<Self::Item>, EdenApiError>;
+    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError>;
 
     fn received_item(&mut self, _item: &Self::Item) {}
 
@@ -47,7 +44,6 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
     async fn perform_with_retries(
         self,
         client: Client,
-        repo: String,
     ) -> Result<Response<Self::Item>, EdenApiError> {
         struct RetryState<R, T> {
             request: R,
@@ -65,7 +61,6 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
         let entries = stream::unfold(state, move |mut state| {
             let mut stats_tx = stats_tx.clone();
             let client = client.clone();
-            let repo = repo.clone();
 
             async move {
                 loop {
@@ -87,7 +82,7 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
                         }
                     } else {
                         tracing::trace!("No active response stream; sending new request");
-                        let res = state.request.perform(client.clone(), repo.clone()).await;
+                        let res = state.request.perform(client.clone()).await;
                         match res {
                             Ok(Response { entries, stats, .. }) => {
                                 state.entries = Some(entries);
@@ -143,7 +138,8 @@ pub(crate) trait RetryableStreamRequest: Sized + Sync + Send + 'static {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashSet;
+    use std::sync::Arc;
 
     use anyhow::anyhow;
     use anyhow::Result;
@@ -152,12 +148,11 @@ mod tests {
     use async_trait::async_trait;
     use http_client::HttpClientError;
     use parking_lot::Mutex;
-    use std::collections::HashSet;
-    use std::sync::Arc;
     use types::HgId;
     use types::Key;
     use types::RepoPathBuf;
 
+    use super::*;
     use crate::builder::HttpClientBuilder;
     use crate::EdenApiError;
     use crate::Response;
@@ -182,11 +177,7 @@ mod tests {
     impl RetryableStreamRequest for Arc<Mutex<RetryableTest>> {
         type Item = Key;
 
-        async fn perform(
-            &self,
-            _client: Client,
-            _repo: String,
-        ) -> Result<Response<Self::Item>, EdenApiError> {
+        async fn perform(&self, _client: Client) -> Result<Response<Self::Item>, EdenApiError> {
             let mut this = self.lock();
             let mut response = Response::empty();
             let mut entries: Vec<Result<Key, EdenApiError>> =
@@ -234,8 +225,7 @@ mod tests {
         let fails = 2;
         let retryable = Arc::new(Mutex::new(RetryableTest::new(keys, fails)));
         let retryable_move = retryable.clone();
-        let response =
-            block_on(retryable_move.perform_with_retries(client, repo_name.to_string()))?;
+        let response = block_on(retryable_move.perform_with_retries(client))?;
 
         let results: Vec<_> = stream_to_iter(response.entries).into_iter().collect();
 

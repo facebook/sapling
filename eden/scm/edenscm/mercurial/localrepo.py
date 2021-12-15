@@ -1228,14 +1228,14 @@ class localrepository(object):
         if scheme == "ssh" and "dummyssh" in self.ui.config("ui", "ssh"):
             return absent(_("paths.default being 'ssh:' and dummyssh in use"))
 
-        if self.ui.config("edenapi", "url"):
+        if self.ui.config("edenapi", "url") and getattr(self, "name", None):
             return edenapi.getclient(self.ui)
 
         # If remote path is an EagerRepo, use EdenApi provided by it.
         if scheme in ("eager", "test"):
             return edenapi.getclient(self.ui)
 
-        return absent(_("missing edenapi.url config"))
+        return absent(_("missing edenapi.url config or repo name"))
 
     @util.propertycache
     def edenapi(self):

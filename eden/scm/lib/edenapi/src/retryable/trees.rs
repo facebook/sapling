@@ -10,12 +10,13 @@ use std::collections::HashSet;
 use async_trait::async_trait;
 use types::Key;
 
+use super::RetryableStreamRequest;
 use crate::client::Client;
 use crate::errors::EdenApiError;
 use crate::response::Response;
-use crate::types::{EdenApiServerError, TreeAttributes, TreeEntry};
-
-use super::RetryableStreamRequest;
+use crate::types::EdenApiServerError;
+use crate::types::TreeAttributes;
+use crate::types::TreeEntry;
 
 pub(crate) struct RetryableTrees {
     keys: HashSet<Key>,
@@ -36,14 +37,10 @@ impl RetryableTrees {
 impl RetryableStreamRequest for RetryableTrees {
     type Item = Result<TreeEntry, EdenApiServerError>;
 
-    async fn perform(
-        &self,
-        client: Client,
-        repo: String,
-    ) -> Result<Response<Self::Item>, EdenApiError> {
+    async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError> {
         let keys: Vec<Key> = self.keys.iter().cloned().collect();
         client
-            .fetch_trees(repo, keys, self.attributes.clone())
+            .fetch_trees(Default::default(), keys, self.attributes.clone())
             .await
     }
 

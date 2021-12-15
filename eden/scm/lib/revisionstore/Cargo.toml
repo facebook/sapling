@@ -12,6 +12,7 @@ auth = { path = "../auth" }
 bincode = "1.3.3"
 blake2 = "0.9"
 byteorder = "1.3"
+configmodel = { path = "../configmodel" }
 configparser = { path = "../configparser" }
 crossbeam = "0.8"
 edenapi = { path = "../edenapi" }

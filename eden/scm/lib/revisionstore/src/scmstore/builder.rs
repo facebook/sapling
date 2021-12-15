@@ -11,6 +11,8 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
+use configmodel::Config;
+use configmodel::ConfigExt;
 use configparser::config::ConfigSet;
 use configparser::convert::ByteCount;
 use edenapi::Builder;
@@ -176,8 +178,7 @@ impl<'a> FileStoreBuilder<'a> {
         Ok(if let Some(use_edenapi) = self.override_edenapi {
             use_edenapi
         } else {
-            self.config
-                .get_or_default::<bool>("remotefilelog", "http")?
+            use_edenapi_via_config(self.config)?
         })
     }
 
@@ -489,7 +490,7 @@ impl<'a> TreeStoreBuilder<'a> {
         Ok(if let Some(use_edenapi) = self.override_edenapi {
             use_edenapi
         } else {
-            self.config.get_or_default::<bool>("treemanifest", "http")?
+            use_edenapi_via_config(self.config)?
         })
     }
 
@@ -583,4 +584,16 @@ impl<'a> TreeStoreBuilder<'a> {
             flush_on_drop: true,
         })
     }
+}
+
+fn use_edenapi_via_config(config: &dyn Config) -> Result<bool> {
+    let use_edenapi = config.get_or_default::<bool>("remotefilelog", "http")?
+        // EdenApi client cannot be initialized if reponame or url is missing.
+        // In some tests (ex. scm/lib), remotefilelog.http is true but the reponame is empty.
+        && !config
+            .get("remotefilelog", "reponame")
+            .unwrap_or_default()
+            .is_empty()
+        && !config.get("edenapi", "url").unwrap_or_default().is_empty();
+    Ok(use_edenapi)
 }

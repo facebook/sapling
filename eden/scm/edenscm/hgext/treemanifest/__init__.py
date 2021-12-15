@@ -541,8 +541,9 @@ class basetreemanifestlog(object):
         return m
 
     def edenapistore(self, repo):
-        if usehttpfetching(repo):
-            return repo.edenapi.treestore(repo.name)
+        edenapi = repo.nullableedenapi
+        if usehttpfetching(repo) and edenapi:
+            return edenapi.treestore(repo.name)
         return None
 
     def makeruststore(self):

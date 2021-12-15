@@ -31,6 +31,7 @@ class NonEdenOperationTest(EdenHgTestCase):
             "commit",
             "--config",
             "ui.username=Kevin Flynn <lightcyclist@example.com>",
+            "--config=remotefilelog.reponame=dummy",
             "-Am",
             "first commit",
             cwd=non_eden_hg_repo,
@@ -40,6 +41,7 @@ class NonEdenOperationTest(EdenHgTestCase):
         clone_of_non_eden_hg_repo = os.path.join(self.tmp_dir, "clone-target")
         self.hg(
             "clone",
+            "--config=remotefilelog.reponame=dummy",
             "--pull",
             non_eden_hg_repo,
             clone_of_non_eden_hg_repo,
