@@ -239,6 +239,10 @@ pub struct EdenFsCheckout {
 }
 
 impl EdenFsCheckout {
+    pub fn data_dir(&self) -> PathBuf {
+        self.data_dir.clone()
+    }
+
     pub fn backing_repo(&self) -> Option<PathBuf> {
         self.backing_repo.clone()
     }
