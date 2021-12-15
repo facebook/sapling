@@ -54,6 +54,7 @@ define_perf_counters! {
         BlobGetsMaxLatency,
         BlobGetsNotFoundMaxLatency,
         BlobGetsDeduplicated,
+        BlobGetsTotalSize,
         BlobPresenceChecks,
         BlobPresenceChecksMaxLatency,
         BlobPuts,
@@ -61,6 +62,7 @@ define_perf_counters! {
         BlobPutsShardAccessWait,
         BlobPutsMaxLatency,
         BlobPutsDeduplicated,
+        BlobPutsTotalSize,
         BytesSent,
         CachelibHits,
         CachelibMisses,
@@ -127,10 +129,12 @@ impl PerfCounterType {
             | BlobGetsNotFound
             | BlobGetsMaxLatency
             | BlobGetsNotFoundMaxLatency
+            | BlobGetsTotalSize
             | BlobPresenceChecks
             | BlobPresenceChecksMaxLatency
             | BlobPuts
             | BlobPutsMaxLatency
+            | BlobPutsTotalSize
             | CachelibHits
             | CachelibMisses
             | GetpackNumPossibleLFSFiles
@@ -154,11 +158,13 @@ impl PerfCounterType {
             | BlobGetsAccessWait
             | BlobGetsShardAccessWait
             | BlobGetsDeduplicated
+            | BlobGetsTotalSize
             | BlobPresenceChecks
             | BlobPuts
             | BlobPutsAccessWait
             | BlobPutsShardAccessWait
             | BlobPutsDeduplicated
+            | BlobPutsTotalSize
             | BytesSent
             | CachelibHits
             | CachelibMisses

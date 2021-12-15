@@ -77,6 +77,17 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
             None,
             &self.inner,
         );
+
+        match result {
+            Ok(Some(ref data)) => {
+                ctx.perf_counters().add_to_counter(
+                    PerfCounterType::BlobGetsTotalSize,
+                    data.len().try_into().unwrap_or(0),
+                );
+            }
+            _ => {}
+        }
+
         result
     }
 
@@ -138,6 +149,14 @@ impl<B: BlobstorePutOps> LogBlob<B> {
             &self.inner,
             None,
         );
+
+        if result.is_ok() {
+            ctx.perf_counters().add_to_counter(
+                PerfCounterType::BlobPutsTotalSize,
+                size.try_into().unwrap_or(0),
+            );
+        }
+
         result
     }
 }

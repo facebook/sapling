@@ -75,6 +75,11 @@ impl BlobstoreGetData {
     }
 
     #[inline]
+    pub fn len(&self) -> usize {
+        self.bytes.len()
+    }
+
+    #[inline]
     pub fn into_raw_bytes(self) -> Bytes {
         self.into_bytes().into_bytes()
     }

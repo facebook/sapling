@@ -460,13 +460,23 @@ async fn blobstore_get<'a>(
         PerfCounterType::BlobGetsMaxLatency,
         stats.completion_time.as_millis_unchecked() as i64,
     );
-    if let Ok(None) = result {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobGetsNotFound);
-        ctx.perf_counters().set_max_counter(
-            PerfCounterType::BlobGetsNotFoundMaxLatency,
-            stats.completion_time.as_millis_unchecked() as i64,
-        );
+
+    match result {
+        Ok(Some(ref data)) => {
+            ctx.perf_counters().add_to_counter(
+                PerfCounterType::BlobGetsTotalSize,
+                data.len().try_into().unwrap_or(0),
+            );
+        }
+        Ok(None) => {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::BlobGetsNotFound);
+            ctx.perf_counters().set_max_counter(
+                PerfCounterType::BlobGetsNotFoundMaxLatency,
+                stats.completion_time.as_millis_unchecked() as i64,
+            );
+        }
+        _ => {}
     }
 
     Ok(result?)
@@ -855,6 +865,13 @@ impl MultiplexedBlobstoreBase {
             .timed()
             .await
         };
+
+        if result.is_ok() {
+            ctx.perf_counters().add_to_counter(
+                PerfCounterType::BlobPutsTotalSize,
+                value.len().try_into().unwrap_or(0),
+            );
+        }
 
         ctx.perf_counters().set_max_counter(
             PerfCounterType::BlobPutsMaxLatency,

@@ -35,10 +35,12 @@
       "BlobGetsMaxLatency": *, (glob)
       "BlobGetsNotFound": 1,
       "BlobGetsNotFoundMaxLatency": *, (glob)
+      "BlobGetsTotalSize": 0,
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -83,10 +85,12 @@
       "BlobGetsMaxLatency": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
+      "BlobGetsTotalSize": 0,
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 210,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsTotalSize": 10930,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -127,10 +131,12 @@
       "BlobGetsMaxLatency": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
+      "BlobGetsTotalSize": 155,
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -179,10 +185,12 @@
       "BlobGetsMaxLatency": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
+      "BlobGetsTotalSize": 10701,
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
@@ -222,10 +230,12 @@
       "BlobGetsMaxLatency": *, (glob)
       "BlobGetsNotFound": 0,
       "BlobGetsNotFoundMaxLatency": *, (glob)
+      "BlobGetsTotalSize": 0,
       "BlobPresenceChecks": 0,
       "BlobPresenceChecksMaxLatency": *, (glob)
       "BlobPuts": 0,
       "BlobPutsMaxLatency": *, (glob)
+      "BlobPutsTotalSize": 0,
       "CachelibHits": 0,
       "CachelibMisses": 0,
       "GetpackNumPossibleLFSFiles": 0,
