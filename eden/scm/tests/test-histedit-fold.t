@@ -175,7 +175,6 @@ check saving last-message.txt
   > pick 58c8f2bfc151 f
   > fold bab801520cec d
   > EOF
-  allow non-folding commit
   ==== before editing
   f
   ***
@@ -481,7 +480,6 @@ into the hook command.
   > pick 6c795aa153cb a
   > EOF
   commit 16b87e97178dde2af2f3c6f6ddda882292f21d13
-  commit 973e98d91193dacddd35dd67b9aee2d392393b9e
   commit 9599899f62c05f4377548c32bf1c9f1a39634b0c
 
   $ hg logt

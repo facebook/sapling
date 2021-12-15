@@ -242,7 +242,6 @@ from edenscm.mercurial import (
     context,
     copies,
     destutil,
-    discovery,
     error,
     exchange,
     extensions,
@@ -654,8 +653,8 @@ def applychanges(ui, repo, ctx, opts):
     return stats
 
 
-def collapse(repo, first, last, commitopts, skipprompt=False):
-    """collapse the set of revisions from first to last as new one.
+def collapse(repo, first, commitopts, skipprompt=False):
+    """collapse the set of revisions from first to the working context one as new one.
 
     Expected commit options are:
         - message
@@ -664,7 +663,8 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
     Commit message is edited in all cases.
 
     This function works in memory."""
-    ctxs = list(repo.set("%d::%d", first, last))
+    last = repo[None]
+    ctxs = list(repo.set("%n::.", first.node())) + [last]
     if not ctxs:
         return None
     for c in ctxs:
@@ -794,6 +794,11 @@ class edit(histeditaction):
 
 @action(["fold", "f"], _("use commit, but combine it with the one above"))
 class fold(histeditaction):
+    def __init__(self, state, node):
+        super(fold, self).__init__(state, node)
+        self.collapsedctx = None
+        self.replacements = None
+
     def verify(self, prev, expected, seen):
         """Verifies semantic correctness of the fold rule"""
         super(fold, self).verify(prev, expected, seen)
@@ -810,42 +815,12 @@ class fold(histeditaction):
             )
 
     def continuedirty(self):
-        repo = self.repo
-        rulectx = repo[self.node]
-
-        commit = commitfuncfor(repo, rulectx)
-        commit(
-            text="fold-temp-revision %s" % node.short(self.node),
-            user=rulectx.user(),
-            date=rulectx.date(),
-            extra=rulectx.extra(),
-        )
+        self.collapsedctx, self.replacements = self.finishfold()
 
     def continueclean(self):
-        repo = self.repo
-        ctx = repo["."]
-        rulectx = repo[self.node]
-        parentctxnode = self.state.parentctxnode
-        if ctx.node() == parentctxnode:
-            repo.ui.warn(_("%s: empty changeset\n") % node.short(self.node))
-            return ctx, [(self.node, (parentctxnode,))]
-
-        parentctx = repo[parentctxnode]
-        newcommits = list(repo.nodes("(%d::. - %d)", parentctx, parentctx))
-        if not newcommits:
-            repo.ui.warn(
-                _(
-                    "%s: cannot fold - working copy is not a "
-                    "descendant of previous commit %s\n"
-                )
-                % (node.short(self.node), node.short(parentctxnode))
-            )
-            return ctx, [(self.node, (ctx.node(),))]
-
-        newcommits.remove(ctx.node())
-        return self.finishfold(
-            repo.ui, repo, parentctx, rulectx, ctx.node(), newcommits
-        )
+        if self.collapsedctx is None:
+            return self.finishfold()
+        return self.collapsedctx, self.replacements
 
     def skipprompt(self):
         """Returns true if the rule should skip the message editor.
@@ -872,12 +847,16 @@ class fold(histeditaction):
         """
         return False
 
-    def finishfold(self, ui, repo, ctx, oldctx, newnode, internalchanges):
-        parent = ctx.p1().node()
-        repo.ui.pushbuffer()
-        with repo.transaction("fold-checkout"):
-            hg.update(repo, parent)
-        repo.ui.popbuffer()
+    def finishfold(self):
+        repo = self.repo
+        parentctxnode = self.state.parentctxnode
+        ctx = repo[parentctxnode]
+        oldctx = repo[self.node]
+        wctx = repo[None]
+        if len(wctx.files()) == 0:
+            self.repo.ui.warn(_("%s: empty changeset\n") % node.short(self.node))
+            return ctx, [(self.node, (parentctxnode,))]
+        newnodes = list(repo.nodes("(%n::. - %n)", parentctxnode, parentctxnode))
         ### prepare new commit data
         commitopts = {}
         commitopts["user"] = ctx.user()
@@ -888,7 +867,7 @@ class fold(histeditaction):
             newmessage = (
                 "\n***\n".join(
                     [ctx.description()]
-                    + [repo[r].description() for r in internalchanges]
+                    + [repo[r].description() for r in newnodes]
                     + [oldctx.description()]
                 )
                 + "\n"
@@ -906,27 +885,25 @@ class fold(histeditaction):
         extra["histedit_source"] = "%s,%s" % (ctx.hex(), oldctx.hex())
         # mutation predecessors - ctx is likely an intermediate commit, but its
         # predecessors will refer to the original commits.
-        preds = [ctx.node()] + internalchanges + [oldctx.node()]
+        preds = [ctx.node()] + newnodes + [oldctx.node()]
         commitopts["mutinfo"] = mutation.record(repo, extra, preds, "histedit")
         commitopts["extra"] = extra
         phasemin = max(ctx.phase(), oldctx.phase())
         overrides = {("phases", "new-commit"): phasemin}
         with repo.ui.configoverride(overrides, "histedit"):
-            n = collapse(
-                repo, ctx, repo[newnode], commitopts, skipprompt=self.skipprompt()
-            )
+            n = collapse(repo, ctx, commitopts, skipprompt=self.skipprompt())
         if n is None:
             return ctx, []
         repo.ui.pushbuffer()
         with repo.transaction("fold-checkout"):
             hg.update(repo, n)
         repo.ui.popbuffer()
+        mergemod.mergestate.read(repo).reset()
         replacements = [
-            (oldctx.node(), (newnode,)),
+            (oldctx.node(), (n,)),
             (ctx.node(), (n,)),
-            (newnode, (n,)),
         ]
-        for ich in internalchanges:
+        for ich in newnodes:
             replacements.append((ich, (n,)))
         return repo[n], replacements
 

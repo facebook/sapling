@@ -182,8 +182,6 @@ Base setup for the rest of the testing
   │
   o  e80cad0096a5 d
   │
-  │ o  7641852d682f fold-temp-revision e860deea161a
-  │ │
   │ x  c04b72554bfd d
   ├─╯
   o  dfac7d6bf3bc c

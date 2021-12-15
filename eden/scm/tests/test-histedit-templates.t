@@ -49,4 +49,4 @@ Getting the JSON output for nodechanges
   > pick 109f8ec89544 Added a
   > roll f5dcf3b4db23 Added b
   > EOF
-  {"109f8ec895447f81b380ba8d4d8b66539ccdcb94": ["8d01470bfeab64d3de13c49adb79d88790d38396"], "f3ec56a374bdbdf1953cacca505161442c6f3a3e": [], "f5dcf3b4db23f31f1aacf46c33d1393de303d26f": ["8d01470bfeab64d3de13c49adb79d88790d38396"]} (no-eol)
+  {"109f8ec895447f81b380ba8d4d8b66539ccdcb94": ["8d01470bfeab64d3de13c49adb79d88790d38396"], "f5dcf3b4db23f31f1aacf46c33d1393de303d26f": ["8d01470bfeab64d3de13c49adb79d88790d38396"]} (no-eol)

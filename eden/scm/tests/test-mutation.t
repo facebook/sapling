@@ -482,30 +482,21 @@ Unhide some old commits and show their mutations in the log
   
 Debugmutatation looking forward
   $ hg debugmutation -s -r c4484fcb5ac0f15058c6595a56d239d4ed707bee --hidden
-   *  c4484fcb5ac0f15058c6595a56d239d4ed707bee diverges
-      :=  histedit by test at 1970-01-01T00:00:00 into:
-      :   961157b412e21813bbee86fd1704fb09bd25874b
-      '=  histedit by test at 1970-01-01T00:00:00 (folded with: e0e94ae5d0b0429f35bb3e14d1532fc861122e32) into:
-          e1a0d5ae83cecdbf2a65995535ea1a3cd2009ab8 histedit by test at 1970-01-01T00:00:00 (folded with: 64a3bc96c043ea50b808b3ace4a4c6d2ca92b2d2) into:
-          dd5d0e1bc12eb7fb11debaa39287fb24c16a80d8
+   *  c4484fcb5ac0f15058c6595a56d239d4ed707bee histedit by test at 1970-01-01T00:00:00 (folded with: e0e94ae5d0b0429f35bb3e14d1532fc861122e32) into:
+      e1a0d5ae83cecdbf2a65995535ea1a3cd2009ab8 histedit by test at 1970-01-01T00:00:00 (folded with: 64a3bc96c043ea50b808b3ace4a4c6d2ca92b2d2) into:
+      dd5d0e1bc12eb7fb11debaa39287fb24c16a80d8
   
   $ hg debugmutation -s -r 07f94070ed0943f8108119a726522ec4879ed36a
    *  07f94070ed0943f8108119a726522ec4879ed36a split by test at 1970-01-01T00:00:00 into:
-      |-  7d383d1b236d896a5adeea8dc390b681e4ccb217 diverges
-      |   :=  histedit by test at 1970-01-01T00:00:00 (folded with: f05234144e37d59b175fa4283563aac4dfe81ec0) into:
-      |   :   419fc47d2ae4909d2cdff5f873c3d9c18eeaa057 histedit by test at 1970-01-01T00:00:00 (folded with: 9c2c451b82d046da459d807b11c42992324e4e33) into:
-      |   :   5dbe0bac3aa7743362af3b46d69ea19ea84fd35a histedit by test at 1970-01-01T00:00:00 (folded with: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) into:
-      |   :   76fad0d9f8585b5d315b140cf784130e4a23ba28 histedit by test at 1970-01-01T00:00:00 (folded with: 48b076c1640c53afc98cc99922d034e17830a65d) into:
-      |   :   1851fa2d6ef001f121536b4d076e8ec6c01e3b34
-      |   '=  histedit by test at 1970-01-01T00:00:00 into:
-      |       8d138e378583f27f0bf86eb38cf38c21ea0a49aa
-      '-  9c2c451b82d046da459d807b11c42992324e4e33 diverges
-          :=  histedit by test at 1970-01-01T00:00:00 into:
-          :   2f5128c36bc27276ba0603d1dd333933c294bd0d
-          '=  histedit by test at 1970-01-01T00:00:00 (folded with: 419fc47d2ae4909d2cdff5f873c3d9c18eeaa057) into:
-              5dbe0bac3aa7743362af3b46d69ea19ea84fd35a histedit by test at 1970-01-01T00:00:00 (folded with: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) into:
-              76fad0d9f8585b5d315b140cf784130e4a23ba28 histedit by test at 1970-01-01T00:00:00 (folded with: 48b076c1640c53afc98cc99922d034e17830a65d) into:
-              1851fa2d6ef001f121536b4d076e8ec6c01e3b34
+      |-  7d383d1b236d896a5adeea8dc390b681e4ccb217 histedit by test at 1970-01-01T00:00:00 (folded with: f05234144e37d59b175fa4283563aac4dfe81ec0) into:
+      |   419fc47d2ae4909d2cdff5f873c3d9c18eeaa057 histedit by test at 1970-01-01T00:00:00 (folded with: 9c2c451b82d046da459d807b11c42992324e4e33) into:
+      |   5dbe0bac3aa7743362af3b46d69ea19ea84fd35a histedit by test at 1970-01-01T00:00:00 (folded with: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) into:
+      |   76fad0d9f8585b5d315b140cf784130e4a23ba28 histedit by test at 1970-01-01T00:00:00 (folded with: 48b076c1640c53afc98cc99922d034e17830a65d) into:
+      |   1851fa2d6ef001f121536b4d076e8ec6c01e3b34
+      '-  9c2c451b82d046da459d807b11c42992324e4e33 histedit by test at 1970-01-01T00:00:00 (folded with: 419fc47d2ae4909d2cdff5f873c3d9c18eeaa057) into:
+          5dbe0bac3aa7743362af3b46d69ea19ea84fd35a histedit by test at 1970-01-01T00:00:00 (folded with: 36e4e93ec194346c3e5a0afefd426dbc14dcaf4a) into:
+          76fad0d9f8585b5d315b140cf784130e4a23ba28 histedit by test at 1970-01-01T00:00:00 (folded with: 48b076c1640c53afc98cc99922d034e17830a65d) into:
+          1851fa2d6ef001f121536b4d076e8ec6c01e3b34
   
 
 Histedit with exec that amends in between folds
@@ -540,9 +531,6 @@ Histedit with exec that amends in between folds
   
    *  0d4155d128bf7fff3f12582a65b52be84ad44809
   
-   *  f1153a6a5f2db8f8567d7e31efbf8096731ea1ef histedit by test at 1970-01-01T00:00:00 from:
-      15a208dbcdc54b4f841ffecf9d13f98675933242
-  
    *  7e96860f6790189e613eb93c3d8edc2e4432c204 histedit by test at 1970-01-01T00:00:00 from:
       |-  08d8367dafb9bb90c58101707eca32b726ca635a
       '-  15a208dbcdc54b4f841ffecf9d13f98675933242
@@ -551,9 +539,6 @@ Histedit with exec that amends in between folds
       7e96860f6790189e613eb93c3d8edc2e4432c204 histedit by test at 1970-01-01T00:00:00 from:
       |-  08d8367dafb9bb90c58101707eca32b726ca635a
       '-  15a208dbcdc54b4f841ffecf9d13f98675933242
-  
-   *  9ba93d4b6c80837572711b838b670dde6cf34803 histedit by test at 1970-01-01T00:00:00 from:
-      0d4155d128bf7fff3f12582a65b52be84ad44809
   
    *  a2235e1011a071a02b80aadd371c2fb15308ce15 histedit by test at 1970-01-01T00:00:00 from:
       |-  cc92d7c90d06d08784aed399397f8cb68eb25325 amend by test at 1970-01-01T00:00:00 from:
@@ -606,9 +591,6 @@ Histedit with stop, extra commit, and fold
       15a208dbcdc54b4f841ffecf9d13f98675933242
   
    *  59401578013ab5382082b65eed82d6a465c081a0
-  
-   *  4ed766be66c60ad571e4f938b9b786ab1786882a histedit by test at 1970-01-01T00:00:00 from:
-      0d4155d128bf7fff3f12582a65b52be84ad44809
   
    *  d313be93f9b7ee46e11581641241d356c346a001 histedit by test at 1970-01-01T00:00:00 from:
       |-  59401578013ab5382082b65eed82d6a465c081a0
