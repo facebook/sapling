@@ -235,7 +235,7 @@ queries! {
         insert_or_ignore,
         "{insert_or_ignore} INTO bonsai_hg_mapping (repo_id, hg_cs_id, bcs_id) VALUES {values}"
     }
-    
+
     // Sett almost identical InsertMapping above
     write ReplaceMapping(values: (
         repo_id: RepositoryId,
