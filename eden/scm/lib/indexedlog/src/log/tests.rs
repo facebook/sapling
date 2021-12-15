@@ -962,6 +962,37 @@ fn test_repair() {
 }
 
 #[test]
+fn test_repair_on_open() {
+    use crate::OpenWithRepair;
+
+    let dir = tempdir().unwrap();
+    let path = dir.path();
+    let opts = OpenOptions::new().create(true);
+
+    // Prepare some data.
+    let mut log = opts.open(path).unwrap();
+    log.append(b"abc").unwrap();
+    log.flush().unwrap();
+    drop(log);
+
+    // Corrupt the log by breaking the meta file.
+    let meta_path = path.join(META_FILE);
+    utils::atomic_write(meta_path, b"xxx", false).unwrap();
+
+    // Opening the log errors out.
+    opts.open(path).unwrap_err();
+
+    // Opening with auto repair succeeds.
+    let log = opts.open_with_repair(path).unwrap();
+
+    // Reading entries is fine.
+    assert_eq!(
+        log.iter().collect::<Result<Vec<_>, _>>().unwrap(),
+        vec![b"abc"]
+    );
+}
+
+#[test]
 fn test_repair_noop() {
     // Repair does nothing if the Log can be read out without issues.
     let dir = tempdir().unwrap();

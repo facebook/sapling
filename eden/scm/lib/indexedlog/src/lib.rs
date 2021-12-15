@@ -31,6 +31,7 @@ pub mod utils;
 pub use errors::Error;
 pub use errors::Result;
 pub use repair::DefaultOpenOptions;
+pub use repair::OpenWithRepair;
 pub use repair::Repair;
 
 #[cfg(test)]
