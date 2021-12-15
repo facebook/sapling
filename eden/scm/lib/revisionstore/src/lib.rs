@@ -158,6 +158,7 @@ pub mod mutablepack;
 pub mod packstore;
 pub mod packwriter;
 pub mod scmstore;
+pub mod trait_impls;
 pub mod uniondatastore;
 pub mod unionhistorystore;
 pub mod util;

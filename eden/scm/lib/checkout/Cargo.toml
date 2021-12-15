@@ -15,6 +15,7 @@ pathmatcher = { path = "../pathmatcher" }
 progress-model = { path = "../progress/model" }
 revisionstore = { path = "../revisionstore" }
 status = { path = "../status" }
+storemodel = { path = "../storemodel" }
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.29"
 treestate = { path = "../treestate" }
@@ -22,6 +23,7 @@ types = { path = "../types" }
 vfs = { path = "../vfs" }
 
 [dev-dependencies]
+async-trait = "0.1.51"
 manifest-tree = { path = "../manifest-tree", features = ["for-tests"] }
 quickcheck = "1.0"
 tempfile = "3.2"

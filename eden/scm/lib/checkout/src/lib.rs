@@ -35,12 +35,11 @@ use minibytes::Bytes;
 use parking_lot::Mutex;
 use progress_model::ProgressBar;
 use progress_model::Registry;
-use revisionstore::datastore::strip_metadata;
-use revisionstore::scmstore::FileAttributes;
 use revisionstore::scmstore::FileStore;
+use revisionstore::trait_impls::ArcFileStore;
+use revisionstore::trait_impls::ClonableRemoteDataStore;
 use revisionstore::RemoteDataStore;
-use revisionstore::StoreKey;
-use revisionstore::StoreResult;
+use storemodel::ReadFileContents;
 use tracing::debug;
 use tracing::warn;
 use treestate::filestate::StateFlags;
@@ -71,9 +70,7 @@ use status::FileStatus;
 use status::Status;
 use tokio::runtime::Handle;
 
-const PREFETCH_CHUNK_SIZE: usize = 1000;
 const VFS_BATCH_SIZE: usize = 100;
-const FETCH_PARALLELISM: usize = 20;
 
 /// Contains lists of files to be removed / updated during checkout.
 pub struct CheckoutPlan {
@@ -200,7 +197,7 @@ impl CheckoutPlan {
     /// This async function offloads file system operation to tokio blocking thread pool.
     /// It limits number of concurrent fs operations to Checkout::concurrency.
     ///
-    /// This function also designed to leverage async storage API(which we do not yet have).
+    /// This function also designed to leverage async storage API.
     /// When updating content of the file/symlink, this function first creates list of HgId
     /// it needs to fetch. This list is then converted to stream and fed into storage for fetching
     ///
@@ -210,12 +207,9 @@ impl CheckoutPlan {
     ///
     /// This function fails fast and returns error when first checkout operation fails.
     /// Pending storage futures are dropped when error is returned
-    pub async fn apply_stream<
-        S: Stream<Item = Result<(Bytes, Key)>> + Unpin,
-        F: FnOnce(Vec<Key>) -> S,
-    >(
+    pub async fn apply_store(
         &self,
-        f: F,
+        store: &dyn ReadFileContents<Error = anyhow::Error>,
     ) -> Result<CheckoutStats> {
         let vfs = &self.checkout.vfs;
         let filtered_update_content: Vec<_> = self
@@ -247,7 +241,7 @@ impl CheckoutPlan {
             .collect();
         let keys: Vec<_> = actions.keys().cloned().collect();
 
-        let data_stream = f(keys);
+        let data_stream = store.read_file_contents(keys).await;
 
         let update_content = data_stream.map(|result| -> Result<_> {
             let (data, key) = result?;
@@ -283,103 +277,16 @@ impl CheckoutPlan {
     }
 
     pub async fn apply_read_store(&self, store: Arc<FileStore>) -> Result<CheckoutStats> {
-        self.apply_stream(|keys| Self::stream_data_from_scmstore(store, keys))
-            .await
+        let store = ArcFileStore(store);
+        self.apply_store(&store).await
     }
 
     pub async fn apply_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
         &self,
         store: &DS,
     ) -> Result<CheckoutStats> {
-        self.apply_stream(|keys| Self::stream_data_from_remote_data_store(store, keys))
-            .await
-    }
-
-    pub fn stream_data_from_scmstore(
-        store: Arc<FileStore>,
-        keys: Vec<Key>,
-    ) -> impl Stream<Item = Result<(Bytes, Key)>> {
-        let store = store.clone();
-        stream::iter(keys.into_iter())
-            .chunks(PREFETCH_CHUNK_SIZE)
-            .map(move |chunk| {
-                let store = store.clone();
-                Handle::current().spawn_blocking(move || {
-                    let mut data = vec![];
-                    for result in store.fetch(chunk.iter().cloned(), FileAttributes::CONTENT) {
-                        let result = match result {
-                            Err(err) => Err(err.into()),
-                            Ok((key, mut file)) => {
-                                file.file_content().map(|content| (content, key))
-                            }
-                        };
-                        let is_err = result.is_err();
-                        data.push(result);
-                        if is_err {
-                            break;
-                        }
-                    }
-                    stream::iter(data.into_iter())
-                })
-            })
-            .buffer_unordered(FETCH_PARALLELISM)
-            .map(|r| {
-                r.unwrap_or_else(|_| {
-                    stream::iter(vec![Err(anyhow!("background fetch join error"))].into_iter())
-                })
-            })
-            .flatten()
-    }
-
-    pub fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
-        store: &DS,
-        keys: Vec<Key>,
-    ) -> impl Stream<Item = Result<(Bytes, Key)>> {
-        let store = store.clone();
-        stream::iter(keys.into_iter().map(StoreKey::HgId))
-            .chunks(PREFETCH_CHUNK_SIZE)
-            .map(move |chunk| {
-                let store = store.clone();
-                Handle::current().spawn_blocking(move || {
-                    let mut data = vec![];
-                    match store.prefetch(&chunk) {
-                        Err(e) => {
-                            data.push(Err(e));
-                        }
-                        Ok(_) => {
-                            for store_key in chunk.iter() {
-                                let key = match store_key {
-                                    StoreKey::HgId(key) => key,
-                                    _ => unreachable!(),
-                                };
-                                let store_result = store.get(store_key.clone());
-                                let result = match store_result {
-                                    Err(err) => Err(err),
-                                    Ok(StoreResult::Found(data)) => {
-                                        strip_metadata(&data.into()).map(|(d, _)| (d, key.clone()))
-                                    }
-                                    Ok(StoreResult::NotFound(k)) => {
-                                        Err(format_err!("{:?} not found in store", k))
-                                    }
-                                };
-                                let is_err = result.is_err();
-                                data.push(result);
-                                if is_err {
-                                    break;
-                                }
-                            }
-                        }
-                    };
-                    stream::iter(data.into_iter())
-                })
-            })
-            .buffer_unordered(FETCH_PARALLELISM)
-            .map(|r| {
-                r.unwrap_or_else(|_| {
-                    stream::iter(vec![Err(anyhow!("background fetch join error"))].into_iter())
-                })
-            })
-            .flatten()
+        let store = ClonableRemoteDataStore(store);
+        self.apply_store(&store).await
     }
 
     pub async fn apply_remote_data_store_dry_run<DS: RemoteDataStore + Clone + 'static>(
@@ -390,7 +297,8 @@ impl CheckoutPlan {
             .update_content
             .iter()
             .map(UpdateContentAction::make_key);
-        let mut stream = Self::stream_data_from_remote_data_store(store, keys.collect());
+        let store = ClonableRemoteDataStore(store);
+        let mut stream = store.read_file_contents(keys.collect()).await;
         let (mut count, mut size) = (0, 0);
         while let Some(result) = stream.next().await {
             let (bytes, _) = result?;
@@ -405,7 +313,8 @@ impl CheckoutPlan {
             .update_content
             .iter()
             .map(UpdateContentAction::make_key);
-        let mut stream = Self::stream_data_from_scmstore(store, keys.collect());
+        let store = ArcFileStore(store);
+        let mut stream = store.read_file_contents(keys.collect()).await;
         let (mut count, mut size) = (0, 0);
         while let Some(result) = stream.next().await {
             let (bytes, _) = result?;
@@ -492,7 +401,10 @@ impl CheckoutPlan {
             return Ok(unknowns);
         }
 
-        let check_content = Self::stream_data_from_scmstore(store, check_content)
+        let store = ArcFileStore(store);
+        let check_content = store
+            .read_file_contents(check_content)
+            .await
             .chunks(VFS_BATCH_SIZE)
             .map(|v| {
                 let vfs = vfs.clone();
@@ -839,6 +751,7 @@ mod test {
 
     use anyhow::ensure;
     use anyhow::Context;
+    use futures::stream::BoxStream;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::testutil::TestStore;
     use manifest_tree::Diff;
@@ -993,7 +906,7 @@ mod test {
             .plan_action_map(ActionMap::from_diff(diff).context("Plan construction failed")?);
 
         // Use clean vfs for test
-        plan.apply_stream(dummy_fs)
+        plan.apply_store(&DummyFileContentStore)
             .await
             .context("Plan execution failed")?;
 
@@ -1121,8 +1034,17 @@ mod test {
         Ok(())
     }
 
-    fn dummy_fs(v: Vec<Key>) -> impl Stream<Item = Result<(Bytes, Key)>> {
-        stream::iter(v).map(|key| Ok((hgid_file(&key.hgid).into(), key)))
+    struct DummyFileContentStore;
+
+    #[async_trait::async_trait]
+    impl ReadFileContents for DummyFileContentStore {
+        type Error = anyhow::Error;
+
+        async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
+            stream::iter(keys)
+                .map(|key| Ok((hgid_file(&key.hgid).into(), key)))
+                .boxed()
+        }
     }
 
     fn hgid_file(hgid: &HgId) -> Vec<u8> {

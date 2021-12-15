@@ -43,6 +43,7 @@ serde_derive = "1.0"
 serde_json = { version = "1.0.64", features = ["float_roundtrip", "unbounded_depth"] }
 sha-1 = "0.8"
 sha2 = "0.8"
+storemodel = { path = "../storemodel" }
 tempfile = "3.2"
 thiserror = "1.0.29"
 tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
