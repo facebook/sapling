@@ -248,6 +248,9 @@ impl ConfigSetHgExt for ConfigSet {
 
         if let Some(repo_path) = repo_path {
             errors.append(&mut self.load_repo(&repo_path, opts.clone()));
+            if let Err(e) = read_set_repo_name(self, repo_path) {
+                errors.push(e);
+            }
         }
 
         if !errors.is_empty() {
@@ -340,7 +343,7 @@ impl ConfigSetHgExt for ConfigSet {
                 }
 
                 let user_name: String = temp_config.get_or_default("ui", "username")?;
-                let repo_name = read_repo_name(&temp_config, repo_path)?;
+                let repo_name = read_set_repo_name(&mut temp_config, repo_path)?;
 
                 (repo_name, user_name)
             };
@@ -462,41 +465,62 @@ impl ConfigSetHgExt for ConfigSet {
     }
 }
 
-/// Read repo name from various places (.hg/reponame, remotefilelog.reponame,
-/// paths.default).
+/// Read repo name from various places (remotefilelog.reponame, paths.default, .hg/reponame).
 ///
-/// Try to write the reponame back to `.hg/reponame`.
+/// Try to write the reponame back to `.hg/reponame`, and set `remotefilelog.reponame`
+/// for code paths using them.
 ///
 /// If `configs.forbid-empty-reponame` is `true`, raise if the repo name is empty
 /// and `paths.default` is set.
-fn read_repo_name(config: &ConfigSet, repo_path: &Path) -> crate::Result<String> {
-    let (repo_name, source): (String, &str) = match read_repo_name_from_disk(repo_path) {
-        Ok(name) => (name, ".hg/reponame"),
-        Err(e) => {
-            tracing::warn!("repo name: no .hg/reponame: {:?}", &e);
-            let mut name: String = config.get_or_default("remotefilelog", "reponame")?;
-            let mut source = "remotefilelog.reponame";
+fn read_set_repo_name(config: &mut ConfigSet, repo_path: &Path) -> crate::Result<String> {
+    let (repo_name, source): (String, &str) = {
+        let mut name: String = config.get_or_default("remotefilelog", "reponame")?;
+        let mut source = "remotefilelog.reponame";
+        if name.is_empty() {
+            tracing::warn!("repo name: no remotefilelog.reponame");
+            let path: String = config.get_or_default("paths", "default")?;
+            name = get_url_basename(&path).unwrap_or_default();
             if name.is_empty() {
-                tracing::warn!("repo name: no remotefilelog.reponame");
-                let path: String = config.get_or_default("paths", "default")?;
-                let name = get_url_basename(&path).unwrap_or_default();
-                if name.is_empty() {
-                    tracing::warn!("repo name: no path.default reponame: {}", &path);
-                }
-                source = "paths.default";
+                tracing::warn!("repo name: no path.default reponame: {}", &path);
             }
-            (name, source)
+            source = "paths.default";
         }
+        if name.is_empty() {
+            match read_repo_name_from_disk(repo_path) {
+                Ok(s) => {
+                    name = s;
+                    source = ".hg/reponame";
+                }
+                Err(e) => {
+                    tracing::warn!("repo name: no .hg/reponame: {:?}", &e);
+                }
+            };
+        }
+        (name, source)
     };
 
     if !repo_name.is_empty() {
         tracing::debug!("repo name: {:?} (from {})", &repo_name, source);
         if source != ".hg/reponame" {
-            let path = get_repo_name_path(repo_path);
-            match fs::write(&path, &repo_name) {
-                Ok(_) => tracing::debug!("repo name: written to .hg/reponame"),
-                Err(e) => tracing::warn!("repo name: cannot write to .hg/reponame: {:?}", e),
+            let need_rewrite = match read_repo_name_from_disk(repo_path) {
+                Ok(s) => s == repo_name,
+                Err(_) => true,
+            };
+            if need_rewrite {
+                let path = get_repo_name_path(repo_path);
+                match fs::write(&path, &repo_name) {
+                    Ok(_) => tracing::debug!("repo name: written to .hg/reponame"),
+                    Err(e) => tracing::warn!("repo name: cannot write to .hg/reponame: {:?}", e),
+                }
             }
+        }
+        if source != "remotefilelog.reponame" {
+            config.set(
+                "remotefilelog",
+                "reponame",
+                Some(&repo_name),
+                &source.into(),
+            );
         }
     } else {
         let forbid_empty_reponame: bool =
@@ -575,12 +599,30 @@ fn get_url_basename(s: &str) -> Option<String> {
     // Use a base_url to support non-absolute urls.
     let base_url = Url::parse("file:///.").unwrap();
     let parse_opts = Url::options().base_url(Some(&base_url));
-    if let Ok(url) = parse_opts.parse(s) {
-        // Try the last segment in url path.
-        let basename = url.path_segments().and_then(|s| s.rev().next());
-        // Try the hostname. ex. in "fb://fbsource", "fbsource" is a host not a path.
-        let basename = basename.or_else(|| url.host_str());
-        return basename.map(|s| s.to_string());
+    match parse_opts.parse(s) {
+        Ok(url) => {
+            tracing::trace!("parsed url {}: {:?}", s, url);
+            // Try the last segment in url path.
+            if let Some(last_segment) = url
+                .path_segments()
+                .and_then(|s| s.rev().find(|s| !s.is_empty()))
+            {
+                return Some(last_segment.to_string());
+            }
+            // Try path. `path_segment` can be `None` for URL like "test:reponame".
+            let path = url.path();
+            if !path.contains('/') && !path.is_empty() {
+                return Some(path.to_string());
+            }
+            // Try the hostname. ex. in "fb://fbsource", "fbsource" is a host not a path.
+            // Also see https://www.mercurial-scm.org/repo/hg/help/schemes
+            if let Some(host_str) = url.host_str() {
+                return Some(host_str.to_string());
+            }
+        }
+        Err(e) => {
+            tracing::warn!("cannot parse url {}: {:?}", s, e);
+        }
     }
     None
 }

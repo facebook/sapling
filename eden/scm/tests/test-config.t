@@ -232,3 +232,17 @@ alias has lower priority
   $ hg log --template '{author}\n'
   repo user
   $ cd ..
+
+reponame is set from paths.default
+
+  $ cat >> $HGRCPATH << EOF
+  > [remotefilelog]
+  > %unset reponame
+  > EOF
+  $ newrepo reponame-path-default-test
+  $ enable remotenames
+  $ hg paths --add default test:repo-myrepo1
+  $ hg config remotefilelog.reponame
+  repo-myrepo1
+  $ cat .hg/reponame
+  repo-myrepo1 (no-eol)

@@ -840,6 +840,69 @@ test --tmpdir support
   ----------------------------------------------------------------------
   # Ran 1 tests, 0 skipped, 0 failed.
 
+#if git no-bucktest
+(bucktest produces .scm.sqlite file)
+test --record support
+  $ rt --tmpdir=$TESTTMP/record --record test-success.t
+  
+  Keeping testtmp dir: $TESTTMP/record/child1/test-success.t
+  Keeping threadtmp dir: $TESTTMP/record/child1 
+  
+  Set up config environment by:
+    export HGRCPATH=$TESTTMP/record/child1/.hgrc 
+  .
+  ----------------------------------------------------------------------
+  # Ran 1 tests, 0 skipped, 0 failed.
+  $ GIT_DIR=$TESTTMP/record/child1/test-success.t/.git git log --stat
+  commit 7dcd55e4b90850b75e85e73b0fa636d3f76247e2
+  Author: test <test@localhost>
+  Date:   Sat Jan 1 00:00:00 2000 +0000
+  
+      EOF (line 24)
+  
+   x | 0
+   1 file changed, 0 insertions(+), 0 deletions(-)
+  
+  commit f6293e577088469cb68d70eaebe572c396a89486
+  Author: test <test@localhost>
+  Date:   Sat Jan 1 00:00:00 2000 +0000
+  
+      $ rm x (line 23)
+  
+  commit d30656b881527f71305a5cb0d36735bf04a8824d
+  Author: test <test@localhost>
+  Date:   Sat Jan 1 00:00:00 2000 +0000
+  
+      $ printf 'zyx\nwvu\ntsr\n' (line 16)
+  
+  commit 749d47a07cbcc6ef6823ebb81e8749aa7728ee58
+  Author: test <test@localhost>
+  Date:   Sat Jan 1 00:00:00 2000 +0000
+  
+      $ printf 'abc\ndef\nxyz\n' (line 10)
+  
+   x | 0
+   1 file changed, 0 insertions(+), 0 deletions(-)
+  
+  commit bc24df25828a37502fd35fed6d03ee25839dbdc7
+  Author: test <test@localhost>
+  Date:   Sat Jan 1 00:00:00 2000 +0000
+  
+      $ touch x (line 9)
+  
+  commit 66e869113273061d628421e8a8167bf7361c5938
+  Author: test <test@localhost>
+  Date:   Sat Jan 1 00:00:00 2000 +0000
+  
+      $ echo xyzzy (line 2)
+  
+  commit 47537d28c96c68884b66c5fd3d3aea8bf44624f1
+  Author: test <test@localhost>
+  Date:   Sat Jan 1 00:00:00 2000 +0000
+  
+      $ echo babar (line 0)
+#endif
+
 timeouts
 ========
   $ cat > test-timeout.t <<EOF

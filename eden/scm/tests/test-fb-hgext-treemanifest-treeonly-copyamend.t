@@ -115,8 +115,8 @@ Create a client
 
 Rename the file in a commit
   $ hg mv a/b/c/d/e/f/g/h/i/j/file a/b/c/d/e/f/g/h/i/j/file2
-  fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0
   * files fetched over *s (glob) (?)
+  fetching tree '' efa8fa4352b919302f90e85924e691a632d6bea0
   1 trees fetched over 0.00s
   fetching tree 'a' da4a8c7aed08ac15737161f1141f62c8bf5863ff
   1 trees fetched over 0.00s
