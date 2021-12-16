@@ -43,6 +43,16 @@ class NfsDirList {
     return std::get<XdrList<T>>(std::move(list_));
   }
 
+  /**
+   * Access the built list via reference. Only implemented for entryplus3
+   * since only the entryplus3 implementation will need to fill in stat data.
+   *
+   * Use this method when you need to modify the NfsDirList's vector of entries.
+   */
+  std::vector<entryplus3>& getListRef() {
+    return std::get<XdrList<entryplus3>>(list_).list;
+  }
+
  private:
   uint32_t remaining_;
   std::variant<XdrList<entry3>, XdrList<entryplus3>> list_{};
