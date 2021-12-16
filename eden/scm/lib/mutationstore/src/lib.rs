@@ -50,6 +50,7 @@ use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
 use indexedlog::log::{self as ilog};
 use indexedlog::DefaultOpenOptions;
+use indexedlog::OpenWithRepair;
 pub use indexedlog::Repair;
 use types::mutation::MutationEntry;
 use types::node::Node;
@@ -126,7 +127,7 @@ impl DefaultOpenOptions<ilog::OpenOptions> for MutationStore {
 
 impl MutationStore {
     pub fn open(path: impl AsRef<Path>) -> Result<MutationStore> {
-        let log = Self::default_open_options().open(path.as_ref())?;
+        let log = Self::default_open_options().open_with_repair(path.as_ref())?;
         let pending = Vec::new();
         Ok(MutationStore { log, pending })
     }
