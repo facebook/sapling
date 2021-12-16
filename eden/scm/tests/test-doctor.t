@@ -1,5 +1,4 @@
 #chg-compatible
-#require false
 
   $ configure modern
   $ setconfig format.use-symlink-atomic-write=1
@@ -57,121 +56,8 @@ Break the repo in various ways:
 #endif
   $ rm .hg/store/allheads/meta
 
-Check the repo is broken (exit code is non-zero):
-
-  $ hg log -GpT '{desc}\n' &>/dev/null
-  [255]
-
-Test that 'hg doctor' can fix them:
-
-  $ hg doctor -v
-  checking internal storage
-  metalog:
-    Checking blobs at "*": (glob)
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified * entries, * bytes in log (glob)
-    Index "id" passed integrity check
-    
-    Checking roots at "*": (glob)
-    Processing IndexedLog: Filesystem("*") (glob)
-    Rebuilt metadata
-    Verified 3 entries, 90 bytes in log
-    Index "reverse" passed integrity check
-    
-    Checking blobs referred by 4 Roots:
-    All Roots are verified.
-  
-  
-  mutation:
-    Processing IndexedLog: Filesystem("*") (glob)
-    Fixed header in log
-    Extended log to 82 bytes required by meta
-    Verified first 0 entries, 12 of 82 bytes in log
-    Backed up corrupted log to "*" (glob)
-    Reset log size to 12
-    Rebuilt index "pred"
-    Rebuilt index "succ"
-    Rebuilt index "split"
-  
-  
-  allheads:
-    Processing IndexedLog: Filesystem("*") (glob)
-    Rebuilt metadata
-    Verified 3 entries, 90 bytes in log
-    Index "node" passed integrity check
-  
-  
-  revisionstore:
-    Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 0 entries, 12 bytes in log
-    Rebuilt index "node"
-    Reset latest to 0
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 3 entries, 153 bytes in log
-    Index "node" passed integrity check
-    Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "node" passed integrity check
-    Index "sha256" passed integrity check
-    Latest = 0
-    Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "sha256" passed integrity check
-    Latest = 0
-    Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "node_and_path" passed integrity check
-    Latest = 0
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 3 entries, 357 bytes in log
-    Index "node_and_path" passed integrity check
-  
-  
-  revisionstore:
-    Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 0 entries, 12 bytes in log
-    Rebuilt index "node"
-    Reset latest to 0
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 3 entries, 373 bytes in log
-    Index "node" passed integrity check
-    Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "node" passed integrity check
-    Index "sha256" passed integrity check
-    Latest = 0
-    Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "sha256" passed integrity check
-    Latest = 0
-    Processing RotateLog: "*" (glob)
-    Attempt to repair log "0"
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 0 entries, 12 bytes in log
-    Index "node_and_path" passed integrity check
-    Latest = 0
-    Processing IndexedLog: Filesystem("*") (glob)
-    Verified 3 entries, 348 bytes in log
-    Index "node_and_path" passed integrity check
-  
-  
-  checking commit references
-
-Check the repo is usable again:
+The repo is auto-fixed for common indexedlog open issues:
+(note: this does not conver all corruption issues)
 
   $ hg log -GpT '{desc}\n'
   o  C
@@ -192,6 +78,132 @@ Check the repo is usable again:
      +A
      \ No newline at end of file
   
+
+Repairs log to "repair.log":
+
+  $ cat .hg/store/mutation/repair.log
+  date -d * (glob)
+  Processing IndexedLog: * (glob)
+  Verified 1 entries, 82 bytes in log
+  Index "pred" passed integrity check
+  Index "succ" passed integrity check
+  Index "split" passed integrity check
+  
+  date -d * (glob)
+  Processing IndexedLog: * (glob)
+  Fixed header in log
+  Extended log to 82 bytes required by meta
+  Verified first 0 entries, 12 of 82 bytes in log
+  Backed up corrupted log to * (glob)
+  Reset log size to 12
+  Rebuilt index "pred"
+  Rebuilt index "succ"
+  Rebuilt index "split"
+  
+
+Test that 'hg doctor' can fix them:
+
+  $ hg doctor -v
+  checking internal storage
+  metalog:
+    Checking blobs at "*": (glob)
+    Processing IndexedLog: * (glob)
+    Verified * entries, * bytes in log (glob)
+    Index "id" passed integrity check
+    
+    Checking roots at "*": (glob)
+    Processing IndexedLog: * (glob)
+    Verified 3 entries, 90 bytes in log
+    Index "reverse" passed integrity check
+    
+    Checking blobs referred by 4 Roots:
+    All Roots are verified.
+  
+  
+  mutation:
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "pred" passed integrity check
+    Index "succ" passed integrity check
+    Index "split" passed integrity check
+  
+  
+  allheads:
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node" passed integrity check
+  
+  
+  revisionstore:
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node" passed integrity check
+    Latest = 0
+    Processing IndexedLog: * (glob)
+    Verified 3 entries, 153 bytes in log
+    Index "node" passed integrity check
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node" passed integrity check
+    Index "sha256" passed integrity check
+    Latest = 0
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "sha256" passed integrity check
+    Latest = 0
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node_and_path" passed integrity check
+    Latest = 0
+    Processing IndexedLog: * (glob)
+    Verified 3 entries, 357 bytes in log
+    Index "node_and_path" passed integrity check
+  
+  
+  revisionstore:
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node" passed integrity check
+    Latest = 0
+    Processing IndexedLog: * (glob)
+    Verified 3 entries, 373 bytes in log
+    Index "node" passed integrity check
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node" passed integrity check
+    Index "sha256" passed integrity check
+    Latest = 0
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "sha256" passed integrity check
+    Latest = 0
+    Processing RotateLog: "*" (glob)
+    Attempt to repair log "0"
+    Processing IndexedLog: * (glob)
+    Verified 0 entries, 12 bytes in log
+    Index "node_and_path" passed integrity check
+    Latest = 0
+    Processing IndexedLog: * (glob)
+    Verified 3 entries, 348 bytes in log
+    Index "node_and_path" passed integrity check
+  
+  
+  checking commit references
+
 Check changelog repiar:
 
   $ newrepo
@@ -382,11 +394,9 @@ Test fixing broken segmented changelog (broken mutimeta)
   $ rm .hg/store/segments/v1/multimeta .hg/store/segments/v1/multimetalog/meta
   $ touch .hg/store/segments/v1/multimeta .hg/store/segments/v1/multimetalog/meta
   $ hg log -r tip 2>/dev/null 1>/dev/null
-  [1]
 
   $ hg doctor
   checking internal storage
-  segments/v1: repaired
   checking commit references
 
   $ hg log -r tip -T '{desc}\n'

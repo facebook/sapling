@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::fs;
+use std::io::Write;
+use std::ops::AddAssign;
 use std::path::Path;
 
 use crate::errors::ResultExt;
@@ -64,6 +67,74 @@ pub trait OpenOptionsOutput {
     type Output;
 
     fn open_path(&self, path: &Path) -> crate::Result<Self::Output>;
+}
+
+/// Repair message as a string.
+/// Also write the message to other places (ex. a file, best-effort).
+pub(crate) struct RepairMessage {
+    output: String,
+    additional_outputs: Vec<Box<dyn Write>>,
+}
+
+impl RepairMessage {
+    /// Creates the `RepairMessageWriter`. Attempt to write to `repair.log`
+    /// in `dir`, but unable to doing so is not fatal.
+    pub(crate) fn new(dir: &Path) -> Self {
+        let mut additional_outputs = Vec::new();
+
+        // Truncate the file if it's too large (ex. when repair is run
+        // in a loop).
+        let path = dir.join("repair.log");
+        let mut need_truncate = false;
+        if let Ok(meta) = fs::metadata(&path) {
+            const REPAIR_LOG_SIZE_LIMIT: u64 = 1 << 20;
+            if meta.len() > REPAIR_LOG_SIZE_LIMIT {
+                need_truncate = true;
+            }
+        }
+
+        let mut opts = fs::OpenOptions::new();
+        opts.write(true).create(true);
+        if !need_truncate {
+            opts.append(true);
+        }
+
+        if let Ok(mut file) = opts.open(path) {
+            if need_truncate {
+                let _ = file.write_all(b"# This file was truncated\n\n");
+            }
+            if let Ok(duration) = std::time::UNIX_EPOCH.elapsed() {
+                let msg = format!("date -d @{}\n", duration.as_secs());
+                let _ = file.write_all(msg.as_bytes());
+            }
+            additional_outputs.push(Box::new(file) as Box<dyn Write>);
+        }
+        Self {
+            output: String::new(),
+            additional_outputs,
+        }
+    }
+
+    pub(crate) fn as_str(&self) -> &str {
+        self.output.as_str()
+    }
+
+    pub(crate) fn into_string(mut self) -> String {
+        for out in self.additional_outputs.iter_mut() {
+            let _ = out.write_all(b"\n");
+            let _ = out.flush();
+        }
+        self.output
+    }
+}
+
+impl AddAssign<&str> for RepairMessage {
+    fn add_assign(&mut self, rhs: &str) {
+        self.output += rhs;
+        for out in self.additional_outputs.iter_mut() {
+            let _ = out.write_all(rhs.as_bytes());
+        }
+    }
 }
 
 impl<T: DefaultOpenOptions<O>, O: OpenOptionsRepair> Repair<O> for T {

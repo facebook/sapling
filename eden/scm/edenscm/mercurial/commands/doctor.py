@@ -557,7 +557,11 @@ def fshash(path):
     """Return an integer that is likely changed if content of the directory is changed"""
     value = 0
     for dirpath, dirnames, filenames in os.walk(path):
-        paths = [os.path.join(path, dirpath, name) for name in filenames + dirnames]
+        paths = [
+            os.path.join(path, dirpath, name)
+            for name in filenames + dirnames
+            if name != "repair.log"
+        ]
         value += len(paths)
         value += sum(
             (st.st_mtime % 1024) + st.st_size * 1024

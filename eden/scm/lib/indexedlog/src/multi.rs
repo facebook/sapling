@@ -28,6 +28,7 @@ use crate::log::LogMetadata;
 use crate::log::{self};
 use crate::repair::OpenOptionsOutput;
 use crate::repair::OpenOptionsRepair;
+use crate::repair::RepairMessage;
 use crate::utils;
 use crate::utils::rand_u64;
 
@@ -356,8 +357,8 @@ impl ops::IndexMut<usize> for MultiLog {
 impl OpenOptionsRepair for OpenOptions {
     fn open_options_repair(&self, path: impl AsRef<Path>) -> crate::Result<String> {
         let path = path.as_ref();
-        let mut out = String::new();
         let lock = LockGuard(ScopedDirLock::new(path)?);
+        let mut out = RepairMessage::new(path);
 
         // First, repair the MultiMeta log.
         let mpath = multi_meta_log_path(path);
@@ -439,7 +440,7 @@ impl OpenOptionsRepair for OpenOptions {
                     &mpath,
                     "repair cannot find valid MultiMeta",
                 ))
-                .context(|| format!("Repair log:\n{}", indent(&out)));
+                .context(|| format!("Repair log:\n{}", indent(out.as_str())));
             }
             Some(meta) => meta,
         };
@@ -470,7 +471,7 @@ impl OpenOptionsRepair for OpenOptions {
             out += "MultiMeta is valid\n";
         }
 
-        Ok(out)
+        Ok(out.into_string())
     }
 }
 
@@ -820,10 +821,17 @@ mod tests {
 
     fn repair_output(opts: &OpenOptions, path: &Path) -> String {
         let out = opts.open_options_repair(path).unwrap();
+        filter_repair_output(out)
+    }
+
+    fn filter_repair_output(out: String) -> String {
         // Filter out dynamic content.
         out.lines()
             .filter(|l| {
-                !l.contains("bytes in log") && !l.contains("Backed up") && !l.contains("Processing")
+                !l.contains("bytes in log")
+                    && !l.contains("Backed up")
+                    && !l.contains("Processing")
+                    && !l.contains("date -d")
             })
             .collect::<Vec<_>>()
             .join("\n")
@@ -860,8 +868,9 @@ mod tests {
         };
 
         // Valid MultiLog.
+        let s1 = repair();
         assert_eq!(
-            repair(),
+            &s1,
             r#"Repairing MultiMeta Log:
   Index "reverse" passed integrity check
 Repairing Log a
@@ -870,6 +879,10 @@ Repairing Log b
 Log b has valid length 1212 after repair
 MultiMeta is valid"#
         );
+
+        // Repair output is also written to "repair.log" file.
+        let s2 = filter_repair_output(std::fs::read_to_string(path.join("repair.log")).unwrap());
+        assert_eq!(&s1, s2.trim_end());
 
         // Put bad data in the first log. The repair will pick a recent MultiMeta point and
         // dropping some entries.

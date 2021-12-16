@@ -27,6 +27,7 @@ use crate::log::PRIMARY_HEADER;
 use crate::log::PRIMARY_START_OFFSET;
 use crate::repair::OpenOptionsOutput;
 use crate::repair::OpenOptionsRepair;
+use crate::repair::RepairMessage;
 use crate::utils::mmap_path;
 use crate::utils::{self};
 
@@ -42,9 +43,6 @@ impl OpenOptions {
     /// Return message useful for human consumption.
     pub fn repair(&self, dir: impl Into<GenericPath>) -> crate::Result<String> {
         let dir = dir.into();
-        let mut message = String::new();
-        message += &format!("Processing IndexedLog: {:?}\n", dir);
-
         let dir = match dir.as_opt_path() {
             Some(dir) => dir,
             None => return Ok(format!("{:?} is not on disk. Nothing to repair.\n", &dir)),
@@ -56,6 +54,8 @@ impl OpenOptions {
             }
 
             let lock = ScopedDirLock::new(dir)?;
+            let mut message = RepairMessage::new(dir);
+            message += &format!("Processing IndexedLog: {:?}\n", dir);
 
             let primary_path = dir.join(PRIMARY_FILE);
             let meta_path = dir.join(META_FILE);
@@ -234,7 +234,7 @@ impl OpenOptions {
                 .rebuild_indexes_with_lock(false, &lock)
                 .context("while trying to update indexes with reapired log")?;
 
-            Ok(message)
+            Ok(message.into_string())
         })();
 
         result.context(|| format!("in log::OpenOptions::repair({:?})", dir))

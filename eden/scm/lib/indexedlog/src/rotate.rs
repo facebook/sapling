@@ -32,6 +32,7 @@ use crate::log::Log;
 use crate::log::{self};
 use crate::repair::OpenOptionsOutput;
 use crate::repair::OpenOptionsRepair;
+use crate::repair::RepairMessage;
 use crate::utils;
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
@@ -260,9 +261,9 @@ impl OpenOptions {
     pub fn repair(&self, dir: impl AsRef<Path>) -> crate::Result<String> {
         let dir = dir.as_ref();
         (|| -> crate::Result<_> {
-            let _lock = ScopedDirLock::new(&dir)?;
+            let _lock = ScopedDirLock::new(dir)?;
 
-            let mut message = String::new();
+            let mut message = RepairMessage::new(dir);
             message += &format!("Processing RotateLog: {:?}\n", dir);
             let read_dir = dir.read_dir().context(dir, "cannot readdir")?;
             let mut ids = Vec::new();
@@ -304,7 +305,7 @@ impl OpenOptions {
                 },
             };
 
-            Ok(message)
+            Ok(message.into_string())
         })()
         .context(|| format!("in rotate::OpenOptions::repair({:?})", dir))
     }
