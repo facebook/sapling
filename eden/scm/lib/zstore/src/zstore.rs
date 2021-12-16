@@ -16,6 +16,7 @@ use std::path::PathBuf;
 
 use indexedlog::log as ilog;
 use indexedlog::DefaultOpenOptions;
+use indexedlog::OpenWithRepair;
 use lazy_static::lazy_static;
 use lru_cache::LruCache;
 use minibytes::Bytes;
@@ -95,7 +96,7 @@ impl OpenOptions {
 
     /// Load or create [`Zstore`] at the given directory.
     pub fn open(&self, dir: &Path) -> crate::Result<Zstore> {
-        let log = Zstore::default_open_options().open(dir)?;
+        let log = Zstore::default_open_options().open_with_repair(dir)?;
         // The cache_size should be greater than len(metalog.keys()))
         Ok(Zstore {
             dir: dir.to_path_buf(),
