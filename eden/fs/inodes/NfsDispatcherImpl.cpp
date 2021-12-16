@@ -289,6 +289,19 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdir(
       });
 }
 
+ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
+    InodeNumber dir,
+    off_t offset,
+    uint32_t count,
+    ObjectFetchContext& context) {
+  return inodeMap_->lookupTreeInode(dir).thenValue(
+      [&context, offset, count](const TreeInodePtr& inode) {
+        auto [dirList, isEof] = inode->nfsReaddir(
+            NfsDirList{count, nfsv3Procs::readdirplus}, offset, context);
+        return ReaddirRes{std::move(dirList), isEof};
+      });
+}
+
 ImmediateFuture<struct statfs> NfsDispatcherImpl::statfs(
     InodeNumber /*dir*/,
     ObjectFetchContext& /*context*/) {

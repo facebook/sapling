@@ -348,6 +348,21 @@ class NfsDispatcher {
       uint32_t count,
       ObjectFetchContext& context) = 0;
 
+  /**
+   * Variant of readdir that reads the content of the directory referenced by
+   * the InodeNumber dir and also reads stat data for each file. As with
+   * readdir, a maximum of count bytes will be added to the returned NfsDirList.
+   *
+   * Readdirplus behaves similarly to readdir for very large directories. See
+   * the comment above for more info.
+   *
+   */
+  virtual ImmediateFuture<ReaddirRes> readdirplus(
+      InodeNumber dir,
+      off_t offset,
+      uint32_t count,
+      ObjectFetchContext& context) = 0;
+
   virtual ImmediateFuture<struct statfs> statfs(
       InodeNumber dir,
       ObjectFetchContext& context) = 0;

@@ -101,6 +101,12 @@ class NfsDispatcherImpl : public NfsDispatcher {
       uint32_t count,
       ObjectFetchContext& context) override;
 
+  ImmediateFuture<NfsDispatcher::ReaddirRes> readdirplus(
+      InodeNumber dir,
+      off_t offset,
+      uint32_t count,
+      ObjectFetchContext& context) override;
+
   ImmediateFuture<struct statfs> statfs(
       InodeNumber ino,
       ObjectFetchContext& context) override;
