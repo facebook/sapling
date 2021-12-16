@@ -301,20 +301,11 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
         auto& dirListRef = dirList.getListRef();
         std::vector<ImmediateFuture<folly::Unit>> futuresVec{};
         for (auto& entry : dirListRef) {
-          if (entry.name == ".") {
+          if (entry.name == "." || entry.name == "..") {
             futuresVec.push_back(
                 this->getattr(InodeNumber{entry.fileid}, context)
-                    .thenValue([&entry](struct stat st) {
-                      entry.name_attributes =
-                          statToPostOpAttr(folly::Try<struct stat>(st));
-                      return folly::unit;
-                    }));
-          } else if (entry.name == "..") {
-            futuresVec.push_back(
-                this->getattr(InodeNumber{entry.fileid}, context)
-                    .thenValue([&entry](struct stat st) {
-                      entry.name_attributes =
-                          statToPostOpAttr(folly::Try<struct stat>(st));
+                    .thenTry([&entry](folly::Try<struct stat> st) {
+                      entry.name_attributes = statToPostOpAttr(st);
                       return folly::unit;
                     }));
           } else {
@@ -323,9 +314,8 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
                     .thenValue([entry, &context](InodePtr&& inodep) {
                       return inodep->stat(context);
                     })
-                    .thenValue([&entry](struct stat st) {
-                      entry.name_attributes =
-                          statToPostOpAttr(folly::Try<struct stat>(st));
+                    .thenTry([&entry](folly::Try<struct stat> st) {
+                      entry.name_attributes = statToPostOpAttr(st);
                       return folly::unit;
                     }));
           }
