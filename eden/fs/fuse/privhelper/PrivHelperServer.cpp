@@ -564,7 +564,8 @@ void PrivHelperServer::nfsMount(
     folly::SocketAddress mountdAddr,
     folly::SocketAddress nfsdAddr,
     bool readOnly,
-    uint32_t iosize) {
+    uint32_t iosize,
+    bool useReaddirplus) {
 #ifdef __APPLE__
   // Hold the attribute list set below.
   auto attrsBuf = folly::IOBufQueue{folly::IOBufQueue::cacheChainLength()};
@@ -575,16 +576,22 @@ void PrivHelperServer::nfsMount(
   // must follow the increasing order of their associated flags.
   uint32_t mattrFlags = 0;
 
-  // Make the client use any source port, disable rdirplus, soft but make the
-  // mount interruptible. While in theory we would want the mount to be soft,
-  // macOS force a maximum timeout of 60s, which in some case is too short for
-  // files to be fetched, thus disable it.
+  // Check if we should enable readdirplus. If so, set readdirplus to 0.
+  uint32_t readdirplus_flag = 0;
+  if (useReaddirplus) {
+    readdirplus_flag = NFS_MFLAG_RDIRPLUS;
+  }
+
+  // Make the client use any source port, enable/disable rdirplus, soft but make
+  // the mount interruptible. While in theory we would want the mount to be
+  // soft, macOS force a maximum timeout of 60s, which in some case is too short
+  // for files to be fetched, thus disable it.
   mattrFlags |= NFS_MATTR_FLAGS;
   nfs_mattr_flags flags{
       NFS_MATTR_BITMAP_LEN,
       NFS_MFLAG_RESVPORT | NFS_MFLAG_RDIRPLUS | NFS_MFLAG_SOFT | NFS_MFLAG_INTR,
       NFS_MATTR_BITMAP_LEN,
-      NFS_MFLAG_INTR};
+      NFS_MFLAG_INTR | readdirplus_flag};
   XdrTrait<nfs_mattr_flags>::serialize(attrSer, flags);
 
   mattrFlags |= NFS_MATTR_NFS_VERSION;
@@ -733,13 +740,17 @@ void PrivHelperServer::nfsMount(
   // Prepare the flags and options to pass to mount(2).
   // Since each mount point will have its own NFS server, we need to manually
   // specify it.
-  // TODO(xavierd): remove nordirplus as this will likely improve performance.
+  folly::StringPiece noReaddirplusStr = ",nordirplus,";
+  if (useReaddirplus) {
+    noReaddirplusStr = ",";
+  }
   auto mountOpts = fmt::format(
       "addr={},vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},"
-      "noresvport,nolock,nordirplus,soft,retrans=0,rsize={},wsize={}",
+      "noresvport,nolock{}soft,retrans=0,rsize={},wsize={}",
       nfsdAddr.getAddressStr(),
       nfsdAddr.getPort(),
       mountdAddr.getPort(),
+      noReaddirplusStr,
       iosize,
       iosize);
 
@@ -847,15 +858,21 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
 UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
   string mountPath;
   folly::SocketAddress mountdAddr, nfsdAddr;
-  bool readOnly;
+  bool readOnly, useReaddirplus;
   uint32_t iosize;
   PrivHelperConn::parseMountNfsRequest(
-      cursor, mountPath, mountdAddr, nfsdAddr, readOnly, iosize);
+      cursor,
+      mountPath,
+      mountdAddr,
+      nfsdAddr,
+      readOnly,
+      iosize,
+      useReaddirplus);
   XLOG(DBG3) << "mount.nfs \"" << mountPath << "\"";
 
   sanityCheckMountPoint(mountPath);
 
-  nfsMount(mountPath, mountdAddr, nfsdAddr, readOnly, iosize);
+  nfsMount(mountPath, mountdAddr, nfsdAddr, readOnly, iosize, useReaddirplus);
   mountPoints_.insert(mountPath);
 
   return makeResponse();

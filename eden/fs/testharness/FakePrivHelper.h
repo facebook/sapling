@@ -59,7 +59,8 @@ class FakePrivHelper : public PrivHelper {
       folly::SocketAddress mountdAddr,
       folly::SocketAddress nfsdAddr,
       bool readOnly,
-      uint32_t iosize) override;
+      uint32_t iosize,
+      bool useReaddirplus) override;
   folly::Future<folly::Unit> fuseUnmount(folly::StringPiece mountPath) override;
   folly::Future<folly::Unit> nfsUnmount(folly::StringPiece mountPath) override;
   folly::Future<folly::Unit> bindMount(

@@ -171,7 +171,8 @@ UnixSocket::Message PrivHelperConn::serializeMountNfsRequest(
     folly::SocketAddress mountdAddr,
     folly::SocketAddress nfsdAddr,
     bool readOnly,
-    uint32_t iosize) {
+    uint32_t iosize,
+    bool useReaddirplus) {
   auto msg = serializeHeader(xid, REQ_MOUNT_NFS);
   Appender appender(&msg.data, kDefaultBufferSize);
 
@@ -180,6 +181,7 @@ UnixSocket::Message PrivHelperConn::serializeMountNfsRequest(
   serializeSocketAddress(appender, nfsdAddr);
   serializeBool(appender, readOnly);
   serializeUint32(appender, iosize);
+  serializeBool(appender, useReaddirplus);
   return msg;
 }
 
@@ -189,12 +191,14 @@ void PrivHelperConn::parseMountNfsRequest(
     folly::SocketAddress& mountdAddr,
     folly::SocketAddress& nfsdAddr,
     bool& readOnly,
-    uint32_t& iosize) {
+    uint32_t& iosize,
+    bool& useReaddirplus) {
   mountPoint = deserializeString(cursor);
   mountdAddr = deserializeSocketAddress(cursor);
   nfsdAddr = deserializeSocketAddress(cursor);
   readOnly = deserializeBool(cursor);
   iosize = deserializeUint32(cursor);
+  useReaddirplus = deserializeBool(cursor);
   checkAtEnd(cursor, "mount nfs request");
 }
 

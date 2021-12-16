@@ -1697,6 +1697,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
 #else
         if (shouldUseNFSMount_) {
           auto iosize = edenConfig->nfsIoSize.getValue();
+          auto useReaddirplus = edenConfig->useReaddirplus.getValue();
 
           // Make sure that we are running on the EventBase while registering
           // the mount point.
@@ -1705,6 +1706,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
               [this,
                readOnly,
                iosize,
+               useReaddirplus,
                mountPromise = std::move(mountPromise),
                mountPath = std::move(mountPath)](
                   NfsServer::NfsMountInfo mountInfo) mutable {
@@ -1716,7 +1718,8 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                         mountdAddr,
                         channel->getAddr(),
                         readOnly,
-                        iosize)
+                        iosize,
+                        useReaddirplus)
                     .thenTry([this,
                               mountPromise = std::move(mountPromise),
                               channel = std::move(channel)](
