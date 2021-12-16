@@ -13,6 +13,7 @@ use indexedlog::log::IndexOutput;
 use indexedlog::log::Log;
 use indexedlog::log::{self};
 use indexedlog::DefaultOpenOptions;
+use indexedlog::OpenWithRepair;
 use thiserror::Error;
 use types::errors::KeyError;
 use types::node::Node;
@@ -49,7 +50,7 @@ impl DefaultOpenOptions<log::OpenOptions> for NodeMap {
 impl NodeMap {
     pub fn open(dir: impl AsRef<Path>) -> Result<Self> {
         Ok(NodeMap {
-            log: Self::default_open_options().open(dir.as_ref())?,
+            log: Self::default_open_options().open_with_repair(dir.as_ref())?,
         })
     }
 
