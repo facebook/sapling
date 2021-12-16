@@ -286,65 +286,98 @@ async fn link(fb: FacebookInit) -> Result<(), Error> {
 
 #[fbinit::test]
 async fn generations(fb: FacebookInit) -> Result<(), Error> {
-    test_chunking_methods(
-        fb,
-        DEFAULT_PUT_BEHAVIOUR,
-        |ctx, bs, test_source| async move {
-            borrowed!(ctx);
-            // Generate unique keys.
-            let suffix: String = thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(10)
-                .map(char::from)
-                .collect();
-            let key1 = format!("manifoldblob_test_{}", suffix);
-            let suffix: String = thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(10)
-                .map(char::from)
-                .collect();
-            let key2 = format!("manifoldblob_test_{}", suffix);
+    for auto_inline_puts in [true, false] {
+        // Generate unique keys.
+        let suffix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+        let key1 = format!("manifoldblob_test_{}", suffix);
+        let suffix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .map(char::from)
+            .collect();
+        let key2 = format!("manifoldblob_test_{}", suffix);
 
+        let blobstore_bytes_inline = {
+            let mut bytes_in = [0u8; MAX_INLINE_LEN as usize];
+            thread_rng().fill_bytes(&mut bytes_in);
+            BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in))
+        };
+
+        let blobstore_bytes = {
             let mut bytes_in = [0u8; 1024];
             thread_rng().fill_bytes(&mut bytes_in);
+            BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in))
+        };
 
-            let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
+        for blobstore_bytes in [blobstore_bytes_inline, blobstore_bytes] {
+            let (test_source, config_store) = get_test_config_store();
+            let bs = Sqlblob::with_sqlite_in_memory(
+                DEFAULT_PUT_BEHAVIOUR,
+                &config_store,
+                auto_inline_puts,
+            )?;
+            let ctx = CoreContext::test_mock(fb);
+            borrowed!(ctx);
 
             // Write a fresh blob
-            bs.put(ctx, key1.clone(), blobstore_bytes.clone()).await?;
+            bs.put_with_status(ctx, key1.clone(), blobstore_bytes.clone())
+                .await?;
 
-            // Inspect, and determine that the generation number is present
             let generations = bs.get_chunk_generations(&key1).await?;
-            assert_eq!(generations, vec![Some(2)], "Generation set to 2");
+
+            let value_len: u64 = blobstore_bytes.len().try_into()?;
+            if !auto_inline_puts || value_len > MAX_INLINE_LEN {
+                // Inspect, and determine that the generation number is present
+                assert_eq!(
+                    generations,
+                    vec![Some(2)],
+                    "Generation set to 2 {} {}",
+                    auto_inline_puts,
+                    value_len
+                );
+            } else {
+                assert_eq!(generations, vec![], "No generations expected");
+            }
 
             set_test_generations(test_source.as_ref(), 4, 3, 0, INITIAL_VERSION + 1);
+
             tokio::time::sleep(UPDATE_WAIT_TIME).await;
 
             // Set the generation and confirm
             bs.set_generation(&key1).await?;
             let generations = bs.get_chunk_generations(&key1).await?;
-            assert_eq!(generations, vec![Some(3)], "Generation set to 3");
+            if !auto_inline_puts || value_len > MAX_INLINE_LEN {
+                assert_eq!(generations, vec![Some(3)], "Generation set to 3");
+            } else {
+                assert_eq!(generations, vec![], "No generations expected");
+            }
 
-            // Update via another key, confirm both have put generation
-            set_test_generations(test_source.as_ref(), 5, 4, 2, INITIAL_VERSION + 2);
-            tokio::time::sleep(UPDATE_WAIT_TIME).await;
-            bs.put(ctx, key2.clone(), blobstore_bytes.clone()).await?;
-            let generations = bs.get_chunk_generations(&key1).await?;
-            assert_eq!(generations, vec![Some(5)], "key1 generation not updated");
-            let generations = bs.get_chunk_generations(&key2).await?;
-            assert_eq!(generations, vec![Some(5)], "key2 generation not updated");
+            // don't need to run these with variety of key lengths
+            if value_len > MAX_INLINE_LEN {
+                // Update via another key, confirm both have put generation
+                set_test_generations(test_source.as_ref(), 5, 4, 2, INITIAL_VERSION + 2);
+                tokio::time::sleep(UPDATE_WAIT_TIME).await;
+                bs.put(ctx, key2.clone(), blobstore_bytes.clone()).await?;
+                let generations = bs.get_chunk_generations(&key1).await?;
+                assert_eq!(generations, vec![Some(5)], "key1 generation not updated");
+                let generations = bs.get_chunk_generations(&key2).await?;
+                assert_eq!(generations, vec![Some(5)], "key2 generation not updated");
 
-            // Now update via the route GC uses, confirm it updates nicely and doesn't leap to
-            // the wrong version.
-            set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 3);
-            tokio::time::sleep(UPDATE_WAIT_TIME).await;
-            bs.set_generation(&key1).await?;
-            let generations = bs.get_chunk_generations(&key1).await?;
-            assert_eq!(generations, vec![Some(10)], "key1 generation not updated");
-            let generations = bs.get_chunk_generations(&key2).await?;
-            assert_eq!(generations, vec![Some(10)], "key2 generation not updated");
-            Ok(())
-        },
-    )
-    .await
+                // Now update via the route GC uses, confirm it updates nicely and doesn't leap to
+                // the wrong version.
+                set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 3);
+                tokio::time::sleep(UPDATE_WAIT_TIME).await;
+                bs.set_generation(&key1).await?;
+                let generations = bs.get_chunk_generations(&key1).await?;
+                assert_eq!(generations, vec![Some(10)], "key1 generation not updated");
+                let generations = bs.get_chunk_generations(&key2).await?;
+                assert_eq!(generations, vec![Some(10)], "key2 generation not updated");
+            }
+        }
+    }
+    Ok(())
 }
