@@ -17,6 +17,7 @@ use indexedlog::log::{self};
 use indexedlog::rotate::RotateLog;
 use indexedlog::rotate::RotateLogLookupIter;
 use indexedlog::rotate::{self};
+use indexedlog::OpenWithRepair;
 use indexedlog::Result as IndexedlogResult;
 use minibytes::Bytes;
 use tracing::debug;
@@ -170,7 +171,8 @@ impl StoreOpenOptions {
     /// data consistency.
     pub fn local(self, path: impl AsRef<Path>) -> Result<Store> {
         Ok(Store::Local(
-            self.into_local_open_options().open(path.as_ref())?,
+            self.into_local_open_options()
+                .open_with_repair(path.as_ref())?,
         ))
     }
 
@@ -200,7 +202,7 @@ impl StoreOpenOptions {
     /// and `max_bytes_per_log`.
     pub fn shared(self, path: impl AsRef<Path>) -> Result<Store> {
         let opts = self.into_shared_open_options();
-        let mut rotate_log = opts.open(path.as_ref())?;
+        let mut rotate_log = opts.open_with_repair(path.as_ref())?;
         // Attempt to clean up old logs that might be left around. On Windows, other
         // Mercurial processes that have the store opened might prevent their removal.
         let res = rotate_log.remove_old_logs();
