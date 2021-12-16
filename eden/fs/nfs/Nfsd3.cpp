@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/nfs/rpc/Server.h"
 #ifndef _WIN32
-
 #include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/nfs/rpc/Server.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 
 #ifndef __APPLE__
