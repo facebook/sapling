@@ -399,21 +399,8 @@ impl Sqlblob {
             bail!("key does not exist");
         }
     }
-}
 
-impl fmt::Debug for Sqlblob {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Sqlblob").finish()
-    }
-}
-
-#[async_trait]
-impl Blobstore for Sqlblob {
-    async fn get<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-        key: &'a str,
-    ) -> Result<Option<BlobstoreGetData>> {
+    async fn get_impl<'a>(&'a self, key: &'a str) -> Result<Option<BlobstoreGetData>> {
         let chunked = self.data_store.get(&key).await?;
         if let Some(chunked) = chunked {
             let blob = match chunked.chunking_method {
@@ -448,6 +435,23 @@ impl Blobstore for Sqlblob {
         } else {
             Ok(None)
         }
+    }
+}
+
+impl fmt::Debug for Sqlblob {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Sqlblob").finish()
+    }
+}
+
+#[async_trait]
+impl Blobstore for Sqlblob {
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        self.get_impl(key).await
     }
 
     async fn is_present<'a>(
