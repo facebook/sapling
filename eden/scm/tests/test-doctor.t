@@ -1,4 +1,5 @@
 #chg-compatible
+#require false
 
   $ configure modern
   $ setconfig format.use-symlink-atomic-write=1

@@ -16,6 +16,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::log as ilog;
+use indexedlog::OpenWithRepair;
 use indexedlog::Repair;
 use lazy_static::lazy_static;
 use minibytes::Bytes;
@@ -99,7 +100,7 @@ impl MetaLog {
     pub fn open(path: impl AsRef<Path>, root_id: Option<Id20>) -> Result<MetaLog> {
         let path = path.as_ref();
         let (store_path, compaction_epoch) = resolve_compaction_epoch(path)?;
-        let log = Self::ilog_open_options().open(store_path.join("roots"))?;
+        let log = Self::ilog_open_options().open_with_repair(store_path.join("roots"))?;
         let orig_root_id = match root_id {
             Some(id) => id,
             None => find_last_root_id(&log)?,
@@ -194,7 +195,7 @@ impl MetaLog {
     /// The oldest `root_id` is returned as the first item.
     pub fn list_roots(path: impl AsRef<Path>) -> Result<Vec<Id20>> {
         let (store_path, _) = resolve_compaction_epoch(path.as_ref())?;
-        let log = Self::ilog_open_options().open(store_path.join("roots"))?;
+        let log = Self::ilog_open_options().open_with_repair(store_path.join("roots"))?;
         let result = std::iter::once(EMPTY_ROOT_ID.clone())
             .chain(
                 log.iter()
@@ -430,7 +431,7 @@ impl Repair<()> for MetaLog {
             .map_err(|e| indexedlog::Error::from(("cannot create backup", e)))?;
 
             Self::ilog_open_options().delete_content(&roots_path)?;
-            let mut root_id_log = Self::ilog_open_options().open(&roots_path)?;
+            let mut root_id_log = Self::ilog_open_options().open_with_repair(&roots_path)?;
             for root_id in &good_root_ids {
                 root_id_log.append(root_id.as_ref())?;
             }
