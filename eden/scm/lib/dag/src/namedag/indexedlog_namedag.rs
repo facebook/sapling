@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 use indexedlog::multi;
 use indexedlog::DefaultOpenOptions;
+use indexedlog::OpenWithRepair;
 
 use super::AbstractNameDag;
 use super::NameDagBuilder;
@@ -48,7 +49,7 @@ impl Open for IndexedLogNameDagPath {
         let path = &self.0;
         let opts = NameDag::default_open_options();
         tracing::debug!(target: "dag::open",  "open at {:?}", path.display());
-        let mut mlog = opts.open(path)?;
+        let mut mlog = opts.open_with_repair(path)?;
         let mut logs = mlog.detach_logs();
         let dag_log = logs.pop().unwrap();
         let map_log = logs.pop().unwrap();
