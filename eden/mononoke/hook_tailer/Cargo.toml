@@ -50,5 +50,4 @@ quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb
 ring = { git = "https://github.com/fanzeyi/ring", branch = "main" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
 shellexpand = { git = "https://github.com/fanzeyi/shellexpand.git", rev = "179447a3f8fccd765acfd2eed15a54c716c49cfe" }
-slog-syslog = { git = "https://github.com/slog-rs/syslog", rev = "c783ed8221a8f781b088e11dbf1a31ce40392cb1" }
 toml = { git = "https://github.com/fbsource/toml", branch = "dotted-table-0.5.8" }
