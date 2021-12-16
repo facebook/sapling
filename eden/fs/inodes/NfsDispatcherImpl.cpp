@@ -15,7 +15,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/nfs/NfsUtils.h"
 
 namespace facebook::eden {
 
@@ -295,10 +295,47 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdirplus(
     uint32_t count,
     ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
-      [&context, offset, count](const TreeInodePtr& inode) {
+      [&context, offset, count, this](const TreeInodePtr& inode) {
         auto [dirList, isEof] = inode->nfsReaddir(
             NfsDirList{count, nfsv3Procs::readdirplus}, offset, context);
-        return ReaddirRes{std::move(dirList), isEof};
+        auto& dirListRef = dirList.getListRef();
+        std::vector<ImmediateFuture<folly::Unit>> futuresVec{};
+        for (auto& entry : dirListRef) {
+          if (entry.name == ".") {
+            futuresVec.push_back(
+                this->getattr(InodeNumber{entry.fileid}, context)
+                    .thenValue([&entry](struct stat st) {
+                      entry.name_attributes =
+                          statToPostOpAttr(folly::Try<struct stat>(st));
+                      return folly::unit;
+                    }));
+          } else if (entry.name == "..") {
+            futuresVec.push_back(
+                this->getattr(InodeNumber{entry.fileid}, context)
+                    .thenValue([&entry](struct stat st) {
+                      entry.name_attributes =
+                          statToPostOpAttr(folly::Try<struct stat>(st));
+                      return folly::unit;
+                    }));
+          } else {
+            futuresVec.push_back(
+                inode->getOrLoadChild(PathComponent{entry.name}, context)
+                    .thenValue([entry, &context](InodePtr&& inodep) {
+                      return inodep->stat(context);
+                    })
+                    .thenValue([&entry](struct stat st) {
+                      entry.name_attributes =
+                          statToPostOpAttr(folly::Try<struct stat>(st));
+                      return folly::unit;
+                    }));
+          }
+        }
+        auto res = collectAllSafe(std::move(futuresVec));
+        return std::move(res).thenValue(
+            [dirList = std::move(dirList),
+             isEof = isEof](std::vector<folly::Unit>&&) mutable {
+              return ReaddirRes{std::move(dirList), isEof};
+            });
       });
 }
 
