@@ -59,7 +59,6 @@ prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runti
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 quickcheck = { git = "https://github.com/jakoschiko/quickcheck", rev = "6ecdf5bb4b0132ce66670b4d46453aa022ea892c" }
-ring = { git = "https://github.com/fanzeyi/ring", branch = "main" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
 shellexpand = { git = "https://github.com/fanzeyi/shellexpand.git", rev = "179447a3f8fccd765acfd2eed15a54c716c49cfe" }
 toml = { git = "https://github.com/fbsource/toml", branch = "dotted-table-0.5.8" }
