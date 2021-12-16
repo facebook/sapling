@@ -1274,7 +1274,8 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdir(
                           /*cookieverf*/ getReaddirCookieverf(),
                           /*reply*/
                           dirlist3{
-                              /*entries*/ readdirRes.entries.extractList(),
+                              /*entries*/ readdirRes.entries
+                                  .extractList<entry3>(),
                               /*eof*/ readdirRes.isEof,
                           }}}}};
                 XdrTrait<READDIR3res>::serialize(ser, res);

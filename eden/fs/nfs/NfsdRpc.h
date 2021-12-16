@@ -759,6 +759,16 @@ struct entryplus3 {
   uint64_t cookie;
   post_op_attr name_attributes;
   post_op_fh3 name_handle;
+  /* We don't use the default constructor directly, but it satisfies
+   * the macro requirements
+   */
+  entryplus3() = default;
+  entryplus3(uint64_t fileid, std::string name, uint64_t cookie)
+      : fileid(fileid),
+        name(std::move(name)),
+        cookie(cookie),
+        name_attributes(post_op_attr{}),
+        name_handle({nfs_fh3{InodeNumber(fileid)}}) {}
 };
 EDEN_XDR_SERDE_DECL(
     entryplus3,

@@ -20,7 +20,7 @@ namespace facebook::eden {
  */
 class NfsDirList {
  public:
-  explicit NfsDirList(uint32_t count);
+  explicit NfsDirList(uint32_t count, nfsv3Procs listType);
 
   NfsDirList(NfsDirList&&) = default;
   NfsDirList& operator=(NfsDirList&&) = default;
@@ -38,13 +38,14 @@ class NfsDirList {
   /**
    * Move the built list out of the NfsDirList.
    */
-  XdrList<entry3> extractList() {
-    return std::move(list_);
+  template <typename T>
+  XdrList<T> extractList() {
+    return std::get<XdrList<T>>(std::move(list_));
   }
 
  private:
   uint32_t remaining_;
-  XdrList<entry3> list_{};
+  std::variant<XdrList<entry3>, XdrList<entryplus3>> list_{};
 };
 
 } // namespace facebook::eden

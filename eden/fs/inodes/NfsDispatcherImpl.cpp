@@ -15,6 +15,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/nfs/NfsdRpc.h"
 
 namespace facebook::eden {
 
@@ -282,8 +283,8 @@ ImmediateFuture<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdir(
     ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(dir).thenValue(
       [&context, offset, count](const TreeInodePtr& inode) {
-        auto [dirList, isEof] =
-            inode->nfsReaddir(NfsDirList{count}, offset, context);
+        auto [dirList, isEof] = inode->nfsReaddir(
+            NfsDirList{count, nfsv3Procs::readdir}, offset, context);
         return ReaddirRes{std::move(dirList), isEof};
       });
 }
