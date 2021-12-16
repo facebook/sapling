@@ -11,18 +11,19 @@ use anyhow::{bail, Context, Error};
 use bytesize::ByteSize;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 use futures::future::FutureExt;
-use futures::stream::{self, Stream, StreamExt, TryStreamExt};
+use futures::stream::{self, StreamExt, TryStreamExt};
 use source_control::types as thrift;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 
 use crate::args::commit_id::{add_commit_id_args, get_commit_id, resolve_commit_id};
 use crate::args::path::{add_path_args, get_path};
 use crate::args::repo::{add_repo_args, get_repo_specifier};
 use crate::connection::Connection;
+use crate::lib::path_tree::{PathItem, PathTree};
 use crate::lib::progress::{add_progress_args, progress_renderer, ProgressOutput};
 use crate::render::{Render, RenderStream};
 
@@ -31,6 +32,7 @@ pub(super) const NAME: &str = "export";
 const ARG_OUTPUT: &str = "OUTPUT";
 const ARG_VERBOSE: &str = "VERBOSE";
 const ARG_MAKE_PARENT_DIRS: &str = "MAKE_PARENT_DIRS";
+const ARG_PATH_LIST_FILE: &str = "PATH_LIST_FILE";
 
 /// Chunk size for requests.
 const TREE_CHUNK_SIZE: i64 = source_control::TREE_LIST_MAX_LIMIT;
@@ -68,6 +70,12 @@ pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
             .long("make-parent-dirs")
             .help("Create parent directories of the destination if they do not exist"),
     );
+    let cmd = cmd.arg(
+        Arg::with_name(ARG_PATH_LIST_FILE)
+            .long("path-list-file")
+            .takes_value(true)
+            .help("Filename of a file containing a list of paths (relative to PATH) to export"),
+    );
     cmd
 }
 
@@ -80,30 +88,61 @@ fn join_path(path: &str, elem: &str) -> String {
     path
 }
 
-fn export_tree_chunk(
-    path: String,
-    destination: PathBuf,
-    response: thrift::TreeListResponse,
-) -> impl Stream<Item = Result<ExportItem, Error>> {
-    stream::iter(response.entries).map(move |entry| {
-        match entry.info {
-            thrift::EntryInfo::tree(info) => Ok(ExportItem::Tree {
-                path: join_path(&path, &entry.name),
-                id: info.id,
-                destination: destination.join(&entry.name),
-            }),
-            thrift::EntryInfo::file(info) => Ok(ExportItem::File {
-                path: join_path(&path, &entry.name),
-                id: info.id,
-                destination: destination.join(&entry.name),
-                size: info.file_size as u64,
-                type_: entry.r#type,
-            }),
-            _ => {
-                bail!("malformed response format for '{}'", entry.name);
-            }
+fn export_tree_entry(
+    path: &str,
+    destination: &Path,
+    entry: thrift::TreeEntry,
+) -> Result<ExportItem, Error> {
+    match entry.info {
+        thrift::EntryInfo::tree(info) => Ok(ExportItem::Tree {
+            path: join_path(path, &entry.name),
+            id: info.id,
+            destination: destination.join(&entry.name),
+            filter: None,
+        }),
+        thrift::EntryInfo::file(info) => Ok(ExportItem::File {
+            path: join_path(path, &entry.name),
+            id: info.id,
+            destination: destination.join(&entry.name),
+            size: info.file_size as u64,
+            type_: entry.r#type,
+        }),
+        _ => {
+            bail!("malformed response format for '{}'", entry.name);
         }
-    })
+    }
+}
+
+fn export_filtered_tree_entry(
+    path: &str,
+    destination: &Path,
+    entry: thrift::TreeEntry,
+    filter: &mut PathTree,
+) -> Result<Option<ExportItem>, Error> {
+    match (filter.remove(&entry.name), entry.info) {
+        (None, _) => Ok(None),
+        (Some(item), thrift::EntryInfo::tree(info)) => {
+            let subfilter = match item {
+                PathItem::Target | PathItem::TargetDir => None,
+                PathItem::Dir(tree) => Some(tree),
+            };
+            Ok(Some(ExportItem::Tree {
+                path: join_path(path, &entry.name),
+                id: info.id,
+                destination: destination.join(&entry.name),
+                filter: subfilter,
+            }))
+        }
+        (Some(PathItem::Dir(_) | PathItem::TargetDir), thrift::EntryInfo::file(_)) => Ok(None),
+        (Some(PathItem::Target), thrift::EntryInfo::file(info)) => Ok(Some(ExportItem::File {
+            path: join_path(path, &entry.name),
+            id: info.id,
+            destination: destination.join(&entry.name),
+            size: info.file_size as u64,
+            type_: entry.r#type,
+        })),
+        _ => bail!("malformed response format for '{}'", entry.name),
+    }
 }
 
 async fn export_tree(
@@ -112,6 +151,7 @@ async fn export_tree(
     path: String,
     id: Vec<u8>,
     destination: PathBuf,
+    filter: Option<PathTree>,
 ) -> Result<Vec<ExportItem>, Error> {
     tokio::fs::create_dir(&destination).await?;
     let tree = thrift::TreeSpecifier::by_id(thrift::TreeIdSpecifier {
@@ -126,32 +166,44 @@ async fn export_tree(
     };
     let response = connection.tree_list(&tree, &params).await?;
     let count = response.count;
-    let output: Vec<ExportItem> = export_tree_chunk(path.clone(), destination.clone(), response)
-        .chain(
-            stream::iter((TREE_CHUNK_SIZE..count).step_by(TREE_CHUNK_SIZE as usize))
-                .map({
-                    move |offset| {
-                        // Request subsequent chunks of the directory listing.
-                        let path = path.clone();
-                        let destination = destination.clone();
-                        let connection = connection.clone();
-                        let tree = tree.clone();
-                        async move {
-                            let params = thrift::TreeListParams {
-                                offset,
-                                limit: TREE_CHUNK_SIZE,
-                                ..Default::default()
-                            };
-                            let response = connection.tree_list(&tree, &params).await?;
-                            Ok::<_, Error>(export_tree_chunk(path, destination, response))
-                        }
+    let other_tree_chunks =
+        stream::iter((TREE_CHUNK_SIZE..count).step_by(TREE_CHUNK_SIZE as usize))
+            .map({
+                |offset| {
+                    // Request subsequent chunks of the directory listing.
+                    let connection = connection.clone();
+                    let tree = tree.clone();
+                    async move {
+                        let params = thrift::TreeListParams {
+                            offset,
+                            limit: TREE_CHUNK_SIZE,
+                            ..Default::default()
+                        };
+                        Ok::<_, Error>(connection.tree_list(&tree, &params).await?.entries)
                     }
-                })
-                .buffered(CONCURRENT_TREE_FETCHES)
-                .try_flatten(),
-        )
-        .try_collect()
-        .await?;
+                }
+            })
+            .buffered(CONCURRENT_TREE_FETCHES)
+            .try_collect::<Vec<_>>()
+            .await?;
+
+    let output = if let Some(mut filter) = filter {
+        Some(response.entries)
+            .into_iter()
+            .chain(other_tree_chunks)
+            .flatten()
+            .filter_map(|entry| {
+                export_filtered_tree_entry(&path, &destination, entry, &mut filter).transpose()
+            })
+            .collect::<Result<_, _>>()?
+    } else {
+        Some(response.entries)
+            .into_iter()
+            .chain(other_tree_chunks)
+            .flatten()
+            .map(|entry| export_tree_entry(&path, &destination, entry))
+            .collect::<Result<_, _>>()?
+    };
     Ok(output)
 }
 
@@ -239,8 +291,9 @@ async fn export_item(
             path,
             id,
             destination,
+            filter,
         } => {
-            let items = export_tree(connection, repo, path, id, destination).await?;
+            let items = export_tree(connection, repo, path, id, destination, filter).await?;
             Ok((None, items))
         }
         ExportItem::File {
@@ -271,6 +324,7 @@ enum ExportItem {
         path: String,
         id: Vec<u8>,
         destination: PathBuf,
+        filter: Option<PathTree>,
     },
     File {
         path: String,
@@ -306,10 +360,28 @@ pub(super) async fn run(
             destination.to_string_lossy()
         );
     }
+    let path_tree = match matches.value_of_os(ARG_PATH_LIST_FILE) {
+        Some(path_list_file) => {
+            let file = tokio::fs::File::open(path_list_file)
+                .await
+                .context("failed to open path list file")?;
+            let lines = tokio::io::BufReader::new(file).lines();
+            let stream = tokio_stream::wrappers::LinesStream::new(lines);
+            let path_tree = stream
+                .try_collect::<PathTree>()
+                .await
+                .context("failed to load path list file")?;
+            Some(path_tree)
+        }
+        None => None,
+    };
+
     if matches.is_present(ARG_MAKE_PARENT_DIRS) {
         if let Some(parent) = destination.parent() {
             if !parent.exists() {
-                std::fs::create_dir_all(parent).context("failed to create parent directories")?;
+                tokio::fs::create_dir_all(parent)
+                    .await
+                    .context("failed to create parent directories")?;
             }
         }
     }
@@ -351,11 +423,17 @@ pub(super) async fn run(
                 path,
                 id: info.id,
                 destination,
+                filter: path_tree,
             }
         }
         (Some(type_), Some(thrift::EntryInfo::file(info))) => {
             file_count = 1;
             total_size = info.file_size as u64;
+            if path_tree.is_some() {
+                // A list of paths to filter has been provided, but the target
+                // is a file, so none of the paths can possible match.
+                return Ok(stream::empty().boxed());
+            }
             ExportItem::File {
                 path,
                 id: info.id,
