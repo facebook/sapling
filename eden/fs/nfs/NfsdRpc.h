@@ -712,6 +712,9 @@ struct entry3 {
   uint64_t fileid;
   std::string name;
   uint64_t cookie;
+  entry3() = default;
+  entry3(InodeNumber fileid, std::string name, uint64_t cookie)
+      : fileid(fileid.get()), name(std::move(name)), cookie(cookie) {}
 };
 EDEN_XDR_SERDE_DECL(entry3, fileid, name, cookie);
 
@@ -763,12 +766,12 @@ struct entryplus3 {
    * the macro requirements
    */
   entryplus3() = default;
-  entryplus3(uint64_t fileid, std::string name, uint64_t cookie)
-      : fileid(fileid),
+  entryplus3(InodeNumber fileid, std::string name, uint64_t cookie)
+      : fileid(fileid.get()),
         name(std::move(name)),
         cookie(cookie),
         name_attributes(post_op_attr{}),
-        name_handle({nfs_fh3{InodeNumber(fileid)}}) {}
+        name_handle({nfs_fh3{fileid}}) {}
 };
 EDEN_XDR_SERDE_DECL(
     entryplus3,

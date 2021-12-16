@@ -68,7 +68,7 @@ bool NfsDirList::add(
     // because we don't have access to stat data in this layer. In a
     // separate layer, we will fill in the post_op_attr with the
     // appropriate stat data. For entry3s, we don't need this extra data.
-    EntryT entry = EntryT{ino.get(), name.str(), offset};
+    EntryT entry = EntryT{ino, name.str(), offset};
 
     // The serialized size includes a boolean indicating that this is not
     // the end of the list.
