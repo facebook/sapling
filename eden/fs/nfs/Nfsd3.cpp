@@ -1286,11 +1286,59 @@ ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdir(
 }
 
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::readdirplus(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     NfsRequestContext& context) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, context.getXid());
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, context.getXid());
+  auto args = XdrTrait<READDIRPLUS3args>::deserialize(deser);
+
+  if (!isReaddirCookieverfValid(args.cookieverf)) {
+    READDIRPLUS3res res{
+        {{nfsstat3::NFS3ERR_BAD_COOKIE, READDIRPLUS3resfail{}}}};
+    XdrTrait<READDIRPLUS3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  // TODO(T107744453): Should probably acount for args.maxcount somewhere
+  return dispatcher_
+      ->readdirplus(args.dir.ino, args.cookie, args.dircount, context)
+      .thenTry([this, ino = args.dir.ino, ser = std::move(ser), &context](
+                   folly::Try<NfsDispatcher::ReaddirRes> try_) mutable {
+        return dispatcher_->getattr(ino, context)
+            .thenTry([ser = std::move(ser), try_ = std::move(try_)](
+                         const folly::Try<struct stat>& tryStat) mutable {
+              if (try_.hasException()) {
+                READDIRPLUS3res res{
+                    {{exceptionToNfsError(try_.exception()),
+                      READDIRPLUS3resfail{statToPostOpAttr(tryStat)}}}};
+                XdrTrait<READDIRPLUS3res>::serialize(ser, res);
+              } else {
+                auto& readdirRes = try_.value();
+                /* TODO @cuev: This is prob where we'd use args.maxcount:
+                 *
+                 * From rfc 1813 section 3.3.17:
+                 *
+                 * maxcount
+                 *    The maximum size of the READDIRPLUS3resok structure, in
+                 *    bytes. The size must include all XDR overhead. The server
+                 *    is free to return fewer than maxcount bytes of data.
+                 */
+                READDIRPLUS3res res{
+                    {{nfsstat3::NFS3_OK,
+                      READDIRPLUS3resok{
+                          /*dir_attributes*/ statToPostOpAttr(tryStat),
+                          /*cookieverf*/ getReaddirCookieverf(),
+                          /*reply*/
+                          dirlistplus3{
+                              /*entries*/ readdirRes.entries
+                                  .extractList<entryplus3>(),
+                              /*eof*/ readdirRes.isEof,
+                          }}}}};
+                XdrTrait<READDIRPLUS3res>::serialize(ser, res);
+              }
+              return folly::unit;
+            });
+      });
 }
 
 ImmediateFuture<folly::Unit> Nfsd3ServerProcessor::fsstat(
