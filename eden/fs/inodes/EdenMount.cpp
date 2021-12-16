@@ -625,7 +625,8 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
     FOLLY_MAYBE_UNUSED CheckoutMode checkoutMode,
     FOLLY_MAYBE_UNUSED ObjectFetchContext& context) {
   if (objectType == facebook::eden::ObjectType::SYMLINK) {
-    throw std::runtime_error("setPathObjectId does not support symlink type");
+    XLOG(DBG3) << "setPathObjectId called with symlink for object with id "
+               << rootId << " at path" << path;
   }
 
   const folly::stop_watch<> stopWatch;
@@ -638,7 +639,7 @@ folly::Future<SetPathObjectIdResultAndTimes> EdenMount::setPathObjectId(
    */
   auto oldParent = parentCommit_.rlock();
   setPathObjectIdTime->didAcquireParentsLock = stopWatch.elapsed();
-  XLOG(DBG3) << "adding " << rootId << " to Eedn mount " << this->getPath()
+  XLOG(DBG3) << "adding " << rootId << " to Eden mount " << this->getPath()
              << " at path" << path << " on top of " << *oldParent;
 
   auto ctx = std::make_shared<CheckoutContext>(
