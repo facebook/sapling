@@ -469,6 +469,13 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::seconds{10},
       this};
 
+  /**
+   * When set to true, we will use readdirplus instead of readdir. Readdirplus
+   * will be enabled for all nfs mounts. If set to false, regular readdir is
+   * used instead.
+   */
+  ConfigSetting<bool> useReaddirplus{"nfs:use-readdirplus", false, this};
+
   // [prjfs]
 
   /**
