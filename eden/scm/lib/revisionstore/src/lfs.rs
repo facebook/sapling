@@ -43,6 +43,7 @@ use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use hg_http::http_client;
+use hg_http::http_config;
 use http::header::HeaderMap;
 use http::status::StatusCode;
 use http_client::Encoding;
@@ -1608,7 +1609,7 @@ impl LfsRemote {
                 .map(|s| NonZeroU64::new(s).context("download chunk size cannot be 0"))
                 .transpose()?;
 
-            let client = http_client("lfs", Default::default());
+            let client = http_client("lfs", http_config(config));
 
             Ok(Self {
                 shared,

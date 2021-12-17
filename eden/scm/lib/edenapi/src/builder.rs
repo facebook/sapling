@@ -137,7 +137,6 @@ pub struct HttpClientBuilder {
     http_version: Option<HttpVersion>,
     validate_certs: bool,
     log_dir: Option<PathBuf>,
-    convert_cert: bool,
     encoding: Option<Encoding>,
     min_transfer_speed: Option<MinTransferSpeed>,
     max_retry_per_request: usize,
@@ -189,11 +188,6 @@ impl HttpClientBuilder {
             })?
             .map(|auth| (auth.cert, auth.key, auth.cacerts))
             .unwrap_or_default();
-        // Normally, this setting would be set globally for Mercurial elsewhere. However, when this
-        // crate is used outside of Mercurial (such as in EdenFS), global Mercurial HTTP client
-        // config options will not be applied. Since this particular option is essential for EdenAPI
-        // to work correctly, we explicitly [re]set it here.
-        let convert_cert = get_config(config, "http", "convert-cert")?.unwrap_or(cfg!(windows));
 
         let mut headers = get_config::<String>(config, "edenapi", "headers")?
             .map(parse_headers)
@@ -241,6 +235,10 @@ impl HttpClientBuilder {
         let max_retry_per_request =
             get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(10);
 
+        let mut http_config = hg_http::http_config(config);
+        http_config.verbose_stats |= debug;
+        http_config.max_concurrent_requests = max_requests;
+
         Ok(HttpClientBuilder {
             repo_name,
             server_url: Some(server_url),
@@ -259,16 +257,10 @@ impl HttpClientBuilder {
             http_version,
             validate_certs,
             log_dir,
-            convert_cert,
             encoding,
             min_transfer_speed,
             max_retry_per_request,
-
-            http_config: http_client::Config {
-                verbose_stats: debug,
-                max_concurrent_requests: max_requests,
-                ..Default::default()
-            },
+            http_config,
         })
     }
 
@@ -403,7 +395,7 @@ impl HttpClientBuilder {
     /// prior to use. This is required on platforms that do not natively support
     /// PEM certificates, such as Windows.
     pub fn convert_cert(mut self, enable: bool) -> Self {
-        self.convert_cert = enable;
+        self.http_config.convert_cert = enable;
         self
     }
 }
@@ -450,7 +442,6 @@ pub(crate) struct Config {
     pub(crate) http_version: Option<HttpVersion>,
     pub(crate) validate_certs: bool,
     pub(crate) log_dir: Option<PathBuf>,
-    pub(crate) convert_cert: bool,
     pub(crate) encoding: Option<Encoding>,
     pub(crate) min_transfer_speed: Option<MinTransferSpeed>,
     pub(crate) max_retry_per_request: usize,
@@ -479,7 +470,6 @@ impl TryFrom<HttpClientBuilder> for Config {
             http_version,
             validate_certs,
             log_dir,
-            convert_cert,
             encoding,
             min_transfer_speed,
             max_retry_per_request,
@@ -520,7 +510,6 @@ impl TryFrom<HttpClientBuilder> for Config {
             http_version,
             validate_certs,
             log_dir,
-            convert_cert,
             encoding,
             min_transfer_speed,
             max_retry_per_request,

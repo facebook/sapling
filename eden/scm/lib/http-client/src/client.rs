@@ -54,6 +54,7 @@ pub struct HttpClient {
 pub struct Config {
     pub verbose_stats: bool,
     pub max_concurrent_requests: Option<usize>,
+    pub convert_cert: bool,
 }
 
 impl Default for Config {
@@ -61,6 +62,7 @@ impl Default for Config {
         Self {
             verbose_stats: false,
             max_concurrent_requests: None, // No limit by default
+            convert_cert: cfg!(windows),
         }
     }
 }
@@ -338,7 +340,7 @@ impl HttpClient {
     }
 
     fn configure_request(&self, req: Request) -> Request {
-        req
+        req.convert_cert(self.config.convert_cert)
     }
 }
 

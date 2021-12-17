@@ -14,6 +14,7 @@ use std::collections::HashSet;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::Relaxed;
 
+use configmodel::ConfigExt;
 use hg_metrics::increment_counter;
 use http_client::HttpClient;
 use http_client::Request;
@@ -49,12 +50,20 @@ pub fn http_client(client_id: impl ToString, config: http_client::Config) -> Htt
     })
 }
 
+pub fn http_config(config: &dyn configmodel::Config) -> http_client::Config {
+    return http_client::Config {
+        convert_cert: config
+            .get_or("http", "convert-cert", || cfg!(windows))
+            .unwrap_or(cfg!(windows)),
+        ..Default::default()
+    };
+}
+
 /// Global configuration settings for Mercurial's HTTP client.
 #[derive(Debug)]
 pub struct HgHttpConfig {
     pub verbose: bool,
     pub disable_tls_verification: bool,
-    pub convert_cert: bool,
     pub client_info: Option<String>,
     pub unix_socket_path: Option<String>,
     pub unix_socket_domains: HashSet<String>,
@@ -76,9 +85,8 @@ pub fn set_global_config(config: HgHttpConfig) {
         }
         req.set_verify_tls_cert(!config.disable_tls_verification)
             .set_verify_tls_host(!config.disable_tls_verification)
-            .set_client_info(&config.client_info)
             .set_verbose(config.verbose)
-            .set_convert_cert(config.convert_cert);
+            .set_client_info(&config.client_info);
     });
 }
 
@@ -176,4 +184,24 @@ fn bump_counters(client_id: &str, stats: &Stats) {
         n("total_response_delay_ms"),
         stats.latency.as_millis() as usize,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::*;
+
+    #[test]
+    fn test_convert_cert_config() {
+        let mut hg_config = BTreeMap::<String, String>::new();
+
+        assert_eq!(cfg!(windows), http_config(&hg_config).convert_cert);
+
+        hg_config.insert("http.convert-cert".into(), "True".into());
+        assert!(http_config(&hg_config).convert_cert);
+
+        hg_config.insert("http.convert-cert".into(), "false".into());
+        assert!(!http_config(&hg_config).convert_cert);
+    }
 }

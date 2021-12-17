@@ -867,6 +867,8 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+    use crate::Config;
+    use crate::HttpClient;
 
     #[test]
     fn test_get() -> Result<()> {
@@ -1140,6 +1142,24 @@ mod tests {
 
         mock.assert();
         assert_eq!(called.load(Acquire), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_convert_cert_flag() -> Result<()> {
+        let client = HttpClient::new();
+        let url: Url = "https://example.com".parse()?;
+
+        // Make sure convert_cert defaults to cfg!(windows) and gets
+        // passed along to request.
+        assert_eq!(cfg!(windows), client.get(url.clone()).convert_cert);
+
+        let client = HttpClient::from_config(Config {
+            convert_cert: true,
+            ..Default::default()
+        });
+        assert!(client.get(url).convert_cert);
 
         Ok(())
     }

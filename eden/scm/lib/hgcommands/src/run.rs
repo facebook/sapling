@@ -645,9 +645,6 @@ fn setup_http(config: &ConfigSet, global_opts: &HgGlobalOpts) {
     let http_config = HgHttpConfig {
         verbose: config.get_or_default("http", "verbose").unwrap_or_default(),
         disable_tls_verification: global_opts.insecure,
-        convert_cert: config
-            .get_or("http", "convert-cert", || cfg!(windows))
-            .unwrap_or(cfg!(windows)),
         client_info: ClientInfo::new(config).and_then(|i| i.into_json()).ok(),
         unix_socket_path: config
             .get_nonempty_opt("auth_proxy", "unix_socket_path")
