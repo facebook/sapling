@@ -1607,7 +1607,7 @@ impl LfsRemote {
                 .map(|s| NonZeroU64::new(s).context("download chunk size cannot be 0"))
                 .transpose()?;
 
-            let client = http_client("lfs");
+            let client = http_client("lfs", Default::default());
 
             Ok(Self {
                 shared,

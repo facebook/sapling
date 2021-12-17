@@ -44,28 +44,45 @@ pub type StatsFuture =
 #[derive(Clone)]
 pub struct HttpClient {
     pool: Pool,
-    verbose: bool,
     event_listeners: HttpClientEventListeners,
-    max_concurrent_requests: usize,
+    config: Config,
+}
+
+#[derive(Clone, Debug)]
+pub struct Config {
+    pub verbose_stats: bool,
+    pub max_concurrent_requests: Option<usize>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            verbose_stats: false,
+            max_concurrent_requests: None, // No limit by default
+        }
+    }
 }
 
 impl HttpClient {
     pub fn new() -> Self {
+        Self::from_config(Default::default())
+    }
+
+    pub fn from_config(config: Config) -> Self {
         Self {
+            config,
             pool: Pool::new(),
-            verbose: false,
             event_listeners: Default::default(),
-            max_concurrent_requests: 0, // Unlimited by default.
         }
     }
 
-    pub fn verbose(mut self, verbose: bool) -> Self {
-        self.verbose = verbose;
+    pub fn verbose_stats(mut self, verbose: bool) -> Self {
+        self.config.verbose_stats = verbose;
         self
     }
 
-    pub fn max_concurrent_requests(mut self, max: usize) -> Self {
-        self.max_concurrent_requests = max;
+    pub fn max_concurrent_requests(mut self, max: Option<usize>) -> Self {
+        self.config.max_concurrent_requests = max;
         self
     }
 
@@ -103,8 +120,8 @@ impl HttpClient {
         let mut multi = self.pool.multi();
         multi
             .get_mut()
-            .set_max_total_connections(self.max_concurrent_requests)?;
-        let driver = MultiDriver::new(multi.get(), progress_cb, self.verbose);
+            .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
+        let driver = MultiDriver::new(multi.get(), progress_cb, self.config.verbose_stats);
 
         for mut request in requests {
             self.event_listeners.trigger_new_request(request.ctx_mut());
@@ -226,8 +243,8 @@ impl HttpClient {
         let mut multi = self.pool.multi();
         multi
             .get_mut()
-            .set_max_total_connections(self.max_concurrent_requests)?;
-        let driver = MultiDriver::new(multi.get(), progress_cb, self.verbose);
+            .set_max_total_connections(self.config.max_concurrent_requests.unwrap_or(0))?;
+        let driver = MultiDriver::new(multi.get(), progress_cb, self.config.verbose_stats);
         for mut request in requests {
             self.event_listeners
                 .trigger_new_request(request.request.ctx_mut());

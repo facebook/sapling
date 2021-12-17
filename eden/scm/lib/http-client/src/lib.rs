@@ -23,6 +23,7 @@ mod response;
 mod stats;
 mod stream;
 
+pub use client::Config;
 pub use client::HttpClient;
 pub use client::ResponseFuture;
 pub use client::StatsFuture;

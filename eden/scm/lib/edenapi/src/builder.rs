@@ -126,7 +126,6 @@ pub struct HttpClientBuilder {
     key: Option<PathBuf>,
     ca_bundle: Option<PathBuf>,
     headers: HashMap<String, String>,
-    max_requests: Option<usize>,
     max_files: Option<usize>,
     max_trees: Option<usize>,
     max_history: Option<usize>,
@@ -142,6 +141,8 @@ pub struct HttpClientBuilder {
     encoding: Option<Encoding>,
     min_transfer_speed: Option<MinTransferSpeed>,
     max_retry_per_request: usize,
+
+    http_config: http_client::Config,
 }
 
 impl HttpClientBuilder {
@@ -247,7 +248,6 @@ impl HttpClientBuilder {
             key,
             ca_bundle,
             headers,
-            max_requests,
             max_files,
             max_trees,
             max_history,
@@ -263,6 +263,12 @@ impl HttpClientBuilder {
             encoding,
             min_transfer_speed,
             max_retry_per_request,
+
+            http_config: http_client::Config {
+                verbose_stats: debug,
+                max_concurrent_requests: max_requests,
+                ..Default::default()
+            },
         })
     }
 
@@ -323,7 +329,7 @@ impl HttpClientBuilder {
 
     /// Maximum number of concurrent HTTP requests allowed.
     pub fn max_requests(mut self, size: Option<usize>) -> Self {
-        self.max_requests = size;
+        self.http_config.max_concurrent_requests = size;
         self
     }
 
@@ -433,7 +439,6 @@ pub(crate) struct Config {
     pub(crate) key: Option<PathBuf>,
     pub(crate) ca_bundle: Option<PathBuf>,
     pub(crate) headers: HashMap<String, String>,
-    pub(crate) max_requests: Option<usize>,
     pub(crate) max_files: Option<usize>,
     pub(crate) max_trees: Option<usize>,
     pub(crate) max_history: Option<usize>,
@@ -449,6 +454,7 @@ pub(crate) struct Config {
     pub(crate) encoding: Option<Encoding>,
     pub(crate) min_transfer_speed: Option<MinTransferSpeed>,
     pub(crate) max_retry_per_request: usize,
+    pub(crate) http_config: http_client::Config,
 }
 
 impl TryFrom<HttpClientBuilder> for Config {
@@ -462,7 +468,6 @@ impl TryFrom<HttpClientBuilder> for Config {
             key,
             ca_bundle,
             headers,
-            max_requests,
             max_files,
             max_trees,
             max_history,
@@ -478,6 +483,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             encoding,
             min_transfer_speed,
             max_retry_per_request,
+            http_config,
         } = builder;
 
         // Check for missing required fields.
@@ -503,7 +509,6 @@ impl TryFrom<HttpClientBuilder> for Config {
             key,
             ca_bundle,
             headers,
-            max_requests,
             max_files,
             max_trees,
             max_history,
@@ -519,6 +524,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             encoding,
             min_transfer_speed,
             max_retry_per_request,
+            http_config,
         })
     }
 }

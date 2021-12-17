@@ -39,12 +39,12 @@ static TOTAL: Total = Total {
     request_count: AtomicUsize::new(0),
 };
 
-pub fn http_client(client_id: impl ToString) -> HttpClient {
+pub fn http_client(client_id: impl ToString, config: http_client::Config) -> HttpClient {
     let client_id = client_id.to_string();
     let reporter = move |stats: &Stats| {
         bump_counters(&client_id, stats);
     };
-    HttpClient::new().with_event_listeners(|l| {
+    HttpClient::from_config(config).with_event_listeners(|l| {
         l.on_stats(reporter);
     })
 }
