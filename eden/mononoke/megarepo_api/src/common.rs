@@ -37,7 +37,6 @@ use mononoke_types::{
     RepositoryId,
 };
 use mutable_renames::{MutableRenameEntry, MutableRenames};
-use reachabilityindex::LeastCommonAncestorsHint;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
@@ -650,8 +649,8 @@ pub trait MegarepoOp {
 
     async fn validate_changeset_to_merge(
         &self,
-        ctx: &CoreContext,
-        source_repo: &RepoContext,
+        _ctx: &CoreContext,
+        _source_repo: &RepoContext,
         source_config: &Source,
         changesets_to_merge: &BTreeMap<SourceName, ChangesetId>,
     ) -> Result<ChangesetId, MegarepoError> {
@@ -678,30 +677,10 @@ pub trait MegarepoOp {
                     )));
                 }
             }
-            SourceRevision::bookmark(bookmark) => {
-                let (_, source_bookmark_value) =
-                    find_bookmark_and_value(ctx, source_repo, &bookmark).await?;
-
-                if &source_bookmark_value != changeset_id {
-                    let is_ancestor = source_repo
-                        .skiplist_index()
-                        .is_ancestor(
-                            ctx,
-                            &source_repo.blob_repo().get_changeset_fetcher(),
-                            *changeset_id,
-                            source_bookmark_value,
-                        )
-                        .await
-                        .map_err(MegarepoError::internal)?;
-
-                    if !is_ancestor {
-                        return Err(MegarepoError::request(anyhow!(
-                            "{} is not an ancestor of source bookmark {}",
-                            changeset_id,
-                            bookmark,
-                        )));
-                    }
-                }
+            SourceRevision::bookmark(_bookmark) => {
+                /* If the source is following a git repo branch we can't verify much as the bookmark
+                doesn't have to exist in the megarepo */
+                ()
             }
             SourceRevision::UnknownField(_) => {
                 return Err(MegarepoError::internal(anyhow!(
