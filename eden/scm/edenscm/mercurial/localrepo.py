@@ -45,6 +45,7 @@ from . import (
     exchange,
     extensions,
     filelog,
+    git,
     hook,
     lock as lockmod,
     manifest,
@@ -355,8 +356,8 @@ class localrepository(object):
         "doublewritechangelog",
         # hybrid changelog (full idmap, partial hgcommits) + revlog + edenapi
         "hybridchangelog",
-        # git segments changelog
-        "gitchangelog",
+        # backed by git repo
+        git.GIT_REQUIREMENT,
         # lazy commit message (full idmap, partial hgcommits) + edenapi
         "lazytextchangelog",
         # lazy commit message (sparse idmap, partial hgcommits) + edenapi
@@ -3203,7 +3204,7 @@ def _openchangelog(repo):
                 "accessing older commits is broken!\n"
             )
         )
-    if "gitchangelog" in repo.storerequirements:
+    if git.isgit(repo):
         repo.ui.log("changelog_info", changelog_backend="git")
         return changelog2.changelog.opengitsegments(repo, repo.ui.uiconfig())
     if "lazytextchangelog" in repo.storerequirements:

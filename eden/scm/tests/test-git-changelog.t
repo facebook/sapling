@@ -44,24 +44,3 @@ Init an hg repo using the git changelog backend:
     Commit Data (user, message):
       Git
 
-Migrate to revlog changelog format:
-
-  $ hg debugchangelog --migrate rustrevlog
-  $ hg log -Gr 'all()' -T '{node} {desc}'
-  o  3f5848713286c67b8a71a450e98c7fa66787bde2 beta
-  │
-  o  b6c31add3e60ded7a9c9c803641edffb1dccd251 alpha
-  
-  $ hg debugchangelog
-  The changelog is backed by Rust. More backend information:
-  Backend (revlog):
-    Local:
-      Revlog: $TESTTMP/repo1/.hg/store/00changelog.{i,d}
-      Nodemap: $TESTTMP/repo1/.hg/store/00changelog.nodemap
-  Feature Providers:
-    Commit Graph Algorithms:
-      Revlog
-    Commit Hash / Rev Lookup:
-      Nodemap
-    Commit Data (user, message):
-      Revlog

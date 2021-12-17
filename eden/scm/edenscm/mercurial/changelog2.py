@@ -16,6 +16,7 @@ from . import (
     changelog as changelogmod,
     encoding,
     error,
+    git,
     mdiff,
     progress,
     pycompat,
@@ -34,7 +35,6 @@ from .pycompat import encodeutf8
 SEGMENTS_DIR = "segments/v1"
 SEGMENTS_DIR_NEXT = "segments/v1next"  # Used on Windows, for migration.
 HGCOMMITS_DIR = "hgcommits/v1"
-GIT_DIR_FILE = "gitdir"
 
 
 class changelog(object):
@@ -55,7 +55,7 @@ class changelog(object):
         self.inner = inner
         self._uiconfig = uiconfig
         # Do not verify hg hash if git hash is being used.
-        self._verifyhghash = not svfs.exists(GIT_DIR_FILE)
+        self._verifyhghash = not git.isgit(repo)
         # Number of commit texts to buffer. Useful for bounding memory usage.
         self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
         self._reporef = weakref.ref(repo)
@@ -140,7 +140,7 @@ class changelog(object):
     def opengitsegments(cls, repo, uiconfig):
         svfs = repo.svfs
         segmentsdir = _segmentsdir(svfs)
-        gitdir = svfs.readutf8(GIT_DIR_FILE)
+        gitdir = git.readgitdir(repo)
         metalog = repo.metalog()
         inner = bindings.dag.commits.opengitsegments(gitdir, segmentsdir, metalog)
         return cls(repo, inner, uiconfig)
@@ -931,8 +931,8 @@ def migratetorevlog(repo):
         needmigrate = False
         if "segmentedchangelog" in repo.storerequirements:
             needmigrate = True
-        if "gitchangelog" in repo.storerequirements:
-            needmigrate = True
+        if git.isgit(repo):
+            raise error.Abort(_("cannot migrate git repo"))
         if needmigrate:
             srccl = repo.changelog
             dstcl = changelog.openrevlog(repo, repo.ui.uiconfig())
@@ -962,7 +962,6 @@ def migratetorevlog(repo):
 
 def _removechangelogrequirements(repo):
     repo.storerequirements.discard("doublewritechangelog")
-    repo.storerequirements.discard("gitchangelog")
     repo.storerequirements.discard("hybridchangelog")
     repo.storerequirements.discard("lazytextchangelog")
     repo.storerequirements.discard("lazychangelog")

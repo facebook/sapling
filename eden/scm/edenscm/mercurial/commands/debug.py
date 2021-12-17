@@ -50,6 +50,7 @@ from .. import (
     filemerge,
     fileset,
     formatter,
+    git,
     graphmod,
     hg,
     httpconnection,
@@ -1555,8 +1556,8 @@ def debuginitgit(ui, destpath, **opts):
         raise error.Abort(_("invalid --git-dir: %s") % gitdir)
     repo = hg.repository(ui, ui.expandpath(destpath), create=True).local()
     with repo.lock(), repo.transaction("initgit"):
-        repo.svfs.writeutf8("gitdir", gitdir)
-        repo.storerequirements.add("gitchangelog")
+        repo.svfs.writeutf8(git.GIT_DIR_FILE, gitdir)
+        repo.storerequirements.add(git.GIT_REQUIREMENT)
         repo._writestorerequirements()
         repo.invalidatechangelog()
         visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
