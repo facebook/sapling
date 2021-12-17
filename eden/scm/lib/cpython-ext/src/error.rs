@@ -21,7 +21,7 @@ use cpython::PyList;
 use cpython::PyModule;
 use cpython::PyResult;
 use cpython::Python;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use taggederror::CommonMetadata;
 use taggederror::TaggedError;
@@ -87,10 +87,8 @@ pub trait AnyhowResultExt<T> {
 pub type AnyhowErrorIntoPyErrFunc =
     fn(Python, &anyhow::Error, CommonMetadata) -> Option<cpython::PyErr>;
 
-lazy_static! {
-    static ref INTO_PYERR_FUNC_LIST: Mutex<BTreeMap<&'static str, AnyhowErrorIntoPyErrFunc>> =
-        Default::default();
-}
+static INTO_PYERR_FUNC_LIST: Lazy<Mutex<BTreeMap<&'static str, AnyhowErrorIntoPyErrFunc>>> =
+    Lazy::new(|| Default::default());
 
 /// Register a function to convert [`anyhow::Error`] to [`PyErr`].
 /// For multiple functions, those with smaller name are executed first.
