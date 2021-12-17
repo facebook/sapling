@@ -9,6 +9,7 @@ use std::pin::Pin;
 
 use curl::easy::Easy2;
 use futures::prelude::*;
+use url::Url;
 
 use crate::driver::MultiDriver;
 use crate::errors::Abort;
@@ -21,6 +22,7 @@ use crate::pool::Pool;
 use crate::progress::Progress;
 use crate::receiver::ChannelReceiver;
 use crate::receiver::Receiver;
+use crate::request::Method;
 use crate::request::Request;
 use crate::request::StreamRequest;
 use crate::response::AsyncResponse;
@@ -308,6 +310,35 @@ impl HttpClient {
             tracing::error!("Cannot report status because receiver is missing");
             Ok(())
         }
+    }
+
+    /// Create a request with this client's config applied.
+    pub fn new_request(&self, url: Url, method: Method) -> Request {
+        self.configure_request(Request::new(url, method))
+    }
+
+    /// Create a GET request with this client's config applied.
+    pub fn get(&self, url: Url) -> Request {
+        self.new_request(url, Method::Get)
+    }
+
+    /// Create a HEAD request with this client's config applied.
+    pub fn head(&self, url: Url) -> Request {
+        self.new_request(url, Method::Head)
+    }
+
+    /// Create a POST request with this client's config applied.
+    pub fn post(&self, url: Url) -> Request {
+        self.new_request(url, Method::Post)
+    }
+
+    /// Create a PUT request with this client's config applied.
+    pub fn put(&self, url: Url) -> Request {
+        self.new_request(url, Method::Put)
+    }
+
+    fn configure_request(&self, req: Request) -> Request {
+        req
     }
 }
 

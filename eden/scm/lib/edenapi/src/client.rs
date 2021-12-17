@@ -204,6 +204,12 @@ impl Client {
 
     /// Add configured values to a request.
     fn configure_request(&self, mut req: Request) -> Result<Request, EdenApiError> {
+        // This method should probably not exist. Request
+        // configuration should flow through a shared config (i.e.
+        // http_client::Config) that is applied by the HttpClient.
+        // This way, every use of HttpClient does not its own http
+        // config and glue code to apply the config to the request.
+
         let config = self.config();
 
         if let Some(ref cert) = config.cert {
@@ -269,7 +275,7 @@ impl Client {
             .into_iter()
             .map(|keys| {
                 let req = make_req(keys).to_wire();
-                self.configure_request(Request::post(url.clone()))?
+                self.configure_request(self.inner.client.post(url.clone()))?
                     .cbor(&req)
                     .map_err(EdenApiError::RequestSerializationFailed)
             })
@@ -503,16 +509,14 @@ impl Client {
         tracing::info!("{}", &msg);
 
         Ok(self.fetch::<UploadToken>(vec![{
-            let request = self
-                .configure_request(Request::put(url.clone()))?
-                .body(raw_content.to_vec());
-            request
+            self.configure_request(self.inner.client.put(url.clone()))?
+                .body(raw_content.to_vec())
         }])?)
     }
 
     async fn clone_data_attempt(&self) -> Result<CloneData<HgId>, EdenApiError> {
         let url = self.build_url(paths::CLONE_DATA)?;
-        let req = self.configure_request(Request::post(url))?;
+        let req = self.configure_request(self.inner.client.post(url))?;
         let mut fetch = self.fetch::<CloneData<HgId>>(vec![req])?;
         fetch.entries.next().await.ok_or_else(|| {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
@@ -525,7 +529,7 @@ impl Client {
     ) -> Result<CloneData<HgId>, EdenApiError> {
         let url = self.build_url(paths::PULL_FAST_FORWARD)?;
         let req = self
-            .configure_request(Request::post(url))?
+            .configure_request(self.inner.client.post(url))?
             .cbor(&req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
         let mut fetch = self.fetch::<CloneData<HgId>>(vec![req])?;
@@ -550,7 +554,7 @@ impl EdenApi for Client {
 
         tracing::info!("Sending health check request: {}", &url);
 
-        let req = self.configure_request(Request::get(url))?;
+        let req = self.configure_request(self.inner.client.get(url))?;
         let res = raise_for_status(req.send_async().await?).await?;
 
         Ok(ResponseMeta::from(&res))
@@ -559,7 +563,7 @@ impl EdenApi for Client {
     async fn capabilities(&self) -> Result<Vec<String>, EdenApiError> {
         tracing::info!("Requesting capabilities for repo {}", &self.repo_name());
         let url = self.build_url("capabilities")?;
-        let req = self.configure_request(Request::get(url))?;
+        let req = self.configure_request(self.inner.client.get(url))?;
         let res = raise_for_status(req.send_async().await?).await?;
         let body: Vec<u8> = res.into_body().decoded().try_concat().await?;
         let caps = serde_json::from_slice(&body)
@@ -660,7 +664,7 @@ impl EdenApi for Client {
         self.log_request(&commit_revlog_data_req, "commit_revlog_data");
 
         let req = self
-            .configure_request(Request::post(url))?
+            .configure_request(self.inner.client.post(url))?
             .cbor(&commit_revlog_data_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -693,7 +697,7 @@ impl EdenApi for Client {
         let bookmark_req = BookmarkRequest { bookmarks };
         self.log_request(&bookmark_req, "bookmarks");
         let req = self
-            .configure_request(Request::post(url))?
+            .configure_request(self.inner.client.post(url))?
             .cbor(&bookmark_req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -720,7 +724,7 @@ impl EdenApi for Client {
         };
         self.log_request(&set_bookmark_req, "set_bookmark");
         let req = self
-            .configure_request(Request::post(url))?
+            .configure_request(self.inner.client.post(url))?
             .cbor(&set_bookmark_req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -755,7 +759,7 @@ impl EdenApi for Client {
         };
         self.log_request(&land_stack_req, "land");
         let req = self
-            .configure_request(Request::post(url))?
+            .configure_request(self.inner.client.post(url))?
             .cbor(&land_stack_req.to_wire())
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -908,7 +912,7 @@ impl EdenApi for Client {
         let wire_graph_req = graph_req.to_wire();
 
         let req = self
-            .configure_request(Request::post(url))?
+            .configure_request(self.inner.client.post(url))?
             .cbor(&wire_graph_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -1103,7 +1107,7 @@ impl EdenApi for Client {
         .to_wire();
 
         let request = self
-            .configure_request(Request::post(url.clone()))?
+            .configure_request(self.inner.client.post(url))?
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -1125,7 +1129,7 @@ impl EdenApi for Client {
         let req = UploadBonsaiChangesetRequest { changeset }.to_wire();
 
         let request = self
-            .configure_request(Request::post(url.clone()))?
+            .configure_request(self.inner.client.post(url.clone()))?
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -1143,7 +1147,7 @@ impl EdenApi for Client {
         }
         .to_wire();
         let request = self
-            .configure_request(Request::post(url.clone()))?
+            .configure_request(self.inner.client.post(url))?
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -1164,7 +1168,7 @@ impl EdenApi for Client {
         let url = self.build_url(paths::FETCH_SNAPSHOT)?;
         let req = request.to_wire();
         let request = self
-            .configure_request(Request::post(url.clone()))?
+            .configure_request(self.inner.client.post(url))?
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
@@ -1177,7 +1181,7 @@ impl EdenApi for Client {
         let metadata = token.data.metadata.clone();
         let req = token.to_wire();
         let request = self
-            .configure_request(Request::post(url.clone()))?
+            .configure_request(self.inner.client.post(url.clone()))?
             .cbor(&req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 

@@ -286,22 +286,22 @@ impl Request {
     }
 
     /// Create a GET request.
-    pub fn get(url: Url) -> Self {
+    pub(crate) fn get(url: Url) -> Self {
         Self::new(url, Method::Get)
     }
 
     /// Create a HEAD request.
-    pub fn head(url: Url) -> Self {
+    pub(crate) fn head(url: Url) -> Self {
         Self::new(url, Method::Head)
     }
 
     /// Create a POST request.
-    pub fn post(url: Url) -> Self {
+    pub(crate) fn post(url: Url) -> Self {
         Self::new(url, Method::Post)
     }
 
     /// Create a PUT request.
-    pub fn put(url: Url) -> Self {
+    pub(crate) fn put(url: Url) -> Self {
         Self::new(url, Method::Put)
     }
 

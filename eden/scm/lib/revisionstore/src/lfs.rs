@@ -1122,7 +1122,8 @@ impl LfsRemoteInner {
             loop {
                 attempt += 1;
 
-                let mut req = Request::new(url.clone(), method)
+                let mut req = client
+                    .new_request(url.clone(), method)
                     .header("Accept", "application/vnd.git-lfs+json")
                     .header("Content-Type", "application/vnd.git-lfs+json")
                     .header("User-Agent", &http_options.user_agent)

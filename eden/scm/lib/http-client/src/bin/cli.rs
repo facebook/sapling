@@ -13,6 +13,7 @@ use std::io::stdout;
 use anyhow::Result;
 use futures::prelude::*;
 use http_client::AsyncResponse;
+use http_client::HttpClient;
 use http_client::Request;
 use structopt::StructOpt;
 use url::Url;
@@ -69,7 +70,7 @@ async fn main() -> Result<()> {
 }
 
 async fn cmd_get(args: Args) -> Result<()> {
-    let req = Request::get(args.url()?);
+    let req = HttpClient::new().get(args.url()?);
     let req = add_headers(req, &args.headers);
     let req = configure_tls(req);
 
@@ -78,7 +79,7 @@ async fn cmd_get(args: Args) -> Result<()> {
 }
 
 async fn cmd_head(args: Args) -> Result<()> {
-    let req = Request::head(args.url()?);
+    let req = HttpClient::new().head(args.url()?);
     let req = add_headers(req, &args.headers);
     let req = configure_tls(req);
 
@@ -90,7 +91,7 @@ async fn cmd_post(args: Args) -> Result<()> {
     eprintln!("Reading payload from stdin");
     let body = read_input()?;
 
-    let req = Request::post(args.url()?).body(body);
+    let req = HttpClient::new().post(args.url()?).body(body);
     let req = add_headers(req, &args.headers);
     let req = configure_tls(req);
 
@@ -102,7 +103,7 @@ async fn cmd_put(args: Args) -> Result<()> {
     eprintln!("Reading payload from stdin");
     let body = read_input()?;
 
-    let req = Request::put(args.url()?).body(body);
+    let req = HttpClient::new().put(args.url()?).body(body);
     let req = add_headers(req, &args.headers);
     let req = configure_tls(req);
 
