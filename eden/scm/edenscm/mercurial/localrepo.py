@@ -1545,6 +1545,8 @@ class localrepository(object):
     def file(self, f):
         if f[0] == "/":
             f = f[1:]
+        if git.isgit(self):
+            return git.gitfilelog(self)
         return filelog.filelog(self.svfs, f)
 
     def changectx(self, changeid):

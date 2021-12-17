@@ -31,3 +31,17 @@ def openstore(repo):
     gitdir = readgitdir(repo)
     if gitdir:
         return bindings.gitstore.gitstore(gitdir)
+
+
+class gitfilelog(object):
+    """filelog-like interface for git"""
+
+    def __init__(self, repo):
+        self.store = repo.fileslog.contentstore
+
+    def lookup(self, node):
+        assert len(node) == 20
+        return node
+
+    def read(self, node):
+        return self.store.readobj(node, "blob")

@@ -1,3 +1,4 @@
+#chg-compatible
 
   $ export GIT_AUTHOR_NAME='test'
   $ export GIT_AUTHOR_EMAIL='test@example.org'
@@ -52,3 +53,20 @@ Test checkout:
   alpha beta
   $ cat beta
   2
+
+Test diff:
+
+  $ hg log -r tip -p --config diff.git=1
+  commit:      3f5848713286
+  bookmark:    master
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:10 2007 +0000
+  summary:     beta
+  
+  diff --git a/beta b/beta
+  new file mode 100644
+  --- /dev/null
+  +++ b/beta
+  @@ -0,0 +1,1 @@
+  +2
+  
