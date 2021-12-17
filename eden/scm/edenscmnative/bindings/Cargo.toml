@@ -34,16 +34,17 @@ pyedenapi = { path = "modules/pyedenapi" }
 pyerror = { path = "modules/pyerror" }
 pyfail = { path = "modules/pyfail" }
 pyfs = { path = "modules/pyfs" }
+pygitstore = { path = "modules/pygitstore" }
 pyhgmetrics = { path = "modules/pyhgmetrics" }
 pyhgtime = { path = "modules/pyhgtime" }
 pyindexes = { path = "modules/pyindexes", default-features = false }
+pyio = { path = "modules/pyio" }
 pylock = { path = "modules/pylock" }
 pylz4 = { path = "modules/pylz4" }
 pymanifest = { path = "modules/pymanifest" }
 pymetalog = { path = "modules/pymetalog" }
 pymutationstore = { path = "modules/pymutationstore" }
 pynodemap = { path = "modules/pynodemap" }
-pyio = { path = "modules/pyio" }
 pypathmatcher = { path = "modules/pypathmatcher" }
 pypprint = { path = "modules/pypprint" }
 pyprocess = { path = "modules/pyprocess" }
