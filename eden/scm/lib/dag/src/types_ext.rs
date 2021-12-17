@@ -18,7 +18,12 @@ pub(crate) trait PreparedFlatSegmentsExt {
     fn merge(&mut self, rhs: Self);
 
     /// Add graph edges: id -> parent_ids. Used by `assign_head`.
-    fn push_edge(&mut self, id: Id, parent_ids: &[Id]);
+    fn push_edge(&mut self, id: Id, parent_ids: &[Id]) {
+        self.push_segment(id, id, parent_ids)
+    }
+
+    /// Add segment. Used by `import_pull_data`.
+    fn push_segment(&mut self, low: Id, high: Id, parent_ids: &[Id]);
 }
 
 impl PreparedFlatSegmentsExt for PreparedFlatSegments {
@@ -42,11 +47,11 @@ impl PreparedFlatSegmentsExt for PreparedFlatSegments {
         }
     }
 
-    fn push_edge(&mut self, id: Id, parent_ids: &[Id]) {
-        if !maybe_merge_in_place(&mut self.segments, id, id, parent_ids) {
+    fn push_segment(&mut self, low: Id, high: Id, parent_ids: &[Id]) {
+        if !maybe_merge_in_place(&mut self.segments, low, high, parent_ids) {
             let new_seg = FlatSegment {
-                low: id,
-                high: id,
+                low,
+                high,
                 parents: parent_ids.to_vec(),
             };
             self.segments.insert(new_seg);
@@ -149,6 +154,23 @@ mod tests {
                 "FlatSegment { low: 100, high: 101, parents: [] }",
                 "FlatSegment { low: 102, high: 104, parents: [100] }",
                 "FlatSegment { low: 105, high: 107, parents: [103] }"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_push_segment() {
+        let mut segs = PreparedFlatSegments::default();
+        segs.push_segment(Id(10), Id(20), &[]);
+        segs.push_segment(Id(40), Id(50), &[Id(15), Id(10), Id(12)]);
+        segs.push_segment(Id(21), Id(30), &[Id(20)]);
+        segs.push_segment(Id(31), Id(35), &[Id(20)]);
+        assert_eq!(
+            dbg(&segs),
+            [
+                "FlatSegment { low: 10, high: 30, parents: [] }",
+                "FlatSegment { low: 31, high: 35, parents: [20] }",
+                "FlatSegment { low: 40, high: 50, parents: [15, 10, 12] }",
             ]
         );
     }
