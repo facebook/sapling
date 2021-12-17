@@ -301,26 +301,33 @@ def hintcommitcloudswitch(ui, active):
 @revsetpredicate("backedup")
 def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
-    unfi = repo
-    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo.ui)).heads
+    path = ccutil.getnullableremotepath(repo.ui)
+    if not path:
+        return smartset.baseset(repo=repo)
+    heads = backupstate.BackupState(repo, path).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         backedup = repo.dageval(lambda: draft() & ancestors(heads))
         return subset & cl.torevset(backedup)
-    backedup = unfi.revs("not public() and ::%ln", heads)
+    backedup = repo.revs("not public() and ::%ln", heads)
     return smartset.filteredset(subset & repo.revs("draft()"), lambda r: r in backedup)
 
 
 @revsetpredicate("notbackedup")
 def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
-    unfi = repo
-    heads = backupstate.BackupState(repo, ccutil.getremotepath(repo.ui)).heads
+    path = ccutil.getnullableremotepath(repo.ui)
+    if not path:
+        # arguably this should return draft(). However, since there is no
+        # remote, and no way to do backup, returning an empty set avoids
+        # upsetting users with "not backed up" warnings.
+        return smartset.baseset(repo=repo)
+    heads = backupstate.BackupState(repo, path).heads
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
         notbackedup = repo.dageval(lambda: draft() - ancestors(heads))
         return subset & cl.torevset(notbackedup)
-    backedup = unfi.revs("not public() and ::%ln", heads)
+    backedup = repo.revs("not public() and ::%ln", heads)
     return smartset.filteredset(
         subset & repo.revs("not public() - hidden()"), lambda r: r not in backedup
     )

@@ -71,6 +71,10 @@ Check hiding the backup head doesn't affect backed-up changesets
   $ hg unhide 'max(desc(Backed))'
   $ hg up -q 'max(desc(Backed))'
 
+Revset does not crash if paths.default is unset
+  $ hg log -T '{desc}\n' -r 'notbackedup()' --config paths.default=
+  $ hg log -T '{desc}\n' -r 'backedup()' --config paths.default=
+
 Create some changesets that aren't backed up
   $ echo b > file1
   $ commit_time=`expr $now - 11 \* 60`

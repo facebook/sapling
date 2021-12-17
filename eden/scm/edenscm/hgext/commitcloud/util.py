@@ -66,15 +66,22 @@ def getreponame(repo):
     return reponame
 
 
-def getremotepath(ui):
+def getnullableremotepath(ui):
     """Select an appopriate remote repository to connect to for commit cloud operations."""
+    if "default" not in ui.paths:
+        return None
     path = ui.paths.getpath("default")
+    return path.pushloc or path.loc
+
+
+def getremotepath(ui):
+    path = getnullableremotepath(ui)
     if not path:
         raise error.Abort(
             _("'default' repository isn't configured!"),
             hint=_("see 'hg help config.paths'"),
         )
-    return path.pushloc or path.loc
+    return path
 
 
 def getcommandandoptions(command):
