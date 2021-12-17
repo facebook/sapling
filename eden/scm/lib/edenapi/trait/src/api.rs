@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::num::NonZeroU64;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use edenapi_types::AnyFileContentId;
@@ -41,7 +42,6 @@ use edenapi_types::UploadTokensResponse;
 use edenapi_types::UploadTreeEntry;
 use edenapi_types::UploadTreeResponse;
 use minibytes::Bytes;
-use std::time::Duration;
 use types::HgId;
 use types::Key;
 
@@ -99,13 +99,24 @@ pub trait EdenApi: Send + Sync + 'static {
         Err(EdenApiError::NotSupported)
     }
 
+    /// Provide data to complete a lazy pull. `common` defines known heads,
+    /// `missing` defines unknown heads.
+    async fn pull_lazy(
+        &self,
+        common: Vec<HgId>,
+        missing: Vec<HgId>,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        let _ = (common, missing);
+        Err(EdenApiError::NotSupported)
+    }
+
     async fn pull_fast_forward_master(
         &self,
         old_master: HgId,
         new_master: HgId,
     ) -> Result<CloneData<HgId>, EdenApiError> {
-        let _ = (old_master, new_master);
-        Err(EdenApiError::NotSupported)
+        self.pull_lazy(vec![old_master], vec![new_master])
+            .await
     }
 
     async fn commit_location_to_hash(
