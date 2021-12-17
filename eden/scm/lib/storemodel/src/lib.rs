@@ -21,9 +21,14 @@
 //! and history should probably be 3 different traits.
 
 use async_trait::async_trait;
+pub use bytes;
+pub use futures;
 use futures::stream::BoxStream;
-pub use minibytes::Bytes;
+pub use minibytes;
+pub use types;
+use types::HgId;
 use types::Key;
+use types::RepoPath;
 
 #[async_trait]
 pub trait ReadFileContents {
@@ -40,5 +45,23 @@ pub trait ReadFileContents {
     async fn read_file_contents(
         &self,
         keys: Vec<Key>,
-    ) -> BoxStream<Result<(Bytes, Key), Self::Error>>;
+    ) -> BoxStream<Result<(minibytes::Bytes, Key), Self::Error>>;
+}
+
+/// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
+/// data is stored. This allows more easy iteration on serialization format. It also simplifies
+/// writing storage migration.
+pub trait TreeStore {
+    fn get(&self, path: &RepoPath, hgid: HgId) -> anyhow::Result<bytes::Bytes>;
+
+    fn insert(&self, path: &RepoPath, hgid: HgId, data: bytes::Bytes) -> anyhow::Result<()>;
+
+    /// Indicate to the store that we will be attempting to access the given
+    /// tree nodes soon. Some stores (especially ones that may perform network
+    /// I/O) may use this information to prepare for these accesses (e.g., by
+    /// by prefetching the nodes in bulk). For some stores this operation does
+    /// not make sense, so the default implementation is a no-op.
+    fn prefetch(&self, _keys: Vec<Key>) -> anyhow::Result<()> {
+        Ok(())
+    }
 }

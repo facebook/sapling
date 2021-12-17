@@ -22,23 +22,7 @@ use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
 
-/// The `TreeStore` is an abstraction layer for the tree manifest that decouples how or where the
-/// data is stored. This allows more easy iteration on serialization format. It also simplifies
-/// writing storage migration.
-pub trait TreeStore {
-    fn get(&self, path: &RepoPath, hgid: HgId) -> Result<Bytes>;
-
-    fn insert(&self, path: &RepoPath, hgid: HgId, data: Bytes) -> Result<()>;
-
-    /// Indicate to the store that we will be attempting to access the given
-    /// tree nodes soon. Some stores (especially ones that may perform network
-    /// I/O) may use this information to prepare for these accesses (e.g., by
-    /// by prefetching the nodes in bulk). For some stores this operation does
-    /// not make sense, so the default implementation is a no-op.
-    fn prefetch(&self, _keys: Vec<Key>) -> Result<()> {
-        Ok(())
-    }
-}
+pub use storemodel::TreeStore;
 
 #[derive(Clone)]
 pub struct InnerStore {
