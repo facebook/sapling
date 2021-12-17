@@ -1603,6 +1603,11 @@ This section specifies behavior during merges and updates.
    If set to ``true``, calculate and print potentially conflicted commits
    when there are merge conflicts. (default: ``false``)
 
+``word-merge``
+  When enabled, attempt to run word-level 3-way merge resolution on conflicted
+  regions to reduce conflicts. This be helpful for some conflicts caused
+  by renaming or small refactoring. (default: ``false``)
+
 ``merge-patterns``
 ------------------
 

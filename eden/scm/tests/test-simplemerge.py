@@ -37,7 +37,10 @@ class Merge3(simplemerge.Merge3Text):
         btext = b"\n".join([i.strip(b"\n") for i in b] + [b""])
         if util.binary(basetext) or util.binary(atext) or util.binary(btext):
             raise error.Abort("don't know how to merge binary files")
-        simplemerge.Merge3Text.__init__(self, basetext, atext, btext, base, a, b)
+        simplemerge.Merge3Text.__init__(self, basetext, atext, btext)
+        self.base = base
+        self.a = a
+        self.b = b
 
 
 CantReprocessAndShowBase = simplemerge.CantReprocessAndShowBase

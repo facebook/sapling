@@ -37,6 +37,7 @@ patches = mpatch.patches
 patchedsize = mpatch.patchedsize
 textdiff = bdiff.bdiff
 
+wordsplitter = re.compile(br"(\t+| +|[a-zA-Z0-9_\x80-\xff]+|[^ \ta-zA-Z0-9_\x80-\xff])")
 
 # called by dispatch.py
 def init(ui):
@@ -58,6 +59,11 @@ def splitnewlines(text):
         else:
             lines[-1] = lines[-1][:-1]
     return lines
+
+
+def splitwords(text):
+    """split words, used by word-merge. text is bytes"""
+    return wordsplitter.findall(text)
 
 
 class diffopts(object):

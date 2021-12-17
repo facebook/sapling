@@ -946,7 +946,7 @@ class rebaseruntime(object):
 
 
 def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
-    from ..mercurial.simplemerge import Merge3Text
+    from ..mercurial.simplemerge import Merge3Text, wordmergemode
 
     conflicts = []
     resolved = {}
@@ -955,7 +955,8 @@ def _simplemerge(ui, basectx, ctx, p1ctx, manifestbuilder):
         localtext = ctx[file].data()
         othertext = p1ctx[file].data()
 
-        m3 = Merge3Text(basetext, localtext, othertext)
+        wordmerge = wordmergemode.fromui(ui)
+        m3 = Merge3Text(basetext, localtext, othertext, wordmerge=wordmerge)
 
         # merge_lines() has side effect setting conflicts
         merged = b"".join(m3.merge_lines())

@@ -66,25 +66,73 @@ def compare_range(a, astart, aend, b, bstart, bend):
         return True
 
 
+class CantShowWordConflicts(Exception):
+    pass
+
+
+class wordmergemode(object):
+    enforced = "enforced"  # Enforced word merge. Cannot draw conflict regions.
+    ondemand = "ondemand"  # Try line merge first. Only use word merge if it can solve conflicts.
+    disabled = "disabled"  # Do not ever attempt to do word merge.
+
+    @classmethod
+    def fromui(cls, ui):
+        if ui.configbool("merge", "word-merge"):
+            return cls.ondemand
+        else:
+            return cls.disabled
+
+
+def trywordmerge(basetext, atext, btext):
+    """Try resolve conflicts using wordmerge.
+    Return resolved text, or None if merge failed.
+    """
+    try:
+        m3 = Merge3Text(basetext, atext, btext, wordmerge=wordmergemode.enforced)
+        return b"".join(m3.merge_lines())
+    except CantShowWordConflicts:
+        return None
+
+
+def splitwordswithoutemptylines(text):
+    """Run mdiff.splitwords. Then fold "\n" into the previous word.
+
+    This makes "surrounding lines/words" more meaningful and avoids some
+    aggressive merges where conflicts are more desirable.
+    """
+    words = mdiff.splitwords(text)
+    buf = []
+    result = []
+    append = result.append
+    bufappend = buf.append
+    for word in words:
+        if word != b"\n" and buf:
+            append(b"".join(buf))
+            buf.clear()
+        bufappend(word)
+    if buf:
+        append(b"".join(buf))
+    return result
+
+
 class Merge3Text(object):
     """3-way merge of texts.
 
     Given strings BASE, OTHER, THIS, tries to produce a combined text
     incorporating the changes from both BASE->OTHER and BASE->THIS."""
 
-    def __init__(self, basetext, atext, btext, base=None, a=None, b=None):
+    def __init__(self, basetext, atext, btext, wordmerge=wordmergemode.disabled):
         self.basetext = basetext
         self.atext = atext
         self.btext = btext
-        if base is None:
-            base = mdiff.splitnewlines(basetext)
-        if a is None:
-            a = mdiff.splitnewlines(atext)
-        if b is None:
-            b = mdiff.splitnewlines(btext)
-        self.base = base
-        self.a = a
-        self.b = b
+        if wordmerge is wordmergemode.enforced:
+            split = splitwordswithoutemptylines
+        else:
+            split = mdiff.splitnewlines
+        self.base = split(basetext)
+        self.a = split(atext)
+        self.b = split(btext)
+        self.wordmerge = wordmerge
 
     def merge_lines(
         self,
@@ -136,6 +184,18 @@ class Merge3Text(object):
                         yield self.b[i]
                 else:
                     self.conflicts = True
+                    if self.wordmerge is wordmergemode.enforced:
+                        raise CantShowWordConflicts()
+                    elif self.wordmerge is wordmergemode.ondemand:
+                        # Try resolve the conflicted region using word merge
+                        subbasetext = b"".join(self.base[t[1] : t[2]])
+                        subatext = b"".join(self.a[t[3] : t[4]])
+                        subbtext = b"".join(self.b[t[5] : t[6]])
+                        text = trywordmerge(subbasetext, subatext, subbtext)
+                        if text:
+                            for line in text.splitlines(True):
+                                yield line
+                            continue
                     self.conflictscount += 1
                     if start_marker is not None:
                         yield start_marker + newline
@@ -328,8 +388,26 @@ class Merge3Text(object):
         """
 
         ia = ib = 0
-        amatches = mdiff.get_matching_blocks(self.basetext, self.atext)
-        bmatches = mdiff.get_matching_blocks(self.basetext, self.btext)
+        if self.wordmerge is wordmergemode.enforced:
+
+            def escape(word):
+                # escape "word" so it looks like a line ending with "\n"
+                return word.replace(b"\\", b"\\\\").replace(b"\n", b"\\n") + b"\n"
+
+            def concat(words):
+                # escape and concat words
+                return b"".join(map(escape, words))
+
+            basetext = concat(self.base)
+            atext = concat(self.a)
+            btext = concat(self.b)
+        else:
+            basetext = self.basetext
+            atext = self.atext
+            btext = self.btext
+
+        amatches = mdiff.get_matching_blocks(basetext, atext)
+        bmatches = mdiff.get_matching_blocks(basetext, btext)
         len_a = len(amatches)
         len_b = len(bmatches)
 
@@ -518,7 +596,8 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
     except error.Abort:
         return 1
 
-    m3 = Merge3Text(basetext, localtext, othertext)
+    m3 = Merge3Text(basetext, localtext, othertext, wordmerge=wordmergemode.fromui(ui))
+
     extrakwargs = {"localorother": opts.get("localorother", None), "minimize": True}
     if mode == "union":
         extrakwargs["start_marker"] = None
