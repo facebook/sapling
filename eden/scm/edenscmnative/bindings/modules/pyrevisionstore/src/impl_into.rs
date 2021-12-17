@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+//! Support `ImplInto` from cpython-ext.
+
+use std::sync::Arc;
+
+use anyhow::format_err;
+use anyhow::Result;
+use cpython::*;
+use cpython_ext::convert::register_into;
+use cpython_ext::ExtractInner;
+use revisionstore::HgIdDataStore;
+use revisionstore::LegacyStore;
+use revisionstore::RemoteDataStore;
+use revisionstore::StoreKey;
+use revisionstore::StoreResult;
+use storemodel::bytes;
+use storemodel::TreeStore;
+use types::Key;
+use types::Node;
+use types::RepoPath;
+
+use crate::contentstore;
+use crate::treescmstore;
+use crate::PythonHgIdDataStore;
+
+pub(crate) fn register(py: Python) {
+    register_into(py, |py, c: contentstore| c.to_dyn_treestore(py));
+    register_into(py, |py, t: treescmstore| t.to_dyn_treestore(py));
+    register_into(py, py_to_dyn_treestore);
+}
+
+impl contentstore {
+    fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore + Send + Sync> {
+        let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
+        Arc::new(ManifestStore::new(store))
+    }
+}
+
+impl treescmstore {
+    fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore + Send + Sync> {
+        let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
+        Arc::new(ManifestStore::new(store))
+    }
+}
+
+// Legacy support for store in Python.
+// XXX: Check if it's used and drop support for it.
+fn py_to_dyn_treestore(_py: Python, obj: PyObject) -> Arc<dyn TreeStore + Send + Sync> {
+    let store = Arc::new(PythonHgIdDataStore::new(obj)) as Arc<dyn LegacyStore>;
+    Arc::new(ManifestStore::new(store))
+}
+
+struct ManifestStore<T> {
+    underlying: T,
+}
+
+impl<T> ManifestStore<T> {
+    pub fn new(underlying: T) -> Self {
+        ManifestStore { underlying }
+    }
+}
+
+impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {
+    fn get(&self, path: &RepoPath, node: Node) -> Result<bytes::Bytes> {
+        let key = Key::new(path.to_owned(), node);
+        match self.underlying.get(StoreKey::hgid(key))? {
+            StoreResult::NotFound(key) => Err(format_err!("Key {:?} not found in manifest", key)),
+            StoreResult::Found(data) => Ok(bytes::Bytes::from(data)),
+        }
+    }
+
+    fn insert(&self, _path: &RepoPath, _node: Node, _data: bytes::Bytes) -> Result<()> {
+        unimplemented!(
+            "At this time we don't expect to ever write manifest in rust using python stores."
+        );
+    }
+
+    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+        let keys = keys.iter().map(|k| StoreKey::from(k)).collect::<Vec<_>>();
+        self.underlying.prefetch(&keys).map(|_| ())
+    }
+}

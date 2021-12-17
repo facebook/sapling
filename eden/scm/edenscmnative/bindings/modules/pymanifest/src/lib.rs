@@ -14,13 +14,11 @@ use std::ops::Deref;
 use std::str;
 use std::sync::Arc;
 
-use anyhow::format_err;
-use anyhow::Error;
-use bytes::Bytes;
+use anyhow::Result;
 use cpython::*;
+use cpython_ext::convert::ImplInto;
 use cpython_ext::pyset_add;
 use cpython_ext::pyset_new;
-use cpython_ext::ExtractInner;
 use cpython_ext::PyNone;
 use cpython_ext::PyPathBuf;
 use cpython_ext::ResultPyErrExt;
@@ -31,57 +29,16 @@ use manifest::FileType;
 use manifest::FsNodeMetadata;
 use manifest::Manifest;
 use manifest_tree::TreeManifest;
+use manifest_tree::TreeStore;
 use parking_lot::RwLock;
 use pathmatcher::AlwaysMatcher;
 use pathmatcher::Matcher;
 use pathmatcher::TreeMatcher;
 use pypathmatcher::extract_matcher;
 use pypathmatcher::extract_option_matcher;
-use pyrevisionstore::contentstore;
-use pyrevisionstore::treescmstore;
-use pyrevisionstore::PythonHgIdDataStore;
-use revisionstore::HgIdDataStore;
-use revisionstore::LegacyStore;
-use revisionstore::RemoteDataStore;
-use revisionstore::StoreKey;
-use revisionstore::StoreResult;
 use types::Key;
 use types::Node;
-use types::RepoPath;
 use types::RepoPathBuf;
-
-type Result<T, E = Error> = std::result::Result<T, E>;
-
-struct ManifestStore<T> {
-    underlying: T,
-}
-
-impl<T> ManifestStore<T> {
-    pub fn new(underlying: T) -> Self {
-        ManifestStore { underlying }
-    }
-}
-
-impl<T: HgIdDataStore + RemoteDataStore> manifest_tree::TreeStore for ManifestStore<T> {
-    fn get(&self, path: &RepoPath, node: Node) -> Result<Bytes> {
-        let key = Key::new(path.to_owned(), node);
-        match self.underlying.get(StoreKey::hgid(key))? {
-            StoreResult::NotFound(key) => Err(format_err!("Key {:?} not found in manifest", key)),
-            StoreResult::Found(data) => Ok(Bytes::from(data)),
-        }
-    }
-
-    fn insert(&self, _path: &RepoPath, _node: Node, _data: Bytes) -> Result<()> {
-        unimplemented!(
-            "At this time we don't expect to ever write manifest in rust using python stores."
-        );
-    }
-
-    fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        let keys = keys.iter().map(|k| StoreKey::from(k)).collect::<Vec<_>>();
-        self.underlying.prefetch(&keys).map(|_| ())
-    }
-}
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "manifest"].join(".");
@@ -93,7 +50,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(
             py,
             subdir_diff(
-                store: PyObject,
+                store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
                 path: PyPathBuf,
                 binnode: &PyBytes,
                 other_binnodes: &PyList,
@@ -107,7 +64,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(
             py,
             prefetch(
-                store: PyObject,
+                store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
                 node: &PyBytes,
                 path: PyPathBuf,
                 depth: Option<usize> = None
@@ -123,15 +80,10 @@ py_class!(pub class treemanifest |py| {
 
     def __new__(
         _cls,
-        store: PyObject,
+        store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
         node: Option<&PyBytes> = None
     ) -> PyResult<treemanifest> {
-        let store = contentstore::downcast_from(py, store.clone_ref(py)).map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
-            .or_else(|_| treescmstore::downcast_from(py, store.clone_ref(py)).map(|s| {
-                s.extract_inner(py) as Arc<dyn LegacyStore>
-            }))
-            .unwrap_or_else(|_| Arc::new(PythonHgIdDataStore::new(store)) as Arc<dyn LegacyStore>);
-        let manifest_store = Arc::new(ManifestStore::new(store));
+        let manifest_store = store.into();
         let underlying = match node {
             None => TreeManifest::ephemeral(manifest_store),
             Some(value) => TreeManifest::durable(manifest_store, pybytes_to_node(py, value)?),
@@ -566,14 +518,13 @@ impl treemanifest {
 
 pub fn subdir_diff(
     py: Python,
-    store: PyObject,
+    store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
     path: PyPathBuf,
     binnode: &PyBytes,
     other_binnodes: &PyList,
     depth: i32,
 ) -> PyResult<PyObject> {
-    let store = PythonHgIdDataStore::new(store);
-    let manifest_store = Arc::new(ManifestStore::new(store));
+    let manifest_store = store.into();
     let mut others = vec![];
     for pybytes in other_binnodes.iter(py) {
         others.push(pybytes_to_node(py, &pybytes.extract(py)?)?);
@@ -608,12 +559,12 @@ pub fn subdir_diff(
 
 pub fn prefetch(
     py: Python,
-    store: PyObject,
+    store: ImplInto<Arc<dyn TreeStore + Send + Sync>>,
     node: &PyBytes,
     path: PyPathBuf,
     depth: Option<usize>,
 ) -> PyResult<PyNone> {
-    let store = Arc::new(ManifestStore::new(PythonHgIdDataStore::new(store)));
+    let store = store.into();
     let node = pybytes_to_node(py, node)?;
     let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
     let key = Key::new(repo_path_buf, node);

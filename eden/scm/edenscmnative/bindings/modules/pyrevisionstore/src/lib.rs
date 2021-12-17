@@ -92,6 +92,7 @@ use crate::pythonutil::from_tuple_to_key;
 
 mod datastorepyext;
 mod historystorepyext;
+mod impl_into;
 mod pythondatastore;
 mod pythonutil;
 
@@ -144,6 +145,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             )
         ),
     )?;
+
+    impl_into::register(py);
     Ok(m)
 }
 

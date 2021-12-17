@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.20"
-bytes = { version = "1.0", features = ["serde"] }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.7", default-features = false }
 manifest = { path = "../../../../lib/manifest" }
@@ -13,6 +12,8 @@ manifest-tree = { path = "../../../../lib/manifest-tree" }
 parking_lot = "0.11.2"
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }
-pyrevisionstore = { path = "../pyrevisionstore" }
-revisionstore = { path = "../../../../lib/revisionstore" }
 types = { path = "../../../../lib/types" }
+
+[features]
+python2 = ["cpython/python27-sys", "cpython_ext/python2"]
+python3 = ["cpython/python3-sys", "cpython_ext/python3"]
