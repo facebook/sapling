@@ -17,6 +17,7 @@ use dag::ops::PrefixLookup;
 use dag::protocol::AncestorPath;
 use dag::protocol::RemoteIdConvertProtocol;
 use dag::Location;
+use dag::Set;
 use dag::Vertex;
 use dag::VertexName;
 use edenapi::configmodel;
@@ -221,17 +222,20 @@ impl EdenApi for EagerRepo {
         convert_clone_data(clone_data)
     }
 
-    async fn pull_fast_forward_master(
+    async fn pull_lazy(
         &self,
-        old_master: HgId,
-        new_master: HgId,
+        common: Vec<HgId>,
+        missing: Vec<HgId>,
     ) -> Result<dag::CloneData<HgId>, EdenApiError> {
-        debug!("pull_fast_forward_master");
-        let old_master = Vertex::copy_from(old_master.as_ref());
-        let new_master = Vertex::copy_from(new_master.as_ref());
+        debug!("pull_lazy");
+        let common = to_vec_vertex(&common);
+        let missing = to_vec_vertex(&missing);
         let set = self
             .dag()
-            .only(new_master.into(), old_master.into())
+            .only(
+                Set::from_static_names(missing),
+                Set::from_static_names(common),
+            )
             .await
             .map_err(map_dag_err)?;
         let clone_data = self
