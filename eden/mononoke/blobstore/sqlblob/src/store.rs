@@ -114,6 +114,17 @@ queries! {
         WHERE id = {id}"
     }
 
+
+    write UpdateDataOptimistic(id: &str, ctime: i64, chunk_id: &str, chunk_count: u32, chunking_method: ChunkingMethod, old_ctime: i64) {
+        none,
+        "UPDATE data SET
+            creation_time = {ctime}
+            , chunk_id = {chunk_id}
+            , chunk_count = {chunk_count}
+            , chunking_method = {chunking_method}
+        WHERE id = {id} AND creation_time = {old_ctime}"
+    }
+
     write InsertChunk(values: (id: &str, chunk_num: u32, value: &[u8])) {
         insert_or_ignore,
         "{insert_or_ignore} INTO chunk (
@@ -284,6 +295,34 @@ impl DataSqlStore {
             )
             .await?;
         }
+        Ok(())
+    }
+
+    // Update optimistically using ctime as the optimistic lock check
+    // Used from gc marking to inline small blobs where ctime hasn't changed
+    pub(crate) async fn update_optimistic(
+        &self,
+        key: &str,
+        ctime: i64,
+        chunk_id: &str,
+        chunk_count: u32,
+        chunking_method: ChunkingMethod,
+        old_ctime: i64,
+    ) -> Result<(), Error> {
+        let shard_id = self.shard(key);
+        self.delay.delay(shard_id).await;
+
+        UpdateDataOptimistic::query(
+            &self.write_connection[shard_id],
+            &key,
+            &ctime,
+            &chunk_id,
+            &chunk_count,
+            &chunking_method,
+            &old_ctime,
+        )
+        .await?;
+
         Ok(())
     }
 
@@ -501,12 +540,13 @@ impl ChunkSqlStore {
             .ok_or_else(|| format_err!("Missing chunk with id {} shard {}", key, shard_id))
     }
 
+    // Returns length of the chunk value if known
     pub(crate) async fn set_generation(
         &self,
         key: &str,
         chunk_num: u32,
         chunking_method: ChunkingMethod,
-    ) -> Result<(), Error> {
+    ) -> Result<Option<u64>, Error> {
         if let Some(shard_id) = self.shard(key, chunk_num, chunking_method) {
             let put_generation = self.gc_generations.get().put_generation as u64;
             let mark_generation = self.gc_generations.get().mark_generation as u64;
@@ -519,7 +559,7 @@ impl ChunkSqlStore {
             let (found_generation, value_len) =
                 if let Some((found_generation, value_len)) = found_generation {
                     if found_generation >= mark_generation {
-                        return Ok(());
+                        return Ok(value_len);
                     }
                     (Some(found_generation), value_len)
                 } else {
@@ -531,7 +571,7 @@ impl ChunkSqlStore {
 
                     if let Some((found_generation, value_len)) = found_generation {
                         if found_generation >= mark_generation {
-                            return Ok(());
+                            return Ok(value_len);
                         }
                         (Some(found_generation), value_len)
                     } else {
@@ -566,8 +606,10 @@ impl ChunkSqlStore {
                 &value_len,
             )
             .await?;
+
+            return Ok(Some(value_len));
         }
-        Ok(())
+        Ok(None)
     }
 
     pub(crate) async fn get_chunk_sizes_by_generation(

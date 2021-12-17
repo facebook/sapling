@@ -25,6 +25,7 @@ pub const MARK_SAFE: &str = "mark";
 const ARG_INITIAL_GENERATION_ONLY: &str = "initial-generation-only";
 const ARG_SKIP_INITIAL_GENERATION: &str = "skip-initial-generation";
 const ARG_SKIP_MISSING_VALUE_LEN: &str = "skip-missing-value-len";
+const ARG_SKIP_INLINE_SMALL_VALUES: &str = "skip-inline-small-values";
 
 const MIN_RETRY_DELAY: Duration = Duration::from_secs(1);
 const MAX_RETRY_DELAY: Duration = Duration::from_secs(3);
@@ -54,11 +55,18 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .required(false)
                 .help("Only do the sweep; do not set value_len on blobs with no value_len set yet.")
         )
+        .arg(
+            Arg::with_name(ARG_SKIP_INLINE_SMALL_VALUES)
+                .long(ARG_SKIP_INLINE_SMALL_VALUES)
+                .takes_value(false)
+                .required(false)
+                .help("Only set the generation, don't inline small values")
+        )
 }
 
-async fn handle_one_key(key: String, store: Arc<Sqlblob>) -> Result<()> {
+async fn handle_one_key(key: String, store: Arc<Sqlblob>, inline_small_values: bool) -> Result<()> {
     for _retry in 0..RETRIES {
-        let res = store.set_generation(&key).await;
+        let res = store.set_generation(&key, inline_small_values).await;
         if res.is_ok() {
             return res;
         }
@@ -154,6 +162,8 @@ pub async fn subcommand_mark<'a>(
 
     let sqlblob = Arc::new(sqlblob);
 
+    let inline_small_values = !sub_matches.is_present(ARG_SKIP_INLINE_SMALL_VALUES);
+
     info!(logger, "Starting sweep");
     // Set up a task to process each key in parallel in its own task.
     let (key_channel, processor) = {
@@ -164,7 +174,9 @@ pub async fn subcommand_mark<'a>(
                 .try_for_each_concurrent(max_parallelism, {
                     |key| {
                         let sqlblob = sqlblob.clone();
-                        async move { tokio::spawn(handle_one_key(key, sqlblob)).await? }
+                        async move {
+                            tokio::spawn(handle_one_key(key, sqlblob, inline_small_values)).await?
+                        }
                     }
                 })
                 .await

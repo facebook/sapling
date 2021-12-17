@@ -245,7 +245,7 @@ blobstore_test_impl! {
 blobstore_test_impl! {
     sqlblob_test_no_inline => {
         state: (),
-        new: move |_, put_behaviour,| Sqlblob::with_sqlite_in_memory(put_behaviour, &(get_test_config_store().1), false),
+        new: move |_, put_behaviour,| Sqlblob::with_sqlite_in_memory(put_behaviour, &(get_test_config_store().1), false, 0),
         persistent: true,
         has_ctime: true,
     }
@@ -254,7 +254,7 @@ blobstore_test_impl! {
 blobstore_test_impl! {
     sqlblob_test_allow_inline => {
         state: (),
-        new: move |_, put_behaviour,| Sqlblob::with_sqlite_in_memory(put_behaviour, &(get_test_config_store().1), true),
+        new: move |_, put_behaviour,| Sqlblob::with_sqlite_in_memory(put_behaviour, &(get_test_config_store().1), true, 0),
         persistent: true,
         has_ctime: true,
     }

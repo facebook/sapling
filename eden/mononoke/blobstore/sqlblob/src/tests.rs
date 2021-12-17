@@ -26,10 +26,10 @@ where
     Test: Fn(CoreContext, CountedSqlblob, Arc<TestSource>) -> Fut,
     Fut: Future<Output = Result<()>>,
 {
-    for allow_inline in &[true, false] {
+    for allow_inline in [true, false] {
         let (test_source, config_store) = get_test_config_store();
         let blobstore =
-            Sqlblob::with_sqlite_in_memory(put_behaviour, &config_store, *allow_inline)?;
+            Sqlblob::with_sqlite_in_memory(put_behaviour, &config_store, allow_inline, 0)?;
         let ctx = CoreContext::test_mock(fb);
         do_test(ctx, blobstore, test_source)
             .await
@@ -319,6 +319,7 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
                 DEFAULT_PUT_BEHAVIOUR,
                 &config_store,
                 auto_inline_puts,
+                0, // no grace period for ctime updates,
             )?;
             let ctx = CoreContext::test_mock(fb);
             borrowed!(ctx);
@@ -348,11 +349,12 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
             tokio::time::sleep(UPDATE_WAIT_TIME).await;
 
             // Set the generation and confirm
-            bs.set_generation(&key1).await?;
+            bs.set_generation(&key1, true).await?;
             let generations = bs.get_chunk_generations(&key1).await?;
-            if !auto_inline_puts || value_len > MAX_INLINE_LEN {
+            if value_len > MAX_INLINE_LEN {
                 assert_eq!(generations, vec![Some(3)], "Generation set to 3");
             } else {
+                // We should now have no generations as the set_generation(key, true) should have inlined
                 assert_eq!(generations, vec![], "No generations expected");
             }
 
@@ -371,7 +373,7 @@ async fn generations(fb: FacebookInit) -> Result<(), Error> {
                 // the wrong version.
                 set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 3);
                 tokio::time::sleep(UPDATE_WAIT_TIME).await;
-                bs.set_generation(&key1).await?;
+                bs.set_generation(&key1, true).await?;
                 let generations = bs.get_chunk_generations(&key1).await?;
                 assert_eq!(generations, vec![Some(10)], "key1 generation not updated");
                 let generations = bs.get_chunk_generations(&key2).await?;

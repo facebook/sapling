@@ -33,6 +33,7 @@ use cached_config::{ConfigHandle, ConfigStore, ModificationTime, TestSource};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt};
+use futures::TryFutureExt;
 use mononoke_types::{hash::Context as HashContext, BlobstoreBytes};
 use nonzero_ext::nonzero;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
@@ -76,6 +77,7 @@ pub struct Sqlblob {
     chunk_store: Arc<ChunkSqlStore>,
     put_behaviour: PutBehaviour,
     allow_inline_put: bool,
+    ctime_inline_grace: i64,
 }
 
 impl std::fmt::Display for Sqlblob {
@@ -90,8 +92,15 @@ fn get_gc_config_handle(config_store: &ConfigStore) -> Result<ConfigHandle<XdbGc
 
 const DEFAULT_ALLOW_INLINE_PUT: bool = true;
 
+// One day
+const DEFAULT_CTIME_INLINE_GRACE: i64 = 86400;
+
 // base64 encoding for inline hash has an overhead
 pub const MAX_INLINE_LEN: u64 = 255 * 3 / 4;
+
+fn encode_small_value(raw: &[u8]) -> String {
+    base64::encode_config(raw, base64::STANDARD_NO_PAD)
+}
 
 impl Sqlblob {
     pub async fn with_mysql(
@@ -152,6 +161,7 @@ impl Sqlblob {
                 )),
                 put_behaviour,
                 allow_inline_put: DEFAULT_ALLOW_INLINE_PUT,
+                ctime_inline_grace: DEFAULT_CTIME_INLINE_GRACE,
             },
             shardmap,
         ))
@@ -187,6 +197,7 @@ impl Sqlblob {
             },
             config_store,
             DEFAULT_ALLOW_INLINE_PUT,
+            DEFAULT_CTIME_INLINE_GRACE,
         )
         .await
     }
@@ -199,6 +210,7 @@ impl Sqlblob {
         connection_factory: CF,
         config_store: &ConfigStore,
         allow_inline_put: bool,
+        ctime_inline_grace: i64,
     ) -> Result<CountedSqlblob, Error>
     where
         CF: Fn(usize) -> SF,
@@ -247,6 +259,7 @@ impl Sqlblob {
                 )),
                 put_behaviour,
                 allow_inline_put,
+                ctime_inline_grace,
             },
             label,
         ))
@@ -256,6 +269,7 @@ impl Sqlblob {
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
         allow_inline_put: bool,
+        ctime_inline_grace: i64,
     ) -> Result<CountedSqlblob> {
         Self::with_sqlite(
             put_behaviour,
@@ -266,6 +280,7 @@ impl Sqlblob {
             },
             config_store,
             allow_inline_put,
+            ctime_inline_grace,
         )
     }
 
@@ -288,6 +303,7 @@ impl Sqlblob {
             },
             config_store,
             DEFAULT_ALLOW_INLINE_PUT,
+            DEFAULT_CTIME_INLINE_GRACE,
         )
     }
 
@@ -296,6 +312,7 @@ impl Sqlblob {
         mut constructor: F,
         config_store: &ConfigStore,
         allow_inline_put: bool,
+        ctime_inline_grace: i64,
     ) -> Result<CountedSqlblob>
     where
         F: FnMut(usize) -> Result<SqliteConnection>,
@@ -332,6 +349,7 @@ impl Sqlblob {
                 )),
                 put_behaviour,
                 allow_inline_put,
+                ctime_inline_grace,
             },
             "sqlite".into(),
         ))
@@ -385,16 +403,64 @@ impl Sqlblob {
         }
     }
 
-    pub async fn set_generation(&self, key: &str) -> Result<()> {
+    /// Mark the generation for a key
+    /// If its value was small enough to inline, then also inline it if requested
+    pub async fn set_generation(&self, key: &str, inline_small_values: bool) -> Result<()> {
         let chunked = self.data_store.get(key).await?;
         if let Some(chunked) = chunked {
             let set_chunk_generations: FuturesUnordered<_> = (0..chunked.count)
                 .map(|chunk_num| {
                     self.chunk_store
                         .set_generation(&chunked.id, chunk_num, chunked.chunking_method)
+                        .map_ok(|value_len| {
+                            if let Some(value_len) = value_len {
+                                // Should not be chunked at all, request the key is inlined
+                                // We do this after marking rather than short circuiting the above
+                                // so that inlining following this call fails the key is still live
+                                value_len <= MAX_INLINE_LEN
+                            } else {
+                                false
+                            }
+                        })
                 })
                 .collect();
-            set_chunk_generations.try_collect().await
+            let can_inline: Vec<bool> = set_chunk_generations.try_collect().await?;
+            if inline_small_values && can_inline.len() == 1 && can_inline[0] {
+                // Value was small, so lets inline it
+                let small_value = self.get_impl(key).await?;
+                if let Some(small_value) = small_value {
+                    // Double check length incase it changed since setting generation
+                    let value_len: u64 = small_value.as_bytes().len().try_into()?;
+                    if value_len <= MAX_INLINE_LEN {
+                        if let Some(old_ctime) = small_value.as_meta().ctime() {
+                            let ctime = {
+                                match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+                                    Ok(offset) => offset.as_secs().try_into(),
+                                    Err(negative) => {
+                                        negative.duration().as_secs().try_into().map(|v: i64| -v)
+                                    }
+                                }
+                            }?;
+                            // Optimisitic update to convert to the inline form. This only updates for actually old ctimes
+                            // (one day or more), so that we don't attempt to inline any new data from e.g. a packer write
+                            if ctime - old_ctime >= self.ctime_inline_grace {
+                                let small_value = encode_small_value(&small_value.into_raw_bytes());
+                                self.data_store
+                                    .update_optimistic(
+                                        key,
+                                        ctime,
+                                        &small_value,
+                                        0,
+                                        ChunkingMethod::InlineBase64,
+                                        old_ctime,
+                                    )
+                                    .await?;
+                            }
+                        }
+                    }
+                }
+            }
+            Ok(())
         } else {
             bail!("key does not exist");
         }
@@ -553,11 +619,9 @@ impl BlobstorePutOps for Sqlblob {
                     }
                     (chunk_key, chunk_count, chunk_gen_insert_shard_id)
                 }
-                ChunkingMethod::InlineBase64 => (
-                    base64::encode_config(value.as_bytes().as_ref(), base64::STANDARD_NO_PAD),
-                    0,
-                    None,
-                ),
+                ChunkingMethod::InlineBase64 => {
+                    (encode_small_value(value.as_bytes().as_ref()), 0, None)
+                }
             };
 
             self.data_store
