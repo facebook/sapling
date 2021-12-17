@@ -14,18 +14,22 @@ use anyhow::Result;
 use cpython::*;
 use cpython_ext::convert::register_into;
 use cpython_ext::ExtractInner;
+use revisionstore::trait_impls::ArcFileStore;
+use revisionstore::trait_impls::ArcRemoteDataStore;
 use revisionstore::HgIdDataStore;
 use revisionstore::LegacyStore;
 use revisionstore::RemoteDataStore;
 use revisionstore::StoreKey;
 use revisionstore::StoreResult;
 use storemodel::bytes;
+use storemodel::ReadFileContents;
 use storemodel::TreeStore;
 use types::Key;
 use types::Node;
 use types::RepoPath;
 
 use crate::contentstore;
+use crate::filescmstore;
 use crate::treescmstore;
 use crate::PythonHgIdDataStore;
 
@@ -33,12 +37,35 @@ pub(crate) fn register(py: Python) {
     register_into(py, |py, c: contentstore| c.to_dyn_treestore(py));
     register_into(py, |py, t: treescmstore| t.to_dyn_treestore(py));
     register_into(py, py_to_dyn_treestore);
+
+    register_into(py, |py, c: contentstore| c.to_read_file_contents(py));
+    register_into(py, |py, f: filescmstore| f.to_read_file_contents(py));
 }
 
 impl contentstore {
     fn to_dyn_treestore(&self, py: Python) -> Arc<dyn TreeStore + Send + Sync> {
         let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
         Arc::new(ManifestStore::new(store))
+    }
+
+    fn to_read_file_contents(
+        &self,
+        py: Python,
+    ) -> Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync> {
+        let store = self.extract_inner(py) as Arc<dyn LegacyStore>;
+        let store = ArcRemoteDataStore(store as Arc<_>);
+        Arc::new(store)
+    }
+}
+
+impl filescmstore {
+    fn to_read_file_contents(
+        &self,
+        py: Python,
+    ) -> Arc<dyn ReadFileContents<Error = anyhow::Error> + Send + Sync> {
+        let store = self.extract_inner(py);
+        let store = ArcFileStore(store);
+        Arc::new(store)
     }
 }
 

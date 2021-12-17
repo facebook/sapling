@@ -32,17 +32,17 @@ use crate::StoreResult;
 // Wrapper types to workaround Rust's orphan rule.
 pub struct ArcFileStore(pub Arc<FileStore>);
 
-pub struct ClonableRemoteDataStore<'a, T>(pub &'a T);
+pub struct ArcRemoteDataStore<T: ?Sized>(pub Arc<T>);
 
 #[async_trait]
-impl<'a, T> ReadFileContents for ClonableRemoteDataStore<'a, T>
+impl<T> ReadFileContents for ArcRemoteDataStore<T>
 where
-    T: RemoteDataStore + Clone + 'static,
+    T: RemoteDataStore + 'static + ?Sized,
 {
     type Error = anyhow::Error;
 
     async fn read_file_contents(&self, keys: Vec<Key>) -> BoxStream<Result<(Bytes, Key)>> {
-        stream_data_from_remote_data_store(self.0, keys).boxed()
+        stream_data_from_remote_data_store(self.0.clone(), keys).boxed()
     }
 }
 
@@ -59,10 +59,9 @@ const PREFETCH_CHUNK_SIZE: usize = 1000;
 const FETCH_PARALLELISM: usize = 20;
 
 fn stream_data_from_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
-    store: &DS,
+    store: DS,
     keys: Vec<Key>,
 ) -> impl Stream<Item = Result<(Bytes, Key)>> {
-    let store = store.clone();
     stream::iter(keys.into_iter().map(StoreKey::HgId))
         .chunks(PREFETCH_CHUNK_SIZE)
         .map(move |chunk| {

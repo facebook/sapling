@@ -2726,7 +2726,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
 
     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
     if repo.ui.configbool("nativecheckout", "usescmstore"):
-        plan.apply_scmstore(
+        plan.apply(
             repo.fileslog.filescmstore,
         )
     else:

@@ -25,7 +25,7 @@ def debugdryup(ui, repo, fromspec, tospec, **opts):
 
     with PrintTimer(ui, "Fetching"):
         if repo.ui.configbool("nativecheckout", "usescmstore"):
-            count, size = plan.apply_scmstore_dry_run(
+            count, size = plan.apply_dry_run(
                 repo.fileslog.filescmstore,
             )
         else:

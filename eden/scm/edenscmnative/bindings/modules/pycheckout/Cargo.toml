@@ -14,11 +14,15 @@ pathmatcher = { path = "../../../../lib/pathmatcher" }
 pyconfigparser = { path = "../pyconfigparser" }
 pypathmatcher = { path = "../pypathmatcher" }
 pymanifest = { path = "../pymanifest" }
-pyrevisionstore = { path = "../pyrevisionstore" }
 pystatus = { path = "../pystatus" }
 pytreestate = { path = "../pytreestate" }
-revisionstore = { path = "../../../../lib/revisionstore" }
-vfs = { path = "../../../../lib/vfs" }
+storemodel = { path = "../../../../lib/storemodel" }
 tracing = "0.1"
 treestate = { path = "../../../../lib/treestate" }
 types = { path = "../../../../lib/types" }
+vfs = { path = "../../../../lib/vfs" }
+
+[features]
+python2 = ["cpython/python27-sys", "cpython_ext/python2"]
+python3 = ["cpython/python3-sys", "cpython_ext/python3"]
+
