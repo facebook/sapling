@@ -2188,6 +2188,10 @@ async fn calculate_initial_reserved(
 ) -> Result<IdSet> {
     let mut reserved = IdSet::empty();
     for (vertex, opts) in heads.vertex_options() {
+        if opts.reserve_size == 0 {
+            // Avoid potentially costly remote lookup.
+            continue;
+        }
         if let Some(id) = map
             .vertex_id_with_max_group(&vertex, opts.highest_group)
             .await?
