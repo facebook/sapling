@@ -28,6 +28,7 @@
   .hg/store/lfs/pointers/lock (?)
   .hg/store/lfs/pointers/log
   .hg/store/lfs/pointers/meta
+  .hg/store/lfs/pointers/rlock
 
 # Blobs shouldn't have changed
   $ hg diff -r . -r .~2

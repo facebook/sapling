@@ -18,6 +18,7 @@ use super::fold::FoldState;
 use crate::errors::ResultExt;
 use crate::index::Index;
 use crate::lock::ScopedDirLock;
+use crate::lock::READER_LOCK_OPTS;
 use crate::log::GenericPath;
 use crate::log::Log;
 use crate::log::LogMetadata;
@@ -387,6 +388,7 @@ impl OpenOptions {
                 all_folds,
                 index_corrupted: false,
                 open_options: self.clone(),
+                reader_lock: None,
             })
         })();
 
@@ -410,6 +412,10 @@ impl OpenOptions {
         reuse_indexes: Option<&Vec<Index>>,
         lock: Option<&ScopedDirLock>,
     ) -> crate::Result<Log> {
+        let reader_lock = match dir.as_opt_path() {
+            Some(d) => Some(ScopedDirLock::new_with_options(d, &READER_LOCK_OPTS)?),
+            None => None,
+        };
         let create = self.create;
 
         // Do a lock-less load_or_create_meta to avoid the flock overhead.
@@ -451,6 +457,7 @@ impl OpenOptions {
             all_folds,
             index_corrupted: false,
             open_options: self.clone(),
+            reader_lock,
         };
         log.update_indexes_for_on_disk_entries()?;
         log.update_and_flush_disk_folds()?;

@@ -23,6 +23,7 @@ use vlqencoding::VLQEncode;
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::lock::ScopedDirLock;
+use crate::lock::READER_LOCK_OPTS;
 use crate::log::GenericPath;
 use crate::log::LogMetadata;
 use crate::log::{self};
@@ -78,6 +79,9 @@ pub struct MultiLog {
     /// true: use "multimeta" file; false: use "multimeta_log" Log.
     /// For testing purpose only.
     leacy_multimeta_source: bool,
+
+    /// Indicate an active reader. Destrictive writes (repair) are unsafe.
+    reader_lock: ScopedDirLock,
 }
 
 /// Constant for the reverse index of multimeta log.
@@ -119,6 +123,8 @@ impl OpenOptions {
     /// are created on demand.
     pub fn open(&self, path: &Path) -> crate::Result<MultiLog> {
         let result: crate::Result<_> = (|| {
+            let reader_lock = ScopedDirLock::new_with_options(path, &READER_LOCK_OPTS)?;
+
             // The multimeta log contains the "MultiMeta" metadata about how to load other
             // logs.
             let meta_log_path = multi_meta_log_path(&path);
@@ -184,6 +190,7 @@ impl OpenOptions {
                 multimeta,
                 multimeta_log,
                 leacy_multimeta_source: self.leacy_multimeta_source,
+                reader_lock,
             })
         })();
 

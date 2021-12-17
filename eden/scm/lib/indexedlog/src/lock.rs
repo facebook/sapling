@@ -63,6 +63,26 @@ pub struct DirLockOptions {
     pub file_name: &'static str,
 }
 
+/// Lock used to indicate that a reader is alive.
+///
+/// This crate generally depends on "append-only" for lock-free reads
+/// (appending data won't invalidate existing readers' mmaps).
+///
+/// However, certain operations (ex. repair) aren't "append-only".
+/// This reader lock is used to detect if any readers are alive so
+/// non-append-only operations can know whether it's safe to go on.
+pub(crate) static READER_LOCK_OPTS: DirLockOptions = DirLockOptions {
+    exclusive: false,
+    non_blocking: false,
+    // The reader lock uses a different file name from the write lock,
+    // because readers do not block normal writes (append-only + atomic
+    // replace), and normal writes do not block readers.
+    //
+    // If this is "" (using default lock file), then active readers will
+    // prevent normal writes, which is undesirable.
+    file_name: "rlock",
+};
+
 impl ScopedDirLock {
     /// Lock the given directory with default options (exclusive, blocking).
     pub fn new(path: &Path) -> crate::Result<Self> {

@@ -122,37 +122,53 @@
   $TESTTMP/default-hgcache/master/indexedlogdatastore/0/index2-node
   $TESTTMP/default-hgcache/master/indexedlogdatastore/0/log
   $TESTTMP/default-hgcache/master/indexedlogdatastore/0/meta
+  $TESTTMP/default-hgcache/master/indexedlogdatastore/0/rlock
   $TESTTMP/default-hgcache/master/indexedlogdatastore/latest
+  $TESTTMP/default-hgcache/master/indexedlogdatastore/rlock
   $TESTTMP/default-hgcache/master/indexedloghistorystore/0/index2-node_and_path
   $TESTTMP/default-hgcache/master/indexedloghistorystore/0/log
   $TESTTMP/default-hgcache/master/indexedloghistorystore/0/meta
+  $TESTTMP/default-hgcache/master/indexedloghistorystore/0/rlock
   $TESTTMP/default-hgcache/master/indexedloghistorystore/latest
+  $TESTTMP/default-hgcache/master/indexedloghistorystore/rlock
   $TESTTMP/default-hgcache/master/lfs/blobs/0/index2-sha256
   $TESTTMP/default-hgcache/master/lfs/blobs/0/log
   $TESTTMP/default-hgcache/master/lfs/blobs/0/meta
+  $TESTTMP/default-hgcache/master/lfs/blobs/0/rlock
   $TESTTMP/default-hgcache/master/lfs/blobs/latest
+  $TESTTMP/default-hgcache/master/lfs/blobs/rlock
   $TESTTMP/default-hgcache/master/lfs/pointers/0/index2-node
   $TESTTMP/default-hgcache/master/lfs/pointers/0/index2-sha256
   $TESTTMP/default-hgcache/master/lfs/pointers/0/log
   $TESTTMP/default-hgcache/master/lfs/pointers/0/meta
+  $TESTTMP/default-hgcache/master/lfs/pointers/0/rlock
   $TESTTMP/default-hgcache/master/lfs/pointers/latest
+  $TESTTMP/default-hgcache/master/lfs/pointers/rlock
   $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/0/index2-node
   $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/0/log
   $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/0/meta
+  $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/0/rlock
   $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/latest
+  $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/rlock
   $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/0/index2-node_and_path
   $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/0/log
   $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/0/meta
+  $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/0/rlock
   $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/latest
+  $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/rlock
   $TESTTMP/default-hgcache/master/manifests/lfs/blobs/0/index2-sha256
   $TESTTMP/default-hgcache/master/manifests/lfs/blobs/0/log
   $TESTTMP/default-hgcache/master/manifests/lfs/blobs/0/meta
+  $TESTTMP/default-hgcache/master/manifests/lfs/blobs/0/rlock
   $TESTTMP/default-hgcache/master/manifests/lfs/blobs/latest
+  $TESTTMP/default-hgcache/master/manifests/lfs/blobs/rlock
   $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/index2-node
   $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/index2-sha256
   $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/log
   $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/meta
+  $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/rlock
   $TESTTMP/default-hgcache/master/manifests/lfs/pointers/latest
+  $TESTTMP/default-hgcache/master/manifests/lfs/pointers/rlock
   $TESTTMP/default-hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histidx
   $TESTTMP/default-hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histpack
 

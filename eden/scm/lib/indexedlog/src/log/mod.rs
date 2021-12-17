@@ -67,6 +67,7 @@ use crate::index::RangeIter;
 use crate::index::ReadonlyBuffer;
 use crate::index::{self};
 use crate::lock::ScopedDirLock;
+use crate::lock::READER_LOCK_OPTS;
 use crate::utils::mmap_path;
 use crate::utils::xxhash;
 use crate::utils::xxhash32;
@@ -141,6 +142,8 @@ pub struct Log {
     // probably fine considering index corruptions are rare.
     index_corrupted: bool,
     open_options: OpenOptions,
+    // Indicate an active reader. Destrictive writes (repair) are unsafe.
+    reader_lock: Option<ScopedDirLock>,
 }
 
 /// Iterator over all entries in a [`Log`].
@@ -397,6 +400,11 @@ impl Log {
             }
         }
 
+        let reader_lock = match self.dir.as_opt_path() {
+            Some(d) => Some(ScopedDirLock::new_with_options(d, &READER_LOCK_OPTS)?),
+            None => None,
+        };
+
         // Create the new Log.
         let mut log = Log {
             dir: self.dir.clone(),
@@ -413,6 +421,7 @@ impl Log {
             .clone(),
             index_corrupted: false,
             open_options: self.open_options.clone(),
+            reader_lock,
         };
 
         if !copy_dirty {

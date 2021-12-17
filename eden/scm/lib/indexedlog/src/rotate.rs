@@ -24,6 +24,7 @@ use tracing::trace;
 use crate::errors::IoResultExt;
 use crate::errors::ResultExt;
 use crate::lock::ScopedDirLock;
+use crate::lock::READER_LOCK_OPTS;
 use crate::log::FlushFilterContext;
 use crate::log::FlushFilterFunc;
 use crate::log::FlushFilterOutput;
@@ -47,6 +48,8 @@ pub struct RotateLog {
     // fails to load.
     logs_len: AtomicUsize,
     latest: u8,
+    // Indicate an active reader. Destrictive writes (repair) are unsafe.
+    reader_lock: Option<ScopedDirLock>,
 }
 
 // On disk, a RotateLog is a directory containing:
@@ -155,6 +158,7 @@ impl OpenOptions {
     pub fn open(&self, dir: impl AsRef<Path>) -> crate::Result<RotateLog> {
         let dir = dir.as_ref();
         let result: crate::Result<_> = (|| {
+            let reader_lock = ScopedDirLock::new_with_options(dir, &READER_LOCK_OPTS)?;
             let span = debug_span!("RotateLog::open", dir = &dir.to_string_lossy().as_ref());
             let _guard = span.enter();
 
@@ -231,6 +235,7 @@ impl OpenOptions {
                 logs,
                 logs_len,
                 latest,
+                reader_lock: Some(reader_lock),
             })
         })();
 
@@ -250,6 +255,7 @@ impl OpenOptions {
                 logs,
                 logs_len,
                 latest: 0,
+                reader_lock: None,
             })
         })();
         result.context("in rotate::OpenOptions::create_in_memory")
@@ -1100,7 +1106,7 @@ mod tests {
                 .unwrap()
                 .map(|entry| entry.unwrap().file_name().into_string().unwrap())
                 // On Windows, the "lock" file was created by open_dir.
-                .filter(|name| name != "lock")
+                .filter(|name| name != "lock" && name != "rlock")
                 .count()
         };
 
