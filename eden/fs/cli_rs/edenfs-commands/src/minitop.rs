@@ -333,12 +333,17 @@ impl crate::Subcommand for MinitopCmd {
                     .ok_or_else(|| {
                         EdenFsError::Other(anyhow!("Did not fetch pending {} info", import_type))
                     })?;
-                println!(
-                    "total pending {}: {} ({:.3}s)",
-                    import_type,
-                    pending_blob_counts.count,
-                    pending_blob_counts.max_duration_us as f64 / 1000000.0,
-                );
+                stdout
+                    .write(
+                        format!(
+                            "total pending {}: {} ({:.3}s)\n",
+                            import_type,
+                            pending_blob_counts.count,
+                            pending_blob_counts.max_duration_us as f64 / 1000000.0,
+                        )
+                        .as_bytes(),
+                    )
+                    .from_err()?;
             }
 
             // Render aggregated processes
