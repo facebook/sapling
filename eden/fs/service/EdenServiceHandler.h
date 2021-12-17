@@ -8,7 +8,6 @@
 #pragma once
 
 #include <fb303/BaseService.h>
-#include <thrift/lib/cpp2/server/StatusServerInterface.h>
 #include <optional>
 #include "eden/fs/eden-config.h"
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
@@ -40,8 +39,7 @@ extern const char* const kServiceName;
  * Handler for the EdenService thrift interface
  */
 class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
-                           public fb303::BaseService,
-                           public apache::thrift::StatusServerInterface {
+                           public fb303::BaseService {
  public:
   explicit EdenServiceHandler(
       std::vector<std::string> originalCommandLine,

@@ -1865,6 +1865,7 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->setEnableCodel(FLAGS_thrift_enable_codel);
   server_->setQueueTimeout(
       std::chrono::milliseconds{FLAGS_thrift_queue_timeout});
+  server_->setAllowCheckUnimplementedExtraInterfaces(false);
 
   // Setting this allows us to to only do stopListening() on the stop() call
   // and delay thread-pool join (stop cpu workers + stop workers) untill
@@ -1877,7 +1878,6 @@ Future<Unit> EdenServer::createThriftServer() {
   auto procFactory =
       std::make_shared<ThriftServerAsyncProcessorFactory<EdenServiceHandler>>(
           handler_);
-  server_->setStatusInterface(handler_);
   server_->setProcessorFactory(procFactory);
 
   // Get the path to the thrift socket.
