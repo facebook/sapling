@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::io::{stderr, stdout, Write};
 use std::process::Command;
 
 use anyhow::{anyhow, Context, Result};
@@ -99,7 +100,19 @@ fn wrapper_main() -> Result<i32> {
             // help flag has been disabled for the main command and debug subcommand so they
             // will fallback correct while we still show help message for enabled commands
             // correctly.
-            Err(e) if e.kind == clap::ErrorKind::HelpDisplayed => Ok(0),
+            Err(e) if e.kind == clap::ErrorKind::HelpDisplayed => {
+                // Prints help messages.
+                // If `use_stderr` is set, it indicates a misuse of flags and we should return
+                // non-zero exit code. If not, the user has requested the help message and we
+                // should return zero.
+                if e.use_stderr() {
+                    writeln!(&mut stderr(), "{}", e.message);
+                    Ok(1)
+                } else {
+                    writeln!(&mut stdout().lock(), "{}", e.message);
+                    Ok(0)
+                }
+            }
             Err(_) => fallback(),
         }
     }
