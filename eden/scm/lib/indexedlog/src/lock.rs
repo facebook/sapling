@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::fs;
 use std::fs::File;
 use std::io;
 use std::path::Path;
@@ -13,6 +14,7 @@ use std::path::PathBuf;
 use fs2::FileExt;
 
 use crate::errors::IoResultExt;
+use crate::utils;
 
 /// RAII style file locking.
 pub struct ScopedFileLock<'a> {
@@ -54,15 +56,75 @@ pub struct ScopedDirLock {
     path: PathBuf,
 }
 
+/// Options for directory locking.
+pub struct DirLockOptions {
+    pub exclusive: bool,
+    pub non_blocking: bool,
+    pub file_name: &'static str,
+}
+
 impl ScopedDirLock {
-    /// Lock the given directory.
+    /// Lock the given directory with default options (exclusive, blocking).
     pub fn new(path: &Path) -> crate::Result<Self> {
-        let file = crate::utils::open_dir(path).context(path, "cannot open for locking")?;
-        file.lock_exclusive().context(path, "cannot lock")?;
-        let result = Self {
-            file,
-            path: path.to_path_buf(),
+        const DEFAULT_OPTIONS: DirLockOptions = DirLockOptions {
+            exclusive: true,
+            non_blocking: false,
+            file_name: "",
         };
+        Self::new_with_options(path, &DEFAULT_OPTIONS)
+    }
+
+    /// Lock the given directory with advanced options.
+    ///
+    /// - `opts.file_name`: decides the lock file name. A directory can have
+    ///   multiple locks independent from one another using different `file_name`s.
+    /// - `opts.non_blocking`: if true, do not wait and return an error if lock
+    ///   cannot be obtained; if false, wait forever for the lock to be available.
+    /// - `opts.exclusive`: if true, ensure that no other locks are present for
+    ///   for the (dir, file_name); if false, allow other non-exclusive locks
+    ///   to co-exist.
+    pub fn new_with_options(dir: &Path, opts: &DirLockOptions) -> crate::Result<Self> {
+        let (path, file) = if opts.file_name.is_empty() {
+            let file = utils::open_dir(dir).context(dir, "cannot open for locking")?;
+            (dir.to_path_buf(), file)
+        } else {
+            let path = dir.join(opts.file_name);
+
+            // Try opening witout requiring write permission first. This allows
+            // shared lock as a different user without write permission.
+            let file = match fs::OpenOptions::new().read(true).open(&path) {
+                Ok(f) => f,
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    // Create the file.
+                    utils::mkdir_p(dir)?;
+                    fs::OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .open(&path)
+                        .context(&path, "cannot create for locking")?
+                }
+                Err(e) => {
+                    return Err(e).context(&path, "cannot open for locking");
+                }
+            };
+            (path, file)
+        };
+
+        // Lock
+        match (opts.exclusive, opts.non_blocking) {
+            (true, false) => file.lock_exclusive(),
+            (true, true) => file.try_lock_exclusive(),
+            (false, false) => file.lock_shared(),
+            (false, true) => file.try_lock_shared(),
+        }
+        .context(&path, || {
+            format!(
+                "cannot lock (exclusive: {}, non_blocking: {})",
+                opts.exclusive, opts.non_blocking,
+            )
+        })?;
+
+        let result = Self { file, path };
         Ok(result)
     }
 
@@ -201,5 +263,49 @@ mod tests {
             file.read_exact(&mut buf).expect("read");
             assert_eq!(&buf[..], &expected[..]);
         }
+    }
+
+    #[test]
+    fn test_dir_lock_with_options() {
+        let dir = tempdir().unwrap();
+        let path = dir.path();
+        let opts = DirLockOptions {
+            file_name: "foo",
+            exclusive: false,
+            non_blocking: false,
+        };
+
+        // Multiple shared locks obtained with blocking on and off.
+        let l1 = ScopedDirLock::new_with_options(path, &opts).unwrap();
+        let l2 = ScopedDirLock::new_with_options(path, &opts).unwrap();
+
+        let opts = DirLockOptions {
+            non_blocking: true,
+            ..opts
+        };
+        let l3 = ScopedDirLock::new_with_options(path, &opts).unwrap();
+
+        // Exclusive lock cannot be obtained while shared locks are present.
+        let opts = DirLockOptions {
+            exclusive: true,
+            ..opts
+        };
+        assert!(ScopedDirLock::new_with_options(path, &opts).is_err());
+
+        // Exclusive lock can be obtained after releasing shared locks.
+        drop((l1, l2, l3));
+        let l4 = ScopedDirLock::new_with_options(path, &opts).unwrap();
+
+        // Exclusive lock cannot be obtained while other locks are present.
+        assert!(ScopedDirLock::new_with_options(path, &opts).is_err());
+
+        // Exclusive lock cannot be obtained with a different file name.
+        let opts = DirLockOptions {
+            file_name: "bar",
+            ..opts
+        };
+        assert!(ScopedDirLock::new_with_options(path, &opts).is_ok());
+
+        drop(l4);
     }
 }
