@@ -15,7 +15,7 @@ import socket
 import subprocess
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Generator, IO, List, Tuple
 
@@ -66,9 +66,11 @@ def print_diagnostic_info(
 
     processor = instance.get_config_value("rage.reporter", default="")
     if not dry_run and processor:
-        print_expanded_log_file(instance.get_log_path(), processor, out)
+        section_title("Verbose EdenFS logs:", out)
+        paste_file(instance.get_log_path(), processor, out)
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
+    print_crashed_edenfs_logs(processor, out)
 
     if health_status.is_healthy() and health_status.pid is not None:
         print_edenfs_process_tree(health_status.pid, out)
@@ -181,7 +183,7 @@ def print_log_file(
         out.write(b"Error reading the log file: %s\n" % str(e).encode())
 
 
-def print_expanded_log_file(path: Path, processor: str, out: IO[bytes]) -> None:
+def paste_file(path: Path, processor: str, out: IO[bytes]) -> None:
     try:
         proc = subprocess.Popen(
             shlex.split(processor), stdin=subprocess.PIPE, stdout=subprocess.PIPE
@@ -207,14 +209,13 @@ def print_expanded_log_file(path: Path, processor: str, out: IO[bytes]) -> None:
         pattern = re.compile("^.*\\n[a-zA-Z0-9_.-]*: .*\\n$")
         match = pattern.match(stdout)
 
-        section_title("Verbose EdenFS logs:", out)
         if not match:
             out.write(stdout.encode())
         else:
             paste, _ = stdout.split("\n")[1].split(": ")
             out.write(paste.encode())
     except Exception as e:
-        out.write(b"Error generating expanded EdenFS logs: %s\n" % str(e).encode())
+        out.write(b"Error generating paste: %s\n" % str(e).encode())
 
 
 def print_tail_of_log_file(path: Path, out: IO[bytes]) -> None:
@@ -371,3 +372,24 @@ def print_prefetch_profiles_list(instance: EdenInstance, out: IO[bytes]) -> None
                 out.write(f"{checkout.path}: []\n".encode())
     except Exception as e:
         out.write(f"Error printing Prefetch Profiles list: {e}\n".encode())
+
+
+def print_crashed_edenfs_logs(processor: str, out: IO[bytes]) -> None:
+    if sys.platform != "darwin":
+        return
+
+    crashes_path = Path("/Library/Logs/DiagnosticReports")
+    if not crashes_path.exists():
+        return
+
+    # Only upload crashes from the past week.
+    date_threshold = datetime.now() - timedelta(weeks=1)
+
+    section_title("EdenFS crashes:", out)
+    for crash in crashes_path.iterdir():
+        if crash.name.startswith("edenfs"):
+            out.write(f"{str(crash.name)}: ".encode())
+            if datetime.fromtimestamp(crash.stat().st_mtime) > date_threshold:
+                paste_file(crash, processor, out)
+            else:
+                out.write(" not uploaded due to being too old".encode())
