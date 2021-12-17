@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 import abc
+import binascii
 import errno
 import getpass
 import json
@@ -671,3 +672,18 @@ def get_protocol(nfs: bool) -> str:
         return "prjfs"
     else:
         return "nfs" if nfs else "fuse"
+
+
+def get_tip_commit_hash(repo: Path) -> bytes:
+    # Try to get the tip commit ID.  If that fails, use the null commit ID.
+    args = ["hg", "log", "-T", "{node}", "-r", "tip"]
+    env = dict(os.environ, HGPLAIN="1")
+    result = subprocess.run(
+        args,
+        env=env,
+        cwd=str(repo),
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return binascii.unhexlify(result.stdout.strip())

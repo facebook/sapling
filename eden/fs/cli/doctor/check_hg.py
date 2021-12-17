@@ -20,6 +20,7 @@ from eden.fs.cli.doctor.problem import (
     ProblemTracker,
     UnexpectedCheckError,
 )
+from eden.fs.cli.util import get_tip_commit_hash
 
 
 class HgChecker:
@@ -315,21 +316,6 @@ class AbandonedTransactionChecker(HgChecker):
 
     def repair(self):
         self.backing_repo._run_hg(["recover"])
-
-
-def get_tip_commit_hash(repo: Path) -> bytes:
-    # Try to get the tip commit ID.  If that fails, use the null commit ID.
-    args = ["hg", "log", "-T", "{node}", "-r", "tip"]
-    env = dict(os.environ, HGPLAIN="1")
-    result = subprocess.run(
-        args,
-        env=env,
-        cwd=str(repo),
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    return binascii.unhexlify(result.stdout.strip())
 
 
 def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
