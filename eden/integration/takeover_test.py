@@ -355,7 +355,7 @@ class TakeoverTest(testcase.EdenRepoTest):
         p.wait()
         self.assertEqual(p.exitstatus, 4)
 
-        self.assertEqual(client.getStatus(), fb303_status.STOPPING)
+        self.assertEqual(client.getDaemonInfo().status, fb303_status.STOPPING)
 
     def assert_shutdown_fails_with_in_progress_graceful_restart(
         self, client: EdenClient
@@ -368,7 +368,7 @@ class TakeoverTest(testcase.EdenRepoTest):
                 "initiateShutdown should not throw when graceful restart is in progress"
             )
 
-        self.assertEqual(client.getStatus(), fb303_status.STOPPING)
+        self.assertEqual(client.getDaemonInfo().status, fb303_status.STOPPING)
 
     def assert_sigkill_fails_with_in_progress_graceful_restart(
         self, client: EdenClient
@@ -382,7 +382,7 @@ class TakeoverTest(testcase.EdenRepoTest):
                 "sending SIGTERM should not throw when graceful restart is in progress"
             )
 
-        self.assertEqual(client.getStatus(), fb303_status.STOPPING)
+        self.assertEqual(client.getDaemonInfo().status, fb303_status.STOPPING)
 
     def test_stop_during_takeover(self) -> None:
         # block graceful restart
@@ -407,7 +407,7 @@ class TakeoverTest(testcase.EdenRepoTest):
                         "eden restart --graceful command finished while "
                         "graceful restart was still blocked"
                     )
-                if client.getStatus() is fb303_status.STOPPING:
+                if client.getDaemonInfo().status is fb303_status.STOPPING:
                     return True
                 return None
 

@@ -423,20 +423,6 @@ EdenServiceHandler::getProcessor() {
   return processor;
 }
 
-facebook::fb303::cpp2::fb303_status EdenServiceHandler::getStatus() {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG4);
-  auto status = server_->getStatus();
-  switch (status) {
-    case EdenServer::RunState::STARTING:
-      return facebook::fb303::cpp2::fb303_status::STARTING;
-    case EdenServer::RunState::RUNNING:
-      return facebook::fb303::cpp2::fb303_status::ALIVE;
-    case EdenServer::RunState::SHUTTING_DOWN:
-      return facebook::fb303::cpp2::fb303_status::STOPPING;
-  }
-  EDEN_BUG() << "unexpected EdenServer status " << enumValue(status);
-}
-
 void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, argument->get_mountPoint());
   try {
@@ -2686,9 +2672,23 @@ void EdenServiceHandler::reloadConfig() {
 }
 
 void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
-  *result.pid_ref() = getpid();
-  *result.commandLine_ref() = originalCommandLine_;
-  result.status_ref() = getStatus();
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG4);
+
+  fb303::cpp2::fb303_status status = [&] {
+    switch (server_->getStatus()) {
+      case EdenServer::RunState::STARTING:
+        return facebook::fb303::cpp2::fb303_status::STARTING;
+      case EdenServer::RunState::RUNNING:
+        return facebook::fb303::cpp2::fb303_status::ALIVE;
+      case EdenServer::RunState::SHUTTING_DOWN:
+        return facebook::fb303::cpp2::fb303_status::STOPPING;
+    }
+    EDEN_BUG() << "unexpected EdenServer status " << enumValue(status);
+  }();
+
+  result.pid_ref() = getpid();
+  result.commandLine_ref() = originalCommandLine_;
+  result.status_ref() = status;
 
   auto now = std::chrono::steady_clock::now();
   std::chrono::duration<float> uptime = now - server_->getStartTime();

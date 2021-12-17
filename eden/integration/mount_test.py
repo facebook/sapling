@@ -226,13 +226,13 @@ class MountTest(testcase.EdenRepoTest):
             # Since we blocked mount initialization the mount should still
             # report as INITIALIZING, and edenfs should report itself STARTING
             self.assertEqual({self.mount: "INITIALIZING"}, self.eden.list_cmd_simple())
-            self.assertEqual(fb303_status.STARTING, client.getStatus())
+            self.assertEqual(fb303_status.STARTING, client.getDaemonInfo().status)
 
             # Unblock mounting and wait for the mount to transition to running
             client.unblockFault(UnblockFaultArg(keyClass="mount", keyValueRegex=".*"))
             self._wait_for_mount_running(client)
             self._wait_until_alive(client)
-            self.assertEqual(fb303_status.ALIVE, client.getStatus())
+            self.assertEqual(fb303_status.ALIVE, client.getDaemonInfo().status)
 
         self.assertEqual({self.mount: "RUNNING"}, self.eden.list_cmd_simple())
 
@@ -250,7 +250,7 @@ class MountTest(testcase.EdenRepoTest):
 
     def _wait_until_alive(self, client: EdenClient) -> None:
         def is_alive() -> Optional[bool]:
-            if client.getStatus() == fb303_status.ALIVE:
+            if client.getDaemonInfo().status == fb303_status.ALIVE:
                 return True
             return None
 
@@ -337,7 +337,7 @@ class MountTest(testcase.EdenRepoTest):
                 },
                 self.eden.list_cmd_simple(),
             )
-            self.assertEqual(fb303_status.STARTING, client.getStatus())
+            self.assertEqual(fb303_status.STARTING, client.getDaemonInfo().status)
 
             # Fail mounting of the additional 2 mounts we created
             client.unblockFault(

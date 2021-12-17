@@ -51,8 +51,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
   std::unique_ptr<apache::thrift::AsyncProcessor> getProcessor() override;
 
-  fb303::cpp2::fb303_status getStatus() override;
-
   void mount(std::unique_ptr<MountArgument> mount) override;
 
   void unmount(std::unique_ptr<std::string> mountPoint) override;
