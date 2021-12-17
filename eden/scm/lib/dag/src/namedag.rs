@@ -68,6 +68,7 @@ use crate::protocol::RemoteIdConvertProtocol;
 use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::types_ext::PreparedFlatSegmentsExt;
+use crate::Error::NeedSlowPath;
 use crate::IdSet;
 use crate::IdSpan;
 use crate::Level;
@@ -693,7 +694,7 @@ where
 
             for name in root_names {
                 if new.contains_vertex_name(&name).await? {
-                    let e = crate::Error::NeedSlowPath(format!("{:?} exists in local graph", name));
+                    let e = NeedSlowPath(format!("{:?} exists in local graph", name));
                     return Err(e);
                 }
             }
@@ -702,78 +703,170 @@ where
             client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
         }
 
-        let mut next_free_client_id = new
-            .dag
-            .master_group()?
-            .max()
-            .map_or_else(|| Group::MASTER.min_id(), |i| i + 1);
-        let mut new_client_segments = vec![];
-        let server_idmap_tree: BTreeMap<_, _> = clone_data.idmap.clone().into_iter().collect();
-        let mut last_server_id = None; // Can't use 0 since server might return segment starting from 0 (for example if pulling from empty repo)
-
-        for server_segment in clone_data.flat_segments.segments {
-            if server_segment.low > server_segment.high {
-                return programming(format!(
-                    "server returned incorrect segment {:?}",
-                    server_segment
-                ));
-            }
-            match last_server_id {
-                Some(last_server_id) if server_segment.low <= last_server_id => {
-                    return programming(format!(
-                        "server returned non sorted segment {:?}, previous segment high {}",
-                        server_segment, last_server_id
-                    ));
-                }
-                _ => {}
-            }
-            last_server_id = Some(server_segment.high);
-            let mut parent_names = vec![];
-            for server_parent in server_segment.parents {
-                let parent_name = clone_data.idmap.get(&server_parent);
-                // all parents should be in server's id_map
-                let parent_name = parent_name.ok_or_else(|| {
-                    DagError::Programming(format!(
-                        "server does not provide name for id {}",
-                        server_parent
-                    ))
-                })?;
-                parent_names.push(parent_name.clone());
-            }
-            // Parents should exist in the local graph and can be resolved without looking
-            // up remotely. Either looked up above, or inserted by the `new.map.insert`
+        // Prepare states used below.
+        let mut prepared_client_segments = PreparedFlatSegments::default();
+        let server_idmap = &clone_data.idmap;
+        let server_idmap_by_name: BTreeMap<&VertexName, Id> =
+            server_idmap.iter().map(|(&id, name)| (name, id)).collect();
+        // `taken` is the union of `covered` and `reserved`, mainly used by `find_free_span`.
+        let mut taken = {
+            let covered = new.dag().all_ids_in_groups(&[Group::MASTER])?;
+            // Normally we would want `calculate_initial_reserved` here. But we calculate head
+            // reservation for all `heads` in order, instead of just considering heads in the
+            // `clone_data`. So we're fine without the "initial reserved". In other words, the
+            // `calculate_initial_reserved` logic is "inlined" into the `for ... in heads`
             // loop below.
-            let client_parents = new.map.vertex_id_batch(&parent_names).await?;
-            let client_parents = client_parents.into_iter().collect::<Result<Vec<Id>>>()?;
+            covered
+        };
 
-            let new_client_id_low = next_free_client_id;
-            let new_client_id_high =
-                new_client_id_low + server_segment.high.0 - server_segment.low.0;
-            next_free_client_id = new_client_id_high + 1;
-            new_client_segments.push(FlatSegment {
-                low: new_client_id_low,
-                high: new_client_id_high,
-                parents: client_parents,
-            });
+        // Index used by lookups.
+        let server_seg_by_high: BTreeMap<Id, &FlatSegment> = clone_data
+            .flat_segments
+            .segments
+            .iter()
+            .map(|s| (s.high, s))
+            .collect();
+        let find_server_seg_contains_server_id = |server_id: Id| -> Result<&FlatSegment> {
+            let seg = match server_seg_by_high.range(server_id..).next() {
+                Some((_high, &seg)) => {
+                    if seg.low <= server_id && seg.high >= server_id {
+                        Some(seg)
+                    } else {
+                        None
+                    }
+                }
+                None => None,
+            };
+            seg.ok_or_else(|| {
+                DagError::Programming(format!(
+                    "server does not provide segment covering id {}",
+                    server_id
+                ))
+            })
+        };
 
-            // this can be negative becase we generally don't know if client id's are greater or lower then server id's
-            let server_to_client_offset = new_client_id_low.0 as i64 - server_segment.low.0 as i64;
+        // Insert segments by visiting the heads.
+        //
+        // Similar to `IdMap::assign_head`, but insert a segment at a time,
+        // not a vertex at a time.
+        //
+        // Only the MASTER group supports laziness. So we only care about it.
+        for (head, opts) in heads.vertex_options() {
+            let mut stack: Vec<&FlatSegment> = vec![];
+            if let Some(&head_server_id) = server_idmap_by_name.get(&head) {
+                let head_server_seg = find_server_seg_contains_server_id(head_server_id)?;
+                stack.push(head_server_seg);
+            }
 
-            let new_server_ids = server_idmap_tree.range(server_segment.low..=server_segment.high);
+            while let Some(server_seg) = stack.pop() {
+                let high_vertex = server_idmap[&server_seg.high].clone();
+                let client_high_id = new
+                    .map
+                    .vertex_id_with_max_group(&high_vertex, Group::NON_MASTER)
+                    .await?;
+                match client_high_id {
+                    Some(id) if id.group() == Group::MASTER => {
+                        // `server_seg` is present in MASTER group (previously inserted
+                        // by this loop). No need to insert or visit parents.
+                        continue;
+                    }
+                    Some(id) => {
+                        // `id` in NON_MASTER group. This should not really happen because we have
+                        // checked all "roots" are missing in the local graph. See `NeedSlowPath`
+                        // above.
+                        let e = NeedSlowPath(format!(
+                            "{:?} exists in local graph as {:?} - fast path requires MASTER group",
+                            &high_vertex, id
+                        ));
+                        return Err(e);
+                    }
+                    None => {}
+                }
 
-            for (server_id, name) in new_server_ids {
-                let client_id = Id((server_id.0 as i64 + server_to_client_offset) as u64);
-                tracing::debug!(target: "dag::pull", "insert IdMap: {:?}-{:?}", &name, client_id);
-                new.map.insert(client_id, name.as_ref()).await?;
+                let parent_server_ids = &server_seg.parents;
+                let parent_names: Vec<VertexName> = {
+                    let iter = parent_server_ids.iter().map(|id| server_idmap[id].clone());
+                    iter.collect()
+                };
+
+                // The client parent ids in the MASTER group.
+                let mut parent_client_ids = Vec::new();
+                let mut missng_parent_server_ids = Vec::new();
+
+                // Calculate `parent_client_ids`, and `missng_parent_server_ids`.
+                // Intentiaonlly using `new.map` not `new` to bypass remote lookups.
+                {
+                    let client_id_res = new.map.vertex_id_batch(&parent_names).await?;
+                    assert_eq!(client_id_res.len(), parent_server_ids.len());
+                    for (res, &server_id) in client_id_res.into_iter().zip(parent_server_ids) {
+                        match res {
+                            Ok(id) if id.group() != Group::MASTER => {
+                                return Err(NeedSlowPath(format!(
+                                    "{:?} exists id in local graph as {:?} - fast path requires MASTER group",
+                                    &parent_names, id
+                                )));
+                            }
+                            Ok(id) => {
+                                parent_client_ids.push(id);
+                            }
+                            Err(crate::Error::VertexNotFound(_)) => {
+                                missng_parent_server_ids.push(server_id);
+                            }
+                            Err(e) => return Err(e),
+                        }
+                    }
+                }
+
+                if !missng_parent_server_ids.is_empty() {
+                    // Parents are not ready. Needs revisit this segment after inserting parents.
+                    stack.push(server_seg);
+                    // Insert missing parents.
+                    // First parent, first insertion.
+                    for &server_id in missng_parent_server_ids.iter().rev() {
+                        let parent_server_seg = find_server_seg_contains_server_id(server_id)?;
+                        stack.push(parent_server_seg);
+                    }
+                    continue;
+                }
+
+                // All parents are present. Time to insert this segment.
+                // Find a suitable low..=high range.
+                let candidate_id = parent_client_ids
+                    .iter()
+                    .max()
+                    .copied()
+                    .unwrap_or(Group::MASTER.min_id())
+                    + 1;
+                let size = server_seg.high.0 - server_seg.low.0 + 1;
+                let span = find_free_span(&taken, candidate_id, size, false);
+
+                // Map the server_seg.low..=server_seg.high to client span.low..=span.high.
+                // Insert to IdMap.
+                for (&server_id, name) in server_idmap.range(server_seg.low..=server_seg.high) {
+                    let client_id = server_id + span.low.0 - server_seg.low.0;
+                    if client_id.group() != Group::MASTER {
+                        return Err(crate::Error::IdOverflow(Group::MASTER));
+                    }
+                    new.map.insert(client_id, name.as_ref()).await?;
+                }
+
+                // Prepare insertion to IdDag.
+                prepared_client_segments.push_segment(span.low, span.high, &parent_client_ids);
+
+                // Mark the range as taken.
+                taken.push(span);
+            }
+
+            // Consider reservation for `head` by updating `taken`.
+            if opts.reserve_size > 0 {
+                let head_client_id = new.map.vertex_id(head).await?;
+                let span = find_free_span(&taken, head_client_id + 1, opts.reserve_size as _, true);
+                taken.push(span);
             }
         }
 
-        let new_client_segments = PreparedFlatSegments {
-            segments: new_client_segments.into_iter().collect(),
-        };
-
         new.dag
-            .build_segments_from_prepared_flat_segments(&new_client_segments)?;
+            .build_segments_from_prepared_flat_segments(&prepared_client_segments)?;
 
         if cfg!(debug_assertions) {
             new.verify_missing().await?;
@@ -2181,6 +2274,11 @@ where
     }
 }
 
+/// Calculate the initial "reserved" set used before inserting new vertexes.
+/// Only heads that have non-zero reserve_size and are presnet in the graph
+/// take effect. In other words, heads that are known to be not present in
+/// the local graph (ex. being added), or have zero reserve_size can be
+/// skipped as an optimization.
 async fn calculate_initial_reserved(
     map: &dyn IdConvert,
     covered: &IdSet,

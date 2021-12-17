@@ -79,7 +79,7 @@ impl From<Vec<VertexName>> for VertexListWithOptions {
     }
 }
 
-impl<'a> From<Vec<(VertexName, VertexOptions)>> for VertexListWithOptions {
+impl From<Vec<(VertexName, VertexOptions)>> for VertexListWithOptions {
     fn from(list: Vec<(VertexName, VertexOptions)>) -> Self {
         Self { list }
     }

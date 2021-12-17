@@ -324,12 +324,10 @@ async fn test_pull_lazy_with_merges() {
     assert_eq!(
         client.debug_segments(0, Group::MASTER),
         r#"
-        I+11 : K+13 [D+3, H+10, M+6] OnlyHead
-        G+9 : H+10 [F+7, N+8] OnlyHead
-        N+8 : N+8 [M+6]
-        F+7 : F+7 [E+4]
-        L+5 : M+6 [C+2]
-        A+0 : E+4 [] Root OnlyHead"#
+        I+11 : K+13 [D+3, H+10, M+7] OnlyHead
+        G+9 : H+10 [F+5, N+8] OnlyHead
+        L+6 : N+8 [C+2]
+        A+0 : F+5 [] Root OnlyHead"#
     );
     assert_eq!(client.output(), ["resolve names: [C, D, F, L], heads: [E]"]);
 }

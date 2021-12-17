@@ -142,21 +142,21 @@ Fast path can still be used with stale remotenames:
   $ EDENSCM_DISABLE_REMOTE_RESOLVE=0000000000000000000000000000000000000000 LOG=dag::protocol=debug hg log -Gr 'all()' -T '{desc} {remotenames}'
   o    H remote/master
   ├─╮
-  │ o  G
+  │ o  I
   │ │
-  │ o  F
-  │ │
-  o │  I
-  │ │
-  o │  J
-    │
-    o  E
-    │
-    o  D
-    │
-    o  C
-    │
-    o  B
-    │
-    o  A
+  │ o  J
+  │
+  o  G
+  │
+  o  F
+  │
+  o  E
+  │
+  o  D
+  │
+  o  C
+  │
+  o  B
+  │
+  o  A
   
