@@ -90,6 +90,14 @@ Repairs log to "repair.log":
   Index "split" passed integrity check
   
   date -d * (glob)
+  Corruption detected: * (glob)
+  in * (glob)
+  (This error is considered as a data corruption)
+  Caused by 1 errors:
+  - * (glob)
+  Starting auto repair.
+  
+  date -d * (glob)
   Processing IndexedLog: * (glob)
   Fixed header in log
   Extended log to 82 bytes required by meta

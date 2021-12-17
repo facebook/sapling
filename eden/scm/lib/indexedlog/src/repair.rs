@@ -11,6 +11,9 @@ use std::ops::AddAssign;
 use std::path::Path;
 
 use crate::errors::ResultExt;
+use crate::lock::DirLockOptions;
+use crate::lock::ScopedDirLock;
+use crate::lock::READER_LOCK_OPTS;
 
 // Public interface -------------------------------------------------------
 
@@ -23,8 +26,6 @@ pub trait Repair<T> {
 }
 
 /// Repair on open.
-///
-/// Use with causion. See warnings in `open_with_repair`.
 pub trait OpenWithRepair {
     type Output;
 
@@ -38,7 +39,8 @@ pub trait OpenWithRepair {
     /// For performance reasons, this does not perform a full verification
     /// of all data and corruption can still happen when reading data.
     ///
-    /// Warning: indexedlog requires append-only for lock-free reads.
+    /// Repair is skipped if there are other readers for safety. This is
+    /// because indexedlog requires append-only for lock-free reads.
     /// Repair is not append-only. It can silently cause other running
     /// processes reading the data, or keeping the data previously read
     /// to get silently wrong data without detection.
@@ -77,7 +79,7 @@ pub(crate) struct RepairMessage {
 }
 
 impl RepairMessage {
-    /// Creates the `RepairMessageWriter`. Attempt to write to `repair.log`
+    /// Creates the `RepairMessage`. Attempt to write to `repair.log`
     /// in `dir`, but unable to doing so is not fatal.
     pub(crate) fn new(dir: &Path) -> Self {
         let mut additional_outputs = Vec::new();
@@ -147,9 +149,39 @@ pub(crate) fn open_with_repair<T>(opts: &T, path: &Path) -> crate::Result<T::Out
 where
     T: OpenOptionsOutput + OpenOptionsRepair,
 {
-    let res = opts.open_path(path);
-    if let Err(e) = &res {
-        if e.is_corruption() {
+    match opts.open_path(path) {
+        Ok(v) => Ok(v),
+        Err(e) if e.is_corruption() => {
+            // Check if it's safe to repair (no active readers).
+            static CHECK_READER_LOCK_OPTS: DirLockOptions = DirLockOptions {
+                exclusive: true,
+                non_blocking: true,
+                ..READER_LOCK_OPTS
+            };
+
+            let mut msg = RepairMessage::new(path);
+            msg += &format!("Corruption detected: {:?}.\n", &e);
+
+            let lock = match ScopedDirLock::new_with_options(path, &CHECK_READER_LOCK_OPTS) {
+                Ok(lock) => lock,
+                Err(lock_err) => {
+                    msg += &"Auto-repair is skipped due to active readers.\n";
+                    let _ = msg.into_string();
+                    return Err(e.source(lock_err))
+                        .context(|| format!("in open_with_repair({:?})", path))
+                        .context("repair is skipped due to active readers");
+                }
+            };
+
+            // Release the lock. It prevents open, optionally used by repair.
+            // Without this it will deadlock.
+            // We don't need to prevent others from obtaining the reader lock
+            // to `open` because the `open` will fail anyway.
+            drop(lock);
+
+            msg += &"Starting auto repair.\n";
+            let _ = msg.into_string();
+
             // Repair and retry.
             let repair_message = opts
                 .open_options_repair(path)
@@ -162,8 +194,8 @@ where
                 )
             });
         }
+        Err(e) => Err(e),
     }
-    res
 }
 
 impl<T> OpenWithRepair for T

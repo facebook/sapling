@@ -973,7 +973,6 @@ fn test_repair_on_open() {
     let mut log = opts.open(path).unwrap();
     log.append(b"abc").unwrap();
     log.flush().unwrap();
-    drop(log);
 
     // Corrupt the log by breaking the meta file.
     let meta_path = path.join(META_FILE);
@@ -981,6 +980,13 @@ fn test_repair_on_open() {
 
     // Opening the log errors out.
     opts.open(path).unwrap_err();
+
+    // Auto repair fails because it detects active reader.
+    opts.open_with_repair(path).unwrap_err();
+    opts.open(path).unwrap_err();
+
+    // Drop the active reader.
+    drop(log);
 
     // Opening with auto repair succeeds.
     let log = opts.open_with_repair(path).unwrap();
