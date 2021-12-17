@@ -16,7 +16,7 @@ import re
 import struct
 from typing import Dict
 
-from . import error, mdiff, revlog
+from . import error, git, mdiff, revlog
 from .pycompat import decodeutf8, encodeutf8
 
 
@@ -157,6 +157,9 @@ class fileslog(object):
     def __init__(self, repo):
         self.ui = repo.ui
         self.repo = repo
+        if git.isgit(repo):
+            gitstore = git.openstore(repo)
+            self.contentstore = gitstore
 
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending

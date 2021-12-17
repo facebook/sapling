@@ -28,6 +28,7 @@ from . import (
     error,
     extensions,
     filemerge,
+    git,
     i18n,
     json,
     match as matchmod,
@@ -2350,8 +2351,14 @@ def update(
 
         # If we're doing the initial checkout from null, let's use the new fancier
         # nativecheckout, since it has more efficient fetch mechanics.
-        if repo.ui.configbool("experimental", "nativecheckout") or (
-            repo.ui.configbool("clone", "nativecheckout") and repo["."].node() == nullid
+        # git backend only supports nativecheckout at present.
+        if (
+            repo.ui.configbool("experimental", "nativecheckout")
+            or (
+                repo.ui.configbool("clone", "nativecheckout")
+                and repo["."].node() == nullid
+            )
+            or git.isgit(repo)
         ):
             if branchmerge:
                 fallbackcheckout = "branchmerge is not supported: %s" % branchmerge
@@ -2688,9 +2695,13 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
         repo.ui.debug("Native checkout plan:\n%s\n" % plan)
 
     if not force:
+        if git.isgit(repo):
+            store = repo.fileslog.contentstore
+        else:
+            store = repo.fileslog.filescmstore
         unknown = plan.check_unknown_files(
             p2.manifest(),
-            repo.fileslog.filescmstore,
+            store,
             repo.dirstate._map._tree,
         )
         if unknown:

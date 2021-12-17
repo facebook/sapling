@@ -84,6 +84,7 @@ from edenscm.mercurial import (
     error,
     exchange,
     extensions,
+    git,
     hg,
     localrepo,
     manifest,
@@ -424,7 +425,12 @@ def _prunesharedpacks(repo, packpath):
 
 def setuptreestores(repo, mfl):
     ui = repo.ui
-    mfl.makeruststore()
+    if git.isgit(repo):
+        mfl._isgit = True
+        mfl.datastore = git.openstore(repo)
+    else:
+        mfl._isgit = False
+        mfl.makeruststore()
 
 
 class basetreemanifestlog(object):
@@ -498,6 +504,8 @@ class basetreemanifestlog(object):
 
     def commitsharedpacks(self):
         """Persist the dirty trees written to the shared packs."""
+        if self._isgit:
+            return
 
         self.datastore.markforrefresh()
         self.historystore.markforrefresh()
@@ -524,7 +532,9 @@ class basetreemanifestlog(object):
                 "native tree manifestlog doesn't support "
                 "subdir reads: (%s, %s)" % (dir, hex(node))
             )
-        if node == nullid:
+        # git store does not have the Python `.get(path, node)` method.
+        # it can only be accessed via the Rust treemanifest.
+        if node == nullid or self._isgit:
             return treemanifestctx(self, dir, node)
         if node in self._treemanifestcache:
             return self._treemanifestcache[node]

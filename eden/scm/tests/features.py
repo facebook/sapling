@@ -221,7 +221,7 @@ segmentedchangelogcompatiblelist = """
     test-filelog.py
     test-fileset-generated.t
     test-getbundle.t
-    test-git-changelog.t
+    test-git.t
     test-gitignore-t.py
     test-globalrevs-svnrev.t
     test-help.t

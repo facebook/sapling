@@ -44,3 +44,11 @@ Init an hg repo using the git changelog backend:
     Commit Data (user, message):
       Git
 
+Test checkout:
+
+  $ hg up tip
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo *
+  alpha beta
+  $ cat beta
+  2
