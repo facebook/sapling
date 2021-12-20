@@ -8,19 +8,24 @@
 #![allow(non_camel_case_types)]
 
 use std::cell::RefCell;
+use std::num::NonZeroU8;
+use std::sync::Arc;
 
 use anyhow::Error;
 use cpython::*;
 use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
+use pathmatcher::Matcher;
+use pypathmatcher::extract_matcher;
 use pypathmatcher::UnsafePythonMatcher;
 use pytreestate::treestate;
 use workingcopy::filesystem::ChangeType;
 use workingcopy::filesystem::PendingChangeResult;
 use workingcopy::filesystem::PendingChanges;
 use workingcopy::filesystem::PhysicalFileSystem;
+use workingcopy::walker::MultiWalker;
+use workingcopy::walker::SingleWalker;
 use workingcopy::walker::WalkError;
-use workingcopy::walker::Walker;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");
@@ -78,13 +83,24 @@ py_class!(class pendingchanges |py| {
     }
 });
 
+enum WalkerType<T> {
+    Single(SingleWalker<T>),
+    Multi(MultiWalker<T>),
+}
 py_class!(class walker |py| {
-    data walker: RefCell<Walker<UnsafePythonMatcher>>;
+    data inner: RefCell<WalkerType<Arc<dyn Matcher + Sync + Send>>>;
     data _errors: RefCell<Vec<Error>>;
-    def __new__(_cls, root: PyPathBuf, pymatcher: PyObject, include_directories: bool) -> PyResult<walker> {
-        let matcher = UnsafePythonMatcher::new(pymatcher);
-        let walker = Walker::new(root.to_path_buf(), matcher, include_directories).map_pyerr(py)?;
-        walker::create_instance(py, RefCell::new(walker), RefCell::new(Vec::new()))
+    def __new__(_cls, root: PyPathBuf, pymatcher: PyObject, include_directories: bool, thread_count: u8) -> PyResult<walker> {
+        let matcher = extract_matcher(py, pymatcher)?;
+        if thread_count == 0 {
+            let walker = SingleWalker::new(root.to_path_buf(), matcher, include_directories).map_pyerr(py)?;
+            walker::create_instance(py, RefCell::new(WalkerType::Single(walker)), RefCell::new(Vec::new()))
+        } else {
+            // Safe to unwrap, because thread_count is checked above.
+            let thread_count = NonZeroU8::new(thread_count).unwrap();
+            let walker = MultiWalker::new(root.to_path_buf(), matcher, include_directories, thread_count).map_pyerr(py)?;
+            walker::create_instance(py, RefCell::new(WalkerType::Multi(walker)), RefCell::new(Vec::new()))
+        }
     }
 
     def __iter__(&self) -> PyResult<Self> {
@@ -93,13 +109,13 @@ py_class!(class walker |py| {
 
     def __next__(&self) -> PyResult<Option<PyPathBuf>> {
         loop {
-            match self.walker(py).borrow_mut().next() {
-                Some(Ok(path)) => {
-                    return Ok(Some(PyPathBuf::from(path.as_ref())))
-                },
-                Some(Err(e)) => {
-                    self._errors(py).borrow_mut().push(e)
-                },
+            let result = match &mut *self.inner(py).borrow_mut() {
+                WalkerType::Single(walker) => walker.next(),
+                WalkerType::Multi(walker) => walker.next(),
+            };
+            match result {
+                Some(Ok(path)) => return Ok(Some(PyPathBuf::from(path.as_ref()))),
+                Some(Err(e)) => self._errors(py).borrow_mut().push(e),
                 None => return Ok(None),
             };
         }

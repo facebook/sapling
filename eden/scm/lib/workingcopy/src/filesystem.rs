@@ -24,9 +24,9 @@ use vfs::is_executable;
 use vfs::is_symlink;
 use vfs::VFS;
 
+use crate::walker::SingleWalker;
 use crate::walker::WalkEntry;
 use crate::walker::WalkError;
-use crate::walker::Walker;
 
 /// Represents a file modification time in Mercurial, in seconds since the unix epoch.
 #[derive(PartialEq)]
@@ -80,7 +80,7 @@ impl PhysicalFileSystem {
         include_directories: bool,
         last_write: HgModifiedTime,
     ) -> Result<PendingChanges<M>> {
-        let walker = Walker::new(self.vfs.root().to_path_buf(), matcher.clone(), false)?;
+        let walker = SingleWalker::new(self.vfs.root().to_path_buf(), matcher.clone(), false)?;
         let pending_changes = PendingChanges {
             vfs: self.vfs.clone(),
             walker,
@@ -99,7 +99,7 @@ impl PhysicalFileSystem {
 
 pub struct PendingChanges<M: Matcher + Clone> {
     vfs: VFS,
-    walker: Walker<M>,
+    walker: SingleWalker<M>,
     matcher: M,
     treestate: Arc<Mutex<TreeState>>,
     stage: PendingChangesStage,

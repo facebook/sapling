@@ -28,6 +28,7 @@ _rangemask = 0x7FFFFFFF
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("workingcopy", "enablerustwalker", default=False)
+configitem("workingcopy", "rustwalkerthreads", default=0)
 configitem("workingcopy", "rustpendingchanges", default=False)
 
 
@@ -42,7 +43,7 @@ class physicalfilesystem(object):
         # This is needed temporarily to enable an incremental migration of
         # functionality to this layer.
         self.dirstate = dirstate
-        self.mtolog = self.ui.configint("experimental", "samplestatus") or 0
+        self.mtolog = self.ui.configint("experimental", "samplestatus", 0)
         self.ltolog = self.mtolog
         self.dtolog = self.mtolog
         self.ftolog = self.mtolog
@@ -189,7 +190,7 @@ class physicalfilesystem(object):
         seen = set()
 
         walkfn = self._walk
-        if self.ui.configbool("workingcopy", "enablerustwalker"):
+        if self.ui.configbool("workingcopy", "enablerustwalker", False):
             walkfn = self._rustwalk
 
         lookups = []
@@ -273,7 +274,8 @@ class physicalfilesystem(object):
             match.traversedir = origmatch.traversedir
 
         traversedir = bool(match.traversedir)
-        walker = workingcopy.walker(join(""), match, traversedir)
+        threadcount = self.ui.configint("workingcopy", "rustwalkerthreads", 0)
+        walker = workingcopy.walker(join(""), match, traversedir, threadcount)
         for fn in walker:
             fn = self.dirstate.normalize(fn)
             st = util.lstat(join(fn))
