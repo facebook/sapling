@@ -115,8 +115,7 @@ pub trait EdenApi: Send + Sync + 'static {
         old_master: HgId,
         new_master: HgId,
     ) -> Result<CloneData<HgId>, EdenApiError> {
-        self.pull_lazy(vec![old_master], vec![new_master])
-            .await
+        self.pull_lazy(vec![old_master], vec![new_master]).await
     }
 
     async fn commit_location_to_hash(
