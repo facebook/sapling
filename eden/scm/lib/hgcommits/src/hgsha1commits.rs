@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
-use std::collections::HashSet;
 use std::io;
 use std::io::Write;
 use std::path::Path;
@@ -15,7 +13,6 @@ use std::sync::Arc;
 
 use dag::delegate;
 use dag::errors::NotFoundError;
-use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::Dag;
@@ -31,6 +28,7 @@ use zstore::Id20;
 use zstore::Zstore;
 
 use crate::strip;
+use crate::utils;
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::GraphNode;
@@ -107,41 +105,14 @@ impl AppendCommits for HgCommits {
         }
 
         // Write commit graph to DAG.
-        let graph_nodes = commits
-            .iter()
-            .map(|c| GraphNode {
-                vertex: c.vertex.clone(),
-                parents: c.parents.clone(),
-            })
-            .collect::<Vec<_>>();
+        let graph_nodes = utils::commits_to_graph_nodes(commits);
         self.add_graph_nodes(&graph_nodes).await?;
 
         Ok(())
     }
 
     async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()> {
-        // Write commit graph to DAG.
-        let parents: HashMap<Vertex, Vec<Vertex>> = graph_nodes
-            .iter()
-            .cloned()
-            .map(|c| (c.vertex, c.parents))
-            .collect();
-        let heads: Vec<Vertex> = {
-            let mut non_heads = HashSet::new();
-            for graph_node in graph_nodes {
-                for parent in graph_node.parents.iter() {
-                    non_heads.insert(parent);
-                }
-            }
-            graph_nodes
-                .iter()
-                .map(|c| &c.vertex)
-                .filter(|v| !non_heads.contains(v))
-                .cloned()
-                .collect()
-        };
-        self.dag.add_heads(&parents, &heads.into()).await?;
-        Ok(())
+        utils::add_graph_nodes_to_dag(&mut self.dag, graph_nodes).await
     }
 
     async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {

@@ -139,6 +139,7 @@ mod hybrid;
 mod memhgcommits;
 mod revlog;
 mod strip;
+mod utils;
 
 pub use doublewrite::DoubleWriteCommits;
 pub use errors::CommitError as Error;
