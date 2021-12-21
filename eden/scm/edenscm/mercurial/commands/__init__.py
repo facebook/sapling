@@ -1227,10 +1227,10 @@ def bookmark(ui, repo, *names, **opts):
                 raise error.Abort(
                     _("--strip cannot be used together with %s") % ("--%s" % name)
                 )
-            # book --strip is just an alias for prune -B.
+            # book --strip is just an alias for hide -B.
             # (it may raise UnknownCommand)
-            stripfunc = cmdutil.findcmd("prune", table)[1][0]
-            return stripfunc(ui, repo, bookmark=names, rev=[])
+            stripfunc = cmdutil.findcmd("hide", table)[1][0]
+            return stripfunc(ui, repo, bookmark=names)
 
     if delete or rename or names or inactive:
         with repo.wlock(), repo.lock(), repo.transaction("bookmark") as tr:

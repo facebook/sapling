@@ -1,9 +1,8 @@
 # coding=utf-8
-
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
 
 from __future__ import absolute_import
 
@@ -43,10 +42,11 @@ sh % "hg log -G -T '{rev} {bookmarks}' -r 'all()'" == r"""
     │
     o  0"""
 sh % "hg bookmark -D feature1" == r"""
-    bookmark 'feature1' deleted
-    2 changesets pruned
-    hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
-    hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints"""
+    hiding commit 2dc09a01254d "r3"
+    hiding commit 191de46dc8b9 "r5"
+    2 changesets hidden
+    removing bookmark "feature1 (was at: 191de46dc8b9)"
+    1 bookmark removed"""
 sh % "hg log -G -T '{rev} {bookmarks}' -r 'all()' --hidden" == r"""
     o  6 feature2
     │

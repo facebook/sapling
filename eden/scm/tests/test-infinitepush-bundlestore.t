@@ -457,13 +457,14 @@ Prune it again and pull it via commit hash
   $ hg log -r scratch/mybranch -T '{node}\n'
   8872775dd97a750e1533dc1fbbca665644b32547
   $ hg prune -r scratch/mybranch
-  1 changesets pruned
-  hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
-  hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
+  hiding commit 8872775dd97a "scratch amended commit"
+  1 changeset hidden
+  removing bookmark "scratch/mybranch (was at: 8872775dd97a)"
+  1 bookmark removed
   $ hg log -G -T '{node|short} {desc} {bookmarks}'
   @  fe8283fe1190 peercommit
   │
-  │ o  d8c4f54ab678 scratchcommitwithpushrebase scratch/mybranch
+  │ o  d8c4f54ab678 scratchcommitwithpushrebase
   │ │
   │ o  2b5d271c7e0d scratchcommitnobook
   │ │
@@ -475,8 +476,7 @@ Prune it again and pull it via commit hash
   ├─╯
   o  67145f466344 initialcommit
   
-Have to use full hash because short hashes are not supported yet
-  $ hg pull -r 8872775dd97a750e1533dc1fbbca665644b32547
+  $ hg pull -r 8872775dd97a
   pulling from ssh://user@dummy/repo
   no changes found
   adding changesets
@@ -487,7 +487,7 @@ Have to use full hash because short hashes are not supported yet
   │
   │ o  8872775dd97a scratch amended commit
   │ │
-  │ o  d8c4f54ab678 scratchcommitwithpushrebase scratch/mybranch
+  │ o  d8c4f54ab678 scratchcommitwithpushrebase
   │ │
   │ o  2b5d271c7e0d scratchcommitnobook
   │ │
@@ -501,9 +501,8 @@ Have to use full hash because short hashes are not supported yet
   
 Push new scratch head. Make sure that new bundle is created but 8872775dd97a
 still in the old bundle
-  $ hg up scratch/mybranch
+  $ hg up d8c4f54ab678
   4 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  (activating bookmark scratch/mybranch)
   $ mkcommit newscratchhead
   $ hg push -r . --to scratch/newscratchhead --create
   pushing to ssh://user@dummy/repo
