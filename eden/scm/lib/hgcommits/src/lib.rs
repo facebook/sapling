@@ -17,6 +17,7 @@ use dag::Vertex;
 use dag::VertexListWithOptions;
 use futures::future::try_join_all;
 use futures::stream::BoxStream;
+use metalog::MetaLog;
 use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
@@ -95,6 +96,16 @@ pub trait AppendCommits: Send + Sync {
         Err(crate::Error::Unsupported(
             "import_pull_data is not supported by this backend",
         ))
+    }
+
+    /// Update references to match metalog.
+    ///
+    /// This is not needed if metalog is the source of truth.
+    /// However, if metalog is synced from git references, then this
+    /// method is needed to sync metalog back to git references.
+    fn update_references_to_match_metalog(&mut self, metalog: &MetaLog) -> Result<()> {
+        let _ = metalog;
+        Ok(())
     }
 }
 

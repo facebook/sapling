@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
@@ -23,6 +25,7 @@ use gitdag::GitDag;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::Mutex;
+use types::HgId;
 
 use crate::utils;
 use crate::AppendCommits;
@@ -71,37 +74,134 @@ impl GitSegmentedCommits {
         })
     }
 
-    /// Migrate git references to metalog.
-    pub fn export_git_references(&self, metalog: &mut MetaLog) -> Result<()> {
+    /// Rewrite metalog bookmarks, remotenames to match git references.
+    /// The reverse of `metalog_to_git_references`, used at the start of a transaction.
+    pub fn git_references_to_metalog(&self, metalog: &mut MetaLog) -> Result<()> {
         let refs = self.dag.git_references();
 
-        let mut bookmarks = Vec::new();
-        let mut remotenames = Vec::new();
+        let mut bookmarks = BTreeMap::new();
+        let mut remotenames = BTreeMap::new();
+        let mut visibleheads = Vec::new();
 
         for (name, vertex) in refs {
             let names: Vec<&str> = name.splitn(3, '/').collect();
+            let id = match HgId::from_slice(vertex.as_ref()) {
+                Ok(id) => id,
+                Err(_) => continue,
+            };
             match &names[..] {
                 ["refs", "remotes", name] => {
                     // Treat as a remotename
-                    if name.contains('/') && !name.ends_with("/HEAD") {
-                        remotenames.push(format!("{} bookmarks {}\n", vertex.to_hex(), name));
+                    if name.contains('/') && !name.ends_with("/HEAD") && !name.starts_with("tags/")
+                    {
+                        remotenames.insert(name.to_string(), id);
                     }
                 }
-                ["refs", "tags", name] | ["refs", "heads", name] => {
-                    // Treat as a bookmark
+                ["refs", "heads", name] => {
+                    // Treat as a local bookmark.
                     if name != &"HEAD" {
-                        bookmarks.push(format!("{} {}\n", vertex.to_hex(), name));
+                        bookmarks.insert(name.to_string(), id);
                     }
+                }
+                ["refs", "tags", name] => {
+                    // Treat as a remotename prefixed with `tags/`.
+                    if name != &"HEAD" {
+                        let name = format!("tags/{}", name);
+                        remotenames.insert(name, id);
+                    }
+                }
+                ["refs", "visibleheads", _name] => {
+                    visibleheads.push(id);
                 }
                 _ => {}
             }
         }
 
-        metalog.set("bookmarks", bookmarks.concat().as_bytes())?;
-        metalog.set("remotenames", remotenames.concat().as_bytes())?;
+        let encoded_bookmarks = refencode::encode_bookmarks(&bookmarks);
+        let encoded_remotenames = refencode::encode_remotenames(&remotenames);
+        let encoded_visibleheads = refencode::encode_visibleheads(&visibleheads);
+        metalog.set("bookmarks", encoded_bookmarks.as_ref())?;
+        metalog.set("remotenames", encoded_remotenames.as_ref())?;
+        metalog.set("visibleheads", encoded_visibleheads.as_ref())?;
         let mut opts = metalog::CommitOptions::default();
         opts.message = "sync from git";
         metalog.commit(opts)?;
+
+        Ok(())
+    }
+
+    /// Rewrite git references to match bookmarks, remotenames in metalog.
+    /// The reverse of `git_references_to_metalog`, used at the end of a transaction.
+    pub fn metalog_to_git_references(&self, metalog: &MetaLog) -> Result<()> {
+        let expected_refs = {
+            let mut refs: BTreeMap<String, git2::Oid> = Default::default();
+            if let Some(encoded) = metalog.get("bookmarks")? {
+                let decoded = refencode::decode_bookmarks(&encoded)?;
+                for (name, hgid) in decoded {
+                    let name = format!("refs/heads/{}", name);
+                    refs.insert(name, hgid_to_git_oid(hgid));
+                }
+            }
+            if let Some(encoded) = metalog.get("remotenames")? {
+                let decoded = refencode::decode_remotenames(&encoded)?;
+                for (name, hgid) in decoded {
+                    let name = if let Some(tag) = name.strip_prefix("tags/") {
+                        format!("refs/tags/{}", tag)
+                    } else {
+                        format!("refs/remotes/{}", name)
+                    };
+                    refs.insert(name, hgid_to_git_oid(hgid));
+                }
+            }
+            if let Some(encoded) = metalog.get("visibleheads")? {
+                let decoded = refencode::decode_visibleheads(&encoded)?;
+                for hgid in decoded {
+                    let name = format!("refs/visibleheads/{}", hgid.to_hex());
+                    refs.insert(name, hgid_to_git_oid(hgid));
+                }
+            }
+            refs
+        };
+
+
+        {
+            let reflog_message = format!(
+                "{}\nRootId: {}",
+                metalog.message(),
+                metalog.root_id().to_hex()
+            );
+            let repo = self.git_repo.lock();
+            let mut handled_ref_names = HashSet::with_capacity(expected_refs.len());
+            for reference in repo.references()? {
+                let mut reference = reference?;
+                let name = match reference.name() {
+                    Some(n) => n,
+                    None => continue,
+                };
+                handled_ref_names.insert(name.to_string());
+                // Only care about refs/* names. Skip HEAD or FETCH_HEAD.
+                if !name.starts_with("refs/") {
+                    continue;
+                }
+                let expected_oid = expected_refs.get(name);
+                match expected_oid {
+                    None => reference.delete()?,
+                    Some(&oid) => {
+                        if let Ok(obj) = reference.peel(git2::ObjectType::Commit) {
+                            if obj.id() != oid {
+                                repo.reference(name, oid, true, &reflog_message)?;
+                            }
+                        }
+                    }
+                }
+            }
+            for (name, oid) in expected_refs {
+                if handled_ref_names.contains(name.as_str()) {
+                    continue;
+                }
+                repo.reference(&name, oid, true, &reflog_message)?;
+            }
+        }
 
         Ok(())
     }
@@ -146,6 +246,10 @@ impl AppendCommits for GitSegmentedCommits {
 
     async fn flush_commit_data(&mut self) -> Result<()> {
         Ok(())
+    }
+
+    fn update_references_to_match_metalog(&mut self, metalog: &MetaLog) -> Result<()> {
+        self.metalog_to_git_references(metalog)
     }
 }
 
@@ -276,4 +380,8 @@ fn to_hg_text(commit: &git2::Commit) -> Bytes {
     write(commit.message_bytes());
 
     result.into()
+}
+
+fn hgid_to_git_oid(id: HgId) -> git2::Oid {
+    git2::Oid::from_bytes(id.as_ref()).expect("HgId should convert to git2::Oid")
 }

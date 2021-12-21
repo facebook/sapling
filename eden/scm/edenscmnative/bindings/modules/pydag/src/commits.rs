@@ -126,7 +126,7 @@ py_class!(pub class commits |py| {
         Ok(PyNone)
     }
 
-    /// Import clone data (serialized in mincode) and flush.
+    /// Import clone data (inside PyCell) and flush.
     def importclonedata(&self, data: PyCell) -> PyResult<PyNone> {
         let data: Box<CloneData<Vertex>> = data.take(py).ok_or_else(|| format_err!("Data is not CloneData")).map_pyerr(py)?;
         let mut inner = self.inner(py).borrow_mut();
@@ -134,7 +134,7 @@ py_class!(pub class commits |py| {
         Ok(PyNone)
     }
 
-    /// Import pull data(inside PyCell) and flush.
+    /// Import pull data (inside PyCell) and flush.
     /// Returns (commit_count, segment_count) on success.
     def importpulldata(&self, data: PyCell, heads: Serde<VertexListWithOptions>) -> PyResult<(u64, usize)> {
         let data: Box<CloneData<Vertex>> = data.take(py).ok_or_else(|| format_err!("Data is not CloneData")).map_pyerr(py)?;
@@ -255,6 +255,19 @@ py_class!(pub class commits |py| {
         Ok(problems)
     }
 
+    /// updatereferences(metalog)
+    ///
+    /// Update commit references to match metalog. Useful when metalog is not the
+    /// source of truth of commit references (ex. using git references as source
+    /// of truth).
+    def updatereferences(&self, metalog: PyMetaLog) -> PyResult<PyNone> {
+        let meta = metalog.metalog_refcell(py);
+        let meta = meta.borrow();
+        let mut inner = self.inner(py).borrow_mut();
+        inner.update_references_to_match_metalog(&meta).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
     /// migratesparsesegments(src, dst, heads=[]).
     ///
     /// Load full Dag from src directory, migrate a subset of dag to dst directory.
@@ -353,7 +366,7 @@ py_class!(pub class commits |py| {
         let inner = py.allow_threads(|| GitSegmentedCommits::new(gitdir.as_path(), segmentsdir.as_path())).map_pyerr(py)?;
         let meta = metalog.metalog_refcell(py);
         let mut meta = meta.borrow_mut();
-        inner.export_git_references(&mut meta).map_pyerr(py)?;
+        inner.git_references_to_metalog(&mut meta).map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 
