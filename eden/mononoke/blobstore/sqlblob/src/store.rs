@@ -192,12 +192,11 @@ queries! {
         "{insert_or_ignore} INTO chunk_generation VALUES {values}"
     }
 
-    write SetInitialGeneration(generation: u64) {
-        insert_or_ignore,
-        "{insert_or_ignore} INTO chunk_generation
-            SELECT chunk.id, {generation}, chunk_generation.value_len
-            FROM chunk LEFT JOIN chunk_generation ON chunk.id = chunk_generation.id
-            WHERE chunk_generation.last_seen_generation IS NULL"
+    read GetNeedsInitialGeneration(limit: u64) -> (Vec<u8>, Option<u64>) {
+        "SELECT chunk.id, chunk_generation.value_len
+        FROM chunk LEFT JOIN chunk_generation ON chunk.id = chunk_generation.id
+        WHERE chunk_generation.last_seen_generation IS NULL
+        LIMIT {limit}"
     }
 
     read GetAllKeys() -> (Vec<u8>) {
@@ -626,12 +625,27 @@ impl ChunkSqlStore {
     }
 
     pub(crate) async fn set_initial_generation(&self, shard_num: usize) -> Result<(), Error> {
-        let put_generation = self.gc_generations.get().put_generation as u64;
+        loop {
+            self.delay.delay(shard_num).await;
+            let conn = &self.write_connection[shard_num];
+            let chunks_needing_gen = GetNeedsInitialGeneration::query(conn, &10000).await?;
+            if chunks_needing_gen.is_empty() {
+                return Ok(());
+            }
 
-        self.delay.delay(shard_num).await;
+            let generation = self.gc_generations.get().put_generation as u64;
 
-        SetInitialGeneration::query(&self.write_connection[shard_num], &put_generation).await?;
-        Ok(())
+            for (id, value_len) in chunks_needing_gen {
+                let id = String::from_utf8_lossy(&id);
+                let value_len = if let Some(value_len) = value_len {
+                    value_len
+                } else {
+                    self.get_len(shard_num, &id).await?
+                };
+
+                InsertGeneration::query(conn, &[(&id.as_ref(), &generation, &value_len)]).await?;
+            }
+        }
     }
 
     pub(crate) async fn set_missing_value_len(&self, shard_num: usize) -> Result<(), Error> {
