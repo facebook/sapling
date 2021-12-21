@@ -2434,6 +2434,9 @@ class localrepository(object):
 
         return fparent1
 
+    def _filecommitgit(self, fctx):
+        return self.fileslog.contentstore.writeobj("blob", fctx.data())
+
     def checkcommitpatterns(self, wctx, match, status, fail):
         """check for commit arguments that aren't committable"""
         if match.isexact() or match.prefix():
@@ -2598,6 +2601,7 @@ class localrepository(object):
                     % (extraslen, extraslimit)
                 )
 
+        isgit = git.isgit(self)
         lock = self.lock()
         try:
             tr = self.transaction("commit")
@@ -2654,19 +2658,28 @@ class localrepository(object):
 
                 linkrev = len(self)
                 self.ui.note(_("committing files:\n"))
-                # Prefetch rename data, since _filecommit will look for it.
-                if util.safehasattr(self.fileslog, "metadatastore"):
-                    keys = []
-                    for f in added:
-                        fctx = ctx[f]
-                        if fctx.filenode() is not None:
-                            keys.append((fctx.path(), fctx.filenode()))
-                    self.fileslog.metadatastore.prefetch(keys)
+
+                if not isgit:
+                    # Prefetch rename data, since _filecommit will look for it.
+                    # (git does not need this step)
+                    if util.safehasattr(self.fileslog, "metadatastore"):
+                        keys = []
+                        for f in added:
+                            fctx = ctx[f]
+                            if fctx.filenode() is not None:
+                                keys.append((fctx.path(), fctx.filenode()))
+                        self.fileslog.metadatastore.prefetch(keys)
                 for f in added:
                     self.ui.note(f + "\n")
                     try:
                         fctx = ctx[f]
-                        m[f] = self._filecommit(fctx, m1, m2, linkrev, trp, changed)
+                        if isgit:
+                            filenode = self._filecommitgit(fctx)
+                        else:
+                            filenode = self._filecommit(
+                                fctx, m1, m2, linkrev, trp, changed
+                            )
+                        m[f] = filenode
                         m.setflag(f, fctx.flags())
                     except OSError:
                         self.ui.warn(_("trouble committing %s!\n") % f)
@@ -2682,17 +2695,20 @@ class localrepository(object):
                 removed = sorted(removed)
                 drop = sorted(drop)
                 if added or drop:
-                    mn = (
-                        mctx.write(
-                            trp,
-                            linkrev,
-                            p1.manifestnode(),
-                            p2.manifestnode(),
-                            added,
-                            drop,
+                    if isgit:
+                        mn = mctx.writegit()
+                    else:
+                        mn = (
+                            mctx.write(
+                                trp,
+                                linkrev,
+                                p1.manifestnode(),
+                                p2.manifestnode(),
+                                added,
+                                drop,
+                            )
+                            or p1.manifestnode()
                         )
-                        or p1.manifestnode()
-                    )
                 else:
                     mn = p1.manifestnode()
                 files = changed + removed

@@ -76,3 +76,14 @@ Test status:
   $ echo 3 > alpha
   $ hg status
   M alpha
+
+Test commit:
+
+  $ hg commit -m alpha3
+  $ hg log -Gr: -T '{desc}'
+  @  alpha3
+  │
+  o  beta
+  │
+  o  alpha
+  
