@@ -21,6 +21,7 @@ import bindings
 from . import (
     encoding,
     error,
+    git,
     lock as lockmod,
     mutation,
     pycompat,
@@ -1168,7 +1169,9 @@ class lazyremotenamedict(pycompat.Mapping):
         alias_default = repo.ui.configbool("remotenames", "alias.default")
         entries = list(readremotenames(repo))
         threshold = repo.ui.configint("remotenames", "autocleanupthreshold") or 0
-        if threshold > 0 and len(entries) > threshold:
+        # Do not clean up refs for git, which might have a lot of refs.
+        # Doing so causes surprises: tags, remote refs will be gone unexpectedly.
+        if not git.isgit(repo) and threshold > 0 and len(entries) > threshold:
             repo.ui.status_err(
                 _(
                     "attempt to clean up remote bookmarks since they exceed threshold %s\n"
