@@ -160,6 +160,7 @@ class fileslog(object):
         if git.isgit(repo):
             gitstore = git.openstore(repo)
             self.contentstore = gitstore
+            self.filescmstore = gitstore
 
     def commitpending(self):
         """Used in alternative filelog implementations to commit pending
