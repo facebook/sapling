@@ -15,6 +15,7 @@ use manifest::testutil::*;
 use manifest::Manifest;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
+use storemodel::TreeFormat;
 use types::testutil::*;
 use types::HgId;
 use types::Key;
@@ -52,6 +53,7 @@ pub fn make_tree_manifest_from_meta(
 pub struct TestStore {
     entries: RwLock<HashMap<RepoPathBuf, HashMap<HgId, Bytes>>>,
     pub prefetched: Mutex<Vec<Vec<Key>>>,
+    format: TreeFormat,
 }
 
 impl TestStore {
@@ -59,7 +61,13 @@ impl TestStore {
         TestStore {
             entries: RwLock::new(HashMap::new()),
             prefetched: Mutex::new(Vec::new()),
+            format: TreeFormat::Hg,
         }
+    }
+
+    pub fn with_format(mut self, format: TreeFormat) -> Self {
+        self.format = format;
+        self
     }
 
     #[allow(unused)]
@@ -90,5 +98,9 @@ impl TreeStore for TestStore {
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
         self.prefetched.lock().push(keys);
         Ok(())
+    }
+
+    fn format(&self) -> TreeFormat {
+        self.format
     }
 }

@@ -31,6 +31,7 @@ use once_cell::sync::OnceCell;
 use pathmatcher::Matcher;
 use sha1::Digest;
 use sha1::Sha1;
+use storemodel::TreeFormat;
 use thiserror::Error;
 use types::HgId;
 use types::Key;
@@ -242,10 +243,22 @@ impl Manifest for TreeManifest {
         }
     }
 
+    /// Write dirty trees using specified format to disk. Return the root tree id.
     fn flush(&mut self) -> Result<HgId> {
-        fn compute_hgid<C: AsRef<[u8]>>(content: C) -> HgId {
+        fn compute_sha1(content: &[u8], format: TreeFormat) -> HgId {
             let mut hasher = Sha1::new();
-            hasher.input(content.as_ref());
+            match format {
+                TreeFormat::Git => hasher.input(format!("tree {}\0", content.len())),
+                TreeFormat::Hg => {
+                    // XXX: No p1, p2 to produce a genuine SHA1.
+                    // This code path is only meaningful for tests.
+                    assert!(
+                        cfg!(test),
+                        "flush() cannot be used with hg store, consider finalize() instead"
+                    );
+                }
+            }
+            hasher.input(content);
             let buf: [u8; HgId::len()] = hasher.result().into();
             (&buf).into()
         }
@@ -253,6 +266,7 @@ impl Manifest for TreeManifest {
             store: &'a InnerStore,
             pathbuf: &'b mut RepoPathBuf,
             cursor: &'c mut Link,
+            format: TreeFormat,
         ) -> Result<(HgId, store::Flag)> {
             loop {
                 let new_cursor = match cursor.as_mut_ref()? {
@@ -266,7 +280,7 @@ impl Manifest for TreeManifest {
                     Ephemeral(links) => {
                         let iter = links.iter_mut().map(|(component, link)| {
                             pathbuf.push(component.as_path_component());
-                            let (hgid, flag) = do_flush(store, pathbuf, link)?;
+                            let (hgid, flag) = do_flush(store, pathbuf, link, format)?;
                             pathbuf.pop();
                             Ok(store::Element::new(
                                 component.to_owned(),
@@ -274,8 +288,8 @@ impl Manifest for TreeManifest {
                                 flag,
                             ))
                         });
-                        let entry = store::Entry::from_elements(iter)?;
-                        let hgid = compute_hgid(&entry);
+                        let entry = store::Entry::from_elements(iter, format)?;
+                        let hgid = compute_sha1(entry.as_ref(), format);
                         store.insert_entry(&pathbuf, hgid, entry)?;
 
                         let cell = OnceCell::new();
@@ -290,8 +304,9 @@ impl Manifest for TreeManifest {
             }
         }
         let mut path = RepoPathBuf::new();
-        let (hgid, _) = do_flush(&self.store, &mut path, &mut self.root)?;
-        Ok(hgid.clone())
+        let format = self.store.format();
+        let (hgid, _) = do_flush(&self.store, &mut path, &mut self.root, format)?;
+        Ok(hgid)
     }
 
     fn files<'a, M: 'static + Matcher + Sync + Send>(
@@ -388,6 +403,8 @@ impl fmt::Debug for TreeManifest {
 }
 
 impl TreeManifest {
+    /// Produces new trees to write in hg format (path, id, text, p1, p2).
+    /// Does not write to the tree store directly.
     pub fn finalize(
         &mut self,
         parent_trees: Vec<&TreeManifest>,
@@ -514,7 +531,7 @@ impl TreeManifest {
                     let (hgid, flag) = self.work(link, child_parents)?;
                     self.path.pop();
                     let element = store::Element::new(component.clone(), hgid, flag);
-                    entry.add_element(element);
+                    entry.add_element_hg(element);
                 }
                 let entry = entry.freeze();
                 let hgid = compute_hgid(&parent_tree_nodes, &entry);
@@ -538,6 +555,11 @@ impl TreeManifest {
             }
         }
 
+        assert_eq!(
+            self.store.format(),
+            TreeFormat::Hg,
+            "finalize() can only be used for hg store, use flush() instead"
+        );
         let mut executor = Executor::new(&self.store, &parent_trees)?;
         executor.work(&mut self.root, (0..parent_trees.len()).collect())?;
         Ok(executor.converted_nodes.into_iter())
@@ -702,12 +724,18 @@ pub fn prefetch(
 mod tests {
     use manifest::testutil::*;
     use manifest::FileType;
+    use store::Element;
     use types::hgid::NULL_ID;
     use types::testutil::*;
 
     use self::testutil::*;
     use super::*;
 
+    impl store::Entry {
+        fn from_elements_hg<I: IntoIterator<Item = Result<Element>>>(elements: I) -> Result<Self> {
+            Self::from_elements(elements, TreeFormat::Hg)
+        }
+    }
     fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<store::Element> {
         Ok(store::Element::new(
             path_component_buf(path),
@@ -789,7 +817,7 @@ mod tests {
     #[test]
     fn test_durable_link() {
         let store = TestStore::new();
-        let root_entry = store::Entry::from_elements(vec![
+        let root_entry = store::Entry::from_elements_hg(vec![
             store_element("foo", "10", store::Flag::Directory),
             store_element("baz", "20", store::Flag::File(FileType::Regular)),
         ])
@@ -797,7 +825,7 @@ mod tests {
         store
             .insert(RepoPath::empty(), hgid("1"), root_entry.to_bytes())
             .unwrap();
-        let foo_entry = store::Entry::from_elements(vec![store_element(
+        let foo_entry = store::Entry::from_elements_hg(vec![store_element(
             "bar",
             "11",
             store::Flag::File(FileType::Regular),
@@ -935,7 +963,7 @@ mod tests {
     #[test]
     fn test_remove_from_durable() {
         let store = TestStore::new();
-        let root_entry = store::Entry::from_elements(vec![
+        let root_entry = store::Entry::from_elements_hg(vec![
             store_element("a1", "10", store::Flag::Directory),
             store_element("a2", "20", store::Flag::File(FileType::Regular)),
         ])
@@ -944,7 +972,7 @@ mod tests {
         store
             .insert(RepoPath::empty(), tree_hgid, root_entry.to_bytes())
             .unwrap();
-        let a1_entry = store::Entry::from_elements(vec![
+        let a1_entry = store::Entry::from_elements_hg(vec![
             store_element("b1", "11", store::Flag::File(FileType::Regular)),
             store_element("b2", "12", store::Flag::File(FileType::Regular)),
         ])
@@ -1177,7 +1205,7 @@ mod tests {
     #[test]
     fn test_finalize_materialization() {
         let store = Arc::new(TestStore::new());
-        let entry_1 = store::Entry::from_elements(vec![
+        let entry_1 = store::Entry::from_elements_hg(vec![
             store_element("foo", "10", store::Flag::Directory),
             store_element("baz", "20", store::Flag::File(FileType::Regular)),
         ])
@@ -1187,7 +1215,7 @@ mod tests {
             .unwrap();
         let parent = TreeManifest::durable(store.clone(), hgid("1"));
 
-        let entry_2 = store::Entry::from_elements(vec![
+        let entry_2 = store::Entry::from_elements_hg(vec![
             store_element("foo", "10", store::Flag::Directory),
             store_element("baz", "21", store::Flag::File(FileType::Regular)),
         ])
@@ -1289,7 +1317,7 @@ mod tests {
     fn test_compat_subtree_diff() {
         let store = Arc::new(TestStore::new());
         // add ("", 1), ("foo", 11), ("baz", 21), ("foo/bar", 111)
-        let root_1_entry = store::Entry::from_elements(vec![
+        let root_1_entry = store::Entry::from_elements_hg(vec![
             store_element("foo", "11", store::Flag::Directory),
             store_element("baz", "21", store::Flag::File(FileType::Regular)),
         ])
@@ -1301,7 +1329,7 @@ mod tests {
                 root_1_entry.clone().to_bytes(),
             )
             .unwrap();
-        let foo_11_entry = store::Entry::from_elements(vec![store_element(
+        let foo_11_entry = store::Entry::from_elements_hg(vec![store_element(
             "bar",
             "111",
             store::Flag::File(FileType::Regular),
@@ -1316,7 +1344,7 @@ mod tests {
             .unwrap();
 
         // add ("", 2), ("foo", 12), ("baz", 21), ("foo/bar", 112)
-        let root_2_entry = store::Entry::from_elements(vec![
+        let root_2_entry = store::Entry::from_elements_hg(vec![
             store_element("foo", "12", store::Flag::Directory),
             store_element("baz", "21", store::Flag::File(FileType::Regular)),
         ])
@@ -1324,7 +1352,7 @@ mod tests {
         store
             .insert(RepoPath::empty(), hgid("2"), root_2_entry.to_bytes())
             .unwrap();
-        let foo_12_entry = store::Entry::from_elements(vec![store_element(
+        let foo_12_entry = store::Entry::from_elements_hg(vec![store_element(
             "bar",
             "112",
             store::Flag::File(FileType::Regular),
@@ -1419,7 +1447,7 @@ mod tests {
     fn test_compat_subtree_diff_file_to_directory() {
         let store = Arc::new(TestStore::new());
         // add ("", 1), ("foo", 11)
-        let root_1_entry = store::Entry::from_elements(vec![store_element(
+        let root_1_entry = store::Entry::from_elements_hg(vec![store_element(
             "foo",
             "11",
             store::Flag::File(FileType::Regular),
@@ -1434,9 +1462,12 @@ mod tests {
             .unwrap();
 
         // add ("", 2), ("foo", 12), ("foo/bar", 121)
-        let root_2_entry =
-            store::Entry::from_elements(vec![store_element("foo", "12", store::Flag::Directory)])
-                .unwrap();
+        let root_2_entry = store::Entry::from_elements_hg(vec![store_element(
+            "foo",
+            "12",
+            store::Flag::Directory,
+        )])
+        .unwrap();
         store
             .insert(
                 RepoPath::empty(),
@@ -1444,7 +1475,7 @@ mod tests {
                 root_2_entry.clone().to_bytes(),
             )
             .unwrap();
-        let foo_12_entry = store::Entry::from_elements(vec![store_element(
+        let foo_12_entry = store::Entry::from_elements_hg(vec![store_element(
             "bar",
             "121",
             store::Flag::File(FileType::Regular),
@@ -1486,7 +1517,12 @@ mod tests {
 
     #[test]
     fn test_list() {
-        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+        test_list_format(TreeFormat::Git);
+        test_list_format(TreeFormat::Hg);
+    }
+
+    fn test_list_format(format: TreeFormat) {
+        let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new().with_format(format)));
         let c1_meta = make_meta("10");
         tree.insert(repo_path_buf("a1/b1/c1"), c1_meta).unwrap();
         let b2_meta = make_meta("20");

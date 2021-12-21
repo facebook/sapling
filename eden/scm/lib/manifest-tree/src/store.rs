@@ -118,15 +118,27 @@ impl Entry {
     /// Returns an iterator over the elements that the current `Entry` contains. This is the
     /// primary method of inspection for an `Entry`.
     pub fn elements<'a>(&'a self) -> Elements<'a> {
-        Elements::from_byte_slice(&self.0)
+        Elements::from_byte_slice_hg(&self.0)
     }
 
     /// The primary builder of an Entry, from a list of `Element`.
-    pub fn from_elements<I: IntoIterator<Item = Result<Element>>>(elements: I) -> Result<Entry> {
+    pub fn from_elements<I: IntoIterator<Item = Result<Element>>>(
+        elements: I,
+        format: TreeFormat,
+    ) -> Result<Entry> {
         let mut underlying = BytesMut::new();
-        for element_result in elements.into_iter() {
-            underlying.extend(element_result?.to_byte_vec());
-            underlying.extend(b"\n");
+        match format {
+            TreeFormat::Hg => {
+                for element_result in elements.into_iter() {
+                    underlying.extend(element_result?.to_byte_vec_hg());
+                    underlying.extend(b"\n");
+                }
+            }
+            TreeFormat::Git => {
+                for element_result in elements.into_iter() {
+                    underlying.extend(element_result?.to_byte_vec_git());
+                }
+            }
         }
         Ok(Entry(underlying.freeze()))
     }
@@ -145,8 +157,8 @@ impl EntryMut {
 
     /// Adds an element to the list of elements represented by this `Entry`.
     /// It is expected that elements are added sorted by paths.
-    pub fn add_element(&mut self, element: Element) {
-        self.0.extend(element.to_byte_vec());
+    pub fn add_element_hg(&mut self, element: Element) {
+        self.0.extend(element.to_byte_vec_hg());
         self.0.extend(b"\n");
     }
 
@@ -169,7 +181,7 @@ pub struct Elements<'a> {
 
 impl<'a> Elements<'a> {
     /// Constructs `Elements` from raw byte slice.
-    pub fn from_byte_slice(byte_slice: &'a [u8]) -> Self {
+    pub(crate) fn from_byte_slice_hg(byte_slice: &'a [u8]) -> Self {
         // hg: first 20 bytes are a hex SHA1, no spaces
         // git: mode + space. The space is the 6th or 7th byte.
         let format = if byte_slice.get(b"40000".len()) == Some(&b' ')
@@ -202,7 +214,7 @@ impl<'a> Elements<'a> {
             }
             Some(delta) => self.position + delta,
         };
-        let result = Element::from_byte_slice(&self.byte_slice[self.position..end]);
+        let result = Element::from_byte_slice_hg(&self.byte_slice[self.position..end]);
         self.position = end + 1;
         Some(result)
     }
@@ -306,7 +318,7 @@ impl Element {
         }
     }
 
-    fn from_byte_slice(byte_slice: &[u8]) -> Result<Element> {
+    fn from_byte_slice_hg(byte_slice: &[u8]) -> Result<Element> {
         let path_len = match byte_slice.iter().position(|&x| x == b'\0') {
             Some(position) => position,
             None => return Err(format_err!("did not find path delimiter")),
@@ -336,7 +348,7 @@ impl Element {
         Ok(element)
     }
 
-    fn to_byte_vec(&self) -> Vec<u8> {
+    fn to_byte_vec_hg(&self) -> Vec<u8> {
         let component = self.component.as_byte_slice();
         // TODO: benchmark taking a buffer as a parameter
         // We may not use the last byte but it doesn't hurt to allocate
@@ -355,6 +367,23 @@ impl Element {
         }
         buffer
     }
+
+    fn to_byte_vec_git(&self) -> Vec<u8> {
+        let mode: &[u8] = match self.flag {
+            Flag::File(FileType::Regular) => b"100644",
+            Flag::File(FileType::Executable) => b"100755",
+            Flag::File(FileType::Symlink) => b"120000",
+            Flag::Directory => b"40000",
+        };
+        let component = self.component.as_byte_slice();
+        let mut buffer = Vec::with_capacity(mode.len() + component.len() + HgId::len() + 2);
+        buffer.extend_from_slice(mode);
+        buffer.push(b' ');
+        buffer.extend_from_slice(component);
+        buffer.push(b'\0');
+        buffer.extend_from_slice(self.hgid.as_ref());
+        buffer
+    }
 }
 
 #[cfg(test)]
@@ -365,45 +394,45 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_element_from_byte_slice() {
+    fn test_element_from_byte_slice_hg() {
         let mut buffer = vec![];
         let path = PathComponent::from_str("foo").unwrap();
         let hgid = hgid("123");
-        assert!(Element::from_byte_slice(&buffer).is_err());
+        assert!(Element::from_byte_slice_hg(&buffer).is_err());
         buffer.extend_from_slice(path.as_byte_slice());
-        assert!(Element::from_byte_slice(&buffer).is_err());
+        assert!(Element::from_byte_slice_hg(&buffer).is_err());
         buffer.push(b'\0');
-        assert!(Element::from_byte_slice(&buffer).is_err());
+        assert!(Element::from_byte_slice_hg(&buffer).is_err());
         buffer.extend_from_slice(hgid.to_hex().as_ref());
         assert_eq!(
-            Element::from_byte_slice(&buffer).unwrap(),
+            Element::from_byte_slice_hg(&buffer).unwrap(),
             Element::new(path.to_owned(), hgid, Flag::File(FileType::Regular))
         );
 
         buffer.push(b'x');
         assert_eq!(
-            Element::from_byte_slice(&buffer).unwrap(),
+            Element::from_byte_slice_hg(&buffer).unwrap(),
             Element::new(path.to_owned(), hgid, Flag::File(FileType::Executable))
         );
 
         *buffer.last_mut().unwrap() = b'l';
         assert_eq!(
-            Element::from_byte_slice(&buffer).unwrap(),
+            Element::from_byte_slice_hg(&buffer).unwrap(),
             Element::new(path.to_owned(), hgid, Flag::File(FileType::Symlink))
         );
 
         *buffer.last_mut().unwrap() = b't';
         assert_eq!(
-            Element::from_byte_slice(&buffer).unwrap(),
+            Element::from_byte_slice_hg(&buffer).unwrap(),
             Element::new(path.to_owned(), hgid, Flag::Directory)
         );
 
         *buffer.last_mut().unwrap() = b's';
-        assert!(Element::from_byte_slice(&buffer).is_err());
+        assert!(Element::from_byte_slice_hg(&buffer).is_err());
 
         *buffer.last_mut().unwrap() = b'x';
         buffer.push(b'\0');
-        assert!(Element::from_byte_slice(&buffer).is_err());
+        assert!(Element::from_byte_slice_hg(&buffer).is_err());
     }
 
     #[test]
@@ -438,8 +467,8 @@ mod tests {
         let flag = Flag::Directory;
         let byte_slice = b"c\02e31d52f551e445002a6e6690700ce2ac31f196et";
         let element = Element::new(component, hgid, flag);
-        assert_eq!(Element::from_byte_slice(byte_slice).unwrap(), element);
-        let buffer = element.to_byte_vec();
+        assert_eq!(Element::from_byte_slice_hg(byte_slice).unwrap(), element);
+        let buffer = element.to_byte_vec_hg();
         assert_eq!(buffer.to_vec(), byte_slice.to_vec());
     }
 
@@ -454,8 +483,8 @@ mod tests {
                 None => Flag::Directory,
             };
             let element = Element::new(component, hgid, flag);
-            let buffer = element.to_byte_vec();
-            Element::from_byte_slice(&buffer).unwrap() == element
+            let buffer = element.to_byte_vec_hg();
+            Element::from_byte_slice_hg(&buffer).unwrap() == element
         }
     }
 }
