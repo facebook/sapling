@@ -108,7 +108,7 @@ configitem("update", "nextpreferdraft", default=True)
 testedwith = "ships-with-fb-hgext"
 
 amendopts = [
-    ("", "rebase", None, _("rebases children after the amend (ADVANCED)")),
+    ("", "rebase", None, _("rebases children after the amend")),
     ("", "fixup", None, _("rebase children from a previous amend (DEPRECATED)")),
     ("", "to", "", _("amend to a specific commit in the current stack (ADVANCED)")),
 ] + cmdutil.templateopts
@@ -315,7 +315,12 @@ def amend(ui, repo, *pats, **opts):
     rebased on top of the amended version of the commit, unless doing so
     would result in merge conflicts. If this happens, run 'hg restack'
     to manually trigger the rebase so that you can go through the merge
-    conflict resolution process.
+    conflict resolution process.  You can also:
+
+    - Specify --rebase to always trigger the rebase and resolve merge
+      conflicts.
+
+    - Specify --no-rebase to prevent the automatic rebasing of descendants.
     """
     # 'rebase' is a tristate option: None=auto, True=force, False=disable
     rebase = opts.get("rebase")
