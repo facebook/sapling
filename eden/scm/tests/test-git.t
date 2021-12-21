@@ -87,3 +87,17 @@ Test commit:
   │
   o  alpha
   
+Test bookmarks:
+
+  $ hg bookmark -r. foo
+  $ hg bookmarks
+     foo                       5c9a5ee451a8
+     master                    3f5848713286
+
+Test changes are readable via git:
+
+  $ export GIT_DIR="$TESTTMP/gitrepo/.git"
+  $ git log foo --pretty='format:%s %an %d'
+  alpha3 test  (refs/visibleheads/5c9a5ee451a8051f0d16433dee8a2c2259d5fed8, foo)
+  beta test  (HEAD -> master)
+  alpha test  (no-eol)

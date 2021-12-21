@@ -1775,7 +1775,7 @@ class localrepository(object):
             vfsmap,
             "journal",
             "undo",
-            aftertrans(renames),
+            aftertrans(reporef, renames),
             self.store.createmode,
             validator=validate,
             releasefn=releasefn,
@@ -3091,7 +3091,10 @@ class localrepository(object):
 
 
 # used to avoid circular references so destructors work
-def aftertrans(files):
+# This function is passed as the `after` function to `transaction`, and is
+# called after writing metalog. See `transaction.py` and `def transaction`
+# above.
+def aftertrans(reporef, files):
     renamefiles = [tuple(t) for t in files]
 
     def a():
@@ -3104,6 +3107,12 @@ def aftertrans(files):
                 vfs.rename(src, dest)
             except OSError:  # journal file does not yet exist
                 pass
+
+        # Sync metalog references back to git references.
+        # This should happen after writng metalog.
+        repo = reporef()
+        if repo is not None and git.isgit(repo):
+            repo.changelog.inner.updatereferences(repo.metalog())
 
     return a
 
