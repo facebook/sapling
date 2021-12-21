@@ -26,7 +26,6 @@ rand = { version = "0.8", features = ["small_rng"], optional = true }
 sha-1 = "0.8"
 storemodel = { path = "../storemodel" }
 thiserror = "1.0.29"
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tracing = "0.1.29"
 types = { path = "../types" }
 

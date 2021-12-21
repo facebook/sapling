@@ -12,6 +12,7 @@ use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use storemodel::ReadFileContents;
 use storemodel::TreeStore;
+use storemodel::TreeFormat;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
@@ -47,5 +48,9 @@ impl TreeStore for GitStore {
             anyhow::bail!("tree id mismatch: {} (written) != {} (expected)", id, hgid);
         }
         Ok(())
+    }
+
+    fn format(&self) -> TreeFormat {
+        TreeFormat::Git
     }
 }

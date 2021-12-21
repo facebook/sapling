@@ -64,4 +64,21 @@ pub trait TreeStore {
     fn prefetch(&self, _keys: Vec<Key>) -> anyhow::Result<()> {
         Ok(())
     }
+
+    /// Decides whether the store uses git or hg format.
+    fn format(&self) -> TreeFormat {
+        TreeFormat::Hg
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TreeFormat {
+    // NAME '\0' HEX_SHA1 MODE '\n'
+    // MODE: 't' (tree), 'l' (symlink), 'x' (executable)
+    Hg,
+
+    // MODE ' ' NAME '\0' BIN_SHA1
+    // MODE: '40000' (tree), '100644' (regular), '100755' (executable),
+    //       '120000' (symlink), '160000' (gitlink)
+    Git,
 }

@@ -16,25 +16,13 @@ use bytes::BytesMut;
 use manifest::FileMetadata;
 use manifest::FileType;
 use manifest::FsNodeMetadata;
+use storemodel::TreeFormat;
+pub use storemodel::TreeStore;
 use types::HgId;
 use types::Key;
 use types::PathComponent;
 use types::PathComponentBuf;
 use types::RepoPath;
-
-pub use storemodel::TreeStore;
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum TreeFormat {
-    // NAME '\0' HEX_SHA1 MODE '\n'
-    // MODE: 't' (tree), 'l' (symlink), 'x' (executable)
-    Hg,
-
-    // MODE ' ' NAME '\0' BIN_SHA1
-    // MODE: '40000' (tree), '100644' (regular), '100755' (executable),
-    //       '120000' (symlink), '160000' (gitlink)
-    Git,
-}
 
 #[derive(Clone)]
 pub struct InnerStore {
@@ -44,6 +32,10 @@ pub struct InnerStore {
 impl InnerStore {
     pub fn new(tree_store: Arc<dyn TreeStore + Send + Sync>) -> Self {
         InnerStore { tree_store }
+    }
+
+    pub fn format(&self) -> TreeFormat {
+        self.tree_store.format()
     }
 
     pub fn get_entry(&self, path: &RepoPath, hgid: HgId) -> Result<Entry> {
