@@ -35,12 +35,20 @@ py_class!(pub class gitstore |py| {
         Self::create_instance(py, Arc::new(store))
     }
 
-    /// readobj(node, kind="any").
+    /// readobj(node, kind="any") -> bytes.
     /// Read a git object of the given type.
     def readobj(&self, node: Serde<HgId>, kind: &str = "any") -> PyResult<PyBytes> {
         let kind = str_to_object_type(py, kind)?;
         let data = self.inner(py).read_obj(node.0, kind).map_pyerr(py)?;
         Ok(PyBytes::new(py, &data))
+    }
+
+    /// readobjsize(node, kind="any") -> int.
+    /// Read a git object size without reading its full content.
+    def readobjsize(&self, node: Serde<HgId>, kind: &str = "any") -> PyResult<usize> {
+        let kind = str_to_object_type(py, kind)?;
+        let size = self.inner(py).read_obj_size(node.0, kind).map_pyerr(py)?;
+        Ok(size)
     }
 
     /// writeobj(kind, data) -> node.

@@ -70,3 +70,9 @@ Test diff:
   @@ -0,0 +1,1 @@
   +2
   
+Test status:
+
+  $ hg status
+  $ echo 3 > alpha
+  $ hg status
+  M alpha

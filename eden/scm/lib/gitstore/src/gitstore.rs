@@ -61,6 +61,20 @@ impl GitStore {
         Ok(obj.data().to_vec())
     }
 
+    /// Read the size of an object without its full content.
+    pub fn read_obj_size(&self, id: HgId, kind: git2::ObjectType) -> Git2Result<usize> {
+        let oid = hgid_to_git_oid(id);
+        let (size, obj_kind) = self.odb.read_header(oid)?;
+        if kind != git2::ObjectType::Any && obj_kind != kind {
+            return Err(git2::Error::new(
+                git2::ErrorCode::NotFound,
+                git2::ErrorClass::Object,
+                format!("{} {} not found", kind, oid),
+            ));
+        }
+        Ok(size)
+    }
+
     /// Write object to the odb.
     pub fn write_obj(&self, kind: git2::ObjectType, data: &[u8]) -> Git2Result<HgId> {
         let oid = self.odb.write(kind, data)?;

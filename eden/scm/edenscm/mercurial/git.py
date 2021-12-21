@@ -7,6 +7,8 @@
 utilities for git support
 """
 
+import hashlib
+
 import bindings
 
 GIT_DIR_FILE = "gitdir"
@@ -45,3 +47,21 @@ class gitfilelog(object):
 
     def read(self, node):
         return self.store.readobj(node, "blob")
+
+    def size(self, node):
+        return self.store.readobjsize(node, "blob")
+
+    def rev(self, node):
+        # same trick as remotefilelog
+        return node
+
+    def cmp(self, node, text):
+        """returns True if blob hash is different from text"""
+        # compare without reading `node`
+        return node != hashobj(b"blob", text)
+
+
+def hashobj(kind, text):
+    """(bytes, bytes) -> bytes. obtain git SHA1 hash"""
+    # git blob format: kind + " " + str(size) + "\0" + text
+    return hashlib.sha1(b"%s %d\0%s" % (kind, len(text), text)).digest()
