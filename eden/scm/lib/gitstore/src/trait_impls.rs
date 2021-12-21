@@ -10,8 +10,8 @@
 use async_trait::async_trait;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
-use manifest_tree::TreeStore;
 use storemodel::ReadFileContents;
+use storemodel::TreeStore;
 use types::HgId;
 use types::Key;
 use types::RepoPath;
