@@ -16,6 +16,8 @@ import errno
 import struct
 import typing
 
+import bindings
+
 from . import (
     encoding,
     error,
@@ -78,51 +80,36 @@ class bmstore(dict):
         nm = repo.changelog.nodemap
         tonode = bin  # force local lookup
         setitem = dict.__setitem__
+        with _getbkfile(repo) as bkfile:
+            data = bkfile.read()
+        decoded = bindings.refencode.decodebookmarks(data)
         try:
-            with _getbkfile(repo) as bkfile:
-                for line in bkfile:
-                    line = decodeutf8(line)
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        sha, refspec = line.split(" ", 1)
-                        node = tonode(sha)
-                    except (TypeError, ValueError):
-                        # TypeError:
-                        # - bin(...)
-                        # ValueError:
-                        # - node in nm, for non-20-bytes entry
-                        # - split(...), for string without ' '
-                        repo.ui.warn(_("malformed line in .hg/bookmarks: %r\n") % line)
+            for refspec, node in sorted(decoded.items()):
+                if node in nm:
+                    refspec = encoding.tolocal(refspec)
+                    setitem(self, refspec, node)
+                else:
+                    # This might happen if:
+                    # - changelog was loaded, bookmarks are not loaded
+                    # - bookmarks was changed to point to unknown nodes
+                    # - bookmarks are loaded
+                    #
+                    # Try to mitigate by reloading changelog.
+                    repo.invalidate()
+                    nm = repo.changelog.nodemap
+                    if node in nm:
+                        refspec = encoding.tolocal(refspec)
+                        setitem(self, refspec, node)
+                        repo.ui.log("features", feature="fix-bookmark-changelog-order")
                     else:
-                        if node in nm:
-                            refspec = encoding.tolocal(refspec)
-                            setitem(self, refspec, node)
-                        else:
-                            # This might happen if:
-                            # - changelog was loaded, bookmarks are not loaded
-                            # - bookmarks was changed to point to unknown nodes
-                            # - bookmarks are loaded
-                            #
-                            # Try to mitigate by reloading changelog.
-                            repo.invalidate()
-                            nm = repo.changelog.nodemap
-                            if node in nm:
-                                refspec = encoding.tolocal(refspec)
-                                setitem(self, refspec, node)
-                                repo.ui.log(
-                                    "features", feature="fix-bookmark-changelog-order"
-                                )
-                            else:
-                                repo.ui.log(
-                                    "features",
-                                    feature="fix-bookmark-changelog-order-failed",
-                                )
-                                repo.ui.warn(
-                                    _("unknown reference in .hg/bookmarks: %s %s\n")
-                                    % (refspec, sha)
-                                )
+                        repo.ui.log(
+                            "features",
+                            feature="fix-bookmark-changelog-order-failed",
+                        )
+                        repo.ui.warn(
+                            _("unknown reference in .hg/bookmarks: %s %s\n")
+                            % (refspec, hex(node))
+                        )
 
         except IOError as inst:
             if inst.errno != errno.ENOENT:
@@ -205,9 +192,8 @@ class bmstore(dict):
         self._aclean = True
 
     def _write(self, fp):
-        for name, node in sorted(pycompat.iteritems(self)):
-            name = encoding.fromlocal(name)
-            fp.write(encodeutf8("%s %s\n" % (hex(node), name)))
+        encoded = bindings.refencode.encodebookmarks(self)
+        fp.write(encoded)
         self._clean = True
         self._repo.invalidatevolatilesets()
 
@@ -1152,35 +1138,8 @@ def saveremotenames(repo, remotebookmarks, override=True):
             repo.invalidatevolatilesets()
 
 
-def decoderemotenames(data):
-    # type: (bytes) -> typing.Dict[str, bytes]
-    """Decode remotenames into {fullname: node}
-
-    The fullname can further be split by `splitremotename`.
-    """
-    result = {}
-    for line in decodeutf8(data).splitlines():
-        try:
-            hexnode, nametype, fullname = line.split(" ", 2)
-        except ValueError:
-            raise error.CorruptedState(_("corrupt entry in remotenames: %s") % (line,))
-        # Ignore 'default-push' names. See https://fburl.com/1rft34i8.
-        if fullname.startswith("default-push/"):
-            continue
-        if nametype != "bookmarks":
-            continue
-        result[fullname] = bin(hexnode)
-    return result
-
-
-def encoderemotenames(fullnamenodes):
-    # type: typing.List[typing.Tuple[str, bytes]] -> (bytes)
-    """Encode {fullname: node} to remotenames format."""
-    content = "".join(
-        "%s bookmarks %s\n" % (hex(node), name)
-        for name, node in sorted(fullnamenodes.items())
-    )
-    return encodeutf8(content)
+encoderemotenames = bindings.refencode.encoderemotenames
+decoderemotenames = bindings.refencode.decoderemotenames
 
 
 class lazyremotenamedict(pycompat.Mapping):

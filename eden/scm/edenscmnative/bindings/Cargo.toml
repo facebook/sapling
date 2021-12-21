@@ -49,6 +49,7 @@ pypathmatcher = { path = "modules/pypathmatcher" }
 pypprint = { path = "modules/pypprint" }
 pyprocess = { path = "modules/pyprocess" }
 pyprogress = { path = "modules/pyprogress" }
+pyrefencode = { path = "modules/pyrefencode" }
 pyregex = { path = "modules/pyregex" }
 pyrenderdag = { path = "modules/pyrenderdag" }
 pyrevisionstore = { path = "modules/pyrevisionstore" }

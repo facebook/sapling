@@ -43,24 +43,8 @@ def stoptracking(repo):
         repo.svfs.write("visibleheads", b"")
 
 
-# Supported file format version.
-# Version 1 is:
-#  * A single line containing "v1"
-#  * A list of node hashes for each visible head, one per line.
-FORMAT_VERSION = "v1"
-
-
-def encodeheads(heads):
-    return encodeutf8(
-        "%s\n%s" % (FORMAT_VERSION, "".join("%s\n" % node.hex(h) for h in heads))
-    )
-
-
-def decodeheads(data):
-    lines = decodeutf8(data).splitlines()
-    if lines and lines[0].strip() != FORMAT_VERSION:
-        raise error.Abort("invalid visibleheads file format %r" % lines[0])
-    return [node.bin(head.strip()) for head in lines[1:]]
+encodeheads = bindings.refencode.encodevisibleheads
+decodeheads = bindings.refencode.decodevisibleheads
 
 
 class visibleheads(object):
