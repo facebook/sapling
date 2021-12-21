@@ -644,8 +644,8 @@ Clean up by hiding some commits, and create a new stack
   hiding commit fada67350ab0 "commit2 amended amended amended amended amended"
   hiding commit 68e035cc1996 "commit2 amended amended rebased amended rebased am"
   4 changesets hidden
-  removing bookmark "bookmark1 (was at: 8134e74ecdc8)"
-  removing bookmark "bookmark1-testhost (was at: a7bb357e7299)"
+  removing bookmark 'bookmark1' (was at: 8134e74ecdc8)
+  removing bookmark 'bookmark1-testhost' (was at: a7bb357e7299)
   2 bookmarks removed
   $ hg bookmark testbookmark
   $ hg cloud sync -q

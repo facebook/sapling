@@ -1,9 +1,8 @@
 # coding=utf-8
-
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
 
 from __future__ import absolute_import
 
@@ -82,8 +81,8 @@ sh % "hg hide ." == r"""
     0 files updated, 0 files merged, 1 files removed, 0 files unresolved
     working directory now at 426bada5c675
     3 changesets hidden
-    removing bookmark "cat (was at: 26805aba1e60)"
-    removing bookmark "dog (was at: 112478962961)"
+    removing bookmark 'cat' (was at: 26805aba1e60)
+    removing bookmark 'dog' (was at: 112478962961)
     2 bookmarks removed
     hint[undo]: you can undo this using the `hg undo` command
     hint[hint-ack]: use 'hg hint --ack undo' to silence these hints"""
@@ -160,7 +159,7 @@ sh % "hg hide --cleanup" == r"""
     hiding commit 78d2dca436b2 "E"
     hiding commit 1f7934a9b4de "F"
     2 changesets hidden
-    removing bookmark "alive (was at: 1f7934a9b4de)"
+    removing bookmark 'alive' (was at: 1f7934a9b4de)
     1 bookmark removed
     hint[undo]: you can undo this using the `hg undo` command
     hint[hint-ack]: use 'hg hint --ack undo' to silence these hints"""
@@ -181,7 +180,7 @@ sh % "hg book -r 3 somebookmark"
 sh % "hg hide -B somebookmark" == r"""
     hiding commit be0ef73c17ad "D"
     1 changeset hidden
-    removing bookmark "somebookmark (was at: be0ef73c17ad)"
+    removing bookmark 'somebookmark' (was at: be0ef73c17ad)
     1 bookmark removed
     hint[undo]: you can undo this using the `hg undo` command
     hint[hint-ack]: use 'hg hint --ack undo' to silence these hints"""

@@ -459,7 +459,7 @@ Prune it again and pull it via commit hash
   $ hg prune -r scratch/mybranch
   hiding commit 8872775dd97a "scratch amended commit"
   1 changeset hidden
-  removing bookmark "scratch/mybranch (was at: 8872775dd97a)"
+  removing bookmark 'scratch/mybranch' (was at: 8872775dd97a)
   1 bookmark removed
   $ hg log -G -T '{node|short} {desc} {bookmarks}'
   @  fe8283fe1190 peercommit

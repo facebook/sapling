@@ -45,7 +45,7 @@ sh % "hg bookmark -D feature1" == r"""
     hiding commit 2dc09a01254d "r3"
     hiding commit 191de46dc8b9 "r5"
     2 changesets hidden
-    removing bookmark "feature1 (was at: 191de46dc8b9)"
+    removing bookmark 'feature1' (was at: 191de46dc8b9)
     1 bookmark removed"""
 sh % "hg log -G -T '{rev} {bookmarks}' -r 'all()' --hidden" == r"""
     o  6 feature2

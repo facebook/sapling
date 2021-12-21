@@ -178,7 +178,7 @@ def hide(ui, repo, *revs, **opts):
             for bookmark in sorted(deletebookmarks):
                 if not ui.quiet:
                     ui.status(
-                        _('removing bookmark "%s (was at: %s)"\n')
+                        _("removing bookmark '%s' (was at: %s)\n")
                         % (bookmark, short(repo._bookmarks[bookmark]))
                     )
             bookmarksmod.delete(repo, tr, deletebookmarks)

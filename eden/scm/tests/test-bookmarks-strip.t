@@ -52,8 +52,8 @@ strip to revision 1
   $ hg hide 'desc(2)'
   hiding commit 25e1ee7a0081 "2"
   1 changeset hidden
-  removing bookmark "test (was at: 25e1ee7a0081)"
-  removing bookmark "test2 (was at: 25e1ee7a0081)"
+  removing bookmark 'test' (was at: 25e1ee7a0081)
+  removing bookmark 'test2' (was at: 25e1ee7a0081)
   2 bookmarks removed
 
 list bookmarks
