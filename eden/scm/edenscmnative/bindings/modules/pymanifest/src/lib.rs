@@ -508,6 +508,16 @@ py_class!(pub class treemanifest |py| {
         }
         Ok(result)
     }
+
+    /// flush() -> node.
+    /// Write pending trees to store. Return root node.
+    /// Only works for git store. Use finalize() for hg store instead.
+    def flush(&self) -> PyResult<PyBytes> {
+        let mut tree = self.underlying(py).write();
+        let hgid = tree.flush().map_pyerr(py)?;
+        Ok(PyBytes::new(py, hgid.as_ref()))
+    }
+
 });
 
 impl treemanifest {

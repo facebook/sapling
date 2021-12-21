@@ -438,6 +438,7 @@ class basetreemanifestlog(object):
         self.recentlinknode = None
         cachesize = 4
         self._treemanifestcache = util.lrucachedict(cachesize)
+        self._isgit = False
 
     def add(
         self,
@@ -450,6 +451,9 @@ class basetreemanifestlog(object):
         linkrev=None,
     ):
         """Writes the given tree into the manifestlog."""
+        assert (
+            not self._isgit
+        ), "do not use add() for git tree, use tree.flush() instead"
         return self._addtopack(
             ui,
             newtree,
@@ -729,8 +733,13 @@ class memtreemanifestctx(object):
     def read(self):
         return self._treemanifest
 
+    def writegit(self):
+        newtree = self._treemanifest
+        return newtree.flush()
+
     def write(self, tr, linkrev, p1, p2, added, removed):
         mfl = self._manifestlog
+        assert not mfl._isgit, "do not use write() for git tree, use writegit() instead"
 
         newtree = self._treemanifest
 
