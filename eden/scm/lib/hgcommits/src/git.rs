@@ -11,8 +11,11 @@ use std::path::PathBuf;
 
 use dag::delegate;
 use dag::errors::NotFoundError;
+use dag::ops::DagPersistent;
+use dag::Group;
 use dag::Set;
 use dag::Vertex;
+use dag::VertexListWithOptions;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use gitdag::git2;
@@ -21,8 +24,10 @@ use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::Mutex;
 
+use crate::utils;
 use crate::AppendCommits;
 use crate::DescribeBackend;
+use crate::GraphNode;
 use crate::HgCommit;
 use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
@@ -104,11 +109,38 @@ impl GitSegmentedCommits {
 
 #[async_trait::async_trait]
 impl AppendCommits for GitSegmentedCommits {
-    async fn add_commits(&mut self, _commits: &[HgCommit]) -> Result<()> {
-        Err(crate::Error::Unsupported("add commits for git backend"))
+    async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
+        // Write to git odb.
+        // Raw text format should be in git, although the type name is HgCommit.
+        {
+            let repo = self.git_repo.lock();
+            let odb = repo.odb()?;
+            for commit in commits {
+                let oid = odb.write(git2::ObjectType::Commit, commit.raw_text.as_ref())?;
+                if oid.as_ref() != commit.vertex.as_ref() {
+                    return Err(crate::Error::HashMismatch(
+                        Vertex::copy_from(oid.as_ref()),
+                        commit.vertex.clone(),
+                    ));
+                }
+            }
+        }
+
+        // Write to segments.
+        let graph_nodes = utils::commits_to_graph_nodes(commits);
+        self.add_graph_nodes(&graph_nodes).await?;
+
+        Ok(())
     }
 
-    async fn flush(&mut self, _master_heads: &[Vertex]) -> Result<()> {
+    async fn add_graph_nodes(&mut self, graph_nodes: &[GraphNode]) -> Result<()> {
+        utils::add_graph_nodes_to_dag(&mut *self.dag, graph_nodes).await
+    }
+
+
+    async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
+        let heads = VertexListWithOptions::from(master_heads).with_highest_group(Group::MASTER);
+        self.dag.flush(&heads).await?;
         Ok(())
     }
 

@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 use std::ops::Deref;
+use std::ops::DerefMut;
 use std::path::Path;
 
 use dag::ops::DagAlgorithm;
@@ -70,6 +71,12 @@ impl Deref for GitDag {
 
     fn deref(&self) -> &Self::Target {
         &self.dag
+    }
+}
+
+impl DerefMut for GitDag {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.dag
     }
 }
 
