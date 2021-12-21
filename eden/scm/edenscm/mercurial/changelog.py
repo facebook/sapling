@@ -267,3 +267,48 @@ def hgcommittext(manifest, files, desc, user, date, extra):
     l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
     text = encodeutf8("\n".join(l), errors="surrogateescape")
     return text
+
+
+def gitdatestr(datestr):
+    """convert datestr to git date str used in commits"""
+    utc, offset = util.parsedate(datestr)
+    if offset >= 0:
+        offsetsign = "+"
+    else:
+        offsetsign = "-"
+        offset = -offset
+    offsethour = offset // 60
+    offsetminute = offset % 60
+    return "%d %s%02d%02d" % (utc, offsetsign, offsethour, offsetminute)
+
+
+def gituser(userstr):
+    """ensure the userstr contains '<>' for email, required by git"""
+    if userstr.endswith(">") and " <" in userstr:
+        return userstr
+    else:
+        return "%s <>" % userstr
+
+
+def gitcommittext(tree, parents, desc, user, date, extra):
+    """construct raw text (bytes) used by git commit"""
+    # Example:
+    # tree 97e8739f1945a4ba78c9bc1c670718c5dc5c08eb
+    # parent 402aab067c4f60fa8ed4868e76b54064fa06a245
+    # author svcscm svcscm <svcscm@fb.com> 1626293346 -0700
+    # committer Facebook GitHub Bot <facebook-github-bot@users.noreply.github.com> 1626293437 -0700
+    #
+    # Updating submodules
+    committer = extra and extra.get("committer") or user
+    committerdate = extra and extra.get("committer_date") or date
+    text = "tree %s\n%sauthor %s %s\ncommitter %s %s\n\n%s\n" % (
+        hex(tree),
+        "".join("parent %s\n" % hex(p) for p in parents),
+        gituser(user),
+        gitdatestr(date),
+        gituser(committer),
+        gitdatestr(committerdate),
+        stripdesc(desc),
+    )
+    text = encodeutf8(text, errors="surrogateescape")
+    return text

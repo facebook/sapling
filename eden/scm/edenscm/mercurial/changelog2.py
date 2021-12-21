@@ -26,7 +26,7 @@ from . import (
     visibility,
     vfs as vfsmod,
 )
-from .changelog import changelogrevision, hgcommittext, readfiles
+from .changelog import changelogrevision, hgcommittext, gitcommittext, readfiles
 from .i18n import _
 from .node import hex, nullid, nullrev, wdirid, wdirrev
 from .pycompat import encodeutf8
@@ -54,8 +54,7 @@ class changelog(object):
         self.svfs = svfs
         self.inner = inner
         self._uiconfig = uiconfig
-        # Do not verify hg hash if git hash is being used.
-        self._verifyhghash = not git.isgit(repo)
+        self._isgit = git.isgit(repo)
         # Number of commit texts to buffer. Useful for bounding memory usage.
         self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
         self._reporef = weakref.ref(repo)
@@ -388,9 +387,14 @@ class changelog(object):
     def add(
         self, manifest, files, desc, transaction, p1, p2, user, date=None, extra=None
     ):
-        text = hgcommittext(manifest, files, desc, user, date, extra)
-        node = revlog.hash(text, p1, p2)
         parents = [p for p in (p1, p2) if p != nullid]
+        if self._isgit:
+            # 'files' is not used by git
+            text = gitcommittext(manifest, parents, desc, user, date, extra)
+            node = git.hashobj(b"commit", text)
+        else:
+            text = hgcommittext(manifest, files, desc, user, date, extra)
+            node = revlog.hash(text, p1, p2)
 
         # Avoid updating "tip" is node is known locally.
         # Strictly speaking this should check with the remote server for lazy
@@ -470,8 +474,9 @@ class changelog(object):
         text = self.inner.getcommitrawtext(node)
         if text is None:
             raise error.LookupError(node, self.indexfile, _("no node"))
-        # check HG SHA1 hash
-        if self._verifyhghash:
+        # Do not verify hg hash if git hash is being used.
+        if not self._isgit:
+            # check HG SHA1 hash
             p1, p2 = self.parents(node)[:2]
             if revlog.hash(text, p1, p2) != node:
                 if (
