@@ -1903,6 +1903,57 @@ mod tests {
         assert_eq!(dbg_iter(iter), "[RH0-10[], 20-30[10]]");
     }
 
+    #[test]
+    fn test_roots_max_level_empty() {
+        // Create segments in a way that the highest level
+        // contains no segments in the master group.
+        let mut iddag = IdDag::new_in_process();
+        let nid = |i: u64| -> Id { Group::NON_MASTER.min_id() + i };
+        let mut prepared = PreparedFlatSegments {
+            segments: vec![
+                FlatSegment {
+                    low: Id(0),
+                    high: Id(10),
+                    parents: vec![],
+                },
+                FlatSegment {
+                    low: nid(0),
+                    high: nid(4),
+                    parents: vec![],
+                },
+            ]
+            .into_iter()
+            .collect(),
+        };
+        for i in 1..=3 {
+            prepared.segments.insert(FlatSegment {
+                low: nid(5 * i),
+                high: nid(5 * i + 1),
+                parents: vec![],
+            });
+            prepared.segments.insert(FlatSegment {
+                low: nid(5 * i + 2),
+                high: nid(5 * i + 4),
+                parents: vec![nid(5 * i + 1), nid(5 * i - 1)],
+            });
+        }
+        iddag.set_new_segment_size(2);
+        iddag
+            .build_segments_from_prepared_flat_segments(&prepared)
+            .unwrap();
+
+        // The highest level is not 0. But the highest level exist in the non-master
+        // group, not the master group.
+        assert_eq!(iddag.max_level().unwrap(), 2);
+
+        let all = iddag.all().unwrap();
+        assert_eq!(format!("{:?}", &all), "0..=10 N0..=N19");
+
+        // BUG: roots should not include 1..=10.
+        let roots = iddag.roots(all).unwrap();
+        assert_eq!(format!("{:?}", roots), "0..=10 N0 N5 N10 N15");
+    }
+
     fn dbg_iter<'a, T: std::fmt::Debug>(iter: Box<dyn Iterator<Item = Result<T>> + 'a>) -> String {
         let v = iter.map(|s| s.unwrap()).collect::<Vec<_>>();
         dbg(v)
