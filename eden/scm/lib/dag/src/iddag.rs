@@ -1121,9 +1121,11 @@ pub trait IdDagAlgorithm: IdDagStore {
             level: Level,
         ) -> Result<()> {
             trace(&|| format!("visit range {:?} lv{}", &range, level));
+            let mut visited = false;
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
+                visited = true;
                 trace(&|| format!(" seg {:?}", &seg));
                 // `range` is all valid. If a high-level segment misses it, try
                 // a lower level one.
@@ -1211,6 +1213,16 @@ pub trait IdDagAlgorithm: IdDagStore {
                         ctx.result.push_span(span.low.into());
                     }
                 }
+            }
+            // The high level segment misses the range. Try a lower level.
+            if !visited {
+                if level == 0 {
+                    return bug(format!(
+                        "flat segments should have covered: {:?} returned by all()",
+                        range,
+                    ));
+                }
+                visit_segments(ctx, range, level - 1)?;
             }
             Ok(())
         }
@@ -1949,9 +1961,8 @@ mod tests {
         let all = iddag.all().unwrap();
         assert_eq!(format!("{:?}", &all), "0..=10 N0..=N19");
 
-        // BUG: roots should not include 1..=10.
         let roots = iddag.roots(all).unwrap();
-        assert_eq!(format!("{:?}", roots), "0..=10 N0 N5 N10 N15");
+        assert_eq!(format!("{:?}", roots), "0 N0 N5 N10 N15");
     }
 
     fn dbg_iter<'a, T: std::fmt::Debug>(iter: Box<dyn Iterator<Item = Result<T>> + 'a>) -> String {
