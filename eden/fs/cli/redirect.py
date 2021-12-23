@@ -905,6 +905,14 @@ class AddCmd(Subcmd):
             ),
             action="store_true",
         )
+        parser.add_argument(
+            "--strict",
+            help=(
+                "force bind mount to fail if it would overwrite an "
+                "existing directory"
+            ),
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         redir_type = RedirectionType.from_arg_str(args.redir_type)
@@ -952,6 +960,30 @@ class AddCmd(Subcmd):
                 file=sys.stderr,
             )
             return 0
+
+        # We should prevent users from accidentally overwriting existing
+        # directories. We only need to check this condition for bind mounts
+        # because symlinks should already fail if the target dir exists.
+        if redir_type == RedirectionType.BIND and redir.repo_path.is_dir():
+            print(
+                f"WARNING: {redir.repo_path} already exists.\nMounting over "
+                "an existing directory will overwrite its contents.\nYou can "
+                "use --strict to prevent overwriting existing directories.\n"
+            )
+            with instance.get_telemetry_logger().new_sample(
+                "redirection_overwrite"
+            ) as tel_logger:
+                tel_logger.add_string("existing_dir", str(redir.repo_path))
+                tel_logger.add_string("checkout", str(checkout.path))
+            if args.strict:
+                print(
+                    f"Not adding redirection {redir.repo_path} because "
+                    "the --strict option was used.\nIf you would like "
+                    "to add this redirection (not recommended), then "
+                    "rerun this command without --strict.",
+                    file=sys.stderr,
+                )
+                return 1
 
         redir.apply(checkout)
 
