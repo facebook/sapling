@@ -10,6 +10,7 @@
 //! Commits stored in HG format and backed by efficient `dag` structures.
 
 use std::io;
+use std::sync::Arc;
 
 use dag::errors::NotFoundError;
 use dag::CloneData;
@@ -41,6 +42,9 @@ pub trait ReadCommitText: Sync {
         }))
         .await
     }
+
+    /// Return a trait object to resolve root tree ids from commit ids.
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync>;
 }
 
 pub trait StreamCommitText {

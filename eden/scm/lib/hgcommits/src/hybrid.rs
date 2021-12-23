@@ -255,6 +255,13 @@ impl HybridCommits {
         self.lazy_hash_desc = format!("lazy, using local segments ({})", dag_path.display());
         Ok(())
     }
+
+    fn to_hybrid_commit_text(&self) -> HybridCommitTextReader {
+        HybridCommitTextReader {
+            zstore: self.commits.commit_data_store(),
+            client: self.client.clone(),
+        }
+    }
 }
 
 #[async_trait::async_trait]
@@ -334,14 +341,38 @@ impl AppendCommits for HybridCommits {
     }
 }
 
+/// Subset of HybridCommits useful to read commit text.
+#[derive(Clone)]
+struct HybridCommitTextReader {
+    zstore: Arc<RwLock<Zstore>>,
+    client: Arc<dyn EdenApi>,
+}
+
 #[async_trait::async_trait]
 impl ReadCommitText for HybridCommits {
+    async fn get_commit_raw_text_list(&self, vertexes: &[Vertex]) -> Result<Vec<Bytes>> {
+        self.to_hybrid_commit_text()
+            .get_commit_raw_text_list(vertexes)
+            .await
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        Arc::new(self.to_hybrid_commit_text())
+    }
+}
+
+#[async_trait::async_trait]
+impl ReadCommitText for HybridCommitTextReader {
     async fn get_commit_raw_text_list(&self, vertexes: &[Vertex]) -> Result<Vec<Bytes>> {
         let vertexes: Vec<Vertex> = vertexes.to_vec();
         let stream =
             self.stream_commit_raw_text(Box::pin(stream::iter(vertexes.into_iter().map(Ok))))?;
         let commits: Vec<Bytes> = stream.map(|c| c.map(|c| c.raw_text)).try_collect().await?;
         Ok(commits)
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        Arc::new(self.clone())
     }
 }
 
@@ -350,7 +381,16 @@ impl StreamCommitText for HybridCommits {
         &self,
         input: BoxStream<'static, anyhow::Result<Vertex>>,
     ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
-        let zstore = self.commits.commit_data_store();
+        self.to_hybrid_commit_text().stream_commit_raw_text(input)
+    }
+}
+
+impl StreamCommitText for HybridCommitTextReader {
+    fn stream_commit_raw_text(
+        &self,
+        input: BoxStream<'static, anyhow::Result<Vertex>>,
+    ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
+        let zstore = self.zstore.clone();
         let client = self.client.clone();
         let resolver = Resolver { client, zstore };
         let buffer_size = 10000;

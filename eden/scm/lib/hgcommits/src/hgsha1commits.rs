@@ -132,11 +132,26 @@ impl AppendCommits for HgCommits {
 #[async_trait::async_trait]
 impl ReadCommitText for HgCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+        self.commits.get_commit_raw_text(vertex).await
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        self.commits.to_dyn_read_commit_text()
+    }
+}
+
+#[async_trait::async_trait]
+impl ReadCommitText for Arc<RwLock<Zstore>> {
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let id = Id20::from_slice(vertex.as_ref())?;
-        match self.commits.read().get(id)? {
+        match self.read().get(id)? {
             Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
             None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
         }
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        Arc::new(self.clone())
     }
 }
 

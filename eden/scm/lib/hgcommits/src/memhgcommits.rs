@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io;
+use std::sync::Arc;
 
 use dag::delegate;
 use dag::errors::NotFoundError;
@@ -105,7 +106,22 @@ impl AppendCommits for MemHgCommits {
 #[async_trait::async_trait]
 impl ReadCommitText for MemHgCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        Ok(self.commits.get(vertex).cloned())
+        self.commits.get_commit_raw_text(vertex).await
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        self.commits.to_dyn_read_commit_text()
+    }
+}
+
+#[async_trait::async_trait]
+impl ReadCommitText for HashMap<Vertex, Bytes> {
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+        Ok(self.get(vertex).cloned())
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        Arc::new(self.clone())
     }
 }
 

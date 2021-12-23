@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use dag::delegate;
 use dag::errors::NotFoundError;
@@ -53,7 +54,7 @@ use crate::StripCommits;
 /// In the future when we abstract away the HG SHA1 logic, we can
 /// revisit and build something writable based on this.
 pub struct GitSegmentedCommits {
-    git_repo: Mutex<git2::Repository>,
+    git_repo: Arc<Mutex<git2::Repository>>,
     dag: GitDag,
     dag_path: PathBuf,
     git_path: PathBuf,
@@ -67,7 +68,7 @@ impl GitSegmentedCommits {
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
         Ok(Self {
-            git_repo: Mutex::new(git_repo),
+            git_repo: Arc::new(Mutex::new(git_repo)),
             dag,
             dag_path,
             git_path,
@@ -256,14 +257,29 @@ impl AppendCommits for GitSegmentedCommits {
 #[async_trait::async_trait]
 impl ReadCommitText for GitSegmentedCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+        self.git_repo.get_commit_raw_text(vertex).await
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        self.git_repo.to_dyn_read_commit_text()
+    }
+}
+
+#[async_trait::async_trait]
+impl ReadCommitText for Arc<Mutex<git2::Repository>> {
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let oid = match git2::Oid::from_bytes(vertex.as_ref()) {
             Ok(oid) => oid,
             Err(_) => return Ok(None),
         };
-        let repo = self.git_repo.lock();
+        let repo = self.lock();
         let commit = repo.find_commit(oid)?;
         let text = to_hg_text(&commit);
         Ok(Some(text))
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        Arc::new(self.clone())
     }
 }
 

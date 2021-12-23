@@ -7,6 +7,7 @@
 
 use std::io;
 use std::path::Path;
+use std::sync::Arc;
 
 use dag::delegate;
 use dag::Set;
@@ -70,6 +71,10 @@ impl ReadCommitText for DoubleWriteCommits {
             Ok(None) => self.revlog.get_commit_raw_text(vertex).await,
             result => result,
         }
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        self.commits.to_dyn_read_commit_text()
     }
 }
 

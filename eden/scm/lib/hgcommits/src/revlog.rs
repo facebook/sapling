@@ -9,6 +9,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use dag::delegate;
 use dag::errors::NotFoundError;
@@ -34,6 +35,7 @@ use crate::StreamCommitText;
 use crate::StripCommits;
 
 /// HG commits stored on disk using the revlog format.
+#[derive(Clone)]
 pub struct RevlogCommits {
     revlog: RevlogIndex,
     pub(crate) dir: PathBuf,
@@ -96,6 +98,10 @@ impl ReadCommitText for RevlogCommits {
             Some(id) => Ok(Some(self.revlog.raw_data(id.0 as u32)?)),
             None => Ok(get_hard_coded_commit_text(vertex)),
         }
+    }
+
+    fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
+        Arc::new(self.clone())
     }
 }
 
