@@ -26,6 +26,7 @@ use gitdag::GitDag;
 use metalog::MetaLog;
 use minibytes::Bytes;
 use parking_lot::Mutex;
+use storemodel::ReadRootTreeIds;
 use types::HgId;
 
 use crate::utils;
@@ -263,6 +264,12 @@ impl ReadCommitText for GitSegmentedCommits {
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         self.git_repo.to_dyn_read_commit_text()
     }
+
+    fn to_dyn_read_root_tree_ids(&self) -> Arc<dyn ReadRootTreeIds + Send + Sync> {
+        // The default impl works. But ReadCommitText has overhead constructing
+        // the hg text. Bypass that overhead.
+        Arc::new(Wrapper(self.git_repo.clone()))
+    }
 }
 
 #[async_trait::async_trait]
@@ -280,6 +287,26 @@ impl ReadCommitText for Arc<Mutex<git2::Repository>> {
 
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync> {
         Arc::new(self.clone())
+    }
+}
+
+// Workaround orphan rule
+struct Wrapper<T>(T);
+
+#[async_trait::async_trait]
+impl ReadRootTreeIds for Wrapper<Arc<Mutex<git2::Repository>>> {
+    async fn read_root_tree_ids(&self, commits: Vec<HgId>) -> anyhow::Result<Vec<(HgId, HgId)>> {
+        let mut result = Vec::with_capacity(commits.len());
+        let repo = self.0.lock();
+        for commit_hgid in commits {
+            let oid = hgid_to_git_oid(commit_hgid);
+            let commit = repo.find_commit(oid)?;
+            let tree_id = commit.tree_id();
+            let tree_hgid =
+                HgId::from_slice(tree_id.as_bytes()).expect("git Oid should convert to HgId");
+            result.push((commit_hgid, tree_hgid));
+        }
+        Ok(result)
     }
 }
 

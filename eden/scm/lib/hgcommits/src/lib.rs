@@ -22,10 +22,11 @@ use metalog::MetaLog;
 use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
+use storemodel::ReadRootTreeIds;
 
 #[async_trait::async_trait]
 pub trait ReadCommitText: Sync {
-    /// Read raw text for a commit.
+    /// Read raw text for a commit, in hg commit format.
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let list = self.get_commit_raw_text_list(&[vertex.clone()]).await?;
         Ok(Some(list.into_iter().next().unwrap()))
@@ -45,6 +46,13 @@ pub trait ReadCommitText: Sync {
 
     /// Return a trait object to resolve root tree ids from commit ids.
     fn to_dyn_read_commit_text(&self) -> Arc<dyn ReadCommitText + Send + Sync>;
+
+    /// Return a trait object to resolve root tree ids from commit ids.
+    fn to_dyn_read_root_tree_ids(&self) -> Arc<dyn ReadRootTreeIds + Send + Sync> {
+        let reader = self.to_dyn_read_commit_text();
+        let reader = trait_impls::ArcReadCommitText(reader);
+        Arc::new(reader)
+    }
 }
 
 pub trait StreamCommitText {
@@ -154,6 +162,7 @@ mod hybrid;
 mod memhgcommits;
 mod revlog;
 mod strip;
+pub mod trait_impls;
 mod utils;
 
 pub use doublewrite::DoubleWriteCommits;

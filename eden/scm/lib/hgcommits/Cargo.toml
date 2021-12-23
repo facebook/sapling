@@ -17,6 +17,7 @@ parking_lot = { version = "0.11.2", features = ["send_guard"] }
 refencode = { path = "../refencode" }
 revlogindex = { path = "../revlogindex" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }
+storemodel = { path = "../storemodel" }
 streams = { path = "../streams" }
 thiserror = "1.0.29"
 tracing = "0.1.29"
