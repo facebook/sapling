@@ -914,10 +914,68 @@ class AddCmd(Subcmd):
             action="store_true",
         )
 
+    def _should_return_success_early(
+        self,
+        redir_type: RedirectionType,
+        configured_redirections: Dict[str, Redirection],
+        checkout_path: Path,
+        repo_path: Path,
+    ) -> bool:
+        """We should return success early iff:
+        1) we're adding a symlink redirection
+        2) the symlink already exists
+        3) the symlink is already a redirection that's managed by EdenFS
+        """
+        if redir_type == RedirectionType.SYMLINK:
+            # We cannot use resolve_repo_relative_path() because it will essentially
+            # attempt to resolve any existing symlinks twice. This causes us to never
+            # return the correct path for existing symlinks. Instead, we skip resolving
+            # and simply check if the absolute path is relative to the checkout path
+            # and if any relative paths are pre-existing configured redirections.
+            relative_path = repo_path
+            if repo_path.is_absolute():
+                try:
+                    canonical_repo_path = repo_path
+                    relative_path = canonical_repo_path.relative_to(checkout_path)
+                except ValueError:
+                    raise RuntimeError(
+                        (
+                            f"The redirection  path `{repo_path}` doesn't resolve "
+                            f"to a path inside the repo `{checkout_path}`"
+                        )
+                    )
+
+            existing_redir = configured_redirections.get(str(relative_path), None)
+            if (
+                existing_redir
+                and existing_redir.type == RedirectionType.SYMLINK
+                and existing_redir.repo_path == relative_path
+            ):
+                return True
+        return False
+
     def run(self, args: argparse.Namespace) -> int:
         redir_type = RedirectionType.from_arg_str(args.redir_type)
 
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
+
+        # Get only the explicitly configured entries for the purposes of the
+        # add command, so that we avoid writing out any of the effective list
+        # of redirections to the local configuration.  That doesn't matter so
+        # much at this stage, but when we add loading in profile(s) later we
+        # don't want to scoop those up and write them out to this branch of
+        # the configuration.
+        redirs = get_configured_redirections(checkout)
+
+        # We are only checking for pre-existing symlinks in this method, so we
+        # can use the configured mounts instead of the effective mounts. This is
+        # because the symlinks contained in these lists should be the same. I.e.
+        # if a symlink is configured, it is also effective.
+        if self._should_return_success_early(
+            redir_type, redirs, checkout.path, Path(args.repo_path)
+        ):
+            print("EdenFS managed symlink redirection already exists.")
+            return 0
 
         # We need to query the status of the mounts to catch things like
         # a redirect being configured but unmounted.  This improves the
@@ -925,7 +983,7 @@ class AddCmd(Subcmd):
         # we'd hit the skip case below because it is configured, but we wouldn't
         # bring the redirection back online.
         # However, we keep this separate from the `redirs` list below for
-        # the reasons stated in the comment below.
+        # the reasons stated in the comment above.
         effective_redirs = get_effective_redirections(checkout, mtab.new())
 
         try:
@@ -935,14 +993,6 @@ class AddCmd(Subcmd):
         except RuntimeError as exc:
             print(str(exc), file=sys.stderr)
             return 1
-
-        # Get only the explicitly configured entries for the purposes of the
-        # add command, so that we avoid writing out any of the effective list
-        # of redirections to the local configuration.  That doesn't matter so
-        # much at this stage, but when we add loading in profile(s) later we
-        # don't want to scoop those up and write them out to this branch of
-        # the configuration.
-        redirs = get_configured_redirections(checkout)
         redir = Redirection(
             Path(args.repo_path), redir_type, None, USER_REDIRECTION_SOURCE
         )
