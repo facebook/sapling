@@ -1047,6 +1047,7 @@ class DelCmd(Subcmd):
 class RedirectCmd(Subcmd):
     NAME = "redirect"
     HELP = "List and manipulate redirected paths"
+    ALIASES = ["redir"]
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         self.add_subcommands(parser, redirect_cmd.commands)
