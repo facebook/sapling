@@ -64,11 +64,18 @@ class EdenConfigParser:
     def read_dict(
         self, dictionary: Mapping[ConfigSectionName, Mapping[ConfigOptionName, Any]]
     ) -> None:
-        for section, options in dictionary.items():
-            for option, value in options.items():
-                self._sections[section][option] = self._make_storable_value(
-                    section, option, value
-                )
+        section = option = value = None
+        try:
+            for section, options in dictionary.items():
+                for option, value in options.items():
+                    self._sections[section][option] = self._make_storable_value(
+                        section, option, value
+                    )
+        except AttributeError:
+            raise Exception(
+                "Malformed config. Config files use TOML format.\n"
+                f"Issue found near section: {section}, option: {option}, value: {value}."
+            )
 
     # Convert the passed EdenConfigParser to a raw dictionary (without
     # interpolation)
