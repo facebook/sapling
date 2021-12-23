@@ -95,6 +95,9 @@ impl<T> ManifestStore<T> {
 
 impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {
     fn get(&self, path: &RepoPath, node: Node) -> Result<bytes::Bytes> {
+        if node.is_null() {
+            return Ok(Default::default());
+        }
         let key = Key::new(path.to_owned(), node);
         match self.underlying.get(StoreKey::hgid(key))? {
             StoreResult::NotFound(key) => Err(format_err!("Key {:?} not found in manifest", key)),
@@ -109,7 +112,16 @@ impl<T: HgIdDataStore + RemoteDataStore> TreeStore for ManifestStore<T> {
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
-        let keys = keys.iter().map(|k| StoreKey::from(k)).collect::<Vec<_>>();
+        let keys = keys
+            .iter()
+            .filter_map(|k| {
+                if k.hgid.is_null() {
+                    None
+                } else {
+                    Some(StoreKey::from(k))
+                }
+            })
+            .collect::<Vec<_>>();
         self.underlying.prefetch(&keys).map(|_| ())
     }
 }
