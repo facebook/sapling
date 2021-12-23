@@ -1865,6 +1865,11 @@ where
         Ok(self.try_snapshot()? as Arc<dyn DagAlgorithm + Send + Sync>)
     }
 
+    fn id_dag_snapshot(&self) -> Result<Arc<dyn IdDagAlgorithm + Send + Sync>> {
+        let store = self.dag.try_clone()?.store;
+        Ok(Arc::new(store))
+    }
+
     fn dag_id(&self) -> &str {
         &self.id
     }

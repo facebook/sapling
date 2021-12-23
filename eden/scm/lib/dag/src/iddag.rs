@@ -63,7 +63,7 @@ use crate::VerLink;
 /// keep [`IdDag`] and [`IdMap`] in sync.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct IdDag<Store> {
-    store: Store,
+    pub(crate) store: Store,
     #[serde(skip, default = "default_seg_size")]
     new_seg_size: usize,
     #[serde(skip, default = "VerLink::new")]

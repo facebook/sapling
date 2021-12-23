@@ -18,6 +18,7 @@ use crate::errors::NotFoundError;
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
+pub use crate::iddag::IdDagAlgorithm;
 use crate::namedag::MemNameDag;
 use crate::nameset::id_lazy::IdLazySet;
 use crate::nameset::id_static::IdStaticSet;
@@ -188,6 +189,19 @@ pub trait DagAlgorithm: Send + Sync {
     ///
     /// This makes it easier to fight with borrowck.
     fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
+
+    /// Get a snapshot of the `IdDag` that can operate separately.
+    ///
+    /// This is for advanced use-cases. For example, if callsite wants to
+    /// do some graph calculation without network, and control how to
+    /// batch the vertex name lookups precisely.
+    fn id_dag_snapshot(&self) -> Result<Arc<dyn IdDagAlgorithm + Send + Sync>> {
+        Err(crate::errors::BackendError::Generic(format!(
+            "id_dag_snapshot() is not supported for {}",
+            std::any::type_name::<Self>()
+        ))
+        .into())
+    }
 
     /// Identity of the dag.
     fn dag_id(&self) -> &str;
