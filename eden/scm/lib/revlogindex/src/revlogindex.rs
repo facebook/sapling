@@ -912,23 +912,29 @@ impl RevlogIndex {
         match snapshot.deref() {
             Some(s) => s.clone(),
             None => {
-                let result = Arc::new(RevlogIndex {
-                    pending_parents: self.pending_parents.clone(),
-                    pending_nodes: self.pending_nodes.clone(),
-                    pending_nodes_index: self.pending_nodes_index.clone(),
-                    pending_raw_data: self.pending_raw_data.clone(),
-                    snapshot: Default::default(),
-                    data_handler: Default::default(),
-                    nodemap: self.nodemap.clone(),
-                    changelogi_data: self.changelogi_data.clone(),
-                    index_path: self.index_path.clone(),
-                    nodemap_path: self.nodemap_path.clone(),
-                    id: self.id.clone(),
-                    version: self.version.clone(),
-                });
+                let result = Arc::new(self.clone());
                 *snapshot = Some(result.clone());
                 result
             }
+        }
+    }
+}
+
+impl Clone for RevlogIndex {
+    fn clone(&self) -> Self {
+        Self {
+            pending_parents: self.pending_parents.clone(),
+            pending_nodes: self.pending_nodes.clone(),
+            pending_nodes_index: self.pending_nodes_index.clone(),
+            pending_raw_data: self.pending_raw_data.clone(),
+            snapshot: Default::default(),
+            data_handler: Default::default(),
+            nodemap: self.nodemap.clone(),
+            changelogi_data: self.changelogi_data.clone(),
+            index_path: self.index_path.clone(),
+            nodemap_path: self.nodemap_path.clone(),
+            id: self.id.clone(),
+            version: self.version.clone(),
         }
     }
 }
