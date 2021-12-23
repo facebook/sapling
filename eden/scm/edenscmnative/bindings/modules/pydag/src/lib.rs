@@ -15,6 +15,7 @@ use dag::Repair;
 pub mod commits;
 pub mod dagalgo;
 pub mod idmap;
+mod impl_into;
 pub mod nameset;
 pub mod spanset;
 
@@ -49,6 +50,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     // Repair NameDag storage.
     m.add(py, "repair", py_fn!(py, repair(path: &PyPath)))?;
+
+    impl_into::register(py);
 
     Ok(m)
 }

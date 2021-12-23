@@ -50,6 +50,7 @@ use hgcommits::StripCommits;
 use minibytes::Bytes;
 use pyedenapi::PyClient;
 use pymetalog::metalog as PyMetaLog;
+use storemodel::ReadRootTreeIds;
 
 use crate::dagalgo::dagalgo;
 use crate::idmap;
@@ -383,5 +384,13 @@ impl commits {
     /// Create a `commits` Python object from a Rust struct.
     pub fn from_commits(py: Python, commits: impl Commits + Send + 'static) -> PyResult<Self> {
         Self::create_instance(py, RefCell::new(Box::new(commits)))
+    }
+
+    pub(crate) fn to_read_root_tree_nodes(
+        &self,
+        py: Python,
+    ) -> Arc<dyn ReadRootTreeIds + Send + Sync> {
+        let inner = self.inner(py).borrow();
+        inner.to_dyn_read_root_tree_ids()
     }
 }
