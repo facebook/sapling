@@ -42,6 +42,7 @@ pub struct Span {
 /// A set of integer spans.
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct SpanSet {
+    /// `spans` are sorted in DESC order.
     spans: VecDeque<Span>,
 }
 
@@ -826,6 +827,34 @@ impl<T: AsRef<SpanSet>> Iterator for SpanSetIter<T> {
         }
     }
 
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        #[cfg(test)]
+        let expected_size = self.size_hint().0.max(n + 1) - n - 1;
+        let mut n = n as u64;
+        while self.front <= self.back {
+            let (vec_id, span_id) = self.front;
+            let span = &self.span_set.as_ref().spans[vec_id as usize];
+            let span_remaining = span.count() - span_id;
+            if n >= span_remaining {
+                n -= span_remaining;
+                self.front = (vec_id + 1, 0)
+            } else {
+                let span_id = span_id + n;
+                self.front = (vec_id, span_id);
+                let result = if self.front <= self.back {
+                    self.front.1 += 1;
+                    Some(span.high - span_id)
+                } else {
+                    None
+                };
+                #[cfg(test)]
+                assert_eq!(self.size_hint().0, expected_size);
+                return result;
+            };
+        }
+        None
+    }
+
     fn size_hint(&self) -> (usize, Option<usize>) {
         let size = self.count_remaining() as _;
         (size, Some(size))
@@ -866,6 +895,48 @@ impl<T: AsRef<SpanSet>> DoubleEndedIterator for SpanSetIter<T> {
             assert_eq!(self.size_hint().0 + 1, old_size);
             Some(span.high - span_id)
         }
+    }
+
+    fn nth_back(&mut self, n: usize) -> Option<Self::Item> {
+        #[cfg(test)]
+        let expected_size = self.size_hint().0.max(n + 1) - n - 1;
+        let mut n = n as u64;
+        while self.front <= self.back {
+            let (vec_id, span_id) = self.back;
+            let span = &self.span_set.as_ref().spans[vec_id as usize];
+            let span_remaining = span_id + 1;
+            if n >= span_remaining {
+                n -= span_remaining;
+                let span_end = if vec_id > 0 {
+                    self.span_set.as_ref().spans[(vec_id - 1) as usize].count() - 1
+                } else {
+                    0
+                };
+                self.back = (vec_id - 1, span_end);
+            } else {
+                let span_id = span_id - n;
+                self.back = (vec_id, span_id);
+                let result = if self.front <= self.back {
+                    if span_id == 0 {
+                        let span_end = if vec_id > 0 {
+                            self.span_set.as_ref().spans[(vec_id - 1) as usize].count() - 1
+                        } else {
+                            0
+                        };
+                        self.back = (vec_id - 1, span_end);
+                    } else {
+                        self.back.1 -= 1;
+                    }
+                    Some(span.high - span_id)
+                } else {
+                    None
+                };
+                #[cfg(test)]
+                assert_eq!(self.size_hint().0, expected_size);
+                return result;
+            }
+        }
+        None
     }
 }
 
@@ -1302,6 +1373,24 @@ mod tests {
                     .find(|s| s.contains(Id(low)) && s.contains(Id(high)));
                 assert_eq!(result1, result2);
             }
+        }
+    }
+
+    #[test]
+    fn test_span_iter_nth() {
+        let set = SpanSet::from_spans(vec![5..=10, 15..=15, 18..=20, 23..=23, 26..=30, 35..=40]);
+        let vec: Vec<Id> = set.iter_desc().collect();
+        for n in 0..=(vec.len() + 2) {
+            assert_eq!(set.iter_desc().nth(n), vec.get(n).cloned());
+        }
+    }
+
+    #[test]
+    fn test_span_iter_nth_back() {
+        let set = SpanSet::from_spans(vec![5..=10, 15..=15, 18..=20, 23..=23, 26..=30, 35..=40]);
+        let vec: Vec<Id> = set.iter_asc().collect();
+        for n in 0..=(vec.len() + 2) {
+            assert_eq!(set.iter_desc().nth_back(n), vec.get(n).cloned());
         }
     }
 
