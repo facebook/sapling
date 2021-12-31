@@ -26,7 +26,6 @@ use crate::from_request::{check_range_and_convert, validate_timestamp, FromReque
 use crate::history::collect_history;
 use crate::into_response::{AsyncIntoResponse, AsyncIntoResponseWith, IntoResponse};
 use crate::source_control_impl::SourceControlServiceImpl;
-use crate::specifiers::SpecifierExt;
 
 // Magic number used when we want to limit concurrency with buffer_unordered.
 const CONCURRENCY_LIMIT: usize = 100;
@@ -186,9 +185,18 @@ impl SourceControlServiceImpl {
         }
 
         // Resolve the CommitSpecfier into ChangesetContext
-        let (_repo, base_commit, other_commit) = self
-            .repo_changeset_pair(ctx, &commit, &params.other_commit_id)
-            .await?;
+        let (base_commit, other_commit) = match params.other_commit_id {
+            Some(other_commit_id) => {
+                let (_repo, base_commit, other_commit) = self
+                    .repo_changeset_pair(ctx, &commit, &other_commit_id)
+                    .await?;
+                (base_commit, Some(other_commit))
+            }
+            None => {
+                let (_repo, base_commit) = self.repo_changeset(ctx, &commit).await?;
+                (base_commit, None)
+            }
+        };
 
         // Resolve the path into ChangesetPathContentContext
         // To make it more efficient we do a batch request
@@ -214,13 +222,16 @@ impl SourceControlServiceImpl {
                         }
                         None => None,
                     },
-                    match path_pair.other_path {
-                        Some(path) => {
-                            let mpath = MononokePath::try_from(&path)
-                                .context("invalid other commit path")?;
-                            other_commit_paths.push(mpath.clone());
-                            Some(mpath)
-                        }
+                    match &other_commit {
+                        Some(_other_commit) => match path_pair.other_path {
+                            Some(path) => {
+                                let mpath = MononokePath::try_from(&path)
+                                    .context("invalid other commit path")?;
+                                other_commit_paths.push(mpath.clone());
+                                Some(mpath)
+                            }
+                            None => None,
+                        },
                         None => None,
                     },
                     CopyInfo::from_request(&path_pair.copy_info)?,
@@ -229,17 +240,32 @@ impl SourceControlServiceImpl {
             })
             .collect::<Result<Vec<_>, errors::ServiceError>>()?;
 
-        let (base_commit_paths, other_commit_paths) = try_join!(
-            base_commit.paths_with_content(base_commit_paths.into_iter()),
-            other_commit.paths_with_content(other_commit_paths.into_iter())
-        )?;
         let (base_commit_contexts, other_commit_contexts) = try_join!(
-            base_commit_paths
-                .map_ok(|path_context| (path_context.path().clone(), path_context))
-                .try_collect::<HashMap<_, _>>(),
-            other_commit_paths
-                .map_ok(|path_context| (path_context.path().clone(), path_context))
-                .try_collect::<HashMap<_, _>>()
+            async {
+                let base_commit_paths = base_commit
+                    .paths_with_content(base_commit_paths.into_iter())
+                    .await?;
+                let base_commit_contexts = base_commit_paths
+                    .map_ok(|path_context| (path_context.path().clone(), path_context))
+                    .try_collect::<HashMap<_, _>>()
+                    .await?;
+                Ok::<_, MononokeError>(base_commit_contexts)
+            },
+            async {
+                match &other_commit {
+                    None => Ok(None),
+                    Some(other_commit) => {
+                        let other_commit_paths = other_commit
+                            .paths_with_content(other_commit_paths.into_iter())
+                            .await?;
+                        let other_commit_contexts = other_commit_paths
+                            .map_ok(|path_context| (path_context.path().clone(), path_context))
+                            .try_collect::<HashMap<_, _>>()
+                            .await?;
+                        Ok::<_, MononokeError>(Some(other_commit_contexts))
+                    }
+                }
+            }
         )?;
 
         let paths = paths
@@ -258,14 +284,17 @@ impl SourceControlServiceImpl {
                 };
 
                 let other_path = match other_path {
-                    Some(other_path) => {
-                        Some(other_commit_contexts.get(&other_path).ok_or_else(|| {
-                            errors::invalid_request(format!(
-                                "{} not found in {:?}",
-                                other_path, other_commit
-                            ))
-                        })?)
-                    }
+                    Some(other_path) => match &other_commit_contexts {
+                        Some(other_commit_contexts) => {
+                            Some(other_commit_contexts.get(&other_path).ok_or_else(|| {
+                                errors::invalid_request(format!(
+                                    "{} not found in {:?}",
+                                    other_path, other_commit
+                                ))
+                            })?)
+                        }
+                        None => None,
+                    },
                     None => None,
                 };
 
@@ -351,27 +380,26 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitCompareParams,
     ) -> Result<thrift::CommitCompareResponse, errors::ServiceError> {
-        let (_repo, base_changeset, other_changeset) = match &params.other_commit_id {
-            Some(id) => self.repo_changeset_pair(ctx, &commit, &id).await?,
+        let (base_changeset, other_changeset) = match &params.other_commit_id {
+            Some(id) => {
+                let (_repo, base_changeset, other_changeset) =
+                    self.repo_changeset_pair(ctx, &commit, &id).await?;
+                (base_changeset, Some(other_changeset))
+            }
             None => {
                 let (repo, base_changeset) = self.repo_changeset(ctx, &commit).await?;
-                let other_changeset_id = base_changeset
-                    .parents()
-                    .await?
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| {
-                        // TODO: compare with empty manifest in this case
-                        errors::commit_not_found(format!(
-                            "parent commit not found: {}",
-                            commit.description()
-                        ))
-                    })?;
-                let other_changeset = repo
-                    .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
-                    .await?
-                    .ok_or_else(|| errors::internal_error("other changeset is missing"))?;
-                (repo, base_changeset, other_changeset)
+                let other_changeset_id = base_changeset.parents().await?.into_iter().next();
+
+                match other_changeset_id {
+                    None => (base_changeset, None),
+                    Some(other_changeset_id) => {
+                        let other_changeset = repo
+                            .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
+                            .await?
+                            .ok_or_else(|| errors::internal_error("other changeset is missing"))?;
+                        (base_changeset, Some(other_changeset))
+                    }
+                }
             }
         };
 
@@ -400,14 +428,23 @@ impl SourceControlServiceImpl {
         };
         let (diff_files, diff_trees) = match params.ordered_params {
             None => {
-                let diff = base_changeset
-                    .diff_unordered(
-                        &other_changeset,
-                        !params.skip_copies_renames,
-                        paths,
-                        diff_items,
-                    )
-                    .await?;
+                let diff = match other_changeset {
+                    Some(ref other_changeset) => {
+                        base_changeset
+                            .diff_unordered(
+                                other_changeset,
+                                !params.skip_copies_renames,
+                                paths,
+                                diff_items,
+                            )
+                            .await?
+                    }
+                    None => {
+                        base_changeset
+                            .diff_root_unordered(paths, diff_items)
+                            .await?
+                    }
+                };
                 stream::iter(diff)
                     .map(into_compare_path)
                     .buffer_unordered(CONCURRENCY_LIMIT)
@@ -436,16 +473,30 @@ impl SourceControlServiceImpl {
                         })
                     })
                     .transpose()?;
-                let diff = base_changeset
-                    .diff(
-                        &other_changeset,
-                        !params.skip_copies_renames,
-                        paths,
-                        diff_items,
-                        ChangesetFileOrdering::Ordered { after },
-                        Some(limit),
-                    )
-                    .await?;
+                let diff = match other_changeset {
+                    Some(ref other_changeset) => {
+                        base_changeset
+                            .diff(
+                                other_changeset,
+                                !params.skip_copies_renames,
+                                paths,
+                                diff_items,
+                                ChangesetFileOrdering::Ordered { after },
+                                Some(limit),
+                            )
+                            .await?
+                    }
+                    None => {
+                        base_changeset
+                            .diff_root(
+                                paths,
+                                diff_items,
+                                ChangesetFileOrdering::Ordered { after },
+                                Some(limit),
+                            )
+                            .await?
+                    }
+                };
                 diff.into_iter()
                     .map(into_compare_path)
                     .collect::<FuturesOrdered<_>>()
@@ -459,8 +510,12 @@ impl SourceControlServiceImpl {
             }
         };
 
-        let other_commit_ids =
-            map_commit_identity(&other_changeset, &params.identity_schemes).await?;
+        let other_commit_ids = match other_changeset {
+            None => None,
+            Some(other_changeset) => {
+                Some(map_commit_identity(&other_changeset, &params.identity_schemes).await?)
+            }
+        };
         Ok(thrift::CommitCompareResponse {
             diff_files,
             diff_trees,

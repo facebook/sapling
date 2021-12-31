@@ -157,7 +157,10 @@ impl AddScubaParams for thrift::CommitCompareParams {
 
 impl AddScubaParams for thrift::CommitFileDiffsParams {
     fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
-        scuba.add("other_commit", self.other_commit_id.to_string());
+        scuba.add(
+            "other_commit",
+            self.other_commit_id.as_ref().map(|oci| oci.to_string()),
+        );
         scuba.add("param_format", self.format.to_string());
         scuba.add("param_context", self.context);
     }

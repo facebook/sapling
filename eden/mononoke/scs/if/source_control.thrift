@@ -831,7 +831,7 @@ const i64 COMMIT_FILE_DIFFS_PATH_COUNT_LIMIT = 1000;
 
 struct CommitFileDiffsParams {
   /// The commit to diff against.
-  1: CommitId other_commit_id;
+  1: optional CommitId other_commit_id;
   /// List of paths to diffs: in a single request
   ///  * at most COMMIT_FILE_DIFFS_PATH_COUNT_LIMIT paths can be requested
   ///  * the total size of diffed files must be less than COMMIT_FILE_DIFFS_SIZE_LIMIT
@@ -1266,7 +1266,7 @@ struct CommitCompareResponse {
   /// Only populated if FILES was specified.
   1: list<CommitCompareFile> diff_files;
   /// Commit that was used for comparison
-  2: map<CommitIdentityScheme, CommitId> other_commit_ids;
+  2: optional map<CommitIdentityScheme, CommitId> other_commit_ids;
   /// List of the dirs that are different between commits with their metadata
   /// Only populated if TREES was specified.
   3: list<CommitCompareTree> diff_trees;

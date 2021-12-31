@@ -40,11 +40,11 @@ impl Render for DiffOutput {
 async fn make_file_diff_request(
     connection: &Connection,
     commit: &thrift::CommitSpecifier,
-    other_commit_id: &thrift::CommitId,
+    other_commit_id: Option<thrift::CommitId>,
     paths: Vec<thrift::CommitFileDiffsParamsPathPair>,
 ) -> Result<Box<DiffOutput>, Error> {
     let params = thrift::CommitFileDiffsParams {
-        other_commit_id: other_commit_id.clone(),
+        other_commit_id,
         paths,
         format: thrift::DiffFormat::RAW_DIFF,
         context: 3,
@@ -72,7 +72,7 @@ async fn make_file_diff_request(
 pub(crate) fn diff_files<I>(
     connection: &Connection,
     commit: thrift::CommitSpecifier,
-    other_commit_id: thrift::CommitId,
+    other_commit_id: Option<thrift::CommitId>,
     paths_sizes: I,
 ) -> Result<RenderStream, Error>
 where
@@ -103,7 +103,7 @@ where
             let commit = commit.clone();
             let other_commit_id = other_commit_id.clone();
             async move {
-                make_file_diff_request(&connection, &commit, &other_commit_id, paths)
+                make_file_diff_request(&connection, &commit, other_commit_id, paths)
                     .await
                     .map(|d| d as Box<dyn Render>)
             }

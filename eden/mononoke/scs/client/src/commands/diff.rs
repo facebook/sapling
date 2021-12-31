@@ -182,11 +182,16 @@ pub(super) async fn run(
         .boxed());
     }
 
-    let (_scheme, other_commit_id) = response
-        .other_commit_ids
-        .into_iter()
-        .next()
-        .expect("expected commit id");
+    let other_commit_id = match response.other_commit_ids {
+        None => None,
+        Some(other_commit_ids) => {
+            let (_scheme, other_commit_id) = other_commit_ids
+                .into_iter()
+                .next()
+                .expect("expected commit id");
+            Some(other_commit_id)
+        }
+    };
 
     let placeholder_only = matches.is_present(ARG_PLACEHOLDERS_ONLY);
     let paths_sizes = response.diff_files.iter().map(|diff_file| {

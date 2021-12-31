@@ -478,3 +478,174 @@ async fn test_ordered_diff(fb: FacebookInit) -> Result<(), Error> {
     check_diff_paths(&diff, &filtered_changed_files_list[3..]);
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_ordered_root_diff(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = test_repo_factory::build_empty()?;
+
+    // List of file names to test in repo order.  Note in particular that
+    // "j.txt" is after "j/k" even though "." is before "/" in lexicographic
+    // order, as we sort based on the directory name ("j").
+    let file_list = [
+        "!", "0", "1", "10", "2", "a/a/a/a", "a/a/a/b", "d/e", "d/g", "i", "j/k", "j.txt", "p",
+        "r/s/t/u", "r/v", "r/w/x", "r/y", "z", "é",
+    ];
+
+    let mut root = CreateCommitContext::new_root(&ctx, &blobrepo);
+
+    for file in file_list.iter() {
+        root = root.add_file(*file, *file);
+    }
+    let commit = root.commit().await?;
+
+    let mononoke =
+        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists");
+    let commit_ctx = repo
+        .changeset(commit)
+        .await?
+        .ok_or(anyhow!("commit not found"))?;
+
+    let diff = commit_ctx
+        .diff_root(
+            None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::FILES},
+            ChangesetFileOrdering::Ordered { after: None },
+            None, /* limit */
+        )
+        .await?;
+    check_diff_paths(&diff, &file_list);
+
+    // Test limits and continuation.
+    let diff = commit_ctx
+        .diff_root(
+            None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::FILES},
+            ChangesetFileOrdering::Ordered { after: None },
+            Some(8),
+        )
+        .await?;
+    check_diff_paths(&diff, &file_list[..8]);
+
+    let diff = commit_ctx
+        .diff_root(
+            None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::FILES},
+            ChangesetFileOrdering::Ordered {
+                after: Some(file_list[7].try_into()?),
+            },
+            Some(8),
+        )
+        .await?;
+    check_diff_paths(&diff, &file_list[8..16]);
+
+    let diff = commit_ctx
+        .diff_root(
+            None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::FILES},
+            ChangesetFileOrdering::Ordered {
+                after: Some(file_list[15].try_into()?),
+            },
+            Some(8),
+        )
+        .await?;
+    check_diff_paths(&diff, &file_list[16..]);
+
+    let path_restrictions = Some(vec![
+        "1".try_into()?,
+        "a/a".try_into()?,
+        "q".try_into()?,
+        "r/s".try_into()?,
+    ]);
+    let diff = commit_ctx
+        .diff_root(
+            path_restrictions.clone(),
+            btreeset! {ChangesetDiffItem::FILES},
+            ChangesetFileOrdering::Ordered { after: None },
+            Some(3),
+        )
+        .await?;
+
+    let filtered_changed_files_list = ["1", "a/a/a/a", "a/a/a/b", "q/y", "r/s/t/u"];
+    check_diff_paths(&diff, &filtered_changed_files_list[..3]);
+
+    let diff = commit_ctx
+        .diff_root(
+            None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::FILES, ChangesetDiffItem::TREES},
+            ChangesetFileOrdering::Ordered { after: None },
+            None, /* limit */
+        )
+        .await?;
+
+    let files_dirs_list = [
+        "!", "0", "1", "10", "2", "a", "a/a", "a/a/a", "a/a/a/a", "a/a/a/b", "d", "d/e", "d/g",
+        "i", "j", "j/k", "j.txt", "p", "r", "r/s", "r/s/t", "r/s/t/u", "r/v", "r/w", "r/w/x",
+        "r/y", "z", "é",
+    ];
+    check_diff_paths(&diff, &files_dirs_list);
+
+    let diff = commit_ctx
+        .diff_root(
+            None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::TREES},
+            ChangesetFileOrdering::Ordered { after: None },
+            None, /* limit */
+        )
+        .await?;
+
+    let dirs_list = ["a", "a/a", "a/a/a", "d", "j", "r", "r/s", "r/s/t", "r/w"];
+    check_diff_paths(&diff, &dirs_list);
+
+    // a non-root commit2
+    let commit2 = CreateCommitContext::new(&ctx, &blobrepo, vec![commit])
+        .add_file("second_file", "second_file")
+        .delete_file("!")
+        .delete_file("0")
+        .delete_file("j/k")
+        .commit()
+        .await?;
+
+    // commit2
+    let commit2_ctx = repo
+        .changeset(commit2)
+        .await?
+        .ok_or(anyhow!("commit not found"))?;
+
+    let diff = commit2_ctx
+        .diff_root(
+            None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::FILES},
+            ChangesetFileOrdering::Ordered { after: None },
+            None,
+        )
+        .await?;
+
+    let second_commit_files_list = [
+        "1",
+        "10",
+        "2",
+        "a/a/a/a",
+        "a/a/a/b",
+        "d/e",
+        "d/g",
+        "i",
+        "j.txt",
+        "p",
+        "r/s/t/u",
+        "r/v",
+        "r/w/x",
+        "r/y",
+        "second_file",
+        "z",
+        "é",
+    ];
+    check_diff_paths(&diff, &second_commit_files_list);
+
+    Ok(())
+}

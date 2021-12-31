@@ -28,7 +28,9 @@ use manifest::{
 use maplit::hashset;
 use mercurial_types::Globalrev;
 pub use mononoke_types::Generation;
-use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement, Svnrev};
+use mononoke_types::{
+    BonsaiChangeset, FileChange, MPath, MPathElement, SkeletonManifestId, Svnrev,
+};
 use rand;
 use reachabilityindex::ReachabilityIndex;
 use repo_derived_data::RepoDerivedDataRef;
@@ -823,21 +825,16 @@ impl ChangesetContext {
         return Ok(change_contexts);
     }
 
-    pub async fn find_files_unordered(
+    async fn find_entries(
         &self,
         prefixes: Option<Vec<MononokePath>>,
-        basenames: Option<Vec<String>>,
-    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
-        self.find_files(prefixes, basenames, ChangesetFileOrdering::Unordered)
-            .await
-    }
-
-    pub async fn find_files(
-        &self,
-        prefixes: Option<Vec<MononokePath>>,
-        basenames: Option<Vec<String>>,
         ordering: ChangesetFileOrdering,
-    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
+    ) -> Result<
+        impl Stream<
+            Item = Result<(Option<MPath>, ManifestEntry<SkeletonManifestId, ()>), anyhow::Error>,
+        >,
+        MononokeError,
+    > {
         let root = self.root_skeleton_manifest_id().await?;
         let prefixes = match prefixes {
             Some(prefixes) => prefixes
@@ -865,6 +862,25 @@ impl ChangesetContext {
                 )
                 .right_stream(),
         };
+        Ok(entries)
+    }
+
+    pub async fn find_files_unordered(
+        &self,
+        prefixes: Option<Vec<MononokePath>>,
+        basenames: Option<Vec<String>>,
+    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
+        self.find_files(prefixes, basenames, ChangesetFileOrdering::Unordered)
+            .await
+    }
+
+    pub async fn find_files(
+        &self,
+        prefixes: Option<Vec<MononokePath>>,
+        basenames: Option<Vec<String>>,
+        ordering: ChangesetFileOrdering,
+    ) -> Result<impl Stream<Item = Result<MononokePath, MononokeError>>, MononokeError> {
+        let entries = self.find_entries(prefixes, ordering).await?;
         let mpaths = entries.try_filter_map(|(path, entry)| async move {
             match (path, entry) {
                 (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),
@@ -1004,5 +1020,57 @@ impl ChangesetContext {
             async move { Ok::<_, MononokeError>(changeset) }
         })
         .boxed()
+    }
+
+    pub async fn diff_root_unordered(
+        &self,
+        path_restrictions: Option<Vec<MononokePath>>,
+        diff_items: BTreeSet<ChangesetDiffItem>,
+    ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
+        self.diff_root(
+            path_restrictions,
+            diff_items,
+            ChangesetFileOrdering::Unordered,
+            None,
+        )
+        .await
+    }
+
+    /// Returns additions introduced by the root commit, a.k.a the initial commit
+    ///
+    /// `self` is considered the "root/initial/genesis" changeset
+    /// `path_restrictions` if present will narrow down the diff to given paths
+    /// `diff_items` what to include in the output (files, dirs or both)
+    pub async fn diff_root(
+        &self,
+        path_restrictions: Option<Vec<MononokePath>>,
+        diff_items: BTreeSet<ChangesetDiffItem>,
+        ordering: ChangesetFileOrdering,
+        limit: Option<usize>,
+    ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
+        let diff_files = diff_items.contains(&ChangesetDiffItem::FILES);
+        let diff_trees = diff_items.contains(&ChangesetDiffItem::TREES);
+
+        let entries = self.find_entries(path_restrictions, ordering).await?;
+        let mpaths = entries.try_filter_map(|(path, entry)| async move {
+            match (path, entry) {
+                (Some(mpath), ManifestEntry::Leaf(_)) if diff_files => Ok(Some(mpath)),
+                (Some(mpath), ManifestEntry::Tree(_)) if diff_trees => Ok(Some(mpath)),
+                _ => Ok(None),
+            }
+        });
+        let stream = mpaths
+            .map_ok(|mpath| MononokePath::new(Some(mpath)))
+            .map_err(MononokeError::from);
+
+        return Ok(stream
+            .take(limit.unwrap_or(usize::MAX))
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .map(|mp| {
+                ChangesetPathDiffContext::Added(ChangesetPathContentContext::new(self.clone(), mp))
+            })
+            .collect());
     }
 }
