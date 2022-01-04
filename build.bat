@@ -1,4 +1,4 @@
-@REM Copyright (c) Facebook, Inc. and its affiliates.
+@REM Copyright (c) Meta Platforms, Inc. and affiliates.
 @REM
 @REM This software may be used and distributed according to the terms of the
 @REM GNU General Public License version 2.
