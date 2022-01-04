@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import daemon_util, proc_utils as proc_utils_mod
 from .config import EdenInstance
-from .util import ShutdownError, poll_until, print_stderr
+from .util import ShutdownError, poll_until, print_stderr, is_apple_silicon
 
 
 # The amount of time to wait for the edenfs process to exit after we send SIGKILL.
@@ -177,7 +177,12 @@ def _start_edenfs_service(
 
 def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
     """Get the command line arguments to use to start the edenfs daemon."""
-    cmd = [
+
+    cmd = []
+    if is_apple_silicon():
+        cmd += ["arch", "-arch", "arm64"]
+
+    cmd += [
         daemon_binary,
         "--edenfs",
         "--edenfsctlPath",
