@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::Ordering;
 use std::str::from_utf8;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -108,7 +109,7 @@ pub struct Element {
 }
 
 /// Used to signal the type of element in a directory: file or directory.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Flag {
     File(FileType),
     Directory,
@@ -257,16 +258,117 @@ impl<'a> Elements<'a> {
         };
         Some(Ok(element))
     }
+
+    /// Look up an item.
+    /// This can be faster than checking `next()` entries if only called once.
+    pub fn lookup(&self, name: &PathComponent) -> Result<Option<(HgId, Flag)>> {
+        match self.format {
+            TreeFormat::Hg => self.lookup_hg(name),
+            TreeFormat::Git => self.lookup_git(name),
+        }
+    }
+
+    fn lookup_hg(&self, name: &PathComponent) -> Result<Option<(HgId, Flag)>> {
+        // NAME '\0' HEX_SHA1 MODE '\n'
+        let mut slice: &[u8] = self.byte_slice;
+        let name = {
+            let name = name.as_byte_slice();
+            let mut buf = Vec::with_capacity(name.len() + 1);
+            buf.extend_from_slice(name);
+            buf.push(b'\0');
+            buf
+        };
+        while slice.len() >= name.len() {
+            match slice[..name.len()].cmp(name.as_slice()) {
+                // XXX: Some tests do not provide sorted entries.
+                Ordering::Less | Ordering::Greater => {
+                    // Check the next entry.
+                    match slice.iter().skip(HgId::hex_len()).position(|&x| x == b'\n') {
+                        Some(position) => {
+                            slice = &slice[position + HgId::hex_len() + 1..];
+                            continue;
+                        }
+                        None => break,
+                    };
+                }
+                Ordering::Equal => {
+                    let hex_start = name.len();
+                    let hex_end = hex_start + HgId::hex_len();
+                    let hex_slice = match slice.get(hex_start..hex_end) {
+                        None => break,
+                        Some(slice) => slice,
+                    };
+                    let hgid = HgId::from_hex(hex_slice)?;
+                    let flag = parse_hg_flag(slice.get(hex_end))?;
+                    return Ok(Some((hgid, flag)));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    fn lookup_git(&self, name: &PathComponent) -> Result<Option<(HgId, Flag)>> {
+        let mut slice: &[u8] = self.byte_slice;
+        let name: &[u8] = name.as_byte_slice();
+        while !slice.is_empty() {
+            let (mode_len, name_len) = match find_git_entry_positions(slice) {
+                Some(positions) => positions,
+                None => return Ok(None),
+            };
+            let name_start = mode_len + 1;
+            let name_end = name_start + name_len;
+            let candidate = match slice.get(name_start..name_end) {
+                Some(name) => name,
+                None => break,
+            };
+            match candidate.cmp(name) {
+                Ordering::Less => {
+                    slice = match slice.get(name_end + 1 + HgId::len()..) {
+                        Some(slice) => slice,
+                        None => break,
+                    };
+                    continue;
+                }
+                Ordering::Equal => {
+                    let flag = parse_git_mode(&slice[..mode_len])?;
+                    let id_start = name_end + 1;
+                    let id_end = id_start + HgId::len();
+                    let hgid = if let Some(id_slice) = slice.get(id_start..id_end) {
+                        HgId::from_slice(id_slice).expect("id_slice has the right length")
+                    } else {
+                        return Err(format_err!("SHA1 is incomplete"));
+                    };
+                    return Ok(Some((hgid, flag)));
+                }
+                Ordering::Greater => break,
+            }
+        }
+        Ok(None)
+    }
 }
 
 impl<'a> Iterator for Elements<'a> {
     type Item = Result<Element>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.format {
+        let item = match self.format {
             TreeFormat::Hg => self.next_hg(),
             TreeFormat::Git => self.next_git(),
+        };
+
+        if cfg!(debug_assertions) {
+            if let Some(Ok(item)) = &item {
+                let lookup = self.lookup(&item.component).unwrap();
+                assert_eq!(
+                    Some((item.hgid, item.flag)),
+                    lookup,
+                    "when lookup '{}'",
+                    item.component.as_str()
+                );
+            }
         }
+
+        item
     }
 }
 
