@@ -32,7 +32,7 @@ from ..mercurial import (
 )
 from ..mercurial.i18n import _, _n
 from ..mercurial.node import short
-from .extlib.phabricator import diffprops, graphql
+from .extlib.phabricator import arcconfig, diffprops, graphql
 from .phabstatus import COMMITTEDSTATUS, getdiffstatus
 
 
@@ -57,6 +57,22 @@ def _cleanuplanded(repo, dryrun=False):
 
     This uses mutation and visibility directly.
     """
+    ui = repo.ui
+    try:
+        client = graphql.Client(repo=repo)
+    except arcconfig.ArcConfigError:
+        # Not all repos have arcconfig. If a repo doesn't have one, that's not
+        # a fatal error.
+        return
+    except Exception as ex:
+        ui.warn(
+            _(
+                "warning: failed to initialize GraphQL client (%r), not marking commits as landed\n"
+            )
+            % ex
+        )
+        return
+
     limit = repo.ui.configint("pullcreatemarkers", "diff-limit", 100)
     difftodraft = {}  # {str: {node}}
     for ctx in repo.set("sort(draft() - obsolete(), -rev)"):
@@ -67,9 +83,7 @@ def _cleanuplanded(repo, dryrun=False):
             if len(difftodraft) >= limit:
                 break
 
-    ui = repo.ui
     try:
-        client = graphql.Client(repo=repo)
         difftopublic, difftolocal = client.getlandednodes(
             repo, list(difftodraft.keys())
         )
