@@ -1554,6 +1554,9 @@ class Test(unittest.TestCase):
         # Do not be affected by system legacy configs.
         env["HGLEGACY"] = ""
 
+        # Do not log to scuba (fb).
+        env["FB_SCM_DIAGS_NO_SCUBA"] = "1"
+
         keys_to_del = (
             "HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy "
             + "HGPLAIN HGPLAINEXCEPT EDITOR VISUAL PAGER "
