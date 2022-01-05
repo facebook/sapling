@@ -193,8 +193,8 @@ void HgQueuedBackingStore::processTreeImportRequests(
               .defer([request = std::move(request), watch, stats = stats_](
                          auto&& result) mutable {
                 XLOG(DBG4)
-                    << "Imported blob from HgImporter for "
-                    << request->getRequest<HgImportRequest::BlobImport>()->hash;
+                    << "Imported tree from HgImporter for "
+                    << request->getRequest<HgImportRequest::TreeImport>()->hash;
                 stats->getHgBackingStoreStatsForCurrentThread()
                     .hgBackingStoreGetTree.addValue(watch.elapsed().count());
                 request->getPromise<HgImportRequest::TreeImport::Response>()
