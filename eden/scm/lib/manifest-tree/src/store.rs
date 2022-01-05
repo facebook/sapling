@@ -118,7 +118,7 @@ impl Entry {
     /// Returns an iterator over the elements that the current `Entry` contains. This is the
     /// primary method of inspection for an `Entry`.
     pub fn elements<'a>(&'a self) -> Elements<'a> {
-        Elements::from_byte_slice_hg(&self.0)
+        Elements::from_byte_slice(&self.0)
     }
 
     /// The primary builder of an Entry, from a list of `Element`.
@@ -181,7 +181,7 @@ pub struct Elements<'a> {
 
 impl<'a> Elements<'a> {
     /// Constructs `Elements` from raw byte slice.
-    pub(crate) fn from_byte_slice_hg(byte_slice: &'a [u8]) -> Self {
+    pub(crate) fn from_byte_slice(byte_slice: &'a [u8]) -> Self {
         // hg: first 20 bytes are a hex SHA1, no spaces
         // git: mode + space. The space is the 6th or 7th byte.
         let format = if byte_slice.get(b"40000".len()) == Some(&b' ')
