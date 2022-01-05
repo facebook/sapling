@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
@@ -381,10 +381,6 @@ impl Sqlblob {
 
     pub async fn set_initial_generation(&self, shard_num: usize) -> Result<()> {
         self.chunk_store.set_initial_generation(shard_num).await
-    }
-
-    pub async fn set_missing_value_len(&self, shard_num: usize) -> Result<()> {
-        self.chunk_store.set_missing_value_len(shard_num).await
     }
 
     #[cfg(test)]

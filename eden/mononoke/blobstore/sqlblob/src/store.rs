@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
@@ -141,14 +141,6 @@ queries! {
             WHERE id = {id} AND last_seen_generation < {generation}"
     }
 
-    write PopulateGenerationValueLen(id: &str, value_len: u64) {
-        none,
-        "UPDATE chunk_generation
-            SET value_len = {value_len}
-            WHERE id = {id}
-                AND value_len IS NULL"
-    }
-
     read SelectData(id: &str) -> (i64, Vec<u8>, u32, ChunkingMethod) {
         "SELECT creation_time, chunk_id, chunk_count, chunking_method
          FROM data
@@ -174,17 +166,10 @@ queries! {
          WHERE id = {id}"
     }
 
-    read GetChunkGeneration(id: &str) -> (u64, Option<u64>) {
+    read GetChunkGeneration(id: &str) -> (u64, u64) {
         "SELECT last_seen_generation, value_len
         FROM chunk_generation
         WHERE id = {id}"
-    }
-
-    read GetChunkGenerationsMissingValueLen(limit: u64) -> (Vec<u8>) {
-        "SELECT id
-        FROM chunk_generation
-        WHERE value_len IS NULL and last_seen_generation IS NOT NULL
-        LIMIT {limit}"
     }
 
     write InsertGeneration(values: (id: &str, generation: u64, value_len: u64)) {
@@ -203,7 +188,7 @@ queries! {
         "SELECT id FROM data"
     }
 
-    read GetGenerationSizes() -> (Option<u64>, Option<u64>) {
+    read GetGenerationSizes() -> (Option<u64>, u64) {
         "SELECT chunk_generation.last_seen_generation, CAST(SUM(chunk_generation.value_len) AS UNSIGNED)
         FROM chunk_generation
         GROUP BY chunk_generation.last_seen_generation"
@@ -558,9 +543,9 @@ impl ChunkSqlStore {
             let (found_generation, value_len) =
                 if let Some((found_generation, value_len)) = found_generation {
                     if found_generation >= mark_generation {
-                        return Ok(value_len);
+                        return Ok(Some(value_len));
                     }
-                    (Some(found_generation), value_len)
+                    (Some(found_generation), Some(value_len))
                 } else {
                     let found_generation =
                         GetChunkGeneration::query(&self.read_master_connection[shard_id], &key)
@@ -570,9 +555,9 @@ impl ChunkSqlStore {
 
                     if let Some((found_generation, value_len)) = found_generation {
                         if found_generation >= mark_generation {
-                            return Ok(value_len);
+                            return Ok(Some(value_len));
                         }
-                        (Some(found_generation), value_len)
+                        (Some(found_generation), Some(value_len))
                     } else {
                         (None, None)
                     }
@@ -619,7 +604,7 @@ impl ChunkSqlStore {
             .await
             .map(|s| {
                 s.into_iter()
-                    .map(|(gen, size)| (gen, size.unwrap_or(0)))
+                    .map(|(gen, size)| (gen, size))
                     .collect::<HashMap<_, _>>()
             })
     }
@@ -644,25 +629,6 @@ impl ChunkSqlStore {
                 };
 
                 InsertGeneration::query(conn, &[(&id.as_ref(), &generation, &value_len)]).await?;
-            }
-        }
-    }
-
-    pub(crate) async fn set_missing_value_len(&self, shard_num: usize) -> Result<(), Error> {
-        // sqlite 3.26 doesn't have UPDATE FROM, so we have to take the ids from the DB and then update them
-        loop {
-            self.delay.delay(shard_num).await;
-            let conn = &self.write_connection[shard_num];
-            let chunks_missing_len =
-                GetChunkGenerationsMissingValueLen::query(conn, &10000).await?;
-
-            if chunks_missing_len.is_empty() {
-                return Ok(());
-            }
-            for (id,) in chunks_missing_len {
-                let id = String::from_utf8_lossy(&id);
-                let value_len = self.get_len(shard_num, &id).await?;
-                PopulateGenerationValueLen::query(conn, &id.as_ref(), &value_len).await?;
             }
         }
     }

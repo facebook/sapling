@@ -33,8 +33,9 @@ Run sqlblob_gc generation size report
   -----------------
            2 | 199 B
 
-Run sqlblob_gc mark, without populating value_len
-  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 mark --skip-missing-value-len 2>&1 | strip_glog
+Run sqlblob_gc generation size report again, just to check mark has not broken it
+Run sqlblob_gc mark
+  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 mark 2>&1 | strip_glog
   Starting initial generation set
   Completed initial generation set
   Starting sweep
@@ -43,28 +44,6 @@ Run sqlblob_gc mark, without populating value_len
   Completed all sweeps
 
 Run sqlblob_gc generation size report again, just to check mark has not broken it
-  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 generation-size 2>&1 | strip_glog
-  Generation | Size
-  -----------------
-           2 | 199 B
-
-Run sqlblob_gc mark
-  $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 mark 2>&1 | strip_glog
-  Starting populating missing value_len
-  Completed populating missing value_len
-  Starting initial generation set
-  Completed initial generation set
-  Starting sweep
-  Starting sweep on data keys from shard 0
-  Starting sweep on data keys from shard 1
-  Completed all sweeps
-
-Check that chunk_generations populated and they have length
-  $ for s in 0 1; do sqlite3 -readonly "$TESTTMP/blobstore/blobs/shard_${s}.sqlite" "SELECT COUNT(1), last_seen_generation, value_len FROM chunk_generation" | sed "s/^/$s /"; done
-  0 0||
-  1 1|2|199
-
-Run sqlblob_gc generation size report, the mark should have populated the length
   $ mononoke_sqlblob_gc --storage-config-name=blobstore --shard-count=2 generation-size 2>&1 | strip_glog
   Generation | Size
   -----------------

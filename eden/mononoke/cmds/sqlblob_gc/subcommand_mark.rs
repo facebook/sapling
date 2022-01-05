@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
  * This software may be used and distributed according to the terms of the
  * GNU General Public License version 2.
@@ -24,7 +24,6 @@ use sqlblob::Sqlblob;
 pub const MARK_SAFE: &str = "mark";
 const ARG_INITIAL_GENERATION_ONLY: &str = "initial-generation-only";
 const ARG_SKIP_INITIAL_GENERATION: &str = "skip-initial-generation";
-const ARG_SKIP_MISSING_VALUE_LEN: &str = "skip-missing-value-len";
 const ARG_SKIP_INLINE_SMALL_VALUES: &str = "skip-inline-small-values";
 
 const MIN_RETRY_DELAY: Duration = Duration::from_secs(1);
@@ -47,13 +46,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(false)
                 .required(false)
                 .help("Only do the sweep; do not set generation on blobs with no generation set yet.")
-        )
-        .arg(
-            Arg::with_name(ARG_SKIP_MISSING_VALUE_LEN)
-                .long(ARG_SKIP_MISSING_VALUE_LEN)
-                .takes_value(false)
-                .required(false)
-                .help("Only do the sweep; do not set value_len on blobs with no value_len set yet.")
         )
         .arg(
             Arg::with_name(ARG_SKIP_INLINE_SMALL_VALUES)
@@ -104,26 +96,6 @@ async fn handle_initial_generation(store: &Sqlblob, shard: usize) -> Result<()> 
     ))
 }
 
-async fn handle_missing_value_len(store: &Sqlblob, shard: usize) -> Result<()> {
-    for _retry in 0..RETRIES {
-        let res = store.set_missing_value_len(shard).await;
-        if res.is_ok() {
-            return res;
-        }
-        let delay = thread_rng().gen_range(MIN_RETRY_DELAY..MAX_RETRY_DELAY);
-        eprintln!(
-            "Failure {:#?} on shard {} - delaying for {:#?}",
-            res, shard, delay
-        );
-        sleep(delay).await;
-    }
-    Err(anyhow!(
-        "Failed to handle missing value_len generation on shard {} after {} retries",
-        &shard,
-        RETRIES
-    ))
-}
-
 pub async fn subcommand_mark<'a>(
     _fb: FacebookInit,
     logger: Logger,
@@ -132,18 +104,6 @@ pub async fn subcommand_mark<'a>(
     sqlblob: Sqlblob,
     shard_range: Range<usize>,
 ) -> Result<()> {
-    if !sub_matches.is_present(ARG_SKIP_MISSING_VALUE_LEN) {
-        info!(logger, "Starting populating missing value_len");
-        let futures: Vec<_> = shard_range
-            .clone()
-            .map(|shard| Ok(handle_missing_value_len(&sqlblob, shard)))
-            .collect();
-        stream::iter(futures.into_iter())
-            .try_for_each_concurrent(max_parallelism, |fut| fut)
-            .await?;
-        info!(logger, "Completed populating missing value_len");
-    }
-
     if !sub_matches.is_present(ARG_SKIP_INITIAL_GENERATION) {
         info!(logger, "Starting initial generation set");
         let set_initial_generation_futures: Vec<_> = shard_range
