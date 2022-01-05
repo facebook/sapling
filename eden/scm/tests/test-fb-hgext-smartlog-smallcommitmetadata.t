@@ -42,5 +42,3 @@ Verify smartlog shows only the configured data
      stable
   
   note: background backup is currently disabled so your commits are not being backed up.
-  abort: repository default does not exist!
-  [255]
