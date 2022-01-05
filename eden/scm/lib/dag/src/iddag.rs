@@ -557,8 +557,6 @@ impl<Store: IdDagStore> IdDag<Store> {
         let span_iter = set.as_spans().iter().cloned();
         spanset::intersect_iter(seg_iter, span_iter, push);
 
-        segments.reverse();
-
         Ok(PreparedFlatSegments {
             segments: segments.into_iter().collect(),
         })
