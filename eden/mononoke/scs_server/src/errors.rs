@@ -155,7 +155,7 @@ impl From<MononokeError> for ServiceError {
                 ..Default::default()
             }),
             MononokeError::InternalError(error) => {
-                let reason = error.to_string();
+                let reason = format!("{:#}", error);
                 let backtrace = error
                     .backtrace()
                     .and_then(|backtrace| match backtrace.status() {
