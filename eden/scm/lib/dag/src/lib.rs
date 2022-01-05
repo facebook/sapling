@@ -52,6 +52,7 @@ pub use namedag::NameDagBuilder;
 pub use nameset::NameSet;
 pub use ops::DagAlgorithm;
 pub use segment::FlatSegment;
+pub use segment::IdSegment;
 pub use segment::PreparedFlatSegments;
 pub use verlink::VerLink;
 pub use vertex_options::VertexListWithOptions;

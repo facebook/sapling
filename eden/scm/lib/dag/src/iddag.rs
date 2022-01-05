@@ -8,6 +8,7 @@
 use std::collections::BTreeSet;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::fmt::{self};
@@ -39,6 +40,7 @@ use crate::segment::SegmentFlags;
 use crate::spanset;
 use crate::types_ext::PreparedFlatSegmentsExt;
 use crate::Error::Programming;
+use crate::IdSegment;
 use crate::IdSet;
 use crate::IdSpan;
 use crate::Level;
@@ -1530,6 +1532,124 @@ pub trait IdDagAlgorithm: IdDagStore {
 
         Ok(result)
     }
+
+    /// Find segments that cover the given `id_set` exactly.
+    /// Returned segments are in DESC order.
+    fn id_set_to_id_segments(&self, id_set: &IdSet) -> Result<VecDeque<IdSegment>> {
+        let max_level = self.max_level()?;
+        self.id_set_to_id_segments_with_max_level(id_set, max_level)
+    }
+
+    /// Find lower level segments that cover the given `id_segment` exactly.
+    /// Returned segments are in DESC order.
+    fn id_segment_to_lower_level_id_segments(
+        &self,
+        id_segment: &IdSegment,
+    ) -> Result<VecDeque<IdSegment>> {
+        let max_level = match id_segment.level {
+            0 => return Err(Programming(
+                "id_segment_to_lower_level_id_segments() requires non-flat (level > 0) segments"
+                    .to_string(),
+            )),
+            l => l - 1,
+        };
+        let span = IdSpan::new(id_segment.low, id_segment.high);
+        let id_set = IdSet::from(span);
+        self.id_set_to_id_segments_with_max_level(&id_set, max_level)
+    }
+
+    /// Find segments with max level limitation that cover the given `id_set` exactly.
+    /// Returned segments are in DESC order.
+    fn id_set_to_id_segments_with_max_level(
+        &self,
+        id_set: &IdSet,
+        max_level: Level,
+    ) -> Result<VecDeque<IdSegment>> {
+        fn trace(msg: &dyn Fn() -> String) {
+            trace!(target: "dag::algo::tosegments", "{}", msg());
+        }
+        debug!(target: "dag::algo::tosegments", "id_set_to_id_segments({:?}, level={})", &id_set, max_level);
+
+        let max_level = max_level.min(self.max_level()?);
+        let mut result = VecDeque::new();
+        'next_span: for span in id_set.iter_span_desc() {
+            trace(&|| format!(" visiting span {:?}", &span));
+            let mut span: IdSpan = *span;
+
+            'current_span: loop {
+                // Try high level segments.
+                for level in (1..=max_level).rev() {
+                    let seg = match self.find_segment_by_head_and_level(span.high, level)? {
+                        None => continue,
+                        Some(seg) => seg,
+                    };
+
+                    let seg_span = seg.span()?;
+                    debug_assert_eq!(seg_span.high, span.high);
+
+                    if seg_span.low < span.low {
+                        trace(&|| format!("  skip  lv {} seg {:?}", level, &seg));
+                        continue;
+                    } else {
+                        trace(&|| format!("  found lv {} seg {:?}", level, &seg));
+                    }
+
+                    let id_seg = IdSegment {
+                        high: seg_span.high,
+                        low: seg_span.low,
+                        parents: seg.parents()?,
+                        level,
+                        has_root: seg.has_root()?,
+                    };
+                    trace(&|| format!("  push {}..={}", id_seg.low, id_seg.high));
+                    result.push_back(id_seg);
+
+                    if seg_span.low == span.low {
+                        continue 'next_span;
+                    } else {
+                        span.high = seg_span.low - 1;
+                        debug_assert!(span.high >= span.low);
+                        continue 'current_span;
+                    }
+                }
+
+                // Query flat segments.
+                let seg = match self.find_flat_segment_including_id(span.high)? {
+                    None => return bug(format!("flat segments does not cover {:?}", span)),
+                    Some(seg) => seg,
+                };
+                trace(&|| format!("  found flat seg {:?}", &seg));
+
+                let seg_span = seg.span()?;
+                debug_assert!(seg_span.high >= span.high);
+
+                let (low, parents) = if seg_span.low < span.low {
+                    (span.low, vec![span.low - 1])
+                } else {
+                    (seg_span.low, seg.parents()?)
+                };
+
+                let has_root = parents.is_empty();
+                let id_seg = IdSegment {
+                    high: span.high,
+                    low,
+                    parents,
+                    level: 0,
+                    has_root,
+                };
+                trace(&|| format!("  push {}..={}", id_seg.low, id_seg.high));
+                result.push_back(id_seg);
+
+                if low == span.low {
+                    continue 'next_span;
+                } else {
+                    span.high = low - 1;
+                    debug_assert!(span.high >= span.low);
+                }
+            }
+        }
+        Ok(result)
+    }
 }
 
 impl<S: IdDagStore> IdDagAlgorithm for S {}
@@ -1918,7 +2038,6 @@ mod tests {
         // Create segments in a way that the highest level
         // contains no segments in the master group.
         let mut iddag = IdDag::new_in_process();
-        let nid = |i: u64| -> Id { Group::NON_MASTER.min_id() + i };
         let mut prepared = PreparedFlatSegments {
             segments: vec![
                 FlatSegment {
@@ -1963,6 +2082,121 @@ mod tests {
         assert_eq!(format!("{:?}", roots), "0 N0 N5 N10 N15");
     }
 
+    #[test]
+    fn test_id_set_to_id_segments() {
+        let mut iddag = IdDag::new_in_process();
+
+        // Insert some segments. Create a few levels.
+        let mut prepared = PreparedFlatSegments::default();
+        for g in &Group::ALL {
+            let mut parents = vec![];
+            for i in 0..=3 {
+                let base = g.min_id() + 10 * i;
+                prepared.segments.insert(FlatSegment {
+                    low: base,
+                    high: base + 4,
+                    parents: parents.clone(),
+                });
+                prepared.segments.insert(FlatSegment {
+                    low: base + 5,
+                    high: base + 9,
+                    parents: vec![base + 1, base + 4],
+                });
+                parents.push(base + 9);
+            }
+        }
+        iddag.set_new_segment_size(2);
+        iddag
+            .build_segments_from_prepared_flat_segments(&prepared)
+            .unwrap();
+        // The highest level is not 0.
+        assert_eq!(iddag.max_level().unwrap(), 2);
+
+        // Tests about id_set_to_id_segments_with_max_level.
+        let t = |id_set, level| -> Vec<String> {
+            let id_segs = iddag
+                .id_set_to_id_segments_with_max_level(&id_set, level)
+                .unwrap();
+
+            // Verify against other special-case APIs.
+            if level >= iddag.max_level().unwrap() {
+                let id_segs2 = iddag.id_set_to_id_segments(&id_set).unwrap();
+                assert_eq!(&id_segs, &id_segs2);
+            }
+            if level == 0 {
+                let flat_segments = iddag.idset_to_flat_segments(id_set).unwrap().segments;
+                let id_segs2: Vec<IdSegment> = flat_segments
+                    .into_iter()
+                    .rev()
+                    .map(|f| IdSegment {
+                        high: f.high,
+                        low: f.low,
+                        parents: f.parents.clone(),
+                        level: 0,
+                        has_root: f.parents.is_empty(),
+                    })
+                    .collect();
+                assert_eq!(&id_segs, &id_segs2);
+            }
+
+            id_segs.into_iter().map(dbg).collect::<Vec<_>>()
+        };
+
+        // Match a flat segment.
+        assert_eq!(t(IdSet::from_spans(vec![10..=14]), 3), ["L0 10..=14 [9]"]);
+
+        // Match multiple flat segments.
+        assert_eq!(
+            t(IdSet::from_spans(vec![20..=29]), 3),
+            ["L0 25..=29 [21, 24]", "L0 20..=24 [9, 19]"]
+        );
+
+        // Match partial flat segments.
+        assert_eq!(
+            t(IdSet::from_spans(vec![21..=28]), 3),
+            ["L0 25..=28 [21, 24]", "L0 21..=24 [20]"]
+        );
+
+        // Match a high level segment.
+        assert_eq!(t(IdSet::from_spans(vec![0..=24]), 3), ["L2 0..=24 []R"]);
+
+        // Respect max_level.
+        assert_eq!(
+            t(IdSet::from_spans(vec![0..=24]), 1),
+            ["L1 15..=24 [11, 14, 9]", "L1 0..=14 []R"]
+        );
+
+        // Match various segments. Pick the highest level possible.
+        assert_eq!(
+            t(IdSet::from_spans(vec![Id(0)..=Id(39), nid(0)..=nid(39)]), 3),
+            [
+                "L0 N35..=N39 [N31, N34]",
+                "L0 N30..=N34 [N9, N19, N29]",
+                "L1 N20..=N29 [N9, N19]",
+                "L2 N0..=N19 []R",
+                "L0 35..=39 [31, 34]",
+                "L1 25..=34 [21, 24, 9, 19]",
+                "L2 0..=24 []R"
+            ]
+        );
+
+        // Related APIs not covered by tests above.
+        let high_level_id_seg = iddag
+            .id_set_to_id_segments(&IdSet::from_spans(vec![0..=39]))
+            .unwrap()
+            .back()
+            .unwrap()
+            .clone();
+        assert_eq!(format!("{:?}", &high_level_id_seg), "L2 0..=24 []R");
+        let low_level_id_segs = iddag
+            .id_segment_to_lower_level_id_segments(&high_level_id_seg)
+            .unwrap();
+        assert_eq!(
+            format!("{:?}", &low_level_id_segs),
+            "[L1 15..=24 [11, 14, 9], L1 0..=14 []R]"
+        );
+    }
+
     fn dbg_iter<'a, T: std::fmt::Debug>(iter: Box<dyn Iterator<Item = Result<T>> + 'a>) -> String {
         let v = iter.map(|s| s.unwrap()).collect::<Vec<_>>();
         dbg(v)
@@ -1970,5 +2204,9 @@ mod tests {
 
     fn dbg<T: std::fmt::Debug>(t: T) -> String {
         format!("{:?}", t)
+    }
+
+    fn nid(i: u64) -> Id {
+        Group::NON_MASTER.min_id() + i
     }
 }

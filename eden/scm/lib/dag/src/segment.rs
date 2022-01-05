@@ -37,8 +37,24 @@ use crate::Result;
 /// [`Segment`] represents a range of [`Id`]s in an [`IdDag`] graph.
 /// It provides methods to access properties of the segments, including the range itself,
 /// parents, and level information.
+///
+/// This is the main struct used by the `dag` crate. It is mostly read from a store.
+/// Once read, it's immutable.
 #[derive(Clone, Eq, Serialize, Deserialize)]
 pub struct Segment(pub(crate) Bytes);
+
+/// In memory representation of a segment. Mostly useful for external use-cases.
+///
+/// Unlike `Segment`, it is not necessarily read from a store and can be
+/// constructed on the fly.
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct IdSegment {
+    pub low: Id,
+    pub high: Id,
+    pub parents: Vec<Id>,
+    pub has_root: bool,
+    pub level: Level,
+}
 
 // Serialization format for Segment:
 //
@@ -195,6 +211,20 @@ impl Debug for Segment {
             write!(f, " (Invalid Parent!!)")?;
         }
         Ok(())
+    }
+}
+
+impl Debug for IdSegment {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(
+            f,
+            "L{} {}..={} {:?}{}",
+            self.level,
+            self.low,
+            self.high,
+            &self.parents,
+            if self.has_root { "R" } else { "" }
+        )
     }
 }
 
