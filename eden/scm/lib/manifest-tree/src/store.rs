@@ -240,7 +240,7 @@ impl<'a> Elements<'a> {
 
         let flag = match &slice[..mode_len] {
             b"40000" => Flag::Directory,
-            b"100644" => Flag::File(FileType::Regular),
+            b"100644" | b"100664" => Flag::File(FileType::Regular),
             b"100755" => Flag::File(FileType::Executable),
             b"120000" => Flag::File(FileType::Symlink),
             s => {
