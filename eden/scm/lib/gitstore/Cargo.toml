@@ -4,6 +4,10 @@ name = "gitstore"
 version = "0.1.0"
 edition = "2021"
 
+[[bench]]
+name = "read_obj"
+harness = false
+
 [dependencies]
 anyhow = "1.0.51"
 async-trait = "0.1.51"
@@ -13,3 +17,6 @@ git2 = "0.13"
 minibytes = { path = "../minibytes" }
 storemodel = { path = "../storemodel" }
 types = { path = "../types" }
+
+[dev-dependencies]
+minibench = { path = "../minibench" }
