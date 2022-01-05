@@ -121,7 +121,9 @@ impl Entry {
     }
 
     /// The primary builder of an Entry, from a list of `Element`.
-    pub fn from_elements(elements: Vec<Element>, format: TreeFormat) -> Entry {
+    pub fn from_elements(mut elements: Vec<Element>, format: TreeFormat) -> Entry {
+        let cmp = crate::namecmp::get_namecmp_func(format);
+        elements.sort_unstable_by(|a, b| cmp(&a.component, a.flag, &b.component, b.flag));
         let mut underlying = BytesMut::new();
         match format {
             TreeFormat::Hg => {
@@ -275,8 +277,7 @@ impl<'a> Elements<'a> {
         };
         while slice.len() >= name.len() {
             match slice[..name.len()].cmp(name.as_slice()) {
-                // XXX: Some tests do not provide sorted entries.
-                Ordering::Less | Ordering::Greater => {
+                Ordering::Less => {
                     // Check the next entry.
                     match slice.iter().skip(HgId::hex_len()).position(|&x| x == b'\n') {
                         Some(position) => {
@@ -297,6 +298,7 @@ impl<'a> Elements<'a> {
                     let flag = parse_hg_flag(slice.get(hex_end))?;
                     return Ok(Some((hgid, flag)));
                 }
+                Ordering::Greater => break,
             }
         }
         Ok(None)

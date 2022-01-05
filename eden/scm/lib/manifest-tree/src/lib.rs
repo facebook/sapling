@@ -8,7 +8,6 @@
 mod diff;
 mod iter;
 mod link;
-#[allow(unused)]
 mod namecmp;
 mod store;
 #[cfg(any(test, feature = "for-tests"))]
