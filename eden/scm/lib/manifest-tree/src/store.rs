@@ -121,25 +121,22 @@ impl Entry {
     }
 
     /// The primary builder of an Entry, from a list of `Element`.
-    pub fn from_elements<I: IntoIterator<Item = Result<Element>>>(
-        elements: I,
-        format: TreeFormat,
-    ) -> Result<Entry> {
+    pub fn from_elements(elements: Vec<Element>, format: TreeFormat) -> Entry {
         let mut underlying = BytesMut::new();
         match format {
             TreeFormat::Hg => {
-                for element_result in elements.into_iter() {
-                    underlying.extend(element_result?.to_byte_vec_hg());
+                for element in elements.into_iter() {
+                    underlying.extend(element.to_byte_vec_hg());
                     underlying.extend(b"\n");
                 }
             }
             TreeFormat::Git => {
-                for element_result in elements.into_iter() {
-                    underlying.extend(element_result?.to_byte_vec_git());
+                for element in elements.into_iter() {
+                    underlying.extend(element.to_byte_vec_git());
                 }
             }
         }
-        Ok(Entry(underlying.freeze()))
+        Entry(underlying.freeze())
     }
 
     // used in tests, finalize and subtree_diff

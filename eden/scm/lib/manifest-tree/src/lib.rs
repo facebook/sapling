@@ -291,7 +291,8 @@ impl Manifest for TreeManifest {
                                 flag,
                             ))
                         });
-                        let entry = store::Entry::from_elements(iter, format)?;
+                        let elements: Vec<_> = iter.collect::<Result<Vec<_>>>()?;
+                        let entry = store::Entry::from_elements(elements, format);
                         let hgid = compute_sha1(entry.as_ref(), format);
                         store.insert_entry(&pathbuf, hgid, entry)?;
 
@@ -735,16 +736,12 @@ mod tests {
     use super::*;
 
     impl store::Entry {
-        fn from_elements_hg<I: IntoIterator<Item = Result<Element>>>(elements: I) -> Result<Self> {
+        fn from_elements_hg(elements: Vec<Element>) -> Self {
             Self::from_elements(elements, TreeFormat::Hg)
         }
     }
-    fn store_element(path: &str, hex: &str, flag: store::Flag) -> Result<store::Element> {
-        Ok(store::Element::new(
-            path_component_buf(path),
-            hgid(hex),
-            flag,
-        ))
+    fn store_element(path: &str, hex: &str, flag: store::Flag) -> store::Element {
+        store::Element::new(path_component_buf(path), hgid(hex), flag)
     }
 
     fn get_hgid(tree: &TreeManifest, path: &RepoPath) -> HgId {
@@ -823,8 +820,7 @@ mod tests {
         let root_entry = store::Entry::from_elements_hg(vec![
             store_element("foo", "10", store::Flag::Directory),
             store_element("baz", "20", store::Flag::File(FileType::Regular)),
-        ])
-        .unwrap();
+        ]);
         store
             .insert(RepoPath::empty(), hgid("1"), root_entry.to_bytes())
             .unwrap();
@@ -832,8 +828,7 @@ mod tests {
             "bar",
             "11",
             store::Flag::File(FileType::Regular),
-        )])
-        .unwrap();
+        )]);
         store
             .insert(repo_path("foo"), hgid("10"), foo_entry.to_bytes())
             .unwrap();
@@ -969,8 +964,7 @@ mod tests {
         let root_entry = store::Entry::from_elements_hg(vec![
             store_element("a1", "10", store::Flag::Directory),
             store_element("a2", "20", store::Flag::File(FileType::Regular)),
-        ])
-        .unwrap();
+        ]);
         let tree_hgid = hgid("1");
         store
             .insert(RepoPath::empty(), tree_hgid, root_entry.to_bytes())
@@ -978,8 +972,7 @@ mod tests {
         let a1_entry = store::Entry::from_elements_hg(vec![
             store_element("b1", "11", store::Flag::File(FileType::Regular)),
             store_element("b2", "12", store::Flag::File(FileType::Regular)),
-        ])
-        .unwrap();
+        ]);
         store
             .insert(repo_path("a1"), hgid("10"), a1_entry.to_bytes())
             .unwrap();
@@ -1211,8 +1204,7 @@ mod tests {
         let entry_1 = store::Entry::from_elements_hg(vec![
             store_element("foo", "10", store::Flag::Directory),
             store_element("baz", "20", store::Flag::File(FileType::Regular)),
-        ])
-        .unwrap();
+        ]);
         store
             .insert(RepoPath::empty(), hgid("1"), entry_1.to_bytes())
             .unwrap();
@@ -1221,8 +1213,7 @@ mod tests {
         let entry_2 = store::Entry::from_elements_hg(vec![
             store_element("foo", "10", store::Flag::Directory),
             store_element("baz", "21", store::Flag::File(FileType::Regular)),
-        ])
-        .unwrap();
+        ]);
         store
             .insert(RepoPath::empty(), hgid("2"), entry_2.to_bytes())
             .unwrap();
@@ -1323,8 +1314,7 @@ mod tests {
         let root_1_entry = store::Entry::from_elements_hg(vec![
             store_element("foo", "11", store::Flag::Directory),
             store_element("baz", "21", store::Flag::File(FileType::Regular)),
-        ])
-        .unwrap();
+        ]);
         store
             .insert(
                 RepoPath::empty(),
@@ -1336,8 +1326,7 @@ mod tests {
             "bar",
             "111",
             store::Flag::File(FileType::Regular),
-        )])
-        .unwrap();
+        )]);
         store
             .insert(
                 repo_path("foo"),
@@ -1350,8 +1339,7 @@ mod tests {
         let root_2_entry = store::Entry::from_elements_hg(vec![
             store_element("foo", "12", store::Flag::Directory),
             store_element("baz", "21", store::Flag::File(FileType::Regular)),
-        ])
-        .unwrap();
+        ]);
         store
             .insert(RepoPath::empty(), hgid("2"), root_2_entry.to_bytes())
             .unwrap();
@@ -1359,8 +1347,7 @@ mod tests {
             "bar",
             "112",
             store::Flag::File(FileType::Regular),
-        )])
-        .unwrap();
+        )]);
         store
             .insert(repo_path("foo"), hgid("12"), foo_12_entry.to_bytes())
             .unwrap();
@@ -1454,8 +1441,7 @@ mod tests {
             "foo",
             "11",
             store::Flag::File(FileType::Regular),
-        )])
-        .unwrap();
+        )]);
         store
             .insert(
                 RepoPath::empty(),
@@ -1469,8 +1455,7 @@ mod tests {
             "foo",
             "12",
             store::Flag::Directory,
-        )])
-        .unwrap();
+        )]);
         store
             .insert(
                 RepoPath::empty(),
@@ -1482,8 +1467,7 @@ mod tests {
             "bar",
             "121",
             store::Flag::File(FileType::Regular),
-        )])
-        .unwrap();
+        )]);
         store
             .insert(
                 repo_path("foo"),
