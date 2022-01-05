@@ -31,6 +31,7 @@ use once_cell::sync::OnceCell;
 use pathmatcher::Matcher;
 use sha1::Digest;
 use sha1::Sha1;
+pub use store::Flag;
 use storemodel::TreeFormat;
 use thiserror::Error;
 use types::HgId;
