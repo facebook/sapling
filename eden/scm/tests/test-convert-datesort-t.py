@@ -2,7 +2,7 @@
 
 # coding=utf-8
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # Copyright (c) Mercurial Contributors.
 #
 # This software may be used and distributed according to the terms of the

@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
@@ -202,7 +202,7 @@ def _scanheredoc(content):
 
 
 def translatepath(path, black=False, verify=False, hgmv=False):
-    header = "# Copyright (c) Facebook, Inc. and its affiliates.\n"
+    header = "# Copyright (c) Meta Platforms, Inc. and affiliates.\n"
     if not _iscreatedbyfb(path):
         header += "# Copyright (c) Mercurial Contributors.\n"
     header += r"""#
