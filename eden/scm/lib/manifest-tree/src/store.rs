@@ -6,8 +6,6 @@
  */
 
 use std::cmp::Ordering;
-use std::str::from_utf8;
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::format_err;
@@ -414,9 +412,8 @@ impl Element {
         if byte_slice.len() > path_len + HgId::hex_len() + 2 {
             return Err(format_err!("entry longer than expected"));
         }
-        // TODO: We don't need this conversion to string
-        let utf8_parsed = from_utf8(&byte_slice[path_len + 1..path_len + HgId::hex_len() + 1])?;
-        let hgid = HgId::from_str(utf8_parsed)?;
+        let hex_slice = &byte_slice[path_len + 1..path_len + HgId::hex_len() + 1];
+        let hgid = HgId::from_hex(hex_slice)?;
         let flag = parse_hg_flag(byte_slice.get(path_len + HgId::hex_len() + 1))?;
         let element = Element {
             component,
@@ -589,7 +586,7 @@ mod tests {
     #[test]
     fn test_roundtrip_serialization_on_directory() {
         let component = PathComponentBuf::from_string(String::from("c")).unwrap();
-        let hgid = HgId::from_str("2e31d52f551e445002a6e6690700ce2ac31f196e").unwrap();
+        let hgid = HgId::from_hex(b"2e31d52f551e445002a6e6690700ce2ac31f196e").unwrap();
         let flag = Flag::Directory;
         let byte_slice = b"c\02e31d52f551e445002a6e6690700ce2ac31f196et";
         let element = Element::new(component, hgid, flag);
