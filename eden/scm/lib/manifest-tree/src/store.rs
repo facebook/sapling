@@ -226,29 +226,11 @@ impl<'a> Elements<'a> {
             Some(s) => s,
         };
 
-        // MODE ' '       NAME          '\0'                     BIN_SHA1
-        //      ^         ^             ^                        ^
-        //      mode_len  mode_len + 1  mode_len + 1 + name_len  .. + 1
-        let mode_len = match slice.iter().position(|&x| x == b' ') {
-            Some(position) => position,
-            None => return Some(Err(format_err!("did not find mode delimiter"))),
-        };
-        let name_len = match slice.iter().skip(mode_len + 1).position(|&x| x == b'\0') {
-            Some(position) => position,
-            None => return Some(Err(format_err!("did not find name delimiter"))),
-        };
+        let (mode_len, name_len) = find_git_entry_positions(slice)?;
 
-        let flag = match &slice[..mode_len] {
-            b"40000" => Flag::Directory,
-            b"100644" | b"100664" => Flag::File(FileType::Regular),
-            b"100755" => Flag::File(FileType::Executable),
-            b"120000" => Flag::File(FileType::Symlink),
-            s => {
-                return Some(Err(format_err!(
-                    "unknown or unsupport mode in git tree ({})",
-                    String::from_utf8_lossy(s)
-                )));
-            }
+        let flag = match parse_git_mode(&slice[..mode_len]) {
+            Ok(flag) => flag,
+            Err(e) => return Some(Err(e)),
         };
 
         let mut offset = mode_len + 1;
@@ -333,13 +315,7 @@ impl Element {
         // TODO: We don't need this conversion to string
         let utf8_parsed = from_utf8(&byte_slice[path_len + 1..path_len + HgId::hex_len() + 1])?;
         let hgid = HgId::from_str(utf8_parsed)?;
-        let flag = match byte_slice.get(path_len + HgId::hex_len() + 1) {
-            None => Flag::File(FileType::Regular),
-            Some(b'x') => Flag::File(FileType::Executable),
-            Some(b'l') => Flag::File(FileType::Symlink),
-            Some(b't') => Flag::Directory,
-            Some(bad_flag) => return Err(format_err!("invalid flag {}", bad_flag)),
-        };
+        let flag = parse_hg_flag(byte_slice.get(path_len + HgId::hex_len() + 1))?;
         let element = Element {
             component,
             hgid,
@@ -384,6 +360,54 @@ impl Element {
         buffer.extend_from_slice(self.hgid.as_ref());
         buffer
     }
+}
+
+/// Find the byte offsets used in a git entry.
+/// Return (mode_len, name_len).
+fn find_git_entry_positions(slice: &[u8]) -> Option<(usize, usize)> {
+    // MODE ' '       NAME          '\0'                     BIN_SHA1
+    //      ^         ^             ^                        ^
+    //      mode_len  mode_len + 1  mode_len + 1 + name_len  .. + 1
+    let mode_len = match slice.iter().position(|&x| x == b' ') {
+        Some(position) => position,
+        None => return None,
+    };
+    let name_len = match slice[mode_len..].iter().position(|&x| x == b'\0') {
+        Some(position) if position > 1 => position - 1,
+        _ => return None,
+    };
+    Some((mode_len, name_len))
+}
+
+/// Convert the git mode (ex. b"100644") to `Flag`.
+fn parse_git_mode(mode: &[u8]) -> Result<Flag> {
+    let flag = match mode {
+        b"40000" => Flag::Directory,
+        // 100664 is non-standard but present in old repos.
+        // See https://github.com/git/git/commit/42ea9cb286423c949d42ad33823a5221182f84bf
+        b"100644" | b"100664" => Flag::File(FileType::Regular),
+        b"100755" => Flag::File(FileType::Executable),
+        b"120000" => Flag::File(FileType::Symlink),
+        s => {
+            return Err(format_err!(
+                "unknown or unsupported mode in git tree ({})",
+                String::from_utf8_lossy(s)
+            ));
+        }
+    };
+    Ok(flag)
+}
+
+/// Convert hg flag to `Flag`.
+fn parse_hg_flag(flag_byte: Option<&u8>) -> Result<Flag> {
+    let flag = match flag_byte {
+        Some(b'\n') | None => Flag::File(FileType::Regular),
+        Some(b'x') => Flag::File(FileType::Executable),
+        Some(b'l') => Flag::File(FileType::Symlink),
+        Some(b't') => Flag::Directory,
+        Some(bad_flag) => return Err(format_err!("invalid flag {}", bad_flag)),
+    };
+    Ok(flag)
 }
 
 #[cfg(test)]
