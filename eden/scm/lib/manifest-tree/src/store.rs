@@ -319,13 +319,7 @@ impl<'a> Elements<'a> {
                 None => break,
             };
             match candidate.cmp(name) {
-                Ordering::Less => {
-                    slice = match slice.get(name_end + 1 + HgId::len()..) {
-                        Some(slice) => slice,
-                        None => break,
-                    };
-                    continue;
-                }
+                Ordering::Less => {}
                 Ordering::Equal => {
                     let flag = parse_git_mode(&slice[..mode_len])?;
                     let id_start = name_end + 1;
@@ -337,8 +331,21 @@ impl<'a> Elements<'a> {
                     };
                     return Ok(Some((hgid, flag)));
                 }
-                Ordering::Greater => break,
+                Ordering::Greater => {
+                    // Directory names are tricky. See the `namecmp` module.
+                    // Here we don't borther figuring out whehter it's a
+                    // directory or not, just keep looking for a few more
+                    // entires.
+                    let len = candidate.len().min(name.len());
+                    if candidate[..len] > name[..len] {
+                        break;
+                    }
+                }
             }
+            slice = match slice.get(name_end + 1 + HgId::len()..) {
+                Some(slice) => slice,
+                None => break,
+            };
         }
         Ok(None)
     }
@@ -583,6 +590,22 @@ mod tests {
     }
 
     #[test]
+    fn test_lookup_order() {
+        let elements = vec![
+            element("b-"),
+            element("b0"),
+            element("b/"),
+            element("a"),
+            element("c"),
+        ];
+        for format in [TreeFormat::Git, TreeFormat::Hg] {
+            let entry = Entry::from_elements(elements.clone(), format);
+            // Exercise the `assert_eq!` about `lookup` in `next()`.
+            let _ = entry.elements().collect::<Vec<_>>();
+        }
+    }
+
+    #[test]
     fn test_roundtrip_serialization_on_directory() {
         let component = PathComponentBuf::from_string(String::from("c")).unwrap();
         let hgid = HgId::from_hex(b"2e31d52f551e445002a6e6690700ce2ac31f196e").unwrap();
@@ -608,5 +631,10 @@ mod tests {
             let buffer = element.to_byte_vec_hg();
             Element::from_byte_slice_hg(&buffer).unwrap() == element
         }
+    }
+
+    fn element(name: &str) -> Element {
+        let (name, flag) = crate::namecmp::tests::get_name_flag(name);
+        Element::new(name, HgId::default(), flag)
     }
 }
