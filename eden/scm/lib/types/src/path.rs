@@ -124,8 +124,8 @@ pub enum InvalidPathComponent {
 impl RepoPathBuf {
     /// Constructs an empty RepoPathBuf. This path will have no
     /// components and will be equivalent to the root of the repository.
-    pub fn new() -> RepoPathBuf {
-        Default::default()
+    pub const fn new() -> RepoPathBuf {
+        Self(String::new())
     }
 
     /// Constructs a `RepoPathBuf` from a vector of bytes. It will fail when the bytes are are not
