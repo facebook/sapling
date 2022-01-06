@@ -123,13 +123,13 @@ def get_process_name(handle: Handle) -> str:
 
 def get_exit_code(handle: Handle) -> Optional[int]:
     STILL_ACTIVE = 259
-    exit_code = _LPDWORD()
-    if _win32.GetExitCodeProcess(handle.handle, exit_code) == 0:
+    exit_code = _DWORD()
+    if _win32.GetExitCodeProcess(handle.handle, ctypes.pointer(exit_code)) == 0:
         raise_win_error()
 
-    if exit_code[0].value == STILL_ACTIVE:
+    if exit_code.value == STILL_ACTIVE:
         return None
-    return int(exit_code[0].value)
+    return int(exit_code.value)
 
 
 class WinProcUtils(proc_utils.ProcUtils):
