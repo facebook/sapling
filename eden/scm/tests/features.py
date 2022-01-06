@@ -347,7 +347,6 @@ segmentedchangelogcompatiblelist = """
     test-sparse-rebase.t
     test-sparse-unsafe-sparse-profile.t
     test-sparse-warn-t.py
-    test-ssh-hang.t
     test-sshserver.py
     test-status-color.t
     test-status-inprocess.py
