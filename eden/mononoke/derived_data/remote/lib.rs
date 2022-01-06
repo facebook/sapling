@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use derived_data_service_if::types::DerivationType;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use derived_data_service_if::types as thrift;
@@ -24,5 +26,6 @@ pub trait DerivationClient: Send + Sync {
         derived_data_type: String,
         cs_id: ChangesetId,
         config_name: String,
+        derivation_type: DerivationType,
     ) -> Result<Option<thrift::DerivedData>>;
 }

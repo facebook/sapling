@@ -29,6 +29,7 @@ use crate::context::DerivationContext;
 use crate::derivable::{BonsaiDerivable, DerivationDependencies};
 use crate::error::DerivationError;
 use crate::manager::util::DiscoveryStats;
+use derived_data_service_if::types::{DerivationType, DeriveSingle};
 
 use super::{DerivationAssignment, DerivedDataManager};
 
@@ -148,6 +149,7 @@ impl DerivedDataManager {
                         Derivable::NAME.to_string(),
                         csid,
                         self.config_name(),
+                        DerivationType::derive_single(DeriveSingle {}),
                     )
                     .await
                 {

@@ -16,11 +16,21 @@ struct DerivedDataType {
   1: string type_name;
 } (rust.exhaustive)
 
+union DerivationType {
+  1: DeriveSingle derive_single;
+  2: DeriveUnderived derive_underived;
+} (rust.ord)
+
+struct DeriveSingle {} (rust.exhaustive)
+
+struct DeriveUnderived {} (rust.exhaustive)
+
 struct DeriveRequest {
   1: string repo_name;
   2: DerivedDataType derived_data_type;
   3: binary changeset_id;
   4: string config_name;
+  5: DerivationType derivation_type;
 } (rust.exhaustive)
 
 struct DeriveResponse {
@@ -112,6 +122,16 @@ struct UnknownDerivedDataConfig {
   1: string reason;
 } (rust.exhaustive)
 
+struct UnknownDerivationType {
+  1: string reason;
+} (rust.exhaustive)
+
+struct DisabledDerivation {
+  1: string type_name;
+  2: i32 repo_id;
+  3: string repo_name;
+} (rust.exhaustive)
+
 struct DisabledFilenodes {} (rust.exhaustive)
 
 union RequestErrorReason {
@@ -119,6 +139,8 @@ union RequestErrorReason {
   2: CommitNotFound commit_not_found;
   3: RepoNotFound repo_not_found;
   4: UnknownDerivedDataConfig unknown_derived_data_config;
+  5: UnknownDerivationType unknown_derivation_type;
+  6: DisabledDerivation disabled_derivation;
 }
 
 exception RequestError {
