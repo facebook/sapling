@@ -195,6 +195,7 @@ Show debug commands if there are no other candidates
   debugthrowexception
   debugthrowrustbail
   debugthrowrustexception
+  debugtop
   debugtreestate
   debugupdatecaches
   debugvisibility
@@ -510,6 +511,7 @@ Show all commands + options
   debugthrowexception: 
   debugthrowrustbail: 
   debugthrowrustexception: 
+  debugtop: refresh-rate, columns
   debugtreestate: 
   debugupdatecaches: 
   debugvisibility: 

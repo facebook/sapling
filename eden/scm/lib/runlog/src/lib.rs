@@ -118,21 +118,21 @@ fn accidentally_running_as_root(repo: &Repo) -> bool {
 /// execution).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Entry {
-    id: String,
-    command: Vec<String>,
-    pid: u64,
-    start_time: chrono::DateTime<chrono::Utc>,
-    end_time: Option<chrono::DateTime<chrono::Utc>>,
-    exit_code: Option<i32>,
-    progress: Vec<Progress>,
+    pub id: String,
+    pub command: Vec<String>,
+    pub pid: u64,
+    pub start_time: chrono::DateTime<chrono::Utc>,
+    pub end_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub exit_code: Option<i32>,
+    pub progress: Vec<Progress>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Progress {
-    topic: String,
-    unit: String,
-    total: u64,
-    position: u64,
+    pub topic: String,
+    pub unit: String,
+    pub total: u64,
+    pub position: u64,
 }
 
 impl Entry {

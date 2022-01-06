@@ -1094,6 +1094,8 @@ Test list of internal help commands
    debugthrowrustexception
                  cause an error to be returned from rust and propagated to
                  python
+   debugtop      outputs information about all running commands for the current
+                 repository
    debugtreestate
                  manage treestate
    debugupdatecaches

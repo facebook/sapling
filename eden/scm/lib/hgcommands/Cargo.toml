@@ -9,9 +9,11 @@ anyhow = "1.0.51"
 async-runtime = { path = "../async-runtime" }
 bindings = { path = "../../edenscmnative/bindings", default-features = false }
 blackbox = { path = "../blackbox" }
+chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clidispatch = { path = "../clidispatch" }
 clientinfo = { path = "../clientinfo" }
 cliparser = { path = "../cliparser", features = ["python"] }
+comfy-table = "4.0.1"
 configparser = { path = "../configparser" }
 cpython = { version = "0.7", default-features = false }
 cpython_ext = { path = "../cpython-ext", default-features = false }

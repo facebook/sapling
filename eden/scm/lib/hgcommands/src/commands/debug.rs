@@ -30,6 +30,7 @@ commands! {
     mod segmentgraph;
     mod segmentpull;
     mod store;
+    mod top;
 }
 
 define_flags! {
