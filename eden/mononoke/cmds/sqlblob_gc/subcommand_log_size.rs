@@ -51,23 +51,24 @@ pub async fn subcommand_log_size(
     shard_range: Range<usize>,
     scuba_sample_builder: MononokeScubaSampleBuilder,
 ) -> Result<()> {
-    let shard_sizes: Vec<(usize, HashMap<Option<u64>, u64>)> = stream::iter(shard_range)
+    let shard_sizes: Vec<(usize, HashMap<Option<u64>, (u64, u64)>)> = stream::iter(shard_range)
         .map(|shard| {
             sqlblob
                 .get_chunk_sizes_by_generation(shard)
                 .map_ok(move |gen_to_size| (shard, gen_to_size))
         })
         .buffer_unordered(max_parallelism)
-        .try_collect::<Vec<(usize, HashMap<Option<u64>, u64>)>>()
+        .try_collect::<Vec<(usize, HashMap<Option<u64>, (u64, u64)>)>>()
         .await?;
 
     let mut size_summary = HashMap::new();
     for (shard, sizes) in shard_sizes {
-        for (generation, size) in sizes.into_iter() {
+        for (generation, (size, chunk_id_count)) in sizes.into_iter() {
             let mut sample = scuba_sample_builder.clone();
             sample.add("shard", shard);
             sample.add_opt("generation", generation);
             sample.add("size", size);
+            sample.add("chunk_id_count", chunk_id_count);
             sample.log();
             *size_summary.entry(generation).or_insert(0u64) += size;
         }

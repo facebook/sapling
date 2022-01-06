@@ -188,8 +188,8 @@ queries! {
         "SELECT id FROM data"
     }
 
-    read GetGenerationSizes() -> (Option<u64>, u64) {
-        "SELECT chunk_generation.last_seen_generation, CAST(SUM(chunk_generation.value_len) AS UNSIGNED)
+    read GetGenerationSizes() -> (Option<u64>, u64, u64) {
+        "SELECT chunk_generation.last_seen_generation, CAST(SUM(chunk_generation.value_len) AS UNSIGNED), CAST(COUNT(1) AS UNSIGNED)
         FROM chunk_generation
         GROUP BY chunk_generation.last_seen_generation"
     }
@@ -596,16 +596,19 @@ impl ChunkSqlStore {
         Ok(None)
     }
 
+    // Returns a HashMap from generation->(size, chunk_id_count)
+    // Its a chunk id count as some chunk ids have multiple chunks of CHUNK_SIZE
+    // but chunk_generation doesn't record that (it doesn't need to)
     pub(crate) async fn get_chunk_sizes_by_generation(
         &self,
         shard_num: usize,
-    ) -> Result<HashMap<Option<u64>, u64>, Error> {
+    ) -> Result<HashMap<Option<u64>, (u64, u64)>, Error> {
         GetGenerationSizes::query(&self.read_master_connection[shard_num])
             .await
             .map(|s| {
                 s.into_iter()
-                    .map(|(gen, size)| (gen, size))
-                    .collect::<HashMap<_, _>>()
+                    .map(|(gen, size, count)| (gen, (size, count)))
+                    .collect::<HashMap<_, (_, _)>>()
             })
     }
 

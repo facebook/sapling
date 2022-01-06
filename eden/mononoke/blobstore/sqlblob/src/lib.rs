@@ -370,10 +370,11 @@ impl Sqlblob {
         self.data_store.get_keys_from_shard(shard_num)
     }
 
+    /// Returns a HashMap from generation->(size, chunk_count)
     pub async fn get_chunk_sizes_by_generation(
         &self,
         shard_num: usize,
-    ) -> Result<HashMap<Option<u64>, u64>> {
+    ) -> Result<HashMap<Option<u64>, (u64, u64)>> {
         self.chunk_store
             .get_chunk_sizes_by_generation(shard_num)
             .await
