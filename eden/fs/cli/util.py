@@ -628,7 +628,7 @@ def underlined(message: str) -> str:
 
 
 def is_edenfs_mount_device(device: bytes) -> bool:
-    return device == b"edenfs" or device.startswith(b"edenfs:")
+    return device == b"eden" or device == b"edenfs" or device.startswith(b"edenfs:")
 
 
 def get_eden_cli_cmd(argv: List[str] = sys.argv) -> List[str]:

@@ -126,7 +126,7 @@ class MacOSMountTable(MountTable):
         return False
 
     def unmount_force(self, mount_point: bytes) -> bool:
-        return False
+        return 0 == subprocess.call(["sudo", "umount", "-f", mount_point])
 
     def create_bind_mount(self, source_path, dest_path) -> bool:
         return False

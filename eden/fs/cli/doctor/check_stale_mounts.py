@@ -87,7 +87,7 @@ def get_all_stale_eden_mount_points(mount_table: mtab.MountTable) -> List[bytes]
         try:
             mount_table.check_path_access(eden_dir)
         except OSError as e:
-            if e.errno == errno.ENOTCONN:
+            if e.errno == errno.ENOTCONN or e.errno == errno.ENXIO:
                 stale_eden_mount_points.add(mount_point)
             else:
                 log.warning(
@@ -103,5 +103,6 @@ def get_all_eden_mount_points(mount_table: mtab.MountTable) -> Set[bytes]:
     return {
         mount.mount_point
         for mount in all_system_mounts
-        if is_edenfs_mount_device(mount.device) and mount.vfstype == b"fuse"
+        if is_edenfs_mount_device(mount.device)
+        and (mount.vfstype == b"fuse" or mount.vfstype == b"macfuse_eden")
     }
