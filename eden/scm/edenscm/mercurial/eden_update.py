@@ -77,7 +77,7 @@ def update(
             # see if there are any conflicts that should prevent us from
             # attempting the update.
             if updatecheck == "noconflict":
-                with progress.spinner(repo.ui, _("checking for conflicts")):
+                with progress.spinner(repo.ui, _("conflict check")):
                     conflicts = repo.dirstate.eden_client.checkout(
                         destctx.node(),
                         CheckoutMode.DRY_RUN,
@@ -102,7 +102,7 @@ def update(
             # but since this is a force update it will have already replaced
             # the conflicts with the destination file state, so we don't have
             # to do anything with them here.
-            with progress.spinner(repo.ui, _("updating to %s") % deststr):
+            with progress.spinner(repo.ui, _("updating")):
                 conflicts = repo.dirstate.eden_client.checkout(
                     destctx.node(),
                     CheckoutMode.FORCE,
@@ -117,7 +117,7 @@ def update(
             stats = 0, 0, 0, 0
             actions = {}
         else:
-            with progress.spinner(repo.ui, _("updating to %s") % deststr):
+            with progress.spinner(repo.ui, _("updating")):
                 conflicts = repo.dirstate.eden_client.checkout(
                     destctx.node(),
                     CheckoutMode.NORMAL,
