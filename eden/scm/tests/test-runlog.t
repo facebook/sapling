@@ -253,20 +253,17 @@ Make sure progress updates when runlog.progress_refresh set.
     ]
   } (no-eol)
 
+Wait for background process to exit.
+  $ waitforrunlog > /dev/null
+
 
 Test we don't clean up entries with chance=0
-  $ setconfig runlog.cleanup_chance=0 runlog.cleanup_threshold=0 runlog.enable=False
+  $ setconfig runlog.cleanup_chance=0 runlog.cleanup_threshold=0
   $ rm -f .hg/runlog/*
-  $ hg root --config runlog.enable=True > /dev/null
-  $ hg root --config runlog.enable=True > /dev/null
-  >>> import os
-  >>> files = os.listdir(".hg/runlog")
-  >>> if len(files) != 4:
-  ...     print("FILES", files)
-  ...     os.system("cat .hg/runlog/*")
-  >>> print(len(files))
+  $ hg root > /dev/null
+  $ hg root > /dev/null
+  $ ls .hg/runlog/* | wc -l | sed -e 's/ //g'
   4
-  $ setconfig runlog.enable=True
 
 Test we always clean up with chance=1
   $ setconfig runlog.cleanup_chance=1
