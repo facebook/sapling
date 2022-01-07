@@ -23,7 +23,6 @@ use mononoke_types::{BonsaiChangeset, ChangesetId};
 use slog::debug;
 use stats::prelude::*;
 use std::collections::HashMap;
-use tunables::tunables;
 
 define_stats! {
     prefix = "mononoke.derived_data.hgchangesets";
@@ -74,22 +73,6 @@ impl BonsaiDerivable for MappedHgChangesetId {
     ) -> Result<HashMap<ChangesetId, Self>> {
         if bonsais.is_empty() {
             return Ok(HashMap::new());
-        }
-
-        let mut res = HashMap::new();
-        if !tunables()
-            .get_by_repo_hgchangesets_use_new_batch_derivation(derivation_ctx.repo_name())
-            .unwrap_or(false)
-        {
-            for bonsai in bonsais {
-                let csid = bonsai.get_changeset_id();
-                let parents = derivation_ctx
-                    .fetch_unknown_parents(ctx, Some(&res), &bonsai)
-                    .await?;
-                let derived = Self::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
-                res.insert(csid, derived);
-            }
-            return Ok(res);
         }
 
         STATS::new_parallel.add_value(1);
@@ -255,10 +238,7 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::{
-        compat::Stream01CompatExt, Future, FutureExt, Stream, TryFutureExt, TryStreamExt,
-    };
-    use maplit::hashmap;
+    use futures::{compat::Stream01CompatExt, Future, Stream, TryFutureExt, TryStreamExt};
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use tests_utils::CreateCommitContext;
@@ -311,26 +291,12 @@ mod test {
             .collect::<Vec<_>>();
         let manager = repo.repo_derived_data().manager();
 
-        let tunables = tunables::MononokeTunables::default();
-        tunables.update_by_repo_bools(&hashmap! {
-            repo.name().to_string() => hashmap!{
-                "hgchangesets_use_new_batch_derivation".to_string() => true,
-            }
-        });
-
-        let batch_derived = tunables::with_tunables_async(
-            tunables,
-            async {
-                manager
-                    .backfill_batch::<MappedHgChangesetId>(&ctx, csids.clone(), options, None)
-                    .await?;
-                manager
-                    .fetch_derived_batch::<MappedHgChangesetId>(&ctx, csids, None)
-                    .await
-            }
-            .boxed(),
-        )
-        .await?;
+        manager
+            .backfill_batch::<MappedHgChangesetId>(&ctx, csids.clone(), options, None)
+            .await?;
+        let batch_derived = manager
+            .fetch_derived_batch::<MappedHgChangesetId>(&ctx, csids, None)
+            .await?;
 
         for (cs_id, hg_cs_id) in commits_desc_to_anc.into_iter().rev() {
             println!("{} {} {:?}", cs_id, hg_cs_id, batch_derived.get(&cs_id));

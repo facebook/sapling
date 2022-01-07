@@ -208,10 +208,6 @@ pub struct MononokeTunables {
 
     force_unode_v2: AtomicBool,
     fastlog_use_gen_num_traversal: AtomicBool,
-    fsnodes_use_new_batch_derivation: TunableBoolByRepo,
-    hgchangesets_use_new_batch_derivation: TunableBoolByRepo,
-    unodes_use_new_batch_derivation: TunableBoolByRepo,
-    skeleton_manifests_use_new_batch_derivation: TunableBoolByRepo,
 
     // Changing the value of this tunable forces all mononoke instances
     // to reload segmented changelog. One can also specify jitter (or use default)

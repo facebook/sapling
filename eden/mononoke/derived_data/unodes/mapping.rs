@@ -110,21 +110,6 @@ impl BonsaiDerivable for RootUnodeManifestId {
         }
 
         let mut res = HashMap::new();
-        if !tunables::tunables()
-            .get_by_repo_unodes_use_new_batch_derivation(derivation_ctx.repo_name())
-            .unwrap_or(false)
-        {
-            for bonsai in bonsais {
-                let csid = bonsai.get_changeset_id();
-                let parents = derivation_ctx
-                    .fetch_unknown_parents(ctx, Some(&res), &bonsai)
-                    .await?;
-                let derived = Self::derive_single(ctx, derivation_ctx, bonsai, parents).await?;
-                res.insert(csid, derived);
-            }
-            return Ok(res);
-        }
-
         STATS::new_parallel.add_value(1);
         let batch_len = bonsais.len();
         let stacks = split_bonsais_in_linear_stacks(&bonsais, FileConflicts::ChangeDelete.into())?;
@@ -262,9 +247,8 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::{compat::Stream01CompatExt, Future, FutureExt, Stream, TryStreamExt};
+    use futures::{compat::Stream01CompatExt, Future, Stream, TryStreamExt};
     use manifest::Entry;
-    use maplit::hashmap;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use mononoke_types::ChangesetId;
     use repo_derived_data::RepoDerivedDataRef;
@@ -368,27 +352,14 @@ mod test {
             .collect::<Vec<_>>();
         let manager = repo.repo_derived_data().manager();
 
-        let tunables = tunables::MononokeTunables::default();
-        tunables.update_by_repo_bools(&hashmap! {
-            repo.name().to_string() => hashmap!{
-                "unodes_use_new_batch_derivation".to_string() => true,
-            }
-        });
-
-        let batch_derived = tunables::with_tunables_async(
-            tunables,
-            async {
-                manager
-                    .backfill_batch::<RootUnodeManifestId>(&ctx, csids.clone(), options, None)
-                    .await?;
-                manager
-                    .fetch_derived_batch::<RootUnodeManifestId>(&ctx, csids, None)
-                    .await
-            }
-            .boxed(),
-        )
-        .await
-        .unwrap();
+        manager
+            .backfill_batch::<RootUnodeManifestId>(&ctx, csids.clone(), options, None)
+            .await
+            .unwrap();
+        let batch_derived = manager
+            .fetch_derived_batch::<RootUnodeManifestId>(&ctx, csids, None)
+            .await
+            .unwrap();
 
         for (cs_id, hg_cs_id, unode_id) in commits_desc_to_anc.into_iter().rev() {
             println!("{} {}", cs_id, hg_cs_id);

@@ -10,7 +10,6 @@ use std::collections::{BTreeMap, HashMap};
 use anyhow::{Context, Error};
 use blobstore::Loadable;
 use borrowed::borrowed;
-use cloned::cloned;
 use context::CoreContext;
 use derived_data::batch::{split_batch_in_linear_stacks, FileConflicts, StackItem};
 use derived_data_manager::{BonsaiDerivable, DerivationContext};
@@ -18,9 +17,8 @@ use futures::stream::{FuturesOrdered, TryStreamExt};
 use itertools::Itertools;
 use mononoke_types::ChangesetId;
 use stats::prelude::*;
-use tunables::tunables;
 
-use crate::derive::{derive_skeleton_manifest, derive_skeleton_manifest_stack};
+use crate::derive::derive_skeleton_manifest_stack;
 use crate::{RootSkeletonManifestId, SkeletonManifestId};
 
 define_stats! {
@@ -71,81 +69,19 @@ pub async fn derive_skeleton_manifests_in_batch(
             .collect::<FuturesOrdered<_>>()
             .try_collect::<Vec<_>>()
             .await?;
-        let use_new_batch_derivation = tunables()
-            .get_by_repo_skeleton_manifests_use_new_batch_derivation(derivation_ctx.repo_name())
-            .unwrap_or(false);
-        if !use_new_batch_derivation {
-            old_batch_derivation(
-                ctx,
-                derivation_ctx,
-                parent_skeleton_manifests,
-                gap_size,
-                linear_stack.stack_items,
-                &mut res,
-            )
-            .await?;
-        } else {
-            STATS::new_parallel.add_value(1);
-            new_batch_derivation(
-                ctx,
-                derivation_ctx,
-                parent_skeleton_manifests,
-                gap_size,
-                linear_stack.stack_items,
-                &mut res,
-            )
-            .await?;
-        };
+        STATS::new_parallel.add_value(1);
+        new_batch_derivation(
+            ctx,
+            derivation_ctx,
+            parent_skeleton_manifests,
+            gap_size,
+            linear_stack.stack_items,
+            &mut res,
+        )
+        .await?;
     }
 
     Ok(res)
-}
-
-pub async fn old_batch_derivation(
-    ctx: &CoreContext,
-    derivation_ctx: &DerivationContext,
-    parent_skeleton_manifests: Vec<SkeletonManifestId>,
-    gap_size: Option<usize>,
-    file_changes: Vec<StackItem>,
-    already_derived: &mut HashMap<ChangesetId, RootSkeletonManifestId>,
-) -> Result<(), Error> {
-    let to_derive = match gap_size {
-        Some(gap_size) => file_changes
-            .chunks(gap_size)
-            .filter_map(|chunk| chunk.last().cloned())
-            .collect(),
-        None => file_changes,
-    };
-
-    let new_skeleton_manifests = to_derive
-        .into_iter()
-        .map(|item| {
-            // Clone the values that we need owned copies of to move
-            // into the future we are going to spawn, which means it
-            // must have static lifetime.
-            cloned!(ctx, derivation_ctx, parent_skeleton_manifests);
-            async move {
-                let cs_id = item.cs_id;
-                let derivation_fut = async move {
-                    derive_skeleton_manifest(
-                        &ctx,
-                        &derivation_ctx,
-                        parent_skeleton_manifests,
-                        item.combined_file_changes.into_iter().collect(),
-                    )
-                    .await
-                };
-                let derivation_handle = tokio::spawn(derivation_fut);
-                let sk_mf_id = RootSkeletonManifestId(derivation_handle.await??);
-                Result::<_, Error>::Ok((cs_id, sk_mf_id))
-            }
-        })
-        .collect::<FuturesOrdered<_>>()
-        .try_collect::<Vec<_>>()
-        .await?;
-
-    already_derived.extend(new_skeleton_manifests);
-    Ok(())
 }
 
 pub async fn new_batch_derivation(
@@ -223,43 +159,16 @@ mod test {
     use derived_data_manager::BatchDeriveOptions;
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use futures::{compat::Stream01CompatExt, FutureExt};
-    use maplit::hashmap;
+    use futures::compat::Stream01CompatExt;
     use repo_derived_data::RepoDerivedDataRef;
     use revset::AncestorsNodeStream;
     use test_repo_factory::TestRepoFactory;
     use tests_utils::resolve_cs_id;
     use tests_utils::{bookmark, drawdag::create_from_dag};
-    use tunables::{with_tunables_async, MononokeTunables};
 
     #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let old_batch = {
-            let repo = linear::getrepo(fb).await;
-            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-
-            let mut cs_ids =
-                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
-                    .compat()
-                    .try_collect::<Vec<_>>()
-                    .await?;
-            cs_ids.reverse();
-            let manager = repo.repo_derived_data().manager();
-            manager
-                .backfill_batch::<RootSkeletonManifestId>(
-                    &ctx,
-                    cs_ids,
-                    BatchDeriveOptions::Parallel { gap_size: None },
-                    None,
-                )
-                .await?;
-            manager
-                .fetch_derived::<RootSkeletonManifestId>(&ctx, master_cs_id, None)
-                .await?
-                .unwrap()
-                .into_skeleton_manifest_id()
-        };
 
         let new_batch = {
             let repo = linear::getrepo(fb).await;
@@ -273,25 +182,14 @@ mod test {
             cs_ids.reverse();
             let manager = repo.repo_derived_data().manager();
 
-            let tunables = MononokeTunables::default();
-            tunables.update_by_repo_bools(&hashmap! {
-                repo.name().to_string() => hashmap!{
-                    "skeleton_manifests_use_new_batch_derivation".to_string() => true,
-                }
-            });
-
-            with_tunables_async(
-                tunables,
-                manager
-                    .backfill_batch::<RootSkeletonManifestId>(
-                        &ctx,
-                        cs_ids,
-                        BatchDeriveOptions::Parallel { gap_size: None },
-                        None,
-                    )
-                    .boxed(),
-            )
-            .await?;
+            manager
+                .backfill_batch::<RootSkeletonManifestId>(
+                    &ctx,
+                    cs_ids,
+                    BatchDeriveOptions::Parallel { gap_size: None },
+                    None,
+                )
+                .await?;
             manager
                 .fetch_derived::<RootSkeletonManifestId>(&ctx, master_cs_id, None)
                 .await?
@@ -309,7 +207,6 @@ mod test {
                 .into_skeleton_manifest_id()
         };
 
-        assert_eq!(old_batch, sequential);
         assert_eq!(new_batch, sequential);
         Ok(())
     }
@@ -330,25 +227,14 @@ mod test {
 
             let manager = repo.repo_derived_data().manager();
 
-            let tunables = MononokeTunables::default();
-            tunables.update_by_repo_bools(&hashmap! {
-                repo.name().to_string() => hashmap!{
-                    "skeleton_manifests_use_new_batch_derivation".to_string() => true,
-                }
-            });
-
-            with_tunables_async(
-                tunables,
-                manager
-                    .backfill_batch::<RootSkeletonManifestId>(
-                        &ctx,
-                        cs_ids,
-                        BatchDeriveOptions::Parallel { gap_size: None },
-                        None,
-                    )
-                    .boxed(),
-            )
-            .await?;
+            manager
+                .backfill_batch::<RootSkeletonManifestId>(
+                    &ctx,
+                    cs_ids,
+                    BatchDeriveOptions::Parallel { gap_size: None },
+                    None,
+                )
+                .await?;
 
             manager
                 .fetch_derived::<RootSkeletonManifestId>(&ctx, master_cs_id, None)
@@ -431,27 +317,16 @@ mod test {
         cs_ids.reverse();
         let manager = repo.repo_derived_data().manager();
 
-        let tunables = MononokeTunables::default();
-        tunables.update_by_repo_bools(&hashmap! {
-            repo.name().to_string() => hashmap!{
-                "skeleton_manifests_use_new_batch_derivation".to_string() => true,
-            }
-        });
-
-        with_tunables_async(
-            tunables,
-            manager
-                .backfill_batch::<RootSkeletonManifestId>(
-                    &ctx,
-                    cs_ids.clone(),
-                    BatchDeriveOptions::Parallel {
-                        gap_size: Some(gap_size),
-                    },
-                    None,
-                )
-                .boxed(),
-        )
-        .await?;
+        manager
+            .backfill_batch::<RootSkeletonManifestId>(
+                &ctx,
+                cs_ids.clone(),
+                BatchDeriveOptions::Parallel {
+                    gap_size: Some(gap_size),
+                },
+                None,
+            )
+            .await?;
 
         let derived = cs_ids
             .chunks(gap_size)
