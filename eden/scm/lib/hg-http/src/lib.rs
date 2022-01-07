@@ -40,6 +40,14 @@ static TOTAL: Total = Total {
     request_count: AtomicUsize::new(0),
 };
 
+pub fn current_progress() -> (usize, usize, usize) {
+    (
+        TOTAL.download_bytes.load(Relaxed),
+        TOTAL.upload_bytes.load(Relaxed),
+        TOTAL.request_count.load(Relaxed),
+    )
+}
+
 pub fn http_client(client_id: impl ToString, config: http_client::Config) -> HttpClient {
     let client_id = client_id.to_string();
     let reporter = move |stats: &Stats| {
