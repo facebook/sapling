@@ -9,7 +9,7 @@ Make sure the table has the expected format
   +----------+------------+----------------------------------------------+
   | PROGRESS | TIME SPENT | CMD                                          |
   +======================================================================+
-  | -        | 0.0s       | debugtop -r 50000 -c PROGRESS,TIME SPENT,CMD |
+  | -        | * | debugtop -r 50000 -c PROGRESS,TIME SPENT,CMD | (glob)
   +----------+------------+----------------------------------------------+
 
 Test non-valid columns
