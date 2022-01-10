@@ -74,7 +74,9 @@ def _snapshot2ctx(repo, snapshot):
     return ctx
 
 
-def show(ui, repo, csid, **opts):
+def show(ui, repo, csid=None, **opts):
+    if csid is None:
+        raise error.CommandError("snapshot show", _("missing snapshot id"))
     try:
         snapshot = repo.edenapi.fetchsnapshot(
             {

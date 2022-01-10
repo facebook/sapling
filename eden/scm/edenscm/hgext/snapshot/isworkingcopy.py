@@ -10,7 +10,9 @@ from .createremote import parsemaxuntracked
 from .latest import _isworkingcopy
 
 
-def cmd(ui, repo, csid, **opts):
+def cmd(ui, repo, csid=None, **opts):
+    if csid is None:
+        raise error.CommandError("snapshot isworkingcopy", _("missing snapshot id"))
     try:
         snapshot = repo.edenapi.fetchsnapshot(
             {
