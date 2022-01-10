@@ -93,7 +93,7 @@ async fn new_tailer(
         bulk_fetcher,
         Arc::new(blobrepo.get_blobstore()),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-        Some(BOOKMARK_NAME.clone()),
+        vec![Some(BOOKMARK_NAME.clone()).into()],
         None,
     ))
 }
@@ -209,7 +209,6 @@ fn new_isolated_on_demand_update(
     ctx: CoreContext,
     blobrepo: &BlobRepo,
 ) -> Result<OnDemandUpdateSegmentedChangelog> {
-    // feel free to add bookmark_name as a parameter when the need appears
     OnDemandUpdateSegmentedChangelog::new(
         ctx,
         blobrepo.get_repoid(),
@@ -217,7 +216,7 @@ fn new_isolated_on_demand_update(
         Arc::new(ConcurrentMemIdMap::new()),
         blobrepo.get_changeset_fetcher(),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-        Some(BOOKMARK_NAME.clone()),
+        vec![Some(BOOKMARK_NAME.clone()).into()],
     )
 }
 
@@ -738,7 +737,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
             Arc::clone(&idmap),
             blobrepo.get_changeset_fetcher(),
             Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-            Some(BOOKMARK_NAME.clone()),
+            vec![Some(BOOKMARK_NAME.clone()).into()],
         )
     };
 
@@ -887,7 +886,7 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
         Arc::new(ConcurrentMemIdMap::new()),
         blobrepo.get_changeset_fetcher(),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-        Some(bookmark_name.clone()),
+        vec![Some(bookmark_name.clone()).into()],
     )?;
     let sc =
         Arc::new(on_demand).with_periodic_update_to_master_bookmark(&ctx, Duration::from_secs(5));

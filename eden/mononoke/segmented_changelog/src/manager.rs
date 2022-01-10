@@ -14,7 +14,7 @@ use async_trait::async_trait;
 
 use futures_stats::TimedFutureExt;
 
-use bookmarks::{BookmarkName, Bookmarks};
+use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -24,7 +24,7 @@ use crate::idmap::IdMapFactory;
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{segmented_changelog_delegate, CloneData, Location, SegmentedChangelog};
+use crate::{segmented_changelog_delegate, CloneData, Location, SeedHead, SegmentedChangelog};
 
 pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,
@@ -33,7 +33,7 @@ pub struct SegmentedChangelogManager {
     idmap_factory: IdMapFactory,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
-    bookmark_name: Option<BookmarkName>,
+    seed_heads: Vec<SeedHead>,
     update_to_master_bookmark_period: Option<Duration>,
 }
 
@@ -45,7 +45,7 @@ impl SegmentedChangelogManager {
         idmap_factory: IdMapFactory,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         bookmarks: Arc<dyn Bookmarks>,
-        bookmark_name: Option<BookmarkName>,
+        seed_heads: Vec<SeedHead>,
         update_to_master_bookmark_period: Option<Duration>,
     ) -> Self {
         Self {
@@ -55,7 +55,7 @@ impl SegmentedChangelogManager {
             idmap_factory,
             changeset_fetcher,
             bookmarks,
-            bookmark_name,
+            seed_heads,
             update_to_master_bookmark_period,
         }
     }
@@ -101,7 +101,7 @@ impl SegmentedChangelogManager {
             owned.idmap,
             Arc::clone(&self.changeset_fetcher),
             Arc::clone(&self.bookmarks),
-            self.bookmark_name.clone(),
+            self.seed_heads.clone(),
         )?))
     }
 

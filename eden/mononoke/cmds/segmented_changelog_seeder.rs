@@ -12,7 +12,7 @@ use std::sync::Arc;
 use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
-use bookmarks::{BookmarkName, BookmarksArc};
+use bookmarks::BookmarksArc;
 use bytes::Bytes;
 use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::{deserialize_cs_entries, ChangesetsArc};
@@ -26,7 +26,9 @@ use fbinit::FacebookInit;
 use futures::stream;
 use metaconfig_types::MetadataDatabaseConfig;
 use segmented_changelog::types::IdMapVersion;
-use segmented_changelog::{SeedHead, SegmentedChangelogSeeder, SegmentedChangelogSqlConnections};
+use segmented_changelog::{
+    seedheads_from_config, SegmentedChangelogSeeder, SegmentedChangelogSqlConnections,
+};
 use slog::info;
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
@@ -164,35 +166,17 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         repo.name()
     );
 
-    let (head, bonsai_changesets_to_include) = match matches.value_of(HEAD_ARG) {
+    let heads = match matches.value_of(HEAD_ARG) {
         Some(head_arg) => {
             let head = helpers::csid_resolve(&ctx, repo.clone(), head_arg)
                 .await
                 .with_context(|| format!("resolving head csid for '{}'", head_arg))?;
-            // If a head not from the config is used
-            (head.into(), vec![])
+            info!(ctx.logger(), "using '{}' for head", head);
+            vec![head.into()]
         }
-        None => {
-            let head = config.segmented_changelog_config.master_bookmark;
-            (
-                head.map(BookmarkName::new).transpose()?.into(),
-                config
-                    .segmented_changelog_config
-                    .bonsai_changesets_to_include,
-            )
-        }
+        None => seedheads_from_config(&ctx, &config.segmented_changelog_config)?,
     };
 
-    info!(ctx.logger(), "using '{}' for head", head);
-    if bonsai_changesets_to_include.len() > 0 {
-        info!(
-            ctx.logger(),
-            "also adding {:?} to segmented changelog", bonsai_changesets_to_include
-        );
-    }
-
-    let mut heads = vec![head];
-    heads.extend(bonsai_changesets_to_include.into_iter().map(SeedHead::from));
     if let Some(idmap_version) = idmap_version_arg {
         segmented_changelog_seeder
             .run_with_idmap_version(&ctx, heads, IdMapVersion(idmap_version))

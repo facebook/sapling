@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use blobstore::Blobstore;
-use bookmarks::{BookmarkName, Bookmarks};
+use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -25,7 +25,9 @@ use crate::manager::SegmentedChangelogManager;
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{DisabledSegmentedChangelog, InProcessIdDag, SegmentedChangelog};
+use crate::{
+    seedheads_from_config, DisabledSegmentedChangelog, InProcessIdDag, SegmentedChangelog,
+};
 
 #[derive(Clone)]
 pub struct SegmentedChangelogSqlConnections(pub SqlConnections);
@@ -57,17 +59,8 @@ pub async fn new_server_segmented_changelog<'a>(
         return Ok(Arc::new(DisabledSegmentedChangelog::new()));
     }
     let repo_id = repo_identity.id();
-    let bookmarks_name = config
-        .master_bookmark
-        .map(|name| {
-            BookmarkName::new(&name).with_context(|| {
-                format!(
-                    "failed to interpret {} as bookmark for repo {}",
-                    name, repo_id
-                )
-            })
-        })
-        .transpose()?;
+    let seed_heads =
+        seedheads_from_config(ctx, &config).context("finding segmented changelog heads")?;
     if config.skip_dag_load_at_startup {
         // This is a special case. We build Segmented Changelog using an in process iddag and idmap
         // and update then on demand.
@@ -80,7 +73,7 @@ pub async fn new_server_segmented_changelog<'a>(
             Arc::new(ConcurrentMemIdMap::new()),
             changeset_fetcher,
             bookmarks,
-            bookmarks_name,
+            seed_heads,
         )?));
     }
     let mut idmap_factory = IdMapFactory::new(
@@ -100,7 +93,7 @@ pub async fn new_server_segmented_changelog<'a>(
         idmap_factory,
         changeset_fetcher,
         bookmarks,
-        bookmarks_name,
+        seed_heads,
         config.update_to_master_bookmark_period,
     );
     let name = repo_identity.name().to_string();

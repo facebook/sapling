@@ -49,7 +49,7 @@ pub use crate::builder::{new_server_segmented_changelog, SegmentedChangelogSqlCo
 pub use crate::copy::copy_segmented_changelog;
 pub use crate::seeder::SegmentedChangelogSeeder;
 pub use crate::tailer::SegmentedChangelogTailer;
-pub use crate::update::SeedHead;
+pub use crate::update::{seedheads_from_config, SeedHead};
 
 // public for benchmarking
 pub use crate::idmap::{ConcurrentMemIdMap, IdMap};

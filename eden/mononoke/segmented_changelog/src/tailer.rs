@@ -18,7 +18,7 @@ use sql_ext::replication::ReplicaLagMonitor;
 use stats::prelude::*;
 
 use blobstore::Blobstore;
-use bookmarks::{BookmarkName, Bookmarks};
+use bookmarks::Bookmarks;
 use bulkops::{Direction, PublicChangesetBulkFetch};
 use changeset_fetcher::{ChangesetFetcher, PrefetchedChangesetsFetcher};
 use context::CoreContext;
@@ -72,7 +72,7 @@ impl SegmentedChangelogTailer {
         bulk_fetch: Arc<PublicChangesetBulkFetch>,
         blobstore: Arc<dyn Blobstore>,
         bookmarks: Arc<dyn Bookmarks>,
-        bookmark_name: Option<BookmarkName>,
+        seed_heads: Vec<SeedHead>,
         caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
     ) -> Self {
         let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
@@ -82,7 +82,6 @@ impl SegmentedChangelogTailer {
             let cache_handlers = CacheHandlers::prod(fb, pool);
             idmap_factory = idmap_factory.with_cache_handlers(cache_handlers);
         }
-        let seed_heads = vec![bookmark_name.into()];
         Self {
             repo_id,
             changeset_fetcher,

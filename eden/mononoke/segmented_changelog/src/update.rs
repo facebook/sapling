@@ -10,18 +10,20 @@ use std::sync::Arc;
 use anyhow::{format_err, Context, Error, Result};
 use futures::future::{FutureExt, TryFutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
+use slog::info;
 
 use bookmarks::{
     BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks, Freshness,
 };
 use context::CoreContext;
+use metaconfig_types::SegmentedChangelogConfig;
 use mononoke_types::ChangesetId;
 
 use crate::dag::{NameDagBuilder, VertexListWithOptions, VertexName, VertexOptions};
 use crate::idmap::{vertex_name_from_cs_id, IdMap, IdMapWrapper};
 use crate::{Group, InProcessIdDag};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SeedHead {
     Changeset(ChangesetId),
     Bookmark(BookmarkName),
@@ -49,6 +51,12 @@ impl From<ChangesetId> for SeedHead {
     }
 }
 
+impl From<&ChangesetId> for SeedHead {
+    fn from(c: &ChangesetId) -> Self {
+        Self::Changeset(*c)
+    }
+}
+
 impl SeedHead {
     pub async fn into_vertex_list(
         &self,
@@ -71,6 +79,31 @@ impl std::fmt::Display for SeedHead {
             Self::AllBookmarks => write!(f, "All Bookmarks"),
         }
     }
+}
+
+pub fn seedheads_from_config(
+    ctx: &CoreContext,
+    config: &SegmentedChangelogConfig,
+) -> Result<Vec<SeedHead>> {
+    let head = config
+        .master_bookmark
+        .as_ref()
+        .map(BookmarkName::new)
+        .transpose()?
+        .into();
+    let bonsai_changesets_to_include = &config.bonsai_changesets_to_include;
+
+    info!(ctx.logger(), "using '{}' for head", head);
+    if bonsai_changesets_to_include.len() > 0 {
+        info!(
+            ctx.logger(),
+            "also adding {:?} to segmented changelog", bonsai_changesets_to_include
+        );
+    }
+
+    let mut heads = vec![head];
+    heads.extend(bonsai_changesets_to_include.into_iter().map(SeedHead::from));
+    Ok(heads)
 }
 
 pub async fn vertexlist_from_seedheads(

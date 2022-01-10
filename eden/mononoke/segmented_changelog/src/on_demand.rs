@@ -22,7 +22,7 @@ use futures_ext::future::{spawn_controlled, ControlledHandle, FbTryFutureExt, Tr
 use futures_stats::TimedFutureExt;
 use stats::prelude::*;
 
-use bookmarks::{BookmarkName, Bookmarks};
+use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -105,11 +105,10 @@ impl OnDemandUpdateSegmentedChangelog {
         idmap: Arc<dyn IdMap>,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         bookmarks: Arc<dyn Bookmarks>,
-        master_bookmark: Option<BookmarkName>,
+        seed_heads: Vec<SeedHead>,
     ) -> Result<Self> {
         let namedag = server_namedag(ctx, iddag, idmap)?;
         let namedag = Arc::new(RwLock::new(namedag));
-        let seed_heads = vec![master_bookmark.into()];
         Ok(Self {
             repo_id,
             namedag,

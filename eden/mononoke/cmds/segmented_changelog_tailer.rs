@@ -19,7 +19,7 @@ use futures::stream;
 use slog::{error, info};
 
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
-use bookmarks::{BookmarkName, Bookmarks};
+use bookmarks::Bookmarks;
 use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::PrefetchedChangesetsFetcher;
 use changesets::{deserialize_cs_entries, ChangesetsArc};
@@ -31,7 +31,9 @@ use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
 use phases::PhasesArc;
-use segmented_changelog::{SegmentedChangelogSqlConnections, SegmentedChangelogTailer};
+use segmented_changelog::{
+    seedheads_from_config, SegmentedChangelogSqlConnections, SegmentedChangelogTailer,
+};
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
@@ -121,23 +123,12 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             .ok_or_else(|| format_err!("unknown repository: {}", reponame))?;
         let repo_id = config.repoid;
 
-        let bookmarks_name = config
-            .segmented_changelog_config
-            .master_bookmark
-            .as_ref()
-            .map(|name| {
-                BookmarkName::new(name).with_context(|| {
-                    format!(
-                        "failed to interpret {} as bookmark for repo {}",
-                        name, repo_id
-                    )
-                })
-            })
-            .transpose()?;
         info!(
             ctx.logger(),
             "repo name '{}' translates to id {}", reponame, repo_id
         );
+
+        let seed_heads = seedheads_from_config(&ctx, &config.segmented_changelog_config)?;
 
         let storage_config = config.storage_config.clone();
         let db_address = match &storage_config.metadata {
@@ -206,7 +197,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             bulk_fetcher,
             Arc::new(blobrepo.get_blobstore()),
             Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-            bookmarks_name,
+            seed_heads,
             None,
         );
 
