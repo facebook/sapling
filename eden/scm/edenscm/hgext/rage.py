@@ -277,8 +277,11 @@ def checkproxyagentstate(ui):
 
     logs = "OS not supported"
     if pycompat.iswindows:
+        username = util.getuser()
         logs = shcmd(
-            "type C:\\Users\\%USERNAME%\\AppData\\Local\\facebook\\fb-x2pagentd\\x2pagentd.log"
+            "type C:\\Users\\{}\\AppData\\Local\\facebook\\fb-x2pagentd\\fb-x2pagentd.log".format(
+                username
+            )
         )
     elif pycompat.islinux:
         logs = shcmd("journalctl --user-unit x2pagentd.service | tail -n 100")
