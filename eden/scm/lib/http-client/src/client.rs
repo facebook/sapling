@@ -133,7 +133,14 @@ impl HttpClient {
             driver.add(handle)?;
         }
 
+        let mut tls_error = false;
         let stats = driver.perform(|res| {
+            if let Err((_, e)) = &res {
+                let e: HttpClientError = e.clone().into();
+                if let HttpClientError::Tls(_) = e {
+                    tls_error = true;
+                }
+            }
             let res = res
                 .map_err(|(mut easy, e)| {
                     let ctx = easy.get_mut().request_context_mut();
@@ -153,6 +160,14 @@ impl HttpClient {
         })?;
 
         self.event_listeners.trigger_stats(&stats);
+
+        drop(driver);
+
+        // Don't reuse the connection if we've hit auth issues. We've seen cases where we reuse
+        // expired credentials.
+        if tls_error {
+            multi.discard();
+        }
 
         Ok(stats)
     }
@@ -256,12 +271,31 @@ impl HttpClient {
             driver.add(handle)?;
         }
 
-        driver
-            .perform(|res| self.report_result_and_drop_receiver(res))
+        let mut tls_error = false;
+        let result = driver
+            .perform(|res| {
+                if let Err((_, e)) = &res {
+                    let e: HttpClientError = e.clone().into();
+                    if let HttpClientError::Tls(_) = e {
+                        tls_error = true;
+                    }
+                }
+                self.report_result_and_drop_receiver(res)
+            })
             .map(|stats| {
                 self.event_listeners.trigger_stats(&stats);
                 stats
-            })
+            });
+
+        drop(driver);
+
+        // Don't reuse the connection if we've hit auth issues. We've seen cases where we reuse
+        // expired credentials.
+        if tls_error {
+            multi.discard();
+        }
+
+        result
     }
 
     /// Obtain the `HttpClientEventListeners` to register callbacks.

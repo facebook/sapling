@@ -59,6 +59,7 @@ impl Pool {
 pub(crate) struct PoolMulti {
     pool: Arc<PoolInner>,
     entry: Option<PoolEntry>,
+    valid: bool,
 }
 
 impl PoolMulti {
@@ -69,11 +70,18 @@ impl PoolMulti {
     pub(crate) fn get_mut(&mut self) -> &mut Multi {
         &mut self.entry.as_mut().unwrap().multi
     }
+
+    /// Release the `PoolMulti` without returning it to the pool.
+    pub(crate) fn discard(mut self) {
+        self.valid = false;
+    }
 }
 
 impl Drop for PoolMulti {
     fn drop(&mut self) {
-        self.pool.push(self.entry.take().unwrap());
+        if self.valid {
+            self.pool.push(self.entry.take().unwrap());
+        }
     }
 }
 
@@ -96,6 +104,7 @@ impl PoolInner {
         PoolMulti {
             pool: self.clone(),
             entry: Some(entry),
+            valid: true,
         }
     }
 
