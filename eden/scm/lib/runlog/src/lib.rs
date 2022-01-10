@@ -77,7 +77,7 @@ impl Logger {
 
     pub fn update_progress(&self, progress: Vec<Progress>) -> Result<()> {
         let mut entry = self.entry.lock();
-        if entry.exit_code.is_none() && entry.set_progress(progress) {
+        if entry.exit_code.is_none() && entry.update_status(progress) {
             self.write(&entry)?;
         }
 
@@ -121,6 +121,8 @@ pub struct Entry {
     pub id: String,
     pub command: Vec<String>,
     pub pid: u64,
+    pub download_bytes: usize,
+    pub upload_bytes: usize,
     pub start_time: chrono::DateTime<chrono::Utc>,
     pub end_time: Option<chrono::DateTime<chrono::Utc>>,
     pub exit_code: Option<i32>,
@@ -145,6 +147,8 @@ impl Entry {
                 .collect(),
             command,
             pid: unsafe { libc::getpid() } as u64,
+            download_bytes: 0,
+            upload_bytes: 0,
             start_time: chrono::Utc::now(),
             end_time: None,
             exit_code: None,
@@ -152,14 +156,23 @@ impl Entry {
         }
     }
 
-    /// Return whether passed progress differs from current progress.
-    pub fn set_progress(&mut self, progress: Vec<Progress>) -> bool {
-        if self.progress == progress {
-            false
-        } else {
-            self.progress = progress;
-            true
+    /// Return whether anything changed in the entry
+    pub fn update_status(&mut self, progress: Vec<Progress>) -> bool {
+        let (download_bytes, upload_bytes, _) = hg_http::current_progress();
+        macro_rules! try_to_update {
+            ($original_stat:expr,$new_stat:expr) => {{
+                if $original_stat == $new_stat {
+                    false
+                } else {
+                    $original_stat = $new_stat;
+                    true
+                }
+            }};
         }
+        let progress_updated = try_to_update!(self.progress, progress);
+        let downloaded_bytes_updated = try_to_update!(self.download_bytes, download_bytes);
+        let upload_bytes_updated = try_to_update!(self.upload_bytes, upload_bytes);
+        progress_updated || downloaded_bytes_updated || upload_bytes_updated
     }
 }
 

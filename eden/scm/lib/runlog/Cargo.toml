@@ -9,6 +9,7 @@ anyhow = "1.0.51"
 chrono = { version = "0.4", features = ["clock", "serde", "std"], default-features = false }
 clidispatch = { path = "../clidispatch" }
 fs2 = "0.4"
+hg-http = { path = "../hg-http" }
 libc = "0.2.98"
 parking_lot = { version = "0.11.2", features = ["send_guard"] }
 progress-model = { path = "../progress/model" }

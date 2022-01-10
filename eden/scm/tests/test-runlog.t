@@ -26,6 +26,8 @@ Check basic command start/end.
       "123"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": null,
     "exit_code": null,
@@ -41,6 +43,8 @@ Check basic command start/end.
       "123"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": ".*", (re)
     "exit_code": 123,
@@ -60,6 +64,8 @@ Make sure runlog works with progress disabled.
       "2"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": null,
     "exit_code": null,
@@ -76,6 +82,8 @@ Make sure runlog works with progress disabled.
       "2"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": null,
     "exit_code": null,
@@ -99,6 +107,8 @@ Make sure runlog works with progress disabled.
       "2"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": null,
     "exit_code": null,
@@ -122,6 +132,8 @@ Make sure runlog works with progress disabled.
       "2"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": ".*", (re)
     "exit_code": 0,
@@ -142,6 +154,8 @@ Make sure runlog works with rust renderer.
       "2"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": null,
     "exit_code": null,
@@ -158,6 +172,8 @@ Make sure runlog works with rust renderer.
       "2"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": null,
     "exit_code": null,
@@ -181,6 +197,8 @@ Make sure runlog works with rust renderer.
       "2"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": null,
     "exit_code": null,
@@ -204,6 +222,8 @@ Make sure runlog works with rust renderer.
       "2"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": ".*", (re)
     "exit_code": 0,
@@ -224,6 +244,8 @@ Make sure progress updates when runlog.progress_refresh set.
       "1"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": null,
     "exit_code": null,
@@ -240,6 +262,8 @@ Make sure progress updates when runlog.progress_refresh set.
       "1"
     ],
     "pid": \d+, (re)
+    "download_bytes": 0,
+    "upload_bytes": 0,
     "start_time": ".*", (re)
     "end_time": null,
     "exit_code": null,
@@ -284,6 +308,8 @@ Show completed entries (i.e. exited "root" entry)
           "root",
       ],
       pid: \d+, (re)
+      download_bytes: 0,
+      upload_bytes: 0,
       start_time: .*, (re)
       end_time: Some(
           .*, (re)
@@ -302,6 +328,8 @@ Show only running commands (i.e. "debugrunlog" command itself)
           "debugrunlog",
       ],
       pid: \d+, (re)
+      download_bytes: 0,
+      upload_bytes: 0,
       start_time: .*, (re)
       end_time: None,
       exit_code: None,
