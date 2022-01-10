@@ -399,6 +399,11 @@ def getparser():
         "-r", "--retest", action="store_true", help="retest failed tests"
     )
     selection.add_argument(
+        "--retry",
+        type=int,
+        help="number of attempts to retry failed tests",
+    )
+    selection.add_argument(
         "--test-list", action="append", help="read tests to run from the specified file"
     )
     selection.add_argument(
@@ -3635,47 +3640,61 @@ class TestRunner(object):
             kws = self.options.keywords
 
             vlog("# Running TestSuite with %d jobs" % self.options.jobs)
-            suite = TestSuite(
-                self._testdir,
-                jobs=self.options.jobs,
-                whitelist=self.options.whitelisted,
-                blacklist=self.options.blacklist,
-                retest=self.options.retest,
-                keywords=kws,
-                loop=self.options.loop,
-                runs_per_test=self.options.runs_per_test,
-                showchannels=self.options.showchannels,
-                tests=tests,
-                loadtest=_reloadtest,
-            )
-            verbosity = 1
-            if self.options.verbose:
-                verbosity = 2
+            retry = self.options.retry or 0
+            attempt = 0
+            retest = self.options.retest
+            while True:
+                suite = TestSuite(
+                    self._testdir,
+                    jobs=self.options.jobs,
+                    whitelist=self.options.whitelisted,
+                    blacklist=self.options.blacklist,
+                    retest=retest,
+                    keywords=kws,
+                    loop=self.options.loop,
+                    runs_per_test=self.options.runs_per_test,
+                    showchannels=self.options.showchannels,
+                    tests=tests,
+                    loadtest=_reloadtest,
+                )
+                verbosity = 1
+                if self.options.verbose:
+                    verbosity = 2
 
-            if self.options.testpilot:
-                runner = TestpilotTestRunner(self)
-            else:
-                runner = TextTestRunner(self, verbosity=verbosity)
-
-            if self.options.list_tests:
-                result = runner.listtests(suite)
-            else:
-                if self._installdir:
-                    self._installhg()
-                    self._checkhglib("Testing")
+                if self.options.testpilot:
+                    runner = TestpilotTestRunner(self)
                 else:
-                    self._usecorrectpython()
+                    runner = TextTestRunner(self, verbosity=verbosity)
 
-                self._usecorrecthg()
+                if self.options.list_tests:
+                    result = runner.listtests(suite)
+                else:
+                    if self._installdir:
+                        self._installhg()
+                        self._checkhglib("Testing")
+                    else:
+                        self._usecorrectpython()
 
-                result = runner.run(suite)
-                if tests and result.testsSkipped == len(tests):
-                    allskipped = True
-                if tests and result.errors:
-                    errored = True
+                    self._usecorrecthg()
 
-            if result.failures:
-                failed = True
+                    result = runner.run(suite)
+                    if tests and result.testsSkipped == len(tests):
+                        allskipped = True
+                    if tests and result.errors:
+                        errored = True
+
+                if result.failures:
+                    if attempt < retry:
+                        attempt += 1
+                        vlog(
+                            "# Retrying failed tests attempt %d of %d"
+                            % (attempt, retry)
+                        )
+                        retest = True
+                        continue
+                    failed = True
+
+                break
 
             if self.options.anycoverage:
                 self._outputcoverage()

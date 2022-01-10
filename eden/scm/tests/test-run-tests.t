@@ -251,6 +251,75 @@ basic failing test
   python hash seed: * (glob)
   [1]
 
+test --retry
+
+  $ cat > test-failure-short.t << EOF
+  >   $ false
+  > EOF
+  $ rt --retry 3 test-failure-short.t test-success.t
+  .
+  --- test-failure-short.t
+  +++ test-failure-short.t.err
+  @@ -1 +1,2 @@
+     $ false
+  +  [1]
+  
+  ERROR: test-failure-short.t output changed
+  !
+  ----------------------------------------------------------------------
+  Failed 1 tests (output changed):
+    test-failure-short.t
+  
+  # Ran 2 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+  
+  --- test-failure-short.t
+  +++ test-failure-short.t.err
+  @@ -1 +1,2 @@
+     $ false
+  +  [1]
+  
+  ERROR: test-failure-short.t output changed
+  !
+  ----------------------------------------------------------------------
+  Failed 1 tests (output changed):
+    test-failure-short.t
+  
+  # Ran 2 tests, 1 skipped, 1 failed.
+  python hash seed: * (glob)
+  
+  --- test-failure-short.t
+  +++ test-failure-short.t.err
+  @@ -1 +1,2 @@
+     $ false
+  +  [1]
+  
+  ERROR: test-failure-short.t output changed
+  !
+  ----------------------------------------------------------------------
+  Failed 1 tests (output changed):
+    test-failure-short.t
+  
+  # Ran 2 tests, 1 skipped, 1 failed.
+  python hash seed: * (glob)
+  
+  --- test-failure-short.t
+  +++ test-failure-short.t.err
+  @@ -1 +1,2 @@
+     $ false
+  +  [1]
+  
+  ERROR: test-failure-short.t output changed
+  !
+  ----------------------------------------------------------------------
+  Failed 1 tests (output changed):
+    test-failure-short.t
+  
+  # Ran 2 tests, 1 skipped, 1 failed.
+  python hash seed: * (glob)
+  [1]
+  $ rm test-failure-short.t
+
 test --outputdir
   $ mkdir output
   $ rt --outputdir output
