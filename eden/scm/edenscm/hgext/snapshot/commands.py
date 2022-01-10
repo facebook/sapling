@@ -6,7 +6,7 @@
 from edenscm.mercurial import error, registrar
 from edenscm.mercurial.i18n import _
 
-from . import createremote, update, show, latest
+from . import createremote, update, show, latest, isworkingcopy
 
 cmdtable = {}
 command = registrar.command(cmdtable)
@@ -83,6 +83,24 @@ def updatecmd(*args, **kwargs):
 def showcmd(*args, **kwargs):
     """gather information about the snapshot"""
     show.show(*args, **kwargs)
+
+
+@subcmd(
+    "isworkingcopy",
+    [
+        (
+            "",
+            "max-untracked-size",
+            "",
+            _("filter out any untracked files larger than this size, in megabytes"),
+            _("MAX_SIZE"),
+        ),
+    ],
+    _("ID"),
+)
+def isworkingcopycmd(*args, **kwargs):
+    """test if a given snapshot is the working copy"""
+    isworkingcopy.cmd(*args, **kwargs)
 
 
 @subcmd(

@@ -12,9 +12,8 @@ from .metalog import fetchlatestsnapshot
 from .update import fetchsnapshot
 
 
-def _isworkingcopy(ui, repo, csid, maxuntrackedsize):
+def _isworkingcopy(ui, repo, snapshot, maxuntrackedsize):
     """Fails if working copy is not the provided snapshot"""
-    snapshot = fetchsnapshot(repo, csid)
 
     if (
         repo.dirstate.p1() != snapshot["hg_parents"]
@@ -87,9 +86,9 @@ def latest(ui, repo, **opts):
         if not ui.plain():
             ui.status(_("no snapshot found\n"))
     else:
-        csid = csid.hex()
         if isworkingcopy:
-            iswc, reason = _isworkingcopy(ui, repo, csid, maxuntrackedsize)
+            snapshot = fetchsnapshot(repo, csid)
+            iswc, reason = _isworkingcopy(ui, repo, snapshot, maxuntrackedsize)
             if iswc:
                 if not ui.plain():
                     ui.status(_("latest snapshot is the working copy\n"))
@@ -98,6 +97,7 @@ def latest(ui, repo, **opts):
                     _("latest snapshot is not the working copy: {}").format(reason)
                 )
         else:
+            csid = csid.hex()
             if ui.plain():
                 ui.status(f"{csid}\n")
             else:
