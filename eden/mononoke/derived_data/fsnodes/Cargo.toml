@@ -33,8 +33,6 @@ sha2 = "0.8"
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 thiserror = "1.0.29"
-tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
-tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
@@ -44,12 +42,12 @@ derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fbinit-tokio = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "main" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
-maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
 revset = { version = "0.1.0", path = "../../revset" }
 test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
+tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
