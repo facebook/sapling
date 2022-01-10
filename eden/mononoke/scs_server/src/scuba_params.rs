@@ -150,6 +150,12 @@ impl AddScubaParams for thrift::CommitCompareParams {
         if let Some(paths) = &self.paths {
             scuba.add("param_paths", paths.iter().collect::<ScubaValue>());
         }
+        if let Some(ordered_params) = &self.ordered_params {
+            if let Some(after_path) = &ordered_params.after_path {
+                scuba.add("param_after", after_path.as_str());
+            }
+            scuba.add("param_limit", ordered_params.limit);
+        }
         scuba.add("param_skip_copies_renames", self.skip_copies_renames as i32);
         self.identity_schemes.add_scuba_params(scuba);
     }
