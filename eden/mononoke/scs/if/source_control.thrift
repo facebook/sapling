@@ -1270,6 +1270,10 @@ struct CommitCompareResponse {
   /// List of the dirs that are different between commits with their metadata
   /// Only populated if TREES was specified.
   3: list<CommitCompareTree> diff_trees;
+  /// Only set if commit compare was ordered, and the limit was reached.
+  /// This is the last path that was produced, suitable for passing into
+  /// the `after_path` parameter of a subsequent ordered request.
+  4: optional Path last_path;
 }
 
 struct CommitFileDiffsResponseElement {

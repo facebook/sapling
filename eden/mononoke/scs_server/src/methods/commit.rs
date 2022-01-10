@@ -35,6 +35,33 @@ enum CommitComparePath {
     Tree(thrift::CommitCompareTree),
 }
 
+impl CommitComparePath {
+    /// The main path that this comparison applies to.
+    fn path(&self) -> Result<&str, errors::ServiceError> {
+        // Use the base path where available.  If it is not available, then
+        // this is a deletion and the other path should be used.
+        match self {
+            CommitComparePath::File(file) => file
+                .base_file
+                .as_ref()
+                .or_else(|| file.other_file.as_ref())
+                .map(|file| file.path.as_str())
+                .ok_or_else(|| {
+                    errors::internal_error("programming error, file entry has no file").into()
+                }),
+
+            CommitComparePath::Tree(tree) => tree
+                .base_tree
+                .as_ref()
+                .or_else(|| tree.other_tree.as_ref())
+                .map(|tree| tree.path.as_str())
+                .ok_or_else(|| {
+                    errors::internal_error("programming error, tree entry has no tree").into()
+                }),
+        }
+    }
+}
+
 // helper used by commit_compare
 async fn into_compare_path(
     path_diff: ChangesetPathDiffContext,
@@ -403,6 +430,7 @@ impl SourceControlServiceImpl {
             }
         };
 
+        let mut last_path = None;
         let mut diff_items: BTreeSet<_> = params
             .compare_items
             .into_iter()
@@ -497,16 +525,21 @@ impl SourceControlServiceImpl {
                             .await?
                     }
                 };
-                diff.into_iter()
+                let diff_items = diff
+                    .into_iter()
                     .map(into_compare_path)
                     .collect::<FuturesOrdered<_>>()
                     .try_collect::<Vec<_>>()
-                    .await?
-                    .into_iter()
-                    .partition_map(|diff| match diff {
-                        CommitComparePath::File(entry) => Either::Left(entry),
-                        CommitComparePath::Tree(entry) => Either::Right(entry),
-                    })
+                    .await?;
+                if diff_items.len() >= limit {
+                    if let Some(item) = diff_items.last() {
+                        last_path = Some(item.path()?.to_string());
+                    }
+                }
+                diff_items.into_iter().partition_map(|diff| match diff {
+                    CommitComparePath::File(entry) => Either::Left(entry),
+                    CommitComparePath::Tree(entry) => Either::Right(entry),
+                })
             }
         };
 
@@ -520,6 +553,7 @@ impl SourceControlServiceImpl {
             diff_files,
             diff_trees,
             other_commit_ids,
+            last_path,
             ..Default::default()
         })
     }
