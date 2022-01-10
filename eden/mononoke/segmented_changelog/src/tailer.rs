@@ -31,7 +31,7 @@ use crate::idmap::{cs_id_from_vertex_name, CacheHandlers, IdMapFactory};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::parents::FetchParents;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
-use crate::update::{bookmark_with_options, server_namedag};
+use crate::update::{server_namedag, vertexlist_from_seedheads, SeedHead};
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::InProcessIdDag;
 use crate::SegmentedChangelogSqlConnections;
@@ -57,7 +57,7 @@ pub struct SegmentedChangelogTailer {
     changeset_fetcher: Arc<PrefetchedChangesetsFetcher>,
     bulk_fetch: Arc<PublicChangesetBulkFetch>,
     bookmarks: Arc<dyn Bookmarks>,
-    bookmark_name: Option<BookmarkName>,
+    seed_heads: Vec<SeedHead>,
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: IdMapFactory,
@@ -82,12 +82,13 @@ impl SegmentedChangelogTailer {
             let cache_handlers = CacheHandlers::prod(fb, pool);
             idmap_factory = idmap_factory.with_cache_handlers(cache_handlers);
         }
+        let seed_heads = vec![bookmark_name.into()];
         Self {
             repo_id,
             changeset_fetcher,
             bulk_fetch,
             bookmarks,
-            bookmark_name,
+            seed_heads,
             sc_version_store,
             iddag_save_store,
             idmap_factory,
@@ -172,8 +173,7 @@ impl SegmentedChangelogTailer {
         let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
 
         let heads =
-            bookmark_with_options(&ctx, self.bookmark_name.as_ref(), self.bookmarks.as_ref())
-                .await?;
+            vertexlist_from_seedheads(&ctx, &self.seed_heads, self.bookmarks.as_ref()).await?;
 
         let head_commits: Vec<_> = namedag
             .heads(namedag.master_group().await?)

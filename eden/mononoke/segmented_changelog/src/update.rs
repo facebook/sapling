@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Result};
+use anyhow::{format_err, Context, Error, Result};
 use futures::future::{FutureExt, TryFutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
 
@@ -20,6 +20,74 @@ use mononoke_types::ChangesetId;
 use crate::dag::{NameDagBuilder, VertexListWithOptions, VertexName, VertexOptions};
 use crate::idmap::{vertex_name_from_cs_id, IdMap, IdMapWrapper};
 use crate::{Group, InProcessIdDag};
+
+#[derive(Debug)]
+pub enum SeedHead {
+    Changeset(ChangesetId),
+    Bookmark(BookmarkName),
+    AllBookmarks,
+}
+
+impl From<Option<BookmarkName>> for SeedHead {
+    fn from(f: Option<BookmarkName>) -> Self {
+        match f {
+            None => Self::AllBookmarks,
+            Some(n) => Self::Bookmark(n),
+        }
+    }
+}
+
+impl From<BookmarkName> for SeedHead {
+    fn from(n: BookmarkName) -> Self {
+        Self::Bookmark(n)
+    }
+}
+
+impl From<ChangesetId> for SeedHead {
+    fn from(c: ChangesetId) -> Self {
+        Self::Changeset(c)
+    }
+}
+
+impl SeedHead {
+    pub async fn into_vertex_list(
+        &self,
+        ctx: &CoreContext,
+        bookmarks: &dyn Bookmarks,
+    ) -> Result<VertexListWithOptions> {
+        match self {
+            Self::Changeset(id) => Ok(VertexListWithOptions::from(vec![head_with_options(id)])),
+            Self::AllBookmarks => bookmark_with_options(ctx, None, bookmarks).await,
+            Self::Bookmark(name) => bookmark_with_options(ctx, Some(&name), bookmarks).await,
+        }
+    }
+}
+
+impl std::fmt::Display for SeedHead {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Changeset(id) => write!(f, "Bonsai CS {}", id),
+            Self::Bookmark(name) => write!(f, "Bookmark {}", name),
+            Self::AllBookmarks => write!(f, "All Bookmarks"),
+        }
+    }
+}
+
+pub async fn vertexlist_from_seedheads(
+    ctx: &CoreContext,
+    heads: &[SeedHead],
+    bookmarks: &dyn Bookmarks,
+) -> Result<VertexListWithOptions> {
+    let heads_with_options = stream::iter(heads.into_iter().map(Result::Ok))
+        .try_fold(VertexListWithOptions::default(), {
+            move |acc, head| async move {
+                Ok::<_, Error>(acc.chain(head.into_vertex_list(ctx, bookmarks).await?))
+            }
+        })
+        .await?;
+
+    Ok(heads_with_options)
+}
 
 pub type ServerNameDag = crate::dag::namedag::AbstractNameDag<InProcessIdDag, IdMapWrapper, (), ()>;
 
@@ -37,14 +105,14 @@ pub fn server_namedag(
         .map_err(anyhow::Error::from)
 }
 
-pub fn head_with_options(head: ChangesetId) -> (VertexName, VertexOptions) {
+fn head_with_options(head: &ChangesetId) -> (VertexName, VertexOptions) {
     let mut options = VertexOptions::default();
     options.reserve_size = 1 << 26;
     options.highest_group = Group::MASTER;
-    (vertex_name_from_cs_id(&head), options)
+    (vertex_name_from_cs_id(head), options)
 }
 
-pub async fn bookmark_with_options(
+async fn bookmark_with_options(
     ctx: &CoreContext,
     bookmark: Option<&BookmarkName>,
     bookmarks: &dyn Bookmarks,
@@ -88,7 +156,7 @@ pub async fn bookmark_with_options(
     };
     Ok(VertexListWithOptions::from(
         bm_stream
-            .map_ok(|cs| head_with_options(cs))
+            .map_ok(|cs| head_with_options(&cs))
             .try_collect::<Vec<_>>()
             .await?,
     ))

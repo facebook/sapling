@@ -37,11 +37,11 @@ use crate::idmap::{CacheHandlers, ConcurrentMemIdMap, IdMap, IdMapFactory, SqlId
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
-use crate::seeder::{SeedHead, SegmentedChangelogSeeder};
+use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{InProcessIdDag, Location, SegmentedChangelog};
+use crate::{InProcessIdDag, Location, SeedHead, SegmentedChangelog};
 
 #[async_trait::async_trait]
 trait SegmentedChangelogExt {

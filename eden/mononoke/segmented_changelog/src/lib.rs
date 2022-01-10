@@ -47,8 +47,9 @@ pub use segmented_changelog_types::{
 
 pub use crate::builder::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
 pub use crate::copy::copy_segmented_changelog;
-pub use crate::seeder::{SeedHead, SegmentedChangelogSeeder};
+pub use crate::seeder::SegmentedChangelogSeeder;
 pub use crate::tailer::SegmentedChangelogTailer;
+pub use crate::update::SeedHead;
 
 // public for benchmarking
 pub use crate::idmap::{ConcurrentMemIdMap, IdMap};

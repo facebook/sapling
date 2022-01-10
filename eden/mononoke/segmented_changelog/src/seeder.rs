@@ -7,80 +7,31 @@
 
 use std::sync::Arc;
 
-use anyhow::{Context, Error, Result};
-use futures::stream;
-use futures::TryStreamExt;
+use anyhow::{Context, Result};
 use slog::info;
 
 use sql_ext::replication::ReplicaLagMonitor;
 use stats::prelude::*;
 
 use blobstore::Blobstore;
-use bookmarks::{BookmarkName, Bookmarks};
+use bookmarks::Bookmarks;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::RepositoryId;
 
 use crate::dag::ops::DagAddHeads;
-use crate::dag::VertexListWithOptions;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::IdMapFactory;
 use crate::idmap::SqlIdMapVersionStore;
 use crate::parents::FetchParents;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
-use crate::update::{bookmark_with_options, head_with_options, server_namedag};
+use crate::update::{server_namedag, vertexlist_from_seedheads, SeedHead};
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{InProcessIdDag, SegmentedChangelogSqlConnections};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.seeder";
     build_all_graph: timeseries(Sum),
-}
-
-#[derive(Debug)]
-pub enum SeedHead {
-    Changeset(ChangesetId),
-    Bookmark(BookmarkName),
-    AllBookmarks,
-}
-
-impl From<Option<BookmarkName>> for SeedHead {
-    fn from(f: Option<BookmarkName>) -> Self {
-        match f {
-            None => Self::AllBookmarks,
-            Some(n) => Self::Bookmark(n),
-        }
-    }
-}
-
-impl From<ChangesetId> for SeedHead {
-    fn from(c: ChangesetId) -> Self {
-        Self::Changeset(c)
-    }
-}
-
-impl SeedHead {
-    pub async fn into_vertex_list(
-        self,
-        ctx: &CoreContext,
-        bookmarks: &dyn Bookmarks,
-    ) -> Result<VertexListWithOptions> {
-        match self {
-            Self::Changeset(id) => Ok(VertexListWithOptions::from(vec![head_with_options(id)])),
-            Self::AllBookmarks => bookmark_with_options(ctx, None, bookmarks).await,
-            Self::Bookmark(name) => bookmark_with_options(ctx, Some(&name), bookmarks).await,
-        }
-    }
-}
-
-impl std::fmt::Display for SeedHead {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Changeset(id) => write!(f, "Bonsai CS {}", id),
-            Self::Bookmark(name) => write!(f, "Bookmark {}", name),
-            Self::AllBookmarks => write!(f, "All Bookmarks"),
-        }
-    }
 }
 
 pub struct SegmentedChangelogSeeder {
@@ -149,16 +100,8 @@ impl SegmentedChangelogSeeder {
         let parents_fetcher = FetchParents::new(ctx.clone(), self.changeset_fetcher.clone());
         // Create a segmented changelog by updating the empty set to a full set
         let mut namedag = server_namedag(ctx.clone(), iddag, idmap)?;
-        let heads_with_options = stream::iter(heads.into_iter().map(Result::Ok))
-            .try_fold(VertexListWithOptions::default(), {
-                let ctx = &ctx;
-                let bookmarks = self.bookmarks.as_ref();
-                move |acc, head| async move {
-                    Ok::<_, Error>(acc.chain(head.into_vertex_list(ctx, bookmarks).await?))
-                }
-            })
-            .await?;
-
+        let heads_with_options =
+            vertexlist_from_seedheads(&ctx, &heads, self.bookmarks.as_ref()).await?;
         namedag
             .add_heads(&parents_fetcher, &heads_with_options)
             .await?;

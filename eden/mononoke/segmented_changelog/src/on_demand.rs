@@ -32,7 +32,7 @@ use crate::dag::VertexListWithOptions;
 use crate::idmap::IdMap;
 use crate::parents::FetchParents;
 use crate::read_only::ReadOnlySegmentedChangelog;
-use crate::update::{bookmark_with_options, server_namedag, ServerNameDag};
+use crate::update::{server_namedag, vertexlist_from_seedheads, SeedHead, ServerNameDag};
 use crate::{
     segmented_changelog_delegate, CloneData, InProcessIdDag, Location, MismatchedHeadsError,
     SegmentedChangelog,
@@ -93,7 +93,7 @@ pub struct OnDemandUpdateSegmentedChangelog {
     namedag: Arc<RwLock<ServerNameDag>>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
-    master_bookmark: Option<BookmarkName>,
+    seed_heads: Vec<SeedHead>,
     ongoing_update: Arc<Mutex<Option<TryShared<BoxFuture<'static, Result<()>>>>>>,
 }
 
@@ -109,12 +109,13 @@ impl OnDemandUpdateSegmentedChangelog {
     ) -> Result<Self> {
         let namedag = server_namedag(ctx, iddag, idmap)?;
         let namedag = Arc::new(RwLock::new(namedag));
+        let seed_heads = vec![master_bookmark.into()];
         Ok(Self {
             repo_id,
             namedag,
             changeset_fetcher,
             bookmarks,
-            master_bookmark,
+            seed_heads,
             ongoing_update: Arc::new(Mutex::new(None)),
         })
     }
@@ -228,8 +229,7 @@ impl OnDemandUpdateSegmentedChangelog {
 
     async fn build_up_to_bookmark(&self, ctx: &CoreContext) -> Result<()> {
         let vertex_list =
-            bookmark_with_options(ctx, self.master_bookmark.as_ref(), self.bookmarks.as_ref())
-                .await?;
+            vertexlist_from_seedheads(ctx, &self.seed_heads, self.bookmarks.as_ref()).await?;
         self.build_up_to_vertex_list(&ctx, &vertex_list).await
     }
 
