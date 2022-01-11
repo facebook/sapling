@@ -9,6 +9,7 @@ use anyhow::Result;
 use edenapi_types::TreeEntry;
 use manifest_tree::TreeEntry as ManifestTreeEntry;
 use minibytes::Bytes;
+use storemodel::TreeFormat;
 use tracing::instrument;
 use types::HgId;
 use types::Key;
@@ -77,6 +78,11 @@ impl LazyTree {
 
     pub fn manifest_tree_entry(&mut self) -> Result<ManifestTreeEntry> {
         // TODO(meyer): Make manifest-tree crate use minibytes::Bytes
-        Ok(ManifestTreeEntry(self.hg_content()?.into_vec().into()))
+        // Currently revisionstore is only for hg format.
+        let format = TreeFormat::Hg;
+        Ok(ManifestTreeEntry(
+            self.hg_content()?.into_vec().into(),
+            format,
+        ))
     }
 }

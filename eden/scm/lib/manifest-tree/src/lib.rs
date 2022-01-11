@@ -527,7 +527,9 @@ impl TreeManifest {
                 // a list of entries to insert in the local store. For those cases we don't
                 // need to convert to Ephemeral instead only verify the hash.
                 let links = link.mut_ephemeral_links(self.store, &self.path)?;
-                let mut entry = store::EntryMut::new();
+                // finalize() is only used for hg format.
+                let format = TreeFormat::Hg;
+                let mut entry = store::EntryMut::new(format);
                 for (component, link) in links.iter_mut() {
                     self.path.push(component.as_path_component());
                     let child_parents = self.parent_trees_for_subdirectory(&active_parents)?;

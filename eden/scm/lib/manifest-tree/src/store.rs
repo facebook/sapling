@@ -44,7 +44,7 @@ impl InnerStore {
         )
         .in_scope(|| {
             let bytes = self.tree_store.get(path, hgid)?;
-            Ok(Entry(bytes))
+            Ok(Entry(bytes, self.tree_store.format()))
         })
     }
 
@@ -93,9 +93,9 @@ impl InnerStore {
 /// representation. For this serialization format it is important that they don't contain
 /// `\0` or `\n`.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Entry(pub Bytes);
+pub struct Entry(pub Bytes, pub TreeFormat);
 
-pub struct EntryMut(BytesMut);
+pub struct EntryMut(BytesMut, TreeFormat);
 
 /// The `Element` is a parsed element of a directory. Directory elements are either files either
 /// direcotries. The type of element is signaled by `Flag`.
@@ -117,7 +117,7 @@ impl Entry {
     /// Returns an iterator over the elements that the current `Entry` contains. This is the
     /// primary method of inspection for an `Entry`.
     pub fn elements<'a>(&'a self) -> Elements<'a> {
-        Elements::from_byte_slice(&self.0)
+        Elements::from_byte_slice(&self.0, self.1)
     }
 
     /// The primary builder of an Entry, from a list of `Element`.
@@ -138,7 +138,7 @@ impl Entry {
                 }
             }
         }
-        Entry(underlying.freeze())
+        Entry(underlying.freeze(), format)
     }
 
     // used in tests, finalize and subtree_diff
@@ -149,8 +149,8 @@ impl Entry {
 
 impl EntryMut {
     /// Constructs an empty `Entry`. It is not valid to save an empty `Entry`.
-    pub fn new() -> Self {
-        EntryMut(BytesMut::new())
+    pub fn new(format: TreeFormat) -> Self {
+        EntryMut(BytesMut::new(), format)
     }
 
     /// Adds an element to the list of elements represented by this `Entry`.
@@ -161,7 +161,7 @@ impl EntryMut {
     }
 
     pub fn freeze(self) -> Entry {
-        Entry(self.0.freeze())
+        Entry(self.0.freeze(), self.1)
     }
 }
 
@@ -179,16 +179,7 @@ pub struct Elements<'a> {
 
 impl<'a> Elements<'a> {
     /// Constructs `Elements` from raw byte slice.
-    pub(crate) fn from_byte_slice(byte_slice: &'a [u8]) -> Self {
-        // hg: first 20 bytes are a hex SHA1, no spaces
-        // git: mode + space. The space is the 6th or 7th byte.
-        let format = if byte_slice.get(b"40000".len()) == Some(&b' ')
-            || byte_slice.get(b"100644".len()) == Some(&b' ')
-        {
-            TreeFormat::Git
-        } else {
-            TreeFormat::Hg
-        };
+    pub(crate) fn from_byte_slice(byte_slice: &'a [u8], format: TreeFormat) -> Self {
         Elements {
             byte_slice,
             position: 0,
@@ -573,7 +564,7 @@ mod tests {
         // TREE=$(git cat-file -p HEAD | grep tree | sed 's/.* //')
         // git cat-file tree $TREE
         let data = b"40000 dir\x00\x8d\xc8w\xa9\x98\xd8\xc6\x1f\x90\x0e\x8bN\xe9\xb5\x01\xfa\n\x03\x93X100755 exe\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91100644 normal\x00\xe6\x9d\xe2\x9b\xb2\xd1\xd6CK\x8b)\xaewZ\xd8\xc2\xe4\x8cS\x91120000 symlink\x00Z\xe04cN\x8d8,\x86F\x06\x8b\x8bR8\x18\x15\xed\xab\xf0";
-        let entry = Entry(Bytes::copy_from_slice(data));
+        let entry = Entry(Bytes::copy_from_slice(data), TreeFormat::Git);
         let elements = entry.elements();
         let elements_str = elements
             .map(|e| format!("{:?}", e.unwrap()))

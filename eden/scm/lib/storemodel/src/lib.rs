@@ -78,7 +78,7 @@ pub trait TreeStore {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum TreeFormat {
     // NAME '\0' HEX_SHA1 MODE '\n'
     // MODE: 't' (tree), 'l' (symlink), 'x' (executable)
