@@ -67,7 +67,12 @@ pub fn maybe_status_fastpath(
 ) -> Result<u8> {
     let rt = tokio::runtime::Runtime::new()?;
 
-    rt.block_on(async { maybe_status_fastpath_internal(repo_root, cwd, print_config, io).await })
+    rt.block_on(maybe_status_fastpath_internal(
+        repo_root,
+        cwd,
+        print_config,
+        io,
+    ))
 }
 
 #[cfg(windows)]

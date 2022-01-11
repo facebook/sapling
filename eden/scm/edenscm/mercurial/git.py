@@ -16,7 +16,7 @@ GIT_REQUIREMENT = "git"
 
 
 def isgit(repo):
-    """Test if repo is backe by git"""
+    """Test if repo is backed by git"""
     return GIT_REQUIREMENT in repo.storerequirements
 
 

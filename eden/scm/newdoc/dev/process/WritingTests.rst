@@ -99,10 +99,10 @@ tests shorter. For example::
 
 Conditional logic
 """""""""""""""""
-Certain tests might require some features (ex. POSIX, case insenstive
-filesystem, or certain programs to be installed). Run ``tests/hghave --list``
-to get a list of features that can be tested. Example use in ``.t`` looks
-like::
+Certain tests might require some features (ex. POSIX, case insensitive
+filesystem, or certain programs to be installed). Run ``python tests/hghave
+--list`` to get a list of features that can be tested. Example use in ``.t``
+looks like::
 
   #require fsmonitor icasefs
   The test will be skipped if any of the requirement is not sastified.

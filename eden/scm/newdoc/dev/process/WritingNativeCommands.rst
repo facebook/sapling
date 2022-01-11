@@ -4,7 +4,7 @@ Writing Native Commands
 Quick Start
 -----------
 
-First, define flags. This is similarily magical as ``structopt``:
+First, define flags. This is similarly magical as ``structopt``:
 
 .. sourcecode:: rust
 
@@ -37,7 +37,7 @@ First, define flags. This is similarily magical as ``structopt``:
 Fields with ``#[arg]`` or ``#[args]`` attribute are optional. If they are
 missing, the command wouldn't accept positional arguments. There is another
 attribute - ``#[command_name]``. It provides the "arg0" and may be useful
-for cases where mutliple commands share a same implementation.
+for cases where multiple commands share a same implementation.
 
 Then, define the function body.
 
@@ -80,7 +80,7 @@ The Python flag definitions look like:
 
     ( short_name, long_name, default_value, description, display_value )
 
-The Rust ``Flag`` type implements convertion from Rust tuples that look like
+The Rust ``Flag`` type implements conversion from Rust tuples that look like
 the Python tuple:
 
 .. sourcecode:: rust
@@ -157,7 +157,7 @@ the name, doc, flags and the function body of a command.
 Command Handlers
 ----------------
 
-Command handlers are where actual command logic lives.  handlers have one of three
+Command handlers are where actual command logic lives.  Handlers have one of three
 specific function signatures that imply what type of commands they are, which is
 an implicit version of what Python does with ``inferrepo=True``.
 

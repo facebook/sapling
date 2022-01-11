@@ -92,7 +92,7 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // process (a forked chg server).
     //
     // Having "run_command" here will make it logged by the forked chg server,
-    // which is a bit more desiable. Since run_command is very close to process
+    // which is a bit more desirable. Since run_command is very close to process
     // start, it should reflect the duration of the command relatively
     // accurately, at least for non-chg cases.
     let span = log_start(args.clone(), now);

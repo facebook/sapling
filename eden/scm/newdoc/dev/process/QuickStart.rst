@@ -31,7 +31,7 @@ Directory Layout
 Coding Style
 ------------
 
-tl;dr: Mimit the style of the existing code.
+tl;dr: Mimic the style of the existing code.
 
 Python
 ~~~~~~

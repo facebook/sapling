@@ -122,7 +122,7 @@ repositories.
 
 When syncing draft commits between repositories, we can ensure that the mutation state
 is kept in sync by transmitting the mutation records associated with all visible draft
-commits and their predecessors to the other respository.  The destination repository
+commits and their predecessors to the other repository.  The destination repository
 can ignore all mutation records for which a mutation record already exists with the same
 successor, as mutation records should be unique per successor.
 

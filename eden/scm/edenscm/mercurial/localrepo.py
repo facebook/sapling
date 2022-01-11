@@ -378,13 +378,13 @@ class localrepository(object):
     # list of prefix for file which can be written without 'wlock'
     # Extensions should extend this list when needed
     _wlockfreeprefix = {
-        # We migh consider requiring 'wlock' for the next
+        # We might consider requiring 'wlock' for the next
         # two, but pretty much all the existing code assume
         # wlock is not needed so we keep them excluded for
         # now.
         "hgrc",
         "requires",
-        # XXX cache is a complicatged business someone
+        # XXX cache is a complicated business someone
         # should investigate this in depth at some point
         "cache/",
         # XXX shouldn't be dirstate covered by the wlock?
@@ -393,7 +393,7 @@ class localrepository(object):
         "checkoutidentifier",
         # XXX bisect was still a bit too messy at the time
         # this changeset was introduced. Someone should fix
-        # the remainig bit and drop this line
+        # the remaining bit and drop this line
         "bisect.state",
         # Race condition to this file is okay.
         "lastsqlsync",
