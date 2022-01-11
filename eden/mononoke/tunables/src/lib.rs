@@ -242,6 +242,9 @@ pub struct MononokeTunables {
     // Setting this will add "_rust" to verify_integrity executable path hence switching it to the
     // rust binary path
     use_verify_integrity_rust_client: AtomicBool,
+
+    // EdenAPI requests that take long than this get logged unsampled
+    edenapi_unsampled_duration_threshold_ms: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

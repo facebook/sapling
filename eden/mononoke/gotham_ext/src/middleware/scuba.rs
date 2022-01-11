@@ -248,6 +248,15 @@ fn log_stats<H: ScubaHandler>(state: &mut State, status_code: &StatusCode) -> Op
     let callbacks = state.try_borrow_mut::<PostResponseCallbacks>()?;
     callbacks.add(move |info| {
         if let Some(duration) = info.duration {
+            // If tunables say we should, log high values unsampled
+            if let Ok(threshold) = tunables::tunables()
+                .get_edenapi_unsampled_duration_threshold_ms()
+                .try_into()
+            {
+                if duration.as_millis_unchecked() > threshold {
+                    scuba.unsampled();
+                }
+            }
             scuba.add(HttpScubaKey::DurationMs, duration.as_millis_unchecked());
         }
 
