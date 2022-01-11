@@ -647,7 +647,8 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
             This is useful for initial backfill to mark commits that are identical between \
             repositories. \
             Input file can contain any commit identifier (e.g. bookmark name) \
-            but the safest approach is to use commit hashes (bonsai or hg).
+            but the safest approach is to use commit hashes (bonsai or hg). \
+            'source-repo' argument represents the small repo while 'target-repo' is the large repo.
         ",
         )
         .arg(
