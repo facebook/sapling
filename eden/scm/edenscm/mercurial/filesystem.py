@@ -16,7 +16,7 @@ import stat
 from typing import Callable, Iterable, Optional, Tuple
 
 from bindings import workingcopy
-from edenscm.mercurial import match as matchmod, registrar
+from edenscm.mercurial import match as matchmod
 
 from . import encoding, error, pathutil, util, vfs as vfsmod
 from .i18n import _
@@ -24,12 +24,6 @@ from .node import hex
 
 
 _rangemask = 0x7FFFFFFF
-
-configtable = {}
-configitem = registrar.configitem(configtable)
-configitem("workingcopy", "enablerustwalker", default=False)
-configitem("workingcopy", "rustwalkerthreads", default=0)
-configitem("workingcopy", "rustpendingchanges", default=False)
 
 
 class physicalfilesystem(object):
@@ -164,7 +158,7 @@ class physicalfilesystem(object):
         repo-rooted file path and the bool is whether the file exists on disk
         or not.
         """
-        if self.ui.configbool("workingcopy", "rustpendingchanges", False):
+        if self.ui.configbool("workingcopy", "rustpendingchanges"):
             physicalfs = workingcopy.physicalfilesystem(self.opener.join(""))
             pendingchanges = physicalfs.pendingchanges(
                 self.dirstate._map._tree, match, False, self.dirstate._lastnormaltime
@@ -190,7 +184,7 @@ class physicalfilesystem(object):
         seen = set()
 
         walkfn = self._walk
-        if self.ui.configbool("workingcopy", "enablerustwalker", False):
+        if self.ui.configbool("workingcopy", "enablerustwalker"):
             walkfn = self._rustwalk
 
         lookups = []
@@ -274,7 +268,7 @@ class physicalfilesystem(object):
             match.traversedir = origmatch.traversedir
 
         traversedir = bool(match.traversedir)
-        threadcount = self.ui.configint("workingcopy", "rustwalkerthreads", 0)
+        threadcount = self.ui.configint("workingcopy", "rustwalkerthreads")
         walker = workingcopy.walker(join(""), match, traversedir, threadcount)
         for fn in walker:
             fn = self.dirstate.normalize(fn)
