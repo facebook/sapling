@@ -9,7 +9,7 @@
   $ newclientrepo foo test:repo_server book
   $ cd ../repo
 
-  $ touch .hg/store/journal
+  $ echo something > .hg/store/journal
 
   $ echo foo > a
   $ hg ci -Am0
@@ -18,4 +18,11 @@
   [255]
 
   $ hg recover
+  rolling back interrupted transaction
+  couldn't read journal entry 'something\n'!
+
+Empty journal is cleaned up automatically.
+  $ touch .hg/store/journal
+  $ hg ci -Am0
+  cleaning up empty abandoned transaction
   rolling back interrupted transaction

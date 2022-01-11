@@ -567,7 +567,7 @@ Migration up
   $ setconfig visibility.enabled=true
 
  (Test if the repo contains an abandoned transaction, the auto migration does not crash)
-  $ touch .hg/store/journal
+  $ echo something > .hg/store/journal
   $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
   switching to explicit tracking of visible commits
   4e7eb8574ed56675aa89d2b5abbced12d5688cef

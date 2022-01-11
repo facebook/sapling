@@ -1665,12 +1665,21 @@ class localrepository(object):
         if tr is not None:
             return tr.nest()
 
-        # abort here if the journal already exists
-        if self.svfs.exists("journal"):
-            raise errormod.AbandonedTransactionFoundError(
-                _("abandoned transaction found"),
-                hint=_("run 'hg recover' to clean up transaction"),
-            )
+        try:
+            stat = self.svfs.stat("journal")
+        except FileNotFoundError:
+            # No existing transaction - this is the normal case.
+            pass
+        else:
+            if stat.st_size > 0:
+                # Non-empty transaction already exists - bail.
+                raise errormod.AbandonedTransactionFoundError(
+                    _("abandoned transaction found"),
+                    hint=_("run 'hg recover' to clean up transaction"),
+                )
+            else:
+                self.ui.status(_("cleaning up empty abandoned transaction\n"))
+                self.recover()
 
         idbase = b"%.40f#%f" % (random.random(), time.time())
         ha = hex(hashlib.sha1(idbase).digest())
