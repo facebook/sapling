@@ -184,6 +184,14 @@ Local state still shows it as backed up, but can check the remote
   8a2d4df2b27fd146766b821123b3dd48c71e7e64 backed up
   585f89184f72f72e80f17cd586fb5ff16df53f82 not backed up
 
+Corrupt backedupheads
+  $ cat > .hg/commitcloud/backedupheads.*
+  $ hg log -r 'notbackedup()'
+  commit:      585f89184f72
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     notbackedup
+  
 Delete backup state file and try again
   $ rm .hg/commitcloud/backedupheads.*
   $ hg cloud check -r "draft()"

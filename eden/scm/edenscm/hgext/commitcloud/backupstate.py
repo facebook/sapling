@@ -39,9 +39,9 @@ class BackupState(object):
         if repo.sharedvfs.exists(self.filename) and not resetlocalstate:
             lines = repo.sharedvfs.readutf8(self.filename).splitlines()
             if len(lines) < 2 or lines[0].strip() != FORMAT_VERSION:
+                version = lines[0].strip() if len(lines) > 0 else "<empty>"
                 repo.ui.debug(
-                    "unrecognised backedupheads version '%s', ignoring\n"
-                    % lines[0].strip()
+                    "unrecognised backedupheads version '%s', ignoring\n" % version
                 )
                 self.initfromserver()
                 return
