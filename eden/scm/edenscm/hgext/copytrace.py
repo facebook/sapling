@@ -104,7 +104,7 @@ def extsetup(ui):
     # Let"s change error message to suggest re-running the command with
     # enabled copytracing
     filemerge._localchangedotherdeletedmsg = _(
-        "local%(l)s changed %(fd)s which other%(o)s deleted\n"
+        "local%(l)s changed %(fd)s which other%(o)s deleted%(fa)s\n"
         + _copytracinghint
         + "use (c)hanged version, (d)elete, or leave (u)nresolved?"
         "$$ &Changed $$ &Delete $$ &Unresolved"

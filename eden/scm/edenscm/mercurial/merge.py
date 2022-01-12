@@ -1273,11 +1273,20 @@ def manifestmerge(
                     )
             elif f in copy:
                 f2 = copy[f]
-                actions[f] = (
-                    "m",
-                    (f, f2, f2, False, pa.node()),
-                    "local copied/moved from " + f2,
-                )
+                if f2 in m2:
+                    actions[f] = (
+                        "m",
+                        (f, f2, f2, False, pa.node()),
+                        "local copied/moved from " + f2,
+                    )
+                else:
+                    # copy source doesn't exist - treat this as
+                    # a change/delete conflict.
+                    actions[f] = (
+                        "cd",
+                        (f, None, f2, False, pa.node()),
+                        "prompt changed/deleted copy source",
+                    )
             elif f in ma:  # clean, a different, no remote
                 if n1 != ma[f]:
                     if acceptremote:

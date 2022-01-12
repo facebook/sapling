@@ -60,7 +60,7 @@ mergeonly = internaltool.mergeonly  # just the full merge, no premerge
 fullmerge = internaltool.fullmerge  # both premerge and merge
 
 _localchangedotherdeletedmsg = _(
-    "local%(l)s changed %(fd)s which other%(o)s deleted\n"
+    "local%(l)s changed %(fd)s which other%(o)s deleted%(fa)s\n"
     "use (c)hanged version, (d)elete, or leave (u)nresolved?"
     "$$ &Changed $$ &Delete $$ &Unresolved"
 )
@@ -293,6 +293,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
     keep as the merged version."""
     ui = repo.ui
     fd = fcd.path()
+    fa = fca.path()
 
     # Avoid prompting during an in-memory merge since it doesn't support merge
     # conflicts.
@@ -305,6 +306,8 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
 
     prompts = partextras(labels)
     prompts["fd"] = fd
+    prompts["fa"] = " (as %s)" % fa if fa != fd else ""
+
     try:
         if fco.isabsent():
             index = ui.promptchoice(_localchangedotherdeletedmsg % prompts, 2)

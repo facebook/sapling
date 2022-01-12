@@ -201,8 +201,12 @@ Test failure to rebase deletion after rename
   rebasing ad25e018afa9 "mod a"
   merging b and a to b
   rebasing ba0395f0e180 "delete a"
-  abort: a@ba0395f0e180: not found in manifest!
-  [255]
+  local [dest] changed b which other [source] deleted (as a)
+  hint: if this message is due to a moved file, you can ask mercurial to attempt to automatically resolve this change by re-running with the --config=experimental.copytrace=on flag, but this will significantly slow down the operation, so you will need to be patient.
+  Source control team is working on fixing this problem.
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
   $ hg rebase --abort
   rebase aborted
   $ cd ..
