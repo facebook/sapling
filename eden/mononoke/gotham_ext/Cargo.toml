@@ -35,6 +35,7 @@ tokio = { version = "1.10", features = ["full", "test-util", "tracing"] }
 tokio-openssl = "0.6"
 tokio-util = { version = "0.6", features = ["full"] }
 trust-dns-resolver = "0.20"
+tunables = { version = "0.1.0", path = "../tunables" }
 
 [patch.crates-io]
 daemonize = { git = "https://github.com/krallin/daemonize", rev = "f7be28efa1b4a70e43bb37b5f4ff4d664992edca" }
