@@ -17,10 +17,14 @@ use parking_lot::Mutex;
 use serde::ser::SerializeMap;
 use serde::ser::Serializer;
 use serde_json::Serializer as JsonSerializer;
+use tracing::subscriber::Interest;
 use tracing::Event;
+use tracing::Metadata;
 use tracing::Subscriber;
 use tracing_serde::fields::AsMap;
 use tracing_subscriber::layer::Context;
+use tracing_subscriber::layer::Filter;
+use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
 pub struct SamplingLayer {
@@ -28,8 +32,13 @@ pub struct SamplingLayer {
 }
 
 impl SamplingLayer {
-    pub fn new(config: Arc<OnceCell<SamplingConfig>>) -> Self {
-        Self { config }
+    pub fn new<S: Subscriber + for<'a> LookupSpan<'a>>(
+        config: Arc<OnceCell<SamplingConfig>>,
+    ) -> impl Layer<S> {
+        Self {
+            config: config.clone(),
+        }
+        .with_filter(SamplingFilter { config })
     }
 }
 
@@ -103,6 +112,35 @@ impl SamplingConfig {
         }
 
         None
+    }
+}
+
+struct SamplingFilter {
+    config: Arc<OnceCell<SamplingConfig>>,
+}
+
+impl SamplingFilter {
+    fn is_enabled(&self, meta: &Metadata<'_>) -> bool {
+        let config = match self.config.get() {
+            Some(config) => config,
+            None => return false,
+        };
+
+        config.keys.get(meta.target()).is_some()
+    }
+}
+
+impl<S: Subscriber> Filter<S> for SamplingFilter {
+    fn enabled(&self, meta: &Metadata<'_>, _: &Context<'_, S>) -> bool {
+        self.is_enabled(meta)
+    }
+
+    fn callsite_enabled(&self, meta: &'static Metadata<'static>) -> Interest {
+        if self.is_enabled(meta) {
+            Interest::always()
+        } else {
+            Interest::never()
+        }
     }
 }
 

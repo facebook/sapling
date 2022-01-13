@@ -459,7 +459,7 @@ We need to disable the SCM_SAMPLING_FILEPATH env var because arcanist may set it
   $ touch a && hg add a
   $ unset SCM_SAMPLING_FILEPATH
   $ hg ci -m "add some new files"
-  $ LOGDIR=`pwd`/logs
+  $ LOGDIR=$TESTTMP/logs
   $ mkdir $LOGDIR
   $ cat >> $HGRCPATH << EOF
   > [sampling]

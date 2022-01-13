@@ -117,6 +117,20 @@ Test env-var logging:
   env_test_var2: def
   metrics_type: env_vars
 
+Test rust traces make it to sampling file as well:
+  $ > $LOGDIR/samplingpath.txt
+  $ setconfig sampling.key.from_rust=hello
+  $ hg debugshell -c "from edenscm import tracing; tracing.info('msg', target='from_rust', hi='there')"
+  atexit handler executed
+  >>> import json
+  >>> with open("$LOGDIR/samplingpath.txt") as f:
+  ...     data = f.read().strip("\0").split("\0")
+  >>> for entry in data:
+  ...     parsed = json.loads(entry)
+  ...     if parsed['category'] == 'hello':
+  ...         print(entry)
+  {"category":"hello","data":{"message":"msg","hi":"there"}}
+
 Test exception logging:
   $ setconfig sampling.key.exceptions=exceptions
 

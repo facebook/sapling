@@ -37,12 +37,15 @@ use configparser::configmodel::ConfigExt;
 use fail::FailScenario;
 use hg_http::HgHttpConfig;
 use once_cell::sync::Lazy;
+use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use progress_model::Registry;
 use tracing::dispatcher::Dispatch;
 use tracing::dispatcher::{self};
 use tracing::Level;
 use tracing_collector::TracingData;
+use tracing_sampler::SamplingConfig;
+use tracing_sampler::SamplingLayer;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::Layer as FmtLayer;
 use tracing_subscriber::layer::SubscriberExt;
@@ -70,9 +73,12 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     // Extra initialization based on global flags.
     let global_opts = dispatch::parse_global_opts(&args[1..]).ok();
 
+    // This allows us to defer the SamplingLayer initialization until after the repo config is loaded.
+    let sampling_config = Arc::new(OnceCell::<SamplingConfig>::new());
+
     // Setup tracing early since "log_start" will use it immediately.
     // The tracing clock starts ticking from here.
-    let tracing_data = match setup_tracing(&global_opts, io) {
+    let tracing_data = match setup_tracing(&global_opts, io, sampling_config.clone()) {
         Err(_) => {
             // With our current architecture it is common to see this path in our tests due to
             // trying to set a global collector a second time. Ignore the error and return some
@@ -127,6 +133,10 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
             dispatch::Dispatcher::from_args(args[1..].to_vec()).and_then(|dispatcher| {
                 let config = dispatcher.config();
                 let global_opts = dispatcher.global_opts();
+
+                if let Some(sc) = SamplingConfig::new(config) {
+                    sampling_config.set(sc).unwrap();
+                }
 
                 run_logger = match runlog::Logger::new(dispatcher.repo(), args[1..].to_vec()) {
                     Ok(logger) => Some(logger),
@@ -240,7 +250,11 @@ fn current_dir(io: &IO) -> io::Result<PathBuf> {
     result
 }
 
-fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mutex<TracingData>>> {
+fn setup_tracing(
+    global_opts: &Option<HgGlobalOpts>,
+    io: &IO,
+    sampling_config: Arc<OnceCell<SamplingConfig>>,
+) -> Result<Arc<Mutex<TracingData>>> {
     // Setup TracingData singleton (currently owned by pytracing).
     {
         let mut data = pytracing::DATA.lock();
@@ -289,7 +303,8 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
                 Level::INFO
             });
 
-        let collector = tracing_collector::default_collector(data.clone(), level);
+        let collector = tracing_collector::default_collector(data.clone(), level)
+            .with(SamplingLayer::new(sampling_config));
         tracing::subscriber::set_global_default(collector)?;
     }
 

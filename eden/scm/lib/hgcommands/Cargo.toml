@@ -48,6 +48,7 @@ taggederror = { path = "../taggederror" }
 terminal_size = "0.1"
 tracing = "0.1.29"
 tracing-collector = { path = "../tracing-collector" }
+tracing-sampler = { path = "../tracing-sampler" }
 tracing-subscriber = { version = "0.3.3", features = ["ansi", "env-filter", "fmt", "json", "parking_lot", "registry"] }
 types = { path = "../types" }
 util = { path = "../util" }
