@@ -441,6 +441,12 @@ impl LfsIndexedLogBlobsStore {
     }
 
     pub fn add(&self, hash: &Sha256, data: Bytes) -> Result<()> {
+        // Verify content integrity at write time to allow avoiding read time check.
+        let apparent_hash = &ContentHash::sha256(&data).unwrap_sha256();
+        if apparent_hash != hash {
+            bail!("content hash mismatch: {} != {}", hash, apparent_hash);
+        }
+
         let chunks = LfsIndexedLogBlobsStore::chunk(data, self.chunk_size);
         let chunks = chunks.map(|(range, data)| LfsIndexedLogBlobsEntry {
             sha256: hash.clone(),
@@ -2145,6 +2151,24 @@ mod tests {
         store.add(&delta, &Default::default())?;
         let stored = store.get(StoreKey::hgid(k1))?;
         assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), stored);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_invalid_hash() -> Result<()> {
+        let dir = TempDir::new()?;
+        let config = make_lfs_config(&dir, "test_invalid_hash");
+
+        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+
+        let bad_hash = ContentHash::sha256(&Bytes::from_static(b"wrong")).unwrap_sha256();
+        let data = Bytes::from_static(b"oops");
+
+        assert!(store.add(&bad_hash, data.clone()).is_err());
+        store.flush()?;
+
+        assert_eq!(store.get(&bad_hash)?, None);
 
         Ok(())
     }
