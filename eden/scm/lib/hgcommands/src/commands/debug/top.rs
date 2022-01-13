@@ -50,7 +50,7 @@ pub fn run(opts: DebugTopOpts, io: &IO, repo: Repo) -> Result<u8> {
         let mut table = Table::new();
         table.set_header(table_generator.column_titles());
         let entries = runlog::FileStore::entry_iter(repo.shared_dot_hg_path().join("runlog"))?;
-        for row in table_generator.generate_rows(entries) {
+        for row in table_generator.generate_rows(entries, chrono::offset::Utc::now) {
             table.add_row(row);
         }
         if !running_in_tty {

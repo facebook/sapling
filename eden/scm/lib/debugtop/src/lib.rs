@@ -8,23 +8,26 @@
 use std::collections::HashMap;
 
 use anyhow::Error;
+#[cfg(test)]
+use chrono::TimeZone;
+use chrono::Utc;
 use runlog::{Entry, Progress};
 
 pub struct TableGenerator {
     column_titles: Vec<String>,
-    row_generator: Vec<fn(&Entry) -> String>,
+    row_generator: Vec<fn(&Entry, fn() -> chrono::DateTime<Utc>) -> String>,
 }
 
 impl TableGenerator {
     pub fn new(column_titles_str: String) -> Result<TableGenerator, Vec<String>> {
-        let column_funcs: Vec<(&str, fn(&Entry) -> String)> = vec![
-            ("PID", |entry| entry.pid.to_string()),
-            ("PROGRESS", |entry| top_progress_entry(&entry.progress)),
-            ("TIME SPENT", |entry| {
-                let time_spent = chrono::offset::Utc::now() - entry.start_time;
+        let column_funcs: Vec<(&str, fn(&Entry, fn() -> chrono::DateTime<Utc>) -> String)> = vec![
+            ("PID", |entry, _| entry.pid.to_string()),
+            ("PROGRESS", |entry, _| top_progress_entry(&entry.progress)),
+            ("TIME SPENT", |entry, current_time| {
+                let time_spent = current_time() - entry.start_time;
                 top_time_entry(time_spent)
             }),
-            ("CMD", |entry| entry.command.join(" ")),
+            ("CMD", |entry, _| entry.command.join(" ")),
         ];
         let columns_map: HashMap<_, _> = column_funcs.iter().copied().collect();
         let column_titles: Vec<_> = if !column_titles_str.is_empty() {
@@ -60,8 +63,9 @@ impl TableGenerator {
     pub fn generate_rows<'a>(
         &'a self,
         runlog_entries: impl Iterator<Item = Result<(Entry, bool), Error>> + 'a,
+        current_time: fn() -> chrono::DateTime<Utc>,
     ) -> impl Iterator<Item = Vec<String>> + 'a {
-        runlog_entries.filter_map(|entry| {
+        runlog_entries.filter_map(move |entry| {
             let (entry, running) = match entry {
                 Ok((entry, running)) => (entry, running),
                 Err(_) => {
@@ -71,7 +75,12 @@ impl TableGenerator {
             if !running {
                 return None;
             }
-            Some(self.row_generator.iter().map(|&f| f(&entry)).collect())
+            Some(
+                self.row_generator
+                    .iter()
+                    .map(|&f| f(&entry, current_time))
+                    .collect(),
+            )
         })
     }
 }
@@ -111,6 +120,112 @@ fn top_progress_entry(progress_bars: &[Progress]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Debug)]
+    struct ParseError {}
+
+    impl std::fmt::Display for ParseError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "Oh no, something bad went down")
+        }
+    }
+
+    impl std::error::Error for ParseError {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            None
+        }
+    }
+
+    #[test]
+    fn test_table_generator() {
+        let default_generator = || TableGenerator::new("".to_string());
+        let default_time = || Utc.timestamp(3, 100000000);
+        // Test invalid columns
+        assert!(
+            matches!(TableGenerator::new("not a valid column, PID, not_valid_either".to_string()),
+            Err(x) if x == vec![
+                "not a valid column".to_string(),
+                "not_valid_either".to_string()
+            ])
+        );
+        // Test default column order
+        let default_columns = vec![
+            "PID".to_string(),
+            "PROGRESS".to_string(),
+            "TIME SPENT".to_string(),
+            "CMD".to_string(),
+        ];
+        assert_eq!(
+            *default_generator().unwrap().column_titles(),
+            default_columns
+        );
+        // Test specific columns
+        assert_eq!(
+            *TableGenerator::new("CMD,   PID".to_string())
+                .unwrap()
+                .column_titles(),
+            vec!["CMD".to_string(), "PID".to_string()]
+        );
+        // Test single row column format
+        let runlog_entries = vec![Ok((
+            Entry {
+                id: "1".to_string(),
+                command: vec!["somecommand".to_string(), "somearg".to_string()],
+                pid: 101,
+                download_bytes: 0,
+                upload_bytes: 0,
+                start_time: Utc.timestamp(0, 0),
+                end_time: None,
+                exit_code: None,
+                progress: vec![Progress {
+                    topic: "spinning".to_string(),
+                    unit: "".to_string(),
+                    total: 100,
+                    position: 2,
+                }],
+            },
+            true,
+        ))];
+        let expected_rows = vec![vec![
+            "101".to_string(),
+            "2.0%".to_string(),
+            "3.1s".to_string(),
+            "somecommand somearg".to_string(),
+        ]];
+        assert_eq!(
+            default_generator()
+                .unwrap()
+                .generate_rows(runlog_entries.into_iter(), default_time)
+                .collect::<Vec<_>>(),
+            expected_rows
+        );
+        // Test row filtering
+        let rr = ParseError {};
+        let runlog_entries: Vec<Result<(Entry, bool), Error>> = vec![
+            Err(Error::new(rr)),
+            Ok((
+                Entry {
+                    id: "0".to_string(),
+                    command: vec!["".to_string()],
+                    pid: 0,
+                    download_bytes: 0,
+                    upload_bytes: 0,
+                    start_time: Utc.timestamp(0, 0),
+                    end_time: None,
+                    exit_code: None,
+                    progress: vec![],
+                },
+                false,
+            )),
+        ];
+        assert!(
+            default_generator()
+                .unwrap()
+                .generate_rows(runlog_entries.into_iter(), default_time)
+                .collect::<Vec<_>>()
+                .is_empty()
+        );
+    }
 
     #[test]
     fn test_time_entry() {
