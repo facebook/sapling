@@ -23,6 +23,7 @@ use tracing::Id;
 use tracing::Level;
 use tracing::Metadata;
 use tracing::Subscriber;
+use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::layer::Context;
 use tracing_subscriber::layer::Layer;
 use tracing_subscriber::layer::SubscriberExt;
@@ -39,7 +40,7 @@ pub fn default_collector(
     level: Level,
 ) -> impl Subscriber + for<'a> LookupSpan<'a> {
     let tracing_data_subscriber = TracingCollector::new(data, level);
-    Registry::default().with(tracing_data_subscriber)
+    Registry::default().with(tracing_data_subscriber.with_filter::<LevelFilter>(level.into()))
 }
 
 pub fn test_init() -> Result<(), SetGlobalDefaultError> {
@@ -57,15 +58,11 @@ pub struct TracingCollector {
 
 impl TracingCollector {
     pub fn new(data: Arc<Mutex<TracingData>>, level: Level) -> Self {
-        Self { level, data }
+        Self { data, level }
     }
 }
 
 impl<S: Subscriber> Layer<S> for TracingCollector {
-    fn enabled(&self, metadata: &Metadata<'_>, ctx: Context<'_, S>) -> bool {
-        metadata.level() <= &self.level
-    }
-
     fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         let callsite_id = attrs.metadata().callsite();
         let mut data = self.data.lock();
