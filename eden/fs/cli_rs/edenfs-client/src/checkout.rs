@@ -6,12 +6,16 @@
  */
 
 use anyhow::anyhow;
+use byteorder::{BigEndian, ReadBytesExt};
 use edenfs_error::{EdenFsError, Result, ResultExt};
 use edenfs_utils::path_from_bytes;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::BTreeMap;
 use std::fmt;
+use std::fmt::Write;
 use std::fs;
+use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -22,8 +26,13 @@ use uuid::Uuid;
 
 use crate::EdenFsInstance;
 
-// files in the client directory
+// files in the client directory (aka data_dir aka state_dir)
 const MOUNT_CONFIG: &str = "config.toml";
+const SNAPSHOT: &str = "SNAPSHOT";
+
+// Magical snapshot strings
+const SNAPSHOT_MAGIC_1: &[u8] = b"eden\x00\x00\x00\x01";
+const SNAPSHOT_MAGIC_2: &[u8] = b"eden\x00\x00\x00\x02";
 
 const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas"];
 const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
@@ -239,8 +248,42 @@ pub struct EdenFsCheckout {
 }
 
 impl EdenFsCheckout {
+    pub fn path(&self) -> PathBuf {
+        self.path.clone()
+    }
+
     pub fn data_dir(&self) -> PathBuf {
         self.data_dir.clone()
+    }
+
+    fn encode_hex(bytes: &[u8]) -> String {
+        let mut s = String::with_capacity(bytes.len() * 2);
+        for &b in bytes {
+            write!(&mut s, "{:02x}", b).unwrap();
+        }
+        s
+    }
+
+    /// Return the hex version of the parent hash in the SNAPSHOT file
+    pub fn get_snapshot(&self) -> Result<String> {
+        let snapshot_path = self.data_dir.join(SNAPSHOT);
+        let mut f = File::open(&snapshot_path).from_err()?;
+        let mut header = [0u8; 8];
+        f.read(&mut header).from_err()?;
+        if header == SNAPSHOT_MAGIC_1 {
+            let mut snapshot = [0u8; 20];
+            f.read(&mut snapshot).from_err()?;
+            Ok(EdenFsCheckout::encode_hex(&snapshot))
+        } else if header == SNAPSHOT_MAGIC_2 {
+            let body_length = f.read_u32::<BigEndian>().from_err()?;
+            let mut buf = vec![0u8; body_length as usize];
+            f.read_exact(&mut buf).from_err()?;
+            Ok(std::str::from_utf8(&buf).from_err()?.to_string())
+        } else {
+            Err(EdenFsError::Other(anyhow!(
+                "SNAPSHOT file has invalid header"
+            )))
+        }
     }
 
     pub fn backing_repo(&self) -> Option<PathBuf> {

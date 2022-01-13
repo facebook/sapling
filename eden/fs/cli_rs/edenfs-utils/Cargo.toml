@@ -8,4 +8,5 @@ edition = "2021"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0.51"
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }

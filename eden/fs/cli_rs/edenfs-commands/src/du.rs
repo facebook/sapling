@@ -22,8 +22,10 @@ use structopt::StructOpt;
 
 use anyhow::anyhow;
 use edenfs_client::checkout::find_checkout;
-use edenfs_client::EdenFsInstance;
+use edenfs_client::checkout::EdenFsCheckout;
+use edenfs_client::{EdenFsClient, EdenFsInstance};
 use edenfs_error::{EdenFsError, Result, ResultExt};
+use edenfs_utils::{bytes_from_path, path_from_bytes};
 
 use crate::ExitCode;
 
@@ -166,6 +168,40 @@ fn usage_for_dir(path: PathBuf, device_id: Option<u64>) -> std::io::Result<(u64,
     Ok((total_size, failed_to_check_files))
 }
 
+async fn ignored_usage_counts_for_mount(
+    checkout: EdenFsCheckout,
+    client: &EdenFsClient,
+) -> Result<u64> {
+    let scm_status = client
+        .getScmStatus(
+            &bytes_from_path(checkout.path())?,
+            true,
+            &checkout.get_snapshot()?.as_bytes().to_vec(),
+        )
+        .await
+        .from_err()?;
+
+    let mut aggregated_usage_counts_ignored = 0;
+    for (rel_path, _file_status) in scm_status.entries {
+        let path = checkout.path().join(path_from_bytes(&rel_path)?);
+        aggregated_usage_counts_ignored += match fs::symlink_metadata(path) {
+            Ok(metadata) => Ok(metadata.len()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // Status can show files that were present in the overlay
+                // before a redirection was mounted over the top of it,
+                // which makes them inaccessible here.  Alternatively,
+                // someone may have raced with us and removed the file
+                // between the status call and our attempt to stat it.
+                // Just absorb the error here and ignore it.
+                Ok(0)
+            }
+            Err(e) => Err(e),
+        }
+        .from_err()?;
+    }
+    Ok(aggregated_usage_counts_ignored)
+}
+
 fn write_title(title: &str) {
     println!("\n{}", title);
     println!("{}", "-".repeat(title.len()));
@@ -174,6 +210,7 @@ fn write_title(title: &str) {
 #[async_trait]
 impl crate::Subcommand for DiskUsageCmd {
     async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+        let client = instance.connect(None).await?;
         let mut aggregated_usage_counts = AggregatedUsageCounts::new();
 
         // GET MOUNT INFO
@@ -205,6 +242,10 @@ impl crate::Subcommand for DiskUsageCmd {
             // TODO: print failed_file_checks
             let (usage_count, _failed_file_checks) = usage_for_dir(overlay_dir, None).from_err()?;
             aggregated_usage_counts.materialized += usage_count;
+
+            // GET SUMMARY INFO for ignored counts
+            aggregated_usage_counts.ignored +=
+                ignored_usage_counts_for_mount(checkout, &client).await?;
         }
         // Make immutable
         let backing_repos = backing_repos;
