@@ -18,6 +18,7 @@ configparser = { path = "../configparser" }
 cpython = { version = "0.7", default-features = false }
 cpython_ext = { path = "../cpython-ext", default-features = false }
 dag = { path = "../dag" }
+debugtop = { path = "../debugtop" }
 eagerepo = { path = "../eagerepo" }
 edenapi = { path = "../edenapi" }
 edenfs_client = { path = "../edenfs-client" }
