@@ -4844,9 +4844,9 @@ def printrecordedtracebacks():
      ...
     """
     for funcname, calls in sorted(_recordedtracebacks.items()):
-        mainio.write_err("Callsites for %s:\n" % (funcname,))
+        mainio.write_err(("Callsites for %s:\n" % (funcname,)).encode())
         for tb, count in sorted(calls.items(), key=lambda i: (-i[1], i[0])):
-            mainio.write_err(" %d %s\n" % (count, tb))
+            mainio.write_err((" %d %s\n" % (count, tb)).encode())
 
 
 class wrapped_stat_result(object):
