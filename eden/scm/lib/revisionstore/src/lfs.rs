@@ -357,7 +357,7 @@ impl LfsIndexedLogBlobsStore {
         })
     }
 
-    pub fn get(&self, hash: &Sha256) -> Result<Option<Bytes>> {
+    pub fn get(&self, hash: &Sha256, total_size: u64) -> Result<Option<Bytes>> {
         let store = self.inner.read();
         let chunks_iter = store
             .lookup(0, hash)?
@@ -411,7 +411,9 @@ impl LfsIndexedLogBlobsStore {
         }
 
         let data: Bytes = res.into();
-        if &ContentHash::sha256(&data).unwrap_sha256() == hash || is_redacted(&data) {
+        if (total_size == data.len() as u64 && &ContentHash::sha256(&data).unwrap_sha256() == hash)
+            || is_redacted(&data)
+        {
             Ok(Some(data))
         } else {
             Ok(None)
@@ -508,7 +510,7 @@ impl LfsBlobsStore {
     /// Read the blob matching the content hash.
     ///
     /// Blob hash should be validated by the underlying store.
-    pub fn get(&self, hash: &Sha256) -> Result<Option<Bytes>> {
+    pub fn get(&self, hash: &Sha256, size: u64) -> Result<Option<Bytes>> {
         let blob = match self {
             LfsBlobsStore::Loose(path, _) => {
                 let path = LfsBlobsStore::path(&path, hash);
@@ -533,13 +535,13 @@ impl LfsBlobsStore {
                 }
             }
 
-            LfsBlobsStore::IndexedLog(log) => log.get(hash)?,
+            LfsBlobsStore::IndexedLog(log) => log.get(hash, size)?,
 
             LfsBlobsStore::Union(first, second) => {
-                if let Some(blob) = first.get(hash)? {
+                if let Some(blob) = first.get(hash, size)? {
                     Some(blob)
                 } else {
-                    second.get(hash)?
+                    second.get(hash, size)?
                 }
             }
         };
@@ -658,7 +660,10 @@ impl LfsStore {
             Some(entry) => match entry.content_hashes.get(&ContentHashType::Sha256) {
                 None => Ok(StoreResult::NotFound(key)),
                 Some(content_hash) => {
-                    match self.blobs.get(&content_hash.clone().unwrap_sha256())? {
+                    match self
+                        .blobs
+                        .get(&content_hash.clone().unwrap_sha256(), entry.size)?
+                    {
                         None => {
                             let hgid = match key {
                                 StoreKey::HgId(hgid) => Some(hgid),
@@ -691,7 +696,10 @@ impl LfsStore {
                 // or return NotFound like blob_impl?
                 None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
                 Some(content_hash) => {
-                    match self.blobs.get(&content_hash.clone().unwrap_sha256())? {
+                    match self
+                        .blobs
+                        .get(&content_hash.clone().unwrap_sha256(), entry.size)?
+                    {
                         None => Ok(Some(LfsStoreEntry::PointerOnly(entry))),
                         Some(blob) => Ok(Some(LfsStoreEntry::PointerAndBlob(entry, blob))),
                     }
@@ -1066,7 +1074,7 @@ impl LfsRemoteInner {
         objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
     ) -> Result<()> {
-        let read_from_store = |_sha256| unreachable!();
+        let read_from_store = |_sha256, _size| unreachable!();
         match self {
             LfsRemoteInner::Http(http) => Self::batch_http(
                 http,
@@ -1082,7 +1090,7 @@ impl LfsRemoteInner {
     pub fn batch_upload(
         &self,
         objs: &HashSet<(Sha256, usize)>,
-        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
+        read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
     ) -> Result<()> {
         let write_to_store = |_, _| unreachable!();
         match self {
@@ -1314,10 +1322,11 @@ impl LfsRemoteInner {
         client: &HttpClient,
         action: ObjectAction,
         oid: Sha256,
-        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + 'static,
+        size: u64,
+        read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + 'static,
         http_options: &HttpOptions,
     ) -> Result<()> {
-        let body = spawn_blocking(move || read_from_store(oid)).await??;
+        let body = spawn_blocking(move || read_from_store(oid, size)).await??;
 
         let url = Url::from_str(&action.href.to_string())?;
         LfsRemoteInner::send_with_retry(
@@ -1435,7 +1444,7 @@ impl LfsRemoteInner {
         http: &HttpLfsRemote,
         objs: &HashSet<(Sha256, usize)>,
         operation: Operation,
-        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
+        read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
     ) -> Result<()> {
         let response = LfsRemoteInner::send_batch_request(http, objs, operation)?;
@@ -1474,6 +1483,7 @@ impl LfsRemoteInner {
                         &http.client,
                         action,
                         oid,
+                        object.object.size,
                         read_from_store.clone(),
                         &http.http_options,
                     )
@@ -1504,8 +1514,8 @@ impl LfsRemoteInner {
         objs: &HashSet<(Sha256, usize)>,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()>,
     ) -> Result<()> {
-        for (hash, _) in objs {
-            if let Some(data) = file.get(hash)? {
+        for (hash, size) in objs {
+            if let Some(data) = file.get(hash, *size as u64)? {
                 write_to_store(*hash, data)?;
             }
         }
@@ -1516,10 +1526,10 @@ impl LfsRemoteInner {
     fn batch_upload_file(
         file: &LfsBlobsStore,
         objs: &HashSet<(Sha256, usize)>,
-        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>>,
+        read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>>,
     ) -> Result<()> {
-        for (sha256, _) in objs {
-            if let Some(blob) = read_from_store(*sha256)? {
+        for (sha256, size) in objs {
+            if let Some(blob) = read_from_store(*sha256, *size as u64)? {
                 file.add(sha256, blob)?;
             }
         }
@@ -1656,7 +1666,7 @@ impl LfsRemote {
     fn batch_upload(
         &self,
         objs: &HashSet<(Sha256, usize)>,
-        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
+        read_from_store: impl Fn(Sha256, u64) -> Result<Option<Bytes>> + Send + Clone + 'static,
     ) -> Result<()> {
         self.remote.batch_upload(objs, read_from_store)
     }
@@ -1685,11 +1695,11 @@ impl HgIdRemoteStore for LfsRemote {
 ///
 /// After this succeeds, the blob's lifetime will be similar to any shared blob, it is the caller's
 /// responsability to ensure that the blob can be fetched from the LFS server.
-fn move_blob(hash: &Sha256, from: &LfsStore, to: &LfsStore) -> Result<()> {
+fn move_blob(hash: &Sha256, size: u64, from: &LfsStore, to: &LfsStore) -> Result<()> {
     (|| {
         let blob = from
             .blobs
-            .get(hash)?
+            .get(hash, size)?
             .ok_or_else(|| format_err!("Cannot find blob for {}", hash))?;
 
         to.blobs.add(hash, blob)?;
@@ -1831,7 +1841,7 @@ impl RemoteDataStore for LfsRemoteStore {
             self.remote.batch_upload(&objs, {
                 let local_store = local_store.clone();
                 let size = size.clone();
-                move |sha256| {
+                move |sha256, _size| {
                     let key = StoreKey::from(ContentHash::Sha256(sha256));
 
                     match local_store.blob(key)? {
@@ -1854,7 +1864,7 @@ impl RemoteDataStore for LfsRemoteStore {
             // to the shared store. This is safe to do as blobs will never be collected from the
             // server once uploaded.
             for obj in objs {
-                move_blob(&obj.0, local_store, &self.remote.shared)?;
+                move_blob(&obj.0, obj.1 as u64, local_store, &self.remote.shared)?;
             }
         }
 
@@ -2090,7 +2100,10 @@ mod tests {
 
         assert!(indexedlog_blobs.contains(&hash)?);
 
-        assert_eq!(Some(delta.data), indexedlog_blobs.get(&hash)?);
+        assert_eq!(
+            Some(delta.data.clone()),
+            indexedlog_blobs.get(&hash, delta.data.len() as u64)?
+        );
 
         Ok(())
     }
@@ -2107,7 +2120,7 @@ mod tests {
         loose_store.add(&sha256, data.clone())?;
 
         assert!(blob_store.contains(&sha256)?);
-        assert_eq!(blob_store.get(&sha256)?, Some(data));
+        assert_eq!(blob_store.get(&sha256, data.len() as u64)?, Some(data));
 
         Ok(())
     }
@@ -2168,7 +2181,7 @@ mod tests {
         assert!(store.add(&bad_hash, data.clone()).is_err());
         store.flush()?;
 
-        assert_eq!(store.get(&bad_hash)?, None);
+        assert_eq!(store.get(&bad_hash, data.len() as u64)?, None);
 
         Ok(())
     }
@@ -2221,7 +2234,7 @@ mod tests {
         store.inner.write().append(serialize(&entry)?)?;
         store.flush()?;
 
-        assert_eq!(store.get(&sha256)?, None);
+        assert_eq!(store.get(&sha256, data.len() as u64)?, None);
 
         Ok(())
     }
@@ -2263,7 +2276,7 @@ mod tests {
 
         store.flush()?;
 
-        assert_eq!(store.get(&sha256)?, Some(data));
+        assert_eq!(store.get(&sha256, data.len() as u64)?, Some(data));
 
         Ok(())
     }
@@ -2305,7 +2318,7 @@ mod tests {
 
         store.flush()?;
 
-        assert_eq!(store.get(&sha256)?, Some(data));
+        assert_eq!(store.get(&sha256, data.len() as u64)?, Some(data));
 
         Ok(())
     }
@@ -3100,10 +3113,18 @@ mod tests {
             .iter()
             .cloned()
             .collect::<HashSet<_>>();
-        remote.batch_upload(&objs, move |sha256| local_lfs.blobs.get(&sha256))?;
+        remote.batch_upload(&objs, move |sha256, size| {
+            local_lfs.blobs.get(&sha256, size)
+        })?;
 
-        assert_eq!(remote_lfs_file_store.get(&blob1.0)?, Some(blob1.2));
-        assert_eq!(remote_lfs_file_store.get(&blob2.0)?, Some(blob2.2));
+        assert_eq!(
+            remote_lfs_file_store.get(&blob1.0, blob1.1 as u64)?,
+            Some(blob1.2)
+        );
+        assert_eq!(
+            remote_lfs_file_store.get(&blob2.0, blob2.1 as u64)?,
+            Some(blob2.2)
+        );
 
         Ok(())
     }
