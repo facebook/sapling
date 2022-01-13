@@ -169,7 +169,7 @@ fn usage_for_dir(path: PathBuf, device_id: Option<u64>) -> std::io::Result<(u64,
 }
 
 async fn ignored_usage_counts_for_mount(
-    checkout: EdenFsCheckout,
+    checkout: &EdenFsCheckout,
     client: &EdenFsClient,
 ) -> Result<u64> {
     let scm_status = client
@@ -245,7 +245,15 @@ impl crate::Subcommand for DiskUsageCmd {
 
             // GET SUMMARY INFO for ignored counts
             aggregated_usage_counts.ignored +=
-                ignored_usage_counts_for_mount(checkout, &client).await?;
+                ignored_usage_counts_for_mount(&checkout, &client).await?;
+
+            // GET SUMMARY INFO for fsck
+            let fsck_dir = checkout.data_dir().join("fsck");
+            if fsck_dir.exists() {
+                let (usage_count, _failed_file_checks) =
+                    usage_for_dir(fsck_dir, None).from_err()?;
+                aggregated_usage_counts.fsck += usage_count;
+            }
         }
         // Make immutable
         let backing_repos = backing_repos;
