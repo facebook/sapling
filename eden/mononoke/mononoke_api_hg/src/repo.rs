@@ -176,8 +176,12 @@ impl HgRepoContext {
     }
 
     /// Look up in blobstore by `ContentId`
-    pub async fn is_file_present(&self, hash: impl Into<FetchKey>) -> Result<bool, MononokeError> {
-        self.is_key_present_in_blobstore(&hash.into().blobstore_key(), None)
+    pub async fn is_file_present(
+        &self,
+        hash: impl Into<FetchKey>,
+        bubble_id: Option<BubbleId>,
+    ) -> Result<bool, MononokeError> {
+        self.is_key_present_in_blobstore(&hash.into().blobstore_key(), bubble_id)
             .await
     }
 

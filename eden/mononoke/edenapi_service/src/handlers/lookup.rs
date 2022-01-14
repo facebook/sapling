@@ -73,7 +73,7 @@ async fn check_file(
         // in the blobstore
         // 2. Maybe alias was written to blobstore but the actual blob has not
         // 3. We want to do a comprehensive lookup here
-        if repo.is_file_present(content_id).await? {
+        if repo.is_file_present(content_id, bubble_id).await? {
             Lookup::Present(Some(
                 FileContentTokenMetadata {
                     content_size: repo.fetch_file_content_size(content_id, bubble_id).await?,
