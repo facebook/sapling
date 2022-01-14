@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use edenapi_types::AnyFileContentId;
-use mononoke_types::{errors::ErrorKind, hash, ContentAlias, ContentId};
+use mononoke_types::{errors::ErrorKind, hash, ContentAlias, ContentId, MononokeId};
 
 /// Key for fetching - we can access with any of the supported key types
 #[derive(Debug, Copy, Clone)]
@@ -49,6 +49,15 @@ impl From<AnyFileContentId> for FetchKey {
             AnyFileContentId::ContentId(id) => Self::from(ContentId::from(id)),
             AnyFileContentId::Sha1(id) => Self::from(hash::Sha1::from(id)),
             AnyFileContentId::Sha256(id) => Self::from(hash::Sha256::from(id)),
+        }
+    }
+}
+
+impl FetchKey {
+    pub fn blobstore_key(&self) -> String {
+        match self {
+            Self::Canonical(cid) => cid.blobstore_key(),
+            Self::Aliased(alias) => alias.blobstore_key(),
         }
     }
 }

@@ -19,7 +19,7 @@ use changesets::{ChangesetInsert, Changesets};
 use context::{CoreContext, SessionClass};
 use edenapi_types::{AnyId, UploadToken};
 use ephemeral_blobstore::{Bubble, BubbleId, RepoEphemeralStore, StorageLocation};
-use filestore::{self, Alias, FetchKey, StoreRequest};
+use filestore::{self, FetchKey, StoreRequest};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
 use futures_util::try_join;
@@ -30,10 +30,7 @@ use mercurial_types::{HgChangesetId, HgFileEnvelopeMut, HgFileNodeId, HgManifest
 use metaconfig_types::RepoConfig;
 use mononoke_api::RepoWriteContext;
 use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
-use mononoke_types::{
-    hash::{Sha1, Sha256},
-    BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId, RepoPath,
-};
+use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, RepoPath};
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
@@ -179,19 +176,11 @@ impl HgRepoContext {
     }
 
     /// Look up in blobstore by `ContentId`
-    pub async fn is_file_present_by_contentid(
-        &self,
-        content_id: ContentId,
-    ) -> Result<bool, MononokeError> {
-        self.is_key_present_in_blobstore(&content_id.blobstore_key(), None)
+    pub async fn is_file_present(&self, hash: impl Into<FetchKey>) -> Result<bool, MononokeError> {
+        self.is_key_present_in_blobstore(&hash.into().blobstore_key(), None)
             .await
     }
 
-    /// Look up in blobstore by `Sha1 alias`
-    pub async fn is_file_present_by_sha1(&self, sha1: Sha1) -> Result<bool, MononokeError> {
-        self.is_key_present_in_blobstore(&Alias::Sha1(sha1).blobstore_key(), None)
-            .await
-    }
 
     /// Convert given hash to canonical ContentId
     pub async fn convert_file_to_content_id<H: Into<FetchKey> + Copy + std::fmt::Debug>(
@@ -230,13 +219,6 @@ impl HgRepoContext {
         .await
         .map_err(MononokeError::from)
     }
-
-    /// Look up in blobstore by `Sha256 alias`
-    pub async fn is_file_present_by_sha256(&self, sha256: Sha256) -> Result<bool, MononokeError> {
-        self.is_key_present_in_blobstore(&Alias::Sha256(sha256).blobstore_key(), None)
-            .await
-    }
-
 
     /// Download file contents
     pub async fn download_file(
