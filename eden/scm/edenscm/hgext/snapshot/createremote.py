@@ -85,6 +85,7 @@ class workingcopy(object):
 def createremote(ui, repo, **opts):
     lifetime = _parselifetime(opts)
     maxuntrackedsize = parsemaxuntracked(opts)
+    reusestorage = opts.get("reuse_storage") is True
     with repo.lock():
         _backupcurrentcommit(repo)
 
@@ -113,6 +114,7 @@ def createremote(ui, repo, **opts):
             },
             lifetime,
             previousbubble,
+            previousbubble if reusestorage else None,
         )
 
     csid = bytes(response["changeset_token"]["data"]["id"]["BonsaiChangesetId"])

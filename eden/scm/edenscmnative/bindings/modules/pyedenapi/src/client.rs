@@ -369,15 +369,18 @@ py_class!(pub class client |py| {
         data: Serde<SnapshotRawData>,
         custom_duration_secs: Option<u64>,
         copy_from_bubble_id: Option<u64>,
+        use_bubble: Option<u64>,
     ) -> PyResult<Serde<UploadSnapshotResponse>> {
         let api = self.inner(py).as_ref();
         let copy_from_bubble_id = copy_from_bubble_id.and_then(NonZeroU64::new);
+        let use_bubble = use_bubble.and_then(NonZeroU64::new);
         py.allow_threads(|| {
             block_unless_interrupted(upload_snapshot(
                 api,
                 data.0,
                 custom_duration_secs,
                 copy_from_bubble_id,
+                use_bubble,
             ))
         })
         .map_pyerr(py)?

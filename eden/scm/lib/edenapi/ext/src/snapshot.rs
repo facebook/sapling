@@ -34,6 +34,7 @@ pub async fn upload_snapshot(
     data: SnapshotRawData,
     custom_duration_secs: Option<u64>,
     copy_from_bubble_id: Option<NonZeroU64>,
+    use_bubble: Option<NonZeroU64>,
 ) -> Result<UploadSnapshotResponse> {
     let SnapshotRawData {
         files,
@@ -100,15 +101,17 @@ pub async fn upload_snapshot(
         .map(|(content_id, data)| (AnyFileContentId::ContentId(content_id), data))
         .collect();
 
-    let prepare_response = {
+    let bubble_id = if let Some(id) = use_bubble {
+        id
+    } else {
         api.ephemeral_prepare(custom_duration_secs.map(Duration::from_secs))
             .await?
             .entries
             .next()
             .await
             .context("Failed to create ephemeral bubble")??
+            .bubble_id
     };
-    let bubble_id = prepare_response.bubble_id;
     let file_content_tokens = {
         let downcast_error = "incorrect upload token, failed to downcast 'token.data.id' to 'AnyId::AnyFileContentId::ContentId' type";
         // upload file contents first, receiving upload tokens

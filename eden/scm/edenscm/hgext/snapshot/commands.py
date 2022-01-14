@@ -48,6 +48,14 @@ subcmd = snapshot.subcommand(
             _("filter out any untracked files larger than this size, in megabytes"),
             _("MAX_SIZE"),
         ),
+        (
+            "",
+            "reuse-storage",
+            None,
+            _(
+                "reuse same storage as latest snapshot, if possible; its lifetime won't be extended"
+            ),
+        ),
     ],
 )
 def createremotecmd(*args, **kwargs):
