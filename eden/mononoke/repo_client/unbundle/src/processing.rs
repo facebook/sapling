@@ -15,6 +15,7 @@ use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
 use bookmarks_movement::{
     log_commits_to_scribe, BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets,
+    ScribeCommitInfo,
 };
 use bytes::Bytes;
 use context::CoreContext;
@@ -191,9 +192,13 @@ async fn run_push(
     let mut changesets_to_log = vec![];
     let mut new_changesets = HashMap::new();
     for bcs in uploaded_bonsais {
-        let cs_id = bcs.get_changeset_id();
-        changesets_to_log.push((cs_id, ChangedFilesInfo::new(&bcs)));
-        new_changesets.insert(cs_id, bcs);
+        let changeset_id = bcs.get_changeset_id();
+        changesets_to_log.push(ScribeCommitInfo {
+            changeset_id,
+            bubble_id: None,
+            changed_files: ChangedFilesInfo::new(&bcs),
+        });
+        new_changesets.insert(changeset_id, bcs);
     }
 
     let mut bookmark_ids = Vec::new();
@@ -346,7 +351,11 @@ async fn run_infinitepush(
         bookmark.as_ref(),
         uploaded_bonsais
             .iter()
-            .map(|bcs| (bcs.get_changeset_id(), ChangedFilesInfo::new(&bcs)))
+            .map(|bcs| ScribeCommitInfo {
+                changeset_id: bcs.get_changeset_id(),
+                bubble_id: None,
+                changed_files: ChangedFilesInfo::new(&bcs),
+            })
             .collect(),
         infinitepush_params.commit_scribe_category.as_deref(),
     )
@@ -415,6 +424,11 @@ async fn run_pushrebase(
                 new_commits
                     .into_iter()
                     .zip(changed_files_info.into_iter())
+                    .map(|(changeset_id, changed_files)| ScribeCommitInfo {
+                        changeset_id,
+                        bubble_id: None,
+                        changed_files,
+                    })
                     .collect(),
                 pushrebase_params.commit_scribe_category.as_deref(),
             )
@@ -424,7 +438,11 @@ async fn run_pushrebase(
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
             let changesets_to_log = uploaded_bonsais
                 .iter()
-                .map(|bcs| (bcs.get_changeset_id(), ChangedFilesInfo::new(&bcs)))
+                .map(|bcs| ScribeCommitInfo {
+                    changeset_id: bcs.get_changeset_id(),
+                    bubble_id: None,
+                    changed_files: ChangedFilesInfo::new(&bcs),
+                })
                 .collect();
 
             let (pushrebased_rev, pushrebased_changesets) = force_pushrebase(

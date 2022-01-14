@@ -6,6 +6,7 @@
  */
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error, Result};
@@ -604,18 +605,28 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
         bookmark,
         commits_to_log
             .iter()
-            .map(|bcs| (bcs.get_changeset_id(), ChangedFilesInfo::new(bcs)))
+            .map(|bcs| ScribeCommitInfo {
+                changeset_id: bcs.get_changeset_id(),
+                bubble_id: None,
+                changed_files: ChangedFilesInfo::new(bcs),
+            })
             .collect(),
         commit_scribe_category.as_deref(),
     )
     .await;
 }
 
+pub struct ScribeCommitInfo {
+    pub changeset_id: ChangesetId,
+    pub bubble_id: Option<NonZeroU64>,
+    pub changed_files: ChangedFilesInfo,
+}
+
 pub async fn log_commits_to_scribe(
     ctx: &CoreContext,
     repo: &(impl RepoIdentityRef + ChangesetsRef),
     bookmark: Option<&BookmarkName>,
-    changesets_and_changed_files_count: Vec<(ChangesetId, ChangedFilesInfo)>,
+    changesets_and_changed_files_count: Vec<ScribeCommitInfo>,
     commit_scribe_category: Option<&str>,
 ) {
     let queue = match commit_scribe_category {
@@ -632,36 +643,45 @@ pub async fn log_commits_to_scribe(
 
     let res = stream::iter(changesets_and_changed_files_count)
         .map(Ok)
-        .map_ok(|(changeset_id, changed_files_info)| {
-            let queue = &queue;
-            async move {
-                let cs = repo
-                    .changesets()
-                    .get(ctx.clone(), changeset_id)
-                    .await?
-                    .ok_or_else(|| anyhow!("Changeset not found: {}", changeset_id))?;
-                let generation = Generation::new(cs.gen);
-                let parents = cs.parents;
-
-                let username = ctx.metadata().unix_name();
-                let hostname = ctx.metadata().client_hostname();
-                let identities = ctx.metadata().identities();
-                let ci = scribe_commit_queue::CommitInfo::new(
-                    repo_id,
-                    repo_name,
-                    bookmark,
-                    generation,
+        .map_ok(
+            |
+                ScribeCommitInfo {
                     changeset_id,
-                    parents,
-                    username.as_deref(),
-                    identities,
-                    hostname.as_deref(),
-                    received_timestamp,
-                    changed_files_info,
-                );
-                queue.queue_commit(&ci)
-            }
-        })
+                    bubble_id,
+                    changed_files,
+                },
+            | {
+                let queue = &queue;
+                async move {
+                    let cs = repo
+                        .changesets()
+                        .get(ctx.clone(), changeset_id)
+                        .await?
+                        .ok_or_else(|| anyhow!("Changeset not found: {}", changeset_id))?;
+                    let generation = Generation::new(cs.gen);
+                    let parents = cs.parents;
+
+                    let username = ctx.metadata().unix_name();
+                    let hostname = ctx.metadata().client_hostname();
+                    let identities = ctx.metadata().identities();
+                    let ci = scribe_commit_queue::CommitInfo::new(
+                        repo_id,
+                        repo_name,
+                        bookmark,
+                        generation,
+                        changeset_id,
+                        bubble_id,
+                        parents,
+                        username.as_deref(),
+                        identities,
+                        hostname.as_deref(),
+                        received_timestamp,
+                        changed_files,
+                    );
+                    queue.queue_commit(&ci)
+                }
+            },
+        )
         .try_for_each_concurrent(100, |f| f)
         .await;
     if let Err(err) = res {

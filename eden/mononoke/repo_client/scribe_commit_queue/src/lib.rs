@@ -11,6 +11,7 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, Generation, RepositoryId};
 use permission_checker::MononokeIdentitySet;
 use scribe_ext::Scribe;
 use serde_derive::Serialize;
+use std::num::NonZeroU64;
 
 #[derive(Serialize)]
 pub struct CommitInfo<'a> {
@@ -20,6 +21,8 @@ pub struct CommitInfo<'a> {
     bookmark: Option<&'a str>,
     generation: Generation,
     changeset_id: ChangesetId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bubble_id: Option<NonZeroU64>,
     parents: Vec<ChangesetId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     user_unix_name: Option<&'a str>,
@@ -62,6 +65,7 @@ impl<'a> CommitInfo<'a> {
         bookmark: Option<&'a str>,
         generation: Generation,
         changeset_id: ChangesetId,
+        bubble_id: Option<NonZeroU64>,
         parents: Vec<ChangesetId>,
         user_unix_name: Option<&'a str>,
         user_identities: &'a MononokeIdentitySet,
@@ -75,6 +79,7 @@ impl<'a> CommitInfo<'a> {
             bookmark,
             generation,
             changeset_id,
+            bubble_id,
             parents,
             user_unix_name,
             user_identities,
