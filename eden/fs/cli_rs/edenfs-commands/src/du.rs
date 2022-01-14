@@ -76,16 +76,16 @@ fn usage_for_dir_entry(
     parent_device_id: u64,
 ) -> std::io::Result<(u64, Vec<PathBuf>)> {
     let entry = dirent?;
-    if entry.path().is_dir() {
+    let symlink_metadata = fs::symlink_metadata(entry.path())?;
+    if symlink_metadata.is_dir() {
         // Don't recurse onto different filesystems
-        if cfg!(windows) || entry.metadata()?.eden_dev() == parent_device_id {
+        if cfg!(windows) || symlink_metadata.eden_dev() == parent_device_id {
             usage_for_dir(entry.path(), Some(parent_device_id))
         } else {
             Ok((0, vec![]))
         }
     } else {
-        let metadata = entry.metadata()?;
-        Ok((metadata.eden_file_size(), vec![]))
+        Ok((symlink_metadata.eden_file_size(), vec![]))
     }
 }
 
