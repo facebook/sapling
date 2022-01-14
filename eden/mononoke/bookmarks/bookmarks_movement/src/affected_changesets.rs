@@ -14,19 +14,21 @@ use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
+use changesets::ChangesetsRef;
 use chrono::Utc;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use derived_data::BonsaiDerived;
 use futures::compat::Stream01CompatExt;
-use futures::future::{self, try_join};
+use futures::future;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures_ext::FbStreamExt;
 use hooks::{CrossRepoPushSource, HookManager};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, Generation};
 use phases::PhasesRef;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_identity::RepoIdentityRef;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scribe_commit_queue::{self, ChangedFilesInfo, LogToScribe};
 use skeleton_manifest::RootSkeletonManifestId;
@@ -611,7 +613,7 @@ pub(crate) async fn log_bonsai_commits_to_scribe(
 
 pub async fn log_commits_to_scribe(
     ctx: &CoreContext,
-    repo: &BlobRepo,
+    repo: &(impl RepoIdentityRef + ChangesetsRef),
     bookmark: Option<&BookmarkName>,
     changesets_and_changed_files_count: Vec<(ChangesetId, ChangedFilesInfo)>,
     commit_scribe_category: Option<&str>,
@@ -623,8 +625,8 @@ pub async fn log_commits_to_scribe(
         _ => LogToScribe::new_with_discard(),
     };
 
-    let repo_id = repo.get_repoid();
-    let repo_name = repo.name();
+    let repo_id = repo.repo_identity().id();
+    let repo_name = repo.repo_identity().name();
     let bookmark = bookmark.map(|bm| bm.as_str());
     let received_timestamp = Utc::now();
 
@@ -633,17 +635,13 @@ pub async fn log_commits_to_scribe(
         .map_ok(|(changeset_id, changed_files_info)| {
             let queue = &queue;
             async move {
-                let get_generation = async {
-                    repo.get_generation_number(ctx.clone(), changeset_id)
-                        .await?
-                        .ok_or_else(|| Error::msg("No generation number found"))
-                };
-                let get_parents = async {
-                    repo.get_changeset_parents_by_bonsai(ctx.clone(), changeset_id)
-                        .await
-                };
-
-                let (generation, parents) = try_join(get_generation, get_parents).await?;
+                let cs = repo
+                    .changesets()
+                    .get(ctx.clone(), changeset_id)
+                    .await?
+                    .ok_or_else(|| anyhow!("Changeset not found: {}", changeset_id))?;
+                let generation = Generation::new(cs.gen);
+                let parents = cs.parents;
 
                 let username = ctx.metadata().unix_name();
                 let hostname = ctx.metadata().client_hostname();
