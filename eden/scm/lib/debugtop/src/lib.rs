@@ -13,10 +13,17 @@ use chrono::TimeZone;
 use chrono::Utc;
 use runlog::{Entry, Progress};
 
+struct EntryState {
+    last_time: chrono::DateTime<chrono::Utc>,
+    last_download_bytes: usize,
+    last_upload_bytes: usize,
+}
+
 pub struct TableGenerator {
     column_titles: Vec<String>,
-    row_generator: Vec<fn(&Entry, fn() -> chrono::DateTime<Utc>) -> String>,
+    row_generator: Vec<fn(&Entry, fn() -> chrono::DateTime<Utc>, Option<&EntryState>) -> String>,
     entry_removal_delay: chrono::Duration,
+    entry_states: HashMap<String, EntryState>,
 }
 
 impl TableGenerator {
@@ -24,11 +31,16 @@ impl TableGenerator {
         column_titles_str: String,
         entry_removal_delay: chrono::Duration,
     ) -> Result<TableGenerator, Vec<String>> {
-        let column_funcs: Vec<(&str, fn(&Entry, fn() -> chrono::DateTime<Utc>) -> String)> = vec![
-            ("PID", |entry, _| entry.pid.to_string()),
-            ("STATUS", |entry, _| top_status_entry(&entry.exit_code)),
-            ("PROGRESS", |entry, _| top_progress_entry(&entry.progress)),
-            ("TIME SPENT", |entry, current_time| {
+        let column_funcs: Vec<(
+            &str,
+            fn(&Entry, fn() -> chrono::DateTime<Utc>, Option<&EntryState>) -> String,
+        )> = vec![
+            ("PID", |entry, _, _| entry.pid.to_string()),
+            ("STATUS", |entry, _, _| top_status_entry(&entry.exit_code)),
+            ("PROGRESS", |entry, _, _| {
+                top_progress_entry(&entry.progress)
+            }),
+            ("TIME SPENT", |entry, current_time, _| {
                 let time_spent = if let Some(end_time) = entry.end_time {
                     end_time
                 } else {
@@ -36,7 +48,27 @@ impl TableGenerator {
                 } - entry.start_time;
                 top_time_entry(time_spent)
             }),
-            ("CMD", |entry, _| entry.command.join(" ")),
+            ("NET DOWN", |entry, current_time, entry_state| {
+                let (duration, bytes_transferred) = match entry_state {
+                    Some(entry_state) => (
+                        current_time() - entry_state.last_time,
+                        entry.download_bytes - entry_state.last_download_bytes,
+                    ),
+                    None => (chrono::Duration::seconds(0), 0_usize),
+                };
+                network_entry(duration, bytes_transferred)
+            }),
+            ("NET UP", |entry, current_time, entry_state| {
+                let (duration, bytes_transferred) = match entry_state {
+                    Some(entry_state) => (
+                        current_time() - entry_state.last_time,
+                        entry.upload_bytes - entry_state.last_upload_bytes,
+                    ),
+                    None => (chrono::Duration::seconds(0), 0_usize),
+                };
+                network_entry(duration, bytes_transferred)
+            }),
+            ("CMD", |entry, _, _| entry.command.join(" ")),
         ];
         let columns_map: HashMap<_, _> = column_funcs.iter().copied().collect();
         let column_titles: Vec<_> = if !column_titles_str.is_empty() {
@@ -63,6 +95,7 @@ impl TableGenerator {
                 .map(|&c| *columns_map.get(c).unwrap())
                 .collect(),
             entry_removal_delay,
+            entry_states: HashMap::new(),
         })
     }
 
@@ -85,12 +118,21 @@ impl TableGenerator {
             let end_time_filter_fn =
                 |end_time| current_time() - end_time <= self.entry_removal_delay;
             if running || entry.end_time.map_or(false, end_time_filter_fn) {
-                Some(
-                    self.row_generator
-                        .iter()
-                        .map(|&f| f(&entry, current_time))
-                        .collect(),
-                )
+                let entry_state = self.entry_states.get(&entry.id);
+                let row = self
+                    .row_generator
+                    .iter()
+                    .map(|&f| f(&entry, current_time, entry_state))
+                    .collect();
+                self.entry_states.insert(
+                    entry.id,
+                    EntryState {
+                        last_time: current_time(),
+                        last_download_bytes: entry.download_bytes,
+                        last_upload_bytes: entry.upload_bytes,
+                    },
+                );
+                Some(row)
             } else {
                 None
             }
@@ -137,6 +179,20 @@ fn top_progress_entry(progress_bars: &[Progress]) -> String {
     String::from("-")
 }
 
+fn network_entry(time_spent: chrono::Duration, bytes_transferred: usize) -> String {
+    let time_spent = time_spent.num_seconds();
+    if time_spent == 0 {
+        return String::from("-");
+    }
+    let rate = ((bytes_transferred * 8) as f32) / (time_spent as f32);
+    let (rate, prefix) = if rate >= 1e5 {
+        (rate / 1e6, "M")
+    } else {
+        (rate / 1e3, "k")
+    };
+    format!("{:.1} {}b/s", rate, prefix)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,6 +232,8 @@ mod tests {
             "STATUS".to_string(),
             "PROGRESS".to_string(),
             "TIME SPENT".to_string(),
+            "NET DOWN".to_string(),
+            "NET UP".to_string(),
             "CMD".to_string(),
         ];
         assert_eq!(
@@ -214,6 +272,8 @@ mod tests {
             "RUNNING".to_string(),
             "2.0%".to_string(),
             "3.1s".to_string(),
+            "-".to_string(),
+            "-".to_string(),
             "somecommand somearg".to_string(),
         ]];
         assert_eq!(
@@ -262,6 +322,8 @@ mod tests {
             "EXITED (123)".to_string(),
             "-".to_string(),
             "3.0s".to_string(),
+            "-".to_string(),
+            "-".to_string(),
             "notarealcommand".to_string(),
         ]];
         assert_eq!(
@@ -345,5 +407,21 @@ mod tests {
         );
         // Test empty list
         assert_eq!(top_progress_entry(&[]), "-");
+    }
+
+    #[test]
+    fn test_network_entry() {
+        assert_eq!(
+            network_entry(chrono::Duration::seconds(0), 5000),
+            String::from("-"),
+        );
+        assert_eq!(
+            network_entry(chrono::Duration::seconds(2), 400),
+            String::from("1.6 kb/s"),
+        );
+        assert_eq!(
+            network_entry(chrono::Duration::seconds(1), 37500),
+            String::from("0.3 Mb/s"),
+        );
     }
 }
