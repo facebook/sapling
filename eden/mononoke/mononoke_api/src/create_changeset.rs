@@ -7,6 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use bookmarks_movement::{log_commits_to_scribe, ScribeCommitInfo};
 use bytes::Bytes;
 use changesets::ChangesetsRef;
 use chrono::{DateTime, FixedOffset};
@@ -26,6 +27,8 @@ use mononoke_types::{
 };
 use repo_blobstore::RepoBlobstore;
 use repo_blobstore::RepoBlobstoreRef;
+use repo_identity::RepoIdentityRef;
+use scribe_commit_queue::ChangedFilesInfo;
 use sorted_vector_map::SortedVectorMap;
 
 use crate::changeset::ChangesetContext;
@@ -287,9 +290,29 @@ impl RepoContext {
     async fn save_changeset(
         &self,
         changeset: BonsaiChangeset,
-        container: &(impl ChangesetsRef + RepoBlobstoreRef),
+        container: &(impl ChangesetsRef + RepoBlobstoreRef + RepoIdentityRef),
+        bubble: Option<&Bubble>,
     ) -> Result<(), MononokeError> {
+        let changeset_id = changeset.get_changeset_id();
+        let changed_files = ChangedFilesInfo::new(&changeset);
+
         blobrepo::save_bonsai_changesets(vec![changeset], self.ctx().clone(), container).await?;
+
+        if let Some(category) = self.config().infinitepush.commit_scribe_category.as_deref() {
+            log_commits_to_scribe(
+                self.ctx(),
+                container,
+                None,
+                vec![ScribeCommitInfo {
+                    changeset_id,
+                    bubble_id: bubble.map(|x| x.bubble_id().into()),
+                    changed_files,
+                }],
+                Some(category),
+            )
+            .await;
+        }
+
         Ok(())
     }
 
@@ -514,12 +537,19 @@ impl RepoContext {
         })?;
 
         let new_changeset_id = new_changeset.get_changeset_id();
+
         if let Some(bubble) = &bubble {
-            self.save_changeset(new_changeset, &bubble.repo_view(self.blob_repo()))
-                .await?;
+            self.save_changeset(
+                new_changeset,
+                &bubble.repo_view(self.blob_repo()),
+                Some(bubble),
+            )
+            .await?;
         } else {
-            self.save_changeset(new_changeset, self.blob_repo()).await?;
+            self.save_changeset(new_changeset, self.blob_repo(), None)
+                .await?;
         }
+
 
         Ok(ChangesetContext::new(self.clone(), new_changeset_id))
     }
