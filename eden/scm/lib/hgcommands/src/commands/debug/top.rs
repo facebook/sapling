@@ -20,9 +20,13 @@ use super::IO;
 
 define_flags! {
     pub struct DebugTopOpts {
-        /// rate to refersh in milliseconds
+        /// rate to refresh in milliseconds
         #[short('r')]
         refresh_rate: i64 = 1000,
+
+        /// amount of milliseconds to show a process after it finishes
+        #[short('d')]
+        reap_delay: i64 = 2000,
 
         /// columns separated by comma; shows all if none is specified
         #[short('c')]
@@ -35,8 +39,9 @@ pub fn run(opts: DebugTopOpts, io: &IO, repo: Repo) -> Result<u8> {
     let mut stderr = io.error();
     let running_in_tty = stdout.is_tty();
     let refresh_rate = opts.refresh_rate.max(0) as u64;
+    let reap_delay = chrono::Duration::milliseconds(opts.reap_delay);
 
-    let table_generator = match TableGenerator::new(opts.columns) {
+    let mut table_generator = match TableGenerator::new(opts.columns, reap_delay) {
         Err(unexpected_columns) => {
             for column in unexpected_columns.iter() {
                 write!(stderr, "Error: column \"{}\" was not expected\n", column)?;

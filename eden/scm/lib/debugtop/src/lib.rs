@@ -16,15 +16,24 @@ use runlog::{Entry, Progress};
 pub struct TableGenerator {
     column_titles: Vec<String>,
     row_generator: Vec<fn(&Entry, fn() -> chrono::DateTime<Utc>) -> String>,
+    entry_removal_delay: chrono::Duration,
 }
 
 impl TableGenerator {
-    pub fn new(column_titles_str: String) -> Result<TableGenerator, Vec<String>> {
+    pub fn new(
+        column_titles_str: String,
+        entry_removal_delay: chrono::Duration,
+    ) -> Result<TableGenerator, Vec<String>> {
         let column_funcs: Vec<(&str, fn(&Entry, fn() -> chrono::DateTime<Utc>) -> String)> = vec![
             ("PID", |entry, _| entry.pid.to_string()),
+            ("STATUS", |entry, _| top_status_entry(&entry.exit_code)),
             ("PROGRESS", |entry, _| top_progress_entry(&entry.progress)),
             ("TIME SPENT", |entry, current_time| {
-                let time_spent = current_time() - entry.start_time;
+                let time_spent = if let Some(end_time) = entry.end_time {
+                    end_time
+                } else {
+                    current_time()
+                } - entry.start_time;
                 top_time_entry(time_spent)
             }),
             ("CMD", |entry, _| entry.command.join(" ")),
@@ -53,6 +62,7 @@ impl TableGenerator {
                 .iter()
                 .map(|&c| *columns_map.get(c).unwrap())
                 .collect(),
+            entry_removal_delay,
         })
     }
 
@@ -61,7 +71,7 @@ impl TableGenerator {
     }
 
     pub fn generate_rows<'a>(
-        &'a self,
+        &'a mut self,
         runlog_entries: impl Iterator<Item = Result<(Entry, bool), Error>> + 'a,
         current_time: fn() -> chrono::DateTime<Utc>,
     ) -> impl Iterator<Item = Vec<String>> + 'a {
@@ -72,16 +82,26 @@ impl TableGenerator {
                     return None;
                 }
             };
-            if !running {
-                return None;
+            let end_time_filter_fn =
+                |end_time| current_time() - end_time <= self.entry_removal_delay;
+            if running || entry.end_time.map_or(false, end_time_filter_fn) {
+                Some(
+                    self.row_generator
+                        .iter()
+                        .map(|&f| f(&entry, current_time))
+                        .collect(),
+                )
+            } else {
+                None
             }
-            Some(
-                self.row_generator
-                    .iter()
-                    .map(|&f| f(&entry, current_time))
-                    .collect(),
-            )
         })
+    }
+}
+
+fn top_status_entry(exit_code: &Option<i32>) -> String {
+    match exit_code {
+        Some(code) => format!("EXITED ({})", code),
+        None => "RUNNING".to_string(),
     }
 }
 
@@ -138,11 +158,13 @@ mod tests {
 
     #[test]
     fn test_table_generator() {
-        let default_generator = || TableGenerator::new("".to_string());
+        let default_removal_delay = chrono::Duration::seconds(1);
+        let default_generator = || TableGenerator::new("".to_string(), default_removal_delay);
         let default_time = || Utc.timestamp(3, 100000000);
+
         // Test invalid columns
         assert!(
-            matches!(TableGenerator::new("not a valid column, PID, not_valid_either".to_string()),
+            matches!(TableGenerator::new("not a valid column, PID, not_valid_either".to_string(), default_removal_delay),
             Err(x) if x == vec![
                 "not a valid column".to_string(),
                 "not_valid_either".to_string()
@@ -151,6 +173,7 @@ mod tests {
         // Test default column order
         let default_columns = vec![
             "PID".to_string(),
+            "STATUS".to_string(),
             "PROGRESS".to_string(),
             "TIME SPENT".to_string(),
             "CMD".to_string(),
@@ -161,7 +184,7 @@ mod tests {
         );
         // Test specific columns
         assert_eq!(
-            *TableGenerator::new("CMD,   PID".to_string())
+            *TableGenerator::new("CMD,   PID".to_string(), default_removal_delay)
                 .unwrap()
                 .column_titles(),
             vec!["CMD".to_string(), "PID".to_string()]
@@ -188,6 +211,7 @@ mod tests {
         ))];
         let expected_rows = vec![vec![
             "101".to_string(),
+            "RUNNING".to_string(),
             "2.0%".to_string(),
             "3.1s".to_string(),
             "somecommand somearg".to_string(),
@@ -200,9 +224,9 @@ mod tests {
             expected_rows
         );
         // Test row filtering
-        let rr = ParseError {};
+        let err = ParseError {};
         let runlog_entries: Vec<Result<(Entry, bool), Error>> = vec![
-            Err(Error::new(rr)),
+            Err(Error::new(err)),
             Ok((
                 Entry {
                     id: "0".to_string(),
@@ -211,20 +235,48 @@ mod tests {
                     download_bytes: 0,
                     upload_bytes: 0,
                     start_time: Utc.timestamp(0, 0),
-                    end_time: None,
-                    exit_code: None,
+                    end_time: Some(Utc.timestamp(2, 0)),
+                    exit_code: Some(0),
+                    progress: vec![],
+                },
+                false,
+            )),
+            Ok((
+                Entry {
+                    id: "1".to_string(),
+                    command: vec!["notarealcommand".to_string()],
+                    pid: 321,
+                    download_bytes: 0,
+                    upload_bytes: 0,
+                    start_time: Utc.timestamp(0, 0),
+                    end_time: Some(Utc.timestamp(3, 0)),
+                    exit_code: Some(123),
                     progress: vec![],
                 },
                 false,
             )),
         ];
-        assert!(
+
+        let expected_rows = vec![vec![
+            "321".to_string(),
+            "EXITED (123)".to_string(),
+            "-".to_string(),
+            "3.0s".to_string(),
+            "notarealcommand".to_string(),
+        ]];
+        assert_eq!(
             default_generator()
                 .unwrap()
                 .generate_rows(runlog_entries.into_iter(), default_time)
-                .collect::<Vec<_>>()
-                .is_empty()
+                .collect::<Vec<_>>(),
+            expected_rows
         );
+    }
+
+    #[test]
+    fn test_status_entry() {
+        assert_eq!(top_status_entry(&Some(0)), "EXITED (0)");
+        assert_eq!(top_status_entry(&None), "RUNNING");
     }
 
     #[test]

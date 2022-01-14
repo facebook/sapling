@@ -511,7 +511,7 @@ Show all commands + options
   debugthrowexception: 
   debugthrowrustbail: 
   debugthrowrustexception: 
-  debugtop: refresh-rate, columns
+  debugtop: refresh-rate, reap-delay, columns
   debugtreestate: 
   debugupdatecaches: 
   debugvisibility: 
