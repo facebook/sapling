@@ -1581,9 +1581,8 @@ impl LfsRemote {
             }
 
             let use_client_certs = config.get_or("lfs", "use-client-certs", || true)?;
-            let auth_proxy = config.get_or("auth_proxy", "x2pagentd", || false)?;
 
-            let auth = if use_client_certs && !auth_proxy {
+            let auth = if use_client_certs {
                 AuthSection::from_config(config).best_match_for(&url)?
             } else {
                 None
