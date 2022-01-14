@@ -482,8 +482,17 @@ class uihunk(patchnode):
         """
         dels = []
         adds = []
-        for line in self.changedlines:
+        for idx, line in enumerate(self.changedlines):
             text = line.linetext
+
+            # Trim newline if this line doesn't actually end with a newline.
+            if (
+                idx < len(self.changedlines) - 1
+                and self.changedlines[idx + 1].linetext
+                == b"\\ No newline at end of file\n"
+            ):
+                text = text[:-1]
+
             if line.applied:
                 if text[0:1] == b"+":
                     dels.append(text[1:])
