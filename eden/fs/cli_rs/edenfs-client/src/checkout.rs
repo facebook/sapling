@@ -24,6 +24,7 @@ use thrift_types::edenfs::types::{MountInfo, MountState};
 use toml::value::Value;
 use uuid::Uuid;
 
+use crate::redirect::{deserialize_redirections, RedirectionType};
 use crate::EdenFsInstance;
 
 // files in the client directory (aka data_dir aka state_dir)
@@ -36,33 +37,6 @@ const SNAPSHOT_MAGIC_2: &[u8] = b"eden\x00\x00\x00\x02";
 
 const SUPPORTED_REPOS: &[&str] = &["git", "hg", "recas"];
 const SUPPORTED_MOUNT_PROTOCOLS: &[&str] = &["fuse", "nfs", "prjfs"];
-
-#[derive(Debug)]
-enum RedirectionType {
-    /// Linux: a bind mount to a mkscratch generated path
-    /// macOS: a mounted dmg file in a mkscratch generated path
-    /// Windows: equivalent to symlink type
-    Bind,
-    /// A symlink to a mkscratch generated path
-    Symlink,
-}
-
-impl FromStr for RedirectionType {
-    type Err = EdenFsError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "bind" {
-            Ok(RedirectionType::Bind)
-        } else if s == "symlink" {
-            Ok(RedirectionType::Symlink)
-        } else {
-            Err(EdenFsError::ConfigurationError(format!(
-                "Unknown redirection type: {}. Must be one of: bind, symlink",
-                s
-            )))
-        }
-    }
-}
 
 #[derive(Deserialize, Debug)]
 struct Repository {
@@ -186,7 +160,7 @@ struct CheckoutConfig {
     repository: Repository,
 
     #[serde(deserialize_with = "deserialize_redirections", default)]
-    redirections: Option<BTreeMap<String, RedirectionType>>,
+    redirections: BTreeMap<PathBuf, RedirectionType>,
 
     profiles: Option<PrefetchProfiles>,
 
@@ -203,31 +177,6 @@ impl CheckoutConfig {
         let config: CheckoutConfig = toml::from_str(&content).from_err()?;
         Ok(config)
     }
-}
-
-fn deserialize_redirections<'de, D>(
-    deserializer: D,
-) -> Result<Option<BTreeMap<String, RedirectionType>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let unvalidated_map: BTreeMap<String, Value> = BTreeMap::deserialize(deserializer)?;
-    let mut map = BTreeMap::new();
-    for (key, value) in unvalidated_map {
-        if let Some(s) = value.as_str() {
-            map.insert(
-                key,
-                RedirectionType::from_str(s).map_err(serde::de::Error::custom)?,
-            );
-        } else {
-            return Err(serde::de::Error::custom(format!(
-                "Unsupported redirection value type {}. Must be string.",
-                value
-            )));
-        }
-    }
-
-    Ok(Some(map))
 }
 
 /// Represents an edenfs checkout with mount information as well as information from configuration
