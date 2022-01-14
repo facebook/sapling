@@ -10,13 +10,7 @@
 use async_trait::async_trait;
 use serde::Serialize;
 use std::fs;
-use std::fs::{DirEntry, Metadata};
-#[cfg(target_os = "linux")]
-use std::os::linux::fs::MetadataExt;
-#[cfg(target_os = "macos")]
-use std::os::unix::fs::MetadataExt;
-#[cfg(windows)]
-use std::os::windows::fs::MetadataExt;
+use std::fs::DirEntry;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -25,6 +19,7 @@ use edenfs_client::checkout::find_checkout;
 use edenfs_client::checkout::EdenFsCheckout;
 use edenfs_client::{EdenFsClient, EdenFsInstance};
 use edenfs_error::{EdenFsError, Result, ResultExt};
+use edenfs_utils::metadata::MetadataExt;
 use edenfs_utils::{bytes_from_path, path_from_bytes};
 
 use crate::ExitCode;
@@ -75,52 +70,6 @@ impl AggregatedUsageCounts {
     }
 }
 
-/// Metadata helper methods that map equivalent methods for the
-/// purposes of disk usage calculations
-trait MetadataDuExt {
-    /// Returns the ID of the device containing the file
-    fn du_dev(&self) -> u64;
-
-    /// Returns the file size
-    fn du_file_size(&self) -> u64;
-}
-
-#[cfg(windows)]
-impl MetadataDuExt for Metadata {
-    fn du_dev(&self) -> u64 {
-        0
-    }
-
-    fn du_file_size(&self) -> u64 {
-        self.file_size()
-    }
-}
-
-#[cfg(target_os = "linux")]
-impl MetadataDuExt for Metadata {
-    fn du_dev(&self) -> u64 {
-        self.st_dev()
-    }
-
-    fn du_file_size(&self) -> u64 {
-        // Use st_blocks as this represents the actual amount of
-        // disk space allocated by the file, not its apparent
-        // size.
-        self.st_blocks() * 512
-    }
-}
-
-#[cfg(target_os = "macos")]
-impl MetadataDuExt for Metadata {
-    fn du_dev(&self) -> u64 {
-        self.dev()
-    }
-
-    fn du_file_size(&self) -> u64 {
-        self.blocks() * 512
-    }
-}
-
 /// Intended to only be called by [usage_for_dir]
 fn usage_for_dir_entry(
     dirent: std::io::Result<DirEntry>,
@@ -129,21 +78,21 @@ fn usage_for_dir_entry(
     let entry = dirent?;
     if entry.path().is_dir() {
         // Don't recurse onto different filesystems
-        if cfg!(windows) || entry.metadata()?.du_dev() == parent_device_id {
+        if cfg!(windows) || entry.metadata()?.eden_dev() == parent_device_id {
             usage_for_dir(entry.path(), Some(parent_device_id))
         } else {
             Ok((0, vec![]))
         }
     } else {
         let metadata = entry.metadata()?;
-        Ok((metadata.du_file_size(), vec![]))
+        Ok((metadata.eden_file_size(), vec![]))
     }
 }
 
 fn usage_for_dir(path: PathBuf, device_id: Option<u64>) -> std::io::Result<(u64, Vec<PathBuf>)> {
     let device_id = match device_id {
         Some(device_id) => device_id,
-        None => fs::metadata(&path)?.du_dev(),
+        None => fs::metadata(&path)?.eden_dev(),
     };
 
     let mut total_size = 0;

@@ -12,6 +12,7 @@ use edenfs_error::{EdenFsError, Result, ResultExt};
 use std::path::PathBuf;
 
 pub mod humantime;
+pub mod metadata;
 
 pub fn path_from_bytes(bytes: &[u8]) -> Result<PathBuf> {
     Ok(PathBuf::from(std::str::from_utf8(bytes).from_err()?))
