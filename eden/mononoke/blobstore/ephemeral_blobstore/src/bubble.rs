@@ -21,6 +21,7 @@ use mononoke_types::repo::{EPH_ID_PREFIX, EPH_ID_SUFFIX};
 use mononoke_types::DateTime;
 use prefixblob::PrefixBlobstore;
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreRef};
+use repo_identity::RepoIdentityArc;
 use repo_identity::RepoIdentityRef;
 use sql::mysql_async::prelude::{ConvIr, FromValue};
 use sql::mysql_async::{FromValueError, Value};
@@ -226,12 +227,14 @@ impl Bubble {
 
     pub fn repo_view(
         &self,
-        container: impl RepoBlobstoreRef + RepoIdentityRef + ChangesetsArc,
+        container: impl RepoBlobstoreRef + RepoIdentityRef + RepoIdentityArc + ChangesetsArc,
     ) -> EphemeralRepoView {
         let repo_blobstore = self.wrap_repo_blobstore(container.repo_blobstore().clone());
+        let repo_identity = container.repo_identity_arc();
         EphemeralRepoView {
             repo_blobstore: Arc::new(repo_blobstore.clone()),
             changesets: Arc::new(self.changesets_with_blobstore(repo_blobstore, container)),
+            repo_identity,
         }
     }
 

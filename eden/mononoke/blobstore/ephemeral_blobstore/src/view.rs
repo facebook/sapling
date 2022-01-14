@@ -7,6 +7,7 @@
 
 use changesets::Changesets;
 use repo_blobstore::RepoBlobstore;
+use repo_identity::RepoIdentity;
 
 #[facet::container]
 pub struct EphemeralRepoView {
@@ -15,4 +16,7 @@ pub struct EphemeralRepoView {
 
     #[facet]
     pub(crate) changesets: dyn Changesets,
+
+    #[facet]
+    pub(crate) repo_identity: RepoIdentity,
 }
