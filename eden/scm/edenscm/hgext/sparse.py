@@ -657,7 +657,7 @@ def _setupdirstate(ui):
 
             sparsematch = repo.sparsematch()
             if self.sparsematch != sparsematch or self.origignore != origignore:
-                self.func = unionmatcher([origignore, negatematcher(sparsematch)])
+                self.func = ignorematcher(origignore, negatematcher(sparsematch))
                 self.sparsematch = sparsematch
                 self.origignore = origignore
             return self.func
@@ -3124,6 +3124,23 @@ class unionmatcher(matchmod.unionmatcher):
         for m in self._matchers:
             sha1.update(_hashmatcher(m))
         return sha1.hexdigest()
+
+
+class ignorematcher(unionmatcher):
+    def __init__(self, origignorematcher, negativesparsematcher):
+        self._origignore = origignorematcher
+        self._negativesparse = negativesparsematcher
+        super().__init__([origignorematcher, negativesparsematcher])
+
+    def explain(self, f):
+        if self._origignore(f):
+            explain = getattr(self._origignore, "explain", None)
+            if explain:
+                return self._matchers[0].explain(f)
+        elif self._negativesparse(f):
+            return "%s is not in sparse profile" % f
+
+        return None
 
 
 class negatematcher(matchmod.basematcher):

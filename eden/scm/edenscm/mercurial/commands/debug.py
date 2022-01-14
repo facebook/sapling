@@ -1412,8 +1412,10 @@ def debugignore(ui, repo, *files, **opts):
         for f in m.files():
             # The matcher supports "explain", use it.
             if explain:
-                ui.write(_x("%s\n") % explain(f))
-                continue
+                explanation = explain(f)
+                if explanation:
+                    ui.write(_x("%s\n") % explain(f))
+                    continue
 
             nf = util.normpath(f)
             ignored = None

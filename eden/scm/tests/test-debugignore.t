@@ -52,3 +52,18 @@
   $ hg debugignore foo
   foo: ignored by rule foo from $TESTTMP/globalignore
   
+Works with sparse checkouts as well.
+  $ newrepo
+  $ enable sparse
+  $ hg sparse include b
+  $ touch a b c
+  $ cat > .gitignore << EOF
+  > a
+  > EOF
+  $ hg debugignore a
+  a: ignored by rule a from .gitignore
+  
+  $ hg debugignore b
+  b is not ignored
+  $ hg debugignore c
+  c is not in sparse profile
