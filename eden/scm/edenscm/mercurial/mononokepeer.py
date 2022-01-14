@@ -225,11 +225,7 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._auth_proxy_http = ui.config("auth_proxy", "http_proxy")
         self._confheaders = ui.config("http", "extra_headers_json")
         self._verbose = ui.configwith(bool, "http", "verbose")
-        try:
-            self._cats = cats.getcats(ui._uiconfig._rcfg._rcfg, raise_if_missing=True)
-        except Exception as e:
-            ui.status(_("CATs missing: %s\n") % e)
-            self._cats = None
+        self._cats = cats.getcats(ui._uiconfig._rcfg._rcfg, raise_if_missing=False)
 
         if self._auth_proxy_http:
             u = util.url(self._auth_proxy_http, parsequery=False, parsefragment=False)
