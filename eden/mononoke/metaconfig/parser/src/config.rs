@@ -792,7 +792,6 @@ mod test {
 
             [segmented_changelog_config]
             enabled = true
-            update_algorithm = "ondemand"
             master_bookmark = "test_bookmark"
             tailer_update_period_secs = 0
             skip_dag_load_at_startup = true
@@ -1097,7 +1096,6 @@ mod test {
                 repo_client_use_warm_bookmarks_cache: true,
                 segmented_changelog_config: SegmentedChangelogConfig {
                     enabled: true,
-                    update_algorithm: Some(String::from("ondemand")),
                     master_bookmark: Some(String::from("test_bookmark")),
                     tailer_update_period: None,
                     skip_dag_load_at_startup: true,
@@ -1169,7 +1167,6 @@ mod test {
                 repo_client_use_warm_bookmarks_cache: false,
                 segmented_changelog_config: SegmentedChangelogConfig {
                     enabled: false,
-                    update_algorithm: None,
                     master_bookmark: None,
                     tailer_update_period: Some(Duration::from_secs(300)),
                     skip_dag_load_at_startup: false,

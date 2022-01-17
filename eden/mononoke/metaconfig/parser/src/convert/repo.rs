@@ -462,7 +462,6 @@ impl Convert for RawSegmentedChangelogConfig {
         let default = SegmentedChangelogConfig::default();
         Ok(SegmentedChangelogConfig {
             enabled: self.enabled.unwrap_or(default.enabled),
-            update_algorithm: self.update_algorithm.or(default.update_algorithm),
             master_bookmark: self.master_bookmark,
             tailer_update_period: maybe_secs_to_duration(
                 self.tailer_update_period_secs,

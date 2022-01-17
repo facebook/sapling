@@ -30,7 +30,6 @@ Seed repository.
   > [segmented_changelog_config]
   > enabled=true
   > master_bookmark="master_bookmark"
-  > update_algorithm="always_download_save"
   > tailer_update_period_secs=1
   > CONFIG
 

@@ -1573,9 +1573,6 @@ pub struct SegmentedChangelogConfig {
     /// This can mean that functionality is disabled to shed load, that the required data is not
     /// curretly being computed or that it was never computed for this repository.
     pub enabled: bool,
-    /// Specifies which update algorithm segmented changelog should be instantiate with. Check
-    /// SegmentedChangelogBuilder for valid options.
-    pub update_algorithm: Option<String>,
     /// The bookmark that is followed to construct the Master group of the Dag.
     pub master_bookmark: Option<String>,
     /// How often the tailer should check for updates on the master_bookmark.
@@ -1633,7 +1630,6 @@ impl Default for SegmentedChangelogConfig {
     fn default() -> Self {
         SegmentedChangelogConfig {
             enabled: false,
-            update_algorithm: None,
             master_bookmark: None,
             tailer_update_period: Some(Duration::from_secs(300)),
             skip_dag_load_at_startup: false,
@@ -1641,25 +1637,5 @@ impl Default for SegmentedChangelogConfig {
             update_to_master_bookmark_period: Some(Duration::from_secs(60)),
             bonsai_changesets_to_include: vec![],
         }
-    }
-}
-
-impl SegmentedChangelogConfig {
-    /// Returns whether `update_algorithm` is set to 'ondemand'
-    pub fn is_update_ondemand(&self) -> bool {
-        self.update_algorithm.as_deref() == Some("ondemand")
-    }
-
-    /// Returns whether `update_algorithm` is set to 'ondemand' and at startup a save should be
-    /// loaded.
-    // Names are not great here. "ondemand" without loading from save is useful for tests where
-    // we don't have the seeder process running.
-    pub fn is_update_ondemand_start_from_save(&self) -> bool {
-        self.update_algorithm.as_deref() == Some("ondemand_start_from_save")
-    }
-
-    /// Returns whether `update_algorithm` is set to 'always_download_save'
-    pub fn is_update_always_download_save(&self) -> bool {
-        self.update_algorithm.as_deref() == Some("always_download_save")
     }
 }
