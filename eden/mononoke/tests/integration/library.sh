@@ -551,11 +551,6 @@ function setup_mononoke_config {
     shift
   fi
 
-  if [[ -z "$REPOTYPE" ]]; then
-    echo "setup_mononoke_config: REPOTYPE is not set" 2>&1
-    exit 1
-  fi
-
   if [[ ! -e "$TESTTMP/mononoke_hgcli" ]]; then
     local priority=""
     if [[ -n "${MONONOKE_HGCLI_PRIORITY:-}" ]]; then
