@@ -1930,8 +1930,10 @@ pub struct Index {
     // Log uses this field for error messages.
     pub(crate) path: PathBuf,
 
-    // OpenOptions
-    open_options: OpenOptions,
+    // Options
+    checksum_enabled: bool,
+    fsync: bool,
+    write: Option<bool>,
 
     // Used by `clear_dirty`.
     clean_root: MemRoot,
@@ -2157,7 +2159,11 @@ impl OpenOptions {
                 file: Some(file),
                 buf: bytes,
                 path: path.to_path_buf(),
-                open_options,
+                // Deconstruct open_options instead of storing it whole, since it contains a
+                // permanent reference to the original key_buf mmap.
+                checksum_enabled: open_options.checksum_enabled,
+                fsync: open_options.fsync,
+                write: open_options.write,
                 clean_root,
                 dirty_root,
                 checksum,
@@ -2194,7 +2200,9 @@ impl OpenOptions {
                 file: None,
                 buf,
                 path: PathBuf::new(),
-                open_options: self.clone(),
+                checksum_enabled: self.checksum_enabled,
+                fsync: self.fsync,
+                write: self.write,
                 clean_root,
                 dirty_root,
                 checksum,
@@ -2387,7 +2395,9 @@ impl Index {
                 file,
                 buf: self.buf.clone(),
                 path: self.path.clone(),
-                open_options: self.open_options.clone(),
+                checksum_enabled: self.checksum_enabled,
+                fsync: self.fsync,
+                write: self.write,
                 clean_root: self.clean_root.clone(),
                 dirty_root: self.dirty_root.clone(),
                 checksum: self.checksum.clone(),
@@ -2403,7 +2413,9 @@ impl Index {
                 file,
                 buf: self.buf.clone(),
                 path: self.path.clone(),
-                open_options: self.open_options.clone(),
+                checksum_enabled: self.checksum_enabled,
+                fsync: self.fsync,
+                write: self.write,
                 clean_root: self.clean_root.clone(),
                 dirty_root: self.clean_root.clone(),
                 checksum: self.checksum.clone(),
@@ -2496,7 +2508,7 @@ impl Index {
             let span = debug_span!("Index::flush", path = self.path.to_string_lossy().as_ref());
             let _guard = span.enter();
 
-            if self.open_options.write == Some(false) {
+            if self.write == Some(false) {
                 return Err(crate::Error::path(
                     self.path(),
                     "cannot flush: Index opened with read-only mode",
@@ -2626,7 +2638,7 @@ impl Index {
 
                 // Update and write Checksum if it's enabled.
                 let mut new_checksum = self.checksum.clone();
-                let checksum_len = if self.open_options.checksum_enabled {
+                let checksum_len = if self.checksum_enabled {
                     new_checksum
                         .update(&self.buf, lock.as_mut(), len, &buf)
                         .context(&path, "cannot read and update checksum")?;
@@ -2645,7 +2657,7 @@ impl Index {
                     .write_all(&buf)
                     .context(&path, "cannot write new data to index")?;
 
-                if self.open_options.fsync || utils::get_global_fsync() {
+                if self.fsync || utils::get_global_fsync() {
                     lock.as_mut().sync_all().context(&path, "cannot sync")?;
                 }
 
