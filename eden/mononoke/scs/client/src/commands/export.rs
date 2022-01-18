@@ -10,8 +10,9 @@
 use anyhow::{bail, Context, Error};
 use bytesize::ByteSize;
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
-use futures::future::FutureExt;
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::future::{BoxFuture, FutureExt};
+use futures::pin_mut;
+use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use source_control::types as thrift;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -33,6 +34,7 @@ const ARG_OUTPUT: &str = "OUTPUT";
 const ARG_VERBOSE: &str = "VERBOSE";
 const ARG_MAKE_PARENT_DIRS: &str = "MAKE_PARENT_DIRS";
 const ARG_PATH_LIST_FILE: &str = "PATH_LIST_FILE";
+const ARG_CASE_INSENSITIVE: &str = "CASE_INSENSITIVE";
 
 /// Chunk size for requests.
 const TREE_CHUNK_SIZE: i64 = source_control::TREE_LIST_MAX_LIMIT;
@@ -76,7 +78,148 @@ pub(super) fn make_subcommand<'a, 'b>() -> App<'a, 'b> {
             .takes_value(true)
             .help("Filename of a file containing a list of paths (relative to PATH) to export"),
     );
+    let cmd = cmd.arg(
+        Arg::with_name(ARG_CASE_INSENSITIVE)
+            .long("case-insensitive")
+            .help("Perform additional requests to try for case insensitive matches"),
+    );
     cmd
+}
+
+/// Returns a stream of the names of the entries in a single directory `path`.
+async fn stream_tree_elements(
+    connection: &Connection,
+    commit: &thrift::CommitSpecifier,
+    path: &str,
+) -> Result<impl Stream<Item = Result<String, Error>>, Error> {
+    let tree = thrift::TreeSpecifier::by_commit_path(thrift::CommitPathSpecifier {
+        commit: commit.clone(),
+        path: path.to_string(),
+        ..Default::default()
+    });
+    let response = connection
+        .tree_list(
+            &tree,
+            &thrift::TreeListParams {
+                offset: 0,
+                limit: source_control::TREE_LIST_MAX_LIMIT,
+                ..Default::default()
+            },
+        )
+        .await?;
+
+    Ok(stream::iter(response.entries)
+        .map(|entry| Ok(entry.name))
+        .chain(
+            stream::iter(
+                (source_control::TREE_LIST_MAX_LIMIT..response.count)
+                    .step_by(source_control::TREE_LIST_MAX_LIMIT as usize),
+            )
+            .map({
+                let connection = connection.clone();
+                move |offset| {
+                    connection.tree_list(
+                        &tree,
+                        &thrift::TreeListParams {
+                            offset,
+                            limit: source_control::TREE_LIST_MAX_LIMIT,
+                            ..Default::default()
+                        },
+                    )
+                }
+            })
+            .buffered(10)
+            .and_then(move |response| async move {
+                Ok(stream::iter(response.entries).map(|entry| Ok(entry.name)))
+            })
+            .try_flatten(),
+        ))
+}
+
+/// Returns an arbitrary case insensitive match of `subpath` within the (case
+/// sensitive) `target_dir`, or `None` if there is no such match.
+fn case_insensitive_subpath<'a>(
+    connection: &'a Connection,
+    commit: &'a thrift::CommitSpecifier,
+    target_dir: &'a str,
+    subpath: &'a str,
+) -> BoxFuture<'a, Result<Option<String>, Error>> {
+    async move {
+        let (target_elem, target_subpath) = subpath.split_once('/').unwrap_or((subpath, ""));
+        let target_elem_lower = target_elem.to_lowercase();
+        let elements = stream_tree_elements(connection, commit, target_dir).await?;
+        pin_mut!(elements);
+        while let Some(elem) = elements.try_next().await? {
+            if elem.to_lowercase() == target_elem_lower {
+                let target = format!("{}/{}", target_dir, elem);
+                if target_subpath.is_empty() {
+                    return Ok(Some(target));
+                } else if let Some(response) =
+                    // We've found a possible directory to look into - recurse
+                    // to see if we can find the full path.
+                    case_insensitive_subpath(
+                        connection,
+                        commit,
+                        &target,
+                        target_subpath,
+                    )
+                    .await?
+                {
+                    return Ok(Some(response));
+                }
+            }
+        }
+        Ok(None)
+    }
+    .boxed()
+}
+
+/// Returns an iterator over pairs of each of the path prefixes of `path` and
+/// the subpath within that prefix, finishing with the full path relative to
+/// the root.  Initial trailing slashes are removed from the path.
+///
+/// ```
+/// assert_eq!(
+///    iter_path_prefixes("a/b/c").collect::<Vec<_>>,
+///    vec![("a/b", "c"), ("a", "b/c"), ("", "a/b/c")],
+/// );
+/// ```
+fn iter_path_prefixes(path: &str) -> impl Iterator<Item = (&str, &str)> {
+    let path = path.trim_end_matches('/');
+    path.rmatch_indices('/')
+        .map(|(slash, _)| (&path[..slash], &path[slash + 1..]))
+        .chain(Some(("", path)))
+}
+
+/// Returns an arbitrary case-insensitive match of `path`, or `None` if there
+/// is no such match.
+async fn case_insensitive_path(
+    connection: &Connection,
+    commit: &thrift::CommitSpecifier,
+    path: &str,
+) -> Result<Option<String>, Error> {
+    // Heuristic: typically it's the last few path elements that actually need
+    // casefolding, so start from the end of the path and look up parent
+    // directories one by one.
+    for (target_dir, target_subpath) in iter_path_prefixes(path) {
+        let (target_elem, target_subpath) = target_subpath
+            .split_once('/')
+            .unwrap_or((target_subpath, ""));
+        let target_elem_lower = target_elem.to_lowercase();
+        let elements = stream_tree_elements(connection, commit, target_dir).await?;
+        pin_mut!(elements);
+        while let Some(elem) = elements.try_next().await? {
+            if elem.to_lowercase() == target_elem_lower {
+                let target = format!("{}/{}", target_dir, elem);
+                if let Some(response) =
+                    case_insensitive_subpath(connection, commit, &target, target_subpath).await?
+                {
+                    return Ok(Some(response));
+                }
+            }
+        }
+    }
+    Ok(None)
 }
 
 fn join_path(path: &str, elem: &str) -> String {
@@ -395,8 +538,8 @@ pub(super) async fn run(
         ..Default::default()
     };
     let path = get_path(matches).expect("path is required");
-    let commit_path = thrift::CommitPathSpecifier {
-        commit,
+    let mut commit_path = thrift::CommitPathSpecifier {
+        commit: commit.clone(),
         path: path.clone(),
         ..Default::default()
     };
@@ -404,7 +547,18 @@ pub(super) async fn run(
     let params = thrift::CommitPathInfoParams {
         ..Default::default()
     };
-    let response = connection.commit_path_info(&commit_path, &params).await?;
+    let response = {
+        let mut response = connection.commit_path_info(&commit_path, &params).await?;
+        if !response.exists {
+            if matches.is_present(ARG_CASE_INSENSITIVE) {
+                if let Some(case_path) = case_insensitive_path(&connection, &commit, &path).await? {
+                    commit_path.path = case_path;
+                    response = connection.commit_path_info(&commit_path, &params).await?;
+                }
+            }
+        }
+        response
+    };
 
     if !response.exists {
         bail!("'{}' does not exist in {}", path, commit_id);
