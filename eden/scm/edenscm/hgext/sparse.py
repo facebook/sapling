@@ -3136,7 +3136,7 @@ class ignorematcher(unionmatcher):
         if self._origignore(f):
             explain = getattr(self._origignore, "explain", None)
             if explain:
-                return self._matchers[0].explain(f)
+                return explain(f)
         elif self._negativesparse(f):
             return "%s is not in sparse profile" % f
 
