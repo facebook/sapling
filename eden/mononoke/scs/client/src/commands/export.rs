@@ -14,6 +14,7 @@ use futures::future::{BoxFuture, FutureExt};
 use futures::pin_mut;
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use source_control::types as thrift;
+use std::borrow::Cow;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -134,6 +135,27 @@ async fn stream_tree_elements(
             })
             .try_flatten(),
         ))
+}
+
+/// Mode of casefold operation for path element comparisons.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum Casefold {
+    /// Paths should be compared case sensitively.
+    Sensitive,
+
+    /// Paths should be compared by folding to lowercase and comparing
+    /// the lowercase version.
+    Insensitive,
+}
+
+impl Casefold {
+    /// Returns the appropriate case-folded version of a given path element.
+    fn of<'a>(self, s: impl Into<Cow<'a, str>>) -> Cow<'a, str> {
+        match self {
+            Casefold::Sensitive => s.into(),
+            Casefold::Insensitive => s.into().to_lowercase().into(),
+        }
+    }
 }
 
 /// Returns an arbitrary case insensitive match of `subpath` within the (case
@@ -261,8 +283,9 @@ fn export_filtered_tree_entry(
     destination: &Path,
     entry: thrift::TreeEntry,
     filter: &mut PathTree,
+    casefold: Casefold,
 ) -> Result<Option<ExportItem>, Error> {
-    match (filter.remove(&entry.name), entry.info) {
+    match (filter.remove(&casefold.of(&entry.name)), entry.info) {
         (None, _) => Ok(None),
         (Some(item), thrift::EntryInfo::tree(info)) => {
             let subfilter = match item {
@@ -295,6 +318,7 @@ async fn export_tree(
     id: Vec<u8>,
     destination: PathBuf,
     filter: Option<PathTree>,
+    casefold: Casefold,
 ) -> Result<Vec<ExportItem>, Error> {
     tokio::fs::create_dir(&destination).await?;
     let tree = thrift::TreeSpecifier::by_id(thrift::TreeIdSpecifier {
@@ -336,7 +360,8 @@ async fn export_tree(
             .chain(other_tree_chunks)
             .flatten()
             .filter_map(|entry| {
-                export_filtered_tree_entry(&path, &destination, entry, &mut filter).transpose()
+                export_filtered_tree_entry(&path, &destination, entry, &mut filter, casefold)
+                    .transpose()
             })
             .collect::<Result<_, _>>()?
     } else {
@@ -426,6 +451,7 @@ async fn export_item(
     connection: Connection,
     repo: thrift::RepoSpecifier,
     item: ExportItem,
+    casefold: Casefold,
     files_written: Arc<AtomicU64>,
     bytes_written: Arc<AtomicU64>,
 ) -> Result<(Option<String>, Vec<ExportItem>), Error> {
@@ -436,7 +462,8 @@ async fn export_item(
             destination,
             filter,
         } => {
-            let items = export_tree(connection, repo, path, id, destination, filter).await?;
+            let items =
+                export_tree(connection, repo, path, id, destination, filter, casefold).await?;
             Ok((None, items))
         }
         ExportItem::File {
@@ -503,6 +530,12 @@ pub(super) async fn run(
             destination.to_string_lossy()
         );
     }
+    let casefold = if matches.is_present(ARG_CASE_INSENSITIVE) {
+        Casefold::Insensitive
+    } else {
+        Casefold::Sensitive
+    };
+
     let path_tree = match matches.value_of_os(ARG_PATH_LIST_FILE) {
         Some(path_list_file) => {
             let file = tokio::fs::File::open(path_list_file)
@@ -510,7 +543,9 @@ pub(super) async fn run(
                 .context("failed to open path list file")?;
             let lines = tokio::io::BufReader::new(file).lines();
             let stream = tokio_stream::wrappers::LinesStream::new(lines);
+
             let path_tree = stream
+                .map_ok(|path| casefold.of(path).into_owned())
                 .try_collect::<PathTree>()
                 .await
                 .context("failed to load path list file")?;
@@ -549,12 +584,10 @@ pub(super) async fn run(
     };
     let response = {
         let mut response = connection.commit_path_info(&commit_path, &params).await?;
-        if !response.exists {
-            if matches.is_present(ARG_CASE_INSENSITIVE) {
-                if let Some(case_path) = case_insensitive_path(&connection, &commit, &path).await? {
-                    commit_path.path = case_path;
-                    response = connection.commit_path_info(&commit_path, &params).await?;
-                }
+        if !response.exists && casefold == Casefold::Insensitive {
+            if let Some(case_path) = case_insensitive_path(&connection, &commit, &path).await? {
+                commit_path.path = case_path;
+                response = connection.commit_path_info(&commit_path, &params).await?;
             }
         }
         response
@@ -609,6 +642,7 @@ pub(super) async fn run(
                 connection.clone(),
                 repo.clone(),
                 item,
+                casefold,
                 files_written.clone(),
                 bytes_written.clone(),
             )
