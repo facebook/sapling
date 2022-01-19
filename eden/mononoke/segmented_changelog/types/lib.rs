@@ -213,19 +213,6 @@ pub trait SegmentedChangelog: Send + Sync {
         missing: Vec<ChangesetId>,
     ) -> Result<CloneData<ChangesetId>>;
 
-    /// Uses segmented changelog fast forward master pull fastpath.
-    ///
-    /// Deprecated. Use `pull_data` instead.
-    async fn pull_fast_forward_master(
-        &self,
-        ctx: &CoreContext,
-        old_master: ChangesetId,
-        new_master: ChangesetId,
-    ) -> Result<CloneData<ChangesetId>> {
-        self.pull_data(ctx, vec![old_master], vec![new_master])
-            .await
-    }
-
     /// Whether segmented changelog is disabled.
     ///
     /// A quick way to test if the backend supports segmented changelog or not

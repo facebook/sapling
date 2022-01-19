@@ -649,26 +649,43 @@ impl HgRepoContext {
         self.repo().segmented_changelog_disabled().await
     }
 
-    pub async fn segmented_changelog_pull_fast_forward_master(
+    pub async fn segmented_changelog_pull_data(
         &self,
-        old_master: HgChangesetId,
-        new_master: HgChangesetId,
+        common: Vec<HgChangesetId>,
+        missing: Vec<HgChangesetId>,
     ) -> Result<CloneData<HgChangesetId>, MononokeError> {
+        let input_hgids = common
+            .iter()
+            .chain(missing.iter())
+            .cloned()
+            .collect::<Vec<_>>();
         let hg_to_bonsai: HashMap<HgChangesetId, ChangesetId> = self
             .blob_repo()
-            .get_hg_bonsai_mapping(self.ctx().clone(), vec![old_master, new_master])
+            .get_hg_bonsai_mapping(self.ctx().clone(), input_hgids)
             .await?
             .into_iter()
             .collect();
-        let old_master = *hg_to_bonsai
-            .get(&old_master)
-            .ok_or_else(|| format_err!("Failed to convert old_master {} to bonsai", old_master))?;
-        let new_master = *hg_to_bonsai
-            .get(&new_master)
-            .ok_or_else(|| format_err!("Failed to convert new_master {} to bonsai", new_master))?;
+        let common = common
+            .into_iter()
+            .map(|hgid| {
+                hg_to_bonsai
+                    .get(&hgid)
+                    .map(|bonsai| bonsai.clone())
+                    .ok_or_else(|| format_err!("Failed to convert common {} to bonsai", hgid))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let missing = missing
+            .into_iter()
+            .map(|hgid| {
+                hg_to_bonsai
+                    .get(&hgid)
+                    .map(|bonsai| bonsai.clone())
+                    .ok_or_else(|| format_err!("Failed to convert missing {} to bonsai", hgid))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         let m_clone_data = self
             .repo()
-            .segmented_changelog_pull_fast_forward_master(old_master, new_master)
+            .segmented_changelog_pull_data(common, missing)
             .await?;
         self.convert_clone_data(m_clone_data).await
     }

@@ -44,7 +44,7 @@ pub async fn pull_fast_forward_master(state: &mut State) -> Result<BytesBody<Byt
     let old_master: HgChangesetId = request.old_master.into();
     let new_master: HgChangesetId = request.new_master.into();
     let clone_data = hg_repo_ctx
-        .segmented_changelog_pull_fast_forward_master(old_master, new_master)
+        .segmented_changelog_pull_data(vec![old_master], vec![new_master])
         .await
         .map_err(|e| e.into_http_error("error getting segmented changelog data"))?;
     let idmap = clone_data

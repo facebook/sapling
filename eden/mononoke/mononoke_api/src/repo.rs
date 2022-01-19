@@ -1579,14 +1579,14 @@ impl RepoContext {
         Ok(disabled)
     }
 
-    pub async fn segmented_changelog_pull_fast_forward_master(
+    pub async fn segmented_changelog_pull_data(
         &self,
-        old_master: ChangesetId,
-        new_master: ChangesetId,
+        common: Vec<ChangesetId>,
+        missing: Vec<ChangesetId>,
     ) -> Result<CloneData<ChangesetId>, MononokeError> {
         let segmented_changelog = self.repo.segmented_changelog();
         let pull_data = segmented_changelog
-            .pull_fast_forward_master(&self.ctx, old_master, new_master)
+            .pull_data(&self.ctx, common, missing)
             .await
             .map_err(MononokeError::from)?;
         Ok(pull_data)
