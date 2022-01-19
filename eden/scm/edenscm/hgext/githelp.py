@@ -23,7 +23,8 @@ maintainers if the command is legitimate. To customize this footer, set:
 import getopt
 import re
 
-from edenscm.mercurial import error, extensions, fancyopts, pycompat, registrar, util
+from bindings import cliparser
+from edenscm.mercurial import error, extensions, pycompat, registrar, util
 from edenscm.mercurial.i18n import _
 
 
@@ -85,27 +86,21 @@ def parseoptions(ui, cmdoptions, args):
     args = list(args)
     while True:
         try:
-            args = fancyopts.fancyopts(list(args), cmdoptions, opts, True)
+            args, opts = cliparser.parsecommand(list(args), cmdoptions)
             break
-        except getopt.GetoptError as ex:
-            flag = None
-            if "requires argument" in ex.msg:
-                raise
-            if ("--" + ex.opt) in ex.msg:
-                flag = "--" + ex.opt
-            elif ("-" + ex.opt) in ex.msg:
-                flag = "-" + ex.opt
-            else:
-                raise GitUnknownError(ui, "unknown option %s" % ex.opt)
+        except (
+            cliparser.OptionNotRecognized,
+            cliparser.OptionAmbiguous,
+        ) as ex:
+            # for example, ("option -v not recognized", "-v")
+            msg, flag = ex.args
             try:
                 args.remove(flag)
             except Exception:
                 raise GitUnknownError(
                     ui,
                     "unknown option {0} packed with other options\n"
-                    "Please try passing the option as it's own flag: -{0}".format(
-                        ex.opt
-                    ),
+                    "Please try passing the option as it's own flag: {0}".format(flag),
                 )
 
             ui.warn(_("ignoring unknown option %s\n") % flag)
@@ -214,7 +209,7 @@ def am(ui, repo, *args, **kwargs):
 
 
 def apply(ui, repo, *args, **kwargs):
-    cmdoptions = [("p", "p", int, "")]
+    cmdoptions = [("p", "p", 0, "")]
     args, opts = parseoptions(ui, cmdoptions, args)
 
     cmd = Command("import --no-commit")
@@ -416,7 +411,7 @@ def clean(ui, repo, *args, **kwargs):
 def clone(ui, repo, *args, **kwargs):
     cmdoptions = [
         ("", "bare", None, ""),
-        ("n", "no-checkout", None, ""),
+        ("n", "checkout", True, ""),
         ("b", "branch", "", ""),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
@@ -437,7 +432,7 @@ def clone(ui, repo, *args, **kwargs):
                 + "-U will clone the repo without checking out a commit\n\n"
             )
         )
-    elif opts.get("no_checkout"):
+    elif not opts.get("checkout"):
         cmd["-U"] = None
 
     if opts.get("branch"):
@@ -458,7 +453,7 @@ def commit(ui, repo, *args, **kwargs):
         ("", "author", "", ""),
         ("", "date", "", ""),
         ("", "amend", None, ""),
-        ("", "no-edit", None, ""),
+        ("", "edit", True, ""),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -467,10 +462,10 @@ def commit(ui, repo, *args, **kwargs):
         cmd = Command("record")
 
     if opts.get("amend"):
-        if opts.get("no_edit"):
-            cmd = Command("amend")
-        else:
+        if opts.get("edit"):
             cmd["--amend"] = None
+        else:
+            cmd = Command("amend")
 
     if opts.get("reuse_message"):
         cmd["-M"] = opts.get("reuse_message")
@@ -987,7 +982,7 @@ def show(ui, repo, *args, **kwargs):
     cmdoptions = [
         ("", "name-status", None, ""),
         ("", "pretty", "", ""),
-        ("U", "unified", int, ""),
+        ("U", "unified", 0, ""),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 

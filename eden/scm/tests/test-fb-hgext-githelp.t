@@ -40,7 +40,7 @@ githelp on a command with standalone unrecognized option should succeed with war
 
 githelp on a command with unrecognized option packed with other options should fail with error
   $ hg githelp -- commit -pv
-  abort: unknown option v packed with other options
+  abort: unknown option -v packed with other options
   Please try passing the option as it's own flag: -v
   
   If this is a valid git command, please search/ask in the Source Control @ FB group (and don't forget to tell us what the git command does).
@@ -48,7 +48,7 @@ githelp on a command with unrecognized option packed with other options should f
 
 githelp with a customized footer for invalid commands
   $ hg --config githelp.unknown.footer="This is a custom footer." githelp -- commit -pv
-  abort: unknown option v packed with other options
+  abort: unknown option -v packed with other options
   Please try passing the option as it's own flag: -v
   
   This is a custom footer.
