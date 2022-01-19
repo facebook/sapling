@@ -1,3 +1,8 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 from __future__ import absolute_import
 
 import unittest
@@ -26,13 +31,6 @@ class LocalEncodingTest(unittest.TestCase):
         s = b"\0" * 100
         self.assertTrue(s is encoding.tolocal(s))
         self.assertTrue(s is encoding.fromlocal(s))
-
-
-class Utf8bEncodingTest(unittest.TestCase):
-    def testasciifastpath(self):
-        s = b"\0" * 100
-        self.assertTrue(s is encoding.toutf8b(s))
-        self.assertTrue(s is encoding.fromutf8b(s))
 
 
 if __name__ == "__main__":
