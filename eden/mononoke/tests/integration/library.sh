@@ -1634,15 +1634,6 @@ function call_with_certs() {
   GLOG_minloglevel=5 "$@"
 }
 
-function traffic_replay() {
-  call_with_certs "$TRAFFIC_REPLAY" \
-    --loglevel warn \
-    --testrun \
-    --hgcli "$MONONOKE_HGCLI" \
-    --mononoke-address "$(mononoke_address)" \
-    --mononoke-server-common-name localhost
-}
-
 function enable_replay_verification_hook {
 
 cat >> "$TESTTMP"/replayverification.py <<EOF
