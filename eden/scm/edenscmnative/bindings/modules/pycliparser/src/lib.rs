@@ -119,8 +119,7 @@ fn parse_command(
     args: Vec<String>,
     definitions: Vec<FlagDef>,
 ) -> PyResult<(Vec<Str>, HashMap<Str, Value>)> {
-    let mut flags: Vec<Flag> = definitions.into_iter().map(Into::into).collect();
-    flags.extend(HgGlobalOpts::flags());
+    let flags: Vec<Flag> = definitions.into_iter().map(Into::into).collect();
 
     let result = ParseOptions::new()
         .flag_alias("repo", "repository")
