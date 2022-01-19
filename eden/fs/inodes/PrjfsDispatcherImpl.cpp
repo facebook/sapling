@@ -10,6 +10,7 @@
 #include "eden/fs/inodes/PrjfsDispatcherImpl.h"
 #include <cpptoml.h>
 #include <folly/executors/QueuedImmediateExecutor.h>
+#include <folly/executors/SerialExecutor.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
@@ -23,6 +24,8 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 namespace facebook::eden {
+
+using namespace std::chrono_literals;
 
 namespace {
 
@@ -56,6 +59,7 @@ std::string makeDotEdenConfig(EdenMount& mount) {
 PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
     : PrjfsDispatcher(mount->getStats()),
       mount_{mount},
+      notificationExecutor_{folly::SerialExecutor::create()},
       dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
 ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
@@ -277,57 +281,219 @@ enum class InodeType : bool {
   File,
 };
 
-ImmediateFuture<folly::Unit> createInode(
-    const EdenMount& mount,
-    RelativePath path,
-    InodeType inodeType,
-    ObjectFetchContext& context) {
-  auto treeInodeFut = createDirInode(mount, path.dirname().copy(), context);
-  return std::move(treeInodeFut)
-      .thenValue(
-          [path = std::move(path), inodeType](const TreeInodePtr treeInode) {
-            if (inodeType == InodeType::Tree) {
-              try {
-                auto inode = treeInode->mkdir(
-                    path.basename(), _S_IFDIR, InvalidationRequired::No);
-                inode->incFsRefcount();
-              } catch (const std::system_error& ex) {
-                /*
-                 * If a concurrent createFile for a child of this directory
-                 * finished before this one, the directory will already exist.
-                 * This is not an error.
-                 */
-                if (ex.code().value() != EEXIST) {
-                  return folly::Try<folly::Unit>(ex);
-                }
-              }
-            } else {
-              auto inode = treeInode->mknod(
-                  path.basename(), _S_IFREG, 0, InvalidationRequired::No);
-              inode->incFsRefcount();
-            }
+enum class OnDiskState {
+  MaterializedFile,
+  MaterializedDirectory,
+  NotPresent,
+};
 
-            return folly::Try{folly::unit};
-          });
+ImmediateFuture<OnDiskState>
+getOnDiskState(const EdenMount& mount, RelativePathPiece path, int retry = 0) {
+  auto absPath = mount.getPath() + path;
+  auto boostPath = boost::filesystem::path(absPath.stringPiece());
+
+  boost::system::error_code ec;
+  auto fileType = boost::filesystem::status(boostPath, ec).type();
+
+  if (fileType == boost::filesystem::regular_file) {
+    return OnDiskState::MaterializedFile;
+  } else if (fileType == boost::filesystem::directory_file) {
+    return OnDiskState::MaterializedDirectory;
+  } else if (fileType == boost::filesystem::file_not_found) {
+    return OnDiskState::NotPresent;
+  } else if (fileType == boost::filesystem::status_error) {
+    if (retry == 5) {
+      XLOG(WARN) << "Assuming path is not present: " << path;
+      return OnDiskState::NotPresent;
+    }
+    XLOG(WARN) << "Error: " << ec.message() << " for path: " << path;
+    return ImmediateFuture{folly::futures::sleep(retry * 5ms)}.thenValue(
+        [&mount, path, retry](folly::Unit&&) {
+          return getOnDiskState(mount, path, retry + 1);
+        });
+  } else {
+    return makeImmediateFuture<OnDiskState>(std::logic_error(
+        fmt::format("Unknown file type {} for file {}", fileType, path)));
+  }
 }
 
-ImmediateFuture<folly::Unit> removeInode(
-    const EdenMount& mount,
+ImmediateFuture<folly::Unit> handleMaterializedFileNotification(
+    EdenMount& mount,
     RelativePath path,
     InodeType inodeType,
     ObjectFetchContext& context) {
-  auto inodeFut = mount.getInode(path.dirname(), context);
-  return std::move(inodeFut).thenValue(
-      [path = std::move(path), inodeType, &context](const InodePtr inode) {
-        auto treeInodePtr = inode.asTreePtr();
-        if (inodeType == InodeType::Tree) {
-          return treeInodePtr->rmdir(
-              path.basename(), InvalidationRequired::No, context);
-        } else {
-          return treeInodePtr->unlink(
-              path.basename(), InvalidationRequired::No, context);
-        }
+  return createDirInode(mount, path.dirname().copy(), context)
+      .thenValue([basename = path.basename().copy(), inodeType, &context](
+                     const TreeInodePtr treeInode) mutable {
+        return treeInode->getOrLoadChild(basename, context)
+            .thenTry(
+                [basename = std::move(basename),
+                 treeInode,
+                 inodeType,
+                 &context](folly::Try<InodePtr> try_) mutable
+                -> ImmediateFuture<folly::Unit> {
+                  if (try_.hasException()) {
+                    if (auto* exc =
+                            try_.tryGetExceptionObject<std::system_error>()) {
+                      if (isEnoent(*exc)) {
+                        if (inodeType == InodeType::Tree) {
+                          auto child = treeInode->mkdir(
+                              basename, _S_IFDIR, InvalidationRequired::No);
+                          child->incFsRefcount();
+                        } else {
+                          auto child = treeInode->mknod(
+                              basename, _S_IFREG, 0, InvalidationRequired::No);
+                          child->incFsRefcount();
+                        }
+                        return folly::unit;
+                      }
+                    }
+                    return makeImmediateFuture<folly::Unit>(try_.exception());
+                  }
+
+                  auto inode = std::move(try_).value();
+                  switch (inodeType) {
+                    case InodeType::Tree: {
+                      if (inode.asTreePtrOrNull()) {
+                        return folly::unit;
+                      }
+                      // Somehow this is a file, but there is a directory on
+                      // disk, let's remove it and create the directory.
+                      return treeInode
+                          ->unlink(basename, InvalidationRequired::No, context)
+                          .thenTry([basename = std::move(basename),
+                                    treeInode](folly::Try<folly::Unit> try_) {
+                            if (auto* exc = try_.tryGetExceptionObject<
+                                            std::system_error>()) {
+                              if (!isEnoent(*exc)) {
+                                return makeImmediateFuture<folly::Unit>(
+                                    try_.exception());
+                              }
+                            }
+                            auto child = treeInode->mkdir(
+                                basename, _S_IFDIR, InvalidationRequired::No);
+                            child->incFsRefcount();
+                            return ImmediateFuture{folly::unit};
+                          });
+                    }
+                    case InodeType::File: {
+                      if (auto fileInode = inode.asFilePtrOrNull()) {
+                        fileInode->materialize();
+                        return folly::unit;
+                      }
+                      // Somehow this is a directory, but there is a file on
+                      // disk, let's remove it and create the file.
+                      return treeInode
+                          ->removeRecursively(
+                              basename, InvalidationRequired::No, context)
+                          .thenTry([basename = std::move(basename),
+                                    treeInode](folly::Try<folly::Unit> try_) {
+                            if (auto* exc = try_.tryGetExceptionObject<
+                                            std::system_error>()) {
+                              if (!isEnoent(*exc)) {
+                                return makeImmediateFuture<folly::Unit>(
+                                    try_.exception());
+                              }
+                            }
+                            auto child = treeInode->mknod(
+                                basename,
+                                _S_IFREG,
+                                0,
+                                InvalidationRequired::No);
+                            child->incFsRefcount();
+                            return ImmediateFuture{folly::unit};
+                          });
+                    }
+                  }
+
+                  return folly::unit;
+                });
       });
+}
+
+ImmediateFuture<folly::Unit> handleNotPresentFileNotification(
+    EdenMount& mount,
+    RelativePath path,
+    ObjectFetchContext& context) {
+  struct GetFirstPresent {
+    GetFirstPresent() = default;
+
+    ImmediateFuture<RelativePathPiece> compute(
+        EdenMount& mount,
+        RelativePathPiece path) {
+      auto dirname = path.dirname();
+      return getOnDiskState(mount, dirname)
+          .thenValue(
+              [this, &mount, path](
+                  OnDiskState state) -> ImmediateFuture<RelativePathPiece> {
+                if (state != OnDiskState::NotPresent) {
+                  return path;
+                }
+
+                return compute(mount, path.dirname());
+              });
+    }
+  };
+
+  // First, we need to figure out how far down this path has been removed.
+  return GetFirstPresent{}
+      .compute(mount, path)
+      .thenValue([&mount, &context](RelativePathPiece path) {
+        auto basename = path.basename();
+        auto dirname = path.dirname();
+
+        // Let's now remove the entire hierarchy.
+        return createDirInode(mount, dirname.copy(), context)
+            .thenValue([basename = basename.copy(),
+                        &context](const TreeInodePtr treeInode) {
+              return treeInode
+                  ->removeRecursively(
+                      basename, InvalidationRequired::No, context)
+                  .thenTry([](folly::Try<folly::Unit> try_) {
+                    if (auto* exc =
+                            try_.tryGetExceptionObject<std::system_error>()) {
+                      if (isEnoent(*exc)) {
+                        // ProjectedFS can sometimes send multiple deletion
+                        // notification for the same file, in which case a
+                        // previous deletion will have removed the file already.
+                        // We can safely ignore the error here.
+                        return folly::Try{folly::unit};
+                      }
+                    }
+                    return try_;
+                  });
+            });
+      })
+      .ensure([path = std::move(path)] {});
+}
+
+ImmediateFuture<folly::Unit> fileNotification(
+    EdenMount& mount,
+    RelativePath path,
+    folly::Executor::KeepAlive<folly::SequencedExecutor> executor,
+    ObjectFetchContext& context) {
+  return ImmediateFuture{
+      folly::via(
+          executor,
+          [&mount, path = std::move(path), &context]() mutable {
+            return getOnDiskState(mount, path)
+                .thenValue([&mount, path = std::move(path), &context](
+                               OnDiskState state) mutable {
+                  switch (state) {
+                    case OnDiskState::MaterializedFile:
+                      return handleMaterializedFileNotification(
+                          mount, std::move(path), InodeType::File, context);
+                    case OnDiskState::MaterializedDirectory:
+                      return handleMaterializedFileNotification(
+                          mount, std::move(path), InodeType::Tree, context);
+                    case OnDiskState::NotPresent:
+                      return handleNotPresentFileNotification(
+                          mount, std::move(path), context);
+                  }
+                })
+                .semi();
+          })
+          .semi()};
 }
 
 } // namespace
@@ -335,70 +501,47 @@ ImmediateFuture<folly::Unit> removeInode(
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileCreated(
     RelativePath path,
     ObjectFetchContext& context) {
-  return createInode(*mount_, std::move(path), InodeType::File, context);
+  return fileNotification(*mount_, path, notificationExecutor_, context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirCreated(
     RelativePath path,
     ObjectFetchContext& context) {
-  return createInode(*mount_, std::move(path), InodeType::Tree, context);
+  return fileNotification(*mount_, path, notificationExecutor_, context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileModified(
     RelativePath path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context).thenValue([](const InodePtr inode) {
-    auto fileInode = inode.asFilePtr();
-    fileInode->materialize();
-    return folly::unit;
-  });
+  return fileNotification(*mount_, path, notificationExecutor_, context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileRenamed(
     RelativePath oldPath,
     RelativePath newPath,
     ObjectFetchContext& context) {
-  auto oldParentInode =
-      createDirInode(*mount_, oldPath.dirname().copy(), context);
-  auto newParentInode =
-      createDirInode(*mount_, newPath.dirname().copy(), context);
+  // A rename is just handled like 2 notifications separate notifications on
+  // the old and new paths.
+  auto oldNotification =
+      fileNotification(*mount_, oldPath, notificationExecutor_, context);
+  auto newNotification =
+      fileNotification(*mount_, newPath, notificationExecutor_, context);
 
-  return collectAllSafe(std::move(oldParentInode), std::move(newParentInode))
+  return collectAllSafe(std::move(oldNotification), std::move(newNotification))
       .thenValue(
-          [oldPath = std::move(oldPath),
-           newPath = std::move(newPath),
-           &context](const std::tuple<TreeInodePtr, TreeInodePtr> inodes) {
-            auto& oldParentTreePtr = std::get<0>(inodes);
-            auto& newParentTreePtr = std::get<1>(inodes);
-            // TODO(xavierd): In the case where the oldPath is actually being
-            // created in another thread, EdenFS simply might not know about
-            // it at this point. Creating the file and renaming it at this
-            // point won't help as the other thread will re-create it. In the
-            // future, we may want to try, wait a bit and retry, or re-think
-            // this and somehow order requests so the file creation always
-            // happens before the rename.
-            //
-            // This should be *extremely* rare, for now let's just let it
-            // error out.
-            return oldParentTreePtr->rename(
-                oldPath.basename(),
-                newParentTreePtr,
-                newPath.basename(),
-                InvalidationRequired::No,
-                context);
-          });
+          [](std::tuple<folly::Unit, folly::Unit>&&) { return folly::unit; });
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::fileDeleted(
     RelativePath path,
     ObjectFetchContext& context) {
-  return removeInode(*mount_, std::move(path), InodeType::File, context);
+  return fileNotification(*mount_, path, notificationExecutor_, context);
 }
 
 ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
     RelativePath path,
     ObjectFetchContext& context) {
-  return removeInode(*mount_, std::move(path), InodeType::Tree, context);
+  return fileNotification(*mount_, path, notificationExecutor_, context);
 }
 
 } // namespace facebook::eden

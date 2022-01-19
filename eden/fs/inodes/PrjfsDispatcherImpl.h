@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/executors/SequencedExecutor.h>
 #include "eden/fs/prjfs/PrjfsDispatcher.h"
 
 namespace facebook::eden {
@@ -60,6 +61,9 @@ class PrjfsDispatcherImpl : public PrjfsDispatcher {
  private:
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
+
+  // All the notifications are dispatched to this executor.
+  folly::Executor::KeepAlive<folly::SequencedExecutor> notificationExecutor_;
 
   const std::string dotEdenConfig_;
 };
