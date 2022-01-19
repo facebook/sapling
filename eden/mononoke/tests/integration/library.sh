@@ -45,7 +45,12 @@ COMMON_ARGS=(
   --with-test-megarepo-configs-client=true
 )
 
+export TEST_CERTDIR
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
+if [[ -z "$TEST_CERTDIR" ]]; then
+  echo "TEST_CERTDIR is not set" 1>&2
+  exit 1
+fi
 
 case "$(uname -s)" in
   # Workarounds for running tests on MacOS
@@ -1515,9 +1520,6 @@ EOF
 
 # Does all the setup necessary for hook tests
 function hook_test_setup() {
-  # shellcheck source=fbcode/eden/mononoke/tests/integration/library.sh
-  . "${TEST_FIXTURES}/library.sh"
-
   setup_mononoke_config
   cd "$TESTTMP/mononoke-config" || exit 1
 

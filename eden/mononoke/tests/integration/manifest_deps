@@ -3,6 +3,7 @@
 
 MONONOKE_BINS = {
     "BACKSYNCER": "backsyncer_cmd",
+    "BINARY_HG": "hg",
     "COMMIT_VALIDATOR": "commit_validator",
     "COPY_BLOBSTORE_KEYS": "copy_blobstore_keys",
     "DERIVED_DATA_SERVICE": "derived_data_service",
@@ -41,21 +42,4 @@ MONONOKE_BINS = {
     "MONONOKE_WALKER": "walker",
     "MONONOKE_X_REPO_SYNC": "mononoke_x_repo_sync_job",
     "WRITE_STUB_LOG_ENTRY": "write_stub_log_entry",
-}
-
-
-EDENSCM_BINS = {
-    "BINARY_HG": "hg",
-}
-
-# The "//" in the values here corresponds to the root of repo (both GitHub and
-# fbcode repos have the same folder layout)
-OSS_DEPS = {
-    "BINARY_HGPYTHON": "python2.7",
-    "DUMMYSSH": "//eden/scm/tests/dummyssh3.py",
-    "RUN_TESTS_LIBRARY": "//eden/scm/tests",
-    "TEST_CERTS": "//eden/mononoke/tests/integration/certs",
-    "TEST_FIXTURES": "//eden/mononoke/tests/integration",
-    "TEST_ROOT_PUBLIC": "//eden/mononoke/tests/integration",
-    "GET_FREE_SOCKET": "//eden/mononoke/tests/integration/get_free_socket.py",
 }
