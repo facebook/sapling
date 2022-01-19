@@ -318,6 +318,19 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
 #endif
 
   /**
+   * Wait for all inflight notifications to complete.
+   *
+   * On Windows, inflight notifications are processed asynchronously and thus
+   * the on-disk state of the the repository may differ from the inode state.
+   * This ensures that all pending notifications have completed.
+   *
+   * On macOS and Linux, this immediately return.
+   *
+   * This can be called from any thread/executor.
+   */
+  ImmediateFuture<folly::Unit> waitForPendingNotifications() const;
+
+  /**
    * Test if the working copy persist on disk after this mount will be
    * destroyed.
    *

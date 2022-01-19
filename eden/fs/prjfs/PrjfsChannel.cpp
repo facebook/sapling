@@ -22,6 +22,8 @@
 
 namespace facebook::eden {
 
+using namespace std::literals::chrono_literals;
+
 namespace {
 
 detail::RcuLockedPtr getChannel(
@@ -221,6 +223,10 @@ PrjfsChannelInner::PrjfsChannelInner(
     : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
       processAccessLog_(processAccessLog) {}
+
+ImmediateFuture<folly::Unit> PrjfsChannelInner::waitForPendingNotifications() {
+  return dispatcher_->waitForPendingNotifications();
+}
 
 HRESULT PrjfsChannelInner::startEnumeration(
     std::shared_ptr<PrjfsRequestContext> context,
@@ -866,29 +872,21 @@ HRESULT PrjfsChannelInner::notification(
       return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);
     }
 
-    auto fut = makeImmediateFutureWith([this,
-                                        context,
-                                        stat = stat,
-                                        handler = handler,
-                                        renderer = renderer,
-                                        relPath = std::move(relPath),
-                                        destPath = std::move(destPath),
-                                        isDirectory]() mutable {
-      auto requestWatch =
-          std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-      context->startRequest(dispatcher_->getStats(), stat, requestWatch);
+    auto requestWatch =
+        std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
-      FB_LOG(getStraceLogger(), DBG7, renderer(relPath, destPath, isDirectory));
-      return (this->*handler)(
-                 std::move(relPath), std::move(destPath), isDirectory, *context)
-          .thenValue([context = std::move(context)](auto&&) {
-            context->sendNotificationSuccess();
-          });
-    });
+    FB_LOG(getStraceLogger(), DBG7, renderer(relPath, destPath, isDirectory));
+    auto fut = (this->*handler)(
+        std::move(relPath), std::move(destPath), isDirectory, *context);
 
-    detachAndCompleteCallback(std::move(fut), std::move(context));
+    SCOPE_EXIT {
+      context->finishRequest();
+    };
 
-    return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
+    // Since the future should just be enqueing to an executor, it should
+    // always be ready.
+    return tryToHResult(std::move(fut).getTry(0ms));
   }
 }
 
@@ -1008,6 +1006,12 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
   inner_.rlock()->setMountChannel(mountChannel_);
 
   XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
+}
+
+ImmediateFuture<folly::Unit> PrjfsChannel::waitForPendingNotifications() {
+  auto inner = getInner();
+  return inner->waitForPendingNotifications().ensure(
+      [inner = std::move(inner)] {});
 }
 
 folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {

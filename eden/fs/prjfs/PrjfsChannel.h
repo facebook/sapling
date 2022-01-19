@@ -44,6 +44,8 @@ class PrjfsChannelInner {
   PrjfsChannelInner(const PrjfsChannelInner&) = delete;
   PrjfsChannelInner& operator=(const PrjfsChannelInner&) = delete;
 
+  ImmediateFuture<folly::Unit> waitForPendingNotifications();
+
   /**
    * Start a directory listing.
    *
@@ -259,6 +261,23 @@ class PrjfsChannel {
   ~PrjfsChannel();
 
   void start(bool readOnly, bool useNegativePathCaching);
+
+  /**
+   * Wait for all the received notifications to be fully handled.
+   *
+   * The PrjfsChannel will receive notifications and immediately dispatch the
+   * work to a background executor and return S_OK to ProjectedFS to unblock
+   * applications writing to the EdenFS repository.
+   *
+   * Thus an application writing to the repository may have their file creation
+   * be successful prior to EdenFS having updated its inode hierarchy. This
+   * discrepancy can cause issues in EdenFS for operations that exclusively
+   * look at the inode hierarchy such as status/checkout/glob.
+   *
+   * The returned ImmediateFuture will complete when all the previously
+   * received notifications have completed.
+   */
+  ImmediateFuture<folly::Unit> waitForPendingNotifications();
 
   /**
    * Stop the PrjfsChannel.

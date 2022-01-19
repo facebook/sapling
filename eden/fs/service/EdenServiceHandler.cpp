@@ -272,16 +272,6 @@ Future<ReturnType> wrapFuture(
 }
 
 template <typename ReturnType>
-folly::SemiFuture<ReturnType> wrapSemiFuture(
-    std::unique_ptr<ThriftLogHelper> logHelper,
-    folly::SemiFuture<ReturnType>&& f) {
-  return std::move(f).defer(
-      [logHelper = std::move(logHelper)](folly::Try<ReturnType>&& ret) {
-        return std::forward<folly::Try<ReturnType>>(ret);
-      });
-}
-
-template <typename ReturnType>
 ImmediateFuture<ReturnType> wrapImmediateFuture(
     std::unique_ptr<ThriftLogHelper> logHelper,
     ImmediateFuture<ReturnType>&& f) {
@@ -534,19 +524,31 @@ std::chrono::seconds getSyncTimeout(const SyncBehavior& sync) {
   auto seconds = sync.syncTimeoutSeconds_ref().value_or(60);
   return std::chrono::seconds{seconds};
 }
+
+ImmediateFuture<folly::Unit> waitForPendingNotifications(
+    const EdenMount& mount,
+    std::chrono::seconds timeout) {
+  if (timeout.count() == 0) {
+    return folly::unit;
+  }
+
+  return mount.waitForPendingNotifications().semi().within(timeout);
+}
 } // namespace
 
 folly::SemiFuture<folly::Unit>
 EdenServiceHandler::semifuture_synchronizeWorkingCopy(
     std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<SynchronizeWorkingCopyParams> /*params*/) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
+    std::unique_ptr<SynchronizeWorkingCopyParams> params) {
+  auto timeout = getSyncTimeout(*params->sync_ref());
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, timeout.count());
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
 
-  // TODO(xavierd): Actually synchronize the working copy.
-
-  return folly::unit;
+  return wrapImmediateFuture(
+             std::move(helper),
+             waitForPendingNotifications(*edenMount, timeout))
+      .semi();
 }
 
 void EdenServiceHandler::getSHA1(
@@ -555,25 +557,31 @@ void EdenServiceHandler::getSHA1(
     unique_ptr<vector<string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
   TraceBlock block("getSHA1");
+  auto syncTimeout = getSyncTimeout(*sync);
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, getSyncTimeout(*sync).count(), toLogArg(*paths));
+      DBG3, *mountPoint, syncTimeout.count(), toLogArg(*paths));
   vector<ImmediateFuture<Hash20>> futures;
   auto mountPath = AbsolutePathPiece{*mountPoint};
-  for (const auto& path : *paths) {
-    futures.emplace_back(
-        getSHA1ForPathDefensively(mountPath, path, helper->getFetchContext()));
-  }
 
-  auto results = collectAll(std::move(futures)).get();
-  for (auto& result : results) {
-    out.emplace_back();
-    SHA1Result& sha1Result = out.back();
-    if (result.hasValue()) {
-      sha1Result.sha1_ref() = thriftHash20(result.value());
-    } else {
-      sha1Result.error_ref() = newEdenError(result.exception());
-    }
-  }
+  waitForPendingNotifications(*server_->getMount(mountPath), syncTimeout)
+      .thenValue([&](auto&&) {
+        for (const auto& path : *paths) {
+          futures.emplace_back(getSHA1ForPathDefensively(
+              mountPath, path, helper->getFetchContext()));
+        }
+
+        auto results = collectAll(std::move(futures)).get();
+        for (auto& result : results) {
+          out.emplace_back();
+          SHA1Result& sha1Result = out.back();
+          if (result.hasValue()) {
+            sha1Result.sha1_ref() = thriftHash20(result.value());
+          } else {
+            sha1Result.error_ref() = newEdenError(result.exception());
+          }
+        }
+      })
+      .get();
 }
 
 ImmediateFuture<Hash20> EdenServiceHandler::getSHA1ForPathDefensively(
@@ -1249,8 +1257,9 @@ EdenServiceHandler::semifuture_getEntryInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
+  auto syncTimeout = getSyncTimeout(*sync);
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, getSyncTimeout(*sync).count(), toLogArg(*paths));
+      DBG3, *mountPoint, syncTimeout.count(), toLogArg(*paths));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto rootInode = edenMount->getRootInode();
@@ -1261,29 +1270,40 @@ EdenServiceHandler::semifuture_getEntryInformation(
   // data. In the future, this should be changed to avoid allocating inodes when
   // possible.
 
-  return wrapSemiFuture(
-      std::move(helper),
-      collectAll(applyToInodes(
-                     rootInode,
-                     *paths,
-                     [](InodePtr inode) { return inode->getType(); },
-                     fetchContext))
-          .deferValue([](vector<Try<dtype_t>> done) {
-            auto out = std::make_unique<vector<EntryInformationOrError>>();
-            out->reserve(done.size());
-            for (auto& item : done) {
-              EntryInformationOrError result;
-              if (item.hasException()) {
-                result.error_ref() = newEdenError(item.exception());
-              } else {
-                EntryInformation info;
-                info.dtype_ref() = static_cast<Dtype>(item.value());
-                result.info_ref() = info;
-              }
-              out->emplace_back(std::move(result));
-            }
-            return out;
-          }));
+  return wrapImmediateFuture(
+             std::move(helper),
+             waitForPendingNotifications(*edenMount, syncTimeout)
+                 .thenValue([rootInode = std::move(rootInode),
+                             paths = std::move(paths),
+                             &fetchContext](auto&&) {
+                   return collectAll(applyToInodes(
+                                         rootInode,
+                                         *paths,
+                                         [](InodePtr inode) {
+                                           return inode->getType();
+                                         },
+                                         fetchContext))
+                       .deferValue([](vector<Try<dtype_t>> done) {
+                         auto out = std::make_unique<
+                             vector<EntryInformationOrError>>();
+                         out->reserve(done.size());
+                         for (auto& item : done) {
+                           EntryInformationOrError result;
+                           if (item.hasException()) {
+                             result.error_ref() =
+                                 newEdenError(item.exception());
+                           } else {
+                             EntryInformation info;
+                             info.dtype_ref() =
+                                 static_cast<Dtype>(item.value());
+                             result.info_ref() = info;
+                           }
+                           out->emplace_back(std::move(result));
+                         }
+                         return out;
+                       });
+                 }))
+      .semi();
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>
@@ -1291,8 +1311,9 @@ EdenServiceHandler::semifuture_getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths,
     std::unique_ptr<SyncBehavior> sync) {
+  auto syncTimeout = getSyncTimeout(*sync);
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG3, *mountPoint, getSyncTimeout(*sync).count(), toLogArg(*paths));
+      DBG3, *mountPoint, syncTimeout.count(), toLogArg(*paths));
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
   auto rootInode = edenMount->getRootInode();
@@ -1301,43 +1322,55 @@ EdenServiceHandler::semifuture_getFileInformation(
   // paths. It's possible to resolve this request directly from source control
   // data. In the future, this should be changed to avoid allocating inodes when
   // possible.
-  return wrapSemiFuture(
-      std::move(helper),
-      collectAll(applyToInodes(
-                     rootInode,
-                     *paths,
-                     [&fetchContext](InodePtr inode) {
-                       return inode->stat(fetchContext)
-                           .thenValue([](struct stat st) {
-                             FileInformation info;
-                             info.size_ref() = st.st_size;
-                             auto ts = stMtime(st);
-                             info.mtime_ref()->seconds_ref() = ts.tv_sec;
-                             info.mtime_ref()->nanoSeconds_ref() = ts.tv_nsec;
-                             info.mode_ref() = st.st_mode;
+  return wrapImmediateFuture(
+             std::move(helper),
+             waitForPendingNotifications(*edenMount, syncTimeout)
+                 .thenValue([rootInode = std::move(rootInode),
+                             paths = std::move(paths),
+                             &fetchContext](auto&&) {
+                   return collectAll(
+                              applyToInodes(
+                                  rootInode,
+                                  *paths,
+                                  [&fetchContext](InodePtr inode) {
+                                    return inode->stat(fetchContext)
+                                        .thenValue([](struct stat st) {
+                                          FileInformation info;
+                                          info.size_ref() = st.st_size;
+                                          auto ts = stMtime(st);
+                                          info.mtime_ref()->seconds_ref() =
+                                              ts.tv_sec;
+                                          info.mtime_ref()->nanoSeconds_ref() =
+                                              ts.tv_nsec;
+                                          info.mode_ref() = st.st_mode;
 
+                                          FileInformationOrError result;
+                                          result.info_ref() = info;
+
+                                          return result;
+                                        })
+                                        .semi();
+                                  },
+                                  fetchContext))
+                       .deferValue([](vector<Try<FileInformationOrError>>&&
+                                          done) {
+                         auto out =
+                             std::make_unique<vector<FileInformationOrError>>();
+                         out->reserve(done.size());
+                         for (auto& item : done) {
+                           if (item.hasException()) {
                              FileInformationOrError result;
-                             result.info_ref() = info;
-
-                             return result;
-                           })
-                           .semi();
-                     },
-                     fetchContext))
-          .deferValue([](vector<Try<FileInformationOrError>>&& done) {
-            auto out = std::make_unique<vector<FileInformationOrError>>();
-            out->reserve(done.size());
-            for (auto& item : done) {
-              if (item.hasException()) {
-                FileInformationOrError result;
-                result.error_ref() = newEdenError(item.exception());
-                out->emplace_back(std::move(result));
-              } else {
-                out->emplace_back(item.value());
-              }
-            }
-            return out;
-          }));
+                             result.error_ref() =
+                                 newEdenError(item.exception());
+                             out->emplace_back(std::move(result));
+                           } else {
+                             out->emplace_back(item.value());
+                           }
+                         }
+                         return out;
+                       });
+                 }))
+      .semi();
 }
 
 #define ATTR_BITMASK(req, attr) \
@@ -1354,43 +1387,58 @@ EdenServiceHandler::semifuture_getAttributesFromFiles(
   // Get requested attributes for each path
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3, mountPoint, syncTimeout.count(), toLogArg(paths));
-  vector<ImmediateFuture<BlobMetadata>> futures;
-  for (const auto& p : paths) {
-    futures.emplace_back(
-        getBlobMetadataForPath(mountPath, p, helper->getFetchContext()));
-  }
+  auto& fetchContext = helper->getFetchContext();
 
-  // Collect all futures into a single tuple
-  auto allRes = facebook::eden::collectAll(std::move(futures));
   return wrapImmediateFuture(
              std::move(helper),
-             std::move(allRes).thenValue(
-                 [paths = std::move(paths),
-                  reqBitmask](std::vector<folly::Try<BlobMetadata>>&& allRes) {
-                   auto res = std::make_unique<GetAttributesFromFilesResult>();
-                   auto sizeRequested = ATTR_BITMASK(reqBitmask, FILE_SIZE);
-                   auto sha1Requested = ATTR_BITMASK(reqBitmask, SHA1_HASH);
-                   for (const auto& tryMetadata : allRes) {
-                     FileAttributeDataOrError file_res;
-                     // check for exceptions. if found, return EdenError early
-                     if (tryMetadata.hasException()) {
-                       file_res.set_error(
-                           newEdenError(tryMetadata.exception()));
-                     } else { /* No exceptions, fill in data */
-                       FileAttributeData file_data;
-                       const auto& metadata = tryMetadata.value();
-                       // Only fill in requested fields
-                       if (sha1Requested) {
-                         file_data.sha1_ref() = thriftHash20(metadata.sha1);
-                       }
-                       if (sizeRequested) {
-                         file_data.fileSize_ref() = metadata.size;
-                       }
-                       file_res.data_ref() = file_data;
-                     }
-                     res->res_ref()->emplace_back(file_res);
+             waitForPendingNotifications(
+                 *server_->getMount(mountPath), syncTimeout)
+                 .thenValue([this,
+                             paths = std::move(paths),
+                             &fetchContext,
+                             mountPath,
+                             reqBitmask](auto&&) mutable {
+                   vector<ImmediateFuture<BlobMetadata>> futures;
+                   for (const auto& p : paths) {
+                     futures.emplace_back(
+                         getBlobMetadataForPath(mountPath, p, fetchContext));
                    }
-                   return res;
+
+                   // Collect all futures into a single tuple
+                   return facebook::eden::collectAll(std::move(futures))
+                       .thenValue([paths = std::move(paths), reqBitmask](
+                                      std::vector<folly::Try<BlobMetadata>>&&
+                                          allRes) {
+                         auto res =
+                             std::make_unique<GetAttributesFromFilesResult>();
+                         auto sizeRequested =
+                             ATTR_BITMASK(reqBitmask, FILE_SIZE);
+                         auto sha1Requested =
+                             ATTR_BITMASK(reqBitmask, SHA1_HASH);
+                         for (const auto& tryMetadata : allRes) {
+                           FileAttributeDataOrError file_res;
+                           // check for exceptions. if found, return EdenError
+                           // early
+                           if (tryMetadata.hasException()) {
+                             file_res.set_error(
+                                 newEdenError(tryMetadata.exception()));
+                           } else { /* No exceptions, fill in data */
+                             FileAttributeData file_data;
+                             const auto& metadata = tryMetadata.value();
+                             // Only fill in requested fields
+                             if (sha1Requested) {
+                               file_data.sha1_ref() =
+                                   thriftHash20(metadata.sha1);
+                             }
+                             if (sizeRequested) {
+                               file_data.fileSize_ref() = metadata.size;
+                             }
+                             file_res.data_ref() = file_data;
+                           }
+                           res->res_ref()->emplace_back(file_res);
+                         }
+                         return res;
+                       });
                  }))
       .semi();
 }
@@ -2103,18 +2151,24 @@ void EdenServiceHandler::debugInodeStatus(
         eden_constants::DIS_COMPUTE_BLOB_SIZES_;
   }
 
+  auto syncTimeout = getSyncTimeout(*sync);
   auto helper = INSTRUMENT_THRIFT_CALL(
-      DBG2, *mountPoint, *path, flags, getSyncTimeout(*sync).count());
+      DBG2, *mountPoint, *path, flags, syncTimeout.count());
   auto mountPath = AbsolutePathPiece{*mountPoint};
   auto edenMount = server_->getMount(mountPath);
 
-  auto inode = inodeFromUserPath(*edenMount, *path, helper->getFetchContext())
-                   .asTreePtr();
-  auto inodePath = inode->getPath().value();
+  waitForPendingNotifications(*edenMount, syncTimeout)
+      .thenValue([&](auto&&) {
+        auto inode =
+            inodeFromUserPath(*edenMount, *path, helper->getFetchContext())
+                .asTreePtr();
+        auto inodePath = inode->getPath().value();
 
-  InodeStatusCallbacks callbacks{edenMount.get(), flags, inodeInfo};
-  traverseObservedInodes(*inode, inodePath, callbacks);
-  callbacks.fillBlobSizes(helper->getFetchContext());
+        InodeStatusCallbacks callbacks{edenMount.get(), flags, inodeInfo};
+        traverseObservedInodes(*inode, inodePath, callbacks);
+        callbacks.fillBlobSizes(helper->getFetchContext());
+      })
+      .get();
 }
 
 void EdenServiceHandler::debugOutstandingFuseCalls(

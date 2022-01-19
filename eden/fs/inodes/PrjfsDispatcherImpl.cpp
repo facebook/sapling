@@ -59,7 +59,9 @@ std::string makeDotEdenConfig(EdenMount& mount) {
 PrjfsDispatcherImpl::PrjfsDispatcherImpl(EdenMount* mount)
     : PrjfsDispatcher(mount->getStats()),
       mount_{mount},
-      notificationExecutor_{folly::SerialExecutor::create()},
+      executor_{1, "PrjfsDispatcher"},
+      notificationExecutor_{
+          folly::SerialExecutor::create(folly::getKeepAliveToken(&executor_))},
       dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
 ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
@@ -472,28 +474,27 @@ ImmediateFuture<folly::Unit> fileNotification(
     RelativePath path,
     folly::Executor::KeepAlive<folly::SequencedExecutor> executor,
     ObjectFetchContext& context) {
-  return ImmediateFuture{
-      folly::via(
-          executor,
-          [&mount, path = std::move(path), &context]() mutable {
-            return getOnDiskState(mount, path)
-                .thenValue([&mount, path = std::move(path), &context](
-                               OnDiskState state) mutable {
-                  switch (state) {
-                    case OnDiskState::MaterializedFile:
-                      return handleMaterializedFileNotification(
-                          mount, std::move(path), InodeType::File, context);
-                    case OnDiskState::MaterializedDirectory:
-                      return handleMaterializedFileNotification(
-                          mount, std::move(path), InodeType::Tree, context);
-                    case OnDiskState::NotPresent:
-                      return handleNotPresentFileNotification(
-                          mount, std::move(path), context);
-                  }
-                })
-                .semi();
-          })
-          .semi()};
+  folly::via(executor, [&mount, path, &context]() mutable {
+    return getOnDiskState(mount, path)
+        .thenValue([&mount, path = std::move(path), &context](
+                       OnDiskState state) mutable {
+          switch (state) {
+            case OnDiskState::MaterializedFile:
+              return handleMaterializedFileNotification(
+                  mount, std::move(path), InodeType::File, context);
+            case OnDiskState::MaterializedDirectory:
+              return handleMaterializedFileNotification(
+                  mount, std::move(path), InodeType::Tree, context);
+            case OnDiskState::NotPresent:
+              return handleNotPresentFileNotification(
+                  mount, std::move(path), context);
+          }
+        })
+        .get();
+  }).thenError([path](const folly::exception_wrapper& ew) {
+    XLOG(ERR) << "While handling notification on: " << path << ": " << ew;
+  });
+  return folly::unit;
 }
 
 } // namespace
@@ -542,6 +543,21 @@ ImmediateFuture<folly::Unit> PrjfsDispatcherImpl::dirDeleted(
     RelativePath path,
     ObjectFetchContext& context) {
   return fileNotification(*mount_, path, notificationExecutor_, context);
+}
+
+ImmediateFuture<folly::Unit>
+PrjfsDispatcherImpl::waitForPendingNotifications() {
+  // Since the executor is a SequencedExecutor, and the fileNotification
+  // function blocks in the executor, the body of the lambda will only be
+  // executed when all previously enqueued notifications have completed.
+  //
+  // Note that this synchronization only guarantees that writes from a the
+  // calling application thread have completed when the future complete. Writes
+  // made by a concurrent process or a different thread may still be in
+  // ProjectedFS queue and therefore may still be pending when the future
+  // complete. This is expected and therefore not a bug.
+  return ImmediateFuture{
+      folly::via(notificationExecutor_, []() { return folly::unit; }).semi()};
 }
 
 } // namespace facebook::eden

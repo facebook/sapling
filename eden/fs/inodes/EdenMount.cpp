@@ -1195,6 +1195,15 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
 }
 #endif
 
+ImmediateFuture<folly::Unit> EdenMount::waitForPendingNotifications() const {
+#ifdef _WIN32
+  if (auto* channel = getPrjfsChannel()) {
+    return channel->waitForPendingNotifications();
+  }
+#endif
+  return folly::unit;
+}
+
 folly::Future<CheckoutResult> EdenMount::checkout(
     const RootId& snapshotHash,
     std::optional<pid_t> clientPid,
@@ -1249,6 +1258,15 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             objectStore_->getRootTree(snapshotHash, ctx->getFetchContext());
         return collectSafe(fromTreeFuture, toTreeFuture);
       })
+      .thenValue(
+          [this](std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
+                     treeResults) {
+            return waitForPendingNotifications()
+                .thenValue([treeResults = std::move(treeResults)](auto&&) {
+                  return treeResults;
+                })
+                .semi();
+          })
       .thenValue([this, ctx, checkoutTimes, stopWatch, journalDiffCallback](
                      std::tuple<shared_ptr<const Tree>, shared_ptr<const Tree>>
                          treeResults) {
@@ -1452,6 +1470,12 @@ Future<Unit> EdenMount::diff(DiffContext* ctxPtr, const RootId& commitHash)
     const {
   auto rootInode = getRootInode();
   return objectStore_->getRootTree(commitHash, ctxPtr->getFetchContext())
+      .thenValue([this](std::shared_ptr<const Tree> rootTree) {
+        return waitForPendingNotifications()
+            .thenValue(
+                [rootTree = std::move(rootTree)](auto&&) { return rootTree; })
+            .semi();
+      })
       .thenValue([ctxPtr, rootInode = std::move(rootInode)](
                      std::shared_ptr<const Tree>&& rootTree) {
         return rootInode->diff(
@@ -1852,8 +1876,8 @@ folly::Promise<folly::Unit>& EdenMount::beginMount() {
   // then release the lock. This is safe for two reasons:
   //
   // * *channelMountPromise will never be destructed (e.g. by calling
-  //   std::optional<>::reset()) or reassigned. (channelMountPromise never goes
-  //   from `has_value() == true` to `has_value() == false`.)
+  //   std::optional<>::reset()) or reassigned. (channelMountPromise never
+  //   goes from `has_value() == true` to `has_value() == false`.)
   //
   // * folly::Promise is self-synchronizing; getFuture() can be called
   //   concurrently with setValue()/setException().

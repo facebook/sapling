@@ -11,7 +11,11 @@ import typing
 from pathlib import Path, PurePath
 
 from facebook.eden.constants import STATS_MOUNTS_STATS
-from facebook.eden.ttypes import GetStatInfoParams, JournalInfo
+from facebook.eden.ttypes import (
+    GetStatInfoParams,
+    JournalInfo,
+    SynchronizeWorkingCopyParams,
+)
 
 from .lib import testcase
 from .lib.hgrepo import HgRepository
@@ -218,6 +222,10 @@ class JournalInfoTest(testcase.EdenRepoTest):
 
     def journal_stats(self) -> JournalInfo:
         with self.get_thrift_client() as thrift_client:
+            thrift_client.synchronizeWorkingCopy(
+                self.mount.encode("utf-8"), SynchronizeWorkingCopyParams()
+            )
+
             stats = thrift_client.getStatInfo(
                 GetStatInfoParams(statsMask=STATS_MOUNTS_STATS)
             )

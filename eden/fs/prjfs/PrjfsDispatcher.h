@@ -118,6 +118,11 @@ class PrjfsDispatcher {
       RelativePath relPath,
       ObjectFetchContext& context) = 0;
 
+  /**
+   * Wait for all received notifications to complete.
+   */
+  virtual ImmediateFuture<folly::Unit> waitForPendingNotifications() = 0;
+
  private:
   EdenStats* stats_{nullptr};
 };
