@@ -879,15 +879,6 @@ def _parse(ui, args):
         raise error.Abort(e.args[0])
 
     # separate global options back out
-    for (k, v) in list(cmdoptions.items()):
-        if "-" in k:
-            orig = k
-            k = k.replace("-", "_")
-            cmdoptions[k] = v
-            del cmdoptions[orig]
-        else:
-            cmdoptions[k] = v
-
     for o in commands.globalopts:
         n = o[1]
         options[n] = cmdoptions[n]

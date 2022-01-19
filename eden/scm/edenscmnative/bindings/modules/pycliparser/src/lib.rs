@@ -132,7 +132,10 @@ fn parse_command(
 
     let opts = result.opts().clone();
 
-    let options: HashMap<Str, Value> = opts.into_iter().map(|(k, v)| (k.into(), v)).collect();
+    let options: HashMap<Str, Value> = opts
+        .into_iter()
+        .map(|(k, v)| (k.replace('-', "_").into(), v))
+        .collect();
 
     Ok((arguments, options))
 }
