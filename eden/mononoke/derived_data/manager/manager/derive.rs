@@ -17,9 +17,9 @@ use blobstore::Loadable;
 use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{abortable, try_join, AbortHandle, Aborted, FutureExt, TryFutureExt};
-use futures::join;
+use futures::future::{try_join, FutureExt, TryFutureExt};
 use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
+use futures::{join, select_biased};
 use futures_stats::{TimedFutureExt, TimedTryFutureExt};
 use mononoke_types::ChangesetId;
 use slog::debug;
@@ -538,36 +538,21 @@ impl DerivedDataManager {
 
         let pc = ctx.clone().fork_perf_counters();
 
-        let (derivation_task, derivation_abort_handle) =
-            abortable(self.derive_underived(ctx, Arc::new(derivation_ctx), csid));
-        let (watcher_task, watcher_abort_handle) = abortable(derivation_disabled_watcher(
-            self.repo_name().to_string(),
-            Derivable::NAME,
-            derivation_abort_handle,
-        ));
-        tokio::spawn(watcher_task);
-
-        let (stats, derivation_result) = derivation_task.timed().await;
-        watcher_abort_handle.abort();
-
-        let derivation_result = match derivation_result {
-            Ok(result) => result,
-            Err(Aborted) => {
-                // Derivation was disabled during the derivation process.
-                Err(DerivationError::Disabled(
-                    Derivable::NAME,
-                    self.repo_id(),
-                    self.repo_name().to_string(),
-                ))
+        select_biased! {
+            _ = derivation_disabled_watcher(self.repo_name(), Derivable::NAME).fuse() =>
+            // Derivation was disabled during the derivation process.
+            Err(DerivationError::Disabled(
+                Derivable::NAME,
+                self.repo_id(),
+                self.repo_name().to_string(),
+            )),
+            (stats, res) = self.derive_underived(ctx, Arc::new(derivation_ctx), csid).timed().fuse() => {
+                if self.should_log_slow_derivation(stats.completion_time) {
+                    self.log_slow_derivation(ctx, csid, &stats, &pc, &res);
+                }
+            res.map(|r| r.derived)
             }
-        };
-
-        if self.should_log_slow_derivation(stats.completion_time) {
-            self.log_slow_derivation(ctx, csid, &stats, &pc, &derivation_result);
         }
-
-        let derivation_outcome = derivation_result?;
-        Ok(derivation_outcome.derived)
     }
 
     #[async_recursion]
@@ -956,21 +941,13 @@ fn emergency_disabled(repo_name: &str, derivable_name: &str) -> bool {
     false
 }
 
-async fn derivation_disabled_watcher(
-    repo_name: String,
-    derivable_name: &'static str,
-    abort_handle: AbortHandle,
-) {
+async fn derivation_disabled_watcher(repo_name: &str, derivable_name: &'static str) {
     let mut delay_secs = tunables::tunables().get_derived_data_disabled_watcher_delay_secs();
     if delay_secs <= 0 {
         delay_secs = 10;
     }
     let delay_duration = Duration::from_secs(delay_secs as u64);
-    loop {
-        if emergency_disabled(&repo_name, derivable_name) {
-            abort_handle.abort();
-            break;
-        }
+    while !emergency_disabled(repo_name, derivable_name) {
         tokio::time::sleep(delay_duration).await;
     }
 }
