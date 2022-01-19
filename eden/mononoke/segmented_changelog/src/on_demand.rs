@@ -358,20 +358,19 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         read_dag.clone_data(ctx).await
     }
 
-    async fn pull_fast_forward_master(
+    async fn pull_data(
         &self,
         ctx: &CoreContext,
-        old_master: ChangesetId,
-        new_master: ChangesetId,
+        common: Vec<ChangesetId>,
+        missing: Vec<ChangesetId>,
     ) -> Result<CloneData<ChangesetId>> {
-        self.build_up_to_heads(ctx, &[old_master, new_master])
+        let heads: Vec<_> = common.iter().chain(missing.iter()).cloned().collect();
+        self.build_up_to_heads(ctx, &heads)
             .await
             .context("error while getting an up to date dag")?;
         let namedag = self.namedag.read().await;
         let read_dag = ReadOnlySegmentedChangelog::new(namedag.dag(), namedag.map().clone_idmap());
-        read_dag
-            .pull_fast_forward_master(ctx, old_master, new_master)
-            .await
+        read_dag.pull_data(ctx, common, missing).await
     }
 
     async fn disabled(&self, _ctx: &CoreContext) -> Result<bool> {

@@ -195,13 +195,36 @@ pub trait SegmentedChangelog: Send + Sync {
     /// only needs one head.
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>>;
 
+    /// Returns data that client can import to perform a lazy fast pull.
+    /// `common` specifies heads known by both client and server.
+    /// `missing` specifies heads unknown by the client, and are being pulled.
+    ///
+    /// Note this endpoint does not handle all `pull` use-cases. It requires
+    /// `roots(missing % common)` to be fully missing client-side, and
+    /// `parents(roots(missing % common))` to exist client-side in its MASTER
+    /// group. It's possible that client-side has `parents(roots(missing %
+    /// common))` in its NON_MASTER group, for example, the client has some
+    /// commits that are merged by the server. At present, that prevents the
+    /// client from importing the pull data.
+    async fn pull_data(
+        &self,
+        ctx: &CoreContext,
+        common: Vec<ChangesetId>,
+        missing: Vec<ChangesetId>,
+    ) -> Result<CloneData<ChangesetId>>;
+
     /// Uses segmented changelog fast forward master pull fastpath.
+    ///
+    /// Deprecated. Use `pull_data` instead.
     async fn pull_fast_forward_master(
         &self,
         ctx: &CoreContext,
         old_master: ChangesetId,
         new_master: ChangesetId,
-    ) -> Result<CloneData<ChangesetId>>;
+    ) -> Result<CloneData<ChangesetId>> {
+        self.pull_data(ctx, vec![old_master], vec![new_master])
+            .await
+    }
 
     /// Whether segmented changelog is disabled.
     ///

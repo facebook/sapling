@@ -84,11 +84,11 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
         ))
     }
 
-    async fn pull_fast_forward_master(
+    async fn pull_data(
         &self,
         _ctx: &CoreContext,
-        _old_master: ChangesetId,
-        _new_master: ChangesetId,
+        _common: Vec<ChangesetId>,
+        _missing: Vec<ChangesetId>,
     ) -> Result<CloneData<ChangesetId>> {
         Err(format_err!(
             "Segmented Changelog is not enabled for this repo",
@@ -147,14 +147,14 @@ macro_rules! segmented_changelog_delegate {
                 delegate.clone_data($ctx).await
             }
 
-            async fn pull_fast_forward_master(
+            async fn pull_data(
                 &$self,
                 $ctx: &CoreContext,
-                old_master: ChangesetId,
-                new_master: ChangesetId,
+                common: Vec<ChangesetId>,
+                missing: Vec<ChangesetId>,
             ) -> Result<CloneData<ChangesetId>> {
                 let delegate = $delegate;
-                delegate.pull_fast_forward_master($ctx, old_master, new_master).await
+                delegate.pull_data($ctx, common, missing).await
             }
 
             async fn many_changeset_ids_to_locations(

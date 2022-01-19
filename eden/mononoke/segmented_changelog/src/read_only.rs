@@ -151,36 +151,49 @@ impl<'a> SegmentedChangelog for ReadOnlySegmentedChangelog<'a> {
         Ok(clone_data)
     }
 
-    async fn pull_fast_forward_master(
+    async fn pull_data(
         &self,
         ctx: &CoreContext,
-        old_master: ChangesetId,
-        new_master: ChangesetId,
+        common: Vec<ChangesetId>,
+        missing: Vec<ChangesetId>,
     ) -> Result<CloneData<ChangesetId>> {
+        let all_cs_ids: Vec<_> = common.iter().chain(missing.iter()).cloned().collect();
         let request_ids = self
             .idmap
-            .find_many_dag_ids(ctx, vec![old_master, new_master])
+            .find_many_dag_ids(ctx, all_cs_ids.clone())
             .await?;
-        let old = *request_ids
-            .get(&old_master)
-            .ok_or_else(|| format_err!("Old id {} not found", old_master))?;
-        let new = *request_ids
-            .get(&new_master)
-            .ok_or_else(|| format_err!("New id {} not found", new_master))?;
-        let master_group = self.iddag.master_group()?;
-
-        if !master_group.contains(old) {
-            bail!("old vertex {} is not in master group", old);
+        for cs_id in &all_cs_ids {
+            if request_ids.contains_key(cs_id) {
+                bail!("ChangesetId {} not found", cs_id);
+            }
         }
 
-        if !master_group.contains(new) {
-            bail!("new vertex {} is not in master group", new);
-        }
-        let old_ancestors = self.iddag.ancestors(old.into())?;
-        let new_ancestors = self.iddag.ancestors(new.into())?;
+        let common_ids = common
+            .iter()
+            .map(|i| {
+                request_ids
+                    .get(i)
+                    .copied()
+                    .ok_or_else(|| format_err!("common head {} not found", i))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let missing_ids = missing
+            .iter()
+            .map(|i| {
+                request_ids
+                    .get(i)
+                    .copied()
+                    .ok_or_else(|| format_err!("missing head {} not found", i))
+            })
+            .collect::<Result<Vec<_>>>()?;
 
-        let result_span = new_ancestors.difference(&old_ancestors);
-        let flat_segments = self.iddag.idset_to_flat_segments(result_span)?;
+        let common_id_set = DagIdSet::from_spans(common_ids.into_iter());
+        let missing_id_set = DagIdSet::from_spans(missing_ids.into_iter());
+        let common_ancestors_id_set = self.iddag.ancestors(common_id_set)?;
+        let missing_ancestors_id_set = self.iddag.ancestors(missing_id_set)?;
+
+        let missing_id_set = missing_ancestors_id_set.difference(&common_ancestors_id_set);
+        let flat_segments = self.iddag.idset_to_flat_segments(missing_id_set)?;
 
         let ids = flat_segments.parents_head_and_roots().into_iter().collect();
 
