@@ -772,16 +772,24 @@ impl HgRepoContext {
             .flatten()
             .chain(missing_commits)
             .collect::<HashSet<_>>();
-        let bonsai_hg_mapping = self
-            .blob_repo()
-            .get_hg_bonsai_mapping(
-                self.ctx().clone(),
-                cs_ids.into_iter().collect::<Vec<ChangesetId>>(),
-            )
-            .await
-            .context("error fetching hg bonsai mapping")?
+
+        let map_chunk_size = 100;
+
+        let bonsai_hg_mapping = stream::iter(cs_ids)
+            .chunks(map_chunk_size)
+            .then(move |chunk| async move {
+                let mapping = self
+                    .blob_repo()
+                    .get_hg_bonsai_mapping(self.ctx().clone(), chunk.to_vec())
+                    .await
+                    .context("error fetching hg bonsai mapping")?;
+                Ok::<_, Error>(mapping)
+            })
+            .try_collect::<Vec<Vec<(HgChangesetId, ChangesetId)>>>()
+            .await?
             .into_iter()
-            .map(|(hg_id, cs_id)| (cs_id, hg_id))
+            .flatten()
+            .map(|(hgid, csid)| (csid, hgid))
             .collect::<HashMap<_, _>>();
 
         let mut hg_parent_mapping: HashMap<HgChangesetId, Vec<HgChangesetId>> = HashMap::new();
