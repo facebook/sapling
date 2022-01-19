@@ -585,10 +585,13 @@ Do you want to run `eden mount %s` instead?"""
         except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
+
             # If the path already exists, make sure it is an empty directory.
             # listdir() will throw its own error if the path is not a directory.
             if len(os.listdir(path)) > 0:
-                raise OSError(errno.ENOTEMPTY, os.strerror(errno.ENOTEMPTY), path)
+                raise Exception(
+                    f'The directory "{path}" already exist on disk. Use `eden rm` if this is an old EdenFS clone to remove it.'
+                )
 
         # On non-Windows platforms, put a README file in the mount point directory.
         # This will be visible to users when the EdenFS checkout is not mounted,
