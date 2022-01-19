@@ -245,14 +245,11 @@ def discover_tests(manifest_env: Env, mysql: bool):
     return all_tests
 
 
-def run_discover_tests(
+def format_discovered_tests(
+    tests: List[str],
     ctx: Any,
-    manifest_env: ManifestEnv,
     xunit_output: str,
-    mysql: bool,
 ):
-    tests = discover_tests(manifest_env, mysql)
-
     if xunit_output is None:
         print("\n".join(tests))
         return
@@ -376,6 +373,13 @@ def run_tests(
     is_flag=False,
     help="Use devdb to run tests with MySQL, specify the shard e.g. --devdb=$USER",
 )
+@click.option(
+    "discovered_tests",
+    "--discovered-test",
+    multiple=True,
+    help="Tests that are already known to exist, passing this will disable automatic test discovery",
+    type=click.Path(),
+)
 @click.argument("manifest", type=click.Path())
 @click.argument("tests", nargs=-1, type=click.Path())
 @click.pass_context
@@ -394,6 +398,7 @@ def run(
     mysql_client,
     mysql_schemas,
     devdb,
+    discovered_tests,
 ):
     manifest = os.path.abspath(manifest)
     if is_libfb_present():
@@ -416,8 +421,11 @@ def run(
 
     maybe_use_local_test_paths(manifest_env)
 
+    if dry_run and discovered_tests:
+        return format_discovered_tests(list(discovered_tests), ctx, output)
     if dry_run:
-        return run_discover_tests(ctx, manifest_env, output, mysql_client)
+        tests = discover_tests(manifest_env, mysql_client)
+        return format_discovered_tests(tests, ctx, output)
 
     test_flags: TestFlags = TestFlags(
         interactive,
@@ -436,7 +444,8 @@ def run(
     selected_tests: List[str] = []
     if simple_test_selector is not None and tests:
         raise click.BadParameter(
-            "Use either --simple-test-selector, or [...TESTS]", ctx
+            f"Found --simple-test-selector {simple_test_selector}. Use either --simple-test-selector, or [...TESTS]",
+            ctx,
         )
     elif simple_test_selector is not None:
         suite, test = simple_test_selector.split(",", 1)
