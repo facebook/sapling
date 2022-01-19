@@ -5067,3 +5067,16 @@ def fssize(path):
             paths = [os.path.join(path, dirpath, name) for name in filenames + dirnames]
             size += sum(st.st_size for st in statfiles(paths) if st)
     return size
+
+
+def dedup(items):
+    """Remove duplicated items while preserving item order.
+
+    >>> dedup([1,2,3,2])
+    [1, 2, 3]
+    >>> dedup([3,2,1,2])
+    [3, 2, 1]
+
+    """
+    return list(collections.OrderedDict.fromkeys(items))
+
