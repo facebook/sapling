@@ -1,7 +1,7 @@
 /*
  * @lint-ignore-every LICENSELINT
  *
- * Copyright (c) Facebook, Inc. and its affiliates.
+ * Copyright (c) Meta Platforms, Inc. and its affiliates.
  * Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
  *
  * This software may be used and distributed according to the terms of the
