@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::io;
@@ -385,8 +386,15 @@ fn to_hg_date_text(time: &git2::Time) -> String {
 
 /// Convert a git commit to hg commit text.
 fn to_hg_text(commit: &git2::Commit) -> Bytes {
-    let mut result = Vec::new();
+    // 222 is calculated from debugshell in linux.git:
+    // max(len(cl.revision(n))-len(repo[n].description().encode('utf8')) for n in cl.dag.all().take(50000))
+    let len = commit.message_bytes().len() + 222;
+    let mut result = Vec::with_capacity(len);
     let mut write = |s: &[u8]| result.extend_from_slice(s);
+
+    fn utf8<'a>(s: &'a [u8]) -> Cow<'a, str> {
+        String::from_utf8_lossy(s)
+    }
 
     // Construct the commit using (faked) hg format:
     // manifest hex + "\n" + user + "\n" + date + (extra) + "\n" + (files) + "\n" + desc
@@ -397,9 +405,9 @@ fn to_hg_text(commit: &git2::Commit) -> Bytes {
 
     // user
     let author = commit.author();
-    write(author.name_bytes());
+    write(utf8(author.name_bytes()).as_bytes());
     write(b" <");
-    write(author.email_bytes());
+    write(utf8(author.email_bytes()).as_bytes());
     write(b">\n");
 
     // date
@@ -408,9 +416,9 @@ fn to_hg_text(commit: &git2::Commit) -> Bytes {
     // extras (committer)
     let committer = commit.committer();
     write(b" committer:");
-    write(committer.name_bytes());
+    write(utf8(committer.name_bytes()).as_bytes());
     write(b" <");
-    write(committer.email_bytes());
+    write(utf8(committer.email_bytes()).as_bytes());
     write(b">\0committer_date:");
     write(to_hg_date_text(&committer.when()).as_bytes());
     write(b"\n");
@@ -420,7 +428,7 @@ fn to_hg_text(commit: &git2::Commit) -> Bytes {
     write(b"\n");
 
     // message
-    write(commit.message_bytes());
+    write(utf8(commit.message_bytes()).as_bytes());
 
     result.into()
 }
