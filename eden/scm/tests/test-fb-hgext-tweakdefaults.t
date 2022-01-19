@@ -135,7 +135,7 @@ Rebase is blocked if you have conflicting changes
   $ hg rebase -d tip
   abort: 1 conflicting file changes:
    a
-  (commit, shelve, update --clean to discard them, or update --merge to merge them)
+  (commit, shelve, update --clean to discard all your changes, or update --merge to merge them)
   [255]
   $ hg revert -q --all
   $ hg up -qC hyphen-book

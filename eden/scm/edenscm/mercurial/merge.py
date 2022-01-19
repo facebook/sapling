@@ -2517,7 +2517,7 @@ def update(
                 for path in i18n.limititems(paths):
                     msg += " %s\n" % path
                 hint = _(
-                    "commit, shelve, update --clean to discard them"
+                    "commit, shelve, update --clean to discard all your changes"
                     ", or update --merge to merge them"
                 )
                 raise error.Abort(msg.strip(), hint=hint)
@@ -2730,7 +2730,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
             msg = _("%d conflicting file changes:\n") % len(conflicts)
             msg += " " + "\n ".join(i18n.limititems(conflicts)) + "\n"
             hint = _(
-                "commit, shelve, update --clean to discard them"
+                "commit, shelve, update --clean to discard all your changes"
                 ", or update --merge to merge them"
             )
             raise error.Abort(msg.strip(), hint=hint)

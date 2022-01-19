@@ -25,5 +25,5 @@ Updating w/ noconflict prints the conflicting changes:
    b
    y
    z
-  (commit, shelve, update --clean to discard them, or update --merge to merge them)
+  (commit, shelve, update --clean to discard all your changes, or update --merge to merge them)
   [255]
