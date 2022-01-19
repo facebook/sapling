@@ -14,6 +14,7 @@ use blobstore::Loadable;
 use bookmark_renaming::BookmarkRenamer;
 use bookmarks::BookmarkName;
 use cacheblob::{InProcessLease, LeaseOps, MemcacheOps};
+pub use commit_transformation::CommitRewrittenToEmpty;
 use commit_transformation::{
     rewrite_commit as multi_mover_rewrite_commit, upload_commits, MultiMover,
 };
@@ -122,6 +123,7 @@ pub async fn rewrite_commit<'a>(
     remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: Mover,
     source_repo: BlobRepo,
+    commit_rewritten_to_empty: CommitRewrittenToEmpty,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     multi_mover_rewrite_commit(
         ctx,
@@ -130,6 +132,7 @@ pub async fn rewrite_commit<'a>(
         mover_to_multi_mover(mover),
         source_repo,
         None,
+        commit_rewritten_to_empty,
     )
     .await
 }
@@ -924,6 +927,7 @@ where
             &remapped_parents,
             mover,
             source_repo.clone(),
+            CommitRewrittenToEmpty::Discard,
         )
         .await?;
         match rewritten_commit {
@@ -1062,6 +1066,7 @@ where
             &remapped_parents,
             mover,
             source_repo.clone(),
+            CommitRewrittenToEmpty::Discard,
         )
         .await?;
 
@@ -1168,6 +1173,7 @@ where
             &HashMap::new(),
             mover,
             source_repo.clone(),
+            CommitRewrittenToEmpty::Discard,
         )
         .await?
         {
@@ -1245,12 +1251,26 @@ where
 
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
+
+                // If a commit is changing mapping let's always rewrite it to
+                // small repo regardless if outcome is empty. This is to ensure
+                // that efter changing mapping there's a commit in small repo
+                // with new mapping on top.
+                let maybe_mapping_change_version =
+                    get_mapping_change_version(ctx, self.get_source_repo(), source_cs_id).await?;
+                let discard_commits_rewriting_to_empty = if maybe_mapping_change_version.is_some() {
+                    CommitRewrittenToEmpty::Keep
+                } else {
+                    CommitRewrittenToEmpty::Discard
+                };
+
                 let maybe_rewritten = rewrite_commit(
                     ctx,
                     cs,
                     &remapped_parents,
                     rewrite_paths,
                     source_repo.clone(),
+                    discard_commits_rewriting_to_empty,
                 )
                 .await?;
                 match maybe_rewritten {
@@ -1406,8 +1426,15 @@ where
                 }
             }
 
-            match rewrite_commit(ctx, cs, &new_parents, mover, self.get_source_repo().clone())
-                .await?
+            match rewrite_commit(
+                ctx,
+                cs,
+                &new_parents,
+                mover,
+                self.get_source_repo().clone(),
+                CommitRewrittenToEmpty::Discard,
+            )
+            .await?
             {
                 Some(rewritten) => {
                     let target_cs_id = self

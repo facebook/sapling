@@ -22,7 +22,7 @@ use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncers, rewrite_commit, update_mapping_with_version, CandidateSelectionHint,
-    CommitSyncContext, CommitSyncOutcome, CommitSyncer, Syncers,
+    CommitRewrittenToEmpty, CommitSyncContext, CommitSyncOutcome, CommitSyncer, Syncers,
 };
 use futures::{
     compat::Future01CompatExt,
@@ -257,6 +257,7 @@ async fn create_rewritten_merge_commit(
             .get_mover_by_version(&version_p1)
             .await?,
         syncers.small_to_large.get_source_repo().clone(),
+        CommitRewrittenToEmpty::Discard,
     )
     .await?;
     let mut rewritten =

@@ -196,6 +196,15 @@ async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId
     Ok(implicit_delete_file_changes)
 }
 
+/// Determines what to do in commits rewriting to empty commit in small repo.
+///
+/// NOTE: The empty commits from large repo are kept regardless of this flag.
+#[derive(PartialEq, Debug, Copy, Clone)]
+pub enum CommitRewrittenToEmpty {
+    Keep,
+    Discard,
+}
+
 /// Create a version of `cs` with `Mover` applied to all changes
 /// The return value can be:
 /// - `Err` if the rewrite failed
@@ -219,6 +228,7 @@ pub async fn rewrite_commit<'a>(
     mover: MultiMover,
     source_repo: BlobRepo,
     force_first_parent: Option<ChangesetId>,
+    commit_rewritten_to_empty: CommitRewrittenToEmpty,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let delete_file_changes = if !cs.file_changes.is_empty() {
         get_implicit_delete_file_changes(
@@ -239,6 +249,7 @@ pub async fn rewrite_commit<'a>(
         mover,
         force_first_parent,
         delete_file_changes,
+        commit_rewritten_to_empty,
     )
 }
 
@@ -302,6 +313,7 @@ pub async fn rewrite_stack_no_merges<'a>(
             mover.clone(),
             force_first_parent,
             implicit_deletes_file_changes,
+            CommitRewrittenToEmpty::Discard,
         )?;
 
         let maybe_cs = maybe_cs
@@ -325,6 +337,7 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
     mover: MultiMover,
     force_first_parent: Option<ChangesetId>,
     implicit_delete_file_changes: Vec<(MPath, FileChange)>,
+    commit_rewritten_to_empty: CommitRewrittenToEmpty,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     if !cs.file_changes.is_empty() {
         let path_rewritten_changes: Result<Vec<Vec<_>>, _> = cs
@@ -415,7 +428,10 @@ pub fn internal_rewrite_commit_with_implicit_deletes<'a>(
         // though bonsai merge commit might not have file changes inside it can still change
         // a working copy. E.g. if p1 has fileA, p2 has fileB, then empty merge(p1, p2)
         // contains both fileA and fileB.
-        if path_rewritten_changes.is_empty() && !is_merge {
+        if path_rewritten_changes.is_empty()
+            && !is_merge
+            && commit_rewritten_to_empty == CommitRewrittenToEmpty::Discard
+        {
             return Ok(None);
         } else {
             cs.file_changes = path_rewritten_changes;
@@ -797,6 +813,7 @@ mod test {
             multi_mover,
             repo.clone(),
             force_first_parent,
+            CommitRewrittenToEmpty::Discard,
         )
         .await?;
         let rewritten =

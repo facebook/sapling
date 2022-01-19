@@ -19,8 +19,8 @@ use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncer_lease, create_commit_syncers, find_toposorted_unsynced_ancestors,
-    rewrite_commit, CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer,
-    Syncers,
+    rewrite_commit, CandidateSelectionHint, CommitRewrittenToEmpty, CommitSyncContext,
+    CommitSyncOutcome, CommitSyncer, Syncers,
 };
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
@@ -175,6 +175,7 @@ async fn rewrite_file_paths(
             &remapped_parents,
             mover.clone(),
             repo.clone(),
+            CommitRewrittenToEmpty::Discard,
         )
         .await?;
 

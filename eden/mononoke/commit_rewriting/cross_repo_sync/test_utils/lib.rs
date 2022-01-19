@@ -17,8 +17,8 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::{
-    rewrite_commit, update_mapping_with_version, CommitSyncContext, CommitSyncDataProvider,
-    CommitSyncRepos, CommitSyncer, Syncers,
+    rewrite_commit, update_mapping_with_version, CommitRewrittenToEmpty, CommitSyncContext,
+    CommitSyncDataProvider, CommitSyncRepos, CommitSyncer, Syncers,
 };
 use live_commit_sync_config::{
     LiveCommitSyncConfig, TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource,
@@ -77,7 +77,15 @@ where
         let mover = commit_syncer
             .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()))
             .await?;
-        rewrite_commit(&ctx, source_bcs_mut, &map, mover, source_repo.clone()).await?
+        rewrite_commit(
+            &ctx,
+            source_bcs_mut,
+            &map,
+            mover,
+            source_repo.clone(),
+            CommitRewrittenToEmpty::Discard,
+        )
+        .await?
     };
     let mut target_bcs_mut = maybe_rewritten.unwrap();
     target_bcs_mut.parents = vec![bookmark_val];

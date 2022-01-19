@@ -15,7 +15,7 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
 use commit_transformation::{
     create_directory_source_to_target_multi_mover, create_source_to_target_multi_mover,
-    rewrite_commit, upload_commits,
+    rewrite_commit, upload_commits, CommitRewrittenToEmpty,
 };
 use context::CoreContext;
 use futures::{stream, StreamExt, TryStreamExt};
@@ -367,6 +367,7 @@ async fn sync_changeset_to_target(
         // hg derivation. This ensures that mainline is within those two so is
         // represented in the commit graph and the sync is a fast-forward move.
         Some(target_cs_id),
+        CommitRewrittenToEmpty::Discard,
     )
     .await
     .map_err(MegarepoError::internal)?

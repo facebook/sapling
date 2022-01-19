@@ -17,8 +17,8 @@ use commit_transformation::upload_commits;
 use context::CoreContext;
 use cross_repo_sync::{rewrite_commit, CommitSyncOutcome, CommitSyncer};
 use cross_repo_sync::{
-    CandidateSelectionHint, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos,
-    CHANGE_XREPO_MAPPING_EXTRA,
+    CandidateSelectionHint, CommitRewrittenToEmpty, CommitSyncContext, CommitSyncDataProvider,
+    CommitSyncRepos, CHANGE_XREPO_MAPPING_EXTRA,
 };
 use fbinit::FacebookInit;
 use fixtures::linear;
@@ -1299,6 +1299,7 @@ async fn init_repos(
             &empty_map,
             commit_syncer.get_mover_by_version(&version).await?,
             source_repo,
+            CommitRewrittenToEmpty::Discard,
         )
         .await
     }?;
