@@ -135,100 +135,6 @@ def _setascii():
     encoding = "ascii"
 
 
-def _tolocal(s):
-    """
-    Convert a string from internal UTF-8 to local encoding
-
-    All internal strings should be UTF-8 but some repos before the
-    implementation of locale support may contain latin1 or possibly
-    other character sets. We attempt to decode everything strictly
-    using UTF-8, then Latin-1, and failing that, we use UTF-8 and
-    replace unknown characters.
-
-    The localstr class is used to cache the known UTF-8 encoding of
-    strings next to their local representation to allow lossless
-    round-trip conversion back to UTF-8.
-
-    >>> _setascii()
-    >>> u = b'foo: \\xc3\\xa4' # utf-8
-    >>> l = tolocal(u)
-    >>> l
-    'foo: ?'
-    >>> fromlocal(l)
-    'foo: \\xc3\\xa4'
-    >>> u2 = b'foo: \\xc3\\xa1'
-    >>> d = { l: 1, tolocal(u2): 2 }
-    >>> len(d) # no collision
-    2
-    >>> b'foo: ?' in d
-    False
-    >>> l1 = b'foo: \\xe4' # historical latin1 fallback
-    >>> l = tolocal(l1)
-    >>> l
-    'foo: ?'
-    >>> fromlocal(l) # magically in utf-8
-    'foo: \\xc3\\xa4'
-    """
-
-    if isasciistr(s):
-        return s
-
-    try:
-        try:
-            # make sure string is actually stored in UTF-8
-            u = s.decode("UTF-8")
-            if encoding == "utf-8":
-                # fast path
-                return s
-            r = u.encode(encoding, u"replace")
-            if u == r.decode(encoding):
-                # r is a safe, non-lossy encoding of s
-                return r
-            return localstr(s, r)
-        except UnicodeDecodeError:
-            # we should only get here if we're looking at an ancient changeset
-            try:
-                u = s.decode(fallbackencoding)
-                r = u.encode(encoding, u"replace")
-                if u == r.decode(encoding):
-                    # r is a safe, non-lossy encoding of s
-                    return r
-                return localstr(u.encode("UTF-8"), r)
-            except UnicodeDecodeError:
-                u = s.decode("utf-8", "replace")  # last ditch
-                # can't round-trip
-                return u.encode(encoding, u"replace")
-    except LookupError as k:
-        raise error.Abort(k, hint="please check your locale settings")
-
-
-def _fromlocal(s):
-    """
-    Convert a string from the local character encoding to UTF-8
-
-    We attempt to decode strings using the encoding mode set by
-    HGENCODINGMODE, which defaults to 'strict'. In this mode, unknown
-    characters will cause an error message. Other modes include
-    'replace', which replaces unknown characters with a special
-    Unicode character, and 'ignore', which drops the character.
-    """
-
-    # can we do a lossless round-trip?
-    if isinstance(s, localstr):
-        return s._utf8
-    if isasciistr(s):
-        return s
-
-    try:
-        u = s.decode(encoding, encodingmode)
-        return u.encode("utf-8")
-    except UnicodeDecodeError as inst:
-        sub = s[max(0, inst.start - 10) : inst.start + 10]
-        raise error.Abort("decoding near '%s': %s!" % (sub, inst))
-    except LookupError as k:
-        raise error.Abort(k, hint="please check your locale settings")
-
-
 def unitolocal(u):
     """Convert a unicode string to a byte string of local encoding"""
     return tolocal(u.encode("utf-8"))
@@ -602,54 +508,6 @@ def toutf8b(s):
     return r
 
 
-def fromutf8b(s):
-    """Given a UTF-8b string, return a local, possibly-binary string.
-
-    return the original binary string. This
-    is a round-trip process for strings like filenames, but metadata
-    that's was passed through tolocal will remain in UTF-8.
-
-    >>> roundtrip = lambda x: fromutf8b(toutf8b(x)) == x
-    >>> m = b"\\xc3\\xa9\\x99abcd"
-    >>> toutf8b(m)
-    '\\xc3\\xa9\\xed\\xb2\\x99abcd'
-    >>> roundtrip(m)
-    True
-    >>> roundtrip(b"\\xc2\\xc2\\x80")
-    True
-    >>> roundtrip(b"\\xef\\xbf\\xbd")
-    True
-    >>> roundtrip(b"\\xef\\xef\\xbf\\xbd")
-    True
-    >>> roundtrip(b"\\xf1\\x80\\x80\\x80\\x80")
-    True
-    """
-
-    if isasciistr(s):
-        return s
-    # fast path - look for uDxxx prefixes in s
-    if "\xed" not in s:
-        return s
-
-    # We could do this with the unicode type but some Python builds
-    # use UTF-16 internally (issue5031) which causes non-BMP code
-    # points to be escaped. Instead, we use our handy getutf8char
-    # helper again to walk the string without "decoding" it.
-
-    s = pycompat.bytestr(s)
-    r = ""
-    pos = 0
-    l = len(s)
-    while pos < l:
-        c = getutf8char(s, pos)
-        pos += len(c)
-        # unescape U+DCxx characters
-        if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
-            c = pycompat.bytechr(ord(c.decode("utf-8", _utf8strict)) & 0xFF)
-        r += c
-    return r
-
-
 if sys.version_info[0] >= 3:
 
     # Prefer native unicode on Python
@@ -673,11 +531,11 @@ if sys.version_info[0] >= 3:
 
 else:
     colwidth = _colwidth
-    fromlocal = _fromlocal
+    fromlocal = pycompat.identity
     lower = _lower
     strio = pycompat.identity
-    tolocal = _tolocal
-    tolocalstr = _tolocal  # Binary utf-8 to local byte string
+    tolocal = pycompat.identity
+    tolocalstr = pycompat.identity
     upper = _upper
 
 
