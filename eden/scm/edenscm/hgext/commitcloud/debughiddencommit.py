@@ -69,9 +69,11 @@ def debughiddencommit(ui, repo, *pats, **opts):
             extra,
         ).commit()
 
-        uploaded, failed = backup.backupwithlockheld(repo, [int(repo[node])])
-
-        visibility.remove(repo, [node])
+        try:
+            uploaded, failed = backup.backupwithlockheld(repo, [int(repo[node])])
+        finally:
+            # Be sure to hide the commit, even if the backup fails
+            visibility.remove(repo, [node])
 
     if failed:
         return 2
