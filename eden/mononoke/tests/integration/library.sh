@@ -2081,6 +2081,9 @@ function derived_data_service() {
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/derived_data_service.out" 2>&1 &
 
+  pid=$!
+  echo "$pid" >> "$DAEMON_PIDS"
+
   # Wait for derived_data_service to start up
   # MONONOKE_START_TIMEOUT is set in seconds
   # Number of attempts is timeout multiplied by 10, since we
