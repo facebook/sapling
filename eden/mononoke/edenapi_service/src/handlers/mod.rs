@@ -294,6 +294,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit::GraphHandler>(route);
         Handlers::setup::<files::DownloadFileHandler>(route);
         Handlers::setup::<commit::CommitMutationsHandler>(route);
+        route.get("/:repo/health_check").to(health_handler);
         route
             .get("/:repo/capabilities")
             .with_path_extractor::<capabilities::CapabilitiesParams>()
