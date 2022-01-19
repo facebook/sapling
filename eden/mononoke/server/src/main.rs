@@ -24,6 +24,7 @@ use std::sync::{
     Arc,
 };
 
+const ARG_BOUND_ADDR_FILE: &str = "bound-address-file";
 const ARG_LISTENING_HOST_PORT: &str = "listening-host-port";
 const ARG_THRIFT_PORT: &str = "thrift_port";
 const ARG_CERT: &str = "cert";
@@ -49,6 +50,13 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
                 .required(true)
                 .takes_value(true)
                 .help("tcp address to listen to in format `host:port`"),
+        )
+        .arg(
+            Arg::with_name(ARG_BOUND_ADDR_FILE)
+                .long(ARG_BOUND_ADDR_FILE)
+                .required(false)
+                .takes_value(true)
+                .help("path for file in which to write the bound tcp address in rust std::net::SocketAddr format"),
         )
         .arg(
             Arg::with_name(ARG_THRIFT_PORT)
@@ -142,6 +150,8 @@ fn main(fb: FacebookInit) -> Result<()> {
         .expect("listening path must be specified")
         .to_string();
 
+    let bound_addr_file = matches.value_of(ARG_BOUND_ADDR_FILE).map(|v| v.into());
+
     let mysql_options = matches.mysql_options().clone();
     let readonly_storage = matches.readonly_storage().clone();
     let blobstore_options = matches.blobstore_options().clone();
@@ -188,6 +198,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 &scuba,
                 will_exit,
                 cslb_config,
+                bound_addr_file,
             )
             .await
         }

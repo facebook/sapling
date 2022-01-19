@@ -30,8 +30,9 @@ use openssl::ssl::SslAcceptor;
 use rate_limiting::RateLimitEnvironment;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{debug, o, Logger};
+use slog::{o, Logger};
 use sql_ext::facebook::MysqlOptions;
+use std::path::PathBuf;
 use std::sync::{atomic::AtomicBool, Arc};
 
 use blobstore_factory::BlobstoreOptions;
@@ -60,6 +61,7 @@ pub async fn create_repo_listeners<'a>(
     scuba: &'a MononokeScubaSampleBuilder,
     will_exit: Arc<AtomicBool>,
     cslb_config: Option<String>,
+    bound_addr_file: Option<PathBuf>,
 ) -> Result<()> {
     let rate_limiter = {
         let handle = config_store
@@ -103,7 +105,6 @@ pub async fn create_repo_listeners<'a>(
         .context("Error instantiating EdenAPI")?
     };
 
-    debug!(root_log, "Mononoke server is listening on {}", sockname);
     connection_acceptor(
         fb,
         common_config,
@@ -124,6 +125,7 @@ pub async fn create_repo_listeners<'a>(
             scuba.add("service", "wireproto");
             scuba
         },
+        bound_addr_file,
     )
     .await
 }

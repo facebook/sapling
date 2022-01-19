@@ -9,8 +9,10 @@ use hostname::get_hostname;
 use hyper::server::conn::Http;
 use session_id::generate_session_id;
 use std::collections::HashMap;
-use std::io;
+use std::fs::File;
+use std::io::{self, Write};
 use std::net::{IpAddr, SocketAddr};
+use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc,
@@ -105,12 +107,15 @@ pub async fn connection_acceptor(
     config_store: &ConfigStore,
     cslb_config: Option<String>,
     wireproto_scuba: MononokeScubaSampleBuilder,
+    bound_addr_path: Option<PathBuf>,
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
     let security_checker =
         ConnectionsSecurityChecker::new(fb, common_config, &repo_handlers, &root_log).await?;
-    let addr: SocketAddr = sockname.parse()?;
+    let addr: SocketAddr = sockname
+        .parse()
+        .with_context(|| format!("could not parse '{}'", sockname))?;
     let listener = TcpListener::bind(&addr)
         .await
         .with_context(|| format!("could not bind mononoke on '{}'", sockname))?;
@@ -126,6 +131,16 @@ pub async fn connection_acceptor(
 
     // Now that we are listening and ready to accept connections, report that we are alive.
     service.set_ready();
+
+    let bound_addr = listener.local_addr()?.to_string();
+    debug!(root_log, "server is listening on {}", bound_addr);
+
+    // Write out the bound address if requested, this is helpful in tests when using automatic binding with :0
+    if let Some(bound_addr_path) = bound_addr_path {
+        let mut writer = File::create(bound_addr_path)?;
+        writer.write_all(bound_addr.as_bytes())?;
+        writer.write_all(b"\n")?;
+    }
 
     let acceptor = Arc::new(Acceptor {
         fb,

@@ -24,6 +24,8 @@ fi
 REPOID=0
 REPONAME=${REPONAME:-repo}
 
+MONONOKE_SERVER_ADDR_FILE="$TESTTMP/mononoke_server_addr.txt"
+
 export LOCAL_CONFIGERATOR_PATH="$TESTTMP/configerator"
 mkdir -p "${LOCAL_CONFIGERATOR_PATH}"
 
@@ -103,16 +105,23 @@ function ssldebuglfssend {
 }
 
 function mononoke {
-  export MONONOKE_SOCKET EDENAPI_URI
-  MONONOKE_SOCKET=$(get_free_socket)
-  EDENAPI_URI=https://localhost:$MONONOKE_SOCKET/edenapi
-
   SCRIBE_LOGS_DIR="$TESTTMP/scribe_logs"
   if [[ ! -d "$SCRIBE_LOGS_DIR" ]]; then
     mkdir "$SCRIBE_LOGS_DIR"
   fi
 
   setup_configerator_configs
+
+  local BIND_ADDR
+  if [[ $LOCALIP == *":"* ]]; then
+    # ipv6, surround in brackets
+    BIND_ADDR="[$LOCALIP]:0"
+  else
+    BIND_ADDR="$LOCALIP:0"
+  fi
+
+  # Stop any confusion from previous runs
+  rm -f "$MONONOKE_SERVER_ADDR_FILE"
 
   # Ignore specific Python warnings to make tests predictable.
   PYTHONWARNINGS="ignore:::requests,ignore::SyntaxWarning" \
@@ -123,7 +132,8 @@ function mononoke {
   --cert "$TEST_CERTDIR/localhost.crt" \
   --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
   --debug \
-  --listening-host-port "$(mononoke_address)" \
+  --listening-host-port "$BIND_ADDR" \
+  --bound-address-file "$MONONOKE_SERVER_ADDR_FILE" \
   --mononoke-config-path "$TESTTMP/mononoke-config" \
   --no-default-scuba-dataset \
   "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
@@ -406,18 +416,29 @@ function wait_for_mononoke {
   start=$(date +%s)
   timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
 
+  local found_port
   while [[ $(($(date +%s) - start)) -lt $timeout ]]; do
-    if sslcurl -q "https://localhost:$MONONOKE_SOCKET/health_check" > /dev/null 2>&1; then
+    if [[ -z "$found_port" && -r "$MONONOKE_SERVER_ADDR_FILE" ]]; then
+      found_port=$(sed 's/^.*:\([^:]*\)$/\1/' "$MONONOKE_SERVER_ADDR_FILE")
+    fi
+
+    if [[ -n "$found_port" ]] && sslcurl -q "https://localhost:$found_port/health_check" > /dev/null 2>&1; then
+      export MONONOKE_SOCKET EDENAPI_URI
+      EDENAPI_URI="https://localhost:$found_port/edenapi"
+      MONONOKE_SOCKET="$found_port"
       return 0
     fi
     sleep 0.1
   done
 
   echo "Mononoke did not start in $timeout seconds" >&2
-  echo ""
-  echo "Results of curl invocation"
-  sslcurl -v "https://localhost:$MONONOKE_SOCKET/health_check"
-
+  if [[ -n "$found_port" ]]; then
+    echo ""
+    echo "Results of curl invocation"
+    sslcurl -v "https://localhost:$found_port/health_check"
+  else
+    echo "Port was never written to $MONONOKE_SERVER_ADDR_FILE" 1>&2
+  fi
   echo ""
   echo "Log of Mononoke server"
   cat "$TESTTMP/mononoke.out"
