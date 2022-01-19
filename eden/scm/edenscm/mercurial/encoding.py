@@ -197,63 +197,43 @@ def trim(s, width, ellipsis="", leftside=False):
     'ellipsis' is always placed at trimmed side.
 
     >>> from .node import bin
-    >>> def bprint(s):
-    ...     print(s)
-    >>> ellipsis = b'+++'
+    >>> ellipsis = '+++'
     >>> from . import encoding
-    >>> encoding.encoding = b'utf-8'
-    >>> t = b'1234567890'
-    >>> bprint(trim(t, 12, ellipsis=ellipsis))
+    >>> encoding.encoding = 'utf-8'
+    >>> t = '1234567890'
+    >>> print(trim(t, 12, ellipsis=ellipsis))
     1234567890
-    >>> bprint(trim(t, 10, ellipsis=ellipsis))
+    >>> print(trim(t, 10, ellipsis=ellipsis))
     1234567890
-    >>> bprint(trim(t, 8, ellipsis=ellipsis))
+    >>> print(trim(t, 8, ellipsis=ellipsis))
     12345+++
-    >>> bprint(trim(t, 8, ellipsis=ellipsis, leftside=True))
+    >>> print(trim(t, 8, ellipsis=ellipsis, leftside=True))
     +++67890
-    >>> bprint(trim(t, 8))
+    >>> print(trim(t, 8))
     12345678
-    >>> bprint(trim(t, 8, leftside=True))
+    >>> print(trim(t, 8, leftside=True))
     34567890
-    >>> bprint(trim(t, 3, ellipsis=ellipsis))
+    >>> print(trim(t, 3, ellipsis=ellipsis))
     +++
-    >>> bprint(trim(t, 1, ellipsis=ellipsis))
+    >>> print(trim(t, 1, ellipsis=ellipsis))
     +
-    >>> u = u'\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
-    >>> t = u.encode(encoding.encoding)
-    >>> bprint(trim(t, 12, ellipsis=ellipsis))
-    \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a
-    >>> bprint(trim(t, 10, ellipsis=ellipsis))
-    \xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a
-    >>> bprint(trim(t, 8, ellipsis=ellipsis))
-    \xe3\x81\x82\xe3\x81\x84+++
-    >>> bprint(trim(t, 8, ellipsis=ellipsis, leftside=True))
-    +++\xe3\x81\x88\xe3\x81\x8a
-    >>> bprint(trim(t, 5))
-    \xe3\x81\x82\xe3\x81\x84
-    >>> bprint(trim(t, 5, leftside=True))
-    \xe3\x81\x88\xe3\x81\x8a
-    >>> bprint(trim(t, 4, ellipsis=ellipsis))
+    >>> t = u'\u3042\u3044\u3046\u3048\u304a' # 2 x 5 = 10 columns
+    >>> print(trim(t, 12, ellipsis=ellipsis))
+    あいうえお
+    >>> print(trim(t, 10, ellipsis=ellipsis))
+    あいうえお
+    >>> print(trim(t, 8, ellipsis=ellipsis))
+    あい+++
+    >>> print(trim(t, 8, ellipsis=ellipsis, leftside=True))
+    +++えお
+    >>> print(trim(t, 5))
+    あい
+    >>> print(trim(t, 5, leftside=True))
+    えお
+    >>> print(trim(t, 4, ellipsis=ellipsis))
     +++
-    >>> bprint(trim(t, 4, ellipsis=ellipsis, leftside=True))
+    >>> print(trim(t, 4, ellipsis=ellipsis, leftside=True))
     +++
-    >>> t = bin(b'112233445566778899aa') # invalid byte sequence
-    >>> bprint(trim(t, 12, ellipsis=ellipsis))
-    \x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa
-    >>> bprint(trim(t, 10, ellipsis=ellipsis))
-    \x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa
-    >>> bprint(trim(t, 8, ellipsis=ellipsis))
-    \x11\x22\x33\x44\x55+++
-    >>> bprint(trim(t, 8, ellipsis=ellipsis, leftside=True))
-    +++\x66\x77\x88\x99\xaa
-    >>> bprint(trim(t, 8))
-    \x11\x22\x33\x44\x55\x66\x77\x88
-    >>> bprint(trim(t, 8, leftside=True))
-    \x33\x44\x55\x66\x77\x88\x99\xaa
-    >>> bprint(trim(t, 3, ellipsis=ellipsis))
-    +++
-    >>> bprint(trim(t, 1, ellipsis=ellipsis))
-    +
     """
     try:
         if sys.version_info.major == 3:

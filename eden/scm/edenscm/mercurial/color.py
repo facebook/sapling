@@ -306,10 +306,10 @@ def _mergeeffects(text, start, stop, usebytes=False):
     # type: (Union[str, bytes], str, str, bool) -> Union[str, bytes]
     """Insert start sequence at every occurrence of stop sequence
 
-    >>> s = _mergeeffects(b'cyan', b'[C]', b'|')
-    >>> s = _mergeeffects(s + b'yellow', b'[Y]', b'|')
-    >>> s = _mergeeffects(b'ma' + s + b'genta', b'[M]', b'|')
-    >>> s = _mergeeffects(b'red' + s, b'[R]', b'|')
+    >>> s = _mergeeffects('cyan', '[C]', '|')
+    >>> s = _mergeeffects(s + 'yellow', '[Y]', '|')
+    >>> s = _mergeeffects('ma' + s + 'genta', '[M]', '|')
+    >>> s = _mergeeffects('red' + s, '[R]', '|')
     >>> s
     '[R]red[M]ma[Y][C]cyan|[R][M][Y]yellow|[R][M]genta|'
     """

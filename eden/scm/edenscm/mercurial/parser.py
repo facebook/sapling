@@ -109,15 +109,15 @@ class parser(object):
 def splitargspec(spec):
     """Parse spec of function arguments into (poskeys, varkey, keys, optkey)
 
-    >>> splitargspec(b'')
+    >>> splitargspec('')
     ([], None, [], None)
-    >>> splitargspec(b'foo bar')
+    >>> splitargspec('foo bar')
     ([], None, ['foo', 'bar'], None)
-    >>> splitargspec(b'foo *bar baz **qux')
+    >>> splitargspec('foo *bar baz **qux')
     (['foo'], 'bar', ['baz'], 'qux')
-    >>> splitargspec(b'*foo')
+    >>> splitargspec('*foo')
     ([], 'foo', [], None)
-    >>> splitargspec(b'**foo')
+    >>> splitargspec('**foo')
     ([], None, [], 'foo')
     """
     optkey = None
@@ -243,40 +243,40 @@ def simplifyinfixops(tree, targetnodes):
 
     >>> from . import pycompat
     >>> def f(tree):
-    ...     s = prettyformat(simplifyinfixops(tree, (b'or',)), (b'symbol',))
+    ...     s = prettyformat(simplifyinfixops(tree, ('or',)), ('symbol',))
     ...     print(s)
-    >>> f((b'or',
-    ...     (b'or',
-    ...       (b'symbol', b'1'),
-    ...       (b'symbol', b'2')),
-    ...     (b'symbol', b'3')))
+    >>> f(('or',
+    ...     ('or',
+    ...       ('symbol', '1'),
+    ...       ('symbol', '2')),
+    ...     ('symbol', '3')))
     (or
       (symbol '1')
       (symbol '2')
       (symbol '3'))
-    >>> f((b'func',
-    ...     (b'symbol', b'p1'),
-    ...     (b'or',
-    ...       (b'or',
-    ...         (b'func',
-    ...           (b'symbol', b'sort'),
-    ...           (b'list',
-    ...             (b'or',
-    ...               (b'or',
-    ...                 (b'symbol', b'1'),
-    ...                 (b'symbol', b'2')),
-    ...               (b'symbol', b'3')),
-    ...             (b'negate',
-    ...               (b'symbol', b'rev')))),
-    ...         (b'and',
-    ...           (b'symbol', b'4'),
-    ...           (b'group',
-    ...             (b'or',
-    ...               (b'or',
-    ...                 (b'symbol', b'5'),
-    ...                 (b'symbol', b'6')),
-    ...               (b'symbol', b'7'))))),
-    ...       (b'symbol', b'8'))))
+    >>> f(('func',
+    ...     ('symbol', 'p1'),
+    ...     ('or',
+    ...       ('or',
+    ...         ('func',
+    ...           ('symbol', 'sort'),
+    ...           ('list',
+    ...             ('or',
+    ...               ('or',
+    ...                 ('symbol', '1'),
+    ...                 ('symbol', '2')),
+    ...               ('symbol', '3')),
+    ...             ('negate',
+    ...               ('symbol', 'rev')))),
+    ...         ('and',
+    ...           ('symbol', '4'),
+    ...           ('group',
+    ...             ('or',
+    ...               ('or',
+    ...                 ('symbol', '5'),
+    ...                 ('symbol', '6')),
+    ...               ('symbol', '7'))))),
+    ...       ('symbol', '8'))))
     (func
       (symbol 'p1')
       (or
@@ -482,27 +482,27 @@ class basealiasrules(object):
         - ``args``: list of argument names (or None for symbol declaration)
         - ``errorstr``: detail about detected error (or None)
 
-        >>> sym = lambda x: (b'symbol', x)
-        >>> symlist = lambda *xs: (b'list',) + tuple(sym(x) for x in xs)
-        >>> func = lambda n, a: (b'func', sym(n), a)
+        >>> sym = lambda x: ('symbol', x)
+        >>> symlist = lambda *xs: ('list',) + tuple(sym(x) for x in xs)
+        >>> func = lambda n, a: ('func', sym(n), a)
         >>> parsemap = {
-        ...     b'foo': sym(b'foo'),
-        ...     b'$foo': sym(b'$foo'),
-        ...     b'foo::bar': (b'dagrange', sym(b'foo'), sym(b'bar')),
-        ...     b'foo()': func(b'foo', None),
-        ...     b'$foo()': func(b'$foo', None),
-        ...     b'foo($1, $2)': func(b'foo', symlist(b'$1', b'$2')),
-        ...     b'foo(bar_bar, baz.baz)':
-        ...         func(b'foo', symlist(b'bar_bar', b'baz.baz')),
-        ...     b'foo(bar($1, $2))':
-        ...         func(b'foo', func(b'bar', symlist(b'$1', b'$2'))),
-        ...     b'foo($1, $2, nested($1, $2))':
-        ...         func(b'foo', (symlist(b'$1', b'$2') +
-        ...                      (func(b'nested', symlist(b'$1', b'$2')),))),
-        ...     b'foo("bar")': func(b'foo', (b'string', b'bar')),
-        ...     b'foo($1, $2': error.ParseError(b'unexpected token: end', 10),
-        ...     b'foo("bar': error.ParseError(b'unterminated string', 5),
-        ...     b'foo($1, $2, $1)': func(b'foo', symlist(b'$1', b'$2', b'$1')),
+        ...     'foo': sym('foo'),
+        ...     '$foo': sym('$foo'),
+        ...     'foo::bar': ('dagrange', sym('foo'), sym('bar')),
+        ...     'foo()': func('foo', None),
+        ...     '$foo()': func('$foo', None),
+        ...     'foo($1, $2)': func('foo', symlist('$1', '$2')),
+        ...     'foo(bar_bar, baz.baz)':
+        ...         func('foo', symlist('bar_bar', 'baz.baz')),
+        ...     'foo(bar($1, $2))':
+        ...         func('foo', func('bar', symlist('$1', '$2'))),
+        ...     'foo($1, $2, nested($1, $2))':
+        ...         func('foo', (symlist('$1', '$2') +
+        ...                      (func('nested', symlist('$1', '$2')),))),
+        ...     'foo("bar")': func('foo', ('string', 'bar')),
+        ...     'foo($1, $2': error.ParseError('unexpected token: end', 10),
+        ...     'foo("bar': error.ParseError('unterminated string', 5),
+        ...     'foo($1, $2, $1)': func('foo', symlist('$1', '$2', '$1')),
         ... }
         >>> def parse(expr):
         ...     x = parsemap[expr]
@@ -510,42 +510,42 @@ class basealiasrules(object):
         ...         raise x
         ...     return x
         >>> def trygetfunc(tree):
-        ...     if not tree or tree[0] != b'func' or tree[1][0] != b'symbol':
+        ...     if not tree or tree[0] != 'func' or tree[1][0] != 'symbol':
         ...         return None
         ...     if not tree[2]:
         ...         return tree[1][1], []
-        ...     if tree[2][0] == b'list':
+        ...     if tree[2][0] == 'list':
         ...         return tree[1][1], list(tree[2][1:])
         ...     return tree[1][1], [tree[2]]
         >>> class aliasrules(basealiasrules):
         ...     _parse = staticmethod(parse)
         ...     _trygetfunc = staticmethod(trygetfunc)
         >>> builddecl = aliasrules._builddecl
-        >>> builddecl(b'foo')
+        >>> builddecl('foo')
         ('foo', None, None)
-        >>> builddecl(b'$foo')
+        >>> builddecl('$foo')
         ('$foo', None, "invalid symbol '$foo'")
-        >>> builddecl(b'foo::bar')
+        >>> builddecl('foo::bar')
         ('foo::bar', None, 'invalid format')
-        >>> builddecl(b'foo()')
+        >>> builddecl('foo()')
         ('foo', [], None)
-        >>> builddecl(b'$foo()')
+        >>> builddecl('$foo()')
         ('$foo()', None, "invalid function '$foo'")
-        >>> builddecl(b'foo($1, $2)')
+        >>> builddecl('foo($1, $2)')
         ('foo', ['$1', '$2'], None)
-        >>> builddecl(b'foo(bar_bar, baz.baz)')
+        >>> builddecl('foo(bar_bar, baz.baz)')
         ('foo', ['bar_bar', 'baz.baz'], None)
-        >>> builddecl(b'foo($1, $2, nested($1, $2))')
+        >>> builddecl('foo($1, $2, nested($1, $2))')
         ('foo($1, $2, nested($1, $2))', None, 'invalid argument list')
-        >>> builddecl(b'foo(bar($1, $2))')
+        >>> builddecl('foo(bar($1, $2))')
         ('foo(bar($1, $2))', None, 'invalid argument list')
-        >>> builddecl(b'foo("bar")')
+        >>> builddecl('foo("bar")')
         ('foo("bar")', None, 'invalid argument list')
-        >>> builddecl(b'foo($1, $2')
+        >>> builddecl('foo($1, $2')
         ('foo($1, $2', None, 'at 10: unexpected token: end')
-        >>> builddecl(b'foo("bar')
+        >>> builddecl('foo("bar')
         ('foo("bar', None, 'at 5: unterminated string')
-        >>> builddecl(b'foo($1, $2, $1)')
+        >>> builddecl('foo($1, $2, $1)')
         ('foo', None, 'argument names collide with each other')
         """
         try:
@@ -603,37 +603,37 @@ class basealiasrules(object):
 
         >>> from . import pycompat
         >>> parsemap = {
-        ...     b'$1 or foo': (b'or', (b'symbol', b'$1'), (b'symbol', b'foo')),
-        ...     b'$1 or $bar':
-        ...         (b'or', (b'symbol', b'$1'), (b'symbol', b'$bar')),
-        ...     b'$10 or baz':
-        ...         (b'or', (b'symbol', b'$10'), (b'symbol', b'baz')),
-        ...     b'"$1" or "foo"':
-        ...         (b'or', (b'string', b'$1'), (b'string', b'foo')),
+        ...     '$1 or foo': ('or', ('symbol', '$1'), ('symbol', 'foo')),
+        ...     '$1 or $bar':
+        ...         ('or', ('symbol', '$1'), ('symbol', '$bar')),
+        ...     '$10 or baz':
+        ...         ('or', ('symbol', '$10'), ('symbol', 'baz')),
+        ...     '"$1" or "foo"':
+        ...         ('or', ('string', '$1'), ('string', 'foo')),
         ... }
         >>> class aliasrules(basealiasrules):
         ...     _parse = staticmethod(parsemap.__getitem__)
         ...     _trygetfunc = staticmethod(lambda x: None)
         >>> builddefn = aliasrules._builddefn
         >>> def pprint(tree):
-        ...     s = prettyformat(tree, (b'_aliasarg', b'string', b'symbol'))
+        ...     s = prettyformat(tree, ('_aliasarg', 'string', 'symbol'))
         ...     print(s)
-        >>> args = [b'$1', b'$2', b'foo']
-        >>> pprint(builddefn(b'$1 or foo', args))
+        >>> args = ['$1', '$2', 'foo']
+        >>> pprint(builddefn('$1 or foo', args))
         (or
           (_aliasarg '$1')
           (_aliasarg 'foo'))
         >>> try:
-        ...     builddefn(b'$1 or $bar', args)
+        ...     builddefn('$1 or $bar', args)
         ... except error.ParseError as inst:
         ...     print(parseerrordetail(inst))
         invalid symbol '$bar'
-        >>> args = [b'$1', b'$10', b'foo']
-        >>> pprint(builddefn(b'$10 or baz', args))
+        >>> args = ['$1', '$10', 'foo']
+        >>> pprint(builddefn('$10 or baz', args))
         (or
           (_aliasarg '$10')
           (symbol 'baz'))
-        >>> pprint(builddefn(b'"$1" or "foo"', args))
+        >>> pprint(builddefn('"$1" or "foo"', args))
         (or
           (string '$1')
           (string 'foo'))

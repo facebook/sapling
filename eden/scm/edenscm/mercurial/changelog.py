@@ -30,9 +30,8 @@ textwithheader = revlog.textwithheader
 
 def _string_escape(text):
     """
-    >>> from .pycompat import bytechr as chr
-    >>> d = {b'nl': chr(10), b'bs': chr(92), b'cr': chr(13), b'nul': chr(0)}
-    >>> s = b"ab%(nl)scd%(bs)s%(bs)sn%(nul)sab%(cr)scd%(bs)s%(nl)s" % d
+    >>> d = {'nl': chr(10), 'bs': chr(92), 'cr': chr(13), 'nul': chr(0)}
+    >>> s = "ab%(nl)scd%(bs)s%(bs)sn%(nul)sab%(cr)scd%(bs)s%(nl)s" % d
     >>> s
     'ab\\ncd\\\\\\\\n\\x00ab\\rcd\\\\\\n'
     >>> res = _string_escape(s)
@@ -47,12 +46,11 @@ def _string_escape(text):
 def decodeextra(text):
     # type: (bytes) -> Dict[str, str]
     """
-    >>> from .pycompat import bytechr as chr
-    >>> sorted(decodeextra(encodeextra({b'foo': b'bar', b'baz': chr(0) + b'2'})
+    >>> sorted(decodeextra(encodeextra({'foo': 'bar', 'baz': '\\x002'}).encode("utf-8")
     ...                    ).items())
     [('baz', '\\x002'), ('branch', 'default'), ('foo', 'bar')]
-    >>> sorted(decodeextra(encodeextra({b'foo': b'bar',
-    ...                                 b'baz': chr(92) + chr(0) + b'2'})
+    >>> sorted(decodeextra(encodeextra({'foo': 'bar',
+    ...                                 'baz': '\\x5c\\x002'}).encode("utf-8")
     ...                    ).items())
     [('baz', '\\\\\\x002'), ('branch', 'default'), ('foo', 'bar')]
     """
@@ -207,13 +205,12 @@ class changelogrevision(object):
 def readfiles(text):
     # type: (bytes) -> List[str]
     """
-    >>> from .pycompat import bytechr as chr
     >>> d = {'nl': chr(10)}
-    >>> withfiles = b'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)sfile1%(nl)sfile2%(nl)sfile3%(nl)s%(nl)s' % d
-    >>> readfiles(withfiles)
+    >>> withfiles = 'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)sfile1%(nl)sfile2%(nl)sfile3%(nl)s%(nl)s' % d
+    >>> readfiles(withfiles.encode("utf8"))
     ['file1', 'file2', 'file3']
-    >>> withoutfiles = b'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)s%(nl)sCommit summary%(nl)s%(nl)sCommit description%(nl)s' % d
-    >>> readfiles(withoutfiles)
+    >>> withoutfiles = 'commitnode%(nl)sAuthor%(nl)sMetadata and extras%(nl)s%(nl)sCommit summary%(nl)s%(nl)sCommit description%(nl)s' % d
+    >>> readfiles(withoutfiles.encode("utf8"))
     []
     """
     if not text:

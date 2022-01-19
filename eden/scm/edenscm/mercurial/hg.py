@@ -216,17 +216,17 @@ def peer(uiorrepo, opts, path, create=False):
 def defaultdest(source):
     """return default destination of clone if none is given
 
-    >>> defaultdest(b'foo')
+    >>> defaultdest('foo')
     'foo'
-    >>> defaultdest(b'/foo/bar')
+    >>> defaultdest('/foo/bar')
     'bar'
-    >>> defaultdest(b'/')
+    >>> defaultdest('/')
     ''
-    >>> defaultdest(b'')
+    >>> defaultdest('')
     ''
-    >>> defaultdest(b'http://example.org/')
+    >>> defaultdest('http://example.org/')
     ''
-    >>> defaultdest(b'http://example.org/foo/')
+    >>> defaultdest('http://example.org/foo/')
     'foo'
     """
     path = util.url(source).path

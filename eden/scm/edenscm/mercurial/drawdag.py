@@ -399,7 +399,7 @@ def _walkgraph(edges, extraedges):
 
 def _getcomments(text):
     """
-    >>> [s for s in _getcomments(br'''
+    >>> [s for s in _getcomments(r'''
     ...        G
     ...        |
     ...  I D C F   # split: B -> E, F, G
