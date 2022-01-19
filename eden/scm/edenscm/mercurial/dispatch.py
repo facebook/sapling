@@ -867,9 +867,7 @@ def _parse(ui, args):
     c += commands.globalopts
 
     try:
-        flagdefs = [(flagdef[0], flagdef[1], flagdef[2]) for flagdef in c]
-
-        args, cmdoptions = cliparser.parsecommand(fullargs, flagdefs)
+        args, cmdoptions = cliparser.parsecommand(fullargs, c)
         args = args[level:]
     except (
         cliparser.OptionNotRecognized,

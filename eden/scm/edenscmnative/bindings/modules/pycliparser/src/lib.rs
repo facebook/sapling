@@ -55,7 +55,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "parsecommand",
         py_fn!(
             py,
-            parse_command(args: Vec<String>, definitions: Vec<(String, String, Value)>)
+            parse_command(args: Vec<String>, definitions: Vec<FlagDef>)
         ),
     )?;
     {
@@ -83,15 +83,43 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
+struct FlagDef {
+    short: Option<char>,
+    long: String,
+    default: Value,
+}
+
+impl<'s> FromPyObject<'s> for FlagDef {
+    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
+        let tuple: PyTuple = obj.extract(py)?;
+        if tuple.len(py) < 3 {
+            let msg = format!("flag defintion requires at least 3 items");
+            return Err(PyErr::new::<exc::ValueError, _>(py, msg));
+        }
+        let short: String = tuple.get_item(py, 0).extract(py)?;
+        let long: String = tuple.get_item(py, 1).extract(py)?;
+        let default: Value = tuple.get_item(py, 2).extract(py)?;
+        Ok(FlagDef {
+            short: short.chars().next(),
+            long,
+            default,
+        })
+    }
+}
+
+impl Into<Flag> for FlagDef {
+    fn into(self) -> Flag {
+        let description = "";
+        (self.short, self.long, description, self.default).into()
+    }
+}
+
 fn parse_command(
     py: Python,
     args: Vec<String>,
-    definitions: Vec<(String, String, Value)>,
+    definitions: Vec<FlagDef>,
 ) -> PyResult<(Vec<Str>, HashMap<Str, Value>)> {
-    let mut flags: Vec<Flag> = definitions
-        .into_iter()
-        .map(|(c, s, v)| (c.chars().nth(0), s, "", v).into())
-        .collect();
+    let mut flags: Vec<Flag> = definitions.into_iter().map(Into::into).collect();
     flags.extend(HgGlobalOpts::flags());
 
     let result = ParseOptions::new()
