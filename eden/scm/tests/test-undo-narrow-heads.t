@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ configure mutation
@@ -19,8 +18,9 @@
   > A
   > EOS
 
+  $ hg book -r $C book-C
   $ hg undo
-  undone to *, before book -fd A C (glob)
+  undone to *, before book -r * book-C (glob)
   $ hg undo
   undone to *, before debugdrawdag * (glob)
   $ hg log -GT '{desc}'

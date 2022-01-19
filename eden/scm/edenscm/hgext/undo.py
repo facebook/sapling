@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+from bindings import cliparser
 from edenscm.mercurial import (
     cmdutil,
     commands,
@@ -14,7 +15,6 @@ from edenscm.mercurial import (
     encoding,
     error,
     extensions,
-    fancyopts,
     hg,
     hintutil,
     localrepo,
@@ -966,12 +966,9 @@ def redo(ui, repo, *args, **opts):
             # don't want to redo to an interupted state
             reverseindex += 1
         elif commandlist[0] == "undo":
-            undoopts = {}
-            fancyopts.fancyopts(
+            _args, undoopts = cliparser.parsecommand(
                 commandlist,
                 cmdtable["undo"][1] + commands.globalopts,
-                undoopts,
-                gnu=True,
             )
             if redocount == 0:
                 # want to go to state before the undo (not after)
