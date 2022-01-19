@@ -1702,7 +1702,7 @@ def reversehunks(hunks):
     ...      c.write(fp)
     >>> fp.seek(0) or None
     >>> reversedpatch = fp.read()
-    >>> print(reversedpatch)
+    >>> print(reversedpatch.decode("utf-8"))
     diff --git a/folder1/g b/folder1/g
     --- a/folder1/g
     +++ b/folder1/g
@@ -1760,7 +1760,7 @@ def parsepatch(originalchunks, maxcontext=None):
     ...     header.write(out)
     ...     for hunk in header.hunks:
     ...         hunk.write(out)
-    >>> print(out.getvalue())
+    >>> print(out.getvalue().decode("utf-8"))
     diff --git a/folder1/g b/folder1/g
     --- a/folder1/g
     +++ b/folder1/g
@@ -1876,19 +1876,19 @@ def pathtransform(path, strip, prefix):
 
     Returns (stripped components, path in repository).
 
-    >>> pathtransform(b'a/b/c', 0, b'')
+    >>> pathtransform('a/b/c', 0, '')
     ('', 'a/b/c')
-    >>> pathtransform(b'   a/b/c   ', 0, b'')
+    >>> pathtransform('   a/b/c   ', 0, '')
     ('', '   a/b/c')
-    >>> pathtransform(b'   a/b/c   ', 2, b'')
+    >>> pathtransform('   a/b/c   ', 2, '')
     ('a/b/', 'c')
-    >>> pathtransform(b'a/b/c', 0, b'd/e/')
+    >>> pathtransform('a/b/c', 0, 'd/e/')
     ('', 'd/e/a/b/c')
-    >>> pathtransform(b'   a//b/c   ', 2, b'd/e/')
+    >>> pathtransform('   a//b/c   ', 2, 'd/e/')
     ('a//b/', 'd/e/c')
-    >>> pathtransform(b'a/b/c', 3, b'')
-    Traceback (most recent call last):
-    PatchError: unable to strip away 1 of 3 dirs from a/b/c
+    >>> try: pathtransform('a/b/c', 3, '')
+    ... except Exception as e: print(e)
+    unable to strip away 1 of 3 dirs from a/b/c
     """
     pathlen = len(path)
     i = 0

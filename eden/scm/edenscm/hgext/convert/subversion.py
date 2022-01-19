@@ -74,16 +74,16 @@ class SvnPathNotFound(Exception):
 
 def revsplit(rev):
     """Parse a revision string and return (uuid, path, revnum).
-    >>> revsplit(b'svn:a2147622-4a9f-4db4-a8d3-13562ff547b2'
-    ...          b'/proj%20B/mytrunk/mytrunk@1')
+    >>> revsplit('svn:a2147622-4a9f-4db4-a8d3-13562ff547b2'
+    ...          '/proj%20B/mytrunk/mytrunk@1')
     ('a2147622-4a9f-4db4-a8d3-13562ff547b2', '/proj%20B/mytrunk/mytrunk', 1)
-    >>> revsplit(b'svn:8af66a51-67f5-4354-b62c-98d67cc7be1d@1')
+    >>> revsplit('svn:8af66a51-67f5-4354-b62c-98d67cc7be1d@1')
     ('', '', 1)
-    >>> revsplit(b'@7')
+    >>> revsplit('@7')
     ('', '', 7)
-    >>> revsplit(b'7')
+    >>> revsplit('7')
     ('', '', 0)
-    >>> revsplit(b'bad')
+    >>> revsplit('bad')
     ('', '', 0)
     """
     parts = rev.rsplit("@", 1)

@@ -1,4 +1,7 @@
-# this is hack to make sure no escape characters are inserted into the output
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
 
 from __future__ import absolute_import
 
@@ -10,10 +13,9 @@ import sys
 from hghave import require
 
 
-require(["py2"])
-
-
 ispy3 = sys.version_info[0] >= 3
+
+# this is hack to make sure no escape characters are inserted into the output
 
 if "TERM" in os.environ:
     del os.environ["TERM"]
@@ -90,4 +92,3 @@ testmod("edenscm.hgext.convert.convcmd")
 testmod("edenscm.hgext.convert.filemap")
 testmod("edenscm.hgext.convert.subversion")
 testmod("edenscm.hgext.convert.p4")
-testmod("edenscm.hgext.gitlookup")

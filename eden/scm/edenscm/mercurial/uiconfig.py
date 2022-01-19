@@ -354,10 +354,9 @@ class uiconfig(object):
         >>> u.configbool(s, 'unknown', True)
         True
         >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configbool(s, 'invalid')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a boolean ('somevalue')
+        >>> try: u.configbool(s, 'invalid')
+        ... except Exception as e: print(e)
+        foo.invalid is not a boolean ('somevalue')
         """
 
         v = self._config(section, name, default, untrusted=untrusted)
@@ -391,14 +390,12 @@ class uiconfig(object):
         >>> u.configwith(float, s, 'unknown', 7)
         7.0
         >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configwith(float, s, 'invalid')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a valid float ('somevalue')
-        >>> u.configwith(float, s, 'invalid', desc='womble')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a valid womble ('somevalue')
+        >>> try: u.configwith(float, s, 'invalid')
+        ... except Exception as e: print(e)
+        foo.invalid is not a valid float ('somevalue')
+        >>> try: u.configwith(float, s, 'invalid', desc='womble')
+        ... except Exception as e: print(e)
+        foo.invalid is not a valid womble ('somevalue')
         """
 
         v = self.config(section, name, default, untrusted)
@@ -426,10 +423,9 @@ class uiconfig(object):
         >>> u.configint(s, 'unknown', 7)
         7
         >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configint(s, 'invalid')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a valid integer ('somevalue')
+        >>> try: u.configint(s, 'invalid')
+        ... except Exception as e: print(e)
+        foo.invalid is not a valid integer ('somevalue')
         """
 
         return self.configwith(int, section, name, default, "integer", untrusted)
@@ -450,10 +446,9 @@ class uiconfig(object):
         >>> u.configbytes(s, 'unknown', '7 MB')
         7340032
         >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configbytes(s, 'invalid')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a byte quantity ('somevalue')
+        >>> try: u.configbytes(s, 'invalid')
+        ... except Exception as e: print(e)
+        foo.invalid is not a byte quantity ('somevalue')
         """
 
         value = self._config(section, name, default, untrusted)

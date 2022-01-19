@@ -302,19 +302,19 @@ def person(author):
     """Any text. Returns the name before an email address,
     interpreting it as per RFC 5322.
 
-    >>> person(b'foo@bar')
+    >>> person('foo@bar')
     'foo'
-    >>> person(b'Foo Bar <foo@bar>')
+    >>> person('Foo Bar <foo@bar>')
     'Foo Bar'
-    >>> person(b'"Foo Bar" <foo@bar>')
+    >>> person('"Foo Bar" <foo@bar>')
     'Foo Bar'
-    >>> person(b'"Foo \"buz\" Bar" <foo@bar>')
+    >>> person('"Foo \"buz\" Bar" <foo@bar>')
     'Foo "buz" Bar'
     >>> # The following are invalid, but do exist in real-life
     ...
-    >>> person(b'Foo "buz" Bar <foo@bar>')
+    >>> person('Foo "buz" Bar <foo@bar>')
     'Foo "buz" Bar'
-    >>> person(b'"Foo Bar <foo@bar>')
+    >>> person('"Foo Bar <foo@bar>')
     'Foo Bar'
     """
     if "@" not in author:

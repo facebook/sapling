@@ -263,15 +263,15 @@ class digester(object):
 
     This helper can be used to compute one or more digests given their name.
 
-    >>> d = digester([b'md5', b'sha1'])
+    >>> d = digester(['md5', 'sha1'])
     >>> d.update(b'foo')
     >>> [k for k in sorted(d)]
     ['md5', 'sha1']
-    >>> d[b'md5']
+    >>> d['md5']
     'acbd18db4cc2f85cedef654fccc4a4d8'
-    >>> d[b'sha1']
+    >>> d['sha1']
     '0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33'
-    >>> digester.preferred([b'md5', b'sha1'])
+    >>> digester.preferred(['md5', 'sha1'])
     'sha1'
     """
 
@@ -434,7 +434,7 @@ def versiontuple(v=None, n=4):
     ``n`` can be 2, 3, or 4. Here is how some version strings map to
     returned values:
 
-    >>> v = b'3.6.1+190-df9b73d2d444'
+    >>> v = '3.6.1+190-df9b73d2d444'
     >>> versiontuple(v, 2)
     (3, 6)
     >>> versiontuple(v, 3)
@@ -442,10 +442,10 @@ def versiontuple(v=None, n=4):
     >>> versiontuple(v, 4)
     (3, 6, 1, '190-df9b73d2d444')
 
-    >>> versiontuple(b'3.6.1+190-df9b73d2d444+20151118')
+    >>> versiontuple('3.6.1+190-df9b73d2d444+20151118')
     (3, 6, 1, '190-df9b73d2d444+20151118')
 
-    >>> v = b'3.6'
+    >>> v = '3.6'
     >>> versiontuple(v, 2)
     (3, 6)
     >>> versiontuple(v, 3)
@@ -453,7 +453,7 @@ def versiontuple(v=None, n=4):
     >>> versiontuple(v, 4)
     (3, 6, None, None)
 
-    >>> v = b'3.9-rc'
+    >>> v = '3.9-rc'
     >>> versiontuple(v, 2)
     (3, 9)
     >>> versiontuple(v, 3)
@@ -461,13 +461,13 @@ def versiontuple(v=None, n=4):
     >>> versiontuple(v, 4)
     (3, 9, None, 'rc')
 
-    >>> v = b'3.9-rc+2-02a8fea4289b'
+    >>> v = '3.9-rc+2-02a8fea4289'
     >>> versiontuple(v, 2)
     (3, 9)
     >>> versiontuple(v, 3)
     (3, 9, None)
     >>> versiontuple(v, 4)
-    (3, 9, None, 'rc+2-02a8fea4289b')
+    (3, 9, None, 'rc+2-02a8fea4289')
     """
     if not v:
         v = version()
@@ -2318,15 +2318,15 @@ def parsedate(date):
     The date may be a "unixtime offset" string or in one of the specified
     formats. If the date already is a (unixtime, offset) tuple, it is returned.
 
-    >>> parsedate(b' today ') == parsedate(
-    ...     datetime.date.today().strftime('%b %d').encode('ascii'))
+    >>> parsedate(' today ') == parsedate(
+    ...     datetime.date.today().strftime('%b %d'))
     True
-    >>> parsedate(b'yesterday ') == parsedate(
+    >>> parsedate('yesterday ') == parsedate(
     ...     (datetime.date.today() - datetime.timedelta(days=1)
-    ...      ).strftime('%b %d').encode('ascii'))
+    ...      ).strftime('%b %d'))
     True
     >>> now, tz = makedate()
-    >>> strnow, strtz = parsedate(b'now')
+    >>> strnow, strtz = parsedate('now')
     >>> (strnow - now) < 1
     True
     >>> tz == strtz
@@ -2354,12 +2354,12 @@ def matchdate(date):
 
     '>{date}' on or after a given date
 
-    >>> p1 = parsedate(b"10:29:59")
-    >>> p2 = parsedate(b"10:30:00")
-    >>> p3 = parsedate(b"10:30:59")
-    >>> p4 = parsedate(b"10:31:00")
-    >>> p5 = parsedate(b"Sep 15 10:30:00 1999")
-    >>> f = matchdate(b"10:30")
+    >>> p1 = parsedate("10:29:59")
+    >>> p2 = parsedate("10:30:00")
+    >>> p3 = parsedate("10:30:59")
+    >>> p4 = parsedate("10:31:00")
+    >>> p5 = parsedate("Sep 15 10:30:00 1999")
+    >>> f = matchdate("10:30")
     >>> f(p1[0])
     False
     >>> f(p2[0])
@@ -2398,27 +2398,27 @@ def stringmatcher(pattern, casesensitive=True):
     ...     return (kind, pattern, [bool(matcher(t)) for t in tests])
 
     exact matching (no prefix):
-    >>> test(b'abcdefg', b'abc', b'def', b'abcdefg')
+    >>> test('abcdefg', 'abc', 'def', 'abcdefg')
     ('literal', 'abcdefg', [False, False, True])
 
     regex matching ('re:' prefix)
-    >>> test(b're:a.+b', b'nomatch', b'fooadef', b'fooadefbar')
+    >>> test('re:a.+b', 'nomatch', 'fooadef', 'fooadefbar')
     ('re', 'a.+b', [False, False, True])
 
     force exact matches ('literal:' prefix)
-    >>> test(b'literal:re:foobar', b'foobar', b're:foobar')
+    >>> test('literal:re:foobar', 'foobar', 're:foobar')
     ('literal', 're:foobar', [False, True])
 
     unknown prefixes are ignored and treated as literals
-    >>> test(b'foo:bar', b'foo', b'bar', b'foo:bar')
+    >>> test('foo:bar', 'foo', 'bar', 'foo:bar')
     ('literal', 'foo:bar', [False, False, True])
 
     case insensitive regex matches
-    >>> itest(b're:A.+b', b'nomatch', b'fooadef', b'fooadefBar')
-    ('re', 'A.+b', [False, False, True])
+    >>> itest('re:A.+B', 'nomatch', 'fooadef', 'fooadefBar')
+    ('re', 'A.+B', [False, False, True])
 
     case insensitive literal matches
-    >>> itest(b'ABCDEFG', b'abc', b'def', b'abcdefg')
+    >>> itest('ABCDEFG', 'abc', 'def', 'abcdefg')
     ('literal', 'ABCDEFG', [False, False, True])
     """
     if pattern.startswith("re:"):
@@ -2516,14 +2516,12 @@ def processlinerange(fromline, toline):
 
     >>> processlinerange(10, 20)
     (9, 20)
-    >>> processlinerange(2, 1)
-    Traceback (most recent call last):
-        ...
-    ParseError: line range must be positive
-    >>> processlinerange(0, 5)
-    Traceback (most recent call last):
-        ...
-    ParseError: fromline must be strictly positive
+    >>> try: processlinerange(2, 1)
+    ... except Exception as e: print(e)
+    line range must be positive
+    >>> try: processlinerange(0, 5)
+    ... except Exception as e: print(e)
+    fromline must be strictly positive
     """
     if toline - fromline < 0:
         raise error.ParseError(_("line range must be positive"))
@@ -2960,55 +2958,55 @@ class url(object):
 
     Examples:
 
-    >>> url(b'http://www.ietf.org/rfc/rfc2396.txt')
+    >>> url('http://www.ietf.org/rfc/rfc2396.txt')
     <url scheme: 'http', host: 'www.ietf.org', path: 'rfc/rfc2396.txt'>
-    >>> url(b'ssh://[::1]:2200//home/joe/repo')
+    >>> url('ssh://[::1]:2200//home/joe/repo')
     <url scheme: 'ssh', host: '[::1]', port: '2200', path: '/home/joe/repo'>
-    >>> url(b'file:///home/joe/repo')
+    >>> url('file:///home/joe/repo')
     <url scheme: 'file', path: '/home/joe/repo'>
-    >>> url(b'file:///c:/temp/foo/')
+    >>> url('file:///c:/temp/foo/')
     <url scheme: 'file', path: 'c:/temp/foo/'>
-    >>> url(b'bundle:foo')
+    >>> url('bundle:foo')
     <url scheme: 'bundle', path: 'foo'>
-    >>> url(b'bundle://../foo')
+    >>> url('bundle://../foo')
     <url scheme: 'bundle', path: '../foo'>
-    >>> url(br'c:\foo\bar')
+    >>> url(r'c:\foo\bar')
     <url path: 'c:\\foo\\bar'>
-    >>> url(br'\\blah\blah\blah')
+    >>> url(r'\\blah\blah\blah')
     <url path: '\\\\blah\\blah\\blah'>
-    >>> url(br'\\blah\blah\blah#baz')
+    >>> url(r'\\blah\blah\blah#baz')
     <url path: '\\\\blah\\blah\\blah', fragment: 'baz'>
-    >>> url(br'file:///C:\users\me')
+    >>> url(r'file:///C:\users\me')
     <url scheme: 'file', path: 'C:\\users\\me'>
 
     Authentication credentials:
 
-    >>> url(b'ssh://joe:xyz@x/repo')
+    >>> url('ssh://joe:xyz@x/repo')
     <url scheme: 'ssh', user: 'joe', passwd: 'xyz', host: 'x', path: 'repo'>
-    >>> url(b'ssh://joe@x/repo')
+    >>> url('ssh://joe@x/repo')
     <url scheme: 'ssh', user: 'joe', host: 'x', path: 'repo'>
 
     Query strings and fragments:
 
-    >>> url(b'http://host/a?b#c')
-    <url scheme: 'http', host: 'host', path: 'a', query: 'b', fragment: 'c'>
-    >>> url(b'http://host/a?b#c', parsequery=False, parsefragment=False)
+    >>> url('http://host/a?b#c')
+    <url scheme: 'http', host: 'host', path: 'a', query: '', fragment: 'c'>
+    >>> url('http://host/a?b#c', parsequery=False, parsefragment=False)
     <url scheme: 'http', host: 'host', path: 'a?b#c'>
 
     Empty path:
 
-    >>> url(b'')
+    >>> url('')
     <url path: ''>
-    >>> url(b'#a')
+    >>> url('#a')
     <url path: '', fragment: 'a'>
-    >>> url(b'http://host/')
+    >>> url('http://host/')
     <url scheme: 'http', host: 'host', path: ''>
-    >>> url(b'http://host/#a')
+    >>> url('http://host/#a')
     <url scheme: 'http', host: 'host', path: '', fragment: 'a'>
 
     Only scheme:
 
-    >>> url(b'http:')
+    >>> url('http:')
     <url scheme: 'http'>
     """
 
@@ -3131,38 +3129,38 @@ class url(object):
                 attrs.append("%s: %r" % (a, v))
         return "<url %s>" % ", ".join(attrs)
 
-    def __bytes__(self):
+    def __str__(self):
         r"""Join the URL's components back into a URL string.
 
         Examples:
 
-        >>> bytes(url(b'http://user:pw@host:80/c:/bob?fo:oo#ba:ar'))
+        >>> str(url('http://user:pw@host:80/c:/bob?fo:oo#ba:ar'))
         'http://user:pw@host:80/c:/bob?fo:oo#ba:ar'
-        >>> bytes(url(b'http://user:pw@host:80/?foo=bar&baz=42'))
+        >>> str(url('http://user:pw@host:80/?foo=bar&baz=42'))
         'http://user:pw@host:80/?foo=bar&baz=42'
-        >>> bytes(url(b'http://user:pw@host:80/?foo=bar%3dbaz'))
+        >>> str(url('http://user:pw@host:80/?foo=bar%3dbaz'))
         'http://user:pw@host:80/?foo=bar%3dbaz'
-        >>> bytes(url(b'ssh://user:pw@[::1]:2200//home/joe#'))
+        >>> str(url('ssh://user:pw@[::1]:2200//home/joe#'))
         'ssh://user:pw@[::1]:2200//home/joe#'
-        >>> bytes(url(b'http://localhost:80//'))
+        >>> str(url('http://localhost:80//'))
         'http://localhost:80//'
-        >>> bytes(url(b'http://localhost:80/'))
+        >>> str(url('http://localhost:80/'))
         'http://localhost:80/'
-        >>> bytes(url(b'http://localhost:80'))
+        >>> str(url('http://localhost:80'))
         'http://localhost:80/'
-        >>> bytes(url(b'bundle:foo'))
+        >>> str(url('bundle:foo'))
         'bundle:foo'
-        >>> bytes(url(b'bundle://../foo'))
+        >>> str(url('bundle://../foo'))
         'bundle:../foo'
-        >>> bytes(url(b'path'))
+        >>> str(url('path'))
         'path'
-        >>> bytes(url(b'file:///tmp/foo/bar'))
+        >>> str(url('file:///tmp/foo/bar'))
         'file:///tmp/foo/bar'
-        >>> bytes(url(b'file:///c:/tmp/foo/bar'))
+        >>> str(url('file:///c:/tmp/foo/bar'))
         'file:///c:/tmp/foo/bar'
-        >>> print(url(br'bundle:foo\bar'))
+        >>> print(url(r'bundle:foo\bar'))
         bundle:foo\bar
-        >>> print(url(br'file:///D:\data\hg'))
+        >>> print(url(r'file:///D:\data\hg'))
         file:///D:\data\hg
         """
         if self._localpath:
@@ -3208,8 +3206,6 @@ class url(object):
         if self.fragment is not None:
             s += "#" + urlreq.quote(self.fragment, safe=self._safepchars)
         return s
-
-    __str__ = encoding.strmethod(__bytes__)
 
     def authinfo(self):
         user, passwd = self.user, self.passwd
@@ -3334,13 +3330,13 @@ tracer = bindings.tracing.singleton
 def sizetoint(s):
     """Convert a space specifier to a byte count.
 
-    >>> sizetoint(b'30')
+    >>> sizetoint('30')
     30
-    >>> sizetoint(b'2.2kb')
+    >>> sizetoint('2.2kb')
     2252
-    >>> sizetoint(b'6M')
+    >>> sizetoint('6M')
     6291456
-    >>> sizetoint(b'1 gb')
+    >>> sizetoint('1 gb')
     1073741824
     """
     t = s.strip().lower()

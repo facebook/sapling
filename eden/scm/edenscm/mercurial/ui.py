@@ -354,10 +354,9 @@ class ui(object):
         >>> u.configbool(s, 'unknown', True)
         True
         >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configbool(s, 'invalid')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a boolean ('somevalue')
+        >>> try: u.configbool(s, 'invalid')
+        ... except Exception as e: print(e)
+        foo.invalid is not a boolean ('somevalue')
         """
         return self._uiconfig.configbool(section, name, default, untrusted)
 
@@ -376,14 +375,12 @@ class ui(object):
         >>> u.configwith(float, s, 'unknown', 7)
         7.0
         >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configwith(float, s, 'invalid')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a valid float ('somevalue')
-        >>> u.configwith(float, s, 'invalid', desc='womble')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a valid womble ('somevalue')
+        >>> try: u.configwith(float, s, 'invalid')
+        ... except Exception as e: print(e)
+        foo.invalid is not a valid float ('somevalue')
+        >>> try: u.configwith(float, s, 'invalid', desc='womble')
+        ... except Exception as e: print(e)
+        foo.invalid is not a valid womble ('somevalue')
         """
         return self._uiconfig.configwith(
             convert, section, name, default, desc, untrusted
@@ -402,10 +399,9 @@ class ui(object):
         >>> u.configint(s, 'unknown', 7)
         7
         >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configint(s, 'invalid')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a valid integer ('somevalue')
+        >>> try: u.configint(s, 'invalid')
+        ... except Exception as e: print(e)
+        foo.invalid is not a valid integer ('somevalue')
         """
         return self._uiconfig.configint(section, name, default, untrusted)
 
@@ -425,10 +421,9 @@ class ui(object):
         >>> u.configbytes(s, 'unknown', '7 MB')
         7340032
         >>> u.setconfig(s, 'invalid', 'somevalue')
-        >>> u.configbytes(s, 'invalid')
-        Traceback (most recent call last):
-            ...
-        ConfigError: foo.invalid is not a byte quantity ('somevalue')
+        >>> try: u.configbytes(s, 'invalid')
+        ... except Exception as e: print(e)
+        foo.invalid is not a byte quantity ('somevalue')
         """
         return self._uiconfig.configbytes(section, name, default, untrusted)
 
@@ -1170,11 +1165,11 @@ class ui(object):
         This returns tuple "(message, choices)", and "choices" is the
         list of tuple "(response character, text without &)".
 
-        >>> ui.extractchoices(b"awake? $$ &Yes $$ &No")
+        >>> ui.extractchoices("awake? $$ &Yes $$ &No")
         ('awake? ', [('y', 'Yes'), ('n', 'No')])
-        >>> ui.extractchoices(b"line\\nbreak? $$ &Yes $$ &No")
+        >>> ui.extractchoices("line\\nbreak? $$ &Yes $$ &No")
         ('line\\nbreak? ', [('y', 'Yes'), ('n', 'No')])
-        >>> ui.extractchoices(b"want lots of $$money$$?$$Ye&s$$N&o")
+        >>> ui.extractchoices("want lots of $$money$$?$$Ye&s$$N&o")
         ('want lots of $$money$$?', [('s', 'Yes'), ('o', 'No')])
         """
 

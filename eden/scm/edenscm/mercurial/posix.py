@@ -69,14 +69,14 @@ def split(p):
     """Same as posixpath.split, but faster
 
     >>> import posixpath
-    >>> for f in [b'/absolute/path/to/file',
-    ...           b'relative/path/to/file',
-    ...           b'file_alone',
-    ...           b'path/to/directory/',
-    ...           b'/multiple/path//separators',
-    ...           b'/file_at_root',
-    ...           b'///multiple_leading_separators_at_root',
-    ...           b'']:
+    >>> for f in ['/absolute/path/to/file',
+    ...           'relative/path/to/file',
+    ...           'file_alone',
+    ...           'path/to/directory/',
+    ...           '/multiple/path//separators',
+    ...           '/file_at_root',
+    ...           '///multiple_leading_separators_at_root',
+    ...           '']:
     ...     assert split(f) == posixpath.split(f), f
     """
     ht = p.rsplit("/", 1)

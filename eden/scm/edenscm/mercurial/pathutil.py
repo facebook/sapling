@@ -162,29 +162,29 @@ def canonpath(root, cwd, myname, auditor=None):
     ...     if not pycompat.iswindows:
     ...         return expected
     ...     return check(root, cwd, myname)
-    >>> winonly(b'd:\\\\repo', b'c:\\\\dir', b'filename')
+    >>> winonly('d:\\\\repo', 'c:\\\\dir', 'filename')
     'aborted'
-    >>> winonly(b'c:\\\\repo', b'c:\\\\dir', b'filename')
+    >>> winonly('c:\\\\repo', 'c:\\\\dir', 'filename')
     'aborted'
-    >>> winonly(b'c:\\\\repo', b'c:\\\\', b'filename')
+    >>> winonly('c:\\\\repo', 'c:\\\\', 'filename')
     'aborted'
-    >>> winonly(b'c:\\\\repo', b'c:\\\\', b'repo\\\\filename',
-    ...         b'filename')
+    >>> winonly('c:\\\\repo', 'c:\\\\', 'repo\\\\filename',
+    ...         'filename')
     'filename'
-    >>> winonly(b'c:\\\\repo', b'c:\\\\repo', b'filename', b'filename')
+    >>> winonly('c:\\\\repo', 'c:\\\\repo', 'filename', 'filename')
     'filename'
-    >>> winonly(b'c:\\\\repo', b'c:\\\\repo\\\\subdir', b'filename',
-    ...         b'subdir/filename')
+    >>> winonly('c:\\\\repo', 'c:\\\\repo\\\\subdir', 'filename',
+    ...         'subdir/filename')
     'subdir/filename'
-    >>> unixonly(b'/repo', b'/dir', b'filename')
+    >>> unixonly('/repo', '/dir', 'filename')
     'aborted'
-    >>> unixonly(b'/repo', b'/', b'filename')
+    >>> unixonly('/repo', '/', 'filename')
     'aborted'
-    >>> unixonly(b'/repo', b'/', b'repo/filename', b'filename')
+    >>> unixonly('/repo', '/', 'repo/filename', 'filename')
     'filename'
-    >>> unixonly(b'/repo', b'/repo', b'filename', b'filename')
+    >>> unixonly('/repo', '/repo', 'filename', 'filename')
     'filename'
-    >>> unixonly(b'/repo', b'/repo/subdir', b'filename', b'subdir/filename')
+    >>> unixonly('/repo', '/repo/subdir', 'filename', 'subdir/filename')
     'subdir/filename'
     """
     if util.endswithsep(root):
@@ -256,9 +256,9 @@ def normasprefix(path):
 
     See also issue3033 for detail about need of this function.
 
-    >>> normasprefix(b'/foo/bar').replace(pycompat.ossep, b'/')
+    >>> normasprefix('/foo/bar').replace(pycompat.ossep, '/')
     '/foo/bar/'
-    >>> normasprefix(b'/').replace(pycompat.ossep, b'/')
+    >>> normasprefix('/').replace(pycompat.ossep, '/')
     '/'
     """
     d, p = os.path.splitdrive(path)

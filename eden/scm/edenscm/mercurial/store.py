@@ -31,13 +31,13 @@ from .pycompat import decodeutf8, encodeutf8, inttobyte, range
 # foo.i or foo.d
 def _encodedir(path):
     """
-    >>> _encodedir(b'data/foo.i')
+    >>> _encodedir('data/foo.i')
     'data/foo.i'
-    >>> _encodedir(b'data/foo.i/bla.i')
+    >>> _encodedir('data/foo.i/bla.i')
     'data/foo.i.hg/bla.i'
-    >>> _encodedir(b'data/foo.i.hg/bla.i')
+    >>> _encodedir('data/foo.i.hg/bla.i')
     'data/foo.i.hg.hg/bla.i'
-    >>> _encodedir(b'data/foo.i\\ndata/foo.i/bla.i\\ndata/foo.i.hg/bla.i\\n')
+    >>> _encodedir('data/foo.i\\ndata/foo.i/bla.i\\ndata/foo.i.hg/bla.i\\n')
     'data/foo.i\\ndata/foo.i.hg/bla.i\\ndata/foo.i.hg.hg/bla.i\\n'
     """
     return (
@@ -52,11 +52,11 @@ encodedir = getattr(parsers, "encodedir", _encodedir)
 
 def decodedir(path):
     """
-    >>> decodedir(b'data/foo.i')
+    >>> decodedir('data/foo.i')
     'data/foo.i'
-    >>> decodedir(b'data/foo.i.hg/bla.i')
+    >>> decodedir('data/foo.i.hg/bla.i')
     'data/foo.i/bla.i'
-    >>> decodedir(b'data/foo.i.hg.hg/bla.i')
+    >>> decodedir('data/foo.i.hg.hg/bla.i')
     'data/foo.i.hg/bla.i'
     """
     if ".hg/" not in path:
@@ -90,56 +90,51 @@ def _buildencodefun(forfncache):
     """
     >>> enc, dec = _buildencodefun(False)
 
-    >>> enc(b'nothing/special.txt')
+    >>> enc('nothing/special.txt')
     'nothing/special.txt'
-    >>> dec(b'nothing/special.txt')
+    >>> dec('nothing/special.txt')
     'nothing/special.txt'
 
-    >>> enc(b'HELLO')
+    >>> enc('HELLO')
     '_h_e_l_l_o'
-    >>> dec(b'_h_e_l_l_o')
+    >>> dec('_h_e_l_l_o')
     'HELLO'
 
-    >>> enc(b'hello:world?')
+    >>> enc('hello:world?')
     'hello~3aworld~3f'
-    >>> dec(b'hello~3aworld~3f')
+    >>> dec('hello~3aworld~3f')
     'hello:world?'
 
-    >>> enc(b'the\\x07quick\\xADshot')
-    'the~07quick~adshot'
-    >>> dec(b'the~07quick~adshot')
-    'the\\x07quick\\xadshot'
-
-    >>> enc(b'X' * 128)
+    >>> enc('X' * 128)
     'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-    >>> enc(b'X' * 127)
+    >>> enc('X' * 127)
     '_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x'
-    >>> path = '/'.join([b'Z', b'X' * 128, b'Y' * 127])
+    >>> path = '/'.join(['Z', 'X' * 128, 'Y' * 127])
     >>> enc(path)
     '_z/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y_y'
     >>> dec(enc(path)) == path
     True
-    >>> dec(enc(b'X' * 128)) == 'X' * 128
+    >>> dec(enc('X' * 128)) == 'X' * 128
     True
-    >>> dec(enc(b'X' * 127)) == 'X' * 127
+    >>> dec(enc('X' * 127)) == 'X' * 127
     True
-    >>> enc(b'/')
+    >>> enc('/')
     '/'
-    >>> dec(b'/')
+    >>> dec('/')
     '/'
 
-    >>> enc(b'X' * 253 + b'_')
+    >>> enc('X' * 253 + '_')
     'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX__'
-    >>> enc(b'X' * 254 + b'_')
+    >>> enc('X' * 254 + '_')
     'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:'
-    >>> path = '/'.join([b'Z', b'X_' * 85, b'Y_' * 86])
+    >>> path = '/'.join(['Z', 'X_' * 85, 'Y_' * 86])
     >>> enc(path)
     '_z/X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__X__/Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:Y:'
     >>> dec(enc(path)) == path
     True
-    >>> dec(enc(b'_' * 128)) == '_' * 128
+    >>> dec(enc('_' * 128)) == '_' * 128
     True
-    >>> dec(enc(b'_' * 127)) == '_' * 127
+    >>> dec(enc('_' * 127)) == '_' * 127
     True
     """
     e = "_"
@@ -223,7 +218,7 @@ _encodefnamelong, _decodefnamelong = _buildencodefun(False)
 
 def encodefilename(s):
     """
-    >>> encodefilename(b'foo.i/bar.d/bla.hg/hi:world?/HELLO')
+    >>> encodefilename('foo.i/bar.d/bla.hg/hi:world?/HELLO')
     'foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o'
     """
     return _encodefnamelong(encodedir(s))
@@ -231,24 +226,13 @@ def encodefilename(s):
 
 def decodefilename(s):
     """
-    >>> decodefilename(b'foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o')
+    >>> decodefilename('foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o')
     'foo.i/bar.d/bla.hg/hi:world?/HELLO'
     """
     return decodedir(_decodefnamelong(s))
 
 
 def _buildlowerencodefun():
-    """
-    >>> f = _buildlowerencodefun()
-    >>> f(b'nothing/special.txt')
-    'nothing/special.txt'
-    >>> f(b'HELLO')
-    'hello'
-    >>> f(b'hello:world?')
-    'hello~3aworld~3f'
-    >>> f(b'the\\x07quick\\xADshot')
-    'the~07quick~adshot'
-    """
     xchr = pycompat.bytechr
     cmap = dict([(inttobyte(x), inttobyte(x)) for x in range(127)])
     for x in _reserved():
@@ -281,15 +265,15 @@ def _auxencode(path, dotencode):
     basename (e.g. "aux", "aux.foo"). A directory or file named "foo.aux"
     doesn't need encoding.
 
-    >>> s = b'.foo/aux.txt/txt.aux/con/prn/nul/foo.'
-    >>> _auxencode(s.split(b'/'), True)
+    >>> s = '.foo/aux.txt/txt.aux/con/prn/nul/foo.'
+    >>> _auxencode(s.split('/'), True)
     ['~2efoo', 'au~78.txt', 'txt.aux', 'co~6e', 'pr~6e', 'nu~6c', 'foo~2e']
-    >>> s = b'.com1com2/lpt9.lpt4.lpt1/conprn/com0/lpt0/foo.'
-    >>> _auxencode(s.split(b'/'), False)
+    >>> s = '.com1com2/lpt9.lpt4.lpt1/conprn/com0/lpt0/foo.'
+    >>> _auxencode(s.split('/'), False)
     ['.com1com2', 'lp~749.lpt4.lpt1', 'conprn', 'com0', 'lpt0', 'foo~2e']
-    >>> _auxencode([b'foo. '], True)
+    >>> _auxencode(['foo. '], True)
     ['foo.~20']
-    >>> _auxencode([b' .foo'], True)
+    >>> _auxencode([' .foo'], True)
     ['~20.foo']
     """
     for i, n in enumerate(path):

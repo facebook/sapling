@@ -52,18 +52,18 @@ def recode(s):
 
 def mapbranch(branch, branchmap):
     """
-    >>> bmap = {b'default': b'branch1'}
-    >>> for i in [b'', None]:
+    >>> bmap = {'default': 'branch1'}
+    >>> for i in ['', None]:
     ...     mapbranch(i, bmap)
     'branch1'
     'branch1'
-    >>> bmap = {b'None': b'branch2'}
-    >>> for i in [b'', None]:
+    >>> bmap = {'None': 'branch2'}
+    >>> for i in ['', None]:
     ...     mapbranch(i, bmap)
     'branch2'
     'branch2'
-    >>> bmap = {b'None': b'branch3', b'default': b'branch4'}
-    >>> for i in [b'None', b'', None, b'default', b'branch5']:
+    >>> bmap = {'None': 'branch3', 'default': 'branch4'}
+    >>> for i in ['None', '', None, 'default', 'branch5']:
     ...     mapbranch(i, bmap)
     'branch3'
     'branch4'

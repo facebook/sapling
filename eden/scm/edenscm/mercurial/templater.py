@@ -165,7 +165,7 @@ def _parsetemplate(tmpl, start, stop, quote=""):
     r"""
     >>> _parsetemplate('foo{bar}"baz', 0, 12)
     ([('string', 'foo'), ('symbol', 'bar'), ('string', '"baz')], 12)
-    >>> _parsetemplate('foo{bar}"baz', 0, 12, quote=b'"')
+    >>> _parsetemplate('foo{bar}"baz', 0, 12, quote='"')
     ([('string', 'foo'), ('symbol', 'bar')], 9)
     >>> _parsetemplate('foo"{bar}', 0, 9, quote='"')
     ([('string', 'foo')], 4)
@@ -227,18 +227,18 @@ def _unnesttemplatelist(tree):
 
     >>> def f(tree):
     ...     print(prettyformat(_unnesttemplatelist(tree)))
-    >>> f((b'template', []))
+    >>> f(('template', []))
     (string '')
-    >>> f((b'template', [(b'string', b'foo')]))
+    >>> f(('template', [('string', 'foo')]))
     (string 'foo')
-    >>> f((b'template', [(b'string', b'foo'), (b'symbol', b'rev')]))
+    >>> f(('template', [('string', 'foo'), ('symbol', 'rev')]))
     (template
       (string 'foo')
       (symbol 'rev'))
-    >>> f((b'template', [(b'symbol', b'rev')]))  # template(rev) -> str
+    >>> f(('template', [('symbol', 'rev')]))  # template(rev) -> str
     (template
       (symbol 'rev'))
-    >>> f((b'template', [(b'template', [(b'string', b'foo')])]))
+    >>> f(('template', [('template', [('string', 'foo')])]))
     (string 'foo')
     """
     if not isinstance(tree, tuple):
@@ -279,18 +279,18 @@ def parseexpandaliases(repo, tmpl):
 def _parseexpr(expr):
     """Parse a template expression into tree
 
-    >>> _parseexpr(b'"foo"')
+    >>> _parseexpr('"foo"')
     ('string', 'foo')
-    >>> _parseexpr(b'foo(bar)')
+    >>> _parseexpr('foo(bar)')
     ('func', ('symbol', 'foo'), ('symbol', 'bar'))
-    >>> _parseexpr(b'foo(')
+    >>> _parseexpr('foo(')
     Traceback (most recent call last):
       ...
-    ParseError: ('not a prefix: end', 4)
-    >>> _parseexpr(b'"foo" "bar"')
+    edenscm.mercurial.error.ParseError: ('not a prefix: end', 4)
+    >>> _parseexpr('"foo" "bar"')
     Traceback (most recent call last):
       ...
-    ParseError: ('invalid token', 7)
+    edenscm.mercurial.error.ParseError: ('invalid token', 7)
     """
     p = parser.parser(elements)
     tree, pos = p.parse(tokenize(expr, 0, len(expr)))
@@ -618,10 +618,10 @@ def _buildfuncargs(exp, context, curmethods, funcname, argspec):
     ...     x = _parseexpr(expr)
     ...     n = getsymbol(x[1])
     ...     return _buildfuncargs(x[2], context, exprmethods, n, argspec)
-    >>> list(fargs(b'a(l=1, k=2)', b'k l m').keys())
+    >>> list(fargs('a(l=1, k=2)', 'k l m').keys())
     ['l', 'k']
-    >>> args = fargs(b'a(opts=1, k=2)', b'**opts')
-    >>> list(args.keys()), list(args[b'opts'].keys())
+    >>> args = fargs('a(opts=1, k=2)', '**opts')
+    >>> list(args.keys()), list(args['opts'].keys())
     (['opts'], ['opts', 'k'])
     """
 
