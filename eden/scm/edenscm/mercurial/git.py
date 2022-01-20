@@ -315,6 +315,28 @@ def submodulecheckout(ctx, match=None, force=False):
             value += 1
 
 
+@cached
+def submodulestatus(ctx):
+    """Find submodule working parents changes.
+    Return submodules {path: (oldnode, newnode)}.
+    Both oldnode and newnode are nullable.
+    """
+    assert ctx.node() is None, "ctx should be a workingctx"
+    tree = ctx.p1().manifest()
+    submodules = parsesubmodules(ctx)
+    status = {}
+    for submod in submodules:
+        oldnode = tree.get(submod.path)
+        newnode = submod.workingparentnode()
+        if newnode == nullid:
+            newnode = None
+        if newnode is None and oldnode is None:
+            # Treat it as not a submodule.
+            continue
+        status[submod.path] = (oldnode, newnode)
+    return status
+
+
 @dataclass
 class Submodule:
     name: str

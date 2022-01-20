@@ -1831,6 +1831,28 @@ class workingctx(committablectx):
             match, ignored=ignored, clean=clean, unknown=unknown
         )
 
+        # Extend status with submodule status
+        if not self.isinmemory() and git.isgit(self._repo):
+            submodulestatus = git.submodulestatus(self)
+            for path, (oldnode, newnode) in submodulestatus.items():
+                if not match(path):
+                    continue
+                if oldnode is None:
+                    if newnode is not None:
+                        s.added.append(path)
+                elif newnode is None:
+                    if path not in s.removed:
+                        s.removed.append(path)
+                elif newnode != oldnode:
+                    s.modified.append(path)
+            submodulepaths = set(submodulestatus)
+            # The directory walk might report submodule paths as "deleted"
+            # ("!"). Since we got the real states above, remove the incorrect
+            # "!" state.
+            if s.deleted and submodulepaths:
+                deleted = [p for p in s.deleted if p not in submodulepaths]
+                s.deleted[:] = deleted
+
         if match.always():
             # cache for performance
             if s.unknown or s.ignored or s.clean:

@@ -66,3 +66,43 @@ Checking out commits triggers submodule updates
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo mod/*/*
   mod/1/A mod/2/C
+
+Make changes to submodules via working copy
+
+  $ hg --cwd mod/1 up -q $B
+  $ hg status
+  M mod/1
+
+  $ hg --cwd mod/2 up -q null
+  $ hg status
+  M mod/1
+  R mod/2
+
+  $ hg status mod/1
+  M mod/1
+
+  $ hg status mod/2
+  R mod/2
+
+  $ rm -rf mod/2
+  $ hg status
+  M mod/1
+  R mod/2
+
+  $ cat >> .gitmodules << EOF
+  > [submodule "sub3"]
+  > url = file://$TESTTMP/sub1/.hg/store/git
+  > path = mod/3
+  > EOF
+
+  $ hg status
+  M .gitmodules
+  M mod/1
+  R mod/2
+
+  $ hg clone -q git+file://$TESTTMP/sub1/.hg/store/git mod/3
+  $ hg status
+  M .gitmodules
+  M mod/1
+  A mod/3
+  R mod/2
