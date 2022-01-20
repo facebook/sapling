@@ -4586,7 +4586,14 @@ def pull(ui, repo, source="default", **opts):
         refspecs = (opts.get("bookmark") or []) + (opts.get("rev") or [])
         ret = git.pull(repo, source, refspecs)
         if ret == 0 and opts.get("update"):
-            return git.postpullupdate(repo)
+            # Figure out the node to checkout
+            node = None
+            for spec in refspecs:
+                if spec in repo:
+                    node = repo[spec].node()
+                    break
+            if node is not None:
+                return hg.updatetotally(repo.ui, repo, node, None)
 
         return ret
 

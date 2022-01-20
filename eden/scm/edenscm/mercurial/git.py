@@ -17,7 +17,7 @@ from edenscm import tracing
 
 from . import error, util
 from .i18n import _
-from .node import hex
+from .node import hex, nullid
 
 GIT_DIR_FILE = "gitdir"
 GIT_REQUIREMENT = "git"
@@ -75,8 +75,11 @@ def clone(ui, url, destpath=None, update=True):
         raise
     if update is not False:
         if update is True:
-            update = None
-        postpullupdate(repo, update)
+            node = repo.changelog.tip()
+        else:
+            node = repo[update].node()
+        if node is not None and node != nullid:
+            hg.updatetotally(repo.ui, repo, node, None)
     return repo
 
 
@@ -183,22 +186,12 @@ def revparse(repo, revspec):
 
 def pull(repo, source, refspecs):
     """Run `git fetch` on the backing repo to perform a pull"""
-    ret = rungit(repo, ["fetch", "--no-tags", "--prune", source] + refspecs)
+    ret = rungit(
+        repo,
+        ["fetch", "--no-write-fetch-head", "--no-tags", "--prune", source] + refspecs,
+    )
     repo.invalidate(clearfilecache=True)
     return ret
-
-
-def postpullupdate(repo, node=None):
-    """Checkout the pulled commit. If `node` is None, use FETCH_HEAD"""
-    from . import hg
-
-    if node is None:
-        # If the repo is empty, then FETCH_HEAD cannot be resolved.
-        if len(repo) == 0:
-            return
-        fetchhead = revparse(repo, "FETCH_HEAD")
-        node = repo[fetchhead].node()
-    return hg.updatetotally(repo.ui, repo, node, None)
 
 
 def push(repo, dest, pushnode, to, force=False):

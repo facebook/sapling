@@ -172,7 +172,6 @@ Test pull:
 - pull with -B
   $ hg pull -B foo
   From $TESTTMP/gitrepo/
-   * branch            foo        -> FETCH_HEAD
    * [new branch]      foo        -> origin/foo
   $ hg log -r origin/foo -T '{desc}\n'
   alpha3
@@ -181,6 +180,10 @@ Test pull:
   $ hg pull -q origin -B master --update
   $ hg log -r . -T '{remotenames}\n'
   origin/master
+
+  $ hg pull -q origin -B foo --update
+  $ hg log -r . -T '{remotenames}\n'
+  origin/foo
 
 - pull without arguments
   $ hg pull
