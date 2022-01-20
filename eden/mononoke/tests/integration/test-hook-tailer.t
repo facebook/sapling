@@ -5,7 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ BLOB_TYPE="blob_files" quiet default_setup
+  $ BLOB_TYPE="blob_files" quiet default_setup_blobimport
 
 Run the hook tailer
 
