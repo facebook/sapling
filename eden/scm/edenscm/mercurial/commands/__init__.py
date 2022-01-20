@@ -41,6 +41,7 @@ from .. import (
     exchange,
     extensions,
     formatter,
+    git,
     hbisect,
     help,
     hg,
@@ -4558,6 +4559,17 @@ def pull(ui, repo, source="default", **opts):
     """
     if ui.configbool("pull", "automigrate"):
         repo.automigratestart()
+
+    if git.isgit(repo):
+        # git has a different default remote name
+        if source == "default":
+            source = "origin"
+        refspecs = (opts.get("bookmark") or []) + (opts.get("rev") or [])
+        ret = git.pull(repo, source, refspecs)
+        if ret == 0 and opts.get("update"):
+            return git.postpullupdate(repo)
+
+        return ret
 
     if ui.configbool("commands", "update.requiredest") and opts.get("update"):
         msg = _("update destination required by configuration")

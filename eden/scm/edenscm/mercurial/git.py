@@ -11,6 +11,7 @@ import hashlib
 import subprocess
 
 import bindings
+from edenscm import tracing
 
 from . import error, util
 from .i18n import _
@@ -71,6 +72,31 @@ def readconfig(repo):
     return config
 
 
+def revparse(repo, revspec):
+    parsed = callgit(repo, ["rev-parse", revspec])
+    return parsed.decode("utf-8", "surrogateescape").strip()
+
+
+def pull(repo, source, refspecs):
+    """Run `git fetch` on the backing repo to perform a pull"""
+    ret = rungit(repo, ["fetch", "--prune", source] + refspecs)
+    repo.invalidate(clearfilecache=True)
+    return ret
+
+
+def postpullupdate(repo, node=None):
+    """Checkout the pulled commit. If `node` is None, use FETCH_HEAD"""
+    from . import hg
+
+    if node is None:
+        # If the repo is empty, then FETCH_HEAD cannot be resolved.
+        if len(repo) == 0:
+            return
+        fetchhead = revparse(repo, "FETCH_HEAD")
+        node = repo[fetchhead].node()
+    return hg.updatetotally(repo.ui, repo, node, None)
+
+
 def callgit(repo, args):
     """Run git command in the backing git repo, return its output"""
     gitdir = readgitdir(repo)
@@ -91,6 +117,35 @@ def callgitnorepo(ui, args, gitdir=None):
         cmd.append("--git-dir=%s" % gitdir)
     cmd += args
     return subprocess.run(cmd, capture_output=True)
+
+
+def rungit(repo, args):
+    """Run git command in the backing git repo, using inherited stdio.
+    Passes --quiet and --verbose to the git command.
+    """
+    gitdir = readgitdir(repo)
+    return rungitnorepo(repo.ui, args, gitdir=gitdir)
+
+
+def rungitnorepo(ui, args, gitdir=None):
+    """Run git command without an optional repo path, using inherited stdio.
+    Passes --quiet and --verbose to the git command.
+    """
+    cmd = [gitbinary(ui)]
+    if gitdir is not None:
+        cmd.append("--git-dir=%s" % gitdir)
+    gitcmd = args[0]
+    cmd.append(gitcmd)
+    # not all git commands support --verbose or --quiet
+    if ui.verbose and gitcmd in {"fetch", "push"}:
+        cmd.append("--verbose")
+    if ui.quiet and gitcmd in {"fetch", "init", "push"}:
+        cmd.append("--quiet")
+    cmd += args[1:]
+    cmd = " ".join(util.shellquote(c) for c in cmd)
+    tracing.debug("running %s\n" % cmd)
+    # use ui.system, which is compatibile with chg, but goes through shell
+    return ui.system(cmd)
 
 
 def gitbinary(ui):

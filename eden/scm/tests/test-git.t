@@ -7,6 +7,7 @@
   $ export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
   $ export GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
   $ setconfig diff.git=true
+  $ unset GIT_DIR
 
 Prepare a git repo:
 
@@ -145,3 +146,33 @@ Exercise pathcopies code path:
   +++ b/beta
   @@ -0,0 +1,1 @@
   +2
+
+Prepare a new git "client" repo:
+
+  $ unset GIT_DIR
+  $ git init -q --bare $TESTTMP/gitrepo2
+  $ cd "$TESTTMP/gitrepo2"
+  $ git remote add origin "$TESTTMP/gitrepo/.git"
+  $ hg debuginitgit --git-dir="$TESTTMP/gitrepo2" "$TESTTMP/repo2"
+  $ cd "$TESTTMP/repo2"
+
+Test pull:
+
+- pull with -B
+  $ hg pull -B foo
+  From $TESTTMP/gitrepo/
+   * branch            foo        -> FETCH_HEAD
+   * [new branch]      foo        -> origin/foo
+  $ hg log -r origin/foo -T '{desc}\n'
+  alpha3
+
+- pull with -B and --update
+  $ hg pull -q origin -B master --update
+  $ hg log -r . -T '{remotenames}\n'
+  origin/master
+
+- pull without arguments
+  $ hg pull
+
+- infinitepush compatibility
+  $ hg pull --config extensions.infinitepush=
