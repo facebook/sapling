@@ -107,6 +107,7 @@ use crate::retryable::RetryableFiles;
 use crate::retryable::RetryableStreamRequest;
 use crate::retryable::RetryableTrees;
 use crate::types::wire::pull::PullFastForwardRequest;
+use crate::types::wire::pull::PullLazyRequest;
 
 /// All non-alphanumeric characters (except hypens, underscores, and periods)
 /// found in the repo's name will be percent-encoded before being used in URLs.
@@ -131,6 +132,7 @@ mod paths {
     pub const COMMIT_REVLOG_DATA: &str = "commit/revlog_data";
     pub const CLONE_DATA: &str = "clone";
     pub const PULL_FAST_FORWARD: &str = "pull_fast_forward_master";
+    pub const PULL_LAZY: &str = "pull_lazy";
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
     pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
     pub const COMMIT_HASH_LOOKUP: &str = "commit/hash_lookup";
@@ -522,6 +524,21 @@ impl Client {
         })?
     }
 
+    async fn pull_lazy_attempt(
+        &self,
+        req: PullLazyRequest,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        let url = self.build_url(paths::PULL_LAZY)?;
+        let req = self
+            .configure_request(self.inner.client.post(url))?
+            .cbor(&req.to_wire())
+            .map_err(EdenApiError::RequestSerializationFailed)?;
+        let mut fetch = self.fetch::<CloneData<HgId>>(vec![req])?;
+        fetch.entries.next().await.ok_or_else(|| {
+            EdenApiError::Other(format_err!("clone data missing from reponse body"))
+        })?
+    }
+
     async fn fast_forward_pull_attempt(
         &self,
         req: PullFastForwardRequest,
@@ -790,6 +807,26 @@ impl EdenApi for Client {
                 new_master,
             };
             this.fast_forward_pull_attempt(req).boxed()
+        })
+        .await
+    }
+
+    async fn pull_lazy(
+        &self,
+        common: Vec<HgId>,
+        missing: Vec<HgId>,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        tracing::info!(
+            "Requesting pull lazy data for the '{}' repository",
+            self.repo_name()
+        );
+
+        self.with_retry(|this| {
+            let req = PullLazyRequest {
+                common: common.clone(),
+                missing: missing.clone(),
+            };
+            this.pull_lazy_attempt(req).boxed()
         })
         .await
     }
