@@ -1323,25 +1323,26 @@ def selectivepullinitbookmarknames(repo):
         # Checking other bookmarks is likely going to make the server
         # do more work, or trigger commit graph code paths on the server
         # that is likely broken or slow.
-        return {mainbookmark(repo)}
-    return set(repo.ui.configlist("remotenames", "selectivepulldefault"))
+        return [mainbookmark(repo)]
+    return repo.ui.configlist("remotenames", "selectivepulldefault")
 
 
 def selectivepullinitbookmarkfullnames(repo):
     """Returns set of initial remote bookmarks full names"""
-    return {
+    return [
         "%s/%s" % (repo.ui.config("remotenames", "hoist"), name)
         for name in selectivepullinitbookmarknames(repo)
-    }
+    ]
 
 
 def selectivepullbookmarknames(repo, remote=None):
     """Returns the bookmark names that should be pulled during a pull."""
-    initbooks = set(selectivepullinitbookmarknames(repo))
+    initbooks = selectivepullinitbookmarknames(repo)
     if remote is not None and "emergencychangelog" not in repo.storerequirements:
         for node, nametype, remotepath, name in readremotenames(repo):
             if nametype == "bookmarks" and remotepath == remote:
-                initbooks.add(name)
+                initbooks.append(name)
+        initbooks = util.dedup(initbooks)
     if not initbooks:
         raise error.Abort(_("no bookmarks to subscribe specified for selectivepull"))
     return initbooks
