@@ -1462,7 +1462,21 @@ class committablectx(basectx):
 
     @propertycache
     def _flagfunc(self):
-        return self._repo.dirstate.flagfunc(self._buildflagfunc)
+        func = self._repo.dirstate.flagfunc(self._buildflagfunc)
+        if git.isgit(self._repo):
+            # change submodule flags to 'm'
+            submodules = git.parsesubmodules(self)
+            if submodules:
+                submodulepaths = set(m.path for m in submodules)
+
+                def flagfunc(path, orig=func, submodulepaths=submodulepaths):
+                    if path in submodulepaths:
+                        return "m"
+                    else:
+                        return orig(path)
+
+                func = flagfunc
+        return func
 
     @propertycache
     def _status(self):
@@ -1886,8 +1900,19 @@ class workingctx(committablectx):
         for f in status.deleted + status.removed:
             if f in man:
                 del man[f]
+
+        if not self.isinmemory() and git.isgit(self._repo):
+            submodulestatus = git.submodulestatus(self)
+        else:
+            submodulestatus = {}
         for i, l in ((addednodeid, status.added), (modifiednodeid, status.modified)):
             for f in l:
+                submodulenodes = submodulestatus.get(f)
+                if submodulenodes is not None:
+                    oldnode, newnode = submodulenodes
+                    # newnode should not be None, but fs is racy...
+                    man.set(f, newnode or oldnode, "m")
+                    continue
                 man[f] = i
                 try:
                     man.setflag(f, ff(f))
@@ -2010,6 +2035,13 @@ class workingfilectx(committablefilectx):
     @propertycache
     def _changectx(self):
         return workingctx(self._repo)
+
+    def filenode(self):
+        # Usually filenode is None until repo.commitctx, but submodule is an
+        # exception. Resolve submodule node so repo.commitctx can use it.
+        if self._filenode is None and self.flags() == "m":
+            self._filenode = self.changectx().manifest().get(self.path())
+        return self._filenode
 
     def data(self):
         return self._repo.wread(self._path)
