@@ -95,7 +95,19 @@
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * There is no additional setup step needed! (glob)
 
+# run segmented changelog tailer on master bookmark
+  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
+  > [segmented_changelog_config]
+  > master_bookmark="master_bookmark"
+  > CONFIG
+  $ segmented_changelog_tailer --repo repo  2>&1 | grep -e successfully -e segmented_changelog_tailer
+  * repo name 'repo' translates to id 0 (glob)
+  * repo 0: SegmentedChangelogTailer initialized (glob)
+  * repo 0: successfully seeded segmented changelog (glob)
+  * repo 0: SegmentedChangelogTailer is done (glob)
+
 # Import the repo
+# Segmented changelog should be rebuild for newly imported commits along the way.
   $ repo_import \
   > import \
   > "$GIT_REPO" \
@@ -124,6 +136,15 @@
   * Saved shifted bonsai changesets (glob)
   * Start deriving data types (glob)
   * Finished deriving data types (glob)
+  * Start tailing segmented changelog (glob)
+  * using 'Bookmark master_bookmark' for head (glob)
+  * repo 0: SegmentedChangelogTailer initialized (glob)
+  * repo 0: starting incremental update to segmented changelog (glob)
+  * repo 0: IdMap updated, IdDag updated (glob)
+  * repo 0: segmented changelog version saved, idmap_version: 1, iddag_version: * (glob)
+  * repo 0: successful incremental update to segmented changelog (glob)
+  * repo 0: SegmentedChangelogTailer is done (glob)
+  * Finished tailing segmented changelog (glob)
   * Start moving the bookmark (glob)
   * Created bookmark BookmarkName { bookmark: "repo_import_new_repo" } pointing to * (glob)
   * Set bookmark BookmarkName { bookmark: "repo_import_new_repo" } to * (glob)
@@ -178,6 +199,7 @@
     ],
     "hg_sync_check_disabled": true,
     "import_stage": "PushCommit",
+    "imported_cs_id": "2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681",
     "merged_cs_id": * (glob)
     "move_bookmark_commits_done": 1,
     "phab_check_disabled": true,

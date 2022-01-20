@@ -6,13 +6,17 @@
  */
 
 #![type_length_limit = "4522397"]
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use backsyncer::{backsync_latest, open_backsyncer_dbs, BacksyncLimit, TargetRepoDbs};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
+use bookmarks::{BookmarkName, BookmarkUpdateReason, Bookmarks};
 use borrowed::borrowed;
+use bulkops::PublicChangesetBulkFetch;
+use changeset_fetcher::PrefetchedChangesetsFetcher;
+use changesets::ChangesetsArc;
 use clap::ArgMatches;
 use cmdlib::args::{self, MononokeMatches};
 use cmdlib::helpers::block_execute;
@@ -34,15 +38,24 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_types::{HgChangesetId, MPath};
-use metaconfig_types::{BookmarkAttrs, CommitSyncConfigVersion, RepoConfig};
+use metaconfig_types::{
+    BookmarkAttrs, CommitSyncConfigVersion, MetadataDatabaseConfig, RepoConfig,
+    SegmentedChangelogConfig,
+};
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::{DefaultAction, Mover};
 use mutable_counters::SqlMutableCounters;
+use phases::PhasesArc;
 use pushrebase::do_pushrebase_bonsai;
+use segmented_changelog::{
+    seedheads_from_config, SeedHead, SegmentedChangelogSqlConnections, SegmentedChangelogTailer,
+};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
+use sql_ext::facebook::{MyAdmin, MysqlOptions};
+use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
@@ -115,6 +128,7 @@ enum ImportStage {
     GitImport,
     RewritePaths,
     DeriveBonsais,
+    TailSegmentedChangelog,
     MoveBookmark,
     MergeCommits,
     PushCommit,
@@ -141,6 +155,8 @@ pub struct RecoveryFields {
     commit_author: String,
     commit_message: String,
     datetime: DateTime,
+    /// Head of the imported commits
+    imported_cs_id: Option<ChangesetId>,
     /// ChangesetId of the merged commit we make to merge the imported commits into dest_bookmark
     merged_cs_id: Option<ChangesetId>,
     /// ChangesetIds created after shifting the file paths of the gitimported commits
@@ -1067,7 +1083,12 @@ async fn repo_import(
             .ok_or_else(|| format_err!("gitimported changeset ids are not found"))?;
         let shifted_bcs_ids =
             rewrite_file_paths(&ctx, &repo, &combined_mover, &gitimport_bcs_ids).await?;
+        let imported_cs_id = match shifted_bcs_ids.last() {
+            Some(bcs_id) => bcs_id,
+            None => return Err(format_err!("There is no bonsai changeset present")),
+        };
         recovery_fields.import_stage = ImportStage::DeriveBonsais;
+        recovery_fields.imported_cs_id = Some(imported_cs_id.clone());
         recovery_fields.shifted_bcs_ids = Some(shifted_bcs_ids);
         save_importing_state(&recovery_fields).await?;
     }
@@ -1112,6 +1133,27 @@ async fn repo_import(
         future::try_join(derive_changesets, backsync_and_derive_changesets).await?;
         info!(ctx.logger(), "Finished deriving data types");
 
+        recovery_fields.import_stage = ImportStage::TailSegmentedChangelog;
+        save_importing_state(&recovery_fields).await?;
+    }
+
+    let imported_cs_id = recovery_fields
+        .imported_cs_id
+        .ok_or_else(|| format_err!("Imported changeset id is not found"))?;
+
+    if recovery_fields.import_stage == ImportStage::TailSegmentedChangelog {
+        info!(ctx.logger(), "Start tailing segmented changelog");
+        tail_segmented_changelog(
+            &ctx,
+            &repo,
+            &imported_cs_id,
+            &repo_config.storage_config.metadata,
+            mysql_options,
+            &repo_config.segmented_changelog_config,
+        )
+        .await?;
+        info!(ctx.logger(), "Finished tailing segmented changelog");
+
         recovery_fields.import_stage = ImportStage::MoveBookmark;
         save_importing_state(&recovery_fields).await?;
     }
@@ -1135,11 +1177,6 @@ async fn repo_import(
     }
 
     if recovery_fields.import_stage == ImportStage::MergeCommits {
-        let imported_cs_id = match shifted_bcs_ids.last() {
-            Some(bcs_id) => bcs_id,
-            None => return Err(format_err!("There is no bonsai changeset present")),
-        };
-
         let maybe_merged_cs_id = Some(
             merge_imported_commit(
                 &ctx,
@@ -1167,6 +1204,88 @@ async fn repo_import(
         &repo_config,
     )
     .await?;
+    Ok(())
+}
+
+async fn tail_segmented_changelog(
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    imported_cs_id: &ChangesetId,
+    storage_config_metadata: &MetadataDatabaseConfig,
+    mysql_options: &MysqlOptions,
+    segmented_changelog_config: &SegmentedChangelogConfig,
+) -> Result<(), Error> {
+    let repo_id = blobrepo.get_repoid();
+
+    let db_address = match storage_config_metadata {
+        MetadataDatabaseConfig::Local(_) => None,
+        MetadataDatabaseConfig::Remote(remote_config) => {
+            Some(remote_config.primary.db_address.clone())
+        }
+    };
+    let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
+        None => Arc::new(NoReplicaLagMonitor()),
+        Some(address) => {
+            let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
+            Arc::new(my_admin.single_shard_lag_monitor(address))
+        }
+    };
+
+    let sql_factory = make_metadata_sql_factory(
+        ctx.fb,
+        storage_config_metadata.clone(),
+        mysql_options.clone(),
+        ReadOnlyStorage(false),
+    )
+    .await
+    .with_context(|| format!("repo {}: constructing metadata sql factory", repo_id))?;
+
+    let segmented_changelog_sql_connections = sql_factory
+        .open::<SegmentedChangelogSqlConnections>()
+        .with_context(|| {
+            format!(
+                "repo {}: error constructing segmented changelog sql connections",
+                repo_id
+            )
+        })?;
+    let changeset_fetcher = Arc::new(
+        PrefetchedChangesetsFetcher::new(repo_id, blobrepo.changesets_arc(), stream::empty())
+            .await?,
+    );
+
+    let bulk_fetcher = Arc::new(PublicChangesetBulkFetch::new(
+        blobrepo.changesets_arc(),
+        blobrepo.phases_arc(),
+    ));
+
+    let mut seed_heads = seedheads_from_config(&ctx, &segmented_changelog_config)?;
+    seed_heads.push(SeedHead::from(imported_cs_id));
+
+    let segmented_changelog_tailer = SegmentedChangelogTailer::new(
+        repo_id,
+        segmented_changelog_sql_connections,
+        replica_lag_monitor,
+        changeset_fetcher,
+        bulk_fetcher,
+        Arc::new(blobrepo.get_blobstore()),
+        Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+        seed_heads,
+        None,
+    );
+
+    info!(
+        ctx.logger(),
+        "repo {}: SegmentedChangelogTailer initialized", repo_id
+    );
+
+    segmented_changelog_tailer
+        .once(ctx)
+        .await
+        .with_context(|| format!("repo {}: incrementally building repo", repo_id))?;
+    info!(
+        ctx.logger(),
+        "repo {}: SegmentedChangelogTailer is done", repo_id,
+    );
     Ok(())
 }
 

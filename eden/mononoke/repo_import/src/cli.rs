@@ -202,6 +202,7 @@ pub fn setup_import_args(matches: &ArgMatches<'_>) -> Result<RecoveryFields, Err
         commit_author: commit_author.to_string(),
         commit_message: commit_message.to_string(),
         datetime,
+        imported_cs_id: None,
         shifted_bcs_ids: None,
         gitimport_bcs_ids: None,
         merged_cs_id: None,
