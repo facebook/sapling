@@ -76,6 +76,7 @@ pub enum EdenApiMethod {
     SetBookmark,
     LandStack,
     PullFastForwardMaster,
+    PullLazy,
     EphemeralPrepare,
     FetchSnapshot,
     CommitGraph,
@@ -102,6 +103,7 @@ impl fmt::Display for EdenApiMethod {
             Self::Lookup => "lookup",
             Self::UploadFile => "upload_file",
             Self::PullFastForwardMaster => "pull_fast_forward_master",
+            Self::PullLazy => "pull_lazy",
             Self::UploadHgFilenodes => "upload_filenodes",
             Self::UploadTrees => "upload_trees",
             Self::UploadHgChangesets => "upload_hg_changesets",
@@ -192,6 +194,7 @@ define_handler!(commit_revlog_data_handler, commit::revlog_data);
 define_handler!(clone_handler, clone::clone_data);
 define_handler!(upload_file_handler, files::upload_file);
 define_handler!(pull_fast_forward_master, pull::pull_fast_forward_master);
+define_handler!(pull_lazy, pull::pull_lazy);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -319,6 +322,10 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/pull_fast_forward_master")
             .with_path_extractor::<pull::PullFastForwardParams>()
             .to(pull_fast_forward_master);
+        route
+            .post("/:repo/pull_lazy")
+            .with_path_extractor::<pull::PullLazyParams>()
+            .to(pull_lazy);
         route
             .put("/:repo/upload/file/:idtype/:id")
             .with_path_extractor::<files::UploadFileParams>()
