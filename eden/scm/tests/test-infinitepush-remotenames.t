@@ -191,10 +191,7 @@ Test hiding of a bookmark
      default/scratch/branchtoupdateto1 2885148f6198
      default/scratch/mybranch  620472ff5c0c
      default/scratch/serverbook 64d557aa86fd
-     remote/scratch/branchtoupdateto1 2885148f6198
      remote/scratch/branchtoupdateto2 1f558bd20eaa
-     remote/scratch/mybranch   620472ff5c0c
-     remote/scratch/serverbook 64d557aa86fd
   $ hg hide .
   hiding commit 1f558bd20eaa "newcommittoupdate2"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -217,6 +214,3 @@ Test hiding of a bookmark
      default/scratch/branchtoupdateto1 2885148f6198
      default/scratch/mybranch  620472ff5c0c
      default/scratch/serverbook 64d557aa86fd
-     remote/scratch/branchtoupdateto1 2885148f6198
-     remote/scratch/mybranch   620472ff5c0c
-     remote/scratch/serverbook 64d557aa86fd

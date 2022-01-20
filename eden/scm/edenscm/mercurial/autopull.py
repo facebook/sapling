@@ -209,7 +209,7 @@ def _pullremotebookmarks(repo, x):
                 source = None
             else:
                 source = remotename
-            return pullattempt(bookmarknames=[name], headnames=[name], source=source)
+            return pullattempt(bookmarknames=[name], headnames=[], source=source)
 
 
 @builtinautopullpredicate("commits", priority=20)
