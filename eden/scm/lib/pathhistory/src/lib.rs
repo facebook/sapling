@@ -22,6 +22,7 @@
 
 #[allow(unused)]
 mod pathops;
+mod utils;
 
 #[cfg(test)]
 dev_logger::init!();
