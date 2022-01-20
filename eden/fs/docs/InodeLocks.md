@@ -96,9 +96,9 @@ InodeBase `location_` fields may be updated without holding this lock.
 
 ## EdenMount's Current Snapshot Lock:
 
-This lock is also a very high level lock in our lock ordering stack.
-It is acquired for the duration of any operation that updates the current
-snapshot that is checked out.
+This lock is a leaf lock that is held for short duration at the beginning and
+end of a checkout operation. Once acquired during checkout, the
+checkoutInProgress flag is set and the lock is released.
 
-Checkout operations acquire both the current snapshot lock and the rename lock.
-The snapshot lock is always acquired before the rename lock.
+On Windows, this lock may need to be taken by recursive ProjectedFS callbacks
+which will need to read the current snapshot to walk the Tree hierarchy.

@@ -151,7 +151,6 @@ struct Owner {
  */
 struct CheckoutTimes {
   using duration = std::chrono::steady_clock::duration;
-  duration didAcquireParentsLock{};
   duration didLookupTrees{};
   duration didDiff{};
   duration didAcquireRenameLock{};
@@ -164,7 +163,6 @@ struct CheckoutTimes {
  */
 struct SetPathObjectIdTimes {
   using duration = std::chrono::steady_clock::duration;
-  duration didAcquireParentsLock{};
   duration didLookupTreesOrGetInodeByPath{};
   duration didAcquireRenameLock{};
   duration didCheckout{};
@@ -352,7 +350,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * Get the commit ID of the working directory's parent commit.
    */
   RootId getParentCommit() const {
-    return *parentCommit_.rlock();
+    return parentState_.rlock()->commitHash;
   }
 
   /**
@@ -1033,10 +1031,19 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    */
   folly::SharedMutex renameMutex_;
 
+  struct ParentCommitState {
+    RootId commitHash;
+    bool checkoutInProgress = false;
+  };
+
   /**
    * The IDs of the parent commit of the working directory.
    */
-  folly::Synchronized<RootId> parentCommit_;
+ public:
+  using ParentLock = folly::Synchronized<ParentCommitState>;
+
+ private:
+  ParentLock parentState_;
 
   std::unique_ptr<Journal> journal_;
   folly::Synchronized<std::unique_ptr<IActivityRecorder>> activityRecorder_;
