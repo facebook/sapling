@@ -1342,6 +1342,25 @@ def followlines(repo, subset, x):
     return subset & rs
 
 
+@predicate("_pathhistory(set, paths...)", safe=True, weight=20)
+def pathhistory(repo, subset, x):
+    """Changesets changing specified paths relative to repo root"""
+    # To achieve "follow" effect, pass `ancestors(.)` as `set`.
+    # To achieve "_followfirst" effect, pass `_firstancestors(.)` as `set`.
+    args = getargs(x, 2, (1 << 30), _("_pathhistory takes at least a set and a path"))
+    revs = getset(repo, subset, args[0], _("_pathhistory requires a set"))
+    paths = [getstring(x, _("argument should be paths")) for x in args[1:]]
+    nodes = repo.changelog.tonodes(revs)
+    hist = repo.pathhistory(paths, nodes)
+    torev = repo.changelog.rev
+    s = generatorset((torev(n) for n in hist), repo=repo, iterasc=False)
+    s.reverse()  # use DESC order to maintain laziness
+    s = subset & s
+    if isinstance(s, generatorset) and s.isascending() is True:
+        s.reverse()  # "subset &" might lose DESC order and laziness
+    return s
+
+
 @predicate("all()", safe=True)
 def getall(repo, subset, x):
     """All changesets, the same as ``0:tip``."""

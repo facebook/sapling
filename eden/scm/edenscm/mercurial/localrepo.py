@@ -1515,6 +1515,20 @@ class localrepository(object):
     def local(self):
         return self
 
+    def pathhistory(self, paths, nodes):
+        """Return an iterator of commit nodes that change paths.
+
+        path in paths can be either a file or a directory.
+        nodes decides the search range (ex. "::." or "_firstancestors(.)")
+        If first is True, only follow the first ancestors.
+
+        This can be used for `log` operations.
+        """
+        hist = bindings.pathhistory.pathhistory(
+            nodes, paths, self.changelog.inner, self.manifestlog.datastore
+        )
+        return hist
+
     def publishing(self):
         # narrow-heads repos are NOT publishing. This ensures pushing to a
         # narrow-heads repo would cause visible heads changes to make the
