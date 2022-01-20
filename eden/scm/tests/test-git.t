@@ -129,3 +129,19 @@ Test changes are readable via git:
   alpha3 test  (refs/visibleheads/5c9a5ee451a8051f0d16433dee8a2c2259d5fed8, foo)
   beta test  (HEAD -> master)
   alpha test  (no-eol)
+
+Exercise pathcopies code path:
+
+  $ hg diff -r '.^^' -r .
+  diff --git a/alpha b/alpha
+  --- a/alpha
+  +++ b/alpha
+  @@ -1,1 +1,1 @@
+  -1
+  +3
+  diff --git a/beta b/beta
+  new file mode 100644
+  --- /dev/null
+  +++ b/beta
+  @@ -0,0 +1,1 @@
+  +2

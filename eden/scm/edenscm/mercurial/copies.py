@@ -16,7 +16,7 @@ import collections
 import heapq
 import os
 
-from . import match as matchmod, node, pathutil, pycompat, scmutil, util
+from . import git, match as matchmod, node, pathutil, pycompat, scmutil, util
 from .i18n import _
 
 
@@ -166,6 +166,11 @@ def _backwardrenames(a, b):
 
 def pathcopies(x, y, match=None):
     """find {dst@y: src@x} copy mapping for directed compare"""
+    # git does not track copy information. It will have to be implemented
+    # differently. For now, git pathcopies remains unimplemented.
+    if git.isgit(x.repo()):
+        return {}
+
     if x == y or not x or not y:
         return {}
     a = y.ancestor(x)
