@@ -145,6 +145,7 @@ from edenscm.mercurial import (
     error,
     exchange,
     extensions,
+    git,
     hg,
     localrepo,
     match,
@@ -290,8 +291,10 @@ def wrappackers():
         packermap["03"] = (shallowbundle.shallowcg3packer, packermap03[1])
 
 
-def cloneshallow(orig, ui, repo, *args, **opts):
-    if opts.get("shallow"):
+def cloneshallow(orig, ui, source, *args, **opts):
+    # skip for (full) git repos
+    giturl = git.maybegiturl(source)
+    if opts.get("shallow") and giturl is None:
         repos = []
 
         def pull_shallow(orig, self, *args, **kwargs):
@@ -333,7 +336,7 @@ def cloneshallow(orig, ui, repo, *args, **opts):
 
         wrapfunction(localrepo, "newreporequirements", newreporequirements)
 
-    orig(ui, repo, *args, **opts)
+    orig(ui, source, *args, **opts)
 
 
 def debugdatashallow(orig, *args, **kwds):

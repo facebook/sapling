@@ -1618,18 +1618,25 @@ def clone(ui, source, dest=None, **opts):
     """
     if opts.get("noupdate") and opts.get("updaterev"):
         raise error.Abort(_("cannot specify both --noupdate and --updaterev"))
-
-    r = hg.clone(
-        ui,
-        opts,
-        source,
-        dest,
-        pull=opts.get("pull"),
-        stream=opts.get("stream") or opts.get("uncompressed"),
-        rev=opts.get("rev"),
-        update=opts.get("updaterev") or not opts.get("noupdate"),
-        shallow=opts.get("shallow"),
-    )
+    giturl = git.maybegiturl(source)
+    if giturl is not None:
+        if opts.get("noupdate"):
+            update = False
+        else:
+            update = opts.get("updaterev") or True
+        r = git.clone(ui, giturl, dest, update)
+    else:
+        r = hg.clone(
+            ui,
+            opts,
+            source,
+            dest,
+            pull=opts.get("pull"),
+            stream=opts.get("stream") or opts.get("uncompressed"),
+            rev=opts.get("rev"),
+            update=opts.get("updaterev") or not opts.get("noupdate"),
+            shallow=opts.get("shallow"),
+        )
 
     return r is None
 

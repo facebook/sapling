@@ -176,3 +176,33 @@ Test pull:
 
 - infinitepush compatibility
   $ hg pull --config extensions.infinitepush=
+
+Test clone with flags (--noupdate, --updaterev):
+
+  $ mkdir $TESTTMP/clonetest
+  $ cd $TESTTMP/clonetest
+
+  $ hg clone -q --noupdate "git+file://$TESTTMP/gitrepo"
+  $ cd gitrepo
+  $ hg log -r . -T '{node|short}\n'
+  000000000000
+  $ cd ..
+
+  $ hg clone "git+file://$TESTTMP/gitrepo" cloned1
+  From file:/*/$TESTTMP/gitrepo (glob)
+   * [new branch]      foo        -> origin/foo
+   * [new branch]      master     -> origin/master
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg --cwd cloned1 log -r . -T '{node|short} {remotenames} {desc}\n'
+  5c9a5ee451a8 origin/foo alpha3
+  $ cd ..
+
+  $ hg clone --updaterev origin/foo "git+file://$TESTTMP/gitrepo" cloned2
+  From file:/*/$TESTTMP/gitrepo (glob)
+   * [new branch]      foo        -> origin/foo
+   * [new branch]      master     -> origin/master
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
+  5c9a5ee451a8 origin/foo alpha3
+  $ cd ..
+

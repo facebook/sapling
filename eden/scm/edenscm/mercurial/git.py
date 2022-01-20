@@ -8,6 +8,8 @@ utilities for git support
 """
 
 import hashlib
+import os
+import shutil
 import subprocess
 
 import bindings
@@ -39,11 +41,107 @@ def isgit(repo):
     return GIT_REQUIREMENT in repo.storerequirements
 
 
+def clone(ui, url, destpath=None, update=True):
+    """Clone a git repo, then create a repo at dest backed by the git repo.
+    update can be False, or True, or a node to update to.
+    - False: do not update, leave an empty working copy.
+    - True: upate to git HEAD.
+    - other: update to `other` (node, or name).
+    """
+    from . import hg
+
+    if destpath is None:
+        # use basename as fallback, but strip ".git" or "/.git".
+        basename = os.path.basename(url)
+        if basename == ".git":
+            basename = os.path.basename(os.path.dirname(url))
+        elif basename.endswith(".git"):
+            basename = basename[:-4]
+        destpath = os.path.realpath(basename)
+
+    repo = hg.repository(ui, ui.expandpath(destpath), create=True).local()
+    try:
+        ret = clonegitbare(ui, url, repo.svfs.join("git"))
+        if ret != 0:
+            raise error.Abort(_("git clone was not successful"))
+        initgit(repo, "git")
+    except Exception:
+        repo = None
+        shutil.rmtree(destpath, ignore_errors=True)
+        raise
+    if update is not False:
+        if update is True:
+            update = None
+        postpullupdate(repo, update)
+    return repo
+
+
+def initgit(repo, gitdir):
+    """Change a repo to be backed by a bare git repo in `gitdir`.
+    This should only be called for newly created repos.
+    """
+    from . import visibility
+
+    hgrc = "%include builtin:git.rc\n"
+
+    with repo.lock(), repo.transaction("initgit"):
+        repo.svfs.writeutf8(GIT_DIR_FILE, gitdir)
+        repo.storerequirements.add(GIT_REQUIREMENT)
+        repo._writestorerequirements()
+        repo.invalidatechangelog()
+        visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
+        repo.sharedvfs.writeutf8("hgrc", hgrc)
+        repo.ui.reloadconfigs(repo.root)
+
+
+def maybegiturl(url):
+    """Return normalized url if url is a git url, or None otherwise.
+
+    For now url schemes "git", "git+file", "git+ftp", "git+http", "git+https",
+    "git+ssh" are considered git urls. The "git+" part will be stripped.
+    """
+    parsed = util.url(url)
+    if parsed.scheme == "git":
+        return url
+    if parsed.scheme in {
+        "git+file",
+        "git+ftp",
+        "git+ftps",
+        "git+http",
+        "git+https",
+        "git+ssh",
+    }:
+        if url.startswith("git+"):
+            return url[4:]
+    return None
+
+
+def clonegitbare(ui, giturl, destpath):
+    """Clone a git repo into local path `dest` as a git bare repo.
+    This does not prepare working copy or `.hg`.
+    """
+    # not using 'git clone --bare' because it writes refs to refs/heads/,
+    # not in desirable refs/remotes/origin/heads/.
+    for gitdir, cmd in [
+        (None, ["init", "-q", "-b", "default", "--bare", destpath]),
+        (destpath, ["remote", "add", "origin", giturl]),
+        (destpath, ["fetch", "origin"]),
+    ]:
+        ret = rungitnorepo(ui, cmd, gitdir=gitdir)
+        if ret != 0:
+            return ret
+    return 0
+
+
 @cached
 def readgitdir(repo):
     """Return the path of the GIT_DIR, if the repo is backed by git"""
     if isgit(repo):
-        return repo.svfs.readutf8(GIT_DIR_FILE)
+        path = repo.svfs.readutf8(GIT_DIR_FILE)
+        if os.path.isabs(path):
+            return path
+        else:
+            return repo.svfs.join(path)
     else:
         return None
 
