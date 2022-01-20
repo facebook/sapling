@@ -85,7 +85,7 @@ Test status:
 
 Test commit:
 
-  $ hg commit -m alpha3
+  $ hg commit -m alpha3 -d '2001-02-03T14:56:01 +0800'
   $ hg log -Gr: -T '{desc}'
   @  alpha3
   │
@@ -124,16 +124,31 @@ Test bookmarks:
 
   $ hg bookmark -r. foo
   $ hg bookmarks
-     foo                       5c9a5ee451a8
+     foo                       4899b7b71a9c
      master                    3f5848713286
 
 Test changes are readable via git:
 
   $ export GIT_DIR="$TESTTMP/gitrepo/.git"
   $ git log foo --pretty='format:%s %an %d'
-  alpha3 test  (refs/visibleheads/5c9a5ee451a8051f0d16433dee8a2c2259d5fed8, foo)
+  alpha3 test  (refs/visibleheads/4899b7b71a9c241a7c43171f525cc9d6fcabfd4f, foo)
   beta test  (HEAD -> master)
   alpha test  (no-eol)
+  $ git fsck --strict
+  $ git show foo
+  commit 4899b7b71a9c241a7c43171f525cc9d6fcabfd4f
+  Author: test <>
+  Date:   Sat Feb 3 14:56:01 2001 +0800
+  
+      alpha3
+  
+  diff --git a/alpha b/alpha
+  index d00491f..00750ed 100644
+  --- a/alpha
+  +++ b/alpha
+  @@ -1 +1 @@
+  -1
+  +3
 
 Exercise pathcopies code path:
 
@@ -168,7 +183,7 @@ Test pull:
   $ hg pull origin -B foo
   pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
   From file:/*/$TESTTMP/gitrepo/ (glob)
-   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> origin/foo
+   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> origin/foo
   $ hg log -r origin/foo -T '{desc}\n'
   alpha3
 
@@ -205,19 +220,19 @@ Test clone with flags (--noupdate, --updaterev):
 
   $ hg clone "git+file://$TESTTMP/gitrepo" cloned1 --config remotenames.selectivepulldefault=foo,master
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> remote/foo
+   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> remote/foo
    * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned1 log -r . -T '{node|short} {remotenames} {desc}\n'
-  5c9a5ee451a8 remote/foo alpha3
+  4899b7b71a9c remote/foo alpha3
   $ cd ..
 
   $ hg clone --updaterev remote/foo "git+file://$TESTTMP/gitrepo" cloned2 --config remotenames.selectivepulldefault=foo
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> remote/foo
+   * [new ref]         4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> remote/foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
-  5c9a5ee451a8 remote/foo alpha3
+  4899b7b71a9c remote/foo alpha3
   $ cd ..
 
 Test push:
@@ -232,7 +247,7 @@ Test push:
 - --to with -r
   $ hg push -r '.^' --to parent_change_beta
   To file:/*/$TESTTMP/gitrepo (glob)
-   * [new branch]      5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> parent_change_beta
+   * [new branch]      4899b7b71a9c241a7c43171f525cc9d6fcabfd4f -> parent_change_beta
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
   alpha3 remote/foo remote/parent_change_beta
@@ -267,7 +282,7 @@ Test push:
   $ hg push -qr $B --to foo
   $ hg push -qr $C --to foo
   To file:/*/$TESTTMP/pushforce.git (glob)
-   ! [rejected]        5d38a953d58b0c80a4416ba62e62d3f2985a3726 -> foo (non-fast-forward)
+   ! [rejected]        c5ccacfe4b4e5a101b506acd6137d4edae939bd5 -> foo (non-fast-forward)
   error: failed to push some refs to 'file:/*/$TESTTMP/pushforce.git' (glob)
   [1]
   $ hg push -qr $C --to foo --force
@@ -293,7 +308,7 @@ Test push:
  (pick "main" automatically)
   $ hg push
   To file:/*/$TESTTMP/pushto.git (glob)
-     0de3093..a9d5bd6  a9d5bd6ac8bcf89de9cd99fd215cca243e8aeed9 -> main
+     6c0d078..d5a5b13  d5a5b13ffe5c8ad66b1b1fb5ae7e27a2ea8bc79a -> main
   $ hg push -q --to stable
 
  (cannot pick with multiple candidates)
@@ -395,6 +410,6 @@ Rebase merging conflicts
   > A    # C/f=1\n2\n2.5\n3\n
   > EOS
   $ hg rebase -r $B -d $C
-  rebasing e03992db70e4 "B"
+  rebasing af57f8af1bd0 "B"
   merging f
 

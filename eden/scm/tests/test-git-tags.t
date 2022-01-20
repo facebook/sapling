@@ -62,7 +62,7 @@ Push tags
   $ hg commit -m C
   $ hg push --to tags/v3
   To file:/*/$TESTTMP/git-repo (glob)
-   * [new tag]         3ae7e245a04362ee0d45ff2e5135e5d93c5a2303 -> v3
+   * [new tag]         00b1479dc0c16c6ce1b909869bd2b1466c2468c0 -> v3
   $ hg log -Gr: -T '{remotenames} {desc}'
   @  remote/tags/v3 C
   │
@@ -76,4 +76,4 @@ Verify the pushed tag can be seen by git
   bfff4215bb0ba84b76577621c9974de957610ecb commit	refs/heads/main
   bfff4215bb0ba84b76577621c9974de957610ecb commit	refs/tags/v1
   e8a8a552565346d086e22288b8cf16ef2cb2267e commit	refs/tags/v2
-  3ae7e245a04362ee0d45ff2e5135e5d93c5a2303 commit	refs/tags/v3
+  00b1479dc0c16c6ce1b909869bd2b1466c2468c0 commit	refs/tags/v3

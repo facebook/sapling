@@ -267,13 +267,20 @@ def hgcommittext(manifest, files, desc, user, date, extra):
 
 
 def gitdatestr(datestr):
-    """convert datestr to git date str used in commits"""
+    """convert datestr to git date str used in commits
+
+    >>> util.parsedate('2000-01-01T00:00:00 +0700')
+    (946659600, -25200)
+    >>> gitdatestr('2000-01-01T00:00:00 +0700')
+    '946659600 +0700'
+    """
     utc, offset = util.parsedate(datestr)
     if offset >= 0:
-        offsetsign = "+"
-    else:
         offsetsign = "-"
+    else:
+        offsetsign = "+"
         offset = -offset
+    offset = offset // 60
     offsethour = offset // 60
     offsetminute = offset % 60
     return "%d %s%02d%02d" % (utc, offsetsign, offsethour, offsetminute)
