@@ -333,3 +333,23 @@ Submodule does not cause a crash:
   100644 blob 0cfbf08886fca9a91cb753ec8734c84fcbe52c9f	c
   100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	d
 
+Tags are ignored during clone and pull:
+
+  $ cd
+  $ git init -b main -q gittag
+  $ cd gittag
+  $ echo 1 > a
+  $ git add a
+  $ git commit -q -m a
+  $ git tag v1
+
+  $ cd
+  $ hg clone -q git+file://$TESTTMP/gittag cloned-gittag
+  $ cd cloned-gittag
+  $ hg pull
+  $ hg bookmarks
+  no bookmarks set
+  $ hg bookmarks --remote
+     origin/main               379d702a285c
+  $ git --git-dir=.hg/store/git for-each-ref
+  379d702a285c1e34e6365cc347249ec73bcd6b40 commit	refs/remotes/origin/main

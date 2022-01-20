@@ -126,7 +126,7 @@ def clonegitbare(ui, giturl, destpath):
     for gitdir, cmd in [
         (None, ["init", "-q", "-b", "default", "--bare", destpath]),
         (destpath, ["remote", "add", "origin", giturl]),
-        (destpath, ["fetch", "origin"]),
+        (destpath, ["fetch", "--no-tags", "origin"]),
     ]:
         ret = rungitnorepo(ui, cmd, gitdir=gitdir)
         if ret != 0:
@@ -178,7 +178,7 @@ def revparse(repo, revspec):
 
 def pull(repo, source, refspecs):
     """Run `git fetch` on the backing repo to perform a pull"""
-    ret = rungit(repo, ["fetch", "--prune", source] + refspecs)
+    ret = rungit(repo, ["fetch", "--no-tags", "--prune", source] + refspecs)
     repo.invalidate(clearfilecache=True)
     return ret
 
