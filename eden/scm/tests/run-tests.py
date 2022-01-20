@@ -1541,6 +1541,13 @@ class Test(unittest.TestCase):
         env["HGENCODINGMODE"] = "strict"
         env["HGOUTPUTENCODING"] = "ascii"
         env["HGIPV6"] = str(int(self._useipv6))
+        # Git
+        env["GIT_AUTHOR_NAME"] = "test"
+        env["GIT_AUTHOR_EMAIL"] = "test@example.org"
+        env["GIT_AUTHOR_DATE"] = "2007-01-01 00:00:10 +0000"
+        env["GIT_COMMITTER_NAME"] = "test"
+        env["GIT_COMMITTER_EMAIL"] = "test@example.org"
+        env["GIT_COMMITTER_DATE"] = "2007-01-01 00:00:10 +0000"
 
         # LOCALIP could be ::1 or 127.0.0.1. Useful for tests that require raw
         # IP addresses.
@@ -1571,6 +1578,8 @@ class Test(unittest.TestCase):
             + " EDENSCM_LOG LOG FAILPOINTS"
             # Used by dummyssh
             + " DUMMYSSH_STABLE_ORDER"
+            # Used by git
+            + " GIT_DIR"
         ).split()
 
         if not self._options.getdeps_build:
