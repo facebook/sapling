@@ -168,7 +168,7 @@ def pathcopies(x, y, match=None):
     """find {dst@y: src@x} copy mapping for directed compare"""
     # git does not track copy information. It will have to be implemented
     # differently. For now, git pathcopies remains unimplemented.
-    if git.isgit(x.repo()):
+    if git.isgitformat(x.repo()):
         return {}
 
     if x == y or not x or not y:

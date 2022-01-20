@@ -2765,7 +2765,7 @@ def _makenofollowlogfilematcher(repo, pats, opts):
 def _usepathhistory(repo):
     """whether to use the PathHistory API for log history"""
     # Git repo does not have filelog, linkrev. Must use PathHistory.
-    if git.isgit(repo):
+    if git.isgitformat(repo):
         return True
     return repo.ui.configbool("experimental", "pathhistory")
 

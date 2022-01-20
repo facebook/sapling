@@ -356,8 +356,10 @@ class localrepository(object):
         "doublewritechangelog",
         # hybrid changelog (full idmap, partial hgcommits) + revlog + edenapi
         "hybridchangelog",
-        # backed by git repo
-        git.GIT_REQUIREMENT,
+        # use git format
+        git.GIT_FORMAT_REQUIREMENT,
+        # backed by git bare repo
+        git.GIT_STORE_REQUIREMENT,
         # lazy commit message (full idmap, partial hgcommits) + edenapi
         "lazytextchangelog",
         # lazy commit message (sparse idmap, partial hgcommits) + edenapi
@@ -958,7 +960,7 @@ class localrepository(object):
         if quiet:
             configoverride[("ui", "quiet")] = True
 
-        if git.isgit(self):
+        if git.isgitpeer(self):
             # git does not support "lookup", aka. prefix match
             if headnames:
                 raise errormod.Abort(
@@ -1571,7 +1573,7 @@ class localrepository(object):
     def file(self, f):
         if f[0] == "/":
             f = f[1:]
-        if git.isgit(self):
+        if git.isgitstore(self):
             return git.gitfilelog(self)
         return filelog.filelog(self.svfs, f)
 
@@ -2638,7 +2640,7 @@ class localrepository(object):
                     % (extraslen, extraslimit)
                 )
 
-        isgit = git.isgit(self)
+        isgit = git.isgitformat(self)
         lock = self.lock()
         try:
             tr = self.transaction("commit")
@@ -3148,7 +3150,7 @@ def aftertrans(reporef, files):
         # Sync metalog references back to git references.
         # This should happen after writng metalog.
         repo = reporef()
-        if repo is not None and git.isgit(repo):
+        if repo is not None and git.isgitstore(repo):
             repo.changelog.inner.updatereferences(repo.metalog())
 
     return a
@@ -3268,7 +3270,7 @@ def _openchangelog(repo):
                 "accessing older commits is broken!\n"
             )
         )
-    if git.isgit(repo):
+    if git.isgitstore(repo):
         repo.ui.log("changelog_info", changelog_backend="git")
         return changelog2.changelog.opengitsegments(repo, repo.ui.uiconfig())
     if "lazytextchangelog" in repo.storerequirements:

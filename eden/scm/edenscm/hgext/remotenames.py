@@ -816,7 +816,7 @@ def _guesspushtobookmark(repo, pushnode, remotename):
 
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
-    if git.isgit(repo):
+    if git.isgitpeer(repo):
         if dest is None:
             dest = "default"
         force = opts.get("force")
@@ -1237,7 +1237,7 @@ def displayremotebookmarks(ui, repo, opts, fm):
 
 
 def _getremotepeer(ui, repo, opts):
-    if git.isgit(repo):
+    if git.isgitpeer(repo):
         # no peer interface for git (bare) repos
         return None
 

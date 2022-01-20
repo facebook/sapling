@@ -1179,7 +1179,7 @@ class lazyremotenamedict(pycompat.Mapping):
         threshold = repo.ui.configint("remotenames", "autocleanupthreshold") or 0
         # Do not clean up refs for git, which might have a lot of refs.
         # Doing so causes surprises: tags, remote refs will be gone unexpectedly.
-        if not git.isgit(repo) and threshold > 0 and len(entries) > threshold:
+        if not git.isgitformat(repo) and threshold > 0 and len(entries) > threshold:
             repo.ui.status_err(
                 _(
                     "attempt to clean up remote bookmarks since they exceed threshold %s\n"

@@ -4597,7 +4597,7 @@ def pull(ui, repo, source="default", **opts):
         # - Does not support named branches.
         modheads, checkout = _newpull(ui, repo, source, **opts)
     else:
-        if git.isgit(repo):
+        if git.isgitpeer(repo):
             raise error.Abort(_("pull: branch name in URL is not supported"))
         # The legacy pull implementation. Problems:
         # - Remotenames:

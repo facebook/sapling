@@ -157,7 +157,7 @@ class fileslog(object):
     def __init__(self, repo):
         self.ui = repo.ui
         self.repo = repo
-        if git.isgit(repo):
+        if git.isgitstore(repo):
             gitstore = git.openstore(repo)
             self.contentstore = gitstore
             self.filescmstore = gitstore

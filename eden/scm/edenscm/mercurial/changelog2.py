@@ -54,7 +54,7 @@ class changelog(object):
         self.svfs = svfs
         self.inner = inner
         self._uiconfig = uiconfig
-        self._isgit = git.isgit(repo)
+        self._isgit = git.isgitformat(repo)
         # Number of commit texts to buffer. Useful for bounding memory usage.
         self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
         self._reporef = weakref.ref(repo)
@@ -936,7 +936,7 @@ def migratetorevlog(repo):
         needmigrate = False
         if "segmentedchangelog" in repo.storerequirements:
             needmigrate = True
-        if git.isgit(repo):
+        if git.isgitformat(repo):
             raise error.Abort(_("cannot migrate git repo"))
         if needmigrate:
             srccl = repo.changelog

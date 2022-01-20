@@ -425,7 +425,7 @@ def _prunesharedpacks(repo, packpath):
 
 def setuptreestores(repo, mfl):
     ui = repo.ui
-    if git.isgit(repo):
+    if git.isgitstore(repo):
         mfl._isgit = True
         mfl.datastore = git.openstore(repo)
     else:

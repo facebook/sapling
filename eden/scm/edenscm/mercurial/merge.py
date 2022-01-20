@@ -2371,7 +2371,7 @@ def update(
                 repo.ui.configbool("clone", "nativecheckout")
                 and repo["."].node() == nullid
             )
-            or git.isgit(repo)
+            or git.isgitstore(repo)
         ):
             if branchmerge:
                 fallbackcheckout = "branchmerge is not supported: %s" % branchmerge
@@ -2407,7 +2407,7 @@ def update(
                     wc,
                     prerecrawls,
                 )
-                if git.isgit(repo) and not wc.isinmemory():
+                if git.isgitformat(repo) and not wc.isinmemory():
                     git.submodulecheckout(p2, matcher, force=force)
                 return ret
 
@@ -2633,7 +2633,7 @@ def update(
                     repo.dirstate.setbranch(p2.branch())
 
     if not partial:
-        if git.isgit(repo) and not wc.isinmemory():
+        if git.isgitformat(repo) and not wc.isinmemory():
             git.submodulecheckout(p2, matcher, force=force)
         repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
 
@@ -2713,7 +2713,7 @@ def donativecheckout(repo, p1, p2, xp1, xp2, matcher, force, partial, wc, prerec
         repo.ui.debug("Native checkout plan:\n%s\n" % plan)
 
     if not force:
-        if git.isgit(repo):
+        if git.isgitstore(repo):
             store = repo.fileslog.contentstore
         else:
             store = repo.fileslog.filescmstore

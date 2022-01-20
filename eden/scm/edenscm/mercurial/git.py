@@ -21,8 +21,16 @@ from . import bookmarks as bookmod, error, progress, util
 from .i18n import _
 from .node import bin, hex, nullid
 
+# If git-store is set, the path in svfs pointing to the git bare repo.
 GIT_DIR_FILE = "gitdir"
-GIT_REQUIREMENT = "git"
+
+# The repo is backed by a local git bare repo.
+# Implies push pull should shell out to git.
+GIT_STORE_REQUIREMENT = "git-store"
+
+# Whether the repo should use git format when creating new objects.
+# Should be set if git-store is set.
+GIT_FORMAT_REQUIREMENT = "git"
 
 
 def cached(func):
@@ -39,9 +47,19 @@ def cached(func):
     return wrapper
 
 
-def isgit(repo):
-    """Test if repo is backed by git"""
-    return GIT_REQUIREMENT in repo.storerequirements
+def isgitformat(repo):
+    """Test if repo should use git format"""
+    return GIT_FORMAT_REQUIREMENT in repo.storerequirements
+
+
+def isgitstore(repo):
+    """Test if repo is backed by a git bare repo, and should delegate to git for exchange."""
+    return GIT_STORE_REQUIREMENT in repo.storerequirements
+
+
+def isgitpeer(repo):
+    """Test if repo should use git commands to push and pull."""
+    return isgitstore(repo)
 
 
 def clone(ui, url, destpath=None, update=True, pullnames=None):
@@ -102,7 +120,8 @@ def initgit(repo, gitdir, giturl=None):
 
     with repo.lock(), repo.transaction("initgit"):
         repo.svfs.writeutf8(GIT_DIR_FILE, gitdir)
-        repo.storerequirements.add(GIT_REQUIREMENT)
+        repo.storerequirements.add(GIT_FORMAT_REQUIREMENT)
+        repo.storerequirements.add(GIT_STORE_REQUIREMENT)
         repo._writestorerequirements()
         repo.invalidatechangelog()
         visibility.add(repo, repo.changelog.dageval(lambda: heads(all())))
@@ -150,7 +169,7 @@ def initgitbare(ui, giturl, destpath):
 @cached
 def readgitdir(repo):
     """Return the path of the GIT_DIR, if the repo is backed by git"""
-    if isgit(repo):
+    if isgitstore(repo):
         path = repo.svfs.readutf8(GIT_DIR_FILE)
         if os.path.isabs(path):
             return path

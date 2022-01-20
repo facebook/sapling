@@ -580,7 +580,7 @@ class changectx(basectx):
     def files(self):
         files = self._changeset.files
         # git does not provide "files" in commit message - run diff to get it
-        if not files and git.isgit(self._repo):
+        if not files and git.isgitformat(self._repo):
             files = sorted(self.manifest().diff(self.p1().manifest()).keys())
         return files
 
@@ -1467,7 +1467,7 @@ class committablectx(basectx):
     @propertycache
     def _flagfunc(self):
         func = self._repo.dirstate.flagfunc(self._buildflagfunc)
-        if git.isgit(self._repo):
+        if git.isgitformat(self._repo):
             # change submodule flags to 'm'
             submodules = git.parsesubmodules(self)
             if submodules:
@@ -1850,7 +1850,7 @@ class workingctx(committablectx):
         )
 
         # Extend status with submodule status
-        if not self.isinmemory() and git.isgit(self._repo):
+        if not self.isinmemory() and git.isgitformat(self._repo):
             submodulestatus = git.submodulestatus(self)
             for path, (oldnode, newnode) in submodulestatus.items():
                 if not match(path):
@@ -1905,7 +1905,7 @@ class workingctx(committablectx):
             if f in man:
                 del man[f]
 
-        if not self.isinmemory() and git.isgit(self._repo):
+        if not self.isinmemory() and git.isgitformat(self._repo):
             submodulestatus = git.submodulestatus(self)
         else:
             submodulestatus = {}
