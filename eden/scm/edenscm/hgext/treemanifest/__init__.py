@@ -1159,6 +1159,8 @@ def pull(orig, ui, repo, *pats, **opts):
 
 
 def _postpullprefetch(ui, repo):
+    if "default" not in repo.ui.paths:
+        return
 
     ctxs = []
     mfstore = repo.manifestlog.datastore
