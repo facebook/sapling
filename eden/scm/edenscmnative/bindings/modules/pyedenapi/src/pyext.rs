@@ -359,6 +359,24 @@ pub trait EdenApiPyExt: EdenApi {
         PyCell::new(py, data)
     }
 
+    fn pull_lazy_py(&self, py: Python, common: Vec<HgId>, missing: Vec<HgId>) -> PyResult<PyCell> {
+        let data = {
+            py.allow_threads(|| {
+                block_unless_interrupted(async move {
+                    match self.pull_lazy(common, missing).await {
+                        Err(e) => Err(e),
+                        Ok(data) => Ok(data.convert_vertex(|hgid| {
+                            VertexName(hgid.into_byte_array().to_vec().into())
+                        })),
+                    }
+                })
+            })
+            .map_pyerr(py)?
+            .map_pyerr(py)?
+        };
+        PyCell::new(py, data)
+    }
+
     fn lookup_file_contents(
         &self,
         py: Python,

@@ -95,3 +95,15 @@ Test APIs:
                                    "high": 1,
                                    "parents": [0]}]}}
 
+  $ hg debugapi -e pulllazy -i "[b'$A']" -i "[b'$B']"
+  {"idmap": {0: bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0"),
+             1: bin("112478962961147124edd43549aedd1a335e44bf")},
+   "flat_segments": {"segments": [{"low": 1,
+                                   "high": 1,
+                                   "parents": [0]}]}}
+  $ hg debugapi -e pulllazy -i "[]" -i "[b'$A']"
+  {"idmap": {0: bin("426bada5c67598ca65036d57d9e4b64b0c1ce7a0")},
+   "flat_segments": {"segments": [{"low": 0,
+                                   "high": 0,
+                                   "parents": []}]}}
+
