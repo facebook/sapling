@@ -20,9 +20,14 @@
 //!
 //! See `PathHistory` for the main structure.
 
-#[allow(unused)]
+mod pathhistory;
 mod pathops;
 mod utils;
+
+#[cfg(test)]
+mod tests;
+
+pub use crate::pathhistory::PathHistory;
 
 #[cfg(test)]
 dev_logger::init!();
