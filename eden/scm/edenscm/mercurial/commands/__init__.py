@@ -3803,7 +3803,15 @@ def import_(ui, repo, patch1=None, *patches, **opts):
         release(lock, dsguard, wlock)
 
 
-@command("init|ini", remoteopts, _("[-e CMD] [--remotecmd CMD] [DEST]"), norepo=True)
+@command(
+    "init|ini",
+    remoteopts
+    + [
+        ("", "git", False, _("use git as backend (EXPERIMENTAL)")),
+    ],
+    _("[-e CMD] [--remotecmd CMD] [DEST]"),
+    norepo=True,
+)
 def init(ui, dest=".", **opts):
     """create a new repository in the given directory
 
@@ -3817,7 +3825,11 @@ def init(ui, dest=".", **opts):
 
     Returns 0 on success.
     """
-    hg.repository(ui, ui.expandpath(dest), create=True)
+    destpath = ui.expandpath(dest)
+    if opts.get("git"):
+        git.clone(ui, "", destpath)
+    else:
+        hg.repository(ui, destpath, create=True)
 
 
 @command(

@@ -362,3 +362,13 @@ Cloud sync does not crash:
   (your repo is not connected to any workspace)
   (use 'hg cloud join --help' for more details)
   [255]
+
+Init with --git:
+
+  $ cd
+  $ hg init --git init-git
+  $ cd init-git
+  $ [ -d $TESTTMP/init-git/.hg/store/git ]
+  $ hg log
+  $ hg status
+

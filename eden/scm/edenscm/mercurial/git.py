@@ -48,6 +48,7 @@ def clone(ui, url, destpath=None, update=True):
     - False: do not update, leave an empty working copy.
     - True: upate to git HEAD.
     - other: update to `other` (node, or name).
+    If url is empty, create the repo but do not add a remote.
     """
     from . import hg
 
@@ -120,14 +121,17 @@ def maybegiturl(url):
 def clonegitbare(ui, giturl, destpath):
     """Clone a git repo into local path `dest` as a git bare repo.
     This does not prepare working copy or `.hg`.
+    If giturl is empty, do not add a remote and skip fetching.
     """
     # not using 'git clone --bare' because it writes refs to refs/heads/,
     # not in desirable refs/remotes/origin/heads/.
-    for gitdir, cmd in [
-        (None, ["init", "-q", "-b", "default", "--bare", destpath]),
-        (destpath, ["remote", "add", "origin", giturl]),
-        (destpath, ["fetch", "--no-tags", "origin"]),
-    ]:
+    cmdlist = [(None, ["init", "-q", "-b", "default", "--bare", destpath])]
+    if giturl:
+        cmdlist += [
+            (destpath, ["remote", "add", "origin", giturl]),
+            (destpath, ["fetch", "--no-tags", "origin"]),
+        ]
+    for gitdir, cmd in cmdlist:
         ret = rungitnorepo(ui, cmd, gitdir=gitdir)
         if ret != 0:
             return ret
