@@ -166,7 +166,7 @@ impl PyTypeId {
 /// Register a function to convert a PyObject (Python type: P)
 /// to type O using the specified function.
 ///
-/// After registration, `PyInto<O>` can be used in Python function
+/// After registration, `ImplInto<O>` can be used in Python function
 /// definitions.
 ///
 /// If P is `PyObject`, then it matches heap types (usually, objects
