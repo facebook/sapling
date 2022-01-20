@@ -117,6 +117,22 @@ ParentChangeCallback = Callable[
 ]
 
 
+def fastreadp1(repopath):
+    """Read dirstate p1 node without constructing repo or dirstate objects
+
+    This is the first 20-bytes of the dirstate file. All known dirstate
+    implementations (edenfs, treestate, etc.) respect this format.
+
+    Return None if p1 cannot be read.
+    """
+    try:
+        with open(os.path.join(repopath, ".hg", "dirstate"), "rb") as f:
+            node = f.read(len(nullid))
+            return node
+    except IOError:
+        return None
+
+
 class dirstate(object):
     def __init__(
         self,

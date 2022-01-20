@@ -383,6 +383,12 @@ class Submodule:
 
     def checkout(self, node, force=False):
         """checkout a commit in working copy"""
+        # Try to check working parent without constructing the repo.
+        # This can speed up checkout significantly if there are many
+        # submodules.
+        if not force and self.workingparentnode() == node:
+            return
+
         repo = self.workingcopyrepo
         self.pullnode(repo, node)
         # Skip if the commit is already checked out, unless force is set.
@@ -392,6 +398,19 @@ class Submodule:
         from . import hg
 
         hg.updaterepo(repo, node, overwrite=force)
+
+    def workingparentnode(self):
+        """get the working parent node (in a fast way)"""
+        # try propertycache workingcopyrepo first
+        repo = self.__dict__.get("workingcopyrepo", None)
+        if repo is not None:
+            return repo.dirstate.p1()
+
+        repopath = self.parentrepo.wvfs.join(self.path)
+
+        from . import dirstate
+
+        return dirstate.fastreadp1(repopath)
 
 
 def callgit(repo, args):
