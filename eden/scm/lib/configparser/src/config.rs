@@ -298,6 +298,13 @@ impl ConfigSet {
         visited: &mut HashSet<PathBuf>,
         errors: &mut Vec<Error>,
     ) {
+        tracing::debug!(
+            "load {} from path '{}' ({} bytes)",
+            path.display(),
+            opts.source.as_ref(),
+            buf.len()
+        );
+
         let mut section = Text::new();
         let shared_path = Arc::new(path.to_path_buf()); // use Arc to do shallow copy
         let skip_include = path.parent().is_none(); // skip handling %include if path is empty
@@ -522,6 +529,17 @@ impl ConfigSet {
                                 .map(|a| a.contains(&(sname, kname)))
                                 != Some(true)
                         {
+                            tracing::debug!(
+                                "dropping {}.{}={} set by {}",
+                                sname.as_ref(),
+                                kname.as_ref(),
+                                value
+                                    .value()
+                                    .as_ref()
+                                    .map(|v| v.as_ref())
+                                    .unwrap_or_default(),
+                                &location,
+                            );
                             values.remove(index);
                             removals += 1;
                             continue;
