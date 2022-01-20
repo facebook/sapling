@@ -4727,7 +4727,7 @@ def pull(ui, repo, source="default", **opts):
 
     # Run 'update' in another transaction.
     if checkout and checkout in repo:
-        checkout = str(repo[checkout].rev())
+        checkout = repo[checkout].node()
 
         # order below depends on implementation of
         # hg.addbranchrevs(). opts['bookmark'] is ignored,
@@ -4759,13 +4759,10 @@ def _newpull(ui, repo, source, **opts):
     """
     revs = opts.get("rev") or []
     bmarks = opts.get("bookmark") or []
+    checkout = None
     if revs:
         revs = autopull.rewritepullrevs(repo, revs)
         checkout = revs[0]
-    elif bmarks:
-        checkout = bmarks[0]
-    else:
-        checkout = "tip"
 
     url = ui.paths.getpath(source)
     remotename = bookmarks.remotenameforurl(ui, url.rawloc)
@@ -4795,6 +4792,10 @@ def _newpull(ui, repo, source, **opts):
         fullname = "%s/%s" % (remotename, name)
         if fullname not in repo:
             raise error.Abort(_("remote bookmark %s not found") % name)
+        if checkout is None:
+            checkout = fullname
+    if checkout is None:
+        checkout = "tip"
 
     # Convert remote bookmark names to {name: hexnode} dict.
     def namestonamehex(names, repo=repo, remotename=remotename):
