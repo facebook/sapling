@@ -17,6 +17,7 @@ from edenscm import tracing
 
 from . import error, util
 from .i18n import _
+from .node import hex
 
 GIT_DIR_FILE = "gitdir"
 GIT_REQUIREMENT = "git"
@@ -193,6 +194,24 @@ def postpullupdate(repo, node=None):
         fetchhead = revparse(repo, "FETCH_HEAD")
         node = repo[fetchhead].node()
     return hg.updatetotally(repo.ui, repo, node, None)
+
+
+def push(repo, dest, pushnode, to, force=False):
+    """Push "pushnode" to remote "dest" bookmark "to"
+
+    If force is True, enable non-fast-forward moves.
+    If pushnode is None, delete the remote bookmark.
+    """
+    if pushnode is None:
+        fromspec = ""
+    elif force:
+        fromspec = "+%s" % hex(pushnode)
+    else:
+        fromspec = "%s" % hex(pushnode)
+    refspec = "%s:refs/heads/%s" % (fromspec, to)
+    ret = rungit(repo, ["push", "-u", dest, refspec])
+    repo.invalidatechangelog()
+    return ret
 
 
 def callgit(repo, args):

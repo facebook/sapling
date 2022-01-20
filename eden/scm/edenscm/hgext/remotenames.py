@@ -28,6 +28,7 @@ import re
 import shutil
 import typing
 
+from edenscm import tracing
 from edenscm.mercurial import (
     bookmarks,
     commands,
@@ -36,6 +37,7 @@ from edenscm.mercurial import (
     error,
     exchange,
     extensions,
+    git,
     hg,
     localrepo,
     mutation,
@@ -784,7 +786,53 @@ def _getrebasedest(repo, opts):
     return tracking.get(active)
 
 
+def _guesspushtobookmark(repo, pushnode, remotename):
+    """try to guess the "push --to" bookmark name
+
+    Find the remote name that starts with "{remotename}/" that does not have
+    another remotename descandant, and can fast-forward to pushnode (aka. is
+    an ancestor of node) with the least distance.
+
+    Return the name that can be used as "push --to", or None if there are no
+    unique choice.
+    """
+    prefix = "%s/" % remotename
+    remotenamenodes = [
+        nodes[0] for nodes in repo._remotenames["bookmarks"].values() if len(nodes) == 1
+    ]
+    candidatenodes = set(
+        repo.dageval(lambda: parents(only([pushnode], remotenamenodes)))
+    )
+    candidates = [
+        (name[len(prefix) :], nodes[0])
+        for name, nodes in repo._remotenames["bookmarks"].items()
+        if name.startswith(prefix) and len(nodes) == 1 and nodes[0] in candidatenodes
+    ]
+    names = [item[0] for item in candidates]
+    if len(names) == 1:
+        return names[0]
+    tracing.debug("candidates of --to: %r" % (names,))
+    return None
+
+
 def expushcmd(orig, ui, repo, dest=None, **opts):
+    if git.isgit(repo):
+        force = opts.get("force")
+        delete = opts.get("delete")
+        if dest == "default":
+            dest = None
+        dest = dest or "origin"
+        if delete:
+            pushnode = None
+            to = delete
+        else:
+            revspec = (["."] + opts.get("bookmark", []) + opts.get("rev", []))[-1]
+            pushnode = scmutil.revsingle(repo, revspec).node()
+            to = opts.get("to") or _guesspushtobookmark(repo, pushnode, dest)
+            if not to:
+                raise error.Abort(_("use '--to' to specify destination bookmark"))
+        return git.push(repo, dest, pushnode, to, force=force)
+
     # during the upgrade from old to new remotenames, tooling that uses --force
     # will continue working if remotenames.forcecompat is enabled
     forcecompat = ui.configbool("remotenames", "forcecompat")

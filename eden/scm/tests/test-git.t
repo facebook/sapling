@@ -1,4 +1,5 @@
 #chg-compatible
+#require git no-windows
 
   $ export GIT_AUTHOR_NAME='test'
   $ export GIT_AUTHOR_EMAIL='test@example.org'
@@ -6,7 +7,7 @@
   $ export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
   $ export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
   $ export GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-  $ setconfig diff.git=true
+  $ setconfig diff.git=true ui.allowemptycommit=true
   $ unset GIT_DIR
 
 Prepare a git repo:
@@ -205,4 +206,86 @@ Test clone with flags (--noupdate, --updaterev):
   $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
   5c9a5ee451a8 origin/foo alpha3
   $ cd ..
+
+Test push:
+
+  $ cd "$TESTTMP/clonetest/cloned1"
+  $ echo 3 > beta
+  $ hg commit -m 'beta.change'
+
+- --to without -r
+  $ hg push -q --to book_change_beta
+
+- --to with -r
+  $ hg push -r '.^' --to parent_change_beta
+  To file:/*/$TESTTMP/gitrepo (glob)
+   * [new branch]      5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> parent_change_beta
+
+  $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
+  alpha3 origin/foo origin/parent_change_beta
+  beta.change origin/book_change_beta
+
+- delete bookmark
+  $ hg push --delete book_change_beta
+  To file:/*/$TESTTMP/gitrepo (glob)
+   - [deleted]         book_change_beta
+
+  $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
+  alpha3 origin/foo origin/parent_change_beta
+  beta.change 
+
+- infinitepush compatibility
+  $ hg push -q -r '.^' --to push_with_infinitepush --config extensions.infinitepush=
+
+- push with --force
+
+  $ cd "$TESTTMP"
+  $ git init -qb main --bare "pushforce.git"
+  $ hg clone "git+file://$TESTTMP/pushforce.git"
+  $ cd pushforce
+  $ git --git-dir=.hg/store/git config advice.pushUpdateRejected false
+
+  $ drawdag << 'EOS'
+  > B C
+  > |/
+  > A
+  > EOS
+
+  $ hg push -qr $B --to foo
+  $ hg push -qr $C --to foo
+  To file:/*/$TESTTMP/pushforce.git (glob)
+   ! [rejected]        5d38a953d58b0c80a4416ba62e62d3f2985a3726 -> foo (non-fast-forward)
+  error: failed to push some refs to 'file:/*/$TESTTMP/pushforce.git' (glob)
+  [1]
+  $ hg push -qr $C --to foo --force
+
+- push without --to
+
+  $ cd "$TESTTMP"
+  $ git init -qb main --bare "pushto.git"
+  $ hg clone "git+file://$TESTTMP/pushto.git"
+  $ cd pushto
+
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A
+  > EOS
+
+  $ hg push -qr $A --to stable
+  $ hg push -qr $B --to main
+  $ hg up -q $B
+  $ hg commit -m C
+
+ (pick "main" automatically)
+  $ hg push
+  To file:/*/$TESTTMP/pushto.git (glob)
+     0de3093..a9d5bd6  a9d5bd6ac8bcf89de9cd99fd215cca243e8aeed9 -> main
+  $ hg push -q --to stable
+
+ (cannot pick with multiple candidates)
+  $ hg commit -m D
+  $ hg push
+  abort: use '--to' to specify destination bookmark
+  [255]
 
