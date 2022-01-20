@@ -20,8 +20,8 @@ use std::str::FromStr;
 
 use edenapi_types::{
     wire::ToWire, AnyFileContentId, AnyId, Batch, FileAttributes, FileAuxData, FileContent,
-    FileContentTokenMetadata, FileEntry, FileRequest, FileSpec, UploadHgFilenodeRequest,
-    UploadToken, UploadTokenMetadata, UploadTokensResponse,
+    FileContentTokenMetadata, FileEntry, FileRequest, FileResponse, FileSpec, ServerError,
+    UploadHgFilenodeRequest, UploadToken, UploadTokenMetadata, UploadTokensResponse,
 };
 use ephemeral_blobstore::BubbleId;
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
@@ -107,6 +107,77 @@ impl EdenApiHandler for FilesHandler {
             })
             .boxed())
     }
+}
+
+/// Fetch the content of the files requested by the client.
+pub struct Files2Handler;
+
+#[async_trait]
+impl EdenApiHandler for Files2Handler {
+    type Request = FileRequest;
+    type Response = FileResponse;
+
+    const HTTP_METHOD: hyper::Method = hyper::Method::POST;
+    const API_METHOD: EdenApiMethod = EdenApiMethod::Files2;
+    const ENDPOINT: &'static str = "/files2";
+
+    fn sampling_rate(request: &Self::Request) -> NonZeroU64 {
+        // Sample trivial requests
+        if request.keys.len() + request.reqs.len() == 1 {
+            nonzero_ext::nonzero!(100u64)
+        } else {
+            nonzero_ext::nonzero!(1u64)
+        }
+    }
+
+    async fn handler(
+        repo: HgRepoContext,
+        _path: Self::PathExtractor,
+        _query: Self::QueryStringExtractor,
+        request: Self::Request,
+    ) -> HandlerResult<'async_trait, Self::Response> {
+        let ctx = repo.ctx().clone();
+
+        let len = request.keys.len() + request.reqs.len();
+        let reqs = request
+            .keys
+            .into_iter()
+            .map(|key| FileSpec {
+                key,
+                attrs: FileAttributes {
+                    content: true,
+                    aux_data: false,
+                },
+            })
+            .chain(request.reqs.into_iter());
+        ctx.perf_counters()
+            .add_to_counter(PerfCounterType::EdenapiFiles, len as i64);
+        let fetches = reqs.map(move |FileSpec { key, attrs }| {
+            fetch_file_response(repo.clone(), key.clone(), attrs)
+        });
+
+        Ok(stream::iter(fetches)
+            .buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
+            .inspect(move |response| {
+                if let Ok(result) = &response {
+                    if result.result.is_ok() {
+                        ctx.session().bump_load(Metric::GetpackFiles, 1.0);
+                    }
+                }
+            })
+            .boxed())
+    }
+}
+
+async fn fetch_file_response(
+    repo: HgRepoContext,
+    key: Key,
+    attrs: FileAttributes,
+) -> Result<FileResponse, Error> {
+    let result = fetch_file(repo, key.clone(), attrs)
+        .await
+        .map_err(|e| ServerError::generic(format!("{}", e)));
+    Ok(FileResponse { key, result })
 }
 
 /// Fetch requested file for a single key.

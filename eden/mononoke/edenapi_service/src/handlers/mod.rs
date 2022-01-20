@@ -59,6 +59,7 @@ pub(crate) use handler::{EdenApiHandler, HandlerError, HandlerResult, PathExtrac
 pub enum EdenApiMethod {
     Capabilities,
     Files,
+    Files2,
     Lookup,
     UploadFile,
     UploadHgFilenodes,
@@ -89,6 +90,7 @@ impl fmt::Display for EdenApiMethod {
         let name = match self {
             Self::Capabilities => "capabilities",
             Self::Files => "files",
+            Self::Files2 => "files2",
             Self::Trees => "trees",
             Self::History => "history",
             Self::CommitLocationToHash => "commit_location_to_hash",
@@ -286,6 +288,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
         Handlers::setup::<commit::LocationToHashHandler>(route);
         Handlers::setup::<commit::HashLookupHandler>(route);
         Handlers::setup::<files::FilesHandler>(route);
+        Handlers::setup::<files::Files2Handler>(route);
         Handlers::setup::<files::UploadHgFilenodesHandler>(route);
         Handlers::setup::<bookmarks::BookmarksHandler>(route);
         Handlers::setup::<bookmarks::SetBookmarkHandler>(route);
