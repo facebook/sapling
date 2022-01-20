@@ -2909,7 +2909,9 @@ def _makelogrevset(repo, pats, opts, revs):
         # When following files, track renames via a special matcher.
         # If we're forced to take the slowpath it means we're following
         # at least one pattern/directory, so don't bother with rename tracking.
-        if follow and not match.always() and not slowpath:
+        #
+        # If path history is used, avoid using filelog and linkrev.
+        if follow and not match.always() and not slowpath and not usepathhistory:
             # _makefollowlogfilematcher expects its files argument to be
             # relative to the repo root, so use match.files(), not pats.
             filematcher = _makefollowlogfilematcher(

@@ -6,6 +6,7 @@
   $ export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
   $ export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
   $ export GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
+  $ setconfig diff.git=true
 
 Prepare a git repo:
 
@@ -56,7 +57,7 @@ Test checkout:
 
 Test diff:
 
-  $ hg log -r tip -p --config diff.git=1
+  $ hg log -r tip -p
   commit:      3f5848713286
   bookmark:    master
   user:        test <test@example.org>
@@ -94,6 +95,26 @@ Test log FILE:
   ╷
   o  alpha
   
+Test log FILE with patches:
+
+  $ hg log -p -G -T '{desc}\n' alpha
+  @  alpha3
+  ╷  diff --git a/alpha b/alpha
+  ╷  --- a/alpha
+  ╷  +++ b/alpha
+  ╷  @@ -1,1 +1,1 @@
+  ╷  -1
+  ╷  +3
+  ╷
+  o  alpha
+     diff --git a/alpha b/alpha
+     new file mode 100644
+     --- /dev/null
+     +++ b/alpha
+     @@ -0,0 +1,1 @@
+     +1
+  
+
 Test bookmarks:
 
   $ hg bookmark -r. foo
