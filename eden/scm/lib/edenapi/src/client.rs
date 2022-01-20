@@ -47,6 +47,7 @@ use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
 use edenapi_types::FileEntry;
 use edenapi_types::FileRequest;
+use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
@@ -412,7 +413,7 @@ impl Client {
     pub(crate) async fn fetch_files(
         &self,
         keys: Vec<Key>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, EdenApiError> {
         tracing::info!("Requesting content for {} file(s)", keys.len());
 
         if keys.is_empty() {
@@ -428,7 +429,19 @@ impl Client {
             req
         })?;
 
-        Ok(self.fetch_guard::<FileEntry>(requests, guards)?)
+        // Convert files v1's FileEntry response into a files v2 FileResponse.
+        let response = self.fetch_guard::<FileEntry>(requests, guards)?;
+        let entries = response
+            .entries
+            .map_ok(|file_entry| FileResponse {
+                key: file_entry.key.clone(),
+                result: Ok(file_entry),
+            })
+            .boxed();
+        Ok(Response {
+            entries,
+            stats: response.stats,
+        })
     }
 
     pub(crate) async fn fetch_trees(
@@ -458,7 +471,7 @@ impl Client {
     pub(crate) async fn fetch_files_attrs(
         &self,
         reqs: Vec<FileSpec>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, EdenApiError> {
         tracing::info!("Requesting attributes for {} file(s)", reqs.len());
 
         if reqs.is_empty() {
@@ -474,7 +487,19 @@ impl Client {
             req
         })?;
 
-        Ok(self.fetch_guard::<FileEntry>(requests, guards)?)
+        // Convert files v1's FileEntry response into a files v2 FileResponse.
+        let response = self.fetch_guard::<FileEntry>(requests, guards)?;
+        let entries = response
+            .entries
+            .map_ok(|file_entry| FileResponse {
+                key: file_entry.key.clone(),
+                result: Ok(file_entry),
+            })
+            .boxed();
+        Ok(Response {
+            entries,
+            stats: response.stats,
+        })
     }
 
     /// Upload a single file
@@ -587,7 +612,7 @@ impl EdenApi for Client {
         Ok(caps)
     }
 
-    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileResponse>, EdenApiError> {
         tracing::info!("Requesting content for {} file(s)", keys.len());
 
         let prog = self.inner.file_progress.create_or_extend(keys.len() as u64);
@@ -603,7 +628,10 @@ impl EdenApi for Client {
             .await
     }
 
-    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files_attrs(
+        &self,
+        reqs: Vec<FileSpec>,
+    ) -> Result<Response<FileResponse>, EdenApiError> {
         tracing::info!("Requesting attributes for {} file(s)", reqs.len());
 
         let prog = self.inner.file_progress.create_or_extend(reqs.len() as u64);

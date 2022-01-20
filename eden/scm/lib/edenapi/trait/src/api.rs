@@ -27,7 +27,7 @@ use edenapi_types::EdenApiServerError;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
-use edenapi_types::FileEntry;
+use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
@@ -59,12 +59,15 @@ pub trait EdenApi: Send + Sync + 'static {
         Err(EdenApiError::NotSupported)
     }
 
-    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileResponse>, EdenApiError> {
         let _ = keys;
         Err(EdenApiError::NotSupported)
     }
 
-    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files_attrs(
+        &self,
+        reqs: Vec<FileSpec>,
+    ) -> Result<Response<FileResponse>, EdenApiError> {
         let _ = reqs;
         Err(EdenApiError::NotSupported)
     }

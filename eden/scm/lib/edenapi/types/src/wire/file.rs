@@ -13,6 +13,7 @@ use serde_derive::Serialize;
 
 use crate::file::FileContent;
 use crate::file::FileEntry;
+use crate::file::FileResponse;
 pub use crate::file::WireFileAttributes;
 pub use crate::file::WireFileAuxData;
 pub use crate::file::WireFileRequest;
@@ -25,6 +26,7 @@ use crate::wire::ToApi;
 use crate::wire::ToWire;
 use crate::wire::WireKey;
 use crate::wire::WireParents;
+use crate::wire::WireResult;
 use crate::wire::WireRevisionstoreMetadata;
 use crate::wire::WireToApiConversionError;
 
@@ -88,6 +90,47 @@ impl ToApi for WireFileEntry {
 
             aux_data: self.aux_data.to_api()?,
             parents: self.parents.to_api()?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireFileResponse {
+    #[serde(rename = "0")]
+    pub key: Option<WireKey>,
+    #[serde(rename = "1")]
+    pub result: Option<WireResult<WireFileEntry>>,
+}
+
+impl ToWire for FileResponse {
+    type Wire = WireFileResponse;
+
+    fn to_wire(self) -> Self::Wire {
+        Self::Wire {
+            key: Some(self.key.to_wire()),
+            result: Some(self.result.to_wire()),
+        }
+    }
+}
+
+impl ToApi for WireFileResponse {
+    type Api = FileResponse;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(Self::Api {
+            key: match self.key {
+                Some(key) => key.to_api()?,
+                None => return Err(WireToApiConversionError::CannotPopulateRequiredField("key")),
+            },
+            result: match self.result {
+                Some(result) => result.to_api()?,
+                None => {
+                    return Err(WireToApiConversionError::CannotPopulateRequiredField(
+                        "result",
+                    ));
+                }
+            },
         })
     }
 }

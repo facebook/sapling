@@ -15,7 +15,7 @@ use async_runtime::block_on;
 use async_runtime::spawn_blocking;
 use async_runtime::stream_to_iter;
 use crossbeam::channel::Sender;
-use edenapi_types::FileEntry;
+use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use futures::StreamExt;
 use parking_lot::RwLock;
@@ -394,12 +394,14 @@ impl FetchState {
         skip(entry, indexedlog_cache, lfs_cache, aux_cache, memcache)
     )]
     fn found_edenapi(
-        entry: FileEntry,
+        entry: FileResponse,
         indexedlog_cache: Option<Arc<IndexedLogHgIdDataStore>>,
         lfs_cache: Option<Arc<LfsStore>>,
         aux_cache: Option<Arc<AuxStore>>,
         memcache: Option<Arc<MemcacheStore>>,
     ) -> Result<(StoreFile, Option<LfsPointersEntry>)> {
+        let entry = entry.result?;
+
         let key = entry.key.clone();
         let mut file = StoreFile::default();
         let mut lfsptr = None;

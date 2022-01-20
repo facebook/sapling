@@ -68,7 +68,15 @@ impl RemoteDataStore for EdenApiDataStore<File> {
                 .entries
                 .map(|entry| {
                     let store = self.store.clone();
-                    spawn_blocking(move || entry.map(|e| store.add_file(&e)))
+                    spawn_blocking(move || {
+                        entry.map(|e| {
+                            if let Ok(entry) = e.result {
+                                store.add_file(&entry)
+                            } else {
+                                Ok(())
+                            }
+                        })
+                    })
                 })
                 .buffer_unordered(4);
 

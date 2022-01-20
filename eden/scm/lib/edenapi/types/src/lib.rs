@@ -100,6 +100,7 @@ pub use crate::file::FileContent;
 pub use crate::file::FileEntry;
 pub use crate::file::FileError;
 pub use crate::file::FileRequest;
+pub use crate::file::FileResponse;
 pub use crate::file::FileSpec;
 pub use crate::file::HgFilenodeData;
 pub use crate::file::UploadHgFilenodeRequest;

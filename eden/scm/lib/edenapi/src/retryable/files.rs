@@ -15,7 +15,7 @@ use super::RetryableStreamRequest;
 use crate::client::Client;
 use crate::errors::EdenApiError;
 use crate::response::Response;
-use crate::types::FileEntry;
+use crate::types::FileResponse;
 use crate::types::FileSpec;
 
 pub(crate) struct RetryableFiles {
@@ -31,7 +31,7 @@ impl RetryableFiles {
 
 #[async_trait]
 impl RetryableStreamRequest for RetryableFiles {
-    type Item = FileEntry;
+    type Item = FileResponse;
 
     async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError> {
         let keys = self.keys.iter().cloned().collect();
@@ -39,7 +39,7 @@ impl RetryableStreamRequest for RetryableFiles {
     }
 
     fn received_item(&mut self, item: &Self::Item) {
-        self.keys.remove(item.key());
+        self.keys.remove(&item.key);
     }
 }
 
@@ -56,7 +56,7 @@ impl RetryableFileAttrs {
 
 #[async_trait]
 impl RetryableStreamRequest for RetryableFileAttrs {
-    type Item = FileEntry;
+    type Item = FileResponse;
 
     async fn perform(&self, client: Client) -> Result<Response<Self::Item>, EdenApiError> {
         let reqs = self.reqs.values().cloned().collect();
@@ -64,6 +64,6 @@ impl RetryableStreamRequest for RetryableFileAttrs {
     }
 
     fn received_item(&mut self, item: &Self::Item) {
-        self.reqs.remove(item.key());
+        self.reqs.remove(&item.key);
     }
 }

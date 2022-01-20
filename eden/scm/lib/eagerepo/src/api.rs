@@ -33,6 +33,7 @@ use edenapi::types::CommitMutationsResponse;
 use edenapi::types::CommitRevlogData;
 use edenapi::types::FileContent;
 use edenapi::types::FileEntry;
+use edenapi::types::FileResponse;
 use edenapi::types::FileSpec;
 use edenapi::types::HgId;
 use edenapi::types::HistoryEntry;
@@ -68,7 +69,7 @@ impl EdenApi for EagerRepo {
         Ok(vec!["segmented-changelog".to_string()])
     }
 
-    async fn files(&self, keys: Vec<Key>) -> edenapi::Result<Response<FileEntry>> {
+    async fn files(&self, keys: Vec<Key>) -> edenapi::Result<Response<FileResponse>> {
         debug!("files {}", debug_key_list(&keys));
         let mut values = Vec::with_capacity(keys.len());
         for key in keys {
@@ -77,7 +78,7 @@ impl EdenApi for EagerRepo {
             let (p1, p2) = extract_p1_p2(&data);
             let parents = Parents::new(p1, p2);
             let entry = FileEntry {
-                key,
+                key: key.clone(),
                 parents,
                 // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
                 content: Some(FileContent {
@@ -86,12 +87,16 @@ impl EdenApi for EagerRepo {
                 }),
                 aux_data: None,
             };
-            values.push(Ok(entry));
+            let response = FileResponse {
+                key,
+                result: Ok(entry),
+            };
+            values.push(Ok(response));
         }
         Ok(convert_to_response(values))
     }
 
-    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> edenapi::Result<Response<FileEntry>> {
+    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> edenapi::Result<Response<FileResponse>> {
         debug!("files {}", debug_spec_list(&reqs));
         let mut values = Vec::with_capacity(reqs.len());
         for spec in reqs {
@@ -102,7 +107,7 @@ impl EdenApi for EagerRepo {
             let parents = Parents::new(p1, p2);
             // TODO(meyer): Actually implement aux data here.
             let entry = FileEntry {
-                key,
+                key: key.clone(),
                 parents,
                 // PERF: to_vec().into() converts minibytes::Bytes to bytes::Bytes.
                 content: Some(FileContent {
@@ -111,7 +116,11 @@ impl EdenApi for EagerRepo {
                 }),
                 aux_data: None,
             };
-            values.push(Ok(entry));
+            let response = FileResponse {
+                key,
+                result: Ok(entry),
+            };
+            values.push(Ok(response));
         }
         Ok(convert_to_response(values))
     }

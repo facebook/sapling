@@ -34,7 +34,7 @@ use edenapi_types::CommitRevlogData;
 use edenapi_types::EphemeralPrepareResponse;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
-use edenapi_types::FileEntry;
+use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::FileType;
 use edenapi_types::HgChangesetContent;
@@ -103,14 +103,14 @@ py_class!(pub class client |py| {
     def files(
         &self,
         keys: Vec<(PyPathBuf, Serde<HgId>)>
-    ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
+    ) -> PyResult<TStream<anyhow::Result<Serde<FileResponse>>>> {
         self.inner(py).as_ref().files_py(py, keys)
     }
 
     def filesattrs(
         &self,
         spec: Serde<Vec<FileSpec>>,
-    ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
+    ) -> PyResult<TStream<anyhow::Result<Serde<FileResponse>>>> {
         let api = self.inner(py).as_ref();
         let entries = py
             .allow_threads(|| block_unless_interrupted(api.files_attrs(spec.0)))

@@ -14,7 +14,7 @@ use edenapi::EdenApi;
 use edenapi::EdenApiError;
 use edenapi::Response;
 use edenapi_types::EdenApiServerError;
-use edenapi_types::FileEntry;
+use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::TreeAttributes;
 use edenapi_types::TreeEntry;
@@ -116,21 +116,21 @@ impl EdenApiFileStore {
     pub fn files_blocking(
         &self,
         keys: Vec<Key>,
-    ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
+    ) -> Result<BlockingResponse<FileResponse>, EdenApiError> {
         BlockingResponse::from_async(self.client.files(keys))
     }
 
     pub fn files_attrs_blocking(
         &self,
         reqs: Vec<FileSpec>,
-    ) -> Result<BlockingResponse<FileEntry>, EdenApiError> {
+    ) -> Result<BlockingResponse<FileResponse>, EdenApiError> {
         BlockingResponse::from_async(self.client.files_attrs(reqs))
     }
 
     pub async fn files_attrs(
         &self,
         reqs: Vec<FileSpec>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, EdenApiError> {
         self.client.files_attrs(reqs).await
     }
 }
@@ -152,7 +152,7 @@ pub trait EdenApiStoreKind: Send + Sync + 'static {
     async fn prefetch_files(
         _client: Arc<dyn EdenApi>,
         _keys: Vec<Key>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, EdenApiError> {
         unimplemented!("fetching files not supported for this store")
     }
 
@@ -170,7 +170,7 @@ impl EdenApiStoreKind for File {
     async fn prefetch_files(
         client: Arc<dyn EdenApi>,
         keys: Vec<Key>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, EdenApiError> {
         client.files(keys).await
     }
 }

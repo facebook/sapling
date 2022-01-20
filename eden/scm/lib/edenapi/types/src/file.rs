@@ -21,6 +21,7 @@ use types::parents::Parents;
 
 use crate::ContentId;
 use crate::InvalidHgId;
+use crate::ServerError;
 use crate::Sha1;
 use crate::Sha256;
 use crate::UploadToken;
@@ -142,6 +143,12 @@ impl FileContent {
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct FileResponse {
+    pub key: Key,
+    pub result: Result<FileEntry, ServerError>,
 }
 
 /// Structure representing source control file content on the wire.

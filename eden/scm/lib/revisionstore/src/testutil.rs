@@ -22,6 +22,7 @@ use edenapi_types::EdenApiServerError;
 use edenapi_types::FileAttributes;
 use edenapi_types::FileContent;
 use edenapi_types::FileEntry;
+use edenapi_types::FileResponse;
 use edenapi_types::FileSpec;
 use edenapi_types::HistoryEntry;
 use edenapi_types::TreeAttributes;
@@ -249,7 +250,7 @@ impl FakeEdenApi {
     fn get_files(
         map: &HashMap<Key, (Bytes, Option<u64>)>,
         reqs: impl Iterator<Item = FileSpec>,
-    ) -> Result<Response<FileEntry>, EdenApiError> {
+    ) -> Result<Response<FileResponse>, EdenApiError> {
         let entries = reqs
             .filter_map(|spec| {
                 let parents = Parents::default();
@@ -277,7 +278,10 @@ impl FakeEdenApi {
                     entry = entry.with_content(content);
                 }
 
-                Some(Ok(entry))
+                Some(Ok(FileResponse {
+                    key: spec.key,
+                    result: Ok(entry),
+                }))
             })
             .collect::<Vec<_>>();
 
@@ -314,7 +318,7 @@ impl EdenApi for FakeEdenApi {
         Ok(ResponseMeta::default())
     }
 
-    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files(&self, keys: Vec<Key>) -> Result<Response<FileResponse>, EdenApiError> {
         Self::get_files(
             &self.files,
             keys.into_iter().map(|key| FileSpec {
@@ -327,7 +331,10 @@ impl EdenApi for FakeEdenApi {
         )
     }
 
-    async fn files_attrs(&self, reqs: Vec<FileSpec>) -> Result<Response<FileEntry>, EdenApiError> {
+    async fn files_attrs(
+        &self,
+        reqs: Vec<FileSpec>,
+    ) -> Result<Response<FileResponse>, EdenApiError> {
         Self::get_files(&self.files, reqs.into_iter())
     }
 

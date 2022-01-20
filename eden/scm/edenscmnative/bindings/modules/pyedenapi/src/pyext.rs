@@ -40,7 +40,7 @@ use edenapi_types::CommitRevlogData;
 use edenapi_types::EdenApiServerError;
 use edenapi_types::FetchSnapshotRequest;
 use edenapi_types::FetchSnapshotResponse;
-use edenapi_types::FileEntry;
+use edenapi_types::FileResponse;
 use edenapi_types::HgChangesetContent;
 use edenapi_types::HgFilenodeData;
 use edenapi_types::HgMutationEntryContent;
@@ -88,7 +88,7 @@ pub trait EdenApiPyExt: EdenApi {
         &self,
         py: Python,
         keys: Vec<(PyPathBuf, Serde<HgId>)>,
-    ) -> PyResult<TStream<anyhow::Result<Serde<FileEntry>>>> {
+    ) -> PyResult<TStream<anyhow::Result<Serde<FileResponse>>>> {
         let keys = to_keys(py, &keys)?;
         let entries = py
             .allow_threads(|| block_unless_interrupted(self.files(keys)))
