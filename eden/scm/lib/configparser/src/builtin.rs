@@ -22,6 +22,7 @@ autopullpattern=
 disallowedto=^origin/
 disallowhint=please don't specify 'origin/' prefix in remote bookmark's name
 hoist=origin
+selectivepulldefault=main,master
 
 [smartlog]
 names=main,master

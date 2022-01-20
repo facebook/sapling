@@ -1055,6 +1055,14 @@ class remotenames(dict):
                     self._node2hoists.setdefault(node[0], []).append(name)
         return self._node2hoists
 
+    def get(self, name):
+        """Resolve a remote bookmark. Return None if the bookmark does not exist"""
+        nodes = self["bookmarks"].get(name)
+        if nodes:
+            return nodes[0]
+        else:
+            return None
+
     @property
     def changecount(self):
         return self._changecount

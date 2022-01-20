@@ -15,9 +15,9 @@ import subprocess
 import bindings
 from edenscm import tracing
 
-from . import error, util
+from . import bookmarks as bookmod, error, util
 from .i18n import _
-from .node import hex, nullid
+from .node import bin, hex, nullid
 
 GIT_DIR_FILE = "gitdir"
 GIT_REQUIREMENT = "git"
@@ -68,7 +68,8 @@ def clone(ui, url, destpath=None, update=True):
             raise error.Abort(_("git clone was not successful"))
         initgit(repo, "git")
         if url:
-            pull(repo, "origin", [])
+            refspecs = defaultpullrefspecs(repo, "origin")
+            pull(repo, "origin", refspecs)
     except Exception:
         repo = None
         shutil.rmtree(destpath, ignore_errors=True)
@@ -186,6 +187,9 @@ def revparse(repo, revspec):
 
 def pull(repo, source, refspecs):
     """Run `git fetch` on the backing repo to perform a pull"""
+    if not refspecs:
+        # Nothing to pull
+        return 0
     ret = rungit(
         repo,
         ["fetch", "--no-write-fetch-head", "--no-tags", "--prune", source] + refspecs,
@@ -210,6 +214,41 @@ def push(repo, dest, pushnode, to, force=False):
     ret = rungit(repo, ["push", "-u", dest, refspec])
     repo.invalidatechangelog()
     return ret
+
+
+def listremote(repo, source, patterns):
+    """List references of the remote peer
+    Return a dict of name to node.
+    """
+    out = callgit(repo, ["ls-remote", "--refs", source] + patterns)
+    refs = {}
+    for line in out.splitlines():
+        if b"\t" not in line:
+            continue
+        hexnode, name = line.split(b"\t", 1)
+        refs[name.decode("utf-8")] = bin(hexnode)
+    return refs
+
+
+def defaultpullrefspecs(repo, source):
+    """default refspecs for 'git fetch' respecting selective pull"""
+    names = bookmod.selectivepullbookmarknames(repo)
+
+    patterns = ["refs/heads/%s" % name for name in names]
+    listed = listremote(repo, source, patterns)
+
+    refspecs = []
+    for name in names:
+        refspec = "refs/heads/%s" % name
+        remotenode = listed.get(refspec)
+        if repo._remotenames.get("%s/%s" % (source, name)) == remotenode:
+            # not changed, skip
+            continue
+        if remotenode is None:
+            # removed remotely
+            refspec = ":refs/remotes/%s/heads/%s" % (source, name)
+        refspecs.append(refspec)
+    return refspecs
 
 
 def callgit(repo, args):

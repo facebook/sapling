@@ -201,11 +201,10 @@ Test clone with flags (--noupdate, --updaterev):
   $ hg log -r . -T '{node|short}\n'
   000000000000
   $ hg bookmarks --remote
-     origin/foo                5c9a5ee451a8
      origin/master             3f5848713286
   $ cd ..
 
-  $ hg clone "git+file://$TESTTMP/gitrepo" cloned1
+  $ hg clone "git+file://$TESTTMP/gitrepo" cloned1 --config remotenames.selectivepulldefault=foo,master
   From file:/*/$TESTTMP/gitrepo (glob)
    * [new branch]      foo        -> origin/foo
    * [new branch]      master     -> origin/master
@@ -214,10 +213,9 @@ Test clone with flags (--noupdate, --updaterev):
   5c9a5ee451a8 origin/foo alpha3
   $ cd ..
 
-  $ hg clone --updaterev origin/foo "git+file://$TESTTMP/gitrepo" cloned2
+  $ hg clone --updaterev origin/foo "git+file://$TESTTMP/gitrepo" cloned2 --config remotenames.selectivepulldefault=foo
   From file:/*/$TESTTMP/gitrepo (glob)
    * [new branch]      foo        -> origin/foo
-   * [new branch]      master     -> origin/master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
   5c9a5ee451a8 origin/foo alpha3

@@ -4584,6 +4584,8 @@ def pull(ui, repo, source="default", **opts):
         if source == "default":
             source = "origin"
         refspecs = (opts.get("bookmark") or []) + (opts.get("rev") or [])
+        if not refspecs:
+            refspecs = git.defaultpullrefspecs(repo, source)
         ret = git.pull(repo, source, refspecs)
         if ret == 0 and opts.get("update"):
             # Figure out the node to checkout
