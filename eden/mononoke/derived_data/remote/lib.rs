@@ -9,6 +9,7 @@ use derived_data_service_if::types::DerivationType;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use clap::Args;
 use derived_data_service_if::types as thrift;
 use mononoke_types::ChangesetId;
 
@@ -16,6 +17,27 @@ use mononoke_types::ChangesetId;
 pub struct RemoteDerivationOptions {
     pub derive_remotely: bool,
     pub smc_tier: Option<String>,
+}
+
+/// Command line arguments for controlling remote derivation
+#[derive(Args, Debug)]
+pub struct RemoteDerivationArgs {
+    /// Derive data remotely using the derived data service
+    #[clap(long)]
+    pub derive_remotely: bool,
+
+    /// Specify SMC tier for the derived data service
+    #[clap(long, value_name = "SMC")]
+    pub derive_remotely_tier: Option<String>,
+}
+
+impl From<RemoteDerivationArgs> for RemoteDerivationOptions {
+    fn from(args: RemoteDerivationArgs) -> Self {
+        RemoteDerivationOptions {
+            derive_remotely: args.derive_remotely,
+            smc_tier: args.derive_remotely_tier,
+        }
+    }
 }
 
 #[async_trait]

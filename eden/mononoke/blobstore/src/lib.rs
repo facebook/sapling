@@ -17,6 +17,7 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
+use clap::ArgEnum;
 use context::CoreContext;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -375,6 +376,7 @@ pub const DEFAULT_PUT_BEHAVIOUR: PutBehaviour = PutBehaviour::IfAbsent;
     Display,
     EnumIter,
     EnumString,
+    ArgEnum,
     Eq,
     PartialEq
 )]

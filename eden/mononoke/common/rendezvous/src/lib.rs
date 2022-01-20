@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use clap::Args;
+
 mod multi_rendez_vous;
 mod rendez_vous;
 mod rendez_vous_stats;
@@ -27,6 +29,22 @@ impl RendezVousOptions {
     pub fn for_test() -> Self {
         Self {
             free_connections: 0,
+        }
+    }
+}
+
+/// Command line arguments for controlling rendez-vous
+#[derive(Args, Debug)]
+pub struct RendezVousArgs {
+    /// How many concurrent connections to allow before batching kicks in
+    #[clap(long, default_value = "5")]
+    pub rendezvous_free_connections: usize,
+}
+
+impl From<RendezVousArgs> for RendezVousOptions {
+    fn from(args: RendezVousArgs) -> Self {
+        RendezVousOptions {
+            free_connections: args.rendezvous_free_connections,
         }
     }
 }

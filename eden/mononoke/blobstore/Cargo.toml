@@ -18,6 +18,7 @@ anyhow = "1.0.51"
 async-trait = "0.1.51"
 auto_impl = "0.4"
 bytes = { version = "1.1", features = ["serde"] }
+clap = { version = "3.0.9", features = ["derive", "regex", "unicode", "wrap_help"] }
 context = { version = "0.1.0", path = "../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "main" }
 serde = { version = "1.0.126", features = ["derive", "rc"] }

@@ -8,6 +8,7 @@
 use std::time::Duration;
 
 use anyhow::Error;
+use clap::ArgEnum;
 use futures_stats::FutureStats;
 use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use strum_macros::{AsRefStr, Display, EnumString, EnumVariantNames};
@@ -43,7 +44,8 @@ const OVERWRITE_STATUS: &str = "overwrite_status";
     Display,
     AsRefStr,
     EnumString,
-    EnumVariantNames
+    EnumVariantNames,
+    ArgEnum
 )]
 #[strum(serialize_all = "kebab_case")]
 pub enum OperationType {

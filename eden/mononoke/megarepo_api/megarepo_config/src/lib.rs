@@ -9,11 +9,13 @@
 #![deny(warnings)]
 
 use async_trait::async_trait;
+use clap::Args;
 use context::CoreContext;
 pub use megarepo_configs::types::{
     Source, SourceMappingRules, SourceRevision, SyncConfigVersion, SyncTargetConfig, Target,
 };
 use megarepo_error::MegarepoError;
+use mononoke_args::config::ConfigArgs;
 use std::path::PathBuf;
 #[cfg(fbcode_build)]
 mod facebook;
@@ -45,6 +47,40 @@ pub enum MononokeMegarepoConfigsOptions {
     IntegrationTest(PathBuf),
     /// Create test-style `MononokeMegarepoConfigs` implementation
     UnitTest,
+}
+
+/// Command line arguments for controlling Megarepo configs
+#[derive(Args, Debug)]
+pub struct MegarepoConfigsArgs {
+    /// Whether to instantiate test-style MononokeMegarepoConfigs
+    ///
+    /// Prod-style instance reads/writes from/to configerator and
+    /// requires the FB environment to work properly.
+    // For compatibility with existing usage, this is `Option<bool>` to allow
+    // `--with-test-megarepo-configs-client=true`.
+    #[clap(long, value_name = "BOOL")]
+    pub with_test_megarepo_configs_client: Option<bool>,
+}
+
+impl MononokeMegarepoConfigsOptions {
+    pub fn from_args(
+        config_args: &ConfigArgs,
+        megarepo_configs_args: &MegarepoConfigsArgs,
+    ) -> Self {
+        let use_test = megarepo_configs_args
+            .with_test_megarepo_configs_client
+            .unwrap_or(false);
+
+        if use_test {
+            if let Some(path) = config_args.local_configerator_path.clone() {
+                MononokeMegarepoConfigsOptions::IntegrationTest(path)
+            } else {
+                MononokeMegarepoConfigsOptions::UnitTest
+            }
+        } else {
+            MononokeMegarepoConfigsOptions::Prod
+        }
+    }
 }
 
 /// An API for Megarepo Configs
