@@ -39,8 +39,6 @@
 
   $ run_check_code ./wrong.py ./correct.py ./quote.py ./classstyle.py
   ./wrong.py:2: Python keyword is not a function --> del(arg2)
-  ./classstyle.py:4: old-style class, use class foo(object) --> class oldstyle_class:
-  ./classstyle.py:7: class foo() creates old style object, use class foo(object) --> class empty():
   [1]
   $ cat > python3-compat.py << EOF
   > foo <> bar

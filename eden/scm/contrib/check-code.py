@@ -289,16 +289,6 @@ pypats = [
             r"#.*camelcase-required",
         ),
         (
-            r"class\s[^( \n]+:",
-            "old-style class, use class foo(object)",
-            r"#.*old-style",
-        ),
-        (
-            r"class\s[^( \n]+\(\):",
-            "class foo() creates old style object, use class foo(object)",
-            r"#.*old-style",
-        ),
-        (
             r"\b(%s)\("
             % "|".join(k for k in keyword.kwlist if k not in ("print", "exec")),
             "Python keyword is not a function",
