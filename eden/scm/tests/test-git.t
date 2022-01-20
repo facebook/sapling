@@ -87,6 +87,13 @@ Test commit:
   │
   o  alpha
   
+Test log FILE:
+
+  $ hg log -G -T '{desc}' alpha
+  @  alpha3
+  ╷
+  o  alpha
+  
 Test bookmarks:
 
   $ hg bookmark -r. foo

@@ -21,6 +21,7 @@ import tempfile
 from typing import Dict
 
 from bindings import renderdag
+from edenscm import tracing
 
 from . import (
     bookmarks,
@@ -33,6 +34,7 @@ from . import (
     encoding,
     error,
     formatter,
+    git,
     graphmod,
     hintutil,
     json,
@@ -2760,6 +2762,14 @@ def _makenofollowlogfilematcher(repo, pats, opts):
     return None
 
 
+def _usepathhistory(repo):
+    """whether to use the PathHistory API for log history"""
+    # Git repo does not have filelog, linkrev. Must use PathHistory.
+    if git.isgit(repo):
+        return True
+    return repo.ui.configbool("experimental", "pathhistory")
+
+
 def _makelogrevset(repo, pats, opts, revs):
     """Return (expr, filematcher) where expr is a revset string built
     from log options and file patterns or None. If --stat or --patch
@@ -2780,6 +2790,7 @@ def _makelogrevset(repo, pats, opts, revs):
         "_patslog": ("filelog(%(val)r)", " or "),
         "_patsfollow": ("follow(%(val)r)", " or "),
         "_patsfollowfirst": ("_followfirst(%(val)r)", " or "),
+        "_pathhistory": ("_pathhistory(%(val)s)", " or "),
         "keyword": ("keyword(%(val)r)", " or "),
         "prune": ("not (%(val)r or ancestors(%(val)r))", " and "),
         "user": ("user(%(val)r)", " or "),
@@ -2788,6 +2799,7 @@ def _makelogrevset(repo, pats, opts, revs):
     opts = dict(opts)
     # follow or not follow?
     follow = opts.get("follow") or opts.get("follow_first")
+    usepathhistory = _usepathhistory(repo)
     if opts.get("follow_first"):
         followfirst = 1
     else:
@@ -2808,9 +2820,12 @@ def _makelogrevset(repo, pats, opts, revs):
     wctx = repo[None]
     match, pats = scmutil.matchandpats(wctx, pats, opts)
     slowpath = match.anypats() or (
-        (match.isexact() or match.prefix()) and opts.get("removed")
+        (match.isexact() or match.prefix())
+        and opts.get("removed")
+        and not usepathhistory
     )
-    if not slowpath:
+    # pathhistory can deal with directories and removed files.
+    if not slowpath and not usepathhistory:
         for f in match.files():
             if follow and f not in wctx:
                 # If the file exists, it may be a directory. The "follow"
@@ -2864,16 +2879,30 @@ def _makelogrevset(repo, pats, opts, revs):
         if follow:
             opts[fnopats[0][followfirst]] = "."
     else:
+        # pathhistory: force "follow" if "pats" is given.
+        if usepathhistory:
+            if pats:
+                paths = list(match.files())
+                if followfirst:
+                    phrevs = "_firstancestors(rev(%d))" % startrev
+                else:
+                    phrevs = "ancestors(rev(%d))" % startrev
+                phfiles = ",".join(map(repr, paths))
+                opts["_pathhistory"] = "%s,%s" % (phrevs, phfiles)
         if follow:
             if pats:
-                # follow() revset interprets its file argument as a
-                # manifest entry, so use match.files(), not pats.
-                opts[fpats[followfirst]] = list(match.files())
+                # pathhistory handled this above
+                if not usepathhistory:
+                    # follow() revset interprets its file argument as a
+                    # manifest entry, so use match.files(), not pats.
+                    opts[fpats[followfirst]] = list(match.files())
             else:
                 op = fnopats[followdescendants][followfirst]
                 opts[op] = "rev(%d)" % startrev
         else:
-            opts["_patslog"] = list(pats)
+            # avoid using filelog() (_patslog) if pathhistory is used
+            if not usepathhistory:
+                opts["_patslog"] = list(pats)
 
     filematcher = None
     if opts.get("patch") or opts.get("stat"):
@@ -2909,6 +2938,7 @@ def _makelogrevset(repo, pats, opts, revs):
 
     if expr:
         expr = "(" + " and ".join(expr) + ")"
+        tracing.debug("log revset: %s\n" % expr, target="log::makelogrevset")
     else:
         expr = None
     return expr, filematcher
