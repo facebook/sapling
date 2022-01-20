@@ -67,7 +67,7 @@ from .. import (
     visibility,
 )
 from ..i18n import _
-from ..node import bin, hex, nullid, short
+from ..node import bin, hex, nullid, nullhex, short
 from ..pycompat import range, isint
 from . import cmdtable
 
@@ -4583,14 +4583,20 @@ def pull(ui, repo, source="default", **opts):
         # git has a different default remote name
         if source == "default":
             source = "origin"
-        refspecs = (opts.get("bookmark") or []) + (opts.get("rev") or [])
-        if not refspecs:
-            refspecs = git.defaultpullrefspecs(repo, source)
-        ret = git.pull(repo, source, refspecs)
+        names = opts.get("bookmark") or []
+        nodes = []
+        for rev in opts.get("rev"):
+            if len(rev) == len(nullhex):
+                nodes.append(bin(rev))
+            else:
+                raise error.Abort(_("--rev for git requires full SHA1 hash"))
+        if not names:
+            names = bookmarks.selectivepullbookmarknames(repo)
+        ret = git.pull(repo, source, names=names, nodes=nodes)
         if ret == 0 and opts.get("update"):
             # Figure out the node to checkout
             node = None
-            for spec in refspecs:
+            for spec in names + nodes:
                 if spec in repo:
                     node = repo[spec].node()
                     break

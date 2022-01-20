@@ -44,13 +44,13 @@ def isgit(repo):
     return GIT_REQUIREMENT in repo.storerequirements
 
 
-def clone(ui, url, destpath=None, update=True, refspecs=None):
+def clone(ui, url, destpath=None, update=True, pullnames=None):
     """Clone a git repo, then create a repo at dest backed by the git repo.
     update can be False, or True, or a node to update to.
     - False: do not update, leave an empty working copy.
     - True: upate to git HEAD.
     - other: update to `other` (node, or name).
-    refspecs decides what to pull.
+    pullnames decides what to pull.
     - None: use default refspecs set by configs.
     - []: do not fetch anything.
     If url is empty, create the repo but do not add a remote.
@@ -73,9 +73,9 @@ def clone(ui, url, destpath=None, update=True, refspecs=None):
             raise error.Abort(_("git clone was not successful"))
         initgit(repo, "git")
         if url:
-            if refspecs is None:
-                refspecs = defaultpullrefspecs(repo, "origin")
-            pull(repo, "origin", refspecs)
+            if pullnames is None:
+                pullnames = bookmod.selectivepullbookmarknames(repo)
+            pull(repo, "origin", names=pullnames)
     except Exception:
         repo = None
         shutil.rmtree(destpath, ignore_errors=True)
@@ -186,12 +186,86 @@ def readconfig(repo):
     return config
 
 
+@dataclass
+class RefName:
+    """simple reference name handing for git
+
+    Common reference names examples:
+    - refs/heads/foo           # branch "foo"
+    - refs/tags/v1.0           # tag "v1.0"
+    - refs/remotes/origin/foo  # branch "foo" in "origin" (note: no "heads/")
+
+    Note that tags are special. Git writes remote tags to "refs/tags/" and do
+    not keep tags under "refs/remotes". But here we put tags in "refs/remotes"
+    so they can be used like other remote names.
+    """
+
+    name: str
+    remote: str = ""
+
+    def __str__(self):
+        components = ["refs"]
+        if self.remote:
+            components += ["remotes", self.remote]
+        elif not self.name.startswith("tags/"):
+            components.append("heads")
+        components.append(self.name)
+        return "/".join(components)
+
+    def withremote(self, remote):
+        return RefName(name=self.name, remote=remote)
+
+    @classmethod
+    def visiblehead(cls, node, remote=""):
+        return cls("visibleheads/%s" % hex(node), remote=remote)
+
+    @property
+    def remotename(self):
+        """remotename used in the local (hg) repo"""
+        return "%s/%s" % (self.remote or "origin", self.name)
+
+
 def revparse(repo, revspec):
     parsed = callgit(repo, ["rev-parse", revspec])
     return parsed.decode("utf-8", "surrogateescape").strip()
 
 
-def pull(repo, source, refspecs):
+def pull(repo, source, names=(), nodes=()):
+    """Pull specified revisions and names.
+
+    names will be normalized to remote heads or tags, if starts wtih 'tags/'.
+    missing names will be removed.
+    nodes, if pulled, will be written to "visibleheads".
+    """
+    # normalize names for listing
+    refnames = [RefName(name) for name in names]
+    listed = listremote(repo, source, refnames)  # ex. {'refs/heads/main': node}
+
+    remote = source
+
+    refspecs = []
+    for refname in refnames:
+        node = listed.get(str(refname))
+        existingnode = repo._remotenames.get(refname.remotename)
+        if node == existingnode:
+            # not changed
+            continue
+        if node is None:
+            # TODO: Figure out how to remove refs.
+            # refspec ":refs/..." does not seem to work reliably.
+            continue
+        else:
+            # pull the node explicitly
+            refspec = "+%s:%s" % (hex(node), refname.withremote(remote))
+        refspecs.append(refspec)
+
+    for node in nodes:
+        refspec = "+%s:%s" % (hex(node), RefName.visiblehead(node, remote=remote))
+
+    return pullrefspecs(repo, source, refspecs)
+
+
+def pullrefspecs(repo, source, refspecs):
     """Run `git fetch` on the backing repo to perform a pull"""
     if not refspecs:
         # Nothing to pull
@@ -226,6 +300,9 @@ def listremote(repo, source, patterns):
     """List references of the remote peer
     Return a dict of name to node.
     """
+    patterns = [str(p) for p in patterns]
+    if not patterns:
+        return {}
     out = callgit(repo, ["ls-remote", "--refs", source] + patterns)
     refs = {}
     for line in out.splitlines():
@@ -234,27 +311,6 @@ def listremote(repo, source, patterns):
         hexnode, name = line.split(b"\t", 1)
         refs[name.decode("utf-8")] = bin(hexnode)
     return refs
-
-
-def defaultpullrefspecs(repo, source):
-    """default refspecs for 'git fetch' respecting selective pull"""
-    names = bookmod.selectivepullbookmarknames(repo)
-
-    patterns = ["refs/heads/%s" % name for name in names]
-    listed = listremote(repo, source, patterns)
-
-    refspecs = []
-    for name in names:
-        refspec = "refs/heads/%s" % name
-        remotenode = listed.get(refspec)
-        if repo._remotenames.get("%s/%s" % (source, name)) == remotenode:
-            # not changed, skip
-            continue
-        if remotenode is None:
-            # removed remotely
-            refspec = ":refs/remotes/%s/heads/%s" % (source, name)
-        refspecs.append(refspec)
-    return refspecs
 
 
 @cached
@@ -365,7 +421,7 @@ class Submodule:
                 self.url,
                 destpath=repopath,
                 update=False,
-                refspecs=[],
+                pullnames=[],
             )
         repo.submodule = weakref.proxy(self)
         return repo
@@ -431,7 +487,7 @@ class Submodule:
             # Write a remote bookmark to mark node public
             with repo.ui.configoverride({("ui", "quiet"): "true"}):
                 refspec = "+%s:refs/remotes/parent/%s" % (hex(node), self.nestedpath)
-                pull(repo, self.url, [refspec])
+                pullrefspecs(repo, self.url, [refspec])
 
     def checkout(self, node, force=False):
         """checkout a commit in working copy"""

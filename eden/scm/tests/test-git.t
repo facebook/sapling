@@ -165,7 +165,7 @@ Test pull:
 - pull with -B
   $ hg pull -B foo
   From $TESTTMP/gitrepo/
-   * [new branch]      foo        -> origin/foo
+   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> origin/foo
   $ hg log -r origin/foo -T '{desc}\n'
   alpha3
 
@@ -199,8 +199,8 @@ Test clone with flags (--noupdate, --updaterev):
 
   $ hg clone "git+file://$TESTTMP/gitrepo" cloned1 --config remotenames.selectivepulldefault=foo,master
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new branch]      foo        -> origin/foo
-   * [new branch]      master     -> origin/master
+   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> origin/foo
+   * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> origin/master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned1 log -r . -T '{node|short} {remotenames} {desc}\n'
   5c9a5ee451a8 origin/foo alpha3
@@ -208,7 +208,7 @@ Test clone with flags (--noupdate, --updaterev):
 
   $ hg clone --updaterev origin/foo "git+file://$TESTTMP/gitrepo" cloned2 --config remotenames.selectivepulldefault=foo
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new branch]      foo        -> origin/foo
+   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> origin/foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
   5c9a5ee451a8 origin/foo alpha3
@@ -320,7 +320,7 @@ Submodule does not cause a crash:
   $ setconfig git.submodules=false
   $ hg clone "git+file://$TESTTMP/submod" cloned-submod
   From file:/*/$TESTTMP/submod (glob)
-   * [new branch]      master     -> origin/master
+   * [new ref]         a4c97159e197fb3aaab3f24fc3b39d7942b311ff -> origin/master
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd cloned-submod
   $ echo *
