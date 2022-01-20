@@ -434,7 +434,7 @@ impl CheckoutPlan {
     async fn write_files(
         async_vfs: &AsyncVfsWriter,
         stats: &CheckoutStats,
-        actions: Vec<(RepoPathBuf, HgId, Bytes, Option<UpdateFlag>)>,
+        actions: Vec<(RepoPathBuf, HgId, Bytes, UpdateFlag)>,
         progress: Option<&Mutex<CheckoutProgress>>,
         bar: &Arc<ProgressBar>,
     ) -> Result<()> {
@@ -670,12 +670,11 @@ impl CheckoutProgress {
     }
 }
 
-// todo: possibly migrate VFS api to use FileType?
-fn type_to_flag(ft: &FileType) -> Option<UpdateFlag> {
+fn type_to_flag(ft: &FileType) -> UpdateFlag {
     match ft {
-        FileType::Regular => None,
-        FileType::Executable => Some(UpdateFlag::Executable),
-        FileType::Symlink => Some(UpdateFlag::Symlink),
+        FileType::Regular => UpdateFlag::Regular,
+        FileType::Executable => UpdateFlag::Executable,
+        FileType::Symlink => UpdateFlag::Symlink,
     }
 }
 
@@ -784,7 +783,7 @@ mod test {
         let path = tempdir.path().to_path_buf().join("updateprogress");
         let mut progress = CheckoutProgress::new(&path, vfs.clone())?;
         let file_path = RepoPathBuf::from_string("file".to_string())?;
-        vfs.write(&file_path.as_repo_path(), &vec![0b0, 0b01], None)?;
+        vfs.write(file_path.as_repo_path(), &[0b0, 0b01], UpdateFlag::Regular)?;
         let id = hgid(1);
         progress.record_writes(vec![(id, file_path.clone())]);
 

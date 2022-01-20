@@ -147,7 +147,7 @@ impl<Ret: Send + 'static, Work: Sync + Send + 'static> Worker<Ret, Work> {
 }
 
 /// Fetch the content of the passed in `key` and write it to it's path.
-fn update(state: &WriterState, key: Key, flag: Option<UpdateFlag>) -> Result<usize> {
+fn update(state: &WriterState, key: Key, flag: UpdateFlag) -> Result<usize> {
     let content = state
         .store
         .get_file_content(&key)?
@@ -171,8 +171,8 @@ fn update(state: &WriterState, key: Key, flag: Option<UpdateFlag>) -> Result<usi
 
 fn threaded_writer(
     state: WriterState,
-    chan: Receiver<Vec<(Key, Option<UpdateFlag>)>>,
-) -> (usize, Vec<(RepoPathBuf, Option<UpdateFlag>)>) {
+    chan: Receiver<Vec<(Key, UpdateFlag)>>,
+) -> (usize, Vec<(RepoPathBuf, UpdateFlag)>) {
     let mut failures = Vec::new();
 
     let mut written = 0;
@@ -226,7 +226,7 @@ impl WriterState {
 }
 
 py_class!(class writerworker |py| {
-    data inner: RefCell<Option<Worker<(usize, Vec<(RepoPathBuf, Option<UpdateFlag>)>), (Key, Option<UpdateFlag>)>>>;
+    data inner: RefCell<Option<Worker<(usize, Vec<(RepoPathBuf, UpdateFlag)>), (Key, UpdateFlag)>>>;
 
     def __new__(_cls, store: PyObject, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
         let store = contentstore::downcast_from(py, store.clone_ref(py)).map(|s| s.extract_inner(py) as Arc<dyn LegacyStore>)
@@ -249,11 +249,11 @@ py_class!(class writerworker |py| {
         let node = HgId::from_slice(node.data(py)).map_pyerr(py)?;
 
         let flags = if flags == "l" {
-            Some(UpdateFlag::Symlink)
+            UpdateFlag::Symlink
         } else if flags == "x" {
-            Some(UpdateFlag::Executable)
+            UpdateFlag::Executable
         } else if flags == "" {
-            None
+            UpdateFlag::Regular
         } else {
             return Err(format_err!("Unknown flags: {}", flags)).map_pyerr(py);
         };
@@ -272,15 +272,13 @@ py_class!(class writerworker |py| {
 
             for (count, fail) in inner.wait()? {
                 written += count;
-                failures.extend(fail.into_iter().map(|(path, flags)| {
+                failures.extend(fail.into_iter().map(|(path, flag)| {
                     let path = PyPathBuf::from(path);
 
-                    let flags = match flags {
-                        None => Str::from("".to_string()),
-                        Some(flag) => match flag {
-                            UpdateFlag::Symlink => Str::from("l".to_string()),
-                            UpdateFlag::Executable => Str::from("x".to_string())
-                        }
+                    let flags = match flag {
+                        UpdateFlag::Regular => Str::from("".to_string()),
+                        UpdateFlag::Symlink => Str::from("l".to_string()),
+                        UpdateFlag::Executable => Str::from("x".to_string()),
                     };
 
                     (path, flags)
@@ -401,7 +399,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState::new(root, store)?;
-        let written = update(&state, k, None)?;
+        let written = update(&state, k, UpdateFlag::Regular)?;
 
         assert_eq!(written, 7);
 
@@ -426,7 +424,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState::new(root, store)?;
-        update(&state, k, Some(UpdateFlag::Executable))?;
+        update(&state, k, UpdateFlag::Executable)?;
 
         let mut file = workingdir.as_ref().to_path_buf();
         file.push("a");
@@ -459,7 +457,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState::new(root, store)?;
-        update(&state, k, Some(UpdateFlag::Symlink))?;
+        update(&state, k, UpdateFlag::Symlink)?;
 
         let mut file = workingdir.as_ref().to_path_buf();
         file.push("a");
@@ -493,7 +491,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState::new(root, store)?;
-        let written = update(&state, k, None)?;
+        let written = update(&state, k, UpdateFlag::Regular)?;
         assert_eq!(written, 7);
 
         Ok(())
@@ -523,7 +521,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState::new(root, store)?;
-        let written = update(&state, k, None)?;
+        let written = update(&state, k, UpdateFlag::Regular)?;
         assert_eq!(written, 7);
 
         let mut path = workingdir.as_ref().to_path_buf();
@@ -559,7 +557,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState::new(root, store)?;
-        assert!(update(&state, k, None).is_err());
+        assert!(update(&state, k, UpdateFlag::Regular).is_err());
 
         Ok(())
     }
@@ -586,7 +584,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState::new(root, store)?;
-        let written = update(&state, k, None)?;
+        let written = update(&state, k, UpdateFlag::Regular)?;
         assert_eq!(written, 7);
 
         let mut path = workingdir.as_ref().to_path_buf();
@@ -808,7 +806,7 @@ mod tests {
 
             let mut written_size = 0;
             for key in keys.iter() {
-                written_size += update(&state, key.clone(), None)?;
+                written_size += update(&state, key.clone(), UpdateFlag::Regular)?;
             }
 
             for key in keys.iter() {
@@ -872,7 +870,7 @@ mod tests {
             let state = WriterState::new(root, store)?;
 
             for key in keys.iter() {
-                update(&state, key.clone(), None)?;
+                update(&state, key.clone(), UpdateFlag::Regular)?;
             }
 
             let root = workingdir.as_ref().to_path_buf();

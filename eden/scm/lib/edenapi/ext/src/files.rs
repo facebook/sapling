@@ -23,6 +23,7 @@ use futures::TryStreamExt;
 use minibytes::Bytes;
 use types::RepoPathBuf;
 use vfs::AsyncVfsWriter;
+use vfs::UpdateFlag;
 use vfs::VFS;
 
 use crate::calc_contentid;
@@ -195,7 +196,7 @@ pub async fn download_files(
             .write_batch(
                 write_paths
                     .into_iter()
-                    .map(|((path, _), content)| (path, content, None)),
+                    .map(|((path, _), content)| (path, content, UpdateFlag::Regular)),
             )
             .await?;
 

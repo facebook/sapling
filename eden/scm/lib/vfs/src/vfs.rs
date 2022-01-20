@@ -58,6 +58,7 @@ struct Inner {
 
 #[derive(Clone, Copy, Debug)]
 pub enum UpdateFlag {
+    Regular,
     Symlink,
     Executable,
 }
@@ -228,12 +229,7 @@ impl VFS {
 
     /// Overwrite the content of the file at `path` with `data`. The number of bytes written on
     /// disk will be returned.
-    fn write_inner(
-        &self,
-        path: &RepoPath,
-        data: &[u8],
-        flags: Option<UpdateFlag>,
-    ) -> Result<usize> {
+    fn write_inner(&self, path: &RepoPath, data: &[u8], flags: UpdateFlag) -> Result<usize> {
         let filepath = self
             .inner
             .auditor
@@ -241,16 +237,16 @@ impl VFS {
             .with_context(|| format!("Can't write into {}", path))?;
 
         match flags {
-            None => self.write_mode(&filepath, data, false),
-            Some(UpdateFlag::Executable) => self.write_mode(&filepath, data, true),
-            Some(UpdateFlag::Symlink) => self.write_symlink(&filepath, data),
+            UpdateFlag::Regular => self.write_mode(&filepath, data, false),
+            UpdateFlag::Executable => self.write_mode(&filepath, data, true),
+            UpdateFlag::Symlink => self.write_symlink(&filepath, data),
         }
     }
 
     /// Overwrite content of the file, try to clear conflicts if attempt fails
     ///
     /// Return an error if fails to overwrite after clearing conflicts, or if clear conflicts fail
-    pub fn write(&self, path: &RepoPath, data: &[u8], flag: Option<UpdateFlag>) -> Result<usize> {
+    pub fn write(&self, path: &RepoPath, data: &[u8], flag: UpdateFlag) -> Result<usize> {
         // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
         match self.write_inner(path, data, flag) {
             Ok(size) => Ok(size),
@@ -428,8 +424,8 @@ mod unix_tests {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
-        vfs.write(path, b"abc", Some(UpdateFlag::Symlink)).unwrap();
-        vfs.write(path, &[1, 2, 3], None).unwrap();
+        vfs.write(path, b"abc", UpdateFlag::Symlink).unwrap();
+        vfs.write(path, &[1, 2, 3], UpdateFlag::Regular).unwrap();
         let mut buf = tmp.path().to_path_buf();
         buf.push("a");
         let metadata = fs::symlink_metadata(buf).unwrap();
@@ -443,9 +439,9 @@ mod unix_tests {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
-        vfs.write(path, "abc".as_bytes(), Some(UpdateFlag::Executable))
+        vfs.write(path, "abc".as_bytes(), UpdateFlag::Executable)
             .unwrap();
-        vfs.write(path, &[1, 2, 3], None).unwrap();
+        vfs.write(path, &[1, 2, 3], UpdateFlag::Regular).unwrap();
         let mut buf = tmp.path().to_path_buf();
         buf.push("a");
         let metadata = fs::symlink_metadata(buf).unwrap();

@@ -30,7 +30,7 @@ struct WorkItem {
 }
 #[derive(Debug)]
 enum Action {
-    Write(RepoPathBuf, Bytes, Option<UpdateFlag>),
+    Write(RepoPathBuf, Bytes, UpdateFlag),
     Remove(RepoPathBuf),
     SetExecutable(RepoPathBuf, bool),
     Batch(Vec<Action>),
@@ -57,7 +57,7 @@ impl AsyncVfsWriter {
         &self,
         path: RepoPathBuf,
         data: B,
-        flag: Option<UpdateFlag>,
+        flag: UpdateFlag,
     ) -> Result<usize> {
         self.submit_action(Action::Write(path, data.into(), flag))
             .await
@@ -65,7 +65,7 @@ impl AsyncVfsWriter {
 
     pub async fn write_batch<B: Into<Bytes>>(
         &self,
-        batch: impl IntoIterator<Item = (RepoPathBuf, B, Option<UpdateFlag>)>,
+        batch: impl IntoIterator<Item = (RepoPathBuf, B, UpdateFlag)>,
     ) -> Result<usize> {
         let batch = batch
             .into_iter()
