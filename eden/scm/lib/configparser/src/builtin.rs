@@ -20,8 +20,8 @@ autopullhoisthotfix=!
 automigrate=false
 
 [remotenames]
-autopullhoistpattern=
-autopullpattern=
+autopullhoistpattern=re:tags/\S+$
+autopullpattern=re:^remote/\S+$
 disallowedto=^remote/
 disallowhint=please don't specify 'remote/' prefix in remote bookmark's name
 hoist=remote
