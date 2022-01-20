@@ -3028,7 +3028,7 @@ def trydiff(
     date1 = util.datestr(ctx1.date())
     date2 = util.datestr(ctx2.date())
 
-    gitmode = {"l": b"120000", "x": b"100755", "": b"100644"}
+    gitmode = {"l": b"120000", "x": b"100755", "": b"100644", "m": b"160000"}
 
     if relroot != "" and (
         repo.ui.configbool("devel", "all-warnings")

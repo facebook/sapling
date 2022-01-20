@@ -1329,6 +1329,9 @@ class filectx(basefilectx):
 
     def data(self):
         # type: () -> bytes
+        if self.flags() == "m":
+            text = "Subproject commit %s\n" % hex(self._filenode)
+            return text.encode("utf-8")
         try:
             return self._filelog.read(self._filenode)
         except error.CensoredNodeError:
@@ -2044,7 +2047,15 @@ class workingfilectx(committablefilectx):
         return self._filenode
 
     def data(self):
-        return self._repo.wread(self._path)
+        try:
+            return self._repo.wread(self._path)
+        except IOError as e:
+            if e.errno == errno.EISDIR:
+                # might be a submodule
+                if self.flags() == "m":
+                    text = "Subproject commit %s\n" % hex(self.filenode())
+                    return text.encode("utf-8")
+            raise
 
     def content_sha256(self):
         return hashlib.sha256(self.data()).digest()

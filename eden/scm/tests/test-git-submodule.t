@@ -107,6 +107,28 @@ Make changes to submodules via working copy
   A mod/3
   R mod/2
 
+Diff working copy changes
+
+  $ hg diff mod
+  diff --git a/mod/1 b/mod/1
+  --- a/mod/1
+  +++ b/mod/1
+  @@ -1,1 +1,1 @@
+  -Subproject commit 73c8ee0cae8ffb843cc154c3bf28a12438801d3f
+  +Subproject commit 0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
+  diff --git a/mod/2 b/mod/2
+  deleted file mode 160000
+  --- a/mod/2
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -Subproject commit f4140cb61bcd309e2a17e95f50ae419c7729a6bc
+  diff --git a/mod/3 b/mod/3
+  new file mode 160000
+  --- /dev/null
+  +++ b/mod/3
+  @@ -0,0 +1,1 @@
+  +Subproject commit 0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
+
 Commit submodule changes
 
   $ hg commit -m 'submodule change with file patterns' mod/1
@@ -121,6 +143,38 @@ Commit submodule changes
   $ echo mod/*/*
   mod/1/A mod/1/B mod/3/A mod/3/B
   $ hg push -q --to foo --create
+
+Diff committed changes
+
+  $ hg diff -r '.^^' -r .
+  diff --git a/.gitmodules b/.gitmodules
+  --- a/.gitmodules
+  +++ b/.gitmodules
+  @@ -6,3 +6,6 @@
+   	path = mod/2
+   	url = file:/*/$TESTTMP/sub2/.hg/store/git (glob)
+   	branch = main
+  +[submodule "sub3"]
+  +url = file:/*/$TESTTMP/sub1/.hg/store/git (glob)
+  +path = mod/3
+  diff --git a/mod/1 b/mod/1
+  --- a/mod/1
+  +++ b/mod/1
+  @@ -1,1 +1,1 @@
+  -Subproject commit 73c8ee0cae8ffb843cc154c3bf28a12438801d3f
+  +Subproject commit 0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
+  diff --git a/mod/2 b/mod/2
+  deleted file mode 160000
+  --- a/mod/2
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -Subproject commit f4140cb61bcd309e2a17e95f50ae419c7729a6bc
+  diff --git a/mod/3 b/mod/3
+  new file mode 160000
+  --- /dev/null
+  +++ b/mod/3
+  @@ -0,0 +1,1 @@
+  +Subproject commit 0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
 
 Try checking out the submodule change made by hg
 
