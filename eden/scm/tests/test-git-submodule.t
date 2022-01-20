@@ -131,7 +131,6 @@ Try checking out the submodule change made by hg
   From file:/*/$TESTTMP/parent-repo-git (glob)
    * [new branch]      foo        -> origin/foo
   pulling submodule mod/1
-  pulling submodule sub3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo mod/*/*
@@ -141,3 +140,28 @@ Try checking out the submodule change made by hg
   $ echo mod/*/*
   mod/1/A mod/1/B mod/2/C mod/3/A mod/3/B
 
+Nested submodules can share submodules with same URLs
+
+  $ cd
+  $ git init -q -b main grandparent-repo-git
+  $ cd grandparent-repo-git
+  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.hg/store/git mod/1
+  $ git submodule --quiet add -b main file://$TESTTMP/parent-repo-git/.git mod/p
+  $ git commit -qm 'add .gitmodules'
+
+  $ cd
+  $ hg clone git+file://$TESTTMP/grandparent-repo-git grandparent-repo-hg
+  From file:/*/$TESTTMP/grandparent-repo-git (glob)
+   * [new branch]      main       -> origin/main
+  pulling submodule mod/1
+  pulling submodule mod/p
+  pulling submodule mod/p/mod/2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ cd grandparent-repo-hg
+  $ echo mod/* mod/*/mod/*
+  mod/1 mod/p mod/p/mod/1 mod/p/mod/2
+
+  $ cd .hg/store/gitmodules
+  $ find | grep gitmodules
+  [1]

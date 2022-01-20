@@ -351,11 +351,13 @@ class Submodule:
         The repo will be crated at:
         <parent repo>/.hg/store/gitmodules/<escaped submodule name>
         """
-        repopath = self.parentrepo.svfs.join("gitmodules", self.name)
+        urldigest = hashlib.sha1(self.url.encode("utf-8")).hexdigest()
+        repopath = self.gitmodulesvfs.join("gitmodules", urldigest)
         if os.path.isdir(os.path.join(repopath, ".hg")):
             from . import hg
 
             repo = hg.repository(self.parentrepo.baseui, repopath)
+
         else:
             # create the repo but do not fetch anything
             repo = clone(
@@ -365,6 +367,7 @@ class Submodule:
                 update=False,
                 refspecs=[],
             )
+        repo.submodule = weakref.proxy(self)
         return repo
 
     @util.propertycache
@@ -392,15 +395,42 @@ class Submodule:
             repo = hg.share(
                 backingrepo.ui, backingrepo.root, repopath, update=False, relative=True
             )
+        repo.submodule = weakref.proxy(self)
         return repo
+
+    @util.propertycache
+    def gitmodulesvfs(self):
+        """Follow a chain of nested parents, get the svfs"""
+        repo = self.parentrepo
+        while True:
+            submod = getattr(repo, "submodule", None)
+            if submod is None:
+                break
+            repo = submod.parentrepo
+        return weakref.proxy(repo.svfs)
+
+    @util.propertycache
+    def nestedpath(self):
+        """Follow a chain of nested parents, get the full path of subrepo.
+        For display purpose only.
+        """
+        path = self.path
+        repo = self.parentrepo
+        while True:
+            submod = getattr(repo, "submodule", None)
+            if submod is None:
+                break
+            path = "%s/%s" % (submod.path, path)
+            repo = submod.parentrepo
+        return path
 
     def pullnode(self, repo, node):
         """fetch a commit on demand, prepare for checkout"""
         if node not in repo:
-            repo.ui.status(_("pulling submodule %s\n") % self.name)
+            repo.ui.status(_("pulling submodule %s\n") % self.nestedpath)
             # Write a remote bookmark to mark node public
             with repo.ui.configoverride({("ui", "quiet"): "true"}):
-                refspec = "+%s:refs/remotes/parent/pull" % (hex(node),)
+                refspec = "+%s:refs/remotes/parent/%s" % (hex(node), self.nestedpath)
                 pull(repo, self.url, [refspec])
 
     def checkout(self, node, force=False):
