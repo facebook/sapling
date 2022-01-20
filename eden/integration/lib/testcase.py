@@ -502,6 +502,7 @@ eden_nfs_repo_test = test_replicator(_replicate_eden_nfs_repo_test)
 
 def _replicate_eden_repo_test(
     test_class: Type[EdenRepoTest],
+    run_on_nfs: bool = True,
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
     class HgRepoTest(HgRepoTestMixin, test_class):
         pass
@@ -516,13 +517,13 @@ def _replicate_eden_repo_test(
         pass
 
     variants = [("Hg", typing.cast(Type[EdenRepoTest], HgRepoTest))]
-    if eden.config.HAVE_NFS:
+    if run_on_nfs and eden.config.HAVE_NFS:
         variants.append(("NFSHg", typing.cast(Type[EdenRepoTest], NFSHgRepoTest)))
 
     # Only run the git tests if EdenFS was built with git support.
     if eden.config.HAVE_GIT:
         variants.append(("Git", typing.cast(Type[EdenRepoTest], GitRepoTest)))
-        if eden.config.HAVE_NFS:
+        if run_on_nfs and eden.config.HAVE_NFS:
             variants.append(("NFSGit", typing.cast(Type[EdenRepoTest], NFSGitRepoTest)))
     return variants
 
