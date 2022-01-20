@@ -34,7 +34,10 @@ use tracing_subscriber::EnvFilter;
 /// purpose.
 pub fn init() {
     let builder = Subscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(EnvFilter::from_env("LOG"))
+        .with_ansi(false)
+        .with_target(false)
+        .without_time()
         .with_span_events(FmtSpan::ACTIVE);
 
     builder.init();
