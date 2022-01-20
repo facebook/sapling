@@ -45,7 +45,7 @@ Clone the git repo with submodules
   $ cd
   $ hg clone git+file://$TESTTMP/parent-repo-git parent-repo-hg
   From file:/*/$TESTTMP/parent-repo-git (glob)
-   * [new ref]         * -> origin/main (glob)
+   * [new ref]         * -> remote/main (glob)
   pulling submodule mod/1
   pulling submodule mod/2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -183,8 +183,9 @@ Try checking out the submodule change made by hg
   $ hg clone -qU git+file://$TESTTMP/parent-repo-git parent-repo-hg2
   $ cd parent-repo-hg2
   $ hg pull -B foo --update
+  pulling from file:/*/$TESTTMP/parent-repo-git (glob)
   From file:/*/$TESTTMP/parent-repo-git (glob)
-   * [new ref]         * -> origin/foo (glob)
+   * [new ref]         * -> remote/foo (glob)
   pulling submodule mod/1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -207,7 +208,7 @@ Nested submodules can share submodules with same URLs
   $ cd
   $ hg clone git+file://$TESTTMP/grandparent-repo-git grandparent-repo-hg
   From file:/*/$TESTTMP/grandparent-repo-git (glob)
-   * [new ref]         * -> origin/main (glob)
+   * [new ref]         * -> remote/main (glob)
   pulling submodule mod/1
   pulling submodule mod/p
   pulling submodule mod/p/mod/2

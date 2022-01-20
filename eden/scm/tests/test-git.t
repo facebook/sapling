@@ -162,9 +162,12 @@ Prepare a new git "client" repo:
 
 Test pull:
 
+  $ hg paths -a origin "file://$TESTTMP/gitrepo/.git"
+
 - pull with -B
-  $ hg pull -B foo
-  From $TESTTMP/gitrepo/
+  $ hg pull origin -B foo
+  pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
+  From file:/*/$TESTTMP/gitrepo/ (glob)
    * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> origin/foo
   $ hg log -r origin/foo -T '{desc}\n'
   alpha3
@@ -179,10 +182,13 @@ Test pull:
   origin/foo
 
 - pull without arguments
+  $ hg paths -a default "file://$TESTTMP/gitrepo/.git"
   $ hg pull
+  pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
 
 - infinitepush compatibility
   $ hg pull --config extensions.infinitepush=
+  pulling from file:/*/$TESTTMP/gitrepo/.git (glob)
 
 Test clone with flags (--noupdate, --updaterev):
 
@@ -194,24 +200,24 @@ Test clone with flags (--noupdate, --updaterev):
   $ hg log -r . -T '{node|short}\n'
   000000000000
   $ hg bookmarks --remote
-     origin/master             3f5848713286
+     remote/master             3f5848713286
   $ cd ..
 
   $ hg clone "git+file://$TESTTMP/gitrepo" cloned1 --config remotenames.selectivepulldefault=foo,master
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> origin/foo
-   * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> origin/master
+   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> remote/foo
+   * [new ref]         3f5848713286c67b8a71a450e98c7fa66787bde2 -> remote/master
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned1 log -r . -T '{node|short} {remotenames} {desc}\n'
-  5c9a5ee451a8 origin/foo alpha3
+  5c9a5ee451a8 remote/foo alpha3
   $ cd ..
 
-  $ hg clone --updaterev origin/foo "git+file://$TESTTMP/gitrepo" cloned2 --config remotenames.selectivepulldefault=foo
+  $ hg clone --updaterev remote/foo "git+file://$TESTTMP/gitrepo" cloned2 --config remotenames.selectivepulldefault=foo
   From file:/*/$TESTTMP/gitrepo (glob)
-   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> origin/foo
+   * [new ref]         5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> remote/foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --cwd cloned2 log -r . -T '{node|short} {remotenames} {desc}\n'
-  5c9a5ee451a8 origin/foo alpha3
+  5c9a5ee451a8 remote/foo alpha3
   $ cd ..
 
 Test push:
@@ -229,8 +235,8 @@ Test push:
    * [new branch]      5c9a5ee451a8051f0d16433dee8a2c2259d5fed8 -> parent_change_beta
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
-  alpha3 origin/foo origin/parent_change_beta
-  beta.change origin/book_change_beta
+  alpha3 remote/foo remote/parent_change_beta
+  beta.change remote/book_change_beta
 
 - delete bookmark
   $ hg push --delete book_change_beta
@@ -238,7 +244,7 @@ Test push:
    - [deleted]         book_change_beta
 
   $ hg log -r '.^+.' -T '{desc} {remotenames}\n'
-  alpha3 origin/foo origin/parent_change_beta
+  alpha3 remote/foo remote/parent_change_beta
   beta.change 
 
 - infinitepush compatibility
@@ -320,7 +326,7 @@ Submodule does not cause a crash:
   $ setconfig git.submodules=false
   $ hg clone "git+file://$TESTTMP/submod" cloned-submod
   From file:/*/$TESTTMP/submod (glob)
-   * [new ref]         a4c97159e197fb3aaab3f24fc3b39d7942b311ff -> origin/master
+   * [new ref]         a4c97159e197fb3aaab3f24fc3b39d7942b311ff -> remote/master
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd cloned-submod
   $ echo *
@@ -351,13 +357,13 @@ Tags are ignored during clone and pull:
   $ cd
   $ hg clone -q git+file://$TESTTMP/gittag cloned-gittag
   $ cd cloned-gittag
-  $ hg pull
+  $ hg pull -q
   $ hg bookmarks
   no bookmarks set
   $ hg bookmarks --remote
-     origin/main               379d702a285c
+     remote/main               379d702a285c
   $ git --git-dir=.hg/store/git for-each-ref
-  379d702a285c1e34e6365cc347249ec73bcd6b40 commit	refs/remotes/origin/main
+  379d702a285c1e34e6365cc347249ec73bcd6b40 commit	refs/remotes/remote/main
 
 Cloud sync does not crash:
 

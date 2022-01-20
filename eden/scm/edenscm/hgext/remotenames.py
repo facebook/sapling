@@ -817,18 +817,18 @@ def _guesspushtobookmark(repo, pushnode, remotename):
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
     if git.isgit(repo):
+        if dest is None:
+            dest = "default"
         force = opts.get("force")
         delete = opts.get("delete")
-        if dest == "default":
-            dest = None
-        dest = dest or "origin"
         if delete:
             pushnode = None
             to = delete
         else:
             revspec = (["."] + opts.get("bookmark", []) + opts.get("rev", []))[-1]
             pushnode = scmutil.revsingle(repo, revspec).node()
-            to = opts.get("to") or _guesspushtobookmark(repo, pushnode, dest)
+            remotename = ui.config("remotenames", "rename.%s" % dest) or dest
+            to = opts.get("to") or _guesspushtobookmark(repo, pushnode, remotename)
             if not to:
                 raise error.Abort(_("use '--to' to specify destination bookmark"))
         return git.push(repo, dest, pushnode, to, force=force)
@@ -1237,6 +1237,10 @@ def displayremotebookmarks(ui, repo, opts, fm):
 
 
 def _getremotepeer(ui, repo, opts):
+    if git.isgit(repo):
+        # no peer interface for git (bare) repos
+        return None
+
     remotepath = opts.get("remote_path")
     path = ui.paths.getpath(remotepath or None, default="default")
 

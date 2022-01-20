@@ -4577,32 +4577,6 @@ def pull(ui, repo, source="default", **opts):
     if ui.configbool("pull", "automigrate"):
         repo.automigratestart()
 
-    if git.isgit(repo):
-        # git has a different default remote name
-        if source == "default":
-            source = "origin"
-        names = opts.get("bookmark") or []
-        nodes = []
-        for rev in opts.get("rev"):
-            if len(rev) == len(nullhex):
-                nodes.append(bin(rev))
-            else:
-                raise error.Abort(_("--rev for git requires full SHA1 hash"))
-        if not names:
-            names = bookmarks.selectivepullbookmarknames(repo)
-        ret = git.pull(repo, source, names=names, nodes=nodes)
-        if ret == 0 and opts.get("update"):
-            # Figure out the node to checkout
-            node = None
-            for spec in names + nodes:
-                if spec in repo:
-                    node = repo[spec].node()
-                    break
-            if node is not None:
-                return hg.updatetotally(repo.ui, repo, node, None)
-
-        return ret
-
     if ui.configbool("commands", "update.requiredest") and opts.get("update"):
         msg = _("update destination required by configuration")
         hint = _("use hg pull followed by hg update DEST")
@@ -4623,6 +4597,8 @@ def pull(ui, repo, source="default", **opts):
         # - Does not support named branches.
         modheads, checkout = _newpull(ui, repo, source, **opts)
     else:
+        if git.isgit(repo):
+            raise error.Abort(_("pull: branch name in URL is not supported"))
         # The legacy pull implementation. Problems:
         # - Remotenames:
         #   - Inefficiency: Call listkey proto twice.

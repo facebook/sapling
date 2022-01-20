@@ -957,6 +957,18 @@ class localrepository(object):
         configoverride = {}
         if quiet:
             configoverride[("ui", "quiet")] = True
+
+        if git.isgit(self):
+            # git does not support "lookup", aka. prefix match
+            if headnames:
+                raise errormod.Abort(
+                    _("pulling %s in git repo is not supported")
+                    % _(", ").join(headnames)
+                )
+            with self.ui.configoverride(configoverride):
+                git.pull(self, source, names=bookmarknames, nodes=headnodes)
+            return
+
         with self.conn(source) as conn, self.wlock(), self.lock(), self.transaction(
             "pull"
         ), self.ui.configoverride(configoverride):

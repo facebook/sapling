@@ -8,6 +8,9 @@
 //! Builtin hgrc templates
 
 static GIT_RC: &str = r#"
+[commands]
+new-pull=true
+
 [extensions]
 remotenames=
 treemanifest=
@@ -19,10 +22,12 @@ automigrate=false
 [remotenames]
 autopullhoistpattern=
 autopullpattern=
-disallowedto=^origin/
-disallowhint=please don't specify 'origin/' prefix in remote bookmark's name
-hoist=origin
+disallowedto=^remote/
+disallowhint=please don't specify 'remote/' prefix in remote bookmark's name
+hoist=remote
+rename.default=remote
 selectivepulldefault=main,master
+selectivepull=true
 
 [smartlog]
 names=main,master

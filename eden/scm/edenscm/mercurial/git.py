@@ -71,11 +71,11 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
         ret = initgitbare(ui, url, repo.svfs.join("git"))
         if ret != 0:
             raise error.Abort(_("git clone was not successful"))
-        initgit(repo, "git")
+        initgit(repo, "git", url)
         if url:
             if pullnames is None:
                 pullnames = bookmod.selectivepullbookmarknames(repo)
-            pull(repo, "origin", names=pullnames)
+            pull(repo, "default", names=pullnames)
     except Exception:
         repo = None
         shutil.rmtree(destpath, ignore_errors=True)
@@ -90,13 +90,15 @@ def clone(ui, url, destpath=None, update=True, pullnames=None):
     return repo
 
 
-def initgit(repo, gitdir):
+def initgit(repo, gitdir, giturl=None):
     """Change a repo to be backed by a bare git repo in `gitdir`.
     This should only be called for newly created repos.
     """
     from . import visibility
 
     hgrc = "%include builtin:git.rc\n"
+    if giturl:
+        hgrc += "\n[paths]\ndefault = %s\n" % giturl
 
     with repo.lock(), repo.transaction("initgit"):
         repo.svfs.writeutf8(GIT_DIR_FILE, gitdir)
@@ -138,10 +140,6 @@ def initgitbare(ui, giturl, destpath):
     # not using 'git clone --bare' because it writes refs to refs/heads/,
     # not in desirable refs/remotes/origin/heads/.
     cmdlist = [(None, ["init", "-q", "-b", "default", "--bare", destpath])]
-    if giturl:
-        cmdlist += [
-            (destpath, ["remote", "add", "origin", giturl]),
-        ]
     for gitdir, cmd in cmdlist:
         ret = rungitnorepo(ui, cmd, gitdir=gitdir)
         if ret != 0:
@@ -237,11 +235,11 @@ def pull(repo, source, names=(), nodes=()):
     missing names will be removed.
     nodes, if pulled, will be written to "visibleheads".
     """
+    url, remote = _urlremote(repo.ui, source)
+
     # normalize names for listing
     refnames = [RefName(name) for name in names]
-    listed = listremote(repo, source, refnames)  # ex. {'refs/heads/main': node}
-
-    remote = source
+    listed = listremote(repo, url, refnames)  # ex. {'refs/heads/main': node}
 
     refspecs = []
     for refname in refnames:
@@ -262,19 +260,55 @@ def pull(repo, source, names=(), nodes=()):
     for node in nodes:
         refspec = "+%s:%s" % (hex(node), RefName.visiblehead(node, remote=remote))
 
-    return pullrefspecs(repo, source, refspecs)
+    ret = pullrefspecs(repo, url, refspecs)
+
+    # update "tip", useful for pull --checkout
+    tip = None
+    for refname in refnames:
+        node = repo._remotenames.get(refname.remotename)
+        if node is not None:
+            tip = node
+    if tip is None:
+        tip = repo.changelog.dag.all().first()
+    if tip is not None:
+        with repo.lock(), repo.transaction("pull"):
+            metalog = repo.metalog()
+            metalog["tip"] = tip
+            metalog.commit("hg pull\nTransaction: pull")
+
+    return ret
 
 
-def pullrefspecs(repo, source, refspecs):
+def _urlremote(ui, source):
+    """normalize source into (url, remotename)"""
+    source = source or "default"
+    if source in ui.paths:
+        url = ui.paths[source].rawloc
+    else:
+        url = source
+        name = ui.paths.getname(source)
+        if not name:
+            hint = _("use '@prog@ paths -a NAME %s' to add a remote name") % url
+            raise error.Abort(_("remote url %s does not have a name") % url, hint=hint)
+        source = name
+
+    # respect remotenames.rename.<source> config
+    remote = ui.config("remotenames", "rename.%s" % source) or source
+
+    return (url, remote)
+
+
+def pullrefspecs(repo, url, refspecs):
     """Run `git fetch` on the backing repo to perform a pull"""
     if not refspecs:
         # Nothing to pull
         return 0
     ret = rungit(
         repo,
-        ["fetch", "--no-write-fetch-head", "--no-tags", "--prune", source] + refspecs,
+        ["fetch", "--no-write-fetch-head", "--no-tags", "--prune", url] + refspecs,
     )
     repo.invalidate(clearfilecache=True)
+    repo.changelog  # trigger updating metalog
     return ret
 
 
@@ -290,20 +324,32 @@ def push(repo, dest, pushnode, to, force=False):
         fromspec = "+%s" % hex(pushnode)
     else:
         fromspec = "%s" % hex(pushnode)
-    refspec = "%s:refs/heads/%s" % (fromspec, to)
-    ret = rungit(repo, ["push", "-u", dest, refspec])
-    repo.invalidatechangelog()
+
+    url, remote = _urlremote(repo.ui, dest)
+    refname = RefName(name=to)
+    refspec = "%s:%s" % (fromspec, refname)
+    ret = rungit(repo, ["push", url, refspec])
+    # udpate remotenames
+    name = refname.withremote(remote).remotename
+    with repo.lock(), repo.transaction("push"):
+        metalog = repo.metalog()
+        namenodes = bookmod.decoderemotenames(metalog["remotenames"])
+        if pushnode is None:
+            namenodes.pop(name, None)
+        else:
+            namenodes[name] = pushnode
+        metalog["remotenames"] = bookmod.encoderemotenames(namenodes)
     return ret
 
 
-def listremote(repo, source, patterns):
+def listremote(repo, url, patterns):
     """List references of the remote peer
     Return a dict of name to node.
     """
     patterns = [str(p) for p in patterns]
     if not patterns:
         return {}
-    out = callgit(repo, ["ls-remote", "--refs", source] + patterns)
+    out = callgit(repo, ["ls-remote", "--refs", url] + patterns)
     refs = {}
     for line in out.splitlines():
         if b"\t" not in line:
