@@ -5,13 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use async_runtime::try_block_unless_interrupted as block_on;
 use cpython::*;
+use cpython_ext::convert::ImplInto;
+use cpython_ext::convert::Serde;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
 use dag::DagAlgorithm;
+use dag::IdSegment;
+use dag::Set;
 use dag::Vertex;
 
 use crate::Names;
@@ -165,6 +170,22 @@ py_class!(pub class dagalgo |py| {
         };
         let dag = self.dag(py);
         Ok(renderdag::render_namedag(dag.as_ref(), get_message).map_pyerr(py)?.into())
+    }
+
+    /// segments(nameset, maxlevel=255) -> [segment]
+    /// Get the segments covering the set with specified maximum level.
+    def segments(&self, set: ImplInto<Set>, maxlevel: u8 = 255) -> PyResult<Serde<VecDeque<IdSegment>>> {
+        let set = set.into();
+        let (id_set, _id_map) = match set.to_id_set_and_id_map_in_o1() {
+            Some(v) => v,
+            None => {
+                let msg = format!("{:?} cannot be converted to IdSet", &set);
+                return Err(PyErr::new::<exc::ValueError, _>(py, msg));
+            }
+        };
+        let id_dag = self.dag(py).id_dag_snapshot().map_pyerr(py)?;
+        let segments = id_dag.id_set_to_id_segments_with_max_level(&id_set, maxlevel).map_pyerr(py)?;
+        Ok(Serde(segments))
     }
 });
 
