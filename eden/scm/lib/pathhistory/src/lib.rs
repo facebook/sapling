@@ -20,5 +20,8 @@
 //!
 //! See `PathHistory` for the main structure.
 
+#[allow(unused)]
+mod pathops;
+
 #[cfg(test)]
 dev_logger::init!();
