@@ -4534,8 +4534,6 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
     :checkout: update destination revision (or None to default destination)
     :brev: a name, which might be a bookmark to be activated after updating
     """
-    if modheads == 0:
-        return
     if optupdate:
         try:
             return hg.updatetotally(ui, repo, checkout, brev)

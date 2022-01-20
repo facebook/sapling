@@ -151,9 +151,9 @@ No new revs, no update:
   $ hg pull -qu
 
   $ hg parents -q
-  1f0dee641bb7
+  7d4251d04d20
 
-  $ hg debugstrip 'desc(change)' --no-backup
+  $ hg debugstrip -q 'desc(change)' --no-backup
 
   $ hg parents -q
   1f0dee641bb7
