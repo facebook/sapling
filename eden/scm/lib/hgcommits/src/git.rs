@@ -281,7 +281,13 @@ impl ReadCommitText for Arc<Mutex<git2::Repository>> {
             Err(_) => return Ok(None),
         };
         let repo = self.lock();
-        let commit = repo.find_commit(oid)?;
+        let commit = match repo.find_commit(oid) {
+            Ok(commit) => commit,
+            Err(e) if e.code() == git2::ErrorCode::NotFound => {
+                return Ok(crate::revlog::get_hard_coded_commit_text(vertex));
+            }
+            Err(e) => return Err(e.into()),
+        };
         let text = to_hg_text(&commit);
         Ok(Some(text))
     }

@@ -57,6 +57,16 @@ Test checkout:
   $ cat beta
   2
 
+Test nullid:
+
+  $ hg log -r null -T '{desc}'
+
+Test non-existed commit hash:
+
+  $ hg log -r deadbeef00000000000000000000000000000000 -T '{desc}'
+  abort: unknown revision 'deadbeef00000000000000000000000000000000'!
+  [255]
+
 Test diff:
 
   $ hg log -r tip -p

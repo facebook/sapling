@@ -49,6 +49,9 @@ impl GitStore {
 
     /// Read an object of the given type.
     pub fn read_obj(&self, id: HgId, kind: git2::ObjectType) -> Git2Result<Vec<u8>> {
+        if id.is_null() {
+            return Ok(Vec::new());
+        }
         let oid = hgid_to_git_oid(id);
         let obj = self.odb.read(oid)?;
         if kind != git2::ObjectType::Any && obj.kind() != kind {
@@ -63,6 +66,9 @@ impl GitStore {
 
     /// Read the size of an object without its full content.
     pub fn read_obj_size(&self, id: HgId, kind: git2::ObjectType) -> Git2Result<usize> {
+        if id.is_null() {
+            return Ok(0);
+        }
         let oid = hgid_to_git_oid(id);
         let (size, obj_kind) = self.odb.read_header(oid)?;
         if kind != git2::ObjectType::Any && obj_kind != kind {
