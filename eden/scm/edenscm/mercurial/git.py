@@ -8,11 +8,29 @@ utilities for git support
 """
 
 import hashlib
+import subprocess
 
 import bindings
 
+from . import error, util
+from .i18n import _
+
 GIT_DIR_FILE = "gitdir"
 GIT_REQUIREMENT = "git"
+
+
+def cached(func):
+    def wrapper(repo, *args, **kwargs):
+        key = "_git_%s" % func.__name__
+        cached = repo.__dict__.get(key, None)
+        if cached is None:
+            value = func(repo, *args, **kwargs)
+            repo.__dict__[key] = (value,)
+            return value
+        else:
+            return cached[0]
+
+    return wrapper
 
 
 def isgit(repo):
@@ -20,6 +38,7 @@ def isgit(repo):
     return GIT_REQUIREMENT in repo.storerequirements
 
 
+@cached
 def readgitdir(repo):
     """Return the path of the GIT_DIR, if the repo is backed by git"""
     if isgit(repo):
@@ -33,6 +52,50 @@ def openstore(repo):
     gitdir = readgitdir(repo)
     if gitdir:
         return bindings.gitstore.gitstore(gitdir)
+
+
+@cached
+def readconfig(repo):
+    """Read git config into a config object"""
+    out = callgit(repo, ["config", "-l"])
+    config = bindings.configparser.config()
+    for line in out.splitlines():
+        line = line.decode("utf-8", "surrogateescape")
+        if "=" not in line:
+            continue
+        sectionname, value = line.split("=", 1)
+        if "." not in sectionname:
+            continue
+        section, name = sectionname.split(".", 1)
+        config.set(section, name, value, "git")
+    return config
+
+
+def callgit(repo, args):
+    """Run git command in the backing git repo, return its output"""
+    gitdir = readgitdir(repo)
+    ret = callgitnorepo(repo.ui, args, gitdir=gitdir)
+    if ret.returncode != 0:
+        cmdstr = " ".join(util.shellquote(c) for c in ret.args)
+        raise error.Abort(
+            _("git command (%s) failed with exit code %s:\n%s%s")
+            % (cmdstr, ret.returncode, ret.stdout, ret.stderr)
+        )
+    return ret.stdout
+
+
+def callgitnorepo(ui, args, gitdir=None):
+    """Run git command, return its `CompletedProcess`"""
+    cmd = [gitbinary(ui)]
+    if gitdir is not None:
+        cmd.append("--git-dir=%s" % gitdir)
+    cmd += args
+    return subprocess.run(cmd, capture_output=True)
+
+
+def gitbinary(ui):
+    """return git executable"""
+    return ui.config("ui", "git") or "git"
 
 
 class gitfilelog(object):
