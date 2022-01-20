@@ -586,6 +586,11 @@ class UpdateTest(EdenHgTestCase):
             {"FILE1", "FILE2"},
         )
 
+    def test_update_to_null_with_untracked_directory(self) -> None:
+        self.mkdir("foo/subdir/bar")
+        self.repo.update("null")
+        self.assertEqual(os.listdir(self.get_path("foo")), ["subdir"])
+
     if sys.platform == "win32":
 
         def test_remove_materialized_while_stopped(self) -> None:

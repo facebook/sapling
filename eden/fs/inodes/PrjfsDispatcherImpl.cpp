@@ -111,6 +111,14 @@ ImmediateFuture<std::vector<PrjfsDirEntry>> PrjfsDispatcherImpl::opendir(
                   false,
                   ImmediateFuture<uint64_t>(dotEdenConfig_.size()));
               return folly::Try{ret};
+            } else {
+              // An update to a commit not containing a directory but with
+              // materialized and ignored subdirectories/files will still be
+              // present in the working copy and will still be a placeholder
+              // due to EdenFS not being able to make the directory full. We
+              // thus simply return an empty directory and ProjectedFS will
+              // combine it with the on-disk materialized state.
+              return folly::Try{std::vector<PrjfsDirEntry>{}};
             }
           }
         }
