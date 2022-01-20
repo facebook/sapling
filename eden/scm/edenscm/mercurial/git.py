@@ -11,11 +11,13 @@ import hashlib
 import os
 import shutil
 import subprocess
+import weakref
+from dataclasses import dataclass
 
 import bindings
 from edenscm import tracing
 
-from . import bookmarks as bookmod, error, util
+from . import bookmarks as bookmod, error, progress, util
 from .i18n import _
 from .node import bin, hex, nullid
 
@@ -42,12 +44,15 @@ def isgit(repo):
     return GIT_REQUIREMENT in repo.storerequirements
 
 
-def clone(ui, url, destpath=None, update=True):
+def clone(ui, url, destpath=None, update=True, refspecs=None):
     """Clone a git repo, then create a repo at dest backed by the git repo.
     update can be False, or True, or a node to update to.
     - False: do not update, leave an empty working copy.
     - True: upate to git HEAD.
     - other: update to `other` (node, or name).
+    refspecs decides what to pull.
+    - None: use default refspecs set by configs.
+    - []: do not fetch anything.
     If url is empty, create the repo but do not add a remote.
     """
     from . import hg
@@ -68,7 +73,8 @@ def clone(ui, url, destpath=None, update=True):
             raise error.Abort(_("git clone was not successful"))
         initgit(repo, "git")
         if url:
-            refspecs = defaultpullrefspecs(repo, "origin")
+            if refspecs is None:
+                refspecs = defaultpullrefspecs(repo, "origin")
             pull(repo, "origin", refspecs)
     except Exception:
         repo = None
@@ -249,6 +255,143 @@ def defaultpullrefspecs(repo, source):
             refspec = ":refs/remotes/%s/heads/%s" % (source, name)
         refspecs.append(refspec)
     return refspecs
+
+
+@cached
+def parsesubmodules(ctx):
+    """Parse .gitmodules in ctx. Return [Submodule]."""
+    repo = ctx.repo()
+    if not repo.ui.configbool("git", "submodules"):
+        repo.ui.note(_("submodules are disabled via git.submodules\n"))
+        return {}
+    if ".gitmodules" not in ctx:
+        return {}
+
+    data = ctx[".gitmodules"].data()
+    # strip leading spaces
+    data = b"".join(l.strip() + b"\n" for l in data.splitlines())
+    config = bindings.configparser.config()
+    config.parse(data.decode("utf-8", "surrogateescape"), ".gitmodules")
+    prefix = 'submodule "'
+    suffix = '"'
+    submodules = []
+    for section in config.sections():
+        if section.startswith(prefix) and section.endswith(suffix):
+            subname = section[len(prefix) : -len(suffix)]
+        subconfig = {}
+        for name in config.names(section):
+            value = config.get(section, name)
+            subconfig[name] = value
+        if "url" in subconfig and "path" in subconfig:
+            submodules.append(
+                Submodule(
+                    subname.replace(".", "_"),
+                    subconfig["url"],
+                    subconfig["path"],
+                    weakref.proxy(repo),
+                )
+            )
+    return submodules
+
+
+def submodulecheckout(ctx, match=None, force=False):
+    """Checkout commits specified in submodules"""
+    ui = ctx.repo().ui
+    submodules = parsesubmodules(ctx)
+    if match is not None:
+        submodules = [submod for submod in submodules if match(submod.path)]
+    with progress.bar(ui, _("updating"), _("submodules"), len(submodules)) as prog:
+        value = 0
+        for submod in submodules:
+            prog.value = (value, submod.name)
+            tracing.debug("checking out submodule %s\n" % submod.name)
+            if submod.path not in ctx:
+                continue
+            fctx = ctx[submod.path]
+            if fctx.flags() != "m":
+                continue
+            node = fctx.filenode()
+            submod.checkout(node, force=force)
+            value += 1
+
+
+@dataclass
+class Submodule:
+    name: str
+    url: str
+    path: str
+    parentrepo: object
+
+    @util.propertycache
+    def backingrepo(self):
+        """submodule backing repo created on demand
+
+        The repo will be crated at:
+        <parent repo>/.hg/store/gitmodules/<escaped submodule name>
+        """
+        repopath = self.parentrepo.svfs.join("gitmodules", self.name)
+        if os.path.isdir(os.path.join(repopath, ".hg")):
+            from . import hg
+
+            repo = hg.repository(self.parentrepo.baseui, repopath)
+        else:
+            # create the repo but do not fetch anything
+            repo = clone(
+                self.parentrepo.baseui,
+                self.url,
+                destpath=repopath,
+                update=False,
+                refspecs=[],
+            )
+        return repo
+
+    @util.propertycache
+    def workingcopyrepo(self):
+        """submodule working repo created on demand
+
+        The repo will be crated in the parent repo's working copy, and share
+        the backing repo.
+        """
+        if "eden" in self.parentrepo.requirements:
+            # NOTE: maybe edenfs redirect can be used here?
+            # or, teach edenfs about the nested repos somehow?
+            raise error.Abort(_("submodule checkout in edenfs is not yet supported"))
+        from . import hg
+
+        repopath = self.parentrepo.wvfs.join(self.path)
+        if os.path.isdir(os.path.join(repopath, ".hg")):
+
+            repo = hg.repository(self.parentrepo.baseui, repopath)
+        else:
+            if self.parentrepo.wvfs.isfile(self.path):
+                self.parentrepo.wvfs.unlink(self.path)
+            self.parentrepo.wvfs.makedirs(self.path)
+            backingrepo = self.backingrepo
+            repo = hg.share(
+                backingrepo.ui, backingrepo.root, repopath, update=False, relative=True
+            )
+        return repo
+
+    def pullnode(self, repo, node):
+        """fetch a commit on demand, prepare for checkout"""
+        if node not in repo:
+            repo.ui.status(_("pulling submodule %s\n") % self.name)
+            # Write a remote bookmark to mark node public
+            with repo.ui.configoverride({("ui", "quiet"): "true"}):
+                refspec = "+%s:refs/remotes/parent/pull" % (hex(node),)
+                pull(repo, self.url, [refspec])
+
+    def checkout(self, node, force=False):
+        """checkout a commit in working copy"""
+        repo = self.workingcopyrepo
+        self.pullnode(repo, node)
+        # Skip if the commit is already checked out, unless force is set.
+        if not force and repo["."].node() == node:
+            return
+        # Run checkout
+        from . import hg
+
+        hg.updaterepo(repo, node, overwrite=force)
 
 
 def callgit(repo, args):

@@ -317,6 +317,7 @@ Submodule does not cause a crash:
 - checkout silently ignores the submodule
 
   $ cd
+  $ setconfig git.submodules=false
   $ hg clone "git+file://$TESTTMP/submod" cloned-submod
   From file:/*/$TESTTMP/submod (glob)
    * [new branch]      master     -> origin/master

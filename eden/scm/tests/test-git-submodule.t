@@ -1,0 +1,68 @@
+#chg-compatible
+#require git no-windows no-fsmonitor
+
+  $ setconfig diff.git=true ui.allowemptycommit=true
+
+Prepare smaller submodules
+
+  $ hg init --git sub1
+  $ drawdag --cwd sub1 << 'EOS'
+  > B
+  > |
+  > A
+  > EOS
+  $ hg bookmark --cwd sub1 -r $B main 
+
+  $ hg init --git sub2
+  $ drawdag --cwd sub2 << 'EOS'
+  > D 
+  > |
+  > C 
+  > EOS
+  $ hg bookmark --cwd sub2 -r $D main 
+
+Prepare git repo with submodules
+(commit hashes are unstable because '.gitmodules' contains TESTTMP paths)
+
+  $ git init -q -b main parent-repo-git
+  $ cd parent-repo-git
+  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.hg/store/git mod/1
+  $ git submodule --quiet add -b main file://$TESTTMP/sub2/.hg/store/git mod/2
+  $ git commit -qm 'add .gitmodules'
+
+  $ cd mod/1
+  $ git checkout -q 'HEAD^'
+  $ cd ../2
+  $ git checkout -q 'HEAD^'
+  $ cd ../..
+  $ git commit -am 'checkout older submodule commits'
+  [main *] checkout older submodule commits (glob)
+   2 files changed, 2 insertions(+), 2 deletions(-)
+
+Clone the git repo with submodules
+
+  $ cd
+  $ hg clone git+file://$TESTTMP/parent-repo-git parent-repo-hg
+  From file:/*/$TESTTMP/parent-repo-git (glob)
+   * [new branch]      main       -> origin/main
+  pulling submodule mod/1
+  pulling submodule mod/2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ cd parent-repo-hg
+  $ echo mod/*/*
+  mod/1/A mod/2/C
+
+Checking out commits triggers submodule updates
+
+  $ hg checkout '.^'
+  pulling submodule mod/1
+  pulling submodule mod/2
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo mod/*/*
+  mod/1/A mod/1/B mod/2/C mod/2/D
+
+  $ hg checkout main
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo mod/*/*
+  mod/1/A mod/2/C

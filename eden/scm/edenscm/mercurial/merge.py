@@ -2395,7 +2395,7 @@ def update(
             if fallbackcheckout:
                 repo.ui.debug("Not using native checkout: %s\n" % fallbackcheckout)
             else:
-                return donativecheckout(
+                ret = donativecheckout(
                     repo,
                     p1,
                     p2,
@@ -2407,6 +2407,9 @@ def update(
                     wc,
                     prerecrawls,
                 )
+                if git.isgit(repo) and not wc.isinmemory():
+                    git.submodulecheckout(p2, matcher, force=force)
+                return ret
 
         if pas[0] is None:
             if repo.ui.configlist("merge", "preferancestor") == ["*"]:
@@ -2630,6 +2633,8 @@ def update(
                     repo.dirstate.setbranch(p2.branch())
 
     if not partial:
+        if git.isgit(repo) and not wc.isinmemory():
+            git.submodulecheckout(p2, matcher, force=force)
         repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
 
     # Log the number of files updated.
