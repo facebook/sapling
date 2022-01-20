@@ -66,6 +66,7 @@
 //!  line3
 //! ```
 
+pub(crate) mod builtin;
 pub mod c_api;
 pub mod config;
 pub mod hg;

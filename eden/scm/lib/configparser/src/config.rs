@@ -372,9 +372,15 @@ impl ConfigSet {
                 if let Rule::line = pair.as_rule() {
                     if !skip_include {
                         let include_path = pair.as_str();
-                        let full_include_path =
-                            path.parent().unwrap().join(expand_path(include_path));
-                        this.load_file(&full_include_path, opts, visited, errors);
+                        if let Some(content) = crate::builtin::get(include_path) {
+                            let text = Text::from(content);
+                            let path = Path::new(include_path);
+                            this.load_file_content(path, text, opts, visited, errors);
+                        } else {
+                            let full_include_path =
+                                path.parent().unwrap().join(expand_path(include_path));
+                            this.load_file(&full_include_path, opts, visited, errors);
+                        }
                     }
                 }
             }
@@ -520,10 +526,11 @@ impl ConfigSet {
                     // If only certain locations are allowed, and this isn't one of them, remove
                     // it. If location is None, it came from inmemory, so don't filter it.
                     if let Some(location) = location {
-                        if allowed_locations
-                            .as_ref()
-                            .map(|a| a.contains(location.as_str()))
-                            == Some(false)
+                        if crate::builtin::get(location.as_str()).is_none()
+                            && allowed_locations
+                                .as_ref()
+                                .map(|a| a.contains(location.as_str()))
+                                == Some(false)
                             && allowed_configs
                                 .as_ref()
                                 .map(|a| a.contains(&(sname, kname)))
@@ -1107,6 +1114,21 @@ pub(crate) mod tests {
         assert_eq!(cfg.get("x", "e"), Some(Text::from("e")));
         assert_eq!(cfg.get("x", "f"), None);
         assert_eq!(cfg.get("y", "b"), Some(Text::from("1")));
+    }
+
+    #[test]
+    fn test_parse_include_builtin() {
+        let dir = TempDir::new("test_parse_include").unwrap();
+        write_file(dir.path().join("rootrc"), "%include builtin:git.rc\n");
+
+        let mut cfg = ConfigSet::new();
+        let errors = cfg.load_path(
+            dir.path().join("rootrc"),
+            &"test_parse_include_builtin".into(),
+        );
+        assert!(errors.is_empty());
+
+        assert_eq!(cfg.get("remotenames", "hoist"), Some(Text::from("origin")));
     }
 
     #[test]
