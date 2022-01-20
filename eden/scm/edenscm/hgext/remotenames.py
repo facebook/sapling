@@ -1123,8 +1123,11 @@ def exbookmarks(orig, ui, repo, *args, **opts):
 
     if _isselectivepull(ui) and remote:
         other = _getremotepeer(ui, repo, opts)
-        remotebookmarks = other.listkeys("bookmarks")
-        _showfetchedbookmarks(ui, other, remotebookmarks, opts, fm)
+        if other is None:
+            displayremotebookmarks(ui, repo, opts, fm)
+        else:
+            remotebookmarks = other.listkeys("bookmarks")
+            _showfetchedbookmarks(ui, other, remotebookmarks, opts, fm)
     elif remote or subscriptions or opts.get("all"):
         displayremotebookmarks(ui, repo, opts, fm)
 
@@ -1236,6 +1239,9 @@ def displayremotebookmarks(ui, repo, opts, fm):
 def _getremotepeer(ui, repo, opts):
     remotepath = opts.get("remote_path")
     path = ui.paths.getpath(remotepath or None, default="default")
+
+    if path is None:
+        return None
 
     destpath = path.pushloc or path.loc
     other = hg.peer(repo, opts, destpath)

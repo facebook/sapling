@@ -187,6 +187,9 @@ Test clone with flags (--noupdate, --updaterev):
   $ cd gitrepo
   $ hg log -r . -T '{node|short}\n'
   000000000000
+  $ hg bookmarks --remote
+     origin/foo                5c9a5ee451a8
+     origin/master             3f5848713286
   $ cd ..
 
   $ hg clone "git+file://$TESTTMP/gitrepo" cloned1
