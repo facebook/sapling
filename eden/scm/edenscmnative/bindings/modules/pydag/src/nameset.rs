@@ -283,3 +283,10 @@ impl ToPyObject for Names {
         nameset::create_instance(py, self.0.clone()).unwrap()
     }
 }
+
+impl nameset {
+    /// Convets to native Rust `Set`.
+    pub(crate) fn to_native_set(&self, py: Python) -> Set {
+        self.inner(py).clone()
+    }
+}
