@@ -25,6 +25,7 @@ from . import (
     error,
     extensions,
     fileset,
+    git,
     match as matchmod,
     mdiff,
     mutation,
@@ -576,7 +577,11 @@ class changectx(basectx):
         return self._changeset.date
 
     def files(self):
-        return self._changeset.files
+        files = self._changeset.files
+        # git does not provide "files" in commit message - run diff to get it
+        if not files and git.isgit(self._repo):
+            files = sorted(self.manifest().diff(self.p1().manifest()).keys())
+        return files
 
     def description(self):
         return self._changeset.description

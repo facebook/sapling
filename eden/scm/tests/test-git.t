@@ -289,3 +289,8 @@ Test push:
   abort: use '--to' to specify destination bookmark
   [255]
 
+"files" metadata:
+
+  $ hg log -r $A+$B -T '{files}\n'
+  A
+  B
