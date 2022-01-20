@@ -46,6 +46,7 @@ from .node import (
     hex,
     modifiednodeid,
     nullid,
+    nullhex,
     nullrev,
     short,
     wdirid,
@@ -2380,9 +2381,8 @@ class overlayworkingctx(committablectx):
                     memctx,
                     path,
                     self.data(path),
-                    "l" in self.flags(path),
-                    "x" in self.flags(path),
-                    self._cache[path]["copied"],
+                    copied=self._cache[path]["copied"],
+                    flags=self.flags(path),
                 )
             else:
                 # Returning None, but including the path in `files`, is
@@ -2878,19 +2878,36 @@ class memfilectx(committablefilectx):
     """
 
     def __init__(
-        self, repo, changectx, path, data, islink=False, isexec=False, copied=None
+        self,
+        repo,
+        changectx,
+        path,
+        data,
+        islink=False,
+        isexec=False,
+        copied=None,
+        flags=None,
     ):
         """
         path is the normalized file path relative to repository root.
         data is the file content as a string.
-        islink is True if the file is a symbolic link.
-        isexec is True if the file is executable.
+        islink is True if the file is a symbolic link (for compatibility).
+        isexec is True if the file is executable (for compatibility).
+        flags provides the "flags" directly, bypassing islink and isexec.
         copied is the source file path if current file was copied in the
         revision being committed, or None."""
         super(memfilectx, self).__init__(repo, path, None, changectx)
         self._data = data
-        self._flags = (islink and "l" or "") + (isexec and "x" or "")
+        if flags is None:
+            self._flags = (islink and "l" or "") + (isexec and "x" or "")
+        else:
+            self._flags = flags
         self._copied = None
+        if self._flags == "m":
+            # HACK: Reconstruct filenode from "data()" for submodules.
+            # Ideally the callsite provides filenode, but that's not a
+            # trivial change.
+            self._filenode = bin(data.rstrip()[-len(nullhex) :])
         if copied:
             self._copied = (copied, nullid)
 

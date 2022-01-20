@@ -2,6 +2,7 @@
 #require git no-windows no-fsmonitor
 
   $ setconfig diff.git=true ui.allowemptycommit=true
+  $ enable rebase
 
 Prepare smaller submodules
 
@@ -219,3 +220,50 @@ Nested submodules can share submodules with same URLs
   $ cd .hg/store/gitmodules
   $ find | grep gitmodules
   [1]
+
+Rebase submodule change
+
+  $ cd
+  $ git init -q -b main rebase-git
+  $ cd rebase-git
+  $ git submodule --quiet add -b main file://$TESTTMP/sub1/.hg/store/git m1
+  $ git submodule --quiet add -b main file://$TESTTMP/sub2/.hg/store/git m2
+  $ git commit -qm A
+
+  $ cd
+  $ hg clone -q git+file://$TESTTMP/rebase-git rebase-hg
+  $ cd rebase-hg
+  $ touch B
+  $ hg commit -Aqm B B
+  $ hg --cwd m2 checkout -q '.^'
+  $ hg commit -qm C
+
+  $ hg rebase -r . -d 'desc(A)' --config rebase.experimental.inmemory=false
+  rebasing * "C" (glob)
+  $ hg log -r '.' -p -T '{desc}\n'
+  C
+  diff --git a/m2 b/m2
+  --- a/m2
+  +++ b/m2
+  @@ -1,1 +1,1 @@
+  -Subproject commit f02e91cd72c210709673488ad9224fdc72e49018
+  +Subproject commit f4140cb61bcd309e2a17e95f50ae419c7729a6bc
+  
+  $ hg st
+  $ echo m2/*
+  m2/C
+
+  $ hg rebase -r . -d 'desc(B)' --config rebase.experimental.inmemory=true
+  rebasing * "C" (glob)
+  $ hg log -r '.' -p -T '{desc}\n'
+  C
+  diff --git a/m2 b/m2
+  --- a/m2
+  +++ b/m2
+  @@ -1,1 +1,1 @@
+  -Subproject commit f02e91cd72c210709673488ad9224fdc72e49018
+  +Subproject commit f4140cb61bcd309e2a17e95f50ae419c7729a6bc
+  
+  $ hg st
+  $ echo m2/*
+  m2/C
