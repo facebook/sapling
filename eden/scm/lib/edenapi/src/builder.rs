@@ -140,8 +140,8 @@ pub struct HttpClientBuilder {
     encoding: Option<Encoding>,
     min_transfer_speed: Option<MinTransferSpeed>,
     max_retry_per_request: usize,
-
     http_config: http_client::Config,
+    use_files2: bool,
 }
 
 impl HttpClientBuilder {
@@ -234,6 +234,7 @@ impl HttpClientBuilder {
             );
         let max_retry_per_request =
             get_config::<usize>(config, "edenapi", "max-retry-per-request")?.unwrap_or(10);
+        let use_files2 = get_config::<bool>(config, "edenapi", "use-files2")?.unwrap_or_default();
 
         let mut http_config = hg_http::http_config(config);
         http_config.verbose_stats |= debug;
@@ -261,6 +262,7 @@ impl HttpClientBuilder {
             min_transfer_speed,
             max_retry_per_request,
             http_config,
+            use_files2,
         })
     }
 
@@ -346,14 +348,12 @@ impl HttpClientBuilder {
         self
     }
 
-
     /// Maximum number of locations per location to has request. Larger requests will be split up
     /// into concurrently-sent batches.
     pub fn max_location_to_hash(mut self, size: Option<usize>) -> Self {
         self.max_location_to_hash = size;
         self
     }
-
 
     /// Timeout for HTTP requests sent by the client.
     pub fn timeout(mut self, timeout: Duration) -> Self {
@@ -446,6 +446,7 @@ pub(crate) struct Config {
     pub(crate) min_transfer_speed: Option<MinTransferSpeed>,
     pub(crate) max_retry_per_request: usize,
     pub(crate) http_config: http_client::Config,
+    pub(crate) use_files2: bool,
 }
 
 impl TryFrom<HttpClientBuilder> for Config {
@@ -474,6 +475,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             min_transfer_speed,
             max_retry_per_request,
             http_config,
+            use_files2,
         } = builder;
 
         // Check for missing required fields.
@@ -514,6 +516,7 @@ impl TryFrom<HttpClientBuilder> for Config {
             min_transfer_speed,
             max_retry_per_request,
             http_config,
+            use_files2,
         })
     }
 }
