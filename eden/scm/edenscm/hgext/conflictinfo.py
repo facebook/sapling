@@ -36,6 +36,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.filemerge import absentfilectx
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin
 
 
 testedwith = "ships-with-fb-hgext"
@@ -175,11 +176,11 @@ def _summarizefileconflicts(self, path, workingctx):
         return None
 
     stateentry = self._state[path]
-    localnode = stateentry[1]
+    localnode = bin(stateentry[1])
     ancestorfile = stateentry[3]
-    ancestornode = stateentry[4]
+    ancestornode = bin(stateentry[4])
     otherfile = stateentry[5]
-    othernode = stateentry[6]
+    othernode = bin(stateentry[6])
     otherctx = self._repo[self._other]
     extras = self.extras(path)
     anccommitnode = extras.get("ancestorlinknode")

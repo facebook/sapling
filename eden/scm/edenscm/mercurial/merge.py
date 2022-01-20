@@ -541,7 +541,10 @@ class mergestate(object):
         if self[dfile] in "rd":
             return True, 0
         stateentry = self._state[dfile]
-        state, hash, lfile, afile, anode, ofile, onode, flags = stateentry
+        state, hexdnode, lfile, afile, hexanode, ofile, hexonode, flags = stateentry
+        dnode = bin(hexdnode)
+        onode = bin(hexonode)
+        anode = bin(hexanode)
         octx = self._repo[self._other]
         extras = self.extras(dfile)
         anccommitnode = extras.get("ancestorlinknode")
@@ -553,7 +556,7 @@ class mergestate(object):
         self._repo.ui.log(
             "merge_resolve", "resolving %s, preresolve = %s", dfile, preresolve
         )
-        fcd = self._filectxorabsent(hash, wctx, dfile)
+        fcd = self._filectxorabsent(dnode, wctx, dfile)
         fco = self._filectxorabsent(onode, octx, ofile)
         # TODO: move this to filectxorabsent
         fca = self._repo.filectx(afile, fileid=anode, changeid=actx)
@@ -574,8 +577,8 @@ class mergestate(object):
                 flags = flo
         if preresolve:
             # restore local
-            if hash != nullhex:
-                f = self._repo.localvfs("merge/" + hash)
+            if dnode != nullid:
+                f = self._repo.localvfs("merge/" + hexdnode)
                 wctx[dfile].write(f.read(), flags)
                 f.close()
             else:
@@ -642,8 +645,9 @@ class mergestate(object):
 
         return complete, r
 
-    def _filectxorabsent(self, hexnode, ctx, f):
-        if hexnode == nullhex:
+    def _filectxorabsent(self, node, ctx, f):
+        assert len(node) == len(nullid)
+        if node == nullid:
             return filemerge.absentfilectx(ctx, f)
         else:
             return ctx[f]

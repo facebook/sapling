@@ -372,3 +372,18 @@ Init with --git:
   $ hg log
   $ hg status
 
+Rebase merging conflicts
+
+  $ cd
+  $ hg init --git rebase
+  $ cd rebase
+  $ enable rebase
+  $ drawdag << 'EOS'
+  > B C  # A/f=1\n2\n3\n
+  > |/   # B/f=1\n1.5\n2\n3\n
+  > A    # C/f=1\n2\n2.5\n3\n
+  > EOS
+  $ hg rebase -r $B -d $C
+  rebasing e03992db70e4 "B"
+  merging f
+
