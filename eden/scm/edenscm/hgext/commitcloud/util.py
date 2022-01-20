@@ -56,11 +56,7 @@ def getuserconfigpath(ui, overrideconfig):
 
 def getreponame(repo):
     """get the configured reponame for this repo"""
-    reponame = repo.ui.config(
-        "remotefilelog",
-        "reponame",
-        os.path.basename(repo.ui.config("paths", "default")),
-    )
+    reponame = repo.ui.config("remotefilelog", "reponame")
     if not reponame:
         raise ccerror.ConfigurationError(repo.ui, _("unknown repo"))
     return reponame

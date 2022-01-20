@@ -353,3 +353,12 @@ Tags are ignored during clone and pull:
      origin/main               379d702a285c
   $ git --git-dir=.hg/store/git for-each-ref
   379d702a285c1e34e6365cc347249ec73bcd6b40 commit	refs/remotes/origin/main
+
+Cloud sync does not crash:
+
+  $ enable commitcloud infinitepush
+  $ hg cloud sync
+  abort: commitcloud: workspace error: undefined workspace
+  (your repo is not connected to any workspace)
+  (use 'hg cloud join --help' for more details)
+  [255]
