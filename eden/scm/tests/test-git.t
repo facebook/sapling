@@ -294,3 +294,39 @@ Test push:
   $ hg log -r $A+$B -T '{files}\n'
   A
   B
+
+Submodule does not cause a crash:
+
+  $ cd
+  $ git init -q submod
+  $ cd submod
+
+  $ git submodule --quiet add ../gitrepo b
+  $ echo 1 > a
+  $ echo 2 > c
+  $ git add a c
+  $ git commit --quiet -m s
+
+- checkout silently ignores the submodule
+
+  $ cd
+  $ hg clone "git+file://$TESTTMP/submod" cloned-submod
+  From file:/*/$TESTTMP/submod (glob)
+   * [new branch]      master     -> origin/master
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd cloned-submod
+  $ echo *
+  a c
+
+- changing the tree does not lose submodule
+
+  $ touch d
+  $ hg commit -m d -A d
+  $ hg book changed
+  $ git --git-dir=.hg/store/git cat-file -p changed:
+  100644 blob 703feeadc77c10eeec4dfe76ae58506b6a77ab11	.gitmodules
+  100644 blob d00491fd7e5bb6fa28c517a0bb32b8b506539d4d	a
+  160000 commit 3f5848713286c67b8a71a450e98c7fa66787bde2	b
+  100644 blob 0cfbf08886fca9a91cb753ec8734c84fcbe52c9f	c
+  100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	d
+

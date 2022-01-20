@@ -433,6 +433,9 @@ impl Element {
             Flag::File(FileType::Executable) => Some(b'x'),
             Flag::File(FileType::Symlink) => Some(b'l'),
             Flag::Directory => Some(b't'),
+            Flag::File(FileType::GitSubmodule) => {
+                panic!("bug: hg tree does not support git submodule")
+            }
         };
         if let Some(byte) = flag {
             buffer.push(byte);
@@ -446,6 +449,7 @@ impl Element {
             Flag::File(FileType::Executable) => b"100755",
             Flag::File(FileType::Symlink) => b"120000",
             Flag::Directory => b"40000",
+            Flag::File(FileType::GitSubmodule) => b"160000",
         };
         let component = self.component.as_byte_slice();
         let mut buffer = Vec::with_capacity(mode.len() + component.len() + HgId::len() + 2);
@@ -484,6 +488,7 @@ fn parse_git_mode(mode: &[u8]) -> Result<Flag> {
         b"100644" | b"100664" => Flag::File(FileType::Regular),
         b"100755" => Flag::File(FileType::Executable),
         b"120000" => Flag::File(FileType::Symlink),
+        b"160000" => Flag::File(FileType::GitSubmodule),
         s => {
             return Err(format_err!(
                 "unknown or unsupported mode in git tree ({})",

@@ -26,13 +26,16 @@ pub enum TreeEntryType {
     Symlink,
 }
 
-impl From<FileType> for TreeEntryType {
-    fn from(file_type: FileType) -> Self {
-        match file_type {
+impl TreeEntryType {
+    /// Returns `None` for entries that need to be skipped.
+    fn from_file_type(file_type: FileType) -> Option<Self> {
+        let entry_type = match file_type {
             FileType::Regular => TreeEntryType::RegularFile,
             FileType::Executable => TreeEntryType::ExecutableFile,
             FileType::Symlink => TreeEntryType::Symlink,
-        }
+            FileType::GitSubmodule => return None,
+        };
+        Some(entry_type)
     }
 }
 
@@ -47,23 +50,28 @@ pub struct TreeEntry {
 }
 
 impl TreeEntry {
-    fn try_from_path_node(path: PathComponentBuf, node: FsNodeMetadata) -> Result<Self> {
+    fn try_from_path_node(path: PathComponentBuf, node: FsNodeMetadata) -> Option<Result<Self>> {
         let (ttype, hash) = match node {
             FsNodeMetadata::Directory(Some(hgid)) => (TreeEntryType::Tree, hgid.as_ref().to_vec()),
             FsNodeMetadata::File(metadata) => {
-                (metadata.file_type.into(), metadata.hgid.as_ref().to_vec())
+                let entry_type = match TreeEntryType::from_file_type(metadata.file_type) {
+                    None => return None,
+                    Some(entry_type) => entry_type,
+                };
+                (entry_type, metadata.hgid.as_ref().to_vec())
             }
-            _ => return Err(format_err!("received an ephemeral directory")),
+            _ => return Some(Err(format_err!("received an ephemeral directory"))),
         };
 
-        Ok(TreeEntry {
+        let entry = TreeEntry {
             hash: hash.into(),
             name: path.as_ref().as_byte_slice().to_vec().into(),
             ttype,
             // TODO: we currently do not have these information stored in Mercurial.
             size: std::ptr::null_mut(),
             content_sha1: std::ptr::null_mut(),
-        })
+        };
+        Some(Ok(entry))
     }
 }
 
@@ -85,7 +93,7 @@ impl TryFrom<List> for Tree {
             List::Directory(list) => {
                 let entries = list
                     .into_iter()
-                    .map(|(path, node)| TreeEntry::try_from_path_node(path, node))
+                    .filter_map(|(path, node)| TreeEntry::try_from_path_node(path, node))
                     .collect::<Result<Vec<_>>>()?;
 
                 let entries = Box::new(entries);

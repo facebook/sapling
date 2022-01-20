@@ -625,15 +625,7 @@ fn file_metadata_to_py_tuple(
     file_metadata: &FileMetadata,
 ) -> PyResult<(PyBytes, String)> {
     let node = PyBytes::new(py, file_metadata.hgid.as_ref());
-    let flag = {
-        let mut s = String::new();
-        match file_metadata.file_type {
-            FileType::Regular => {}
-            FileType::Executable => s.push('x'),
-            FileType::Symlink => s.push('l'),
-        };
-        s
-    };
+    let flag = file_type_to_str(file_metadata.file_type).to_string();
     Ok((node, flag))
 }
 
@@ -649,6 +641,7 @@ fn pystring_to_file_type(py: Python, pystring: &PyString) -> PyResult<FileType> 
     match pystring.to_string_lossy(py).borrow() {
         "x" => Ok(FileType::Executable),
         "l" => Ok(FileType::Symlink),
+        "m" => Ok(FileType::GitSubmodule),
         "" => Ok(FileType::Regular),
         _ => Err(PyErr::new::<exc::RuntimeError, _>(py, "invalid file flags")),
     }
@@ -663,5 +656,6 @@ fn file_type_to_str(file_type: FileType) -> &'static str {
         FileType::Regular => "",
         FileType::Executable => "x",
         FileType::Symlink => "l",
+        FileType::GitSubmodule => "m",
     }
 }

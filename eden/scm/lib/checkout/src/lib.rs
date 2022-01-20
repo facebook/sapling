@@ -675,6 +675,9 @@ fn type_to_flag(ft: &FileType) -> UpdateFlag {
         FileType::Regular => UpdateFlag::Regular,
         FileType::Executable => UpdateFlag::Executable,
         FileType::Symlink => UpdateFlag::Symlink,
+        FileType::GitSubmodule => {
+            panic!("bug: GitSubmodule should be filtered out earlier by ActionMap")
+        }
     }
 }
 
@@ -942,6 +945,7 @@ mod test {
             FileType::Regular => assert_regular(actual),
             FileType::Executable => assert_exec(actual),
             FileType::Symlink => assert_symlink(actual),
+            FileType::GitSubmodule => Ok(()),
         }
     }
 
@@ -1026,6 +1030,7 @@ impl fmt::Display for CheckoutPlan {
                 FileType::Executable => "(x)",
                 FileType::Symlink => "(s)",
                 FileType::Regular => "",
+                FileType::GitSubmodule => continue,
             };
             writeln!(f, "up {}=>{}{}", u.path, u.content_hgid, ft)?;
         }

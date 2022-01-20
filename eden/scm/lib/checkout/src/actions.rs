@@ -52,25 +52,33 @@ impl ActionMap {
         for entry in diff {
             let entry = entry?;
             match entry.diff_type {
-                DiffType::LeftOnly(_) => map.insert(entry.path, Action::Remove),
+                DiffType::LeftOnly(_) => {
+                    map.insert(entry.path, Action::Remove);
+                }
                 DiffType::RightOnly(meta) => {
-                    map.insert(entry.path, Action::Update(UpdateAction::new(None, meta)))
+                    if meta.file_type != FileType::GitSubmodule {
+                        map.insert(entry.path, Action::Update(UpdateAction::new(None, meta)));
+                    }
                 }
                 DiffType::Changed(old, new) => {
                     match (old.hgid == new.hgid, old.file_type, new.file_type) {
                         (true, FileType::Executable, FileType::Regular) => {
-                            map.insert(entry.path, Action::UpdateExec(false))
+                            map.insert(entry.path, Action::UpdateExec(false));
                         }
                         (true, FileType::Regular, FileType::Executable) => {
-                            map.insert(entry.path, Action::UpdateExec(true))
+                            map.insert(entry.path, Action::UpdateExec(true));
                         }
-                        _ => map.insert(
-                            entry.path,
-                            Action::Update(UpdateAction::new(Some(old), new)),
-                        ),
+                        _ => {
+                            if new.file_type != FileType::GitSubmodule {
+                                map.insert(
+                                    entry.path,
+                                    Action::Update(UpdateAction::new(Some(old), new)),
+                                );
+                            }
+                        }
                     }
                 }
-            };
+            }
         }
         Ok(Self { map })
     }
@@ -200,6 +208,8 @@ fn pyflags(t: &FileType) -> &'static str {
         FileType::Symlink => "l",
         FileType::Regular => "",
         FileType::Executable => "x",
+        // NOTE: hg does not have git submoduel "type". Is this code path actually used?
+        FileType::GitSubmodule => "",
     }
 }
 

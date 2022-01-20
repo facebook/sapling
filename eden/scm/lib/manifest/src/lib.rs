@@ -180,13 +180,9 @@ pub struct FileMetadata {
     pub file_type: FileType,
 }
 
-/// The types of files that are supported.
+/// The types of files (leaf nodes in a tree).
 ///
-/// The debate here is whether to use Regular { executable: bool } or an Executable variant.
-/// Technically speaking executable files are regular files. There is no big difference in terms
-/// of the mechanics between the two approaches. The approach using an Executable is more readable
-/// so that is what we have now.
-// TODO: Consider moving Executable to FileMetadata. Consider adding Directory to FileType.
+/// The type needs to round-trip tree serialization.
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum FileType {
     /// Regular files.
@@ -195,6 +191,8 @@ pub enum FileType {
     Executable,
     /// Symlinks. Their targets are not limited to repository paths. They can point anywhere.
     Symlink,
+    /// Git submodule. It's up to the higher layer to decide what to do with them.
+    GitSubmodule,
 }
 
 impl Default for FileType {
