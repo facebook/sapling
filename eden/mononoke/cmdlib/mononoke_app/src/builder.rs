@@ -15,7 +15,7 @@ use blobstore_factory::{
     PackOptions, ReadOnlyStorage, ReadOnlyStorageArgs, ThrottleOptions,
 };
 use cached_config::ConfigStore;
-use clap::{ArgMatches, Args, FromArgMatches, IntoApp};
+use clap::{App, AppSettings, ArgMatches, Args, FromArgMatches, IntoApp};
 use derived_data_remote::RemoteDerivationArgs;
 use environment::{Caching, MononokeEnvironment};
 use fbinit::FacebookInit;
@@ -76,17 +76,33 @@ impl MononokeAppBuilder {
     where
         AppArgs: IntoApp,
     {
-        let app = AppArgs::into_app();
+        self.build_with_subcommands::<AppArgs>(Vec::new())
+    }
+
+    pub fn build_with_subcommands<'help, AppArgs>(
+        self,
+        subcommands: Vec<App<'help>>,
+    ) -> Result<MononokeApp>
+    where
+        AppArgs: IntoApp,
+    {
+        let mut app = AppArgs::into_app();
 
         // Save app-generated about so we can restore it.
         let about = app.get_about();
         let long_about = app.get_long_about();
 
-        let app = EnvironmentArgs::augment_args_for_update(app);
+        app = EnvironmentArgs::augment_args_for_update(app);
 
         // Adding the additional args overrode the about messages.
         // Restore them.
-        let app = app.about(about).long_about(long_about);
+        app = app.about(about).long_about(long_about);
+
+        if !subcommands.is_empty() {
+            app = app
+                .subcommands(subcommands)
+                .setting(AppSettings::SubcommandRequiredElseHelp);
+        }
 
         let args = app.get_matches();
         let env = self.build_environment(&args)?;

@@ -63,6 +63,12 @@ impl MononokeApp {
             .block_on(async move { tokio::spawn(main(self)).await? })
     }
 
+    /// Returns the selected subcommand of the app (if this app
+    /// has subcommands).
+    pub fn subcommand(&self) -> Option<(&str, &ArgMatches)> {
+        self.args.subcommand()
+    }
+
     /// Returns a parsed args struct based on the arguments provided
     /// on the command line.
     pub fn args<Args>(&self) -> Result<Args, ClapError>
