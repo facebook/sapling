@@ -18,7 +18,8 @@ use cached_config::ConfigStore;
 use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
 use cmdlib_logging::{
     create_log_level, create_logger, create_observability_context, create_root_log_drain,
-    LoggingArgs,
+    create_scuba_sample_builder, create_warm_bookmark_cache_scuba_sample_builder, LoggingArgs,
+    ScubaLoggingArgs,
 };
 use derived_data_remote::RemoteDerivationArgs;
 use environment::{Caching, MononokeEnvironment};
@@ -27,7 +28,6 @@ use megarepo_config::{MegarepoConfigsArgs, MononokeMegarepoConfigsOptions};
 use mononoke_args::config::ConfigArgs;
 use mononoke_args::mysql::MysqlArgs;
 use rendezvous::RendezVousArgs;
-use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{o, Logger};
 use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType, SharedConnectionPool};
 use tokio::runtime::Runtime;
@@ -46,6 +46,9 @@ pub struct EnvironmentArgs {
 
     #[clap(flatten, help_heading = "LOGGING OPTIONS")]
     logging_args: LoggingArgs,
+
+    #[clap(flatten, help_heading = "SCUBA LOGGING OPTIONS")]
+    scuba_logging_args: ScubaLoggingArgs,
 
     #[clap(flatten, help_heading = "MYSQL OPTIONS")]
     mysql_args: MysqlArgs,
@@ -125,6 +128,7 @@ impl MononokeAppBuilder {
             blobstore_args,
             config_args,
             logging_args,
+            scuba_logging_args,
             #[cfg(fbcode_build)]
             manifold_args,
             megarepo_configs_args,
@@ -155,11 +159,12 @@ impl MononokeAppBuilder {
             observability_context.clone(),
         )?;
 
-        // TODO: create ScubaArgs, plumb through other options
-        let scuba_sample_builder = create_scuba_sample_builder(self.fb)
-            .context("Failed to create scuba sample builder")?;
+        // TODO: pass the default scuba dataset to builder
+        let scuba_sample_builder =
+            create_scuba_sample_builder(self.fb, &scuba_logging_args, &observability_context)
+                .context("Failed to create scuba sample builder")?;
         let warm_bookmarks_cache_scuba_sample_builder =
-            create_warm_bookmarks_cache_scuba_sample_builder(self.fb)
+            create_warm_bookmark_cache_scuba_sample_builder(self.fb, &scuba_logging_args)
                 .context("Failed to create warm bookmark cache scuba sample builder")?;
 
         // TODO: create CacheArgs and plumb through CachelibSettings
@@ -238,16 +243,6 @@ fn create_config_store(
         CONFIGERATOR_POLL_INTERVAL,
         CONFIGERATOR_REFRESH_TIMEOUT,
     )
-}
-
-fn create_scuba_sample_builder(_fb: FacebookInit) -> Result<MononokeScubaSampleBuilder> {
-    Ok(MononokeScubaSampleBuilder::with_discard())
-}
-
-fn create_warm_bookmarks_cache_scuba_sample_builder(
-    _fb: FacebookInit,
-) -> Result<MononokeScubaSampleBuilder> {
-    Ok(MononokeScubaSampleBuilder::with_discard())
 }
 
 fn init_cachelib() -> Caching {
