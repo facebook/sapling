@@ -10,4 +10,4 @@ mod builder;
 pub mod log;
 
 pub use args::LoggingArgs;
-pub use builder::{create_log_level, create_root_log_drain};
+pub use builder::{create_log_level, create_logger, create_root_log_drain};

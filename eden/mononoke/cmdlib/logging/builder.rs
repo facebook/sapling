@@ -8,12 +8,13 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Context, Result};
 use fbinit::FacebookInit;
+use observability::{DynamicLevelDrain, ObservabilityContext};
 use panichandler::{self, Fate};
 use slog::{debug, o, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_ext::make_tag_filter_drain;
-use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, GlogFormat};
+use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 use slog_term::TermDecorator;
 
 use crate::args::{LoggingArgs, PanicFate};
@@ -121,4 +122,25 @@ pub fn create_root_log_drain(
     );
 
     Ok(root_log_drain)
+}
+
+pub fn create_logger<T>(
+    logging_args: &LoggingArgs,
+    root_log_drain: T,
+    observability_context: ObservabilityContext,
+) -> Result<Logger>
+where
+    T: SendSyncRefUnwindSafeDrain<Ok = (), Err = Never> + Clone + std::panic::UnwindSafe + 'static,
+{
+    let root_log_drain = DynamicLevelDrain::new(root_log_drain, observability_context);
+
+    let kv = FacebookKV::new().context("Failed to initialize FacebookKV")?;
+
+    let logger = if logging_args.fb303_thrift_port.is_some() {
+        Logger::root(slog_stats::StatsDrain::new(root_log_drain), o![kv])
+    } else {
+        Logger::root(root_log_drain, o![kv])
+    };
+
+    Ok(logger)
 }

@@ -16,7 +16,7 @@ use blobstore_factory::{
 };
 use cached_config::ConfigStore;
 use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
-use cmdlib_logging::{create_log_level, create_root_log_drain, LoggingArgs};
+use cmdlib_logging::{create_log_level, create_logger, create_root_log_drain, LoggingArgs};
 use derived_data_remote::RemoteDerivationArgs;
 use environment::{Caching, MononokeEnvironment};
 use fbinit::FacebookInit;
@@ -136,8 +136,6 @@ impl MononokeAppBuilder {
         let root_log_drain = create_root_log_drain(self.fb, &logging_args, log_level)
             .context("Failed to create root log drain")?;
 
-        let logger = Logger::root(root_log_drain.clone(), o![]);
-
         let config_store = create_config_store(
             self.fb,
             &config_args,
@@ -148,6 +146,12 @@ impl MononokeAppBuilder {
         // TODO: create ObvservabilityArgs
         let observability_context = create_observability_context(&config_store, log_level)
             .context("Failed to initialize observability context")?;
+
+        let logger = create_logger(
+            &logging_args,
+            root_log_drain.clone(),
+            observability_context.clone(),
+        )?;
 
         // TODO: create ScubaArgs, plumb through other options
         let scuba_sample_builder = create_scuba_sample_builder(self.fb)
