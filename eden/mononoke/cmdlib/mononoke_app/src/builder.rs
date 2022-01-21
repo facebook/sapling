@@ -16,6 +16,7 @@ use blobstore_factory::{
 };
 use cached_config::ConfigStore;
 use clap::{App, AppSettings, ArgMatches, Args, FromArgMatches, IntoApp};
+use cmdlib_logging::{create_log_level, create_root_log_drain, LoggingArgs};
 use derived_data_remote::RemoteDerivationArgs;
 use environment::{Caching, MononokeEnvironment};
 use fbinit::FacebookInit;
@@ -40,6 +41,9 @@ pub struct MononokeAppBuilder {
 pub struct EnvironmentArgs {
     #[clap(flatten, help_heading = "CONFIG OPTIONS")]
     config_args: ConfigArgs,
+
+    #[clap(flatten, help_heading = "LOGGING OPTIONS")]
+    logging_args: LoggingArgs,
 
     #[clap(flatten, help_heading = "MYSQL OPTIONS")]
     mysql_args: MysqlArgs,
@@ -121,14 +125,20 @@ impl MononokeAppBuilder {
         let rendezvous_args = RendezVousArgs::from_arg_matches(args)?;
         let megarepo_configs_args = MegarepoConfigsArgs::from_arg_matches(args)?;
         let remote_derivation_args = RemoteDerivationArgs::from_arg_matches(args)?;
+        let logging_args = LoggingArgs::from_arg_matches(args)?;
 
-        // TODO: create LoggingArgs and Logger
-        let log_level = slog::Level::Debug;
-        let logger = Logger::root(slog::Discard, o![]);
+        let log_level = create_log_level(&logging_args);
+        let root_log_drain = create_root_log_drain(self.fb, &logging_args, log_level)
+            .context("Failed to create root log drain")?;
 
-        let config_store =
-            create_config_store(self.fb, &config_args, Logger::root(slog::Discard, o![]))
-                .context("Failed to create config store")?;
+        let logger = Logger::root(root_log_drain.clone(), o![]);
+
+        let config_store = create_config_store(
+            self.fb,
+            &config_args,
+            Logger::root(root_log_drain.clone(), o![]),
+        )
+        .context("Failed to create config store")?;
 
         // TODO: create ObvservabilityArgs
         let observability_context = create_observability_context(&config_store, log_level)
