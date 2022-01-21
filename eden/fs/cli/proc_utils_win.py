@@ -122,6 +122,9 @@ def get_process_name(handle: Handle) -> str:
 
 
 def get_exit_code(handle: Handle) -> Optional[int]:
+    """returns the integer exit code of a process iff that process has
+    completed otherwise returns None.
+    """
     STILL_ACTIVE = 259
     exit_code = _DWORD()
     if _win32.GetExitCodeProcess(handle.handle, ctypes.pointer(exit_code)) == 0:
@@ -159,6 +162,7 @@ class WinProcUtils(proc_utils.ProcUtils):
                 raise_win_error()
 
     def is_process_alive(self, pid: int) -> bool:
+        """Returns if a process is currently running."""
         try:
             with open_process(pid) as handle:
                 return get_exit_code(handle) is None
@@ -169,9 +173,14 @@ class WinProcUtils(proc_utils.ProcUtils):
             return False
 
     def is_edenfs_process(self, pid: int) -> bool:
+        """Returns true iff pid references a currently running edenfs process
+        otherwise returns false.
+        """
         try:
             with open_process(pid) as handle:
-                if get_exit_code(handle) is None:
+                # If the process has an exit code then it is not running
+                # and the process can not be a functioning edenfs instance
+                if get_exit_code(handle) is not None:
                     return False
 
                 name = get_process_name(handle)
