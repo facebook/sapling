@@ -12,5 +12,4 @@
 
 pub mod args;
 pub mod helpers;
-mod log;
 pub mod monitoring;

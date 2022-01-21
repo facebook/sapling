@@ -45,7 +45,6 @@ use tunables::init_tunables_worker;
 
 pub type Normal = rand_distr::Normal<f64>;
 use crate::helpers::create_runtime;
-use crate::log;
 
 use super::parse_config_spec_to_path;
 use super::{
@@ -345,7 +344,7 @@ fn create_root_log_drain(
     // NOTE: We pass an unfiltered Logger to init_stdlog_once. That's because we do the filtering
     // at the stdlog level there.
     let stdlog_logger = Logger::root(root_log_drain.clone(), o![]);
-    let stdlog_level = log::init_stdlog_once(stdlog_logger, stdlog_env)?;
+    let stdlog_level = cmdlib_logging::log::init_stdlog_once(stdlog_logger, stdlog_env)?;
 
     // Note what level we enabled stdlog at, so that if someone is trying to debug they get
     // informed of potentially needing to set RUST_LOG.
