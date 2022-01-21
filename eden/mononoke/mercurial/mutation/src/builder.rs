@@ -12,9 +12,12 @@ use sql_ext::SqlConnections;
 
 use crate::store::SqlHgMutationStore;
 
+const DEFAULT_MUTATION_CHAIN_LIMIT: usize = 500;
+
 #[allow(unused)]
 pub struct SqlHgMutationStoreBuilder {
     pub(crate) connections: SqlConnections,
+    pub(crate) mutation_chain_limit: usize,
 }
 
 impl SqlConstruct for SqlHgMutationStoreBuilder {
@@ -23,7 +26,10 @@ impl SqlConstruct for SqlHgMutationStoreBuilder {
     const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-hg-mutations.sql");
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self { connections }
+        Self {
+            connections,
+            mutation_chain_limit: DEFAULT_MUTATION_CHAIN_LIMIT,
+        }
     }
 }
 
@@ -37,6 +43,13 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlHgMutationStoreBuilder {
 
 impl SqlHgMutationStoreBuilder {
     pub fn with_repo_id(self, repo_id: RepositoryId) -> SqlHgMutationStore {
-        SqlHgMutationStore::new(repo_id, self.connections)
+        SqlHgMutationStore::new(repo_id, self.connections, self.mutation_chain_limit)
+    }
+
+    pub fn with_mutation_limit(self, mutation_chain_limit: usize) -> Self {
+        Self {
+            mutation_chain_limit,
+            ..self
+        }
     }
 }

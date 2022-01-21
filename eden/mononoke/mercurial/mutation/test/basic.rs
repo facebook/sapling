@@ -8,6 +8,7 @@
 //! Basic tests.
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use anyhow::Result;
 use context::CoreContext;
@@ -285,6 +286,135 @@ async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
         &[1, 2, 4, 15],
     )
     .await?;
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn check_mutations_are_cut_when_reaching_limit(fb: FacebookInit) -> Result<()> {
+    const TEST_MUTATION_LIMIT: usize = 10;
+
+    let ctx = CoreContext::test_mock(fb);
+    let store = SqlHgMutationStoreBuilder::with_sqlite_in_memory()
+        .unwrap()
+        .with_mutation_limit(TEST_MUTATION_LIMIT)
+        .with_repo_id(REPO_ZERO);
+
+    // Add a lot of entries
+
+    let mut entries = hashmap! {};
+
+    let mut new_entries = Vec::with_capacity(20);
+
+    let mut amend_count: u64 = 20;
+
+    for index in 1..amend_count {
+        new_entries.push(HgMutationEntry::new(
+            make_hg_cs_id(index),
+            smallvec![make_hg_cs_id(index - 1)],
+            vec![],
+            String::from("amend"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ));
+    }
+
+    store
+        .add_entries(
+            &ctx,
+            (1..20).map(|x| make_hg_cs_id(x)).collect::<HashSet<_>>(),
+            new_entries.clone(),
+        )
+        .await?;
+
+    entries.extend((1..20).zip(new_entries));
+
+    // First we want to make sure that we are not fetching the entire history
+    let fetched_entries = store
+        .all_predecessors(&ctx, hashset![make_hg_cs_id(19)])
+        .await?;
+    assert_eq!(fetched_entries.len(), TEST_MUTATION_LIMIT);
+
+    // Now we want to make sure that the mutations we are collecting, correspond to the latest amends
+    check_entries(
+        &store,
+        &ctx,
+        hashset![make_hg_cs_id(19)],
+        &entries,
+        &(10..20).collect::<Vec<_>>(),
+    )
+    .await?;
+
+    // What we want to do here is make multiple folds with 3 amends each.
+    // This way, we reach the maximum number of changes (10*) BUT made specially
+    // for the case where the limit cuts a fold in half. The expected behaviour is
+    // for the half that wasn't cut by the limit to be removed.
+    //
+    // *In this case the maximum number is 10 because we are overriding it
+    // in the `.with_mutation_limit(TEST_MUTATION_LIMIT)` call
+    //
+    // Add a lot of entries
+    //
+    //                             30-.
+    //                                 \ <--- Here it is exceding the limit
+    //                               29-.
+    //                                   \
+    //                                 28-.
+    //                                     \
+    //   19 --> 20 --> 21 --> 22 --> ... --> 27
+    new_entries = Vec::with_capacity(11);
+
+    amend_count = 7;
+    // We add 7 amend operations and then create a fold that
+    // will exceed the limit to check that it is actually removing
+    // the mutation.
+    for index in 0..amend_count {
+        new_entries.push(HgMutationEntry::new(
+            make_hg_cs_id(20 + index),
+            smallvec![make_hg_cs_id(20 + index - 1)],
+            vec![],
+            String::from("amend"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ));
+    }
+
+    new_entries.push(HgMutationEntry::new(
+        make_hg_cs_id(20 + amend_count),
+        smallvec![
+            make_hg_cs_id(20 + amend_count - 1),
+            make_hg_cs_id(20 + amend_count + 1),
+            make_hg_cs_id(20 + amend_count + 2),
+            make_hg_cs_id(20 + amend_count + 3)
+        ],
+        vec![],
+        String::from("combine"),
+        String::from("testuser"),
+        EPOCH_ZERO.clone(),
+        vec![],
+    ));
+
+    store
+        .add_entries(
+            &ctx,
+            (20..32).map(|x| make_hg_cs_id(x)).collect::<HashSet<_>>(),
+            new_entries.clone(),
+        )
+        .await?;
+
+    entries.extend((20..32).zip(new_entries));
+
+    // First we want to make sure that we are not fetching the entire history
+    let fetched_entries = store
+        .all_predecessors(&ctx, hashset![make_hg_cs_id(20 + amend_count)])
+        .await?;
+
+    // The last fold should be erased because it exceeds the maximum (10 in this case) and it is then
+    // cut in half. So only amends stay (7)
+    assert_ne!(fetched_entries.len(), 10);
+    assert_eq!(fetched_entries.len(), 7);
 
     Ok(())
 }
