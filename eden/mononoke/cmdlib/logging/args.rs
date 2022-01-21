@@ -44,6 +44,11 @@ pub struct LoggingArgs {
     /// Fate of the process when a panic happens
     #[clap(long, arg_enum, default_value_t=PanicFate::Abort)]
     pub panic_fate: PanicFate,
+
+    /// Whether to instantiate ObservabilityContext::Dynamic, which reads
+    /// logging levels from configerator. Overwrites --log-level or --debug
+    #[clap(long, parse(try_from_str), default_value_t = false)]
+    pub with_dynamic_observability: bool,
 }
 
 #[derive(ArgEnum, Clone, Copy, Debug)]

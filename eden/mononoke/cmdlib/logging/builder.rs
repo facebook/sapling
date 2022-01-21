@@ -9,6 +9,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{format_err, Context, Result};
+use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use observability::{DynamicLevelDrain, ObservabilityContext};
 use panichandler::{self, Fate};
@@ -143,4 +144,16 @@ where
     };
 
     Ok(logger)
+}
+
+pub fn create_observability_context(
+    logging_args: &LoggingArgs,
+    config_store: &ConfigStore,
+    log_level: slog::Level,
+) -> Result<ObservabilityContext> {
+    if logging_args.with_dynamic_observability {
+        Ok(ObservabilityContext::new(config_store)?)
+    } else {
+        Ok(ObservabilityContext::new_static(log_level))
+    }
 }

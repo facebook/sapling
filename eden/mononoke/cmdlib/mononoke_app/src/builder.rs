@@ -16,14 +16,16 @@ use blobstore_factory::{
 };
 use cached_config::ConfigStore;
 use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
-use cmdlib_logging::{create_log_level, create_logger, create_root_log_drain, LoggingArgs};
+use cmdlib_logging::{
+    create_log_level, create_logger, create_observability_context, create_root_log_drain,
+    LoggingArgs,
+};
 use derived_data_remote::RemoteDerivationArgs;
 use environment::{Caching, MononokeEnvironment};
 use fbinit::FacebookInit;
 use megarepo_config::{MegarepoConfigsArgs, MononokeMegarepoConfigsOptions};
 use mononoke_args::config::ConfigArgs;
 use mononoke_args::mysql::MysqlArgs;
-use observability::ObservabilityContext;
 use rendezvous::RendezVousArgs;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{o, Logger};
@@ -143,9 +145,9 @@ impl MononokeAppBuilder {
         )
         .context("Failed to create config store")?;
 
-        // TODO: create ObvservabilityArgs
-        let observability_context = create_observability_context(&config_store, log_level)
-            .context("Failed to initialize observability context")?;
+        let observability_context =
+            create_observability_context(&logging_args, &config_store, log_level)
+                .context("Failed to initialize observability context")?;
 
         let logger = create_logger(
             &logging_args,
@@ -236,14 +238,6 @@ fn create_config_store(
         CONFIGERATOR_POLL_INTERVAL,
         CONFIGERATOR_REFRESH_TIMEOUT,
     )
-}
-
-fn create_observability_context(
-    // observability_args: &ObservabilityArgs,
-    _config_store: &ConfigStore,
-    log_level: slog::Level,
-) -> Result<ObservabilityContext> {
-    Ok(ObservabilityContext::new_static(log_level))
 }
 
 fn create_scuba_sample_builder(_fb: FacebookInit) -> Result<MononokeScubaSampleBuilder> {
