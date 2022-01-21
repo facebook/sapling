@@ -115,20 +115,20 @@ Diff working copy changes
   --- a/mod/1
   +++ b/mod/1
   @@ -1,1 +1,1 @@
-  -Subproject commit 083a3dd705ebf962dd1495de9877b6707fefa467
-  +Subproject commit 6c0d07834224817a9bcfa3b45096d14b04afdc89
+  -Subproject commit 73c8ee0cae8ffb843cc154c3bf28a12438801d3f
+  +Subproject commit 0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
   diff --git a/mod/2 b/mod/2
   deleted file mode 160000
   --- a/mod/2
   +++ /dev/null
   @@ -1,1 +0,0 @@
-  -Subproject commit 085e9f39dcb6d7d016ff5c355919bdeb0ecd1a4a
+  -Subproject commit f4140cb61bcd309e2a17e95f50ae419c7729a6bc
   diff --git a/mod/3 b/mod/3
   new file mode 160000
   --- /dev/null
   +++ b/mod/3
   @@ -0,0 +1,1 @@
-  +Subproject commit 6c0d07834224817a9bcfa3b45096d14b04afdc89
+  +Subproject commit 0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
 
 Commit submodule changes
 
@@ -162,20 +162,20 @@ Diff committed changes
   --- a/mod/1
   +++ b/mod/1
   @@ -1,1 +1,1 @@
-  -Subproject commit 083a3dd705ebf962dd1495de9877b6707fefa467
-  +Subproject commit 6c0d07834224817a9bcfa3b45096d14b04afdc89
+  -Subproject commit 73c8ee0cae8ffb843cc154c3bf28a12438801d3f
+  +Subproject commit 0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
   diff --git a/mod/2 b/mod/2
   deleted file mode 160000
   --- a/mod/2
   +++ /dev/null
   @@ -1,1 +0,0 @@
-  -Subproject commit 085e9f39dcb6d7d016ff5c355919bdeb0ecd1a4a
+  -Subproject commit f4140cb61bcd309e2a17e95f50ae419c7729a6bc
   diff --git a/mod/3 b/mod/3
   new file mode 160000
   --- /dev/null
   +++ b/mod/3
   @@ -0,0 +1,1 @@
-  +Subproject commit 6c0d07834224817a9bcfa3b45096d14b04afdc89
+  +Subproject commit 0de30934572f96ff6d3cbfc70aa8b46ef95dbb42
 
 Try checking out the submodule change made by hg
 
@@ -247,8 +247,8 @@ Rebase submodule change
   --- a/m2
   +++ b/m2
   @@ -1,1 +1,1 @@
-  -Subproject commit 32f96211d7dc1a0ac95b991a211e9eba8928463c
-  +Subproject commit 085e9f39dcb6d7d016ff5c355919bdeb0ecd1a4a
+  -Subproject commit f02e91cd72c210709673488ad9224fdc72e49018
+  +Subproject commit f4140cb61bcd309e2a17e95f50ae419c7729a6bc
   
   $ hg st
   $ echo m2/*
@@ -262,8 +262,8 @@ Rebase submodule change
   --- a/m2
   +++ b/m2
   @@ -1,1 +1,1 @@
-  -Subproject commit 32f96211d7dc1a0ac95b991a211e9eba8928463c
-  +Subproject commit 085e9f39dcb6d7d016ff5c355919bdeb0ecd1a4a
+  -Subproject commit f02e91cd72c210709673488ad9224fdc72e49018
+  +Subproject commit f4140cb61bcd309e2a17e95f50ae419c7729a6bc
   
   $ hg st
   $ echo m2/*

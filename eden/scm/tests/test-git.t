@@ -282,7 +282,7 @@ Test push:
   $ hg push -qr $B --to foo
   $ hg push -qr $C --to foo
   To file:/*/$TESTTMP/pushforce.git (glob)
-   ! [rejected]        c5ccacfe4b4e5a101b506acd6137d4edae939bd5 -> foo (non-fast-forward)
+   ! [rejected]        5d38a953d58b0c80a4416ba62e62d3f2985a3726 -> foo (non-fast-forward)
   error: failed to push some refs to 'file:/*/$TESTTMP/pushforce.git' (glob)
   [1]
   $ hg push -qr $C --to foo --force
@@ -308,7 +308,7 @@ Test push:
  (pick "main" automatically)
   $ hg push
   To file:/*/$TESTTMP/pushto.git (glob)
-     6c0d078..d5a5b13  d5a5b13ffe5c8ad66b1b1fb5ae7e27a2ea8bc79a -> main
+     0de3093..a9d5bd6  a9d5bd6ac8bcf89de9cd99fd215cca243e8aeed9 -> main
   $ hg push -q --to stable
 
  (cannot pick with multiple candidates)
@@ -410,6 +410,6 @@ Rebase merging conflicts
   > A    # C/f=1\n2\n2.5\n3\n
   > EOS
   $ hg rebase -r $B -d $C
-  rebasing af57f8af1bd0 "B"
+  rebasing e03992db70e4 "B"
   merging f
 

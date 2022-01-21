@@ -273,9 +273,11 @@ def gitdatestr(datestr):
     (946659600, -25200)
     >>> gitdatestr('2000-01-01T00:00:00 +0700')
     '946659600 +0700'
+    >>> gitdatestr('2000-01-01T00:00:00 +0000')
+    '946684800 +0000'
     """
     utc, offset = util.parsedate(datestr)
-    if offset >= 0:
+    if offset > 0:
         offsetsign = "-"
     else:
         offsetsign = "+"
