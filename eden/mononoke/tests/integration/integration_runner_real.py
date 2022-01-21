@@ -27,8 +27,8 @@ Env = Dict[str, str]
 SUITE = "run-tests"
 
 EPHEMERAL_DB_ALLOWLIST = {
-    "test-init.t",
-    "test-lookup.t",
+    "test-server-init.t",
+    "test-server-lookup.t",
     "test-mononoke-admin.t",
     "test-bookmarks-filler.t",
     "test-pushrebase.t",
