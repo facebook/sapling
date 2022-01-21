@@ -1500,4 +1500,12 @@ sh % "hg revert --rev 1 --all" == r"""
     removing B"""
 sh % "hg status --rev 1"
 
-sh % "cd .."
+# Don't backup symlink reverts
+sh % "ln -s foo bar"
+sh % "hg add bar"
+sh % "hg commit -m symlink"
+sh % "rm bar"
+sh % "ln -s car bar"
+sh % "hg status" == "M bar"
+sh % "hg revert --all --config 'ui.origbackuppath=.hg/origbackups'" == "reverting bar"
+sh % "ls .hg/origbackups"

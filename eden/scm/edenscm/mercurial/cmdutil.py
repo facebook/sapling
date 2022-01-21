@@ -4178,10 +4178,16 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                                 % (rel, bakname)
                             )
                             if not opts.get("dry_run"):
-                                if interactive:
-                                    util.copyfile(target, bakname)
-                                else:
-                                    util.rename(target, bakname)
+                                # Don't backup symlinks, since they can
+                                # interfere with future backup paths that
+                                # overlap with the symlink path (like
+                                # accidentally trying to move something
+                                # into the symlink).
+                                if not os.path.islink(target):
+                                    if interactive:
+                                        util.copyfile(target, bakname)
+                                    else:
+                                        util.rename(target, bakname)
                     if ui.verbose or not exact:
                         if not isinstance(msg, str):
                             msg = msg(abs)

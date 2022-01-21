@@ -242,12 +242,6 @@ reverting to rev 0:
   $ readlink.py dangling
   dangling -> nothing
 
-
-backups:
-
-  $ readlink.py *.orig
-  dangling.orig -> empty
-  $ rm *.orig
   $ hg up -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
