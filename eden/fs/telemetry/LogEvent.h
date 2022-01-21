@@ -155,6 +155,7 @@ struct FinishedMount {
 
   std::string repo_type;
   std::string repo_source;
+  std::string fs_channel_type;
   bool is_takeover = false;
   double duration = 0.0;
   bool success = false;
@@ -163,6 +164,7 @@ struct FinishedMount {
   void populate(DynamicEvent& event) const {
     event.addString("repo_type", repo_type);
     event.addString("repo_source", repo_source);
+    event.addString("fs_channel_type", fs_channel_type);
     event.addBool("is_takeover", is_takeover);
     event.addDouble("duration", duration);
     event.addBool("success", success);

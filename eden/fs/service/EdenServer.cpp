@@ -1521,6 +1521,13 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               event.repo_source =
                   basename(edenMount->getCheckoutConfig()->getRepoSource())
                       .str();
+              if (auto mountProtocol = edenMount->getMountProtocol()) {
+                event.fs_channel_type =
+                    FieldConverter<MountProtocol>{}.toDebugString(
+                        mountProtocol.value());
+              } else {
+                event.fs_channel_type = "unknown";
+              }
               event.is_takeover = doTakeover;
               event.duration =
                   std::chrono::duration<double>{mountStopWatch.elapsed()}
@@ -1704,7 +1711,7 @@ Future<CheckoutResult> EdenServer::checkOutRevision(
         // To avoid unbounded memory and disk use we need to periodically
         // clean them up. Checkout will likely create a lot of stale innodes
         // so we run a delayed cleanup after checkout.
-        if (edenMount->isNFSMount() &&
+        if (edenMount->isNfsdChannel() &&
             serverState_->getReloadableConfig()
                 .getEdenConfig()
                 ->unloadUnlinkedInodes.getValue()) {

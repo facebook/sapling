@@ -301,7 +301,7 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   }
 
   /**
-   * Get the FUSE/Prjfs channel for this mount point.
+   * Get the FUSE/NFS/Prjfs channel for this mount point.
    *
    * This should only be called after the mount point has been successfully
    * started.  (It is the caller's responsibility to perform proper
@@ -314,6 +314,24 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
   FuseChannel* FOLLY_NULLABLE getFuseChannel() const;
   Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
 #endif
+
+  /**
+   * Detect the FUSE/NFS/Prjfs channel for this mount point.
+   *
+   * This should only be called after the mount point has been successfully
+   * started.  (It is the caller's responsibility to perform proper
+   * synchronization here with the mount start operation.  This method provides
+   * no internal synchronization of its own.)
+   *
+   * Note these reflect the actually in use Mount Protocol, not what is written
+   * on disk to the mount config. If this mount failed to initialize, these
+   * boolean functions may all return false and getMountProtocol may return a
+   * nullopt.
+   */
+  bool isFuseChannel() const;
+  bool isNfsdChannel() const;
+  bool isPrjfsChannel() const;
+  std::optional<MountProtocol> getMountProtocol() const;
 
   /**
    * Wait for all inflight notifications to complete.
@@ -828,13 +846,6 @@ class EdenMount : public std::enable_shared_from_this<EdenMount> {
    * postCheckoutDelayToUnloadInodes.
    */
   void forgetStaleInodes();
-
-  bool isNFSMount() const {
-#ifndef _WIN32
-    return std::holds_alternative<NfsdChannelVariant>(channel_);
-#endif
-    return false;
-  }
 
  private:
   friend class RenameLock;
