@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use clap::{ArgGroup, Args};
 
-#[derive(Args)]
+#[derive(Args, Debug)]
 #[clap(group(ArgGroup::new("config").args(&["config-path", "config-tier", "prod"]).required(true)))]
 pub struct ConfigArgs {
     /// Path to Mononoke config

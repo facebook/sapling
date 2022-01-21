@@ -15,7 +15,7 @@ use blobstore_factory::{
     PackOptions, ReadOnlyStorage, ReadOnlyStorageArgs, ThrottleOptions,
 };
 use cached_config::ConfigStore;
-use clap::{App, AppSettings, ArgMatches, Args, FromArgMatches, IntoApp};
+use clap::{App, AppSettings, Args, FromArgMatches, IntoApp};
 use cmdlib_logging::{create_log_level, create_root_log_drain, LoggingArgs};
 use derived_data_remote::RemoteDerivationArgs;
 use environment::{Caching, MononokeEnvironment};
@@ -37,7 +37,7 @@ pub struct MononokeAppBuilder {
     readonly_storage_default: ReadOnlyStorage,
 }
 
-#[derive(Args)]
+#[derive(Args, Debug)]
 pub struct EnvironmentArgs {
     #[clap(flatten, help_heading = "CONFIG OPTIONS")]
     config_args: ConfigArgs,
@@ -56,7 +56,7 @@ pub struct EnvironmentArgs {
     manifold_args: ManifoldArgs,
 
     #[clap(flatten, help_heading = "REMOTE DERIVATION OPTIONS")]
-    remove_derivation_args: RemoteDerivationArgs,
+    remote_derivation_args: RemoteDerivationArgs,
 
     #[clap(flatten, help_heading = "STORAGE OPTIONS")]
     readonly_storage_args: ReadOnlyStorageArgs,
@@ -109,7 +109,8 @@ impl MononokeAppBuilder {
         }
 
         let args = app.get_matches();
-        let env = self.build_environment(&args)?;
+        let env_args = EnvironmentArgs::from_arg_matches(&args)?;
+        let env = self.build_environment(env_args)?;
 
         // TODO: create TunablesArgs and init tunables
         // TODO: maybe_enable_mcrouter
@@ -117,15 +118,19 @@ impl MononokeAppBuilder {
         MononokeApp::new(self.fb, args, env)
     }
 
-    fn build_environment(&self, args: &ArgMatches) -> Result<MononokeEnvironment> {
-        let config_args = ConfigArgs::from_arg_matches(args)?;
-        let mysql_args = MysqlArgs::from_arg_matches(args)?;
-        let blobstore_args = BlobstoreArgs::from_arg_matches(args)?;
-        let readonly_storage_args = ReadOnlyStorageArgs::from_arg_matches(args)?;
-        let rendezvous_args = RendezVousArgs::from_arg_matches(args)?;
-        let megarepo_configs_args = MegarepoConfigsArgs::from_arg_matches(args)?;
-        let remote_derivation_args = RemoteDerivationArgs::from_arg_matches(args)?;
-        let logging_args = LoggingArgs::from_arg_matches(args)?;
+    fn build_environment(&self, env_args: EnvironmentArgs) -> Result<MononokeEnvironment> {
+        let EnvironmentArgs {
+            blobstore_args,
+            config_args,
+            logging_args,
+            #[cfg(fbcode_build)]
+            manifold_args,
+            megarepo_configs_args,
+            mysql_args,
+            readonly_storage_args,
+            remote_derivation_args,
+            rendezvous_args,
+        } = env_args;
 
         let log_level = create_log_level(&logging_args);
         let root_log_drain = create_root_log_drain(self.fb, &logging_args, log_level)
@@ -164,7 +169,7 @@ impl MononokeAppBuilder {
             &blobstore_args,
             &mysql_args,
             #[cfg(fbcode_build)]
-            ManifoldArgs::from_arg_matches(args)?,
+            manifold_args,
         )
         .context("Failed to parse blobstore options")?;
 
