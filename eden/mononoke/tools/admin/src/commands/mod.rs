@@ -45,4 +45,5 @@ macro_rules! commands {
 
 commands! {
     mod list_repos;
+    mod repo_info;
 }

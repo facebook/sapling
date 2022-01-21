@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use clap::{ArgMatches, Error as ClapError, FromArgMatches};
+use context::CoreContext;
 use environment::MononokeEnvironment;
 use facet::AsyncBuildable;
 use fbinit::FacebookInit;
@@ -18,6 +19,7 @@ use mononoke_args::config::ConfigArgs;
 use mononoke_args::repo::{RepoArg, RepoArgs};
 use repo_factory::RepoFactory;
 use repo_factory::RepoFactoryBuilder;
+use slog::Logger;
 use tokio::runtime::Handle;
 
 pub struct MononokeApp {
@@ -91,6 +93,16 @@ impl MononokeApp {
     /// The storage configs for this app.
     pub fn storage_configs(&self) -> &StorageConfigs {
         &self.storage_configs
+    }
+
+    /// The logger for this app.
+    pub fn logger(&self) -> &Logger {
+        &self.env.logger
+    }
+
+    /// Create a basic CoreContext.
+    pub fn new_context(&self) -> CoreContext {
+        CoreContext::new_with_logger(self.env.fb, self.logger().clone())
     }
 
     /// Open a repository based on user-provided arguments.
