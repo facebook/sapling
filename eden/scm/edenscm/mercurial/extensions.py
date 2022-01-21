@@ -141,6 +141,15 @@ def find(name):
     return mod
 
 
+def isloaded(name):
+    """test if an extension is loaded
+
+    Unlike isenabled, returns false if an extension is enabled in config but
+    fails to load (ex. when importing the extension an exception happened).
+    """
+    return name in _extensions
+
+
 def loadpath(path, module_name):
     """loads the given extension from the given path
 

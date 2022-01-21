@@ -22,6 +22,7 @@ from . import (
     config,
     encoding,
     error,
+    extensions,
     hintutil,
     minirst,
     parser,
@@ -724,6 +725,16 @@ def diff(context, mapping, args):
     chunks = ctx.diff(match=ctx.match([], getpatterns(0), getpatterns(1)))
 
     return pycompat.decodeutf8(b"".join(chunks), errors="surrogateescape")
+
+
+@templatefunc("enabled(extname)", argspec="extname")
+def enabled(context, mapping, args):
+    """Test if an extension is enabled (ADVANCED)"""
+    if "extname" not in args:
+        raise error.ParseError(_("enabled expects one argument"))
+    extname = evalstring(context, mapping, args["extname"])
+    value = extensions.isloaded(extname)
+    return value
 
 
 @templatefunc("extdata(source)", argspec="source")
