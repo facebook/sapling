@@ -19,7 +19,6 @@ use futures::{
     future::{lazy, select, try_join_all},
     FutureExt, TryFutureExt,
 };
-use futures_util::try_join;
 use gotham_ext::{
     handler::MononokeHttpHandler,
     middleware::{
@@ -226,20 +225,38 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let matches = app.get_matches(fb)?;
 
-
-    let logger = matches.logger();
+    let logger = matches.logger().clone();
     let runtime = matches.runtime();
     let config_store = matches.config_store();
 
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();
     let listen_port = matches.value_of(ARG_LISTEN_PORT).unwrap();
 
+    let addr = format!("{}:{}", listen_host, listen_port);
+
     let tls_certificate = matches.value_of(ARG_TLS_CERTIFICATE);
     let tls_private_key = matches.value_of(ARG_TLS_PRIVATE_KEY);
     let tls_ca = matches.value_of(ARG_TLS_CA);
     let tls_ticket_seeds = matches.value_of(ARG_TLS_TICKET_SEEDS);
 
-    let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
+    let tls_acceptor = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
+        (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
+            let acceptor = secure_utils::SslConfig::new(
+                tls_ca,
+                tls_certificate,
+                tls_private_key,
+                tls_ticket_seeds,
+            )
+            .build_tls_acceptor(logger.clone())?;
+            Some(acceptor)
+        }
+        (None, None, None, None) => None,
+        _ => bail!("TLS flags must be passed together"),
+    };
+
+    let tls_session_data_log = matches
+        .value_of(ARG_TLS_SESSION_DATA_LOG_FILE)
+        .map(|v| v.to_string());
 
     let scuba_logger = matches.scuba_sample_builder();
 
@@ -256,58 +273,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         None
     };
 
-    let server = ServerUris::new(
-        matches.values_of(ARG_SELF_URL).unwrap().collect(),
-        matches.value_of(ARG_UPSTREAM_URL),
-    )?;
-
-    let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
-
-    let repo_factory = Arc::new(RepoFactory::new(matches.environment().clone(), &common));
-
-    let futs = repos
-        .into_iter()
-        .filter(|(_name, config)| config.enabled)
-        .map(|(name, config)| {
-            cloned!(repo_factory, test_acl_checker, logger);
-            async move {
-                let repo = repo_factory
-                    .build(name.clone(), config.clone())
-                    .map_err(Error::from);
-
-                let hipster_acl = config.hipster_acl.as_ref();
-                let aclchecker = async {
-                    if let Some(test_checker) = test_acl_checker {
-                        Ok(test_checker.clone())
-                    } else {
-                        Ok(ArcPermissionChecker::from(
-                            match (disable_acl_checker, hipster_acl) {
-                                (true, _) | (false, None) => {
-                                    PermissionCheckerBuilder::always_allow()
-                                }
-                                (_, Some(acl)) => {
-                                    info!(
-                                        logger,
-                                        "{}: Actions will be checked against {} ACL", name, acl
-                                    );
-                                    PermissionCheckerBuilder::acl_for_repo(fb, &acl).await?
-                                }
-                            },
-                        ))
-                    }
-                };
-
-                let (repo, aclchecker) = try_join!(repo, aclchecker)?;
-
-                Result::<(String, (BlobRepo, ArcPermissionChecker, RepoConfig)), Error>::Ok((
-                    name,
-                    (repo, aclchecker, config),
-                ))
-            }
-        });
-
-    let repos: HashMap<_, _> = runtime.block_on(try_join_all(futs))?.into_iter().collect();
-
     let will_exit = Arc::new(AtomicBool::new(false));
 
     let config_handle = match matches.value_of(ARG_LIVE_CONFIG) {
@@ -322,78 +287,114 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .map(|u| u.parse())
         .transpose()?;
 
-    let ctx = LfsServerContext::new(
-        repos,
-        server,
-        matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM),
-        max_upload_size,
-        will_exit.clone(),
-        config_handle.clone(),
-    )?;
-
+    let self_urls = matches.values_of(ARG_SELF_URL);
+    let upstream_url = matches.value_of(ARG_UPSTREAM_URL).to_owned();
+    let always_wait_for_upstream = matches.is_present(ARG_ALWAYS_WAIT_FOR_UPSTREAM);
     let log_middleware = match matches.is_present(ARG_TEST_FRIENDLY_LOGGING) {
         true => LogMiddleware::test_friendly(),
         false => LogMiddleware::slog(logger.clone()),
     };
 
-    let router = build_router(fb, ctx);
+    let server_uris = ServerUris::new(self_urls.unwrap().collect(), upstream_url)?;
 
-    let handler = MononokeHttpHandler::builder()
-        .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
-        .add(ClientIdentityMiddleware::new())
-        .add(PostResponseMiddleware::with_config(config_handle))
-        .add(RequestContextMiddleware::new(fb, logger.clone()))
-        .add(LoadMiddleware::new())
-        .add(log_middleware)
-        .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
-            "mononoke-lfs",
-        )))
-        .add(<ScubaMiddleware<LfsScubaHandler>>::new(scuba_logger))
-        .add(OdsMiddleware::new())
-        .add(TimerMiddleware::new())
-        .build(router);
+    let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
 
-    let addr = format!("{}:{}", listen_host, listen_port);
+    let repo_factory = Arc::new(RepoFactory::new(matches.environment().clone(), &common));
 
-    let addr = addr
-        .to_socket_addrs()
-        .context(Error::msg("Invalid Listener Address"))?
-        .next()
-        .ok_or(Error::msg("Invalid Socket Address"))?;
+    let futs = repos
+        .into_iter()
+        .filter(|(_name, config)| config.enabled)
+        .map({
+            cloned!(repo_factory, test_acl_checker, logger);
+            move |(name, config)| {
+                cloned!(test_acl_checker, logger, repo_factory, config.hipster_acl);
+                async move {
+                    let aclchecker = if let Some(test_checker) = test_acl_checker {
+                        test_checker
+                    } else {
+                        ArcPermissionChecker::from(match (disable_acl_checker, hipster_acl) {
+                            (true, _) | (false, None) => PermissionCheckerBuilder::always_allow(),
+                            (_, Some(acl)) => {
+                                info!(
+                                    logger,
+                                    "{}: Actions will be checked against {} ACL", name, acl
+                                );
+                                PermissionCheckerBuilder::acl_for_repo(fb, &acl).await?
+                            }
+                        })
+                    };
 
-    start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
+                    let repo = repo_factory.build(name.clone(), config.clone()).await?;
 
-    let listener = runtime
-        .block_on(TcpListener::bind(&addr))
-        .context(Error::msg("Could not start TCP listener"))?;
+                    Result::<(String, (BlobRepo, ArcPermissionChecker, RepoConfig)), Error>::Ok((
+                        name,
+                        (repo, aclchecker, config),
+                    ))
+                }
+            }
+        });
 
-    let server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
-        (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
-            let acceptor = secure_utils::SslConfig::new(
-                tls_ca,
-                tls_certificate,
-                tls_private_key,
-                tls_ticket_seeds,
-            )
-            .build_tls_acceptor(logger.clone())?;
+    let server = {
+        cloned!(logger, will_exit);
+        async move {
+            let repos: HashMap<_, _> = try_join_all(futs).await?.into_iter().collect();
+
+            let addr = addr
+                .to_socket_addrs()
+                .context(Error::msg("Invalid Listener Address"))?
+                .next()
+                .ok_or(Error::msg("Invalid Socket Address"))?;
+
+            let listener = TcpListener::bind(&addr)
+                .await
+                .context(Error::msg("Could not start TCP listener"))?;
+
+            let ctx = LfsServerContext::new(
+                repos,
+                server_uris,
+                always_wait_for_upstream,
+                max_upload_size,
+                will_exit,
+                config_handle.clone(),
+            )?;
+
+            let router = build_router(fb, ctx);
 
             let capture_session_data = tls_session_data_log.is_some();
 
-            serve::https(
-                logger.clone(),
-                listener,
-                acceptor,
-                capture_session_data,
-                trusted_proxy_idents,
-                handler,
-            )
-            .left_future()
+            let handler = MononokeHttpHandler::builder()
+                .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
+                .add(ClientIdentityMiddleware::new())
+                .add(PostResponseMiddleware::with_config(config_handle))
+                .add(RequestContextMiddleware::new(fb, logger.clone()))
+                .add(LoadMiddleware::new())
+                .add(log_middleware)
+                .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
+                    "mononoke-lfs",
+                )))
+                .add(<ScubaMiddleware<LfsScubaHandler>>::new(scuba_logger))
+                .add(OdsMiddleware::new())
+                .add(TimerMiddleware::new())
+                .build(router);
+
+            if let Some(tls_acceptor) = tls_acceptor {
+                serve::https(
+                    logger,
+                    listener,
+                    tls_acceptor,
+                    capture_session_data,
+                    trusted_proxy_idents,
+                    handler,
+                )
+                .await
+            } else {
+                serve::http(logger, listener, handler).await
+            }
         }
-        (None, None, None, None) => serve::http(logger.clone(), listener, handler).right_future(),
-        _ => bail!("TLS flags must be passed together"),
     };
 
-    info!(&logger, "Listening on {:?}", addr);
+    start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
+
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     serve_forever(
         runtime,
