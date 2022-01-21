@@ -18,7 +18,6 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::time::Duration;
 use thrift_types::edenfs::types::{MountInfo, MountState};
 use toml::value::Value;
@@ -194,6 +193,8 @@ pub struct EdenFsCheckout {
     /// As opposed to being populated with information from the configuration & live mount info.
     configured: bool,
     backing_repo: Option<PathBuf>,
+    #[serde(skip)]
+    pub(crate) redirections: Option<BTreeMap<PathBuf, RedirectionType>>,
 }
 
 impl EdenFsCheckout {
@@ -249,6 +250,7 @@ impl EdenFsCheckout {
                 Some(path_string) => Some(path_from_bytes(&path_string)?),
                 None => None,
             },
+            redirections: None,
         })
     }
 
@@ -259,6 +261,7 @@ impl EdenFsCheckout {
             state: None,
             configured: true,
             backing_repo: Some(config.repository.path.clone()),
+            redirections: Some(config.redirections),
         }
     }
 

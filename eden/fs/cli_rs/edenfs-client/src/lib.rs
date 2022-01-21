@@ -12,7 +12,7 @@ use thrift_types::edenfs::client::EdenService;
 pub mod checkout;
 pub mod instance;
 mod mounttable;
-mod redirect;
+pub mod redirect;
 mod utils;
 
 pub use instance::{DaemonHealthy, EdenFsInstance};

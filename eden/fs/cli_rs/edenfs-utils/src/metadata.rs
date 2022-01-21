@@ -7,6 +7,8 @@
 
 use std::fs::Metadata;
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use nix::sys::stat::Mode;
 #[cfg(target_os = "linux")]
 use std::os::linux::fs::MetadataExt as MetadataLinuxExt;
 #[cfg(target_os = "macos")]
@@ -22,16 +24,24 @@ pub trait MetadataExt {
 
     /// Returns the file size
     fn eden_file_size(&self) -> u64;
+
+    fn is_setuid_set(&self) -> bool;
 }
 
 #[cfg(windows)]
 impl MetadataExt for Metadata {
     fn eden_dev(&self) -> u64 {
+        // Dummy value
         0
     }
 
     fn eden_file_size(&self) -> u64 {
         self.file_size()
+    }
+
+    fn is_setuid_set(&self) -> bool {
+        // This doesn't exist for windows
+        false
     }
 }
 
@@ -47,6 +57,11 @@ impl MetadataExt for Metadata {
         // size.
         self.st_blocks() * 512
     }
+
+    fn is_setuid_set(&self) -> bool {
+        let isuid = Mode::S_ISUID;
+        self.st_mode() & isuid.bits() != 0
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -57,5 +72,10 @@ impl MetadataExt for Metadata {
 
     fn eden_file_size(&self) -> u64 {
         self.blocks() * 512
+    }
+
+    fn is_setuid_set(&self) -> bool {
+        let isuid = Mode::S_ISUID;
+        self.mode() & (isuid.bits() as u32) != 0
     }
 }

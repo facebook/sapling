@@ -15,8 +15,8 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 use anyhow::anyhow;
-use edenfs_client::checkout::find_checkout;
-use edenfs_client::checkout::EdenFsCheckout;
+use edenfs_client::checkout::{find_checkout, EdenFsCheckout};
+use edenfs_client::redirect::get_effective_redirections;
 use edenfs_client::{EdenFsClient, EdenFsInstance};
 use edenfs_error::{EdenFsError, Result, ResultExt};
 use edenfs_utils::metadata::MetadataExt;
@@ -202,6 +202,20 @@ impl crate::Subcommand for DiskUsageCmd {
                 let (usage_count, _failed_file_checks) =
                     usage_for_dir(fsck_dir, None).from_err()?;
                 aggregated_usage_counts.fsck += usage_count;
+            }
+
+            // GET SUMMARY INFO for redirections
+            for (_, redir) in get_effective_redirections(&checkout)? {
+                if let Some(target) = redir.expand_target_abspath(&checkout)? {
+                    let (usage_count, _failed_file_checks) =
+                        usage_for_dir(target, None).from_err()?;
+                    aggregated_usage_counts.redirection += usage_count;
+                } else {
+                    return Err(EdenFsError::Other(anyhow!(
+                        "Cannot resolve target for redirection: {:?}",
+                        redir
+                    )));
+                }
             }
         }
         // Make immutable

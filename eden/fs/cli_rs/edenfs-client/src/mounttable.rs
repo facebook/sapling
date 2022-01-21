@@ -18,6 +18,12 @@ pub(crate) struct MountTableInfo {
     vfstype: String,
 }
 
+impl MountTableInfo {
+    pub(crate) fn mount_point(&self) -> PathBuf {
+        self.mount_point.clone()
+    }
+}
+
 fn parse_linux_mtab(mtab_string: String) -> Vec<MountTableInfo> {
     let mut mounts = Vec::new();
     for line in mtab_string.trim().lines() {

@@ -10,3 +10,9 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0.51"
 edenfs-error = { version = "0.1.0", path = "../edenfs-error" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+nix = "0.22"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+nix = "0.22"
