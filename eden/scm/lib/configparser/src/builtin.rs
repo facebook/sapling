@@ -12,6 +12,8 @@ static GIT_RC: &str = r#"
 new-pull=true
 
 [extensions]
+commitcloud=!
+infinitepush=!
 remotenames=
 treemanifest=
 autopullhoisthotfix=!
