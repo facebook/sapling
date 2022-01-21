@@ -42,9 +42,10 @@ pub struct ReadOnlyStorage(pub bool);
 /// Command line arguments for controlling read-only storage
 #[derive(Args, Debug)]
 pub struct ReadOnlyStorageArgs {
-    /// Error on any attempts to write to storage if set to true
-    // For compatibility with existing usage, this is `Option<bool>` to allow
-    // `--with-readonly-storage=true`.
+    /// Error on any attempts to write to storage if set to true,
+    /// allow writes to storaga if set to false (overrides app default)
+    // This is Option<bool> as we distinguish between option being
+    // not present vs being set to false.
     #[clap(long, value_name = "BOOL")]
     pub with_readonly_storage: Option<bool>,
 }

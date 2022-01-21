@@ -47,7 +47,14 @@ pub struct LoggingArgs {
 
     /// Whether to instantiate ObservabilityContext::Dynamic, which reads
     /// logging levels from configerator. Overwrites --log-level or --debug
-    #[clap(long, parse(try_from_str), default_value_t = false)]
+    // For compatibility with existing usage, this arg takes value,
+    // for example `--with-dynamic-observability=true`.
+    #[clap(
+        long,
+        parse(try_from_str),
+        default_value_t = false,
+        value_name = "BOOL"
+    )]
     pub with_dynamic_observability: bool,
 }
 

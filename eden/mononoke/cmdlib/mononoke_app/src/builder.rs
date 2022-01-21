@@ -323,11 +323,8 @@ fn create_blobstore_options(
 
     let pack_options = PackOptions::new(blobstore_args.put_format_override()?);
 
-    let cachelib_blobstore_options = CachelibBlobstoreOptions::new_lazy(Some(
-        blobstore_args
-            .blobstore_cachelib_attempt_zstd
-            .unwrap_or(false),
-    ));
+    let cachelib_blobstore_options =
+        CachelibBlobstoreOptions::new_lazy(Some(blobstore_args.blobstore_cachelib_attempt_zstd));
 
     let blobstore_put_behaviour = blobstore_args.blobstore_put_behaviour;
 

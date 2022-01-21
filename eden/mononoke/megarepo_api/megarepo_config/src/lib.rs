@@ -56,10 +56,15 @@ pub struct MegarepoConfigsArgs {
     ///
     /// Prod-style instance reads/writes from/to configerator and
     /// requires the FB environment to work properly.
-    // For compatibility with existing usage, this is `Option<bool>` to allow
-    // `--with-test-megarepo-configs-client=true`.
-    #[clap(long, value_name = "BOOL")]
-    pub with_test_megarepo_configs_client: Option<bool>,
+    // For compatibility with existing usage, this arg takes value
+    // for example `--with-test-megarepo-configs-client=true`.
+    #[clap(
+        long,
+        parse(try_from_str),
+        default_value_t = false,
+        value_name = "BOOL"
+    )]
+    pub with_test_megarepo_configs_client: bool,
 }
 
 impl MononokeMegarepoConfigsOptions {
@@ -67,11 +72,7 @@ impl MononokeMegarepoConfigsOptions {
         config_args: &ConfigArgs,
         megarepo_configs_args: &MegarepoConfigsArgs,
     ) -> Self {
-        let use_test = megarepo_configs_args
-            .with_test_megarepo_configs_client
-            .unwrap_or(false);
-
-        if use_test {
+        if megarepo_configs_args.with_test_megarepo_configs_client {
             if let Some(path) = config_args.local_configerator_path.clone() {
                 MononokeMegarepoConfigsOptions::IntegrationTest(path)
             } else {

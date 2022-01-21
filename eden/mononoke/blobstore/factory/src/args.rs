@@ -77,7 +77,9 @@ pub struct BlobstoreArgs {
 
     /// Override config to enable or disable zstd compression on write
     /// via PackBlob
-    #[clap(long)]
+    // This is Option<bool> as we distinguish between option being
+    // not present vs being set to false.
+    #[clap(long, value_name = "BOOL")]
     pub blobstore_write_zstd: Option<bool>,
 
     /// Override config to set the zstd compression level for writes
@@ -87,8 +89,15 @@ pub struct BlobstoreArgs {
 
     /// Whether to attempt zstd compression when the blobstore is putting
     /// things into cachelib over the threshold size.
-    #[clap(long)]
-    pub blobstore_cachelib_attempt_zstd: Option<bool>,
+    // For compatibility with existing usage, this arg takes value,
+    // for example `--blobstore-cachelib-attempt-zstd=true`.
+    #[clap(
+        long,
+        parse(try_from_str),
+        default_value_t = false,
+        value_name = "BOOL"
+    )]
+    pub blobstore_cachelib_attempt_zstd: bool,
 
     /// Desired blobstore behaviour when a put is made to an existing key.
     #[clap(long)]
